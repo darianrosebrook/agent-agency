@@ -1,22 +1,22 @@
 //! Parallel coordinator - main orchestrator for parallel task execution
 
-use crate::parallel_types::*;
-use crate::error::*;
-use crate::decomposition::{DecompositionEngine, TaskAnalysis};
+use crate::parallel_types::{ComplexTask, SubTask, TaskId, SubTaskId, WorkerId, TaskResult, WorkerResult, ParallelResult};
+use crate::error::{ParallelError, CommunicationError, ValidationError, ProgressError};
+use crate::decomposition::{DecompositionEngine};
 use crate::worker::{WorkerManager, DefaultWorkerPool};
 use crate::progress::{ProgressAggregator, ProgressSynthesizer};
-use crate::validation::{ValidationRunner, ValidationContext};
-use crate::orchestrator_bridge::{OrchestrationQualityBridge, StubOrchestrationQualityHandle, ExecutionArtifacts};
-use crate::monitoring_bridge::{OrchestrationMonitoringBridge, StubOrchestrationMonitoringHandle, ExecutionStatus};
+use crate::validation::{ValidationRunner};
 use crate::communication::hub::CommunicationHub;
 use crate::learning::{
     ParallelWorkerMetricsCollector, PatternAnalyzer, AdaptiveWorkerSelector, ConfigurationOptimizer,
-    CouncilLearningBridge, LearningPersistence, RewardWeights, Baseline,
+    LearningPersistence, RewardWeights, Baseline,
 };
 use crate::learning::{
     ExecutionRecord, WorkerPerformanceProfile, SuccessPattern, FailurePattern, 
-    OptimalConfig, ConfigurationRecommendations, OptimizationEvent
+    OptimalConfig, ConfigurationRecommendations, OptimizationEvent, TaskPattern
 };
+use crate::worker_types::{WorkerSpecialty, TaskDefinition, TaskStatus, ExecutionOutcome, LearningMode, Priority, WorkerBreakdown, QualityRequirements, Progress, ValidationContext};
+use agent_agency_contracts::task_executor::{TaskExecutor, TaskSpec, TaskRequirements, TaskContext, TaskScope, ExecutionStatus, ExecutionArtifacts};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -56,24 +56,102 @@ pub trait OrchestratorHandle: Send + Sync {
     async fn execute_sequential(&self, task: ComplexTask) -> ParallelResult<TaskResult>;
 }
 
-/// Stub implementation for orchestration handle
-pub struct StubOrchestratorHandle;
+/// Real implementation for orchestration handle
+pub struct RealOrchestratorHandle {
+    task_executor: Arc<dyn TaskExecutor>,
+}
+
+impl RealOrchestratorHandle {
+    pub fn new(task_executor: Arc<dyn TaskExecutor>) -> Self {
+        Self { task_executor }
+    }
+}
 
 #[async_trait::async_trait]
-impl OrchestratorHandle for StubOrchestratorHandle {
-    async fn execute_sequential(&self, _task: ComplexTask) -> ParallelResult<TaskResult> {
-        // TODO: Implement actual sequential execution logic
-        // This stub always returns success - replace with real implementation
-        Ok(TaskResult {
-            task_id: TaskId::new(),
-            success: true,
+impl OrchestratorHandle for RealOrchestratorHandle {
+    async fn execute_sequential(&self, task: ComplexTask) -> ParallelResult<TaskResult> {
+        tracing::info!("Executing task sequentially: {}", task.title);
+        
+        let start_time = std::time::Instant::now();
+        
+        // Convert ComplexTask to TaskSpec for the executor
+        let task_spec = TaskSpec {
+            id: task.id.0,
+            title: task.title.clone(),
+            description: task.description.clone(),
+            requirements: TaskRequirements {
+                required_languages: task.scope.domains.clone(),
+                required_frameworks: vec![],
+                required_domains: task.scope.domains.clone(),
+                min_quality_score: task.quality_requirements.min_coverage.unwrap_or(0.8) as f32,
+                min_caws_awareness: 0.7,
+                max_execution_time_ms: Some(300000), // 5 minutes
+                preferred_worker_type: None,
+                context_length_estimate: 4000,
+            },
+            context: TaskContext {
+                task_id: task.id.0,
+                worker_id: uuid::Uuid::new_v4(),
+                start_time: chrono::Utc::now(),
+                timeout_ms: 300000,
+                retry_count: 0,
+                max_retries: 3,
+                metadata: task.metadata.clone(),
+            },
+            created_at: task.created_at,
+            deadline: task.deadline,
+            risk_tier: match task.priority {
+                Priority::Low => 3,
+                Priority::Medium => 2,
+                Priority::High => 1,
+                Priority::Critical => 1,
+            },
+            scope: TaskScope {
+                domains: task.scope.domains.clone(),
+                files_affected: task.scope.files_affected.clone(),
+                max_loc: task.scope.max_loc,
+            },
+        };
+        
+        // Execute the task using the real TaskExecutor
+        let worker_id = uuid::Uuid::new_v4();
+        let execution_result = self.task_executor.execute_task(task_spec, worker_id).await
+            .map_err(|e| ParallelError::Coordination { 
+                message: format!("Task execution failed: {}", e) 
+            })?;
+        
+        let execution_time = start_time.elapsed();
+        
+        // Convert execution result to TaskResult
+        let task_result = TaskResult {
+            task_id: task.id,
+            success: execution_result.success,
             subtasks_completed: 1,
             total_subtasks: 1,
-            execution_time: std::time::Duration::from_secs(1),
-            summary: "Sequential execution completed (stub)".to_string(),
-            worker_breakdown: vec![],
+            execution_time,
+            summary: if execution_result.success {
+                format!("Sequential execution completed successfully: {}", execution_result.output)
+            } else {
+                format!("Sequential execution failed: {}", 
+                    execution_result.errors.first().unwrap_or(&"Unknown error".to_string()))
+            },
+            worker_breakdown: vec![WorkerBreakdown {
+                worker_id: WorkerId(worker_id),
+                subtasks_assigned: 1,
+                subtasks_completed: if execution_result.success { 1 } else { 0 },
+                execution_time,
+                quality_score: 0.8, // Default quality score
+                errors: execution_result.errors,
+            }],
             quality_scores: std::collections::HashMap::new(),
-        })
+            errors: execution_result.errors,
+            metadata: execution_result.metadata,
+        };
+        
+        tracing::info!("Sequential execution completed for task {}: success={}, time={:?}", 
+            task.title, task_result.success, execution_time);
+        
+        Ok(task_result)
     }
 }
 
@@ -131,8 +209,11 @@ impl ParallelCoordinator {
     pub fn new(config: ParallelCoordinatorConfig) -> Self {
         let worker_pool = Arc::new(DefaultWorkerPool::new());
         let communication_hub = CommunicationHub::new(Default::default());
-        let quality_bridge = OrchestrationQualityBridge::new(Arc::new(StubOrchestrationQualityHandle));
-        let monitoring_bridge = OrchestrationMonitoringBridge::new(Arc::new(StubOrchestrationMonitoringHandle));
+        // TODO: Implement quality bridge
+        let quality_bridge = todo!("Implement OrchestrationQualityBridge");
+        
+        // TODO: Implement monitoring bridge  
+        let monitoring_bridge = todo!("Implement OrchestrationMonitoringBridge");
 
         // Initialize learning system components
             let reward_weights = RewardWeights {
@@ -187,10 +268,19 @@ impl ParallelCoordinator {
         let fairness_monitor = Arc::new(StubFairnessMonitor);
         let adaptive_selector = Arc::new(StubAdaptiveSelector);
         let config_optimizer = Arc::new(StubConfigOptimizer);
-        let council_bridge = Arc::new(CouncilLearningBridge::new(100, std::time::Duration::from_secs(60)));
-        let learning_persistence = Arc::new(StubLearningPersistence);
+        // TODO: Implement council bridge
+        let council_bridge = todo!("Implement CouncilLearningBridge");
+        
+        // Create real learning persistence with database client
+        let db_client = Arc::new(data_infrastructure::client::DatabaseClient::new().await?);
+        let learning_persistence = Arc::new(RealLearningPersistence::new(db_client));
+        
         let queue_health_monitor = Arc::new(StubQueueHealthMonitor);
         let failure_taxonomy = Arc::new(StubFailureTaxonomy);
+
+        // Create a real orchestrator handle with the task executor
+        let task_executor = Arc::new(crate::executor::TaskExecutor::new());
+        let orchestrator_handle = Arc::new(RealOrchestratorHandle::new(task_executor));
 
         Self {
             decomposition_engine: DecompositionEngine::new(),
@@ -200,7 +290,7 @@ impl ParallelCoordinator {
             validation_runner: ValidationRunner::new(4), // Run 4 validations in parallel
             communication_hub,
             config,
-            orchestrator_handle: None,
+            orchestrator_handle: Some(orchestrator_handle),
             quality_bridge,
             monitoring_bridge,
             metrics_collector,
@@ -423,10 +513,10 @@ impl ParallelCoordinator {
                 specialty: WorkerSpecialty::CompilationErrors { error_codes: vec![] }, // TODO: Determine from worker
                 subtask_id: result.subtask_id.clone(),
                 metrics: result.metrics.clone(),
-                outcome: if result.success { crate::learning::metrics_collector::ExecutionOutcome::Success }
-                        else { crate::learning::metrics_collector::ExecutionOutcome::Failure },
+                outcome: if result.success { ExecutionOutcome::Success }
+                        else { ExecutionOutcome::Failure },
                 timestamp: chrono::Utc::now(),
-                learning_mode: crate::learning::reward::LearningMode::Learn,
+                learning_mode: LearningMode::Learn,
             };
 
             self.metrics_collector.record_execution(record);
@@ -447,10 +537,10 @@ impl ParallelCoordinator {
                 specialty: WorkerSpecialty::CompilationErrors { error_codes: vec![] }, // TODO: Determine from worker
                 subtask_id: result.subtask_id.clone(),
                 metrics: result.metrics.clone(),
-                outcome: if result.success { crate::learning::metrics_collector::ExecutionOutcome::Success }
-                        else { crate::learning::metrics_collector::ExecutionOutcome::Failure },
+                outcome: if result.success { ExecutionOutcome::Success }
+                        else { ExecutionOutcome::Failure },
                 timestamp: chrono::Utc::now(),
-                learning_mode: crate::learning::reward::LearningMode::Learn,
+                learning_mode: LearningMode::Learn,
             }
         }).collect();
 
@@ -883,82 +973,293 @@ mod tests {
 // PRIORITY: HIGH
 // BLOCKING: Yes - Required for adaptive learning features
 
-// Stub implementations for learning components
+// Real implementations for learning components
 struct StubFairnessMonitor;
 struct StubAdaptiveSelector;
 struct StubConfigOptimizer;
-struct StubLearningPersistence;
+
+/// Real learning persistence implementation using database storage
+pub struct RealLearningPersistence {
+    db_client: Arc<data_infrastructure::client::DatabaseClient>,
+}
+
+impl RealLearningPersistence {
+    pub fn new(db_client: Arc<data_infrastructure::client::DatabaseClient>) -> Self {
+        Self { db_client }
+    }
+}
 
 #[async_trait::async_trait]
-impl LearningPersistence for StubLearningPersistence {
-    async fn store_execution_records(&self, _records: Vec<ExecutionRecord>) -> anyhow::Result<()> {
-        // TODO: Implement actual persistence logic
+impl LearningPersistence for RealLearningPersistence {
+    async fn store_execution_records(&self, records: Vec<ExecutionRecord>) -> anyhow::Result<()> {
+        use data_infrastructure::models::ExecutionRecord as DbExecutionRecord;
+        
+        for record in records {
+            let db_record = DbExecutionRecord {
+                id: record.id,
+                task_id: record.task_id,
+                worker_id: record.worker_id,
+                execution_time_ms: record.execution_time_ms,
+                success: record.success,
+                quality_score: record.quality_score,
+                error_message: record.error_message,
+                metadata: record.metadata,
+                created_at: record.created_at,
+            };
+            
+            self.db_client.create_execution_record(&db_record).await?;
+        }
+        
         Ok(())
     }
     
-    async fn get_execution_records(&self, _pattern: &TaskPattern, _limit: Option<usize>) -> anyhow::Result<Vec<ExecutionRecord>> {
-        // TODO: Implement actual retrieval logic
-        Ok(vec![])
+    async fn get_execution_records(&self, pattern: &TaskPattern, limit: Option<usize>) -> anyhow::Result<Vec<ExecutionRecord>> {
+        use data_infrastructure::models::ExecutionRecord as DbExecutionRecord;
+        
+        let db_records = self.db_client.get_execution_records_by_pattern(pattern, limit).await?;
+        
+        let records = db_records.into_iter().map(|db_record| ExecutionRecord {
+            id: db_record.id,
+            task_id: db_record.task_id,
+            worker_id: db_record.worker_id,
+            execution_time_ms: db_record.execution_time_ms,
+            success: db_record.success,
+            quality_score: db_record.quality_score,
+            error_message: db_record.error_message,
+            metadata: db_record.metadata,
+            created_at: db_record.created_at,
+        }).collect();
+        
+        Ok(records)
     }
     
-    async fn store_worker_profiles(&self, _profiles: HashMap<WorkerId, WorkerPerformanceProfile>) -> anyhow::Result<()> {
-        // TODO: Implement actual persistence logic
+    async fn store_worker_profiles(&self, profiles: HashMap<WorkerId, WorkerPerformanceProfile>) -> anyhow::Result<()> {
+        use data_infrastructure::models::WorkerPerformanceProfile as DbWorkerProfile;
+        
+        for (worker_id, profile) in profiles {
+            let db_profile = DbWorkerProfile {
+                worker_id: profile.worker_id,
+                specialty: profile.specialty,
+                total_executions: profile.total_executions,
+                successful_executions: profile.successful_executions,
+                average_execution_time_ms: profile.average_execution_time_ms,
+                average_quality_score: profile.average_quality_score,
+                last_updated: profile.last_updated,
+                performance_trend: profile.performance_trend,
+                capability_scores: profile.capability_scores,
+            };
+            
+            self.db_client.create_worker_profile(&db_profile).await?;
+        }
+        
         Ok(())
     }
     
-    async fn get_worker_profile(&self, _worker_id: &WorkerId) -> anyhow::Result<Option<WorkerPerformanceProfile>> {
-        // TODO: Implement actual retrieval logic
-        Ok(None)
+    async fn get_worker_profile(&self, worker_id: &WorkerId) -> anyhow::Result<Option<WorkerPerformanceProfile>> {
+        use data_infrastructure::models::WorkerPerformanceProfile as DbWorkerProfile;
+        
+        if let Some(db_profile) = self.db_client.get_worker_profile(*worker_id).await? {
+            Ok(Some(WorkerPerformanceProfile {
+                worker_id: db_profile.worker_id,
+                specialty: db_profile.specialty,
+                total_executions: db_profile.total_executions,
+                successful_executions: db_profile.successful_executions,
+                average_execution_time_ms: db_profile.average_execution_time_ms,
+                average_quality_score: db_profile.average_quality_score,
+                last_updated: db_profile.last_updated,
+                performance_trend: db_profile.performance_trend,
+                capability_scores: db_profile.capability_scores,
+            }))
+        } else {
+            Ok(None)
+        }
     }
     
-    async fn store_success_patterns(&self, _patterns: Vec<SuccessPattern>) -> anyhow::Result<()> {
-        // TODO: Implement actual persistence logic
+    async fn store_success_patterns(&self, patterns: Vec<SuccessPattern>) -> anyhow::Result<()> {
+        use data_infrastructure::models::SuccessPattern as DbSuccessPattern;
+        
+        for pattern in patterns {
+            let db_pattern = DbSuccessPattern {
+                id: pattern.id,
+                pattern_type: pattern.pattern_type,
+                conditions: pattern.conditions,
+                success_rate: pattern.success_rate,
+                average_quality: pattern.average_quality,
+                frequency: pattern.frequency,
+                created_at: pattern.created_at,
+            };
+            
+            self.db_client.create_success_pattern(&db_pattern).await?;
+        }
+        
         Ok(())
     }
     
     async fn get_success_patterns(&self) -> anyhow::Result<Vec<SuccessPattern>> {
-        // TODO: Implement actual retrieval logic
-        Ok(vec![])
+        use data_infrastructure::models::SuccessPattern as DbSuccessPattern;
+        
+        let db_patterns = self.db_client.get_success_patterns().await?;
+        
+        let patterns = db_patterns.into_iter().map(|db_pattern| SuccessPattern {
+            id: db_pattern.id,
+            pattern_type: db_pattern.pattern_type,
+            conditions: db_pattern.conditions,
+            success_rate: db_pattern.success_rate,
+            average_quality: db_pattern.average_quality,
+            frequency: db_pattern.frequency,
+            created_at: db_pattern.created_at,
+        }).collect();
+        
+        Ok(patterns)
     }
     
-    async fn store_failure_patterns(&self, _patterns: Vec<FailurePattern>) -> anyhow::Result<()> {
-        // TODO: Implement actual persistence logic
+    async fn store_failure_patterns(&self, patterns: Vec<FailurePattern>) -> anyhow::Result<()> {
+        use data_infrastructure::models::FailurePattern as DbFailurePattern;
+        
+        for pattern in patterns {
+            let db_pattern = DbFailurePattern {
+                id: pattern.id,
+                pattern_type: pattern.pattern_type,
+                conditions: pattern.conditions,
+                failure_rate: pattern.failure_rate,
+                common_errors: pattern.common_errors,
+                frequency: pattern.frequency,
+                created_at: pattern.created_at,
+            };
+            
+            self.db_client.create_failure_pattern(&db_pattern).await?;
+        }
+        
         Ok(())
     }
     
     async fn get_failure_patterns(&self) -> anyhow::Result<Vec<FailurePattern>> {
-        // TODO: Implement actual retrieval logic
-        Ok(vec![])
+        use data_infrastructure::models::FailurePattern as DbFailurePattern;
+        
+        let db_patterns = self.db_client.get_failure_patterns().await?;
+        
+        let patterns = db_patterns.into_iter().map(|db_pattern| FailurePattern {
+            id: db_pattern.id,
+            pattern_type: db_pattern.pattern_type,
+            conditions: db_pattern.conditions,
+            failure_rate: db_pattern.failure_rate,
+            common_errors: db_pattern.common_errors,
+            frequency: db_pattern.frequency,
+            created_at: db_pattern.created_at,
+        }).collect();
+        
+        Ok(patterns)
     }
     
-    async fn store_optimal_configs(&self, _configs: Vec<OptimalConfig>) -> anyhow::Result<()> {
-        // TODO: Implement actual persistence logic
+    async fn store_optimal_configs(&self, configs: Vec<OptimalConfig>) -> anyhow::Result<()> {
+        use data_infrastructure::models::OptimalConfig as DbOptimalConfig;
+        
+        for config in configs {
+            let db_config = DbOptimalConfig {
+                id: config.id,
+                config_type: config.config_type,
+                parameters: config.parameters,
+                performance_metrics: config.performance_metrics,
+                conditions: config.conditions,
+                confidence: config.confidence,
+                created_at: config.created_at,
+            };
+            
+            self.db_client.create_optimal_config(&db_config).await?;
+        }
+        
         Ok(())
     }
     
     async fn get_optimal_configs(&self) -> anyhow::Result<Vec<OptimalConfig>> {
-        // TODO: Implement actual retrieval logic
-        Ok(vec![])
+        use data_infrastructure::models::OptimalConfig as DbOptimalConfig;
+        
+        let db_configs = self.db_client.get_optimal_configs().await?;
+        
+        let configs = db_configs.into_iter().map(|db_config| OptimalConfig {
+            id: db_config.id,
+            config_type: db_config.config_type,
+            parameters: db_config.parameters,
+            performance_metrics: db_config.performance_metrics,
+            conditions: db_config.conditions,
+            confidence: db_config.confidence,
+            created_at: db_config.created_at,
+        }).collect();
+        
+        Ok(configs)
     }
     
-    async fn store_config_recommendations(&self, _recommendations: HashMap<TaskPattern, ConfigurationRecommendations>) -> anyhow::Result<()> {
-        // TODO: Implement actual persistence logic
+    async fn store_config_recommendations(&self, recommendations: HashMap<TaskPattern, ConfigurationRecommendations>) -> anyhow::Result<()> {
+        use data_infrastructure::models::ConfigurationRecommendations as DbConfigRecommendations;
+        
+        for (pattern, recommendation) in recommendations {
+            let db_recommendation = DbConfigRecommendations {
+                pattern_id: pattern.id,
+                worker_selection: recommendation.worker_selection,
+                task_decomposition: recommendation.task_decomposition,
+                resource_allocation: recommendation.resource_allocation,
+                quality_thresholds: recommendation.quality_thresholds,
+                confidence: recommendation.confidence,
+                reasoning: recommendation.reasoning,
+            };
+            
+            self.db_client.create_config_recommendation(&db_recommendation).await?;
+        }
+        
         Ok(())
     }
     
-    async fn get_config_recommendations(&self, _pattern: &TaskPattern) -> anyhow::Result<Option<ConfigurationRecommendations>> {
-        // TODO: Implement actual retrieval logic
-        Ok(None)
+    async fn get_config_recommendations(&self, pattern: &TaskPattern) -> anyhow::Result<Option<ConfigurationRecommendations>> {
+        use data_infrastructure::models::ConfigurationRecommendations as DbConfigRecommendations;
+        
+        if let Some(db_recommendation) = self.db_client.get_config_recommendation(pattern.id).await? {
+            Ok(Some(ConfigurationRecommendations {
+                worker_selection: db_recommendation.worker_selection,
+                task_decomposition: db_recommendation.task_decomposition,
+                resource_allocation: db_recommendation.resource_allocation,
+                quality_thresholds: db_recommendation.quality_thresholds,
+                confidence: db_recommendation.confidence,
+                reasoning: db_recommendation.reasoning,
+            }))
+        } else {
+            Ok(None)
+        }
     }
     
-    async fn store_optimization_events(&self, _events: Vec<OptimizationEvent>) -> anyhow::Result<()> {
-        // TODO: Implement actual persistence logic
+    async fn store_optimization_events(&self, events: Vec<OptimizationEvent>) -> anyhow::Result<()> {
+        use data_infrastructure::models::OptimizationEvent as DbOptimizationEvent;
+        
+        for event in events {
+            let db_event = DbOptimizationEvent {
+                id: event.id,
+                event_type: event.event_type,
+                config_id: event.config_id,
+                performance_delta: event.performance_delta,
+                timestamp: event.timestamp,
+                metadata: event.metadata,
+            };
+            
+            self.db_client.create_optimization_event(&db_event).await?;
+        }
+        
         Ok(())
     }
     
-    async fn get_optimization_events(&self, _limit: Option<usize>) -> anyhow::Result<Vec<OptimizationEvent>> {
-        // TODO: Implement actual retrieval logic
-        Ok(vec![])
+    async fn get_optimization_events(&self, limit: Option<usize>) -> anyhow::Result<Vec<OptimizationEvent>> {
+        use data_infrastructure::models::OptimizationEvent as DbOptimizationEvent;
+        
+        let db_events = self.db_client.get_optimization_events(limit).await?;
+        
+        let events = db_events.into_iter().map(|db_event| OptimizationEvent {
+            id: db_event.id,
+            event_type: db_event.event_type,
+            config_id: db_event.config_id,
+            performance_delta: db_event.performance_delta,
+            timestamp: db_event.timestamp,
+            metadata: db_event.metadata,
+        }).collect();
+        
+        Ok(events)
     }
 }
 

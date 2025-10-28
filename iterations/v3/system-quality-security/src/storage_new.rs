@@ -42,16 +42,62 @@ pub trait NewSourceIntegrityStorage: Send + Sync {
 
 /// PostgreSQL implementation of source integrity storage
 pub struct PostgresSourceIntegrityStorage {
-    // For now, use in-memory storage to avoid complex sqlx setup
-    records: std::collections::HashMap<Uuid, SourceIntegrityRecord>,
+    db_client: sqlx::PgPool,
 }
 
 impl PostgresSourceIntegrityStorage {
     /// Create a new PostgreSQL storage instance
-    pub fn new(_db_client: sqlx::PgPool) -> Self {
+    pub fn new(db_client: sqlx::PgPool) -> Self {
         Self { 
-            records: std::collections::HashMap::new(),
+            db_client,
         }
+    }
+
+    /// Initialize the database schema
+    pub async fn initialize_schema(&self) -> anyhow::Result<()> {
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS source_integrity_records (
+                id UUID PRIMARY KEY,
+                source_id VARCHAR(255) NOT NULL,
+                source_type VARCHAR(50) NOT NULL,
+                content_hash VARCHAR(128) NOT NULL,
+                content_size BIGINT NOT NULL,
+                hash_algorithm VARCHAR(20) NOT NULL,
+                integrity_status VARCHAR(20) NOT NULL,
+                tampering_indicators JSONB,
+                verification_metadata JSONB,
+                verification_count INTEGER DEFAULT 0,
+                first_seen_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                last_verified_at TIMESTAMP WITH TIME ZONE,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            )
+            "#
+        )
+        .execute(&self.db_client)
+        .await?;
+
+        // Create indexes for better performance
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_source_integrity_source_id ON source_integrity_records(source_id)"
+        )
+        .execute(&self.db_client)
+        .await?;
+
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_source_integrity_status ON source_integrity_records(integrity_status)"
+        )
+        .execute(&self.db_client)
+        .await?;
+
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_source_integrity_created_at ON source_integrity_records(created_at)"
+        )
+        .execute(&self.db_client)
+        .await?;
+
+        Ok(())
     }
 }
 
@@ -59,70 +105,298 @@ impl PostgresSourceIntegrityStorage {
 impl NewSourceIntegrityStorage for PostgresSourceIntegrityStorage {
     async fn store_record(&self, record: &CreateSourceIntegrityRecord) -> anyhow::Result<Uuid> {
         let id = Uuid::new_v4();
-        let integrity_record = SourceIntegrityRecord {
-            id,
-            source_id: record.source_id.clone(),
-            source_type: record.source_type.clone(),
-            content_hash: record.content_hash.clone(),
-            content_size: record.content_size,
-            hash_algorithm: record.hash_algorithm.clone(),
-            integrity_status: record.integrity_status.clone(),
-            tampering_indicators: record.tampering_indicators.clone(),
-            verification_metadata: record.verification_metadata.clone(),
-            verification_count: 0, // Add missing field
-            first_seen_at: chrono::Utc::now(),
-            last_verified_at: None,
-            created_at: chrono::Utc::now(),
-            updated_at: chrono::Utc::now(),
-        };
+        let now = chrono::Utc::now();
         
-        // Store in memory (in real implementation, this would be database)
-        // For now, just return success
+        sqlx::query(
+            r#"
+            INSERT INTO source_integrity_records (
+                id, source_id, source_type, content_hash, content_size,
+                hash_algorithm, integrity_status, tampering_indicators,
+                verification_metadata, verification_count, first_seen_at,
+                last_verified_at, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            "#
+        )
+        .bind(id)
+        .bind(&record.source_id)
+        .bind(record.source_type.to_string())
+        .bind(&record.content_hash)
+        .bind(record.content_size)
+        .bind(record.hash_algorithm.to_string())
+        .bind(record.integrity_status.to_string())
+        .bind(serde_json::to_value(&record.tampering_indicators)?)
+        .bind(serde_json::to_value(&record.verification_metadata)?)
+        .bind(0i32) // verification_count
+        .bind(now)
+        .bind(None::<chrono::DateTime<chrono::Utc>>)
+        .bind(now)
+        .bind(now)
+        .execute(&self.db_client)
+        .await?;
+        
         Ok(id)
     }
 
     async fn get_record(&self, id: &Uuid) -> anyhow::Result<Option<SourceIntegrityRecord>> {
-        // In-memory lookup (in real implementation, this would be database query)
-        Ok(None) // Simplified for now
+        let row = sqlx::query_as::<_, (Uuid, String, String, String, i64, String, String, serde_json::Value, serde_json::Value, i32, chrono::DateTime<chrono::Utc>, Option<chrono::DateTime<chrono::Utc>>, chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>)>(
+            r#"
+            SELECT id, source_id, source_type, content_hash, content_size,
+                   hash_algorithm, integrity_status, tampering_indicators,
+                   verification_metadata, verification_count, first_seen_at,
+                   last_verified_at, created_at, updated_at
+            FROM source_integrity_records
+            WHERE id = $1
+            "#
+        )
+        .bind(id)
+        .fetch_optional(&self.db_client)
+        .await?;
+
+        if let Some((id, source_id, source_type, content_hash, content_size, hash_algorithm, integrity_status, tampering_indicators, verification_metadata, verification_count, first_seen_at, last_verified_at, created_at, updated_at)) = row {
+            Ok(Some(SourceIntegrityRecord {
+                id,
+                source_id,
+                source_type: SourceType::from_string(&source_type).unwrap_or(SourceType::File),
+                content_hash,
+                content_size,
+                hash_algorithm: HashAlgorithm::from_string(&hash_algorithm).unwrap_or(HashAlgorithm::Sha256),
+                integrity_status: IntegrityStatus::from_string(&integrity_status).unwrap_or(IntegrityStatus::Unknown),
+                tampering_indicators: serde_json::from_value(tampering_indicators).unwrap_or_default(),
+                verification_metadata: serde_json::from_value(verification_metadata).unwrap_or_default(),
+                verification_count,
+                first_seen_at,
+                last_verified_at,
+                created_at,
+                updated_at,
+            }))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn update_record(&self, id: &Uuid, record: &CreateSourceIntegrityRecord) -> anyhow::Result<()> {
-        // In-memory update (in real implementation, this would be database update)
-        Ok(()) // Simplified for now
+        let now = chrono::Utc::now();
+        
+        sqlx::query(
+            r#"
+            UPDATE source_integrity_records SET
+                source_id = $2,
+                source_type = $3,
+                content_hash = $4,
+                content_size = $5,
+                hash_algorithm = $6,
+                integrity_status = $7,
+                tampering_indicators = $8,
+                verification_metadata = $9,
+                updated_at = $10
+            WHERE id = $1
+            "#
+        )
+        .bind(id)
+        .bind(&record.source_id)
+        .bind(record.source_type.to_string())
+        .bind(&record.content_hash)
+        .bind(record.content_size)
+        .bind(record.hash_algorithm.to_string())
+        .bind(record.integrity_status.to_string())
+        .bind(serde_json::to_value(&record.tampering_indicators)?)
+        .bind(serde_json::to_value(&record.verification_metadata)?)
+        .bind(now)
+        .execute(&self.db_client)
+        .await?;
+        
+        Ok(())
     }
 
     async fn delete_record(&self, id: &Uuid) -> anyhow::Result<()> {
-        // In-memory delete (in real implementation, this would be database delete)
-        Ok(()) // Simplified for now
+        sqlx::query("DELETE FROM source_integrity_records WHERE id = $1")
+            .bind(id)
+            .execute(&self.db_client)
+            .await?;
+        
+        Ok(())
     }
 
     async fn list_records(&self) -> anyhow::Result<Vec<SourceIntegrityRecord>> {
-        // In-memory list (in real implementation, this would be database query)
-        Ok(vec![]) // Simplified for now
+        let rows = sqlx::query_as::<_, (Uuid, String, String, String, i64, String, String, serde_json::Value, serde_json::Value, i32, chrono::DateTime<chrono::Utc>, Option<chrono::DateTime<chrono::Utc>>, chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>)>(
+            r#"
+            SELECT id, source_id, source_type, content_hash, content_size,
+                   hash_algorithm, integrity_status, tampering_indicators,
+                   verification_metadata, verification_count, first_seen_at,
+                   last_verified_at, created_at, updated_at
+            FROM source_integrity_records
+            ORDER BY created_at DESC
+            "#
+        )
+        .fetch_all(&self.db_client)
+        .await?;
+
+        let records = rows.into_iter()
+            .map(|(id, source_id, source_type, content_hash, content_size, hash_algorithm, integrity_status, tampering_indicators, verification_metadata, verification_count, first_seen_at, last_verified_at, created_at, updated_at)| {
+                SourceIntegrityRecord {
+                    id,
+                    source_id,
+                    source_type: SourceType::from_string(&source_type).unwrap_or(SourceType::File),
+                    content_hash,
+                    content_size,
+                    hash_algorithm: HashAlgorithm::from_string(&hash_algorithm).unwrap_or(HashAlgorithm::Sha256),
+                    integrity_status: IntegrityStatus::from_string(&integrity_status).unwrap_or(IntegrityStatus::Unknown),
+                    tampering_indicators: serde_json::from_value(tampering_indicators).unwrap_or_default(),
+                    verification_metadata: serde_json::from_value(verification_metadata).unwrap_or_default(),
+                    verification_count,
+                    first_seen_at,
+                    last_verified_at,
+                    created_at,
+                    updated_at,
+                }
+            })
+            .collect();
+
+        Ok(records)
     }
 
-    async fn get_records_by_source(&self, _source_id: &str) -> anyhow::Result<Vec<SourceIntegrityRecord>> {
-        // In-memory lookup by source (in real implementation, this would be database query)
-        Ok(vec![]) // Simplified for now
+    async fn get_records_by_source(&self, source_id: &str) -> anyhow::Result<Vec<SourceIntegrityRecord>> {
+        let rows = sqlx::query_as::<_, (Uuid, String, String, String, i64, String, String, serde_json::Value, serde_json::Value, i32, chrono::DateTime<chrono::Utc>, Option<chrono::DateTime<chrono::Utc>>, chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>)>(
+            r#"
+            SELECT id, source_id, source_type, content_hash, content_size,
+                   hash_algorithm, integrity_status, tampering_indicators,
+                   verification_metadata, verification_count, first_seen_at,
+                   last_verified_at, created_at, updated_at
+            FROM source_integrity_records
+            WHERE source_id = $1
+            ORDER BY created_at DESC
+            "#
+        )
+        .bind(source_id)
+        .fetch_all(&self.db_client)
+        .await?;
+
+        let records = rows.into_iter()
+            .map(|(id, source_id, source_type, content_hash, content_size, hash_algorithm, integrity_status, tampering_indicators, verification_metadata, verification_count, first_seen_at, last_verified_at, created_at, updated_at)| {
+                SourceIntegrityRecord {
+                    id,
+                    source_id,
+                    source_type: SourceType::from_string(&source_type).unwrap_or(SourceType::File),
+                    content_hash,
+                    content_size,
+                    hash_algorithm: HashAlgorithm::from_string(&hash_algorithm).unwrap_or(HashAlgorithm::Sha256),
+                    integrity_status: IntegrityStatus::from_string(&integrity_status).unwrap_or(IntegrityStatus::Unknown),
+                    tampering_indicators: serde_json::from_value(tampering_indicators).unwrap_or_default(),
+                    verification_metadata: serde_json::from_value(verification_metadata).unwrap_or_default(),
+                    verification_count,
+                    first_seen_at,
+                    last_verified_at,
+                    created_at,
+                    updated_at,
+                }
+            })
+            .collect();
+
+        Ok(records)
     }
 
-    async fn get_records_by_status(&self, _status: IntegrityStatus) -> anyhow::Result<Vec<SourceIntegrityRecord>> {
-        // In-memory lookup by status (in real implementation, this would be database query)
-        Ok(vec![]) // Simplified for now
+    async fn get_records_by_status(&self, status: IntegrityStatus) -> anyhow::Result<Vec<SourceIntegrityRecord>> {
+        let rows = sqlx::query_as::<_, (Uuid, String, String, String, i64, String, String, serde_json::Value, serde_json::Value, i32, chrono::DateTime<chrono::Utc>, Option<chrono::DateTime<chrono::Utc>>, chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>)>(
+            r#"
+            SELECT id, source_id, source_type, content_hash, content_size,
+                   hash_algorithm, integrity_status, tampering_indicators,
+                   verification_metadata, verification_count, first_seen_at,
+                   last_verified_at, created_at, updated_at
+            FROM source_integrity_records
+            WHERE integrity_status = $1
+            ORDER BY created_at DESC
+            "#
+        )
+        .bind(status.to_string())
+        .fetch_all(&self.db_client)
+        .await?;
+
+        let records = rows.into_iter()
+            .map(|(id, source_id, source_type, content_hash, content_size, hash_algorithm, integrity_status, tampering_indicators, verification_metadata, verification_count, first_seen_at, last_verified_at, created_at, updated_at)| {
+                SourceIntegrityRecord {
+                    id,
+                    source_id,
+                    source_type: SourceType::from_string(&source_type).unwrap_or(SourceType::File),
+                    content_hash,
+                    content_size,
+                    hash_algorithm: HashAlgorithm::from_string(&hash_algorithm).unwrap_or(HashAlgorithm::Sha256),
+                    integrity_status: IntegrityStatus::from_string(&integrity_status).unwrap_or(IntegrityStatus::Unknown),
+                    tampering_indicators: serde_json::from_value(tampering_indicators).unwrap_or_default(),
+                    verification_metadata: serde_json::from_value(verification_metadata).unwrap_or_default(),
+                    verification_count,
+                    first_seen_at,
+                    last_verified_at,
+                    created_at,
+                    updated_at,
+                }
+            })
+            .collect();
+
+        Ok(records)
     }
 
-    async fn get_records_by_time_range(&self, _start: chrono::DateTime<chrono::Utc>, _end: chrono::DateTime<chrono::Utc>) -> anyhow::Result<Vec<SourceIntegrityRecord>> {
-        // In-memory lookup by time range (in real implementation, this would be database query)
-        Ok(vec![]) // Simplified for now
+    async fn get_records_by_time_range(&self, start: chrono::DateTime<chrono::Utc>, end: chrono::DateTime<chrono::Utc>) -> anyhow::Result<Vec<SourceIntegrityRecord>> {
+        let rows = sqlx::query_as::<_, (Uuid, String, String, String, i64, String, String, serde_json::Value, serde_json::Value, i32, chrono::DateTime<chrono::Utc>, Option<chrono::DateTime<chrono::Utc>>, chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>)>(
+            r#"
+            SELECT id, source_id, source_type, content_hash, content_size,
+                   hash_algorithm, integrity_status, tampering_indicators,
+                   verification_metadata, verification_count, first_seen_at,
+                   last_verified_at, created_at, updated_at
+            FROM source_integrity_records
+            WHERE created_at BETWEEN $1 AND $2
+            ORDER BY created_at DESC
+            "#
+        )
+        .bind(start)
+        .bind(end)
+        .fetch_all(&self.db_client)
+        .await?;
+
+        let records = rows.into_iter()
+            .map(|(id, source_id, source_type, content_hash, content_size, hash_algorithm, integrity_status, tampering_indicators, verification_metadata, verification_count, first_seen_at, last_verified_at, created_at, updated_at)| {
+                SourceIntegrityRecord {
+                    id,
+                    source_id,
+                    source_type: SourceType::from_string(&source_type).unwrap_or(SourceType::File),
+                    content_hash,
+                    content_size,
+                    hash_algorithm: HashAlgorithm::from_string(&hash_algorithm).unwrap_or(HashAlgorithm::Sha256),
+                    integrity_status: IntegrityStatus::from_string(&integrity_status).unwrap_or(IntegrityStatus::Unknown),
+                    tampering_indicators: serde_json::from_value(tampering_indicators).unwrap_or_default(),
+                    verification_metadata: serde_json::from_value(verification_metadata).unwrap_or_default(),
+                    verification_count,
+                    first_seen_at,
+                    last_verified_at,
+                    created_at,
+                    updated_at,
+                }
+            })
+            .collect();
+
+        Ok(records)
     }
 
     async fn get_integrity_stats(&self) -> anyhow::Result<()> {
-        // In-memory stats (in real implementation, this would be database aggregation)
-        Ok(()) // Simplified for now
+        // This method should return actual statistics, but the trait returns ()
+        // In a real implementation, we'd return a stats struct with counts, etc.
+        let _total_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM source_integrity_records")
+            .fetch_one(&self.db_client)
+            .await?;
+
+        let _verified_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM source_integrity_records WHERE integrity_status = 'verified'")
+            .fetch_one(&self.db_client)
+            .await?;
+
+        // For now, just return Ok(()) as the trait requires
+        Ok(())
     }
 
-    async fn cleanup_old_records(&self, _older_than: chrono::DateTime<chrono::Utc>) -> anyhow::Result<usize> {
-        // In-memory cleanup (in real implementation, this would be database cleanup)
-        Ok(0) // Simplified for now
+    async fn cleanup_old_records(&self, older_than: chrono::DateTime<chrono::Utc>) -> anyhow::Result<usize> {
+        let result = sqlx::query("DELETE FROM source_integrity_records WHERE created_at < $1")
+            .bind(older_than)
+            .execute(&self.db_client)
+            .await?;
+        
+        Ok(result.rows_affected() as usize)
     }
 }

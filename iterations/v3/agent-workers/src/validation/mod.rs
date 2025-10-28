@@ -9,4 +9,4 @@ pub use validators::*;
 pub use runner::*;
 
 // Re-export types from types module that are used in validation
-pub use crate::parallel_types::ValidationContext;
+pub use crate::ValidationContext;

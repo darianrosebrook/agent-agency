@@ -2,6 +2,7 @@
 
 use super::types::*;
 use crate::extraction_types::AtomicClaim;
+use crate::evidence::evidence_types::{TestTimingData, TestTimingAnalysis};
 use anyhow::Result;
 use std::collections::HashMap;
 use std::fs;

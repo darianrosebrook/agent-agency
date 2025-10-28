@@ -1,6 +1,7 @@
 //! Channel-based communication infrastructure
 
 use crate::parallel_types::*;
+use crate::WorkerMessage;
 use crate::error::*;
 
 /// Channel configuration for communication

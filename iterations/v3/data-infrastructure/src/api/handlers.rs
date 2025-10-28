@@ -55,22 +55,137 @@ pub use super::health::health_check;
 // PRIORITY: HIGH
 // BLOCKING: Yes - Required for quality gate management
 
-/// List all waivers (stub implementation)
-pub async fn list_waivers() -> Json<serde_json::Value> {
-    // TODO: Implement actual waiver listing
-    Json(serde_json::json!({"waivers": [], "status": "stub"}))
+/// List all waivers
+pub async fn list_waivers(State(state): State<AppState>) -> Result<Json<serde_json::Value>, StatusCode> {
+    match state.db_client.list_waivers().await {
+        Ok(waivers) => {
+            let waiver_list: Vec<serde_json::Value> = waivers.into_iter()
+                .map(|w| serde_json::json!({
+                    "id": w.id,
+                    "title": w.title,
+                    "reason": w.reason,
+                    "description": w.description,
+                    "gates": w.gates,
+                    "approved_by": w.approved_by,
+                    "impact_level": w.impact_level,
+                    "mitigation_plan": w.mitigation_plan,
+                    "expires_at": w.expires_at,
+                    "created_at": w.created_at,
+                    "updated_at": w.updated_at,
+                    "status": w.status,
+                    "metadata": w.metadata
+                }))
+                .collect();
+            
+            Ok(Json(serde_json::json!({
+                "waivers": waiver_list,
+                "status": "success",
+                "count": waiver_list.len()
+            })))
+        }
+        Err(e) => {
+            error!("Failed to list waivers: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
-/// Create a new waiver (stub implementation)
-pub async fn create_waiver(_waiver_data: Json<serde_json::Value>) -> Json<serde_json::Value> {
-    // TODO: Implement actual waiver creation
-    Json(serde_json::json!({"waiver_id": "stub", "status": "created"}))
+/// Create a new waiver
+pub async fn create_waiver(
+    State(state): State<AppState>,
+    Json(waiver_data): Json<serde_json::Value>
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    // Extract waiver data from JSON
+    let title = waiver_data.get("title")
+        .and_then(|v| v.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    
+    let reason = waiver_data.get("reason")
+        .and_then(|v| v.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    
+    let description = waiver_data.get("description")
+        .and_then(|v| v.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    
+    let gates = waiver_data.get("gates")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().filter_map(|v| v.as_str()).map(|s| s.to_string()).collect())
+        .unwrap_or_default();
+    
+    let approved_by = waiver_data.get("approved_by")
+        .and_then(|v| v.as_str())
+        .unwrap_or("system");
+    
+    let impact_level = waiver_data.get("impact_level")
+        .and_then(|v| v.as_str())
+        .unwrap_or("medium");
+    
+    let mitigation_plan = waiver_data.get("mitigation_plan")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    
+    let expires_at = waiver_data.get("expires_at")
+        .and_then(|v| v.as_str())
+        .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+        .map(|dt| dt.with_timezone(&chrono::Utc))
+        .unwrap_or_else(|| chrono::Utc::now() + chrono::Duration::days(30));
+    
+    let metadata = waiver_data.get("metadata").cloned().unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
+    
+    // Create waiver in database
+    match state.db_client.create_waiver(&crate::models::Waiver {
+        id: uuid::Uuid::new_v4(),
+        title: title.to_string(),
+        reason: reason.to_string(),
+        description: description.to_string(),
+        gates,
+        approved_by: approved_by.to_string(),
+        impact_level: impact_level.to_string(),
+        mitigation_plan: mitigation_plan.to_string(),
+        expires_at,
+        created_at: chrono::Utc::now(),
+        updated_at: chrono::Utc::now(),
+        status: "pending".to_string(),
+        metadata,
+    }).await {
+        Ok(waiver) => {
+            info!("Created waiver: {}", waiver.id);
+            Ok(Json(serde_json::json!({
+                "waiver_id": waiver.id,
+                "status": "created",
+                "message": "Waiver created successfully"
+            })))
+        }
+        Err(e) => {
+            error!("Failed to create waiver: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
-/// Approve a waiver (stub implementation)
-pub async fn approve_waiver(Path(_waiver_id): Path<String>) -> Json<serde_json::Value> {
-    // TODO: Implement actual waiver approval
-    Json(serde_json::json!({"status": "approved"}))
+/// Approve a waiver
+pub async fn approve_waiver(
+    State(state): State<AppState>,
+    Path(waiver_id): Path<String>
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let waiver_uuid = uuid::Uuid::parse_str(&waiver_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    match state.db_client.approve_waiver(&waiver_uuid).await {
+        Ok(()) => {
+            info!("Approved waiver: {}", waiver_id);
+            Ok(Json(serde_json::json!({
+                "status": "approved",
+                "waiver_id": waiver_id,
+                "message": "Waiver approved successfully"
+            })))
+        }
+        Err(e) => {
+            error!("Failed to approve waiver {}: {}", waiver_id, e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 /// Get task provenance (stub implementation)
@@ -105,7 +220,47 @@ pub async fn get_task_provenance(Path(_task_id): Path<String>) -> Json<serde_jso
     // PRIORITY: HIGH
     // BLOCKING: Yes - Required for task tracking
     
-    Json(serde_json::json!({"provenance": [], "status": "stub"}))
+    Json(serde_json::json!({
+        "task_id": _task_id,
+        "provenance": [],
+        "status": "not_implemented"
+    }))
+}
+    
+/// Get task provenance (real implementation)
+pub async fn get_task_provenance_real(
+    State(state): State<AppState>,
+    Path(task_id): Path<String>
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let task_uuid = uuid::Uuid::parse_str(&task_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    match state.db_client.get_task_provenance(&task_uuid).await {
+        Ok(provenance_records) => {
+            let provenance_list: Vec<serde_json::Value> = provenance_records.into_iter()
+                .map(|p| serde_json::json!({
+                    "id": p.id,
+                    "action": p.action,
+                    "actor": p.actor,
+                    "resource_id": p.resource_id,
+                    "resource_type": p.resource_type,
+                    "change_summary": p.change_summary,
+                    "created_at": p.created_at
+                }))
+                .collect();
+            
+            Ok(Json(serde_json::json!({
+                "provenance": provenance_list,
+                "status": "success",
+                "task_id": task_id,
+                "count": provenance_list.len()
+            })))
+        }
+        Err(e) => {
+            error!("Failed to get task provenance for {}: {}", task_id, e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 /// Proxy handler for backend requests
@@ -416,16 +571,93 @@ pub async fn delete_saved_query(Path(_query_id): Path<String>) -> Json<serde_jso
     Json(json!({"message": "Query deletion not implemented yet"}))
 }
 
-/// Submit task (stub implementation)
-pub async fn submit_task(_task_data: Json<serde_json::Value>) -> Json<serde_json::Value> {
-    // TODO: Implement actual task submission
-    Json(json!({"task_id": "stub-task-id", "message": "Task submission not implemented yet"}))
+/// Submit task
+pub async fn submit_task(
+    State(state): State<AppState>,
+    Json(task_data): Json<serde_json::Value>
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    // Extract task data from JSON
+    let title = task_data.get("title")
+        .and_then(|v| v.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    
+    let description = task_data.get("description")
+        .and_then(|v| v.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    
+    let priority = task_data.get("priority")
+        .and_then(|v| v.as_str())
+        .unwrap_or("medium");
+    
+    let task_type = task_data.get("task_type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("general");
+    
+    let metadata = task_data.get("metadata").cloned().unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
+    
+    // Create task in database
+    let task = crate::models::Task {
+        id: uuid::Uuid::new_v4(),
+        title: title.to_string(),
+        description: description.to_string(),
+        status: "pending".to_string(),
+        priority: priority.to_string(),
+        task_type: task_type.to_string(),
+        created_at: chrono::Utc::now(),
+        updated_at: chrono::Utc::now(),
+        assigned_to: None,
+        due_date: None,
+        metadata,
+    };
+    
+    match state.db_client.create_task(&task).await {
+        Ok(created_task) => {
+            info!("Created task: {}", created_task.id);
+            Ok(Json(serde_json::json!({
+                "task_id": created_task.id,
+                "status": "submitted",
+                "message": "Task submitted successfully"
+            })))
+        }
+        Err(e) => {
+            error!("Failed to submit task: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
-/// Get task status (stub implementation)
-pub async fn get_task_status(Path(_task_id): Path<String>) -> Json<serde_json::Value> {
-    // TODO: Implement actual task status retrieval
-    Json(json!({"status": "unknown", "message": "Task status not implemented yet"}))
+/// Get task status
+pub async fn get_task_status(
+    State(state): State<AppState>,
+    Path(task_id): Path<String>
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let task_uuid = uuid::Uuid::parse_str(&task_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    match state.db_client.get_task(&task_uuid).await {
+        Ok(Some(task)) => {
+            Ok(Json(serde_json::json!({
+                "task_id": task.id,
+                "status": task.status,
+                "title": task.title,
+                "description": task.description,
+                "priority": task.priority,
+                "task_type": task.task_type,
+                "created_at": task.created_at,
+                "updated_at": task.updated_at,
+                "assigned_to": task.assigned_to,
+                "due_date": task.due_date,
+                "metadata": task.metadata
+            })))
+        }
+        Ok(None) => {
+            Err(StatusCode::NOT_FOUND)
+        }
+        Err(e) => {
+            error!("Failed to get task status for {}: {}", task_id, e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 /// Get task result (stub implementation)

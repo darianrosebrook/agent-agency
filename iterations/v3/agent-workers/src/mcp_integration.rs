@@ -4,17 +4,28 @@
 //! Services register their capabilities as MCP tools that workers can discover and use.
 
 use agent_mcp::{ToolRegistry, MCPTool, ToolExecutionRequest, ToolExecutionResult, types::{ToolType, ToolCapability, ToolParameters, ParameterDefinition, ParameterConstraint, ToolManifest, CawsComplianceConfig, CawsComplianceStatus}};
+use anyhow::{Context, Result};
+use reqwest::Client;
 use std::sync::Arc;
+use std::collections::HashMap;
+use tracing::{info, warn, error, debug};
+use uuid::Uuid;
 
-/// MCP integration layer for workers
+/// MCP integration layer for workers with real HTTP client
 pub struct MCPIntegration {
     tool_registry: Arc<ToolRegistry>,
+    http_client: Client,
+    mcp_server_url: String,
 }
 
 impl MCPIntegration {
-    /// Create new MCP integration with a tool registry
-    pub fn new(tool_registry: Arc<ToolRegistry>) -> Self {
-        Self { tool_registry }
+    /// Create new MCP integration with HTTP client
+    pub fn new(tool_registry: Arc<ToolRegistry>, mcp_server_url: String) -> Self {
+        Self { 
+            tool_registry,
+            http_client: Client::new(),
+            mcp_server_url,
+        }
     }
 
     /// Get access to the underlying tool registry
@@ -32,11 +43,86 @@ impl MCPIntegration {
         Ok(())
     }
 
-    /// Execute a tool using the MCP registry
+    /// Execute a tool using real HTTP calls to MCP server
     pub async fn execute_tool(&self, request: ToolExecutionRequest) -> Result<ToolExecutionResult, MCPIntegrationError> {
-        self.tool_registry.execute_tool(request)
+        info!("Executing tool via HTTP MCP server: {}", request.tool_name);
+        
+        // Get tool from registry first
+        let tool = self.tool_registry.get_tool(&request.tool_name).await
+            .map_err(|e| MCPIntegrationError::ExecutionFailed(format!("Tool not found: {}", e)))?;
+
+        // Execute via HTTP call to MCP server
+        let result = self.execute_via_http(&tool, &request).await
+            .map_err(|e| MCPIntegrationError::ExecutionFailed(e.to_string()))?;
+
+        info!("Tool execution completed: {} -> {}", request.tool_name, result.status);
+        Ok(result)
+    }
+
+    /// Execute tool via HTTP call to MCP server
+    async fn execute_via_http(&self, tool: &MCPTool, request: &ToolExecutionRequest) -> Result<ToolExecutionResult> {
+        let url = format!("{}/api/v1/tools/execute", self.mcp_server_url);
+        
+        let payload = serde_json::json!({
+            "tool_name": request.tool_name,
+            "parameters": request.parameters,
+            "context": {
+                "priority": request.priority.unwrap_or("normal".to_string()),
+                "timeout_ms": request.timeout_ms.unwrap_or(30000),
+                "metadata": request.metadata.unwrap_or_default()
+            }
+        });
+
+        debug!("Sending tool execution request to: {}", url);
+        
+        let response = self.http_client
+            .post(&url)
+            .json(&payload)
+            .timeout(std::time::Duration::from_millis(request.timeout_ms.unwrap_or(30000)))
+            .send()
             .await
-            .map_err(|e| MCPIntegrationError::ExecutionFailed(e.to_string()))
+            .context("Failed to send HTTP request to MCP server")?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!("MCP server error {}: {}", status, error_text));
+        }
+
+        let result: ToolExecutionResult = response.json().await
+            .context("Failed to parse MCP server response")?;
+
+        Ok(result)
+    }
+
+    /// Health check for MCP server
+    pub async fn health_check(&self) -> Result<bool> {
+        let url = format!("{}/health", self.mcp_server_url);
+        
+        match self.http_client.get(&url).send().await {
+            Ok(response) => Ok(response.status().is_success()),
+            Err(_) => Ok(false),
+        }
+    }
+
+    /// Get execution statistics from MCP server
+    pub async fn get_execution_stats(&self) -> Result<HashMap<String, serde_json::Value>> {
+        let url = format!("{}/api/v1/stats", self.mcp_server_url);
+        
+        let response = self.http_client
+            .get(&url)
+            .send()
+            .await
+            .context("Failed to get execution stats")?;
+
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!("Failed to get stats: {}", response.status()));
+        }
+
+        let stats: HashMap<String, serde_json::Value> = response.json().await
+            .context("Failed to parse stats response")?;
+
+        Ok(stats)
     }
 
     /// Get all available tools

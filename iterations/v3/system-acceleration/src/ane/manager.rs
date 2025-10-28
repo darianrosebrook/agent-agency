@@ -19,8 +19,7 @@ use crate::ane::models::mistral_model::{MistralModel, MistralCompilationOptions,
 use crate::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
 use crate::telemetry::TelemetryCollector;
 use crate::ane::infer::execute::{execute_inference, InferenceOptions as ExecuteOptions, InferenceResult};
-// TEMPORARILY DISABLED: mistral inference imports due to candle-core dependency conflicts
-// use crate::ane::infer::mistral::{deliberate_constitution, generate_debate_argument, MistralInferenceOptions, ConstitutionalVerdict, DebateArgument};
+use crate::ane::infer::mistral::{deliberate_constitution, generate_debate_argument, MistralInferenceOptions, ConstitutionalVerdict, DebateArgument};
 use crate::ane::metrics::ewma::{Ewma, PerformanceTracker, PerformanceSummary};
 
 /// Apple Neural Engine manager for ANE-accelerated inference

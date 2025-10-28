@@ -8,8 +8,10 @@ use std::sync::Arc;
 use regex::Regex;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use tracing::{info, debug, warn};
+use tracing::{info, debug, warn, error};
 use std::collections::HashMap;
+use reqwest::Client;
+use anyhow::{Context, Result};
 
 /// Knowledge graph entity
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -80,6 +82,143 @@ pub enum RelationshipType {
     Other,
 }
 
+/// Real HTTP-based entity extraction service
+pub struct HttpEntityExtractionService {
+    client: Client,
+    base_url: String,
+    timeout_ms: u64,
+}
+
+impl HttpEntityExtractionService {
+    pub fn new(base_url: String) -> Self {
+        Self {
+            client: Client::new(),
+            base_url,
+            timeout_ms: 30000,
+        }
+    }
+
+    /// Extract entities from text via HTTP call to external service
+    pub async fn extract_entities(&self, text: &str) -> Result<Vec<ExtractedEntity>> {
+        let url = format!("{}/api/v1/entities/extract", self.base_url);
+        
+        let payload = serde_json::json!({
+            "text": text,
+            "entity_types": ["PERSON", "ORG", "GPE", "EVENT", "WORK_OF_ART", "LAW", "LANGUAGE", "DATE", "TIME", "PERCENT", "MONEY", "QUANTITY", "ORDINAL", "CARDINAL"]
+        });
+
+        debug!("Extracting entities from text: {}...", &text[..text.len().min(100)]);
+
+        let response = self.client
+            .post(&url)
+            .json(&payload)
+            .timeout(std::time::Duration::from_millis(self.timeout_ms))
+            .send()
+            .await
+            .context("Failed to send entity extraction request")?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!("Entity extraction service error {}: {}", status, error_text));
+        }
+
+        let result: serde_json::Value = response.json().await
+            .context("Failed to parse entity extraction response")?;
+
+        // Extract entities from response
+        let entities = result["entities"]
+            .as_array()
+            .ok_or_else(|| anyhow::anyhow!("Invalid entity extraction response format"))?
+            .iter()
+            .map(|entity| ExtractedEntity {
+                text: entity["text"].as_str().unwrap_or("").to_string(),
+                label: entity["label"].as_str().unwrap_or("OTHER").to_string(),
+                start: entity["start"].as_u64().unwrap_or(0) as usize,
+                end: entity["end"].as_u64().unwrap_or(0) as usize,
+                confidence: entity["confidence"].as_f64().unwrap_or(0.0) as f32,
+            })
+            .collect::<Vec<ExtractedEntity>>();
+
+        debug!("Extracted {} entities", entities.len());
+        Ok(entities)
+    }
+
+    /// Extract relationships from text via HTTP call
+    pub async fn extract_relationships(&self, text: &str, entities: &[ExtractedEntity]) -> Result<Vec<ExtractedRelationship>> {
+        let url = format!("{}/api/v1/relationships/extract", self.base_url);
+        
+        let payload = serde_json::json!({
+            "text": text,
+            "entities": entities
+        });
+
+        debug!("Extracting relationships from text with {} entities", entities.len());
+
+        let response = self.client
+            .post(&url)
+            .json(&payload)
+            .timeout(std::time::Duration::from_millis(self.timeout_ms))
+            .send()
+            .await
+            .context("Failed to send relationship extraction request")?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!("Relationship extraction service error {}: {}", status, error_text));
+        }
+
+        let result: serde_json::Value = response.json().await
+            .context("Failed to parse relationship extraction response")?;
+
+        // Extract relationships from response
+        let relationships = result["relationships"]
+            .as_array()
+            .ok_or_else(|| anyhow::anyhow!("Invalid relationship extraction response format"))?
+            .iter()
+            .map(|rel| ExtractedRelationship {
+                source: rel["source"].as_str().unwrap_or("").to_string(),
+                target: rel["target"].as_str().unwrap_or("").to_string(),
+                relation: rel["relation"].as_str().unwrap_or("RELATED_TO").to_string(),
+                confidence: rel["confidence"].as_f64().unwrap_or(0.0) as f32,
+            })
+            .collect::<Vec<ExtractedRelationship>>();
+
+        debug!("Extracted {} relationships", relationships.len());
+        Ok(relationships)
+    }
+
+    /// Health check for entity extraction service
+    pub async fn health_check(&self) -> Result<bool> {
+        let url = format!("{}/health", self.base_url);
+
+        match self.client.get(&url).send().await {
+            Ok(response) => Ok(response.status().is_success()),
+            Err(_) => Ok(false),
+        }
+    }
+}
+
+/// Extracted entity from text
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExtractedEntity {
+    pub text: String,
+    pub label: String,
+    pub start: usize,
+    pub end: usize,
+    pub confidence: f32,
+}
+
+/// Extracted relationship from text
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExtractedRelationship {
+    pub source: String,
+    pub target: String,
+    pub relation: String,
+    pub confidence: f32,
+}
+
 /// Knowledge Graph Engine for entity and relationship management
 #[derive(Debug)]
 pub struct KnowledgeGraphEngine {
@@ -87,6 +226,7 @@ pub struct KnowledgeGraphEngine {
     config: GraphConfig,
     entity_cache: dashmap::DashMap<String, Entity>,
     relationship_cache: dashmap::DashMap<String, Relationship>,
+    entity_extraction_service: Arc<HttpEntityExtractionService>,
 }
 
 impl KnowledgeGraphEngine {
@@ -95,11 +235,28 @@ impl KnowledgeGraphEngine {
         let db_config = data_infrastructure::DatabaseConfig::default();
         let db_client = Arc::new(DatabaseClient::new(db_config).await?);
 
+        // Get entity extraction service URL from environment or use default
+        let extraction_url = std::env::var("ENTITY_EXTRACTION_SERVICE_URL")
+            .unwrap_or_else(|_| "http://localhost:8000".to_string());
+
+        info!("Initializing HTTP entity extraction service at: {}", extraction_url);
+
+        // Create HTTP-based entity extraction service
+        let entity_extraction_service = Arc::new(HttpEntityExtractionService::new(extraction_url));
+        
+        // Test connection
+        if let Err(e) = entity_extraction_service.health_check().await {
+            warn!("Entity extraction service health check failed: {}", e);
+        } else {
+            info!("Entity extraction service health check passed");
+        }
+
         Ok(Self {
             db_client,
             config: config.clone(),
             entity_cache: dashmap::DashMap::new(),
             relationship_cache: dashmap::DashMap::new(),
+            entity_extraction_service,
         })
     }
 

@@ -2,6 +2,7 @@
 
 use super::types::*;
 use crate::extraction_types::{AtomicClaim, Evidence, EvidenceType, EvidenceSource, ProcessingContext};
+use crate::evidence::evidence_types::EvidenceCollectorConfig;
 use anyhow::Result;
 
 /// Performance collector

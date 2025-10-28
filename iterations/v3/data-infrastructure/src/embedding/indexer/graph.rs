@@ -356,12 +356,95 @@ impl GraphQueryBuilder {
         self
     }
 
+    /// Real graph traversal implementation with filters
     pub fn execute(&self, indexer: &GraphIndexer) -> Vec<Uuid> {
-        // Placeholder - would implement actual graph traversal with filters
+        use tracing::{info, debug, warn};
+        use std::collections::{HashSet, VecDeque};
+        
+        info!("Executing graph traversal with {} filters", self.filters.len());
+        
         if let Some(start) = self.start_node {
-            indexer.get_neighbors(start)
+            let mut visited = HashSet::new();
+            let mut queue = VecDeque::new();
+            let mut results = Vec::new();
+            
+            queue.push_back((start, 0)); // (node_id, depth)
+            visited.insert(start);
+            
+            while let Some((current_node, depth)) = queue.pop_front() {
+                // Check depth limit
+                if let Some(max_depth) = self.max_depth {
+                    if depth >= max_depth {
+                        continue;
+                    }
+                }
+                
+                // Apply filters
+                if self.passes_filters(current_node, indexer) {
+                    results.push(current_node);
+                    debug!("Node {} passed filters at depth {}", current_node, depth);
+                }
+                
+                // Get neighbors and add to queue
+                let neighbors = indexer.get_neighbors(current_node);
+                for neighbor in neighbors {
+                    if !visited.contains(&neighbor) {
+                        visited.insert(neighbor);
+                        queue.push_back((neighbor, depth + 1));
+                    }
+                }
+            }
+            
+            info!("Graph traversal completed: {} nodes found", results.len());
+            results
         } else {
+            warn!("No start node specified for graph traversal");
             Vec::new()
         }
+    }
+
+    /// Check if a node passes all filters
+    fn passes_filters(&self, node_id: Uuid, indexer: &GraphIndexer) -> bool {
+        for filter in &self.filters {
+            match filter {
+                GraphFilter::NodeType(node_type) => {
+                    if let Some(node) = indexer.get_node(node_id) {
+                        if node.node_type != *node_type {
+                            return false;
+                        }
+                    } else {
+                        return false;
+                    }
+                }
+                GraphFilter::MinSimilarity(threshold) => {
+                    if let Some(node) = indexer.get_node(node_id) {
+                        if node.similarity_score < *threshold {
+                            return false;
+                        }
+                    } else {
+                        return false;
+                    }
+                }
+                GraphFilter::Metadata(key, value) => {
+                    if let Some(node) = indexer.get_node(node_id) {
+                        if node.metadata.get(key) != Some(value) {
+                            return false;
+                        }
+                    } else {
+                        return false;
+                    }
+                }
+                GraphFilter::ContentContains(text) => {
+                    if let Some(node) = indexer.get_node(node_id) {
+                        if !node.content.to_lowercase().contains(&text.to_lowercase()) {
+                            return false;
+                        }
+                    } else {
+                        return false;
+                    }
+                }
+            }
+        }
+        true
     }
 }

@@ -8,6 +8,7 @@ use super::performance::PerformanceCollector;
 use super::security::SecurityCollector;
 use super::constitutional::ConstitutionalCollector;
 use super::filtering::EvidenceFilter;
+use crate::evidence::evidence_types::EvidenceCollectorConfig;
 use crate::extraction_types::{AtomicClaim, ClaimType, Evidence, EvidenceType, EvidenceSource, ProcessingContext};
 use anyhow::Result;
 use tracing::{debug, info, warn};

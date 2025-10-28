@@ -233,7 +233,7 @@ impl WhisperInferenceExecutor {
             */
             
             // Placeholder implementation
-            let _output_tensor = crate::ane::compat::coreml::Tensor::new(&[0.0f32], &crate::ane::compat::coreml::Device::Cpu)?;
+            let _output_tensor = candle_core::Tensor::new(&[0.0f32], &candle_core::Device::Cpu)?;
 
             // TODO: Implement proper Whisper decoder integration with acceptance criteria:
             // - [ ] Integrate Whisper decoder model for token generation from encoder output

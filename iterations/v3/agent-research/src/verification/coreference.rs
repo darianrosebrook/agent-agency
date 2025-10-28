@@ -10,7 +10,7 @@ use regex::Regex;
 use once_cell::sync::Lazy;
 use anyhow::Result;
 
-use crate::verification::types::*;
+use crate::verification::types::{Entity, EntityType, CoreferenceResolution, CoreferenceChain, CoreferenceType};
 
 /// Static patterns for coreference resolution
 static PRONOUNS: Lazy<HashMap<&'static str, Vec<&'static str>>> = Lazy::new(|| {

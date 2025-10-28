@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "agent-agency-contracts",  # Core contracts and type definitions
     "agent-data-processing",  # NEW: Unified data processing pipeline consolidating ingestors/enrichers/indexers/knowledge/file-ops
     "agent-workers",  # NEW: Consolidated MCP-based worker system
     "agent-mcp",  # Consolidated MCP implementation
@@ -8,7 +9,7 @@ members = [
     "agent-research",  # NEW: Unified advanced AI research platform (research + reflexive-learning + model-benchmarking + claim-extraction + planning-agent + self-prompting-agent)
     "agent-orchestration",  # NEW: Unified orchestration and council decision-making system
     "agent-memory",  # NEW: Agent memory system with knowledge graphs and embeddings
-    "system-acceleration",  # Dependencies disabled to avoid candle-core conflicts
+    "system-acceleration",  # Core ML and ANE acceleration
     "system-resources",  # NEW: Unified resource management & production services (resource-manager + production)
     "system-resilience",  # NEW: Unified fault tolerance & recovery framework (resilience + recovery + workspace-state-manager + memory)
     "system-observability",  # NEW: Unified monitoring & telemetry services (system-health-monitor + observability + telemetry)

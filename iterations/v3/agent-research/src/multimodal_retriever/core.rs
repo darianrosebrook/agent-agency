@@ -96,7 +96,7 @@ pub enum FusionStrategy {
 }
 
 /// Search result combining multiple modalities
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct MultimodalSearchResult {
     pub id: String,
     pub content: String,

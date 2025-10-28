@@ -162,13 +162,33 @@ impl MultimodalSearchEngine {
         }
     }
 
+    /// Real graph query execution implementation
     fn execute_graph_query(&self, graph_query: &GraphQuery) -> Vec<Uuid> {
-        // Placeholder - would execute actual graph query
+        use tracing::{info, debug, warn};
+        
+        info!("Executing graph query with {} filters", graph_query.filters.len());
+        
+        // Use the graph query builder to execute the query
+        let mut query_builder = GraphQueryBuilder::new();
+        
         if let Some(start) = graph_query.start_node {
-            self.graph_indexer.get_neighbors(start)
-        } else {
-            Vec::new()
+            query_builder = query_builder.start_node(start);
         }
+        
+        if let Some(max_depth) = graph_query.max_depth {
+            query_builder = query_builder.max_depth(max_depth);
+        }
+        
+        // Add filters
+        for filter in &graph_query.filters {
+            query_builder = query_builder.add_filter(filter.clone());
+        }
+        
+        // Execute the query
+        let results = query_builder.execute(&self.graph_indexer);
+        
+        debug!("Graph query executed: {} nodes found", results.len());
+        results
     }
 
     fn apply_graph_filter(

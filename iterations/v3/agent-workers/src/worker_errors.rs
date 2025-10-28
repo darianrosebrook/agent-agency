@@ -3,6 +3,7 @@
 use std::path::PathBuf;
 use thiserror::Error;
 use crate::parallel_types::{TaskId, SubTaskId, WorkerId, WorkerSpecialty};
+use crate::WorkerMessage;
 
 /// Main error type for the parallel worker system
 #[derive(Error, Debug)]
@@ -280,8 +281,8 @@ impl From<serde_json::Error> for ParallelError {
     }
 }
 
-impl From<tokio::sync::mpsc::error::SendError<crate::parallel_types::WorkerMessage>> for ParallelError {
-    fn from(err: tokio::sync::mpsc::error::SendError<crate::parallel_types::WorkerMessage>) -> Self {
+impl From<tokio::sync::mpsc::error::SendError<WorkerMessage>> for ParallelError {
+    fn from(err: tokio::sync::mpsc::error::SendError<WorkerMessage>) -> Self {
         ParallelError::Communication {
             message: format!("Failed to send worker message: {}", err),
             source: None,
@@ -345,8 +346,8 @@ impl From<WorkerError> for ParallelError {
 }
 
 // Worker error conversions
-impl From<tokio::sync::mpsc::error::SendError<crate::parallel_types::WorkerMessage>> for WorkerError {
-    fn from(err: tokio::sync::mpsc::error::SendError<crate::parallel_types::WorkerMessage>) -> Self {
+impl From<tokio::sync::mpsc::error::SendError<WorkerMessage>> for WorkerError {
+    fn from(err: tokio::sync::mpsc::error::SendError<WorkerMessage>) -> Self {
         WorkerError::Communication {
             message: format!("Failed to send message: {}", err),
         }

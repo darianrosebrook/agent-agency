@@ -55,9 +55,8 @@ futures-util = "0.3"
 dashmap = "5.5"
 lru = "0.12"
 futures = "0.3"
-# Temporarily disable candle dependencies due to version conflicts
-# candle-core = "0.3"
-# candle-transformers = "0.3"
+candle-core = "0.9"
+candle-transformers = "0.9"
 tokenizers = "0.15"
 
 # SafeTensors and HuggingFace dependencies for model loading

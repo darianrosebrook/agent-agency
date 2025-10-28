@@ -4,6 +4,8 @@
 
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
+use crate::judge_backup::backup_types::JudgeType;
+use crate::judge_backup::verdicts::JudgeVerdict;
 
 /// Configuration for a judge instance
 #[derive(Debug, Clone)]
@@ -13,7 +15,7 @@ pub struct JudgeConfig {
     /// Judge name
     pub name: String,
     /// Judge specialization type
-    pub judge_type: String,
+    pub judge_type: JudgeType,
     /// Judge specialization area
     pub specialization: String,
     /// Maximum response time in milliseconds
@@ -62,9 +64,9 @@ pub struct JudgeContribution {
     /// Judge name for display
     pub judge_name: String,
     /// Judge specialization type
-    pub judge_type: String,
+    pub judge_type: JudgeType,
     /// Judge's verdict/decision
-    pub verdict: String,
+    pub verdict: JudgeVerdict,
     /// Judge's confidence in their decision (0.0-1.0)
     pub confidence: f64,
     /// Detailed reasoning for the decision

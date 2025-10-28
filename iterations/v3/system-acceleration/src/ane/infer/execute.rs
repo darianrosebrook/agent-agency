@@ -250,7 +250,7 @@ async fn execute_with_timeout(
         */
         
         // Placeholder implementation
-        let output_tensor = crate::ane::compat::coreml::Tensor::new(&[0.0f32], &crate::ane::compat::coreml::Device::Cpu)?;
+        let output_tensor = candle_core::Tensor::new(&[0.0f32], &candle_core::Device::Cpu)?;
 
         // Convert tensor output to Vec<f32>
         let output_data = output_tensor.flatten_all()?.to_vec1::<f32>()?;

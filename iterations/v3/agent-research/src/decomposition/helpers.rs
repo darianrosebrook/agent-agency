@@ -127,31 +127,31 @@ impl ClaimTypeInferer {
     }
 
     /// Assess verifiability of a claim
-    pub fn assess_verifiability(claim_text: &str) -> Verifiability {
+    pub fn assess_verifiability(claim_text: &str) -> VerifiabilityLevel {
         let text_lower = claim_text.to_lowercase();
 
         // Testable claims
         if text_lower.contains("test") || text_lower.contains("verify") ||
            text_lower.contains("validate") || text_lower.contains("measure") ||
            text_lower.contains("benchmark") || text_lower.contains("check") {
-            Verifiability::Testable
+            VerifiabilityLevel::DirectlyVerifiable
         }
         // Quantifiable claims
         else if claim_text.chars().any(|c| c.is_ascii_digit()) ||
                 text_lower.contains("performance") || text_lower.contains("latency") ||
                 text_lower.contains("throughput") || text_lower.contains("memory") ||
                 text_lower.contains("cpu") || text_lower.contains("efficiency") {
-            Verifiability::Quantifiable
+            VerifiabilityLevel::IndirectlyVerifiable
         }
         // Observable claims
         else if text_lower.contains("visible") || text_lower.contains("observable") ||
                 text_lower.contains("detectable") || text_lower.contains("monitor") ||
                 text_lower.contains("log") || text_lower.contains("trace") {
-            Verifiability::Observable
+            VerifiabilityLevel::LowVerifiability
         }
         // Default to qualitative
         else {
-            Verifiability::Qualitative
+            VerifiabilityLevel::LowVerifiability
         }
     }
 }

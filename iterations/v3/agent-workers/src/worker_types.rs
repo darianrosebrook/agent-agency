@@ -6,7 +6,10 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 // Use shared types from contracts
-use agent_agency_contracts::{WorkerHealthStatus, WorkerHealthMetrics, RiskTier, WorkerType, WorkerRegistration, TaskPriority};
+use agent_agency_contracts::{WorkerHealthStatus, WorkerHealthMetrics, RiskTier, WorkerType, WorkerRegistration, TaskPriority as ContractTaskPriority};
+
+// Define our own TaskPriority to avoid conflicts
+pub type TaskPriority = ContractTaskPriority;
 
 /// Clock trait for time operations
 pub trait Clock {
@@ -864,6 +867,331 @@ impl Default for SecurityRequirements {
             authentication_required: true,
             authorization_required: true,
             encryption_required: true,
+        }
+    }
+}
+
+// Missing types that are referenced throughout the codebase
+
+/// Worker communication messages
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum WorkerMessage {
+    Started {
+        worker_id: Uuid,
+        subtask_id: Uuid,
+        timestamp: DateTime<Utc>,
+    },
+    Progress {
+        worker_id: Uuid,
+        subtask_id: Uuid,
+        progress_percentage: f32,
+        message: String,
+        timestamp: DateTime<Utc>,
+    },
+    Blocked {
+        worker_id: Uuid,
+        subtask_id: Uuid,
+        reason: String,
+        timestamp: DateTime<Utc>,
+    },
+    Completed {
+        worker_id: Uuid,
+        subtask_id: Uuid,
+        result: WorkerOutput,
+        timestamp: DateTime<Utc>,
+    },
+    Failed {
+        worker_id: Uuid,
+        subtask_id: Uuid,
+        error: String,
+        timestamp: DateTime<Utc>,
+    },
+}
+
+/// Worker progress tracking
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkerProgress {
+    pub worker_id: Uuid,
+    pub subtask_id: Uuid,
+    pub progress_percentage: f32,
+    pub status: WorkerStatus,
+    pub current_step: String,
+    pub estimated_completion: Option<DateTime<Utc>>,
+    pub last_updated: DateTime<Utc>,
+}
+
+/// Overall progress tracking
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Progress {
+    pub total_tasks: u32,
+    pub completed_tasks: u32,
+    pub failed_tasks: u32,
+    pub in_progress_tasks: u32,
+    pub overall_percentage: f32,
+    pub estimated_completion: Option<DateTime<Utc>>,
+    pub last_updated: DateTime<Utc>,
+}
+
+/// Validation result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ValidationResult {
+    Pass {
+        score: f32,
+        message: String,
+        details: HashMap<String, serde_json::Value>,
+    },
+    Fail {
+        score: f32,
+        message: String,
+        errors: Vec<String>,
+        details: HashMap<String, serde_json::Value>,
+    },
+    Warning {
+        score: f32,
+        message: String,
+        warnings: Vec<String>,
+        details: HashMap<String, serde_json::Value>,
+    },
+}
+
+/// Validation context
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidationContext {
+    pub task_id: Uuid,
+    pub worker_id: Uuid,
+    pub validation_type: String,
+    pub requirements: HashMap<String, serde_json::Value>,
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+/// Artifact types
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ArtifactType {
+    SourceCode,
+    Documentation,
+    Test,
+    Configuration,
+    Data,
+    Binary,
+    Other(String),
+}
+
+/// Artifact representation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Artifact {
+    pub id: Uuid,
+    pub name: String,
+    pub artifact_type: ArtifactType,
+    pub content: String,
+    pub metadata: HashMap<String, serde_json::Value>,
+    pub created_at: DateTime<Utc>,
+    pub modified_at: DateTime<Utc>,
+}
+
+/// Worker health status (different from WorkerHealthStatus)
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WorkerHealth {
+    Healthy,
+    Degraded,
+    Unhealthy,
+    Offline,
+}
+
+/// Severity levels for various operations
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SeverityLevel {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+// Additional missing types
+
+/// Worker specialties for task routing
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WorkerSpecialty {
+    General,
+    ReactComponent,
+    FileEditing,
+    Research,
+    CodeGeneration,
+    CompilationErrors { error_codes: Vec<String> },
+    Testing,
+    Documentation,
+    Refactoring,
+    Security,
+    Performance,
+}
+
+/// Task definition for execution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskDefinition {
+    pub id: Uuid,
+    pub name: String,
+    pub description: String,
+    pub required_tools: Vec<String>,
+    pub priority: TaskPriority,
+    pub deadline: Option<DateTime<Utc>>,
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+/// Task status for tracking execution
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TaskStatus {
+    Pending,
+    InProgress,
+    Completed,
+    Failed,
+    Cancelled,
+}
+
+/// Execution outcome for learning system
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ExecutionOutcome {
+    Success,
+    Failure,
+    Timeout,
+    Cancelled,
+}
+
+/// Learning mode for adaptive systems
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum LearningMode {
+    Learn,
+    Apply,
+    Optimize,
+    Disabled,
+}
+
+/// Task priority levels
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Priority {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+/// Worker breakdown for task analysis
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkerBreakdown {
+    pub worker_id: Uuid,
+    pub specialty: WorkerSpecialty,
+    pub estimated_time_ms: u64,
+    pub confidence: f32,
+}
+
+/// Quality requirements for tasks
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QualityRequirements {
+    pub min_coverage: f32,
+    pub max_complexity: u32,
+    pub require_tests: bool,
+    pub require_documentation: bool,
+    pub security_level: SeverityLevel,
+}
+
+/// Tool identifier
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ToolId {
+    pub name: String,
+    pub version: String,
+}
+
+/// Validation rule types
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ValidationRuleType {
+    Custom,
+    Builtin,
+    External,
+}
+
+impl Default for TaskDefinition {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            name: String::new(),
+            description: String::new(),
+            required_tools: Vec::new(),
+            priority: TaskPriority::Medium,
+            deadline: None,
+            metadata: HashMap::new(),
+        }
+    }
+}
+
+impl Default for QualityRequirements {
+    fn default() -> Self {
+        Self {
+            min_coverage: 0.8,
+            max_complexity: 10,
+            require_tests: true,
+            require_documentation: false,
+            security_level: SeverityLevel::Medium,
+        }
+    }
+}
+
+impl Default for ToolId {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            version: "1.0.0".to_string(),
+        }
+    }
+}
+
+impl Default for WorkerProgress {
+    fn default() -> Self {
+        Self {
+            worker_id: Uuid::new_v4(),
+            subtask_id: Uuid::new_v4(),
+            progress_percentage: 0.0,
+            status: WorkerStatus::Available,
+            current_step: String::new(),
+            estimated_completion: None,
+            last_updated: Utc::now(),
+        }
+    }
+}
+
+impl Default for Progress {
+    fn default() -> Self {
+        Self {
+            total_tasks: 0,
+            completed_tasks: 0,
+            failed_tasks: 0,
+            in_progress_tasks: 0,
+            overall_percentage: 0.0,
+            estimated_completion: None,
+            last_updated: Utc::now(),
+        }
+    }
+}
+
+impl Default for ValidationContext {
+    fn default() -> Self {
+        Self {
+            task_id: Uuid::new_v4(),
+            worker_id: Uuid::new_v4(),
+            validation_type: String::new(),
+            requirements: HashMap::new(),
+            metadata: HashMap::new(),
+        }
+    }
+}
+
+impl Default for Artifact {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            name: String::new(),
+            artifact_type: ArtifactType::Other("unknown".to_string()),
+            content: String::new(),
+            metadata: HashMap::new(),
+            created_at: Utc::now(),
+            modified_at: Utc::now(),
         }
     }
 }

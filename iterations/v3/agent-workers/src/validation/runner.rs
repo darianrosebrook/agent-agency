@@ -1,6 +1,6 @@
 //! Quality validation runner with parallel execution
 
-use crate::parallel_types::*;
+use crate::{ValidationResult, ValidationContext};
 use crate::error::*;
 use super::gates::*;
 

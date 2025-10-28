@@ -35,6 +35,7 @@ pub struct User {
     pub id: String,
     pub username: String,
     pub email: String,
+    pub password_hash: String, // SHA-256 hash of password
     pub role: UserRole,
     pub permissions: Vec<String>,
     pub created_at: DateTime<Utc>,
@@ -88,6 +89,49 @@ impl AuthManager {
         }
     }
 
+    /// Hash a password using SHA-256
+    fn hash_password(&self, password: &str) -> String {
+        let mut hasher = Sha256::new();
+        hasher.update(password.as_bytes());
+        format!("{:x}", hasher.finalize())
+    }
+
+    /// Create a new user with hashed password
+    pub async fn create_user(&self, username: String, email: String, password: String, role: UserRole) -> std::result::Result<User, SecurityError> {
+        // Validate inputs
+        self.validate_username(&username)?;
+        self.validate_password(&password)?;
+        
+        // Check if user already exists
+        let users = self.users.read().await;
+        if users.contains_key(&username) {
+            return Err(SecurityError::OperationError("User already exists".to_string()));
+        }
+        drop(users);
+
+        // Hash password
+        let password_hash = self.hash_password(&password);
+
+        // Create user
+        let user = User {
+            id: uuid::Uuid::new_v4().to_string(),
+            username: username.clone(),
+            email,
+            password_hash,
+            role,
+            permissions: vec![],
+            created_at: Utc::now(),
+            last_login: None,
+            is_active: true,
+        };
+
+        // Store user
+        let mut users = self.users.write().await;
+        users.insert(username, user.clone());
+
+        Ok(user)
+    }
+
     /// Authenticate user with username/password
     pub async fn authenticate(&self, username: &str, password: &str) -> std::result::Result<String, SecurityError> {
         if !self.config.enable_authentication {
@@ -102,9 +146,8 @@ impl AuthManager {
             return Err(SecurityError::AccountDisabled);
         }
 
-        // In practice, verify password hash
-        // For demo, accept any password for active users
-        if password.is_empty() {
+        // Verify password hash
+        if !self.verify_password(password, &user.password_hash) {
             return Err(SecurityError::InvalidCredentials);
         }
 
@@ -681,4 +724,23 @@ pub enum SecurityError {
 
     #[error("Security operation failed: {0}")]
     OperationError(String),
+}
+
+impl Default for SecurityConfig {
+    fn default() -> Self {
+        Self {
+            enable_authentication: true,
+            enable_authorization: true,
+            enable_input_validation: true,
+            enable_rate_limiting: true,
+            jwt_secret: "your-secret-key-change-in-production".to_string(),
+            jwt_expiration_hours: 24,
+            api_keys: vec![],
+            rate_limit_requests_per_minute: 100,
+            max_request_size_bytes: 10 * 1024 * 1024, // 10MB
+            enable_audit_logging: true,
+            password_min_length: 8,
+            enable_password_complexity: true,
+        }
+    }
 }

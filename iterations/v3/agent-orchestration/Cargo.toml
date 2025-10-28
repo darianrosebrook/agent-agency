@@ -13,7 +13,9 @@ serde_json.workspace = true
 serde_yaml = "0.9"
 tokio.workspace = true
 async-trait.workspace = true
+# Logging and observability
 tracing.workspace = true
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
 thiserror.workspace = true
 uuid.workspace = true
 chrono.workspace = true
@@ -88,3 +90,7 @@ development = ["development-tools"]
 [[bin]]
 name = "agent-orchestration-server"
 path = "src/main.rs"
+
+[[bin]]
+name = "coreml-demo"
+path = "src/coreml/demo.rs"

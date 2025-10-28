@@ -1,7 +1,7 @@
 //! Demonstration of Core ML integration
 
 use std::path::PathBuf;
-use crate::coreml::{CoreMLManager, CoreMLModelType};
+use agent_orchestration::coreml::{CoreMLManager, CoreMLModelType};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -79,7 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
         // Create mock input (simulated token sequence)
         let mut inputs = std::collections::HashMap::new();
-        inputs.insert("input_ids".to_string(), vec![1i32; 512]); // Token sequence
+        inputs.insert("input_ids".to_string(), vec![1.0f32; 512]); // Token sequence
 
         match manager.run_inference(&language_model, inputs).await {
             Ok(outputs) => {

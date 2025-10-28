@@ -183,16 +183,100 @@ impl PooledDatabaseClient for DatabaseClient {
 #[async_trait]
 impl DatabaseOperations for DatabaseClient {
     // Placeholder implementations - these would contain the actual database operations
-    async fn create_judge(&self, _judge: CreateJudge) -> Result<Judge> {
-        todo!("Implement create_judge")
+    async fn create_judge(&self, judge: CreateJudge) -> Result<Judge> {
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        
+        sqlx::query!(
+            r#"
+            INSERT INTO judges (
+                id, name, judge_type, capabilities, status, 
+                performance_metrics, created_at, updated_at, metadata
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            "#,
+            id,
+            judge.name,
+            judge.judge_type as _,
+            serde_json::to_value(&judge.capabilities)?,
+            judge.status,
+            serde_json::to_value(&judge.performance_metrics)?,
+            now,
+            now,
+            serde_json::to_value(&judge.metadata)?
+        )
+        .execute(&self.pool)
+        .await?;
+        
+        Ok(Judge {
+            id,
+            name: judge.name,
+            judge_type: judge.judge_type,
+            capabilities: judge.capabilities,
+            status: judge.status,
+            performance_metrics: judge.performance_metrics,
+            created_at: now,
+            updated_at: now,
+            metadata: judge.metadata,
+        })
     }
 
-    async fn get_judge(&self, _id: Uuid) -> Result<Option<Judge>> {
-        todo!("Implement get_judge")
+    async fn get_judge(&self, id: Uuid) -> Result<Option<Judge>> {
+        let row = sqlx::query!(
+            r#"
+            SELECT id, name, judge_type, capabilities, status,
+                   performance_metrics, created_at, updated_at, metadata
+            FROM judges
+            WHERE id = $1
+            "#,
+            id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if let Some(row) = row {
+            Ok(Some(Judge {
+                id: row.id,
+                name: row.name,
+                judge_type: row.judge_type.try_into()?,
+                capabilities: serde_json::from_value(row.capabilities)?,
+                status: row.status,
+                performance_metrics: serde_json::from_value(row.performance_metrics)?,
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+                metadata: serde_json::from_value(row.metadata)?,
+            }))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn get_judges(&self) -> Result<Vec<Judge>> {
-        todo!("Implement get_judges")
+        let rows = sqlx::query!(
+            r#"
+            SELECT id, name, judge_type, capabilities, status,
+                   performance_metrics, created_at, updated_at, metadata
+            FROM judges
+            ORDER BY created_at DESC
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let judges = rows.into_iter()
+            .map(|row| Judge {
+                id: row.id,
+                name: row.name,
+                judge_type: row.judge_type.try_into().unwrap_or_default(),
+                capabilities: serde_json::from_value(row.capabilities).unwrap_or_default(),
+                status: row.status,
+                performance_metrics: serde_json::from_value(row.performance_metrics).unwrap_or_default(),
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+                metadata: serde_json::from_value(row.metadata).unwrap_or_default(),
+            })
+            .collect();
+
+        Ok(judges)
     }
 
     async fn update_judge(&self, _id: Uuid, _judge: UpdateJudge) -> Result<Judge> {
@@ -223,12 +307,77 @@ impl DatabaseOperations for DatabaseClient {
         todo!("Implement delete_worker")
     }
 
-    async fn create_task(&self, _task: CreateTask) -> Result<Task> {
-        todo!("Implement create_task")
+    async fn create_task(&self, task: CreateTask) -> Result<Task> {
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        
+        sqlx::query!(
+            r#"
+            INSERT INTO tasks (
+                id, title, description, status, priority, task_type,
+                created_at, updated_at, assigned_to, due_date, metadata
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            "#,
+            id,
+            task.title,
+            task.description,
+            task.status,
+            task.priority,
+            task.task_type,
+            now,
+            now,
+            task.assigned_to,
+            task.due_date,
+            serde_json::to_value(&task.metadata)?
+        )
+        .execute(&self.pool)
+        .await?;
+        
+        Ok(Task {
+            id,
+            title: task.title,
+            description: task.description,
+            status: task.status,
+            priority: task.priority,
+            task_type: task.task_type,
+            created_at: now,
+            updated_at: now,
+            assigned_to: task.assigned_to,
+            due_date: task.due_date,
+            metadata: task.metadata,
+        })
     }
 
-    async fn get_task(&self, _id: Uuid) -> Result<Option<Task>> {
-        todo!("Implement get_task")
+    async fn get_task(&self, id: Uuid) -> Result<Option<Task>> {
+        let row = sqlx::query!(
+            r#"
+            SELECT id, title, description, status, priority, task_type,
+                   created_at, updated_at, assigned_to, due_date, metadata
+            FROM tasks
+            WHERE id = $1
+            "#,
+            id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if let Some(row) = row {
+            Ok(Some(Task {
+                id: row.id,
+                title: row.title,
+                description: row.description,
+                status: row.status,
+                priority: row.priority,
+                task_type: row.task_type,
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+                assigned_to: row.assigned_to,
+                due_date: row.due_date,
+                metadata: serde_json::from_value(row.metadata)?,
+            }))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn get_tasks(&self) -> Result<Vec<Task>> {

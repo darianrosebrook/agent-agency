@@ -14,6 +14,8 @@ use super::metrics::VectorSearchMetrics;
 use super::embedding::EmbeddingProcessor;
 use super::qdrant::QdrantClient;
 use super::text_processing::TextProcessor;
+use data_infrastructure::embedding::provider::OllamaEmbeddingProvider;
+use data_infrastructure::embedding::embedding_types::{EmbeddingConfig, EmbeddingProviderType};
 
 /// Search operations for vector search engine
 pub struct SearchOperations {
@@ -169,30 +171,29 @@ impl SearchOperations {
         self.embedding_processor.process_embedding(embedding)
     }
 
-    /// Generate embedding using external API (placeholder for actual implementation)
+    /// Generate embedding using external API
     async fn generate_embedding_from_api(&self, text: &str) -> Result<Vec<f32>> {
-        // This would integrate with actual embedding APIs
-        // For now, return a mock embedding
         debug!("Generating embedding for text (length: {})", text.len());
 
-        // Placeholder: In real implementation, this would call OpenAI, Cohere, etc.
-        // For now, generate a deterministic mock embedding based on text hash
-        let text_hash = self.text_processor.hash_text(text);
-        let mut embedding = Vec::new();
+        // Use Ollama embedding provider for real embeddings
+        let config = EmbeddingConfig {
+            provider: EmbeddingProviderType::Ollama,
+            model_name: "nomic-embed-text".to_string(),
+            dimension: 768,
+            ollama_url: "http://localhost:11434".to_string(),
+            timeout_ms: 30000,
+        };
 
-        // Generate deterministic "embedding" based on hash
-        for i in 0..384 { // Standard embedding size
-            let value = ((text_hash.wrapping_mul(i as u64)) % 1000) as f32 / 500.0 - 1.0;
-            embedding.push(value);
+        let provider = OllamaEmbeddingProvider::new(&config);
+        
+        // Generate embedding
+        let embeddings = provider.generate_embeddings(&[text.to_string()]).await?;
+        
+        if let Some(embedding) = embeddings.first() {
+            Ok(embedding.values.clone())
+        } else {
+            Err(anyhow::anyhow!("No embedding generated"))
         }
-
-        // Normalize the mock embedding
-        let magnitude = embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
-        for value in &mut embedding {
-            *value /= magnitude;
-        }
-
-        Ok(embedding)
     }
 
     /// Clear all search caches

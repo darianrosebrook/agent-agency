@@ -84,6 +84,14 @@ pub enum ANEError {
     /// Model load failed
     #[error("Model load failed: {0}")]
     ModelLoadFailed(String),
+
+    /// Circuit breaker is open
+    #[error("Circuit breaker open: {0}")]
+    CircuitBreakerOpen(String),
+
+    /// Input context too long for model
+    #[error("Context too long: {0}")]
+    ContextTooLong(String),
 }
 
 /// Result type alias for ANE operations
@@ -120,15 +128,12 @@ impl From<CircuitBreakerError> for ANEError {
     }
 }
 
-// TEMPORARILY DISABLED: candle_core::Error conversion due to dependency conflicts
-/*
 /// Convert from candle_core::Error to ANEError
 impl From<candle_core::Error> for ANEError {
     fn from(err: candle_core::Error) -> Self {
         ANEError::Internal(format!("Tensor operation failed: {}", err))
     }
 }
-*/
 
 /// Helper trait for converting errors to ANEError
 pub trait IntoANEError {
@@ -183,6 +188,8 @@ impl ANEError {
             ANEError::NotImplemented(_) => ErrorSeverity::Medium,
             ANEError::InvalidInput(_) => ErrorSeverity::Medium,
             ANEError::ModelLoadFailed(_) => ErrorSeverity::High,
+            ANEError::CircuitBreakerOpen(_) => ErrorSeverity::High,
+            ANEError::ContextTooLong(_) => ErrorSeverity::Medium,
         }
     }
     
@@ -217,6 +224,8 @@ impl ANEError {
             ANEError::ConfigurationError(msg) => format!("Configuration error: {}", msg),
             ANEError::NotImplemented(msg) => format!("Not implemented: {}", msg),
             ANEError::InvalidInput(msg) => format!("Invalid input: {}", msg),
+            ANEError::CircuitBreakerOpen(msg) => format!("Circuit breaker is open: {}", msg),
+            ANEError::ContextTooLong(msg) => format!("Context too long: {}", msg),
             ANEError::ModelLoadFailed(msg) => format!("Model load failed: {}", msg),
         }
     }

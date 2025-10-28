@@ -168,39 +168,57 @@ impl PolicyEnforcementTools {
         Ok(vec![]) // Stub: no decomposition
     }
 
-    /// Stub implementation for quality gate validation
-    pub async fn validate_quality_gates(&self, _decomposed_tasks: &[serde_json::Value], _evidence: &[serde_json::Value]) -> Result<Vec<String>> {
-        // TODO: Quality Gate Validation - Implement actual quality gate validation
-        // 
-        // COMPLETION CHECKLIST:
-        // [ ] Quality gate rule engine
-        // [ ] Evidence analysis
-        // [ ] Task quality assessment
-        // [ ] Validation result reporting
-        // [ ] Unit tests written (80%+ coverage)
-        // [ ] Integration tests with quality system
-        // [ ] Documentation updated
-        // [ ] Performance benchmarks meet SLA
-        // [ ] Security considerations addressed
-        // [ ] Configuration options defined
-        // [ ] Monitoring/metrics implemented
-        // [ ] Logging added for debugging
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Validates tasks against quality gates
-        // - Analyzes evidence for quality compliance
-        // - Reports validation issues clearly
-        // - Performance meets requirements
-        //
-        // DEPENDENCIES:
-        // - Quality gate rules: Required
-        // - Evidence analysis: Available
-        //
-        // ESTIMATED EFFORT: 14 hours
-        // PRIORITY: HIGH
-        // BLOCKING: Yes - Required for quality assurance
+    /// Quality gate validation implementation
+    pub async fn validate_quality_gates(&self, decomposed_tasks: &[serde_json::Value], evidence: &[serde_json::Value]) -> Result<Vec<String>> {
+        let mut issues = Vec::new();
         
-        Ok(vec![]) // Stub: no issues
+        // Validate each task against quality gates
+        for (i, task) in decomposed_tasks.iter().enumerate() {
+            // Check if task has required fields
+            if !task.get("id").is_some() {
+                issues.push(format!("Task {} missing required 'id' field", i));
+            }
+            
+            if !task.get("description").is_some() {
+                issues.push(format!("Task {} missing required 'description' field", i));
+            }
+            
+            // Check task complexity
+            if let Some(description) = task.get("description").and_then(|d| d.as_str()) {
+                if description.len() < 10 {
+                    issues.push(format!("Task {} description too short (minimum 10 characters)", i));
+                }
+                
+                if description.len() > 1000 {
+                    issues.push(format!("Task {} description too long (maximum 1000 characters)", i));
+                }
+            }
+            
+            // Check for required evidence
+            if evidence.is_empty() {
+                issues.push(format!("Task {} has no supporting evidence", i));
+            }
+        }
+        
+        // Validate evidence quality
+        for (i, ev) in evidence.iter().enumerate() {
+            if !ev.get("source").is_some() {
+                issues.push(format!("Evidence {} missing required 'source' field", i));
+            }
+            
+            if !ev.get("timestamp").is_some() {
+                issues.push(format!("Evidence {} missing required 'timestamp' field", i));
+            }
+            
+            // Check evidence relevance
+            if let Some(content) = ev.get("content").and_then(|c| c.as_str()) {
+                if content.len() < 5 {
+                    issues.push(format!("Evidence {} content too short", i));
+                }
+            }
+        }
+        
+        Ok(issues)
     }
 
     /// Stub implementation for reasoning
@@ -235,42 +253,137 @@ impl PolicyEnforcementTools {
         // PRIORITY: HIGH
         // BLOCKING: Yes - Required for intelligent analysis
         
-        Ok(serde_json::json!({"reasoning": "stub implementation", "has_conflicts": false}))
+    /// Reasoning implementation
+    pub async fn perform_reasoning(&self, decomposed_tasks: &[serde_json::Value], evidence: &[serde_json::Value], quality_checks: &[String]) -> Result<serde_json::Value> {
+        let mut reasoning_result = serde_json::Map::new();
+        
+        // Analyze task complexity
+        let task_count = decomposed_tasks.len();
+        let evidence_count = evidence.len();
+        let quality_issue_count = quality_checks.len();
+        
+        // Calculate complexity score
+        let complexity_score = if task_count == 0 {
+            0.0
+        } else {
+            let base_complexity = task_count as f64;
+            let evidence_ratio = evidence_count as f64 / task_count as f64;
+            let quality_penalty = quality_issue_count as f64 * 0.1;
+            
+            base_complexity + (evidence_ratio * 0.5) - quality_penalty
+        };
+        
+        // Determine reasoning confidence
+        let confidence = if quality_issue_count == 0 && evidence_count >= task_count {
+            0.9
+        } else if quality_issue_count <= task_count / 2 && evidence_count >= task_count / 2 {
+            0.7
+        } else if quality_issue_count < task_count && evidence_count > 0 {
+            0.5
+        } else {
+            0.3
+        };
+        
+        // Generate reasoning summary
+        let reasoning_summary = if quality_issue_count == 0 {
+            "All tasks pass quality gates with sufficient evidence".to_string()
+        } else if quality_issue_count <= task_count / 2 {
+            format!("Some quality issues detected ({} issues), but sufficient evidence available", quality_issue_count)
+        } else {
+            format!("Multiple quality issues detected ({} issues), limited evidence available", quality_issue_count)
+        };
+        
+        // Build reasoning result
+        reasoning_result.insert("complexity_score".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(complexity_score).unwrap()));
+        reasoning_result.insert("confidence".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(confidence).unwrap()));
+        reasoning_result.insert("task_count".to_string(), serde_json::Value::Number(serde_json::Number::from(task_count)));
+        reasoning_result.insert("evidence_count".to_string(), serde_json::Value::Number(serde_json::Number::from(evidence_count)));
+        reasoning_result.insert("quality_issues".to_string(), serde_json::Value::Number(serde_json::Number::from(quality_issue_count)));
+        reasoning_result.insert("reasoning_summary".to_string(), serde_json::Value::String(reasoning_summary));
+        reasoning_result.insert("recommendation".to_string(), serde_json::Value::String(
+            if confidence >= 0.7 {
+                "Proceed with execution".to_string()
+            } else if confidence >= 0.5 {
+                "Proceed with caution".to_string()
+            } else {
+                "Requires additional review".to_string()
+            }
+        ));
+        
+        Ok(serde_json::Value::Object(reasoning_result))
     }
 
-    /// Stub implementation for workflow execution logging
-    pub async fn log_workflow_execution(&self, _execution_id: &str, _result: &serde_json::Value, _caws_spec: Option<&serde_json::Value>) -> Result<()> {
-        // TODO: Workflow Execution Logging - Implement actual workflow logging
-        // 
-        // COMPLETION CHECKLIST:
-        // [ ] Workflow execution tracking
-        // [ ] Result logging
-        // [ ] CAWS specification logging
-        // [ ] Audit trail generation
-        // [ ] Unit tests written (80%+ coverage)
-        // [ ] Integration tests with logging system
-        // [ ] Documentation updated
-        // [ ] Performance benchmarks meet SLA
-        // [ ] Security considerations addressed
-        // [ ] Configuration options defined
-        // [ ] Monitoring/metrics implemented
-        // [ ] Logging added for debugging
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Logs workflow execution details
-        // - Captures execution results
-        // - Maintains audit trail
-        // - Performance meets requirements
-        //
-        // DEPENDENCIES:
-        // - Logging infrastructure: Required
-        // - Audit trail system: Available
-        //
-        // ESTIMATED EFFORT: 8 hours
-        // PRIORITY: MEDIUM
-        // BLOCKING: No - Audit functionality
+    /// Workflow execution logging implementation
+    pub async fn log_workflow_execution(&self, execution_id: &str, result: &serde_json::Value, caws_spec: Option<&serde_json::Value>) -> Result<()> {
+        use tracing::{info, warn, error};
+        use chrono::Utc;
         
-        Ok(()) // Stub: no-op
+        // Log execution start
+        info!(
+            execution_id = execution_id,
+            "Workflow execution started"
+        );
+        
+        // Log CAWS specification if provided
+        if let Some(spec) = caws_spec {
+            info!(
+                execution_id = execution_id,
+                caws_spec = %spec,
+                "CAWS specification logged"
+            );
+        }
+        
+        // Log execution result
+        match result.get("status") {
+            Some(status) if status == "success" => {
+                info!(
+                    execution_id = execution_id,
+                    result = %result,
+                    "Workflow execution completed successfully"
+                );
+            }
+            Some(status) if status == "error" => {
+                error!(
+                    execution_id = execution_id,
+                    result = %result,
+                    "Workflow execution failed"
+                );
+            }
+            Some(status) if status == "warning" => {
+                warn!(
+                    execution_id = execution_id,
+                    result = %result,
+                    "Workflow execution completed with warnings"
+                );
+            }
+            _ => {
+                info!(
+                    execution_id = execution_id,
+                    result = %result,
+                    "Workflow execution completed"
+                );
+            }
+        }
+        
+        // Log performance metrics if available
+        if let Some(metrics) = result.get("metrics") {
+            info!(
+                execution_id = execution_id,
+                metrics = %metrics,
+                "Performance metrics logged"
+            );
+        }
+        
+        // Log quality gate results if available
+        if let Some(quality_results) = result.get("quality_gates") {
+            info!(
+                execution_id = execution_id,
+                quality_gates = %quality_results,
+                "Quality gate results logged"
+            );
+        }
+        
+        Ok(())
     }
 
     /// Stub implementation for chain execution logging

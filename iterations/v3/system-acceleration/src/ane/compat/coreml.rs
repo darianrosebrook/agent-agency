@@ -5,71 +5,7 @@
 
 use crate::ane::ane_errors::{ANEError, Result};
 use crate::ane::TensorSpec;
-// Temporarily disabled due to candle-core dependency conflicts
-// use candle_core::{DType, Tensor, Device};
-
-// Stub types for Tensor and Device to satisfy compilation
-#[derive(Debug, Clone)]
-pub struct Tensor {
-    _data: Vec<f32>,
-    _shape: Vec<usize>,
-}
-
-impl Tensor {
-    pub fn new(data: &[f32], device: &Device) -> Result<Self> {
-        Ok(Self {
-            _data: data.to_vec(),
-            _shape: vec![data.len()],
-        })
-    }
-
-    pub fn dims(&self) -> &[usize] {
-        &self._shape
-    }
-
-    pub fn to_dtype(&self, _dtype: DType) -> Result<Self> {
-        Ok(self.clone())
-    }
-
-    pub fn flatten_all(&self) -> Result<Self> {
-        Ok(self.clone())
-    }
-
-    pub fn reshape(&self, _shape: &[usize]) -> Result<Self> {
-        Ok(self.clone())
-    }
-
-    pub fn to_vec1<T>(&self) -> Result<Vec<T>>
-    where
-        T: Default + Clone,
-    {
-        Ok(vec![T::default(); self._data.len()])
-    }
-}
-
-// Stub DType for compatibility
-#[derive(Debug, Clone)]
-pub enum DType {
-    F32,
-    F16,
-    I32,
-    I16,
-    I8,
-    U8,
-    BOOL,
-}
-
-#[derive(Debug, Clone)]
-pub enum Device {
-    Cpu,
-    Cuda(usize),
-}
-
-impl Device {
-    pub fn cpu() -> Self {
-        Device::Cpu
-    }
-}
+use candle_core::{DType, Tensor, Device};
 
 use std::path::Path;
 use std::marker::PhantomData;
@@ -252,6 +188,11 @@ impl MLFeatureType {
 }
 
 impl MLModel {
+    /// Get the underlying model handle
+    pub fn handle(&self) -> u64 {
+        self.0
+    }
+
     /// Load a Core ML model from a compiled .mlmodelc file
     pub fn from_path(path: &std::path::Path) -> std::result::Result<Self, String> {
         if !TARGET_APPLE_SILICON {

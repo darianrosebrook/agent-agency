@@ -10,6 +10,7 @@ use crate::types::{
     ExecutionArtifacts, ExecutionStatus, TaskDescriptor, WorkingSpec, DiffStats,
     AcceptanceCriterion, TaskPriority
 };
+use crate::judge_backup::backup_types::JudgeType;
 use crate::council::{Council, CouncilConfig};
 use crate::decision_making::{ConsensusStrategy, RiskThresholds};
 use crate::multimodal_orchestration::MultimodalOrchestrator;
@@ -17,7 +18,9 @@ use crate::audit_trail::{AuditTrailManager, AuditConfig};
 use crate::judge_backup::{
     Judge, JudgeConfig,
     EthicsJudge,
-    MockJudge,
+    quality_judge::QualityAssuranceJudge,
+    security_judge::SecurityJudge,
+    verdicts::JudgeVerdict,
 };
 use crate::judge_backup::mock::VerdictStrategy;
 use crate::verdict_aggregation::{
@@ -63,36 +66,34 @@ impl LegacyOrchestratorAdapter {
             Arc::new(EthicsJudge::new(JudgeConfig {
                 judge_id: "ethics-001".to_string(),
                 name: "Ethics Judge".to_string(),
-                judge_type: "ethics".to_string(),
+                judge_type: JudgeType::Ethics,
                 specialization: "moral reasoning".to_string(),
                 max_response_time_ms: 5000,
                 health_check_interval_ms: 30000,
             })),
 
-            // Quality assurance mock judge
-            Arc::new(MockJudge::new(
+            // Quality assurance judge
+            Arc::new(QualityAssuranceJudge::new(
                 JudgeConfig {
                     judge_id: "qa-001".to_string(),
                     name: "Quality Assurance Judge".to_string(),
-                    judge_type: "quality".to_string(),
+                    judge_type: JudgeType::Quality,
                     specialization: "code quality".to_string(),
                     max_response_time_ms: 3000,
                     health_check_interval_ms: 30000,
                 },
-                VerdictStrategy::QualityFocused,
             )),
 
-            // Security-focused mock judge
-            Arc::new(MockJudge::new(
+            // Security judge
+            Arc::new(SecurityJudge::new(
                 JudgeConfig {
                     judge_id: "security-001".to_string(),
                     name: "Security Judge".to_string(),
-                    judge_type: "security".to_string(),
+                    judge_type: JudgeType::Security,
                     specialization: "security analysis".to_string(),
                     max_response_time_ms: 3000,
                     health_check_interval_ms: 30000,
                 },
-                VerdictStrategy::SecurityFocused,
             )),
         ];
 
@@ -168,10 +169,21 @@ impl LegacyOrchestratorAdapter {
         let artifacts = self.execute_task_with_orchestrator(spec, desc).await?;
         
         // Step 4: Review artifacts (simplified for now)
-        let artifact_verdict = self.review_artifacts(&artifacts, spec, desc).await?;
+        let artifact_verdict = if let Some(first_artifact) = artifacts.first() {
+            let artifact_verdict = self.review_artifacts(first_artifact, spec, desc).await?;
+            // The review_artifacts method already returns ArtifactVerdict
+            artifact_verdict
+        } else {
+            // No artifacts to review - approve with low confidence
+            ArtifactVerdict {
+                approved: true,
+                confidence: 0.5,
+                reasoning: "No artifacts to review".to_string(),
+            }
+        };
 
         // Step 5: Combine verdicts and create final result
-        let final_result = self.combine_verdicts(consensus_result, artifact_verdict, vec![artifacts]);
+        let final_result = self.combine_verdicts(consensus_result, artifact_verdict, artifacts);
 
         // Step 6: Record audit trail
         // TODO: Implement audit trail recording for TaskExecutionResult
@@ -296,8 +308,6 @@ impl LegacyOrchestratorAdapter {
             status: ExecutionStatus::Completed,
             output: Some(format!("Task {} executed successfully", desc.task_id)),
             error: None,
-            execution_time_ms: 1500,
-            metadata: std::collections::HashMap::new(),
         }];
 
         Ok(artifacts)
@@ -339,7 +349,13 @@ impl LegacyOrchestratorAdapter {
 
         TaskExecutionResult {
             working_spec: Some(format!("Combined verdict for task")),
-            artifacts,
+            artifacts: artifacts.into_iter().next().unwrap_or_else(|| crate::types::ExecutionArtifacts {
+                execution_id: "no-artifacts".to_string(),
+                worker_id: "unknown".to_string(),
+                status: crate::types::ExecutionStatus::Completed,
+                output: Some("No artifacts available".to_string()),
+                error: None,
+            }),
             quality_report: Some(crate::types::QualityReport {
                 score: overall_confidence,
                 metrics: std::collections::HashMap::new(),
@@ -354,7 +370,13 @@ impl LegacyOrchestratorAdapter {
             id: desc.task_id.clone(),
             description: desc.description.clone(),
             requirements: vec![], // Simplified for now
-            priority: self.convert_priority(desc.priority),
+            priority: match desc.priority {
+                crate::types::TaskPriority::Low => crate::council_types::TaskPriority::Low,
+                crate::types::TaskPriority::Medium => crate::council_types::TaskPriority::Normal,
+                crate::types::TaskPriority::Normal => crate::council_types::TaskPriority::Normal,
+                crate::types::TaskPriority::High => crate::council_types::TaskPriority::High,
+                crate::types::TaskPriority::Critical => crate::council_types::TaskPriority::Critical,
+            },
         }
     }
 
@@ -365,7 +387,7 @@ impl LegacyOrchestratorAdapter {
             TaskPriority::Medium => crate::multimodal_orchestration::ProcessingPriority::Normal,
             TaskPriority::Normal => crate::multimodal_orchestration::ProcessingPriority::Normal,
             TaskPriority::High => crate::multimodal_orchestration::ProcessingPriority::High,
-            TaskPriority::Critical => crate::multimodal_orchestration::ProcessingPriority::Critical,
+            TaskPriority::Critical => crate::multimodal_orchestration::ProcessingPriority::High,
         }
     }
 

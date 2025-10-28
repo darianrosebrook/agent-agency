@@ -4,8 +4,11 @@ use std::collections::HashMap;
 
 // Re-export types for backward compatibility
 pub use agent_agency_contracts::task_request::RiskTier;
-pub use agent_agency_contracts::working_spec::WorkingSpec;
-pub use agent_agency_contracts::refinement_decision::CouncilDecision;
+pub use agent_agency_contracts::working_spec::{
+    WorkingSpec, WorkingSpecConstraints, WorkingSpecContext, TestPlan, RollbackPlan
+};
+pub use agent_agency_contracts::refinement_decision::{CouncilDecision, JudgeType};
+pub use agent_agency_contracts::final_verdict::FinalVerdictContract;
 
 /// Task priority levels
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

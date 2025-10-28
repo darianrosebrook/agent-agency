@@ -1,6 +1,7 @@
 //! Progress aggregation across all workers
 
 use crate::parallel_types::*;
+use crate::{WorkerProgress, Progress};
 use crate::error::*;
 use std::collections::HashMap;
 use std::sync::Arc;

@@ -766,20 +766,50 @@ impl Council {
                     .block_on(async {
                         // Convert ReviewContext to proper types
                         let working_spec = crate::council_types::WorkingSpec {
+                            version: "1.0".to_string(),
                             id: format!("review_{}", review_context.session_id),
                             title: "Review Session".to_string(),
                             description: review_context.working_spec.clone(),
-                            risk_tier: match review_context.risk_tier {
-                                1 => agent_agency_contracts::task_request::RiskTier::Tier1,
-                                2 => agent_agency_contracts::task_request::RiskTier::Tier2,
-                                3 => agent_agency_contracts::task_request::RiskTier::Tier3,
-                                _ => agent_agency_contracts::task_request::RiskTier::Tier3,
-                            },
                             goals: vec![],
-                            context: None,
+                            risk_tier: review_context.risk_tier as u32,
+                            constraints: crate::council_types::WorkingSpecConstraints {
+                                max_duration_minutes: Some(60),
+                                max_iterations: Some(10),
+                                budget_limits: None,
+                                scope_restrictions: None,
+                            },
+                            acceptance_criteria: vec![],
+                            test_plan: crate::council_types::TestPlan {
+                                unit_tests: vec![],
+                                integration_tests: vec![],
+                                e2e_scenarios: vec![],
+                                coverage_targets: None,
+                            },
+                            rollback_plan: agent_agency_contracts::RollbackPlan {
+                                strategy: agent_agency_contracts::RollbackStrategy::GitRevert,
+                                automated_steps: vec!["Revert git commit".to_string()],
+                                manual_steps: vec![],
+                                data_impact: agent_agency_contracts::DataImpact::None,
+                                downtime_required: Some(false),
+                                rollback_window_minutes: Some(5),
+                            },
+                            context: agent_agency_contracts::WorkingSpecContext {
+                                workspace_root: std::env::current_dir().unwrap_or_default().to_string_lossy().to_string(),
+                                git_branch: "main".to_string(),
+                                recent_changes: vec![],
+                                dependencies: std::collections::HashMap::new(),
+                                environment: agent_agency_contracts::task_request::Environment::Development,
+                            },
+                            non_functional_requirements: None,
+                            validation_results: None,
                             metadata: None,
                         };
-                        let risk_tier = working_spec.risk_tier;
+                        let risk_tier = match working_spec.risk_tier {
+                            1 => crate::council_types::RiskTier::Tier1,
+                            2 => crate::council_types::RiskTier::Tier2,
+                            3 => crate::council_types::RiskTier::Tier3,
+                            _ => crate::council_types::RiskTier::Tier3,
+                        };
                         self.retrieve_historical_decisions(&working_spec, &risk_tier).await
                     })
             })
@@ -976,7 +1006,7 @@ impl Council {
             let outcome = agent_memory::ExperienceOutcome {
                 success,
                 performance_score: performance_score.map(|s| s as f32),
-                quality_score: performance_score.map(|s| s as f32),
+                quality_score: performance_score.unwrap_or(0.0) as f64,
                 error_message: if success { None } else { Some("decision_rejected".to_string()) },
                 execution_time_ms: Some(1000), // Default execution time
                 learned_capabilities: vec!["council_decision_making".to_string()],
@@ -1033,10 +1063,10 @@ impl Council {
         // Create review context
         let context = crate::judge_backup::types::ReviewContext {
             session_id: session.session_id.clone(),
-            working_spec: serde_json::to_string(&working_spec).unwrap_or_default(),
+            working_spec: serde_json::to_string(&session.working_spec).unwrap_or_default(),
             risk_tier: match task_descriptor.priority {
                 crate::types::TaskPriority::Critical | crate::types::TaskPriority::High => 1,
-                crate::types::TaskPriority::Medium => 2,
+                crate::types::TaskPriority::Medium | crate::types::TaskPriority::Normal => 2,
                 crate::types::TaskPriority::Low => 3,
             },
             previous_reviews: Vec::new(),
@@ -1078,16 +1108,17 @@ use agent_agency_contracts::Environment;
                 rollback_window_minutes: Some(30),
             },
             risk_tier: match task_descriptor.priority {
-                crate::types::TaskPriority::Critical => agent_agency_contracts::task_request::RiskTier::Tier1,
-                crate::types::TaskPriority::High => agent_agency_contracts::task_request::RiskTier::Tier1,
-                crate::types::TaskPriority::Medium => agent_agency_contracts::task_request::RiskTier::Tier2,
-                crate::types::TaskPriority::Normal => agent_agency_contracts::task_request::RiskTier::Tier2,
-                crate::types::TaskPriority::Low => agent_agency_contracts::task_request::RiskTier::Tier3,
+                crate::types::TaskPriority::Critical => 1,
+                crate::types::TaskPriority::High => 1,
+                crate::types::TaskPriority::Medium => 2,
+                crate::types::TaskPriority::Normal => 2,
+                crate::types::TaskPriority::Low => 3,
             },
             constraints: WorkingSpecConstraints {
                 max_duration_minutes: None,
                 max_iterations: None,
                 budget_limits: None,
+                scope_restrictions: None,
             },
             context: WorkingSpecContext {
                 workspace_root: ".".to_string(),

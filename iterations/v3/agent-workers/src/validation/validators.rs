@@ -1,6 +1,7 @@
 //! Quality validators implementation
 
 use crate::parallel_types::*;
+use crate::{ValidationResult, ValidationContext};
 use async_trait::async_trait;
 
 /// Compilation validator - ensures code compiles

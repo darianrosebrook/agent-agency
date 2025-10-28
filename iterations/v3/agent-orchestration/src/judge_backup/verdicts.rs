@@ -43,6 +43,15 @@ impl JudgeVerdict {
             JudgeVerdict::Reject { .. } => 0.0, // Reject verdicts have no confidence
         }
     }
+
+    /// Convert verdict to string representation
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            JudgeVerdict::Approve { .. } => "approve",
+            JudgeVerdict::Refine { .. } => "refine",
+            JudgeVerdict::Reject { .. } => "reject",
+        }
+    }
 }
 
 /// Required change for refinement

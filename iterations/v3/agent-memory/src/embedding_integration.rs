@@ -3,15 +3,14 @@
 
 use crate::memory_types::*;
 use crate::MemoryResult;
-use data_infrastructure::embedding::{
-    EmbeddingService, EmbeddingServiceImpl, EmbeddingConfig as ESConfig, ContentType,
-    EmbeddingProvider, OllamaEmbeddingProvider
-};
 use data_infrastructure::{DatabaseClient, DatabaseConfig, Row};
 use std::sync::Arc;
 use chrono::{DateTime, Utc, Duration};
 use serde::{Deserialize, Serialize};
-use tracing::{debug, info};
+use tracing::{debug, info, warn, error};
+use reqwest::Client;
+use anyhow::{Context, Result};
+use std::collections::HashMap;
 
 /// Memory embedding with decay information
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,9 +24,99 @@ pub struct MemoryEmbedding {
     pub created_at: DateTime<Utc>,
 }
 
+/// Real HTTP-based embedding service
+pub struct HttpEmbeddingService {
+    client: Client,
+    base_url: String,
+    model_name: String,
+    timeout_ms: u64,
+}
+
+impl HttpEmbeddingService {
+    pub fn new(base_url: String, model_name: String) -> Self {
+        Self {
+            client: Client::new(),
+            base_url,
+            model_name,
+            timeout_ms: 30000,
+        }
+    }
+
+    /// Generate embedding via HTTP call to external service
+    pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>> {
+        let url = format!("{}/api/v1/embeddings", self.base_url);
+        
+        let payload = serde_json::json!({
+            "model": self.model_name,
+            "input": text,
+            "encoding_format": "float"
+        });
+
+        debug!("Generating embedding for text: {}...", &text[..text.len().min(100)]);
+
+        let response = self.client
+            .post(&url)
+            .json(&payload)
+            .timeout(std::time::Duration::from_millis(self.timeout_ms))
+            .send()
+            .await
+            .context("Failed to send embedding request")?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!("Embedding service error {}: {}", status, error_text));
+        }
+
+        let result: serde_json::Value = response.json().await
+            .context("Failed to parse embedding response")?;
+
+        // Extract embedding vector from response
+        let embedding = result["data"][0]["embedding"]
+            .as_array()
+            .ok_or_else(|| anyhow::anyhow!("Invalid embedding response format"))?
+            .iter()
+            .map(|v| v.as_f64().unwrap_or(0.0) as f32)
+            .collect::<Vec<f32>>();
+
+        debug!("Generated embedding with {} dimensions", embedding.len());
+        Ok(embedding)
+    }
+
+    /// Health check for embedding service
+    pub async fn health_check(&self) -> Result<bool> {
+        let url = format!("{}/health", self.base_url);
+
+        match self.client.get(&url).send().await {
+            Ok(response) => Ok(response.status().is_success()),
+            Err(_) => Ok(false),
+        }
+    }
+
+    /// Get service statistics
+    pub async fn get_stats(&self) -> Result<HashMap<String, serde_json::Value>> {
+        let url = format!("{}/api/v1/stats", self.base_url);
+
+        let response = self.client
+            .get(&url)
+            .send()
+            .await
+            .context("Failed to get embedding service stats")?;
+
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!("Failed to get stats: {}", response.status()));
+        }
+
+        let stats: HashMap<String, serde_json::Value> = response.json().await
+            .context("Failed to parse stats response")?;
+
+        Ok(stats)
+    }
+}
+
 /// Embedding integration for memory operations
 pub struct EmbeddingIntegration {
-    embedding_service: Arc<dyn EmbeddingService>,
+    embedding_service: Arc<HttpEmbeddingService>,
     db_client: Arc<DatabaseClient>,
     config: EmbeddingConfig,
 }
@@ -35,20 +124,25 @@ pub struct EmbeddingIntegration {
 impl EmbeddingIntegration {
     /// Create a new embedding integration
     pub async fn new(config: &EmbeddingConfig) -> MemoryResult<Self> {
-        // Create embedding service config
-        let es_config = ESConfig {
-            model_name: "embeddinggemma".to_string(),
-            ollama_url: "http://localhost:11434".to_string(),
-            timeout_ms: 30000,
-            batch_size: 32,
-            cache_size: 1000,
-            dimension: 768,
-        };
+        // Get embedding service URL from environment or use default
+        let embedding_url = std::env::var("EMBEDDING_SERVICE_URL")
+            .unwrap_or_else(|_| "http://localhost:11434".to_string());
+        
+        let model_name = std::env::var("EMBEDDING_MODEL_NAME")
+            .unwrap_or_else(|_| "embeddinggemma".to_string());
 
-        // For now, create a placeholder embedding provider
-        // TODO: Get proper provider injection
-        let provider = OllamaEmbeddingProvider::new(&es_config);
-        let embedding_service = Arc::new(EmbeddingServiceImpl::new(Arc::new(provider), es_config));
+        info!("Initializing HTTP embedding service at: {} with model: {}", embedding_url, model_name);
+
+        // Create HTTP-based embedding service
+        let embedding_service = Arc::new(HttpEmbeddingService::new(embedding_url, model_name));
+        
+        // Test connection
+        if let Err(e) = embedding_service.health_check().await {
+            warn!("Embedding service health check failed: {}", e);
+        } else {
+            info!("Embedding service health check passed");
+        }
+
         let db_config = data_infrastructure::DatabaseConfig::default();
         let db_client = Arc::new(DatabaseClient::new(db_config).await?);
 
@@ -72,12 +166,11 @@ impl EmbeddingIntegration {
             experience.outcome.learned_capabilities.join(", ")
         );
 
-        let stored_embedding = self.embedding_service.generate_embedding(
-            &text_representation,
-            ContentType::Knowledge,
-            "agent_memory_experience"
-        ).await?;
-        Ok(stored_embedding.vector.values)
+        // Generate embedding via HTTP call
+        let embedding = self.embedding_service.generate_embedding(&text_representation).await
+            .map_err(|e| MemoryError::Embedding(e.to_string()))?;
+
+        Ok(embedding)
     }
 
     /// Generate embedding for task context
@@ -90,12 +183,11 @@ impl EmbeddingIntegration {
             context.entities.join(", ")
         );
 
-        let stored_embedding = self.embedding_service.generate_embedding(
-            &text_representation,
-            ContentType::TaskDescription,
-            "agent_memory_context"
-        ).await?;
-        Ok(stored_embedding.vector.values)
+        // Generate embedding via HTTP call
+        let embedding = self.embedding_service.generate_embedding(&text_representation).await
+            .map_err(|e| MemoryError::Embedding(e.to_string()))?;
+
+        Ok(embedding)
     }
 
     /// Store embedding with metadata
@@ -179,11 +271,9 @@ impl EmbeddingIntegration {
 
     /// Semantic search for general text queries
     pub async fn semantic_search_text(&self, query: &str, limit: usize) -> MemoryResult<Vec<(MemoryId, f32)>> {
-        let query_embedding = self.embedding_service.generate_embedding(
-            query,
-            ContentType::Knowledge,
-            "memory_search"
-        ).await?;
+        // Generate embedding via HTTP call
+        let query_embedding = self.embedding_service.generate_embedding(query).await
+            .map_err(|e| MemoryError::Embedding(e.to_string()))?;
 
         let rows = sqlx::query(
             r#"
@@ -194,7 +284,7 @@ impl EmbeddingIntegration {
             LIMIT $2
             "#,
         )
-        .bind(&query_embedding.vector.values)
+        .bind(&query_embedding)
         .bind(limit as i32)
         .fetch_all(self.db_client.pool())
         .await?;
@@ -330,28 +420,17 @@ impl EmbeddingIntegration {
         })
     }
 
-    /// Clean up embeddings for deleted memories
-    pub async fn cleanup_orphaned_embeddings(&self) -> MemoryResult<usize> {
-        let deleted = sqlx::query(
-            r#"
-            DELETE FROM memory_embeddings
-            WHERE memory_id NOT IN (
-                SELECT id FROM agent_experiences
-            )
-            "#,
-        )
-        .execute(self.db_client.pool())
-        .await?;
-
-        let deleted_count = deleted.rows_affected() as usize;
-
-        if deleted_count > 0 {
-            info!("Cleaned up {} orphaned embeddings", deleted_count);
-        }
-
-        Ok(deleted_count)
+    /// Get embedding service statistics
+    pub async fn get_service_stats(&self) -> MemoryResult<HashMap<String, serde_json::Value>> {
+        self.embedding_service.get_stats().await
+            .map_err(|e| MemoryError::Embedding(e.to_string()))
     }
-}
+
+    /// Check embedding service health
+    pub async fn health_check(&self) -> MemoryResult<bool> {
+        self.embedding_service.health_check().await
+            .map_err(|e| MemoryError::Embedding(e.to_string()))
+    }
 
 /// Embedding statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]

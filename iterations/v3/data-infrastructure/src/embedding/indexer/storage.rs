@@ -126,27 +126,38 @@ impl EmbeddingStorage {
         Ok(())
     }
 
-    /// Get text documents by BM25 search
+    /// Real full-text search implementation using PostgreSQL
     pub async fn search_text_documents(&self, query: &str, limit: usize) -> Result<Vec<super::text::TextDocument>> {
-        // Placeholder - would use full-text search
+        use tracing::{info, debug};
+        
+        info!("Performing full-text search for query: '{}'", query);
+        
+        // Use PostgreSQL's full-text search capabilities
         let rows = sqlx::query(
-            "SELECT id, title, content, metadata, term_frequencies
+            "SELECT id, title, content, metadata, term_frequencies,
+                    ts_rank(to_tsvector('english', title || ' ' || content), plainto_tsquery('english', $1)) as rank
              FROM text_documents
-             WHERE content ILIKE $1
+             WHERE to_tsvector('english', title || ' ' || content) @@ plainto_tsquery('english', $1)
+             ORDER BY rank DESC
              LIMIT $2"
         )
-        .bind(format!("%{}%", query))
+        .bind(query)
         .bind(limit as i64)
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.into_iter().map(|row: sqlx::postgres::PgRow| super::text::TextDocument {
-            id: row.get("id"),
-            content: row.get("content"),
-            title: row.get("title"),
-            metadata: serde_json::from_value(row.get("metadata")).unwrap_or_default(),
-            term_frequencies: serde_json::from_value(row.get("term_frequencies")).unwrap_or_default(),
-        }).collect())
+        let results = rows.into_iter().map(|row: sqlx::postgres::PgRow| {
+            super::text::TextDocument {
+                id: row.get("id"),
+                title: row.get("title"),
+                content: row.get("content"),
+                metadata: serde_json::from_value(row.get("metadata")).unwrap_or_default(),
+                term_frequencies: serde_json::from_value(row.get("term_frequencies")).unwrap_or_default(),
+            }
+        }).collect();
+
+        debug!("Found {} text documents matching query", results.len());
+        Ok(results)
     }
 
     /// Health check for database connectivity

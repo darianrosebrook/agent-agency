@@ -1,6 +1,7 @@
 //! Progress synthesis and result combination
 
 use crate::parallel_types::*;
+use crate::{Artifact, ArtifactType};
 use crate::error::*;
 
 /// Synthesizes final results from worker outputs

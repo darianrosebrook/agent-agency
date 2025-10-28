@@ -170,13 +170,46 @@ impl TextIndexer {
         score
     }
 
-    fn generate_embedding(&self, _content: &str) -> Result<EmbeddingVector> {
-        // Placeholder - would use actual embedding model
-        Ok(EmbeddingVector {
-            values: vec![0.1, 0.2, 0.3], // Placeholder values
-            model: "default".to_string(),
-            dimensions: 3,
-        })
+    /// Real dense embedding generation using Ollama
+    fn generate_embedding(&self, content: &str) -> Result<EmbeddingVector> {
+        use tracing::{info, debug, error};
+        use std::sync::Arc;
+        use tokio::runtime::Handle;
+        
+        info!("Generating dense embedding for content (length: {})", content.len());
+        
+        // Use Ollama embedding provider for real embeddings
+        let config = data_infrastructure::embedding::EmbeddingConfig {
+            provider: data_infrastructure::embedding::EmbeddingProviderType::Ollama,
+            model_name: "nomic-embed-text".to_string(),
+            dimension: 768,
+            ollama_url: "http://localhost:11434".to_string(),
+            timeout_ms: 30000,
+        };
+
+        let provider = data_infrastructure::embedding::OllamaEmbeddingProvider::new(&config);
+        
+        // Generate embedding using async runtime
+        let handle = Handle::current();
+        let embedding_result = handle.block_on(async {
+            provider.generate_embeddings(&[content.to_string()]).await
+        });
+        
+        match embedding_result {
+            Ok(embeddings) => {
+                if let Some(embedding) = embeddings.first() {
+                    debug!("Generated embedding with {} dimensions", embedding.values.len());
+                    Ok(embedding.clone())
+                } else {
+                    error!("No embedding generated from Ollama provider");
+                    Err(anyhow::anyhow!("No embedding generated"))
+                }
+            }
+            Err(e) => {
+                error!("Failed to generate embedding: {}", e);
+                Err(e)
+            }
+        }
     }
 
     fn cosine_similarity(&self, a: &EmbeddingVector, b: &EmbeddingVector) -> f64 {

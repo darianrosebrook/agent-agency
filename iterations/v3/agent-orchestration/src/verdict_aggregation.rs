@@ -529,8 +529,8 @@ impl VerdictAggregator {
 
             weighted_contributions.push(WeightedContribution {
                 judge_id: contribution.judge_id.clone(),
-                judge_type: string_to_judge_type(&contribution.judge_type),
-                verdict: string_to_judge_verdict(&contribution.verdict)?,
+                judge_type: string_to_judge_type(&format!("{:?}", contribution.judge_type)),
+                verdict: string_to_judge_verdict(&format!("{:?}", contribution.verdict))?,
                 weight,
                 specialization_score,
                 contribution_quality,
@@ -551,8 +551,7 @@ impl VerdictAggregator {
 
         let mut score: f64 = 0.5; // Base score
 
-        let judge_type = string_to_judge_type(&contribution.judge_type);
-        match judge_type {
+        match contribution.judge_type {
             JudgeType::Constitutional => {
                 // Constitutional judges handle CAWS compliance and governance
                 if task_description.contains("compliance") || task_description.contains("constitutional") ||

@@ -8,13 +8,198 @@ use std::sync::Arc;
 use std::collections::HashMap;
 use chrono::{DateTime, Utc, Duration};
 use serde::{Deserialize, Serialize};
-use tracing::{info, debug};
+use tracing::{info, debug, warn, error};
+use reqwest::Client;
+use anyhow::{Context, Result};
+
+/// Real HTTP-based temporal analysis service
+pub struct HttpTemporalAnalysisService {
+    client: Client,
+    base_url: String,
+    timeout_ms: u64,
+}
+
+impl HttpTemporalAnalysisService {
+    pub fn new(base_url: String) -> Self {
+        Self {
+            client: Client::new(),
+            base_url,
+            timeout_ms: 30000,
+        }
+    }
+
+    /// Analyze temporal patterns via HTTP call to external service
+    pub async fn analyze_patterns(&self, data: &TemporalAnalysisRequest) -> Result<TemporalAnalysisResponse> {
+        let url = format!("{}/api/v1/temporal/analyze", self.base_url);
+        
+        let payload = serde_json::json!({
+            "agent_id": data.agent_id,
+            "time_range": {
+                "start": data.time_range.start,
+                "end": data.time_range.end
+            },
+            "metrics": data.metrics,
+            "analysis_type": data.analysis_type
+        });
+
+        debug!("Analyzing temporal patterns for agent: {}", data.agent_id);
+
+        let response = self.client
+            .post(&url)
+            .json(&payload)
+            .timeout(std::time::Duration::from_millis(self.timeout_ms))
+            .send()
+            .await
+            .context("Failed to send temporal analysis request")?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!("Temporal analysis service error {}: {}", status, error_text));
+        }
+
+        let result: TemporalAnalysisResponse = response.json().await
+            .context("Failed to parse temporal analysis response")?;
+
+        debug!("Temporal analysis completed with {} patterns found", result.patterns.len());
+        Ok(result)
+    }
+
+    /// Detect causality relationships via HTTP call
+    pub async fn detect_causality(&self, events: &[TemporalEvent]) -> Result<Vec<CausalityRelationship>> {
+        let url = format!("{}/api/v1/temporal/causality", self.base_url);
+        
+        let payload = serde_json::json!({
+            "events": events
+        });
+
+        debug!("Detecting causality relationships for {} events", events.len());
+
+        let response = self.client
+            .post(&url)
+            .json(&payload)
+            .timeout(std::time::Duration::from_millis(self.timeout_ms))
+            .send()
+            .await
+            .context("Failed to send causality detection request")?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!("Causality detection service error {}: {}", status, error_text));
+        }
+
+        let result: serde_json::Value = response.json().await
+            .context("Failed to parse causality detection response")?;
+
+        // Extract causality relationships from response
+        let relationships = result["relationships"]
+            .as_array()
+            .ok_or_else(|| anyhow::anyhow!("Invalid causality detection response format"))?
+            .iter()
+            .map(|rel| CausalityRelationship {
+                cause_event: rel["cause_event"].as_str().unwrap_or("").to_string(),
+                effect_event: rel["effect_event"].as_str().unwrap_or("").to_string(),
+                confidence: rel["confidence"].as_f64().unwrap_or(0.0) as f32,
+                time_lag: rel["time_lag"].as_u64().unwrap_or(0) as i64,
+                relationship_type: rel["relationship_type"].as_str().unwrap_or("CAUSES").to_string(),
+            })
+            .collect::<Vec<CausalityRelationship>>();
+
+        debug!("Detected {} causality relationships", relationships.len());
+        Ok(relationships)
+    }
+
+    /// Health check for temporal analysis service
+    pub async fn health_check(&self) -> Result<bool> {
+        let url = format!("{}/health", self.base_url);
+
+        match self.client.get(&url).send().await {
+            Ok(response) => Ok(response.status().is_success()),
+            Err(_) => Ok(false),
+        }
+    }
+}
+
+/// Request for temporal analysis
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TemporalAnalysisRequest {
+    pub agent_id: String,
+    pub time_range: TimeRange,
+    pub metrics: Vec<String>,
+    pub analysis_type: String,
+}
+
+/// Response from temporal analysis
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TemporalAnalysisResponse {
+    pub patterns: Vec<TemporalPattern>,
+    pub trends: Vec<TrendAnalysis>,
+    pub change_points: Vec<ChangePoint>,
+    pub predictions: Vec<Prediction>,
+}
+
+/// Temporal pattern detected
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TemporalPattern {
+    pub pattern_type: String,
+    pub confidence: f32,
+    pub description: String,
+    pub time_range: TimeRange,
+}
+
+/// Trend analysis
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrendAnalysis {
+    pub metric: String,
+    pub trend_direction: String,
+    pub slope: f32,
+    pub r_squared: f32,
+}
+
+/// Change point in time series
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChangePoint {
+    pub timestamp: DateTime<Utc>,
+    pub confidence: f32,
+    pub change_type: String,
+    pub magnitude: f32,
+}
+
+/// Prediction for future values
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Prediction {
+    pub metric: String,
+    pub predicted_value: f32,
+    pub confidence: f32,
+    pub prediction_time: DateTime<Utc>,
+}
+
+/// Temporal event for causality analysis
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TemporalEvent {
+    pub event_id: String,
+    pub timestamp: DateTime<Utc>,
+    pub event_type: String,
+    pub properties: HashMap<String, serde_json::Value>,
+}
+
+/// Causality relationship between events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CausalityRelationship {
+    pub cause_event: String,
+    pub effect_event: String,
+    pub confidence: f32,
+    pub time_lag: i64,
+    pub relationship_type: String,
+}
 
 /// Temporal reasoning engine for time-based memory analysis
 #[derive(Debug)]
 pub struct TemporalReasoningEngine {
     db_client: Arc<DatabaseClient>,
     config: TemporalConfig,
+    temporal_service: Arc<HttpTemporalAnalysisService>,
 }
 
 impl TemporalReasoningEngine {
@@ -23,9 +208,26 @@ impl TemporalReasoningEngine {
         let db_config = data_infrastructure::DatabaseConfig::default();
         let db_client = Arc::new(DatabaseClient::new(db_config).await?);
 
+        // Get temporal analysis service URL from environment or use default
+        let temporal_url = std::env::var("TEMPORAL_ANALYSIS_SERVICE_URL")
+            .unwrap_or_else(|_| "http://localhost:9000".to_string());
+
+        info!("Initializing HTTP temporal analysis service at: {}", temporal_url);
+
+        // Create HTTP-based temporal analysis service
+        let temporal_service = Arc::new(HttpTemporalAnalysisService::new(temporal_url));
+        
+        // Test connection
+        if let Err(e) = temporal_service.health_check().await {
+            warn!("Temporal analysis service health check failed: {}", e);
+        } else {
+            info!("Temporal analysis service health check passed");
+        }
+
         Ok(Self {
             db_client,
             config: config.clone(),
+            temporal_service,
         })
     }
 

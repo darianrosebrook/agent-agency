@@ -5,6 +5,7 @@
 //! considerations for working specification evaluation.
 
 use crate::council_errors::CouncilResult;
+use std::sync::RwLock;
 use crate::judge_backup::risk::{EthicalAssessment, EthicalConcern, StakeholderImpact, EthicalTradeoff, ConsequenceAssessment, CulturalConsideration, EthicalCategory, EthicalSeverity, TimeHorizon};
 use crate::judge_backup::traits::Judge;
 use crate::judge_backup::types::{JudgeConfig, ReviewContext};
@@ -68,7 +69,7 @@ impl EthicsJudge {
                 "future generations".to_string(),
                 "environment".to_string(),
             ],
-            response_cache: ResponseCache::default(),
+            response_cache: RwLock::new(ResponseCache::default()),
         }
     }
 
@@ -373,6 +374,7 @@ impl Judge for EthicsJudge {
 
             for key in to_remove {
                 cache.cache.remove(&key);
+            }
             }
         }
 

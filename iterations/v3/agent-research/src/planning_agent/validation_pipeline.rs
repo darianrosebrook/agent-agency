@@ -58,22 +58,10 @@ impl CommonValidationStage for ValidationStageAdapter {
         // Run the appropriate validation based on stage type
         let results = match self.stage_type {
             ValidationStage::SchemaValidation => {
-                // TODO: Implement comprehensive schema validation with acceptance criteria:
-                // - [ ] Validate working spec structure against JSON schema
-                // - [ ] Check required fields and data types
-                // - [ ] Validate enum values and constraints
-                // - [ ] Ensure cross-field consistency and business rules
-                // - [ ] Provide detailed error messages for schema violations
-                vec![CommonValidationResult::pass("schema_validation", "Schema validation passed")]
+                self.validate_schema(&working_spec)
             }
             ValidationStage::ConstraintValidation => {
-                // TODO: Implement constraint validation logic with acceptance criteria:
-                // - [ ] Validate change budget constraints (max_files, max_loc)
-                // - [ ] Check scope boundaries (in/out directories)
-                // - [ ] Verify risk tier appropriateness for change impact
-                // - [ ] Validate operational rollback SLAs and requirements
-                // - [ ] Ensure acceptance criteria are measurable and testable
-                vec![CommonValidationResult::pass("constraint_validation", "Constraint validation passed")]
+                self.validate_constraints(&working_spec)
             }
             ValidationStage::CawsValidation => {
                 if let Some(validator) = &self.caws_validator {
@@ -110,26 +98,366 @@ impl CommonValidationStage for ValidationStageAdapter {
                 }
             }
             ValidationStage::RiskAssessment => {
-                // TODO: Implement risk assessment analysis with acceptance criteria:
-                // - [ ] Evaluate change impact on system stability and performance
-                // - [ ] Assess operational risk and rollback complexity
-                // - [ ] Analyze blast radius and downstream dependencies
-                // - [ ] Calculate risk score based on multiple factors (complexity, scope, testing)
-                // - [ ] Provide risk mitigation recommendations and safeguards
-                vec![CommonValidationResult::pass("risk_assessment", "Risk assessment passed")]
+                self.assess_risk(&working_spec)
             }
             ValidationStage::DependencyValidation => {
-                // TODO: Implement dependency validation with acceptance criteria:
-                // - [ ] Analyze code dependencies and import relationships
-                // - [ ] Validate external service and API dependencies
-                // - [ ] Check database schema and migration dependencies
-                // - [ ] Verify infrastructure and configuration dependencies
-                // - [ ] Ensure all required dependencies are available and compatible
-                vec![CommonValidationResult::pass("dependency_validation", "Dependency validation passed")]
+                self.validate_dependencies(&working_spec)
             }
         };
 
         Ok(results)
+    }
+
+    /// Validate working spec schema structure
+    fn validate_schema(&self, spec: &agent_agency_contracts::working_spec::WorkingSpec) -> Vec<CommonValidationResult> {
+        let mut results = Vec::new();
+
+        // Check required fields
+        if spec.id.is_empty() {
+            results.push(CommonValidationResult::fail(
+                CommonValidationSeverity::Error,
+                "missing_id",
+                "Working spec must have a non-empty ID"
+            ));
+        }
+
+        if spec.title.is_empty() {
+            results.push(CommonValidationResult::fail(
+                CommonValidationSeverity::Error,
+                "missing_title",
+                "Working spec must have a non-empty title"
+            ));
+        }
+
+        // Validate ID format (should be PREFIX-NUMBER)
+        if !spec.id.is_empty() && !self.is_valid_id_format(&spec.id) {
+            results.push(CommonValidationResult::fail(
+                CommonValidationSeverity::Error,
+                "invalid_id_format",
+                "ID must follow format PREFIX-NUMBER (e.g., FEAT-001, FIX-042)"
+            ));
+        }
+
+        // Validate risk tier
+        if spec.risk_tier < 1 || spec.risk_tier > 3 {
+            results.push(CommonValidationResult::fail(
+                CommonValidationSeverity::Error,
+                "invalid_risk_tier",
+                "Risk tier must be between 1 and 3"
+            ));
+        }
+
+        // Validate change budget
+        if spec.change_budget.max_files == 0 {
+            results.push(CommonValidationResult::fail(
+                CommonValidationSeverity::Error,
+                "invalid_max_files",
+                "Max files must be greater than 0"
+            ));
+        }
+
+        if spec.change_budget.max_loc == 0 {
+            results.push(CommonValidationResult::fail(
+                CommonValidationSeverity::Error,
+                "invalid_max_loc",
+                "Max lines of code must be greater than 0"
+            ));
+        }
+
+        // Validate scope
+        if spec.scope.in_directories.is_empty() {
+            results.push(CommonValidationResult::fail(
+                CommonValidationSeverity::Error,
+                "empty_scope_in",
+                "Scope must include at least one input directory"
+            ));
+        }
+
+        // Validate acceptance criteria
+        if spec.acceptance_criteria.is_empty() {
+            results.push(CommonValidationResult::fail(
+                CommonValidationSeverity::Error,
+                "missing_acceptance_criteria",
+                "Working spec must have at least one acceptance criterion"
+            ));
+        }
+
+        // Validate each acceptance criterion
+        for (i, criterion) in spec.acceptance_criteria.iter().enumerate() {
+            if criterion.given.is_empty() {
+                results.push(CommonValidationResult::fail(
+                    CommonValidationSeverity::Error,
+                    format!("acceptance_criterion_{}_missing_given", i),
+                    format!("Acceptance criterion {} must have a 'given' condition", i + 1)
+                ));
+            }
+
+            if criterion.when.is_empty() {
+                results.push(CommonValidationResult::fail(
+                    CommonValidationSeverity::Error,
+                    format!("acceptance_criterion_{}_missing_when", i),
+                    format!("Acceptance criterion {} must have a 'when' action", i + 1)
+                ));
+            }
+
+            if criterion.then.is_empty() {
+                results.push(CommonValidationResult::fail(
+                    CommonValidationSeverity::Error,
+                    format!("acceptance_criterion_{}_missing_then", i),
+                    format!("Acceptance criterion {} must have a 'then' outcome", i + 1)
+                ));
+            }
+        }
+
+        if results.is_empty() {
+            results.push(CommonValidationResult::pass("schema_validation", "Schema validation passed"));
+        }
+
+        results
+    }
+
+    /// Validate constraints and business rules
+    fn validate_constraints(&self, spec: &agent_agency_contracts::working_spec::WorkingSpec) -> Vec<CommonValidationResult> {
+        let mut results = Vec::new();
+
+        // Validate change budget constraints
+        if spec.change_budget.max_files > 100 {
+            results.push(CommonValidationResult::fail(
+                CommonValidationSeverity::Warning,
+                "large_change_budget",
+                "Change budget exceeds recommended maximum of 100 files"
+            ));
+        }
+
+        if spec.change_budget.max_loc > 10000 {
+            results.push(CommonValidationResult::fail(
+                CommonValidationSeverity::Warning,
+                "large_loc_budget",
+                "Lines of code budget exceeds recommended maximum of 10,000"
+            ));
+        }
+
+        // Validate scope boundaries
+        for dir in &spec.scope.in_directories {
+            if dir.contains("node_modules") || dir.contains(".git") || dir.contains("target/") {
+                results.push(CommonValidationResult::fail(
+                    CommonValidationSeverity::Error,
+                    "invalid_scope_directory",
+                    format!("Scope directory '{}' should not include build artifacts or dependencies", dir)
+                ));
+            }
+        }
+
+        // Validate risk tier appropriateness
+        let is_high_risk_change = spec.change_budget.max_files > 50 || 
+                                 spec.change_budget.max_loc > 5000 ||
+                                 spec.scope.in_directories.len() > 10;
+
+        if is_high_risk_change && spec.risk_tier < 2 {
+            results.push(CommonValidationResult::fail(
+                CommonValidationSeverity::Warning,
+                "risk_tier_mismatch",
+                "High-impact changes should use risk tier 2 or higher"
+            ));
+        }
+
+        // Validate operational rollback SLAs
+        if spec.operational_rollback_slo.is_empty() {
+            results.push(CommonValidationResult::fail(
+                CommonValidationSeverity::Error,
+                "missing_rollback_slo",
+                "Operational rollback SLO must be specified"
+            ));
+        }
+
+        // Validate acceptance criteria are measurable
+        for (i, criterion) in spec.acceptance_criteria.iter().enumerate() {
+            if !self.is_measurable_criterion(criterion) {
+                results.push(CommonValidationResult::fail(
+                    CommonValidationSeverity::Warning,
+                    format!("acceptance_criterion_{}_not_measurable", i),
+                    format!("Acceptance criterion {} should be more specific and measurable", i + 1)
+                ));
+            }
+        }
+
+        if results.is_empty() {
+            results.push(CommonValidationResult::pass("constraint_validation", "Constraint validation passed"));
+        }
+
+        results
+    }
+
+    /// Assess risk factors
+    fn assess_risk(&self, spec: &agent_agency_contracts::working_spec::WorkingSpec) -> Vec<CommonValidationResult> {
+        let mut results = Vec::new();
+        let mut risk_score = 0.0;
+
+        // Calculate complexity risk
+        let complexity_risk = if spec.change_budget.max_files > 25 { 0.3 } else { 0.1 };
+        risk_score += complexity_risk;
+
+        // Calculate scope risk
+        let scope_risk = if spec.scope.in_directories.len() > 5 { 0.2 } else { 0.05 };
+        risk_score += scope_risk;
+
+        // Calculate testing risk
+        let testing_risk = if spec.acceptance_criteria.len() < 3 { 0.2 } else { 0.05 };
+        risk_score += testing_risk;
+
+        // Calculate rollback risk
+        let rollback_risk = if spec.operational_rollback_slo.contains("5m") { 0.1 }
+                           else if spec.operational_rollback_slo.contains("1h") { 0.2 }
+                           else { 0.3 };
+        risk_score += rollback_risk;
+
+        // Assess risk level
+        if risk_score > 0.7 {
+            results.push(CommonValidationResult::fail(
+                CommonValidationSeverity::Error,
+                "high_risk_change",
+                format!("High risk change detected (score: {:.2}). Consider breaking into smaller changes.", risk_score)
+            ));
+        } else if risk_score > 0.5 {
+            results.push(CommonValidationResult::fail(
+                CommonValidationSeverity::Warning,
+                "medium_risk_change",
+                format!("Medium risk change detected (score: {:.2}). Ensure adequate testing and monitoring.", risk_score)
+            ));
+        }
+
+        // Provide risk mitigation recommendations
+        if risk_score > 0.4 {
+            let mut recommendations = Vec::new();
+            
+            if complexity_risk > 0.2 {
+                recommendations.push("Consider breaking into smaller, focused changes");
+            }
+            if scope_risk > 0.1 {
+                recommendations.push("Limit scope to fewer directories");
+            }
+            if testing_risk > 0.1 {
+                recommendations.push("Add more comprehensive acceptance criteria");
+            }
+            if rollback_risk > 0.2 {
+                recommendations.push("Improve rollback procedures and reduce rollback time");
+            }
+
+            if !recommendations.is_empty() {
+                results.push(CommonValidationResult::fail(
+                    CommonValidationSeverity::Info,
+                    "risk_mitigation_recommendations",
+                    format!("Risk mitigation: {}", recommendations.join("; "))
+                ));
+            }
+        }
+
+        if results.is_empty() {
+            results.push(CommonValidationResult::pass("risk_assessment", "Risk assessment passed"));
+        }
+
+        results
+    }
+
+    /// Validate dependencies
+    fn validate_dependencies(&self, spec: &agent_agency_contracts::working_spec::WorkingSpec) -> Vec<CommonValidationResult> {
+        let mut results = Vec::new();
+
+        // Check for external service dependencies
+        let external_services = self.extract_external_dependencies(spec);
+        for service in external_services {
+            results.push(CommonValidationResult::fail(
+                CommonValidationSeverity::Info,
+                "external_dependency",
+                format!("External dependency detected: {}. Ensure service availability.", service)
+            ));
+        }
+
+        // Check for database dependencies
+        if spec.scope.in_directories.iter().any(|dir| dir.contains("migration") || dir.contains("schema")) {
+            results.push(CommonValidationResult::fail(
+                CommonValidationSeverity::Warning,
+                "database_dependency",
+                "Database schema changes detected. Ensure migration compatibility and rollback procedures."
+            ));
+        }
+
+        // Check for API dependencies
+        if spec.scope.in_directories.iter().any(|dir| dir.contains("api") || dir.contains("endpoint")) {
+            results.push(CommonValidationResult::fail(
+                CommonValidationSeverity::Warning,
+                "api_dependency",
+                "API changes detected. Ensure backward compatibility and versioning strategy."
+            ));
+        }
+
+        // Check for configuration dependencies
+        if spec.scope.in_directories.iter().any(|dir| dir.contains("config") || dir.contains("env")) {
+            results.push(CommonValidationResult::fail(
+                CommonValidationSeverity::Info,
+                "config_dependency",
+                "Configuration changes detected. Ensure environment compatibility."
+            ));
+        }
+
+        if results.is_empty() {
+            results.push(CommonValidationResult::pass("dependency_validation", "Dependency validation passed"));
+        }
+
+        results
+    }
+
+    /// Check if ID follows the correct format
+    fn is_valid_id_format(&self, id: &str) -> bool {
+        let parts: Vec<&str> = id.split('-').collect();
+        if parts.len() != 2 {
+            return false;
+        }
+        
+        let prefix = parts[0];
+        let number = parts[1];
+        
+        // Check prefix is uppercase letters
+        if !prefix.chars().all(|c| c.is_ascii_uppercase()) || prefix.is_empty() {
+            return false;
+        }
+        
+        // Check number is digits
+        if !number.chars().all(|c| c.is_ascii_digit()) || number.is_empty() {
+            return false;
+        }
+        
+        true
+    }
+
+    /// Check if acceptance criterion is measurable
+    fn is_measurable_criterion(&self, criterion: &agent_agency_contracts::working_spec::AcceptanceCriterion) -> bool {
+        let measurable_keywords = ["should", "must", "will", "verify", "check", "ensure", "confirm"];
+        let text = format!("{} {} {}", criterion.given, criterion.when, criterion.then).to_lowercase();
+        
+        measurable_keywords.iter().any(|keyword| text.contains(keyword))
+    }
+
+    /// Extract external dependencies from working spec
+    fn extract_external_dependencies(&self, spec: &agent_agency_contracts::working_spec::WorkingSpec) -> Vec<String> {
+        let mut dependencies = Vec::new();
+        
+        // Check title and description for external services
+        let text = format!("{} {}", spec.title, spec.description).to_lowercase();
+        
+        let external_services = [
+            "api", "database", "redis", "postgresql", "mysql", "mongodb",
+            "elasticsearch", "kafka", "rabbitmq", "s3", "dynamodb",
+            "firebase", "auth0", "stripe", "paypal", "twilio", "sendgrid"
+        ];
+        
+        for service in &external_services {
+            if text.contains(service) {
+                dependencies.push(service.to_string());
+            }
+        }
+        
+        dependencies
     }
 }
 

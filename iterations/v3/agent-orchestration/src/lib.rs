@@ -341,4 +341,10 @@ pub enum OrchestrationError {
 
     #[error("Audit error: {0}")]
     AuditError(String),
+
+    #[error("IO error: {0}")]
+    IoError(#[from] std::io::Error),
+
+    #[error("Anyhow error: {0}")]
+    AnyhowError(#[from] anyhow::Error),
 }

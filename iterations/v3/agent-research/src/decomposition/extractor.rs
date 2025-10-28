@@ -236,14 +236,14 @@ impl ClaimExtractor {
     }
 
     /// Assess verifiability of the claim
-    fn assess_verifiability(&self, clause: &str) -> Verifiability {
+    fn assess_verifiability(&self, clause: &str) -> VerifiabilityLevel {
         // Simple assessment based on content
         if clause.contains("test") || clause.contains("verify") || clause.contains("measure") {
-            Verifiability::Testable
+            VerifiabilityLevel::DirectlyVerifiable
         } else if clause.contains(|c: char| c.is_ascii_digit()) {
-            Verifiability::Quantifiable
+            VerifiabilityLevel::IndirectlyVerifiable
         } else {
-            Verifiability::Qualitative
+            VerifiabilityLevel::LowVerifiability
         }
     }
 

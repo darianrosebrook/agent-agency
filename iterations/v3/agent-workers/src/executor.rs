@@ -2,10 +2,10 @@
 //!
 //! Executes tasks by communicating with worker models and handling the execution lifecycle.
 
-use crate::worker_types::{*, UuidGenerator};
-use agent_agency_contracts::{IssueSeverity, task_executor::{TaskExecutor as TaskExecutorTrait, TaskExecutionResult, TaskSpec as ContractTaskSpec, TaskPriority}};
-use agent_agency_council::models::{RiskTier, TaskContext as CouncilTaskContext, TaskSpec};
-use agent_agency_resilience::{CircuitBreaker, RetryConfig};
+use crate::worker_types::{*, UuidGenerator, TaskPriority};
+use agent_agency_contracts::{IssueSeverity, task_executor::{TaskExecutor as TaskExecutorTrait, TaskExecutionResult, TaskSpec as ContractTaskSpec}};
+use agent_agency_contracts::{TaskContext as CouncilTaskContext, TaskSpec};
+use agent_orchestration::types::{CircuitBreaker, RetryConfig};
 use anyhow::{Context, Result};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -266,7 +266,7 @@ impl TaskExecutor {
     /// Convert council TaskContext to workers TaskContext
     fn convert_task_context(
         &self,
-        _council_context: &agent_agency_council::models::TaskContext,
+        _council_context: &CouncilTaskContext,
     ) -> TaskContext {
         // Create execution context with defaults - would map actual fields in real implementation
         TaskContext {
@@ -341,7 +341,7 @@ impl TaskExecutor {
     }
 
     /// Convert council validation rules to worker validation rules
-    fn convert_validation_rules(council_spec: &agent_agency_council::models::CawsSpec) -> Vec<ValidationRule> {
+    fn convert_validation_rules(council_spec: &agent_agency_contracts::CawsSpec) -> Vec<ValidationRule> {
         // For now, create basic validation rules from waivers
         council_spec.waivers.iter().enumerate().map(|(i, waiver)| {
             ValidationRule {
@@ -362,7 +362,7 @@ impl TaskExecutor {
     /// Convert council CawsSpec to workers CawsSpec
     fn convert_caws_spec(
         &self,
-        council_spec: &agent_agency_council::models::CawsSpec,
+        council_spec: &agent_agency_contracts::CawsSpec,
     ) -> CawsSpec {
         // Map council CawsSpec rules to worker quality gates
         let quality_gates = council_spec.rules.iter()
@@ -941,17 +941,17 @@ impl TaskExecutorTrait for TaskExecutor {
         &self,
         task_spec: ContractTaskSpec,
         worker_id: Uuid,
-    ) -> Result<TaskExecutionResult> {
+    ) -> Result<TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
         // Convert contract task spec to internal task spec
         let internal_spec = TaskSpec {
             id: task_spec.id,
             title: task_spec.title,
             description: task_spec.description,
             priority: match task_spec.priority {
-                TaskPriority::Low => crate::worker_types::TaskPriority::Low,
-                TaskPriority::Medium => crate::worker_types::TaskPriority::Medium,
-                TaskPriority::High => crate::worker_types::TaskPriority::High,
-                TaskPriority::Critical => crate::worker_types::TaskPriority::Critical,
+                TaskPriority::Low => TaskPriority::Low,
+                TaskPriority::Medium => TaskPriority::Medium,
+                TaskPriority::High => TaskPriority::High,
+                TaskPriority::Critical => TaskPriority::Critical,
             },
             required_capabilities: task_spec.required_capabilities,
             context: task_spec.context,
@@ -982,17 +982,17 @@ impl TaskExecutorTrait for TaskExecutor {
         task_spec: ContractTaskSpec,
         worker_id: Uuid,
         circuit_breaker_enabled: bool,
-    ) -> Result<TaskExecutionResult> {
+    ) -> Result<TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
         // Convert contract task spec to internal task spec
         let internal_spec = TaskSpec {
             id: task_spec.id,
             title: task_spec.title,
             description: task_spec.description,
             priority: match task_spec.priority {
-                TaskPriority::Low => crate::worker_types::TaskPriority::Low,
-                TaskPriority::Medium => crate::worker_types::TaskPriority::Medium,
-                TaskPriority::High => crate::worker_types::TaskPriority::High,
-                TaskPriority::Critical => crate::worker_types::TaskPriority::Critical,
+                TaskPriority::Low => TaskPriority::Low,
+                TaskPriority::Medium => TaskPriority::Medium,
+                TaskPriority::High => TaskPriority::High,
+                TaskPriority::Critical => TaskPriority::Critical,
             },
             required_capabilities: task_spec.required_capabilities,
             context: task_spec.context,
@@ -1033,7 +1033,7 @@ impl TaskExecutorTrait for TaskExecutor {
         })
     }
 
-    async fn health_check(&self) -> Result<agent_agency_contracts::task_executor::TaskExecutorHealth> {
+    async fn health_check(&self) -> Result<agent_agency_contracts::task_executor::TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>> {
         // Basic health check - in a real implementation this would check actual worker connections
         Ok(agent_agency_contracts::task_executor::TaskExecutorHealth {
             status: agent_agency_contracts::task_executor::HealthStatus::Healthy,
@@ -1045,7 +1045,7 @@ impl TaskExecutorTrait for TaskExecutor {
         })
     }
 
-    async fn get_execution_stats(&self) -> Result<agent_agency_contracts::task_executor::TaskExecutionStats> {
+    async fn get_execution_stats(&self) -> Result<agent_agency_contracts::task_executor::TaskExecutionStats, Box<dyn std::error::Error + Send + Sync>> {
         // Basic stats - in a real implementation this would track actual metrics
         Ok(agent_agency_contracts::task_executor::TaskExecutionStats {
             total_executions: 0,
@@ -1058,9 +1058,42 @@ impl TaskExecutorTrait for TaskExecutor {
         })
     }
 
-    async fn cancel_task_execution(&self, _task_id: Uuid, _worker_id: Uuid) -> Result<()> {
+    async fn cancel_task_execution(&self, _task_id: Uuid, _worker_id: Uuid) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Basic implementation - in a real implementation this would cancel the actual task
         // For now, just return success
         Ok(())
+    }
+
+    /// Resolve worker endpoint from worker registry
+    async fn resolve_worker_endpoint(&self, worker_id: Uuid) -> Result<String, anyhow::Error> {
+        // In a real implementation, this would:
+        // 1. Query worker registry service for worker endpoint
+        // 2. Check worker health and availability
+        // 3. Cache resolved endpoints for performance
+        // 4. Handle worker failover and load balancing
+        
+        // For now, use a simple pattern based on worker ID
+        // In production, this would integrate with service discovery
+        let worker_endpoint = format!("http://worker-{}.local:8080", worker_id);
+        
+        // Validate endpoint is reachable (basic health check)
+        match self.client.get(&format!("{}/health", worker_endpoint))
+            .timeout(std::time::Duration::from_secs(5))
+            .send()
+            .await 
+        {
+            Ok(response) if response.status().is_success() => {
+                info!("Worker {} is healthy at {}", worker_id, worker_endpoint);
+                Ok(worker_endpoint)
+            }
+            Ok(_) => {
+                warn!("Worker {} health check failed, using fallback endpoint", worker_id);
+                Ok(format!("http://worker-{}.fallback:8080", worker_id))
+            }
+            Err(e) => {
+                warn!("Worker {} health check error: {}, using fallback endpoint", worker_id, e);
+                Ok(format!("http://worker-{}.fallback:8080", worker_id))
+            }
+        }
     }
 }

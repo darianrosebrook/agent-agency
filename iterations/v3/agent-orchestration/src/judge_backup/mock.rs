@@ -4,6 +4,7 @@
 //! for testing council workflows and integration scenarios.
 
 use crate::council_errors::CouncilResult;
+use crate::judge_backup::backup_types::JudgeType;
 use crate::judge_backup::traits::Judge;
 use crate::judge_backup::backup_types::{JudgeHealthMetrics, JudgeHealthStatus};
 use crate::judge_backup::types::JudgeConfig;
@@ -334,7 +335,7 @@ pub fn create_mock_judge_panel() -> Vec<MockJudge> {
             JudgeConfig {
                 judge_id: "quality_judge".to_string(),
                 name: "Quality Judge".to_string(),
-                judge_type: "quality".to_string(),
+                judge_type: JudgeType::Quality,
                 specialization: "quality".to_string(),
                 max_response_time_ms: 5000,
                 health_check_interval_ms: 30000,
@@ -345,7 +346,7 @@ pub fn create_mock_judge_panel() -> Vec<MockJudge> {
             JudgeConfig {
                 judge_id: "security_judge".to_string(),
                 name: "Security Judge".to_string(),
-                judge_type: "security".to_string(),
+                judge_type: JudgeType::Security,
                 specialization: "security".to_string(),
                 max_response_time_ms: 5000,
                 health_check_interval_ms: 30000,
@@ -356,7 +357,7 @@ pub fn create_mock_judge_panel() -> Vec<MockJudge> {
             JudgeConfig {
                 judge_id: "general_judge".to_string(),
                 name: "General Judge".to_string(),
-                judge_type: "general".to_string(),
+                judge_type: JudgeType::Constitutional,
                 specialization: "general".to_string(),
                 max_response_time_ms: 5000,
                 health_check_interval_ms: 30000,

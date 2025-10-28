@@ -2,6 +2,7 @@
 
 use super::types::*;
 use crate::extraction_types::{AtomicClaim, Evidence, EvidenceType};
+use crate::evidence::evidence_types::EvidenceCollectorConfig;
 use std::collections::HashMap;
 
 /// Evidence filter and ranking engine

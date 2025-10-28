@@ -10,6 +10,29 @@ use tokio::sync::RwLock;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error, info, warn};
 
+// Import Core ML types from system-acceleration
+use system_acceleration::ane::compat::coreml::{self as ane_coreml, MLModel};
+use system_acceleration::ane::compat::coreml::coreml::ModelRef;
+use system_acceleration::ane::TensorSpec;
+
+// External C functions for Core ML bridge
+extern "C" {
+    fn agentbridge_run_inference(
+        model_ref: u64,
+        input_name: *const std::ffi::c_char,
+        input_data: *const f32,
+        input_shape: *const i32,
+        input_shape_len: i32,
+        out_output_data: *mut *mut f32,
+        out_output_shape: *mut *mut i32,
+        out_output_shape_len: *mut i32,
+        out_error: *mut *mut std::ffi::c_char
+    ) -> i32;
+
+    fn agentbridge_free_string(ptr: *mut std::ffi::c_char);
+    fn agentbridge_free_array_data(ptr: *mut f32);
+}
+
 /// Core ML model types supported by the system
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CoreMLModelType {
@@ -49,8 +72,10 @@ pub struct CoreMLModel {
     pub metadata: ModelMetadata,
     /// Path to compiled model file
     pub model_path: PathBuf,
-    /// Model handle (opaque pointer to Core ML model)
-    pub model_handle: Option<usize>, // Placeholder for actual Core ML handle
+    /// Core ML model instance
+    pub model: Option<MLModel>,
+    /// Model reference for inference
+    pub model_ref: Option<ModelRef>,
 }
 
 /// Core ML manager for loading and managing models
@@ -119,6 +144,18 @@ impl CoreMLManager {
             return Err(format!("FastViT model not found at: {:?}", model_path).into());
         }
 
+        // Load the actual Core ML model
+        let ml_model = match MLModel::from_path(&model_path) {
+            Ok(model) => model,
+            Err(e) => {
+                warn!("Failed to load FastViT Core ML model: {}", e);
+                return Err(format!("Failed to load FastViT model: {}", e).into());
+            }
+        };
+
+        // Create model reference for inference
+        let model_ref = Some(ModelRef::from_handle(ml_model.handle()));
+
         let metadata = ModelMetadata {
             model_type: CoreMLModelType::Vision,
             name: "FastViT-T8-F16".to_string(),
@@ -136,7 +173,8 @@ impl CoreMLManager {
         let model = Arc::new(CoreMLModel {
             metadata,
             model_path,
-            model_handle: Some(1), // Placeholder handle
+            model: Some(ml_model),
+            model_ref,
         });
 
         self.models.write().await.insert(
@@ -156,6 +194,18 @@ impl CoreMLManager {
             return Err(format!("Mistral model not found at: {:?}", model_path).into());
         }
 
+        // Load the actual Core ML model
+        let ml_model = match MLModel::from_path(&model_path) {
+            Ok(model) => model,
+            Err(e) => {
+                warn!("Failed to load Mistral Core ML model: {}", e);
+                return Err(format!("Failed to load Mistral model: {}", e).into());
+            }
+        };
+
+        // Create model reference for inference
+        let model_ref = Some(ModelRef::from_handle(ml_model.handle()));
+
         let metadata = ModelMetadata {
             model_type: CoreMLModelType::Language,
             name: "Mistral-7B-Instruct-FP16".to_string(),
@@ -174,7 +224,8 @@ impl CoreMLManager {
         let model = Arc::new(CoreMLModel {
             metadata,
             model_path,
-            model_handle: Some(2), // Placeholder handle
+            model: Some(ml_model),
+            model_ref,
         });
 
         self.models.write().await.insert(
@@ -194,6 +245,18 @@ impl CoreMLManager {
             return Err(format!("Whisper model not found at: {:?}", model_path).into());
         }
 
+        // Load the actual Core ML model
+        let ml_model = match MLModel::from_path(&model_path) {
+            Ok(model) => model,
+            Err(e) => {
+                warn!("Failed to load Whisper Core ML model: {}", e);
+                return Err(format!("Failed to load Whisper model: {}", e).into());
+            }
+        };
+
+        // Create model reference for inference
+        let model_ref = Some(ModelRef::from_handle(ml_model.handle()));
+
         let metadata = ModelMetadata {
             model_type: CoreMLModelType::SpeechToText,
             name: "Whisper-Base-EN".to_string(),
@@ -211,7 +274,8 @@ impl CoreMLManager {
         let model = Arc::new(CoreMLModel {
             metadata,
             model_path,
-            model_handle: Some(3), // Placeholder handle
+            model: Some(ml_model),
+            model_ref,
         });
 
         self.models.write().await.insert(
@@ -231,6 +295,18 @@ impl CoreMLManager {
             return Err(format!("YOLO model not found at: {:?}", model_path).into());
         }
 
+        // Load the actual Core ML model
+        let ml_model = match MLModel::from_path(&model_path) {
+            Ok(model) => model,
+            Err(e) => {
+                warn!("Failed to load YOLO Core ML model: {}", e);
+                return Err(format!("Failed to load YOLO model: {}", e).into());
+            }
+        };
+
+        // Create model reference for inference
+        let model_ref = Some(ModelRef::from_handle(ml_model.handle()));
+
         let metadata = ModelMetadata {
             model_type: CoreMLModelType::ObjectDetection,
             name: "YOLOv3".to_string(),
@@ -248,7 +324,8 @@ impl CoreMLManager {
         let model = Arc::new(CoreMLModel {
             metadata,
             model_path,
-            model_handle: Some(4), // Placeholder handle
+            model: Some(ml_model),
+            model_ref,
         });
 
         self.models.write().await.insert(
@@ -283,7 +360,7 @@ impl CoreMLManager {
         self.models.read().await.len()
     }
 
-    /// Run inference on a model (placeholder implementation)
+    /// Run inference on a model
     pub async fn run_inference(
         &self,
         model: &CoreMLModel,
@@ -291,20 +368,99 @@ impl CoreMLManager {
     ) -> Result<HashMap<String, Vec<f32>>, Box<dyn std::error::Error + Send + Sync>> {
         debug!("Running inference on model: {}", model.metadata.name);
 
-        // Placeholder: In a real implementation, this would:
-        // 1. Prepare input tensors
-        // 2. Call Core ML prediction
-        // 3. Process and return outputs
+        let model_ref = model.model_ref.as_ref()
+            .ok_or_else(|| "Model reference not available")?;
 
-        // For now, return mock outputs based on expected shapes
-        let mut outputs = HashMap::new();
+        // For now, handle single input/output models
+        // TODO: Extend to support multiple inputs/outputs
+        let (input_name, input_data) = inputs.iter().next()
+            .ok_or_else(|| "No input data provided")?;
 
-        for (output_name, shape) in &model.metadata.output_shapes {
-            let size: usize = shape.iter().product();
-            let mock_output = vec![0.1f32; size]; // Mock output data
-            outputs.insert(output_name.clone(), mock_output);
+        // Get expected input shape
+        let input_shape = model.metadata.input_shapes.get(input_name)
+            .ok_or_else(|| format!("Input '{}' not found in model metadata", input_name))?;
+
+        // Validate input data size matches expected shape
+        let expected_size: usize = input_shape.iter().product();
+        if input_data.len() != expected_size {
+            return Err(format!(
+                "Input data size {} doesn't match expected shape {:?} (size {})",
+                input_data.len(), input_shape, expected_size
+            ).into());
         }
 
+        // Convert shape to i32 for FFI
+        let input_shape_i32: Vec<i32> = input_shape.iter().map(|&x| x as i32).collect();
+
+        // Prepare output buffers (FFI will allocate these)
+        let mut output_data_ptr: *mut f32 = std::ptr::null_mut();
+        let mut output_shape_ptr: *mut i32 = std::ptr::null_mut();
+        let mut output_shape_len: i32 = 0;
+        let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+
+        // Call Core ML inference
+        let input_name_cstr = std::ffi::CString::new(input_name.clone())
+            .map_err(|e| format!("Invalid input name: {}", e))?;
+
+        let result = unsafe {
+            agentbridge_run_inference(
+                model_ref.id(),
+                input_name_cstr.as_ptr(),
+                input_data.as_ptr(),
+                input_shape_i32.as_ptr(),
+                input_shape_i32.len() as i32,
+                &mut output_data_ptr,
+                &mut output_shape_ptr,
+                &mut output_shape_len,
+                &mut error_ptr
+            )
+        };
+
+        if result != 0 {
+            let error_msg = if !error_ptr.is_null() {
+                unsafe {
+                    let cstr = std::ffi::CStr::from_ptr(error_ptr);
+                    let msg = cstr.to_string_lossy().to_string();
+                    agentbridge_free_string(error_ptr);
+                    msg
+                }
+            } else {
+                format!("Core ML inference failed with code {}", result)
+            };
+            return Err(error_msg.into());
+        }
+
+        if output_data_ptr.is_null() || output_shape_ptr.is_null() || output_shape_len <= 0 {
+            return Err("Invalid output from Core ML inference".into());
+        }
+
+        // Convert output shape to Vec
+        let output_shape: Vec<usize> = unsafe {
+            std::slice::from_raw_parts(output_shape_ptr, output_shape_len as usize)
+                .iter()
+                .map(|&x| x as usize)
+                .collect()
+        };
+
+        // Calculate output size and copy data
+        let output_size: usize = output_shape.iter().product();
+        let output_data: Vec<f32> = unsafe {
+            std::slice::from_raw_parts(output_data_ptr, output_size).to_vec()
+        };
+
+        // Free allocated memory
+        unsafe {
+            agentbridge_free_array_data(output_data_ptr as *mut f32);
+            agentbridge_free_array_data(output_shape_ptr as *mut f32);
+        }
+
+        // For now, return single output. TODO: Handle multiple outputs
+        let mut outputs = HashMap::new();
+        let output_name = model.metadata.output_shapes.keys().next()
+            .ok_or_else(|| "No output shapes defined in model metadata")?;
+        outputs.insert(output_name.clone(), output_data);
+
+        debug!("Inference completed successfully for model: {}", model.metadata.name);
         Ok(outputs)
     }
 }

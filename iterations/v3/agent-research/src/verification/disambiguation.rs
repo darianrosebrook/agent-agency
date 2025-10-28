@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 use regex::Regex;
 
 use anyhow::Result;
-use crate::verification::types::*;
+use crate::verification::types::{Entity, EntityType, EntityDisambiguation, EntityCandidate, DisambiguationMethod};
 
 /// Entity disambiguation engine
 pub struct EntityDisambiguator;

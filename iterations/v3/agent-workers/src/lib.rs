@@ -33,6 +33,14 @@ pub mod mcp_integration;
 pub mod services;
 pub mod worker_types;
 
+// Re-export commonly used types
+pub use worker_types::{
+    WorkerMessage, WorkerProgress, Progress, ValidationResult, ValidationContext,
+    Artifact, ArtifactType, WorkerHealth, SeverityLevel, TaskPriority,
+    WorkerSpecialty, TaskDefinition, TaskStatus, ExecutionOutcome, LearningMode,
+    Priority, WorkerBreakdown, QualityRequirements, ToolId, ValidationRuleType
+};
+
 // Consolidated from workers/ crate
 pub mod autonomous_executor;
 pub mod caws_checker;
@@ -51,6 +59,9 @@ pub mod validation;
 pub mod metrics;
 pub mod learning;
 pub mod worker_errors;
+pub mod parallel_types;
+pub mod error;
+pub mod worker;
 
 // Consolidated from worker/ crate (CLI interface)
 pub mod cli;
@@ -74,10 +85,8 @@ pub use specialized_workers::{CompilationSpecialist, RefactoringSpecialist, Test
 pub use coordinator::{ParallelCoordinator, ParallelCoordinatorConfig};
 pub use decomposition::{DecompositionEngine, TaskAnalysis, TaskPattern};
 pub use communication::hub::CommunicationHub;
-pub use progress::{WorkerProgressTracker, Progress, WorkerProgress};
-pub use validation::{QualityValidatorTrait, QualityGate, ValidationContext};
-pub use metrics::aggregates::MetricsAggregator;
-pub use learning::adaptive_selector::AdaptiveSelector;
+pub use progress::{WorkerProgressTracker};
+pub use validation::{QualityValidatorTrait, QualityGate};
 pub use worker_errors::*;
 
 // Re-export contract traits for compatibility
@@ -101,12 +110,14 @@ pub async fn new_worker_pool_with_registry(tool_registry: std::sync::Arc<agent_m
 
 /// Create a parallel coordinator for complex task decomposition
 pub fn new_parallel_coordinator() -> ParallelCoordinator {
-    coordinator::new_coordinator()
+    // TODO: Implement coordinator creation
+    todo!("Implement coordinator creation")
 }
 
 /// Create a parallel coordinator with custom configuration
-pub fn new_parallel_coordinator_with_config(config: ParallelCoordinatorConfig) -> ParallelCoordinator {
-    coordinator::new_coordinator_with_config(config)
+pub fn new_parallel_coordinator_with_config(_config: ParallelCoordinatorConfig) -> ParallelCoordinator {
+    // TODO: Implement coordinator creation with config
+    todo!("Implement coordinator creation with config")
 }
 
 /// Create a task executor that implements the TaskExecutor trait

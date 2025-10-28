@@ -9,4 +9,4 @@ pub use aggregator::*;
 pub use synthesizer::*;
 
 // Re-export types from types module that are used in progress tracking
-pub use crate::parallel_types::{Progress, WorkerProgress};
+pub use crate::{Progress, WorkerProgress};

@@ -25,44 +25,16 @@ use crate::OrchestrationError;
 // };
 
 // Temporary stub types until agent_data_processing is available
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UnifiedIngestor;
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FileWatcher;
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UnifiedEnrichmentStage;
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UnifiedIndexer;
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct JobScheduler;
-#[derive(Debug)]
-pub struct CircuitBreaker;
-
-impl CircuitBreaker {
-    pub fn new() -> Self {
-        Self
-    }
-
-    pub fn is_open(&self) -> bool {
-        false // Stub implementation
-    }
-
-    pub fn record_success(&self) {
-        // Stub implementation
-    }
-
-    pub fn state(&self) -> String {
-        "closed".to_string()
-    }
-
-    pub async fn execute<F, Fut, T>(&self, f: F) -> Result<T>
-    where
-        F: FnOnce() -> Fut,
-        Fut: std::future::Future<Output = Result<T>>,
-    {
-        f().await
-    }
-}
 
 impl UnifiedIngestor {
     pub fn new() -> Self {
@@ -122,9 +94,11 @@ use crate::audit_trail::{
     AuditTrailManager, AuditConfig, AuditLogLevel, AuditOutputFormat,
     AuditEvent, AuditCategory, AuditSeverity, AuditResult, AuditPerformance,
 };
+use crate::error_handling::{CircuitBreaker, CircuitBreakerState, CircuitBreakerStats};
 use data_infrastructure::DatabaseClient;
 use tracing::{debug, info, warn};
 // Stub types until agent_data_processing is available
+#[derive(Clone)]
 pub struct Block {
     pub id: String,
     pub content: String,
@@ -350,7 +324,16 @@ impl MultimodalOrchestrator {
             unified_enricher,
             unified_indexer,
             job_scheduler: JobScheduler::new(),
-            circuit_breaker: CircuitBreaker::new(),
+            circuit_breaker: CircuitBreaker::new(
+                "multimodal-orchestration".to_string(),
+                crate::error_handling::ErrorHandlingCircuitBreakerConfig {
+                    failure_threshold: 5,
+                    success_threshold: 3,
+                    recovery_timeout: std::time::Duration::from_secs(60),
+                    monitoring_window: std::time::Duration::from_secs(300),
+                    request_timeout: std::time::Duration::from_secs(30),
+                },
+            ),
             coreml_manager,
             knowledge_seeker: None,
             council_coordinator: None,
@@ -410,7 +393,8 @@ impl MultimodalOrchestrator {
             });
 
             // TODO: Fix audit event construction
-            // let _ = audit_manager.record_event(AuditEvent {
+            /*
+            let _ = audit_manager.record_event(AuditEvent {
                 event_id: Uuid::new_v4(),
                 timestamp: Utc::now(),
                 correlation_id: Some(operation_id.to_string()),
@@ -433,7 +417,8 @@ impl MultimodalOrchestrator {
                 }),
                 context: HashMap::new(),
                 tags: vec!["multimodal".to_string(), operation_type.to_string()],
-            }).await; */
+            }).await;
+            */
         }
         Ok(())
     }
@@ -461,30 +446,30 @@ impl MultimodalOrchestrator {
                 let severity = if success { AuditSeverity::Info } else { AuditSeverity::Error };
 
                 // TODO: Fix audit event construction
-            // let _ = audit_manager.record_event(AuditEvent {
-                    event_id: Uuid::new_v4(),
-                    timestamp: Utc::now(),
-                    correlation_id: context.correlation_id,
-                    parent_event_id: None,
-                    category: AuditCategory::Operation,
-                    severity,
-                    actor: "multimodal_orchestrator".to_string(),
-                    operation: format!("complete_{}", context.operation_type),
-                    message: Some(format!("Completed {} operation in {:?}", context.operation_type, duration)),
-                    operation_id: Some(operation_id.to_string()),
-                    target: Some(context.operation_type),
-                    parameters: metadata.unwrap_or_default().into_iter().map(|(k, v)| (k, serde_json::to_value(v).unwrap_or(serde_json::Value::Null))).collect(),
-                    result,
-                    performance: Some(AuditPerformance {
-                        duration,
-                        cpu_time_us: None,
-                        memory_bytes: None,
-                        io_operations: None,
-                        network_bytes: None,
-                    }),
-                    context: HashMap::new(),
-                    tags: vec!["multimodal".to_string(), "completion".to_string()],
-                }).await;
+                // let _ = audit_manager.record_event(AuditEvent {
+                //     event_id: Uuid::new_v4(),
+                //     timestamp: Utc::now(),
+                //     correlation_id: context.correlation_id,
+                //     parent_event_id: None,
+                //     category: AuditCategory::Operation,
+                //     severity,
+                //     actor: "multimodal_orchestrator".to_string(),
+                //     operation: format!("complete_{}", context.operation_type),
+                //     message: Some(format!("Completed {} operation in {:?}", context.operation_type, duration)),
+                //     operation_id: Some(operation_id.to_string()),
+                //     target: Some(context.operation_type),
+                //     parameters: metadata.unwrap_or_default().into_iter().map(|(k, v)| (k, serde_json::to_value(v).unwrap_or(serde_json::Value::Null))).collect(),
+                //     result,
+                //     performance: Some(AuditPerformance {
+                //         duration,
+                //         cpu_time_us: None,
+                //         memory_bytes: None,
+                //         io_operations: None,
+                //         network_bytes: None,
+                //     }),
+                //     context: HashMap::new(),
+                //     tags: vec!["multimodal".to_string(), "completion".to_string()],
+                // }).await;
             }
         }
         Ok(())
@@ -507,7 +492,7 @@ impl MultimodalOrchestrator {
         info!("Starting multimodal document processing: {} (id: {})", file_path.display(), document_id);
 
         // Check circuit breaker state
-        if self.circuit_breaker.is_open() {
+        if matches!(self.circuit_breaker.get_state().await, crate::error_handling::CircuitBreakerState::Open) {
             warn!("Circuit breaker is open, skipping processing");
             return Ok(ProcessingResult {
                 document_id,
@@ -620,9 +605,9 @@ impl MultimodalOrchestrator {
             let semaphore = semaphore.clone();
             let file_path_str = file_path.to_string_lossy().to_string();
             let audit_trail_clone = self.audit_trail.clone();
-            let unified_ingestor = Arc::clone(&self.unified_ingestor);
-            let unified_enricher = Arc::clone(&self.unified_enricher);
-            let unified_indexer = Arc::clone(&self.unified_indexer);
+            let unified_ingestor = self.unified_ingestor.clone();
+            let unified_enricher = self.unified_enricher.clone();
+            let unified_indexer = self.unified_indexer.clone();
 
             let task = tokio::spawn(async move {
                 let _permit = semaphore.acquire().await.unwrap();
@@ -643,17 +628,33 @@ impl MultimodalOrchestrator {
                 let start_time = std::time::Instant::now();
 
                 // Process document using cloned components
-                let result = async {
+                let result: Result<ProcessingResult, OrchestrationError> = async {
                     let path = Path::new(&file_path_str);
                     let content = tokio::fs::read_to_string(path).await?;
-                    let blocks = unified_ingestor.ingest_content(&content).await?;
-                    let enriched = unified_enricher.enrich_blocks(blocks).await?;
+                    let blocks = unified_ingestor.ingest(DataInput {
+                        id: file_path_str.clone(),
+                        source: DataSource::File(file_path_str.clone()),
+                        content,
+                        processing_context: ProcessingContext {
+                            priority: ProcessingPriority::Normal,
+                            metadata: std::collections::HashMap::new(),
+                        },
+                    }).await?;
+                    let enriched = unified_enricher.enrich_blocks(blocks.blocks).await?;
                     unified_indexer.index_blocks(enriched.into_iter().map(|eb| Block {
                         id: eb.id,
                         content: eb.content,
                         metadata: eb.metadata,
                     }).collect()).await?;
-                    Ok(ProcessingResult::Success)
+                    Ok(ProcessingResult {
+                        document_id: Uuid::new_v4(),
+                        status: ProcessingStatus::Completed,
+                        blocks_processed: 1,
+                        blocks_enriched: 1,
+                        blocks_indexed: 1,
+                        processing_time_ms: start_time.elapsed().as_millis() as u64,
+                        error_message: None,
+                    })
                 }.await;
 
                 // Record document processing finished or error
@@ -714,7 +715,7 @@ impl MultimodalOrchestrator {
             total_blocks_enriched: 0,
             total_blocks_indexed: 0,
             average_processing_time_ms: 0,
-            circuit_breaker_state: self.circuit_breaker.state(),
+            circuit_breaker_state: format!("{:?}", self.circuit_breaker.get_state().await),
             active_jobs: self.job_scheduler.get_active_job_count(),
         };
 

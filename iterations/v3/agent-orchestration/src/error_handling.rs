@@ -521,6 +521,23 @@ impl CircuitBreaker {
     pub async fn get_state(&self) -> CircuitBreakerState {
         self.state.read().await.clone()
     }
+
+    /// Record a successful operation
+    pub async fn record_success(&self) {
+        let mut stats = self.stats.write().await;
+        stats.total_requests += 1;
+        stats.successful_requests += 1;
+        stats.consecutive_failures = 0;
+        stats.last_success_time = Some(Instant::now());
+
+        // If we're in half-open state and success threshold is met, close the circuit
+        if *self.state.read().await == CircuitBreakerState::HalfOpen {
+            if stats.successful_requests >= self.config.success_threshold as u64 {
+                drop(stats);
+                self.transition_to_closed("Success threshold met in half-open state".to_string()).await;
+            }
+        }
+    }
 }
 
 /// Retry mechanism with exponential backoff for error handling
@@ -814,6 +831,9 @@ impl RecoveryOrchestrator {
             ErrorSeverity::Error => tracing::Level::ERROR,
             ErrorSeverity::Critical => tracing::Level::ERROR,
             ErrorSeverity::Fatal => tracing::Level::ERROR,
+            ErrorSeverity::Low => tracing::Level::DEBUG,
+            ErrorSeverity::Medium => tracing::Level::WARN,
+            ErrorSeverity::High => tracing::Level::ERROR,
         };
 
         match log_level {
