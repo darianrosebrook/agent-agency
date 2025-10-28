@@ -67,7 +67,7 @@ pub struct ExperienceContext {
 pub type MemoryId = Uuid;
 
 /// Configuration for the memory system
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct MemoryConfig {
     pub workspace_config: WorkspaceConfig,
     pub graph_config: GraphConfig,
@@ -79,7 +79,7 @@ pub struct MemoryConfig {
 }
 
 /// Workspace configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct WorkspaceConfig {
     pub access_config: WorkspaceAccessConfig,
     pub current_workspace_id: String,
@@ -112,14 +112,14 @@ impl Default for WorkspaceAccessConfig {
 }
 
 /// Graph configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct GraphConfig {
     pub max_entities: usize,
     pub max_relationships: usize,
 }
 
 /// Decay configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DecayConfig {
     pub decay_rate: f32,
     pub min_importance: f32,
@@ -130,14 +130,14 @@ pub struct DecayConfig {
 }
 
 /// Context configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ContextConfig {
     pub max_contexts: usize,
     pub fold_threshold: f32,
 }
 
 /// Temporal configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TemporalConfig {
     pub time_window_hours: u64,
     pub pattern_detection_enabled: bool,
@@ -146,7 +146,7 @@ pub struct TemporalConfig {
 
 /// Embedding configuration
 #[cfg(feature = "embeddings")]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct EmbeddingConfig {
     pub model_name: String,
     pub dimensions: usize,
@@ -376,8 +376,9 @@ pub enum TrendDirection {
 }
 
 /// Decay schedule types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub enum DecaySchedule {
+    #[default]
     Exponential,
     PowerLaw,
     Logarithmic,
@@ -385,8 +386,9 @@ pub enum DecaySchedule {
 }
 
 /// Workspace access levels
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum WorkspaceAccess {
+    #[default]
     Enabled,
     Disabled,
     ReadOnly,

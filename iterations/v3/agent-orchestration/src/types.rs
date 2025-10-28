@@ -209,6 +209,7 @@ pub struct TaskDescriptor {
 pub enum TaskPriority {
     Low,
     Medium,
+    Normal,
     High,
     Critical,
 }
@@ -258,4 +259,14 @@ pub struct DiffStats {
     pub lines_removed: u32,
     /// Lines of code modified
     pub lines_modified: u32,
+    /// Number of files added
+    pub files_added: u32,
+    /// Number of files modified
+    pub files_modified: u32,
+    /// Number of files deleted
+    pub files_deleted: u32,
+    /// Lines of code deleted
+    pub lines_deleted: u32,
+    /// Number of binary files changed
+    pub binary_files_changed: u32,
 }

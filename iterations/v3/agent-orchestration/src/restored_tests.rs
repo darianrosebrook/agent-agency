@@ -95,7 +95,7 @@ mod tests {
                 data_migration: false,
                 external_deps: vec![],
             },
-            priority: TaskPriority::Medium,
+            priority: TaskPriority::Normal,
             execution_mode: crate::ExecutionMode::Auto,
             task_type: "test".to_string(),
             risk_tier: Some(crate::council_types::RiskTier::Tier2),
@@ -103,7 +103,7 @@ mod tests {
         };
 
         assert_eq!(descriptor.task_id, "test-task-001");
-        assert_eq!(descriptor.priority, TaskPriority::Medium);
+        assert_eq!(descriptor.priority, TaskPriority::Normal);
     }
 
     #[test]

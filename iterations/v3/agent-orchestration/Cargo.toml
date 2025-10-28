@@ -19,6 +19,7 @@ uuid.workspace = true
 chrono.workspace = true
 anyhow.workspace = true
 futures = "0.3"
+futures-util = "0.3"
 
 # Database and persistence
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "json", "uuid", "chrono"] }
@@ -74,8 +75,8 @@ system-resilience = { path = "../system-resilience" }
 agent-data-processing = { path = "../agent-data-processing" }  
 development-tools = { path = "../development-tools", optional = true }
 
-# Optional observability dependency  
-system-observability = { path = "../system-observability", optional = true }
+# Observability dependency  
+system-observability = { path = "../system-observability" }
 
 [features]
 default = []

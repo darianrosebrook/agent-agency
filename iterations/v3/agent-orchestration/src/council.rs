@@ -764,7 +764,23 @@ impl Council {
             tokio::task::block_in_place(|| {
                 tokio::runtime::Handle::current()
                     .block_on(async {
-                        self.retrieve_historical_decisions(&review_context.working_spec, &review_context.risk_tier).await
+                        // Convert ReviewContext to proper types
+                        let working_spec = crate::council_types::WorkingSpec {
+                            id: format!("review_{}", review_context.session_id),
+                            title: "Review Session".to_string(),
+                            description: review_context.working_spec.clone(),
+                            risk_tier: match review_context.risk_tier {
+                                1 => agent_agency_contracts::task_request::RiskTier::Tier1,
+                                2 => agent_agency_contracts::task_request::RiskTier::Tier2,
+                                3 => agent_agency_contracts::task_request::RiskTier::Tier3,
+                                _ => agent_agency_contracts::task_request::RiskTier::Tier3,
+                            },
+                            goals: vec![],
+                            context: None,
+                            metadata: None,
+                        };
+                        let risk_tier = working_spec.risk_tier;
+                        self.retrieve_historical_decisions(&working_spec, &risk_tier).await
                     })
             })
         } else {
@@ -831,7 +847,7 @@ impl Council {
 
         let average_response_time = if !self.available_judges.is_empty() {
             (self.available_judges.iter()
-                .map(|judge| judge.health_metrics().response_time_p95_ms as u64)
+                .map(|judge| judge.health_metrics().response_time_avg_ms as u64)
                 .sum::<u64>() / self.available_judges.len() as u64)
         } else {
             0
@@ -901,8 +917,8 @@ impl Council {
                 }
             }
             false => {
-                let reason = experience.outcome.failure_reasons.first()
-                    .cloned()
+                let reason = experience.outcome.error_message
+                    .clone()
                     .unwrap_or_else(|| "Unknown failure".to_string());
                 crate::decision_making::DecisionOutcome::Failure {
                     reason,
@@ -911,20 +927,14 @@ impl Council {
             }
         };
 
-        // Extract similar task features from metadata
-        let similar_task_features = experience.context.metadata.get("spec_goals")
-            .and_then(|v| v.as_array())
-            .map(|arr| arr.iter()
-                .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                .collect()
-            )
-            .unwrap_or_default();
+        // Extract similar task features from description
+        let similar_task_features = experience.context.description.split_whitespace()
+            .take(5) // Use first 5 words as features
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>();
 
-        // Extract lessons learned from success/failure factors
-        let lessons_learned = experience.outcome.success_factors.iter()
-            .chain(experience.outcome.failure_reasons.iter())
-            .cloned()
-            .collect();
+        // Extract lessons learned from learned capabilities and error message
+        let lessons_learned = experience.outcome.learned_capabilities.clone();
 
         Some(crate::decision_making::HistoricalDecision {
             decision_id: experience.id.to_string(),
@@ -1043,12 +1053,15 @@ impl Council {
     /// Convert task descriptor to working spec format
     fn convert_task_to_working_spec(&self, task_descriptor: &crate::types::TaskDescriptor) -> CouncilResult<agent_agency_contracts::working_spec::WorkingSpec> {
         use agent_agency_contracts::working_spec::*;
+use agent_agency_contracts::Environment;
 
         // Create a basic working spec from task descriptor
         let working_spec = WorkingSpec {
             id: task_descriptor.task_id.clone(),
             title: format!("Task: {}", task_descriptor.task_id),
             description: task_descriptor.description.clone(),
+            version: "1.0.0".to_string(),
+            goals: vec![task_descriptor.description.clone()], // Use description as primary goal
             acceptance_criteria: vec![], // Would be populated from task requirements
             test_plan: TestPlan {
                 unit_tests: vec![],
@@ -1061,17 +1074,31 @@ impl Council {
                 automated_steps: vec!["git revert".to_string()],
                 manual_steps: vec![],
                 data_impact: DataImpact::None,
+                downtime_required: Some(false),
+                rollback_window_minutes: Some(30),
             },
             risk_tier: match task_descriptor.priority {
-                crate::types::TaskPriority::Critical | crate::types::TaskPriority::High => 1,
-                crate::types::TaskPriority::Medium => 2,
-                crate::types::TaskPriority::Low => 3,
+                crate::types::TaskPriority::Critical => agent_agency_contracts::task_request::RiskTier::Tier1,
+                crate::types::TaskPriority::High => agent_agency_contracts::task_request::RiskTier::Tier1,
+                crate::types::TaskPriority::Medium => agent_agency_contracts::task_request::RiskTier::Tier2,
+                crate::types::TaskPriority::Normal => agent_agency_contracts::task_request::RiskTier::Tier2,
+                crate::types::TaskPriority::Low => agent_agency_contracts::task_request::RiskTier::Tier3,
             },
             constraints: WorkingSpecConstraints {
                 max_duration_minutes: None,
                 max_iterations: None,
                 budget_limits: None,
             },
+            context: WorkingSpecContext {
+                workspace_root: ".".to_string(),
+                git_branch: "main".to_string(),
+                recent_changes: vec![],
+                dependencies: std::collections::HashMap::new(),
+                environment: Environment::Development,
+            },
+            metadata: None,
+            non_functional_requirements: None,
+            validation_results: None,
         };
 
         Ok(working_spec)

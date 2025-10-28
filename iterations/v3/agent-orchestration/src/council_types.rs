@@ -5,6 +5,16 @@ use std::collections::HashMap;
 // Re-export types for backward compatibility
 pub use agent_agency_contracts::task_request::RiskTier;
 pub use agent_agency_contracts::working_spec::WorkingSpec;
+pub use agent_agency_contracts::refinement_decision::CouncilDecision;
+
+/// Task priority levels
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TaskPriority {
+    Low,
+    Normal,
+    High,
+    Critical,
+}
 
 /// Final verdict from council decision making
 #[derive(Debug, Clone)]
@@ -38,23 +48,4 @@ pub struct ChangeBudget {
 pub struct BlastRadius {
     pub modules: Vec<String>,
     pub data_migration: bool,
-}
-
-/// Execution mode for task processing
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ExecutionMode {
-    Strict,  // Manual approval required
-    Auto,    // Automatic execution with quality gates
-    DryRun,  // Simulation without actual changes
-}
-
-/// Statistics for code changes
-#[derive(Debug, Clone)]
-pub struct DiffStats {
-    pub files_added: u32,
-    pub files_modified: u32,
-    pub files_deleted: u32,
-    pub lines_added: u32,
-    pub lines_modified: u32,
-    pub lines_deleted: u32,
 }

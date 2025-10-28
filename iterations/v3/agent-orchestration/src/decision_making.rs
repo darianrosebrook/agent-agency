@@ -649,7 +649,7 @@ impl AlgorithmicDecisionEngine {
         let priority = match context.risk_tier {
             agent_agency_contracts::task_request::RiskTier::Tier1 => TaskPriority::Critical,
             agent_agency_contracts::task_request::RiskTier::Tier2 => TaskPriority::High,
-            agent_agency_contracts::task_request::RiskTier::Tier3 => TaskPriority::Medium,
+            agent_agency_contracts::task_request::RiskTier::Tier3 => TaskPriority::Normal,
         };
 
         let estimated_duration_hours = aggregation_result.aggregated_changes

@@ -6,19 +6,19 @@
 //!
 //! Provides a unified interface for context lifecycle management.
 
-use crate::context::types::*;
-use crate::DataProcessingResult;
+// use crate::context::types::*;
+// use crate::DataProcessingResult;
 #[cfg(feature = "embeddings")]
 use data_infrastructure::{DatabaseClient, database_config::DatabaseConfig, ModelRegistry};
-use chrono::{DateTime, Utc, Duration};
-use flate2::{read::GzDecoder, write::GzEncoder, Compression};
-use serde_json;
-use sha2::{Digest, Sha256};
-use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use tracing::{debug, info, warn};
-use uuid::Uuid;
+// use chrono::{DateTime, Utc, Duration};
+// use flate2::{read::GzDecoder, write::GzEncoder, Compression};
+// use serde_json;
+// use sha2::{Digest, Sha256};
+// use std::collections::HashMap;
+// use std::sync::Arc;
+// use tokio::sync::RwLock;
+// use tracing::{debug, info, warn};
+// use uuid::Uuid;
 
 /// Unified context manager for preservation and working memory
 #[cfg(feature = "embeddings")]

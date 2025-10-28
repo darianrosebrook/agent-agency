@@ -12,7 +12,7 @@ use async_trait::async_trait;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use tracing::{debug, info, warn};
+use tracing::debug;
 #[cfg(feature = "memory-integration")]
 use agent_memory::graph_engine::Relationship;
 use std::sync::Arc;
@@ -302,7 +302,7 @@ impl crate::pipeline::PipelineStage for DefaultIndexingStage {
     }
 
     async fn process(&self, input: DataInput) -> DataProcessingResult<ProcessingOutput> {
-        let input_id = input.id.clone(); // Clone once to avoid multiple moves
+        let _input_id = input.id.clone(); // Clone once to avoid multiple moves
 
         // For indexing, we expect the input to contain enriched content
         let processed_content = match &input.content {
@@ -1269,7 +1269,7 @@ impl Bm25Indexer {
         let query_terms: std::collections::HashSet<_> = query.split_whitespace().collect();
         let words: Vec<&str> = text.split_whitespace().collect();
 
-        for (i, window) in words.windows(max_tokens).enumerate() {
+        for (_i, window) in words.windows(max_tokens).enumerate() {
             let window_set: std::collections::HashSet<_> = window.iter().cloned().collect();
             if !query_terms.is_disjoint(&window_set) {
                 return window.join(" ");
@@ -1369,7 +1369,7 @@ impl HnswIndexer {
     /// Index a vector
     pub async fn index_vector(&self, vector: &[f32]) -> Result<Uuid, anyhow::Error> {
         let mut index = self.index.lock();
-        let id = index.insert(vector)?;
+        let _id = index.insert(vector)?;
 
         let mut metadata = self.metadata.lock();
         metadata.total_vectors += 1;
@@ -1385,7 +1385,7 @@ impl HnswIndexer {
 
         let results: Vec<VectorSearchResult> = similarities
             .into_iter()
-            .map(|(id, similarity)| VectorSearchResult {
+            .map(|(_id, similarity)| VectorSearchResult {
                 block_id: Uuid::new_v4(), // In practice, this would map back to the original ID
                 similarity,
                 modality: "vector".to_string(), // Placeholder
@@ -1744,7 +1744,7 @@ impl UnifiedIndexer {
         }).await?;
 
         // Perform vector search
-        let vector_results = self.hnsw_indexer.search(&VectorQuery {
+        let _vector_results = self.hnsw_indexer.search(&VectorQuery {
             vector: vector_query.to_vec(),
             model_id: "default".to_string(),
             k,

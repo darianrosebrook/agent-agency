@@ -13,11 +13,10 @@ use crate::{DataProcessingResult, DataProcessingError};
 use std::collections::HashMap;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, info, warn};
+use tracing::info;
 use uuid::Uuid;
 use chrono::Utc;
 use std::sync::Mutex;
-use md5;
 
 /// Result from enrichment operations
 pub type EnrichmentResult = DataProcessingResult<ProcessingOutput>;
@@ -504,7 +503,7 @@ impl VisionEnricher {
         info!("Performing vision enrichment on {} bytes of {} image", image_data.len(), content_type);
 
         // Basic image analysis and OCR simulation
-        let dimensions = self.extract_image_dimensions(image_data, content_type)?;
+        let _dimensions = self.extract_image_dimensions(image_data, content_type)?;
         let ocr_text = self.perform_ocr_analysis(image_data, content_type)?;
         let bounding_boxes = self.detect_text_regions(image_data, content_type, &ocr_text)?;
         let layout = self.analyze_document_layout(image_data, content_type, &bounding_boxes)?;
@@ -610,15 +609,15 @@ impl VisionEnricher {
     /// Estimate text density in image
     fn estimate_text_density(&self, image_data: &[u8], dimensions: (u32, u32)) -> Result<f64, anyhow::Error> {
         // Estimate text density based on image characteristics
-        let area = dimensions.0 as f64 * dimensions.1 as f64;
-        let complexity = self.analyze_image_complexity(image_data)?;
+        let _area = dimensions.0 as f64 * dimensions.1 as f64;
+        let _complexity = self.analyze_image_complexity(image_data)?;
         
         // Higher complexity suggests more text
-        Ok(complexity * 0.1) // 0-10% text density
+        Ok(_complexity * 0.1) // 0-10% text density
     }
 
     /// Generate realistic OCR text
-    fn generate_realistic_ocr_text(&self, word_count: usize, complexity: f64) -> String {
+    fn generate_realistic_ocr_text(&self, word_count: usize, _complexity: f64) -> String {
         let base_words = vec![
             "document", "text", "content", "information", "data", "analysis", "report", "summary",
             "details", "description", "title", "heading", "paragraph", "section", "chapter",
@@ -678,7 +677,7 @@ impl VisionEnricher {
 
     /// Analyze document layout
     fn analyze_document_layout(&self, image_data: &[u8], content_type: &str, bounding_boxes: &[BoundingBox]) -> Result<DocumentLayout, anyhow::Error> {
-        let dimensions = self.extract_image_dimensions(image_data, content_type)?;
+        let _dimensions = self.extract_image_dimensions(image_data, content_type)?;
         
         // Group bounding boxes into layout elements
         let mut elements = Vec::new();
@@ -834,7 +833,7 @@ impl EntityEnricher {
         let words: Vec<&str> = text.split_whitespace().collect();
         
         // Simple pattern-based entity extraction
-        for (i, word) in words.iter().enumerate() {
+        for (_i, word) in words.iter().enumerate() {
             let entity_type = self.classify_entity_type(word);
             if entity_type != "UNKNOWN" {
                 let start_offset = text.find(word).unwrap_or(0);
@@ -1207,7 +1206,7 @@ impl VisualCaptioningEnricher {
     /// Generate image caption based on analysis
     fn generate_image_caption(&self, image_data: &[u8], content_type: &str, image_type: &str, dimensions: (u32, u32)) -> Result<String, anyhow::Error> {
         let complexity = self.analyze_image_complexity(image_data)?;
-        let aspect_ratio = dimensions.0 as f64 / dimensions.1 as f64;
+        let _aspect_ratio = dimensions.0 as f64 / dimensions.1 as f64;
         
         // Generate caption based on image characteristics
         let mut caption_parts = Vec::new();
@@ -1297,7 +1296,7 @@ impl VisualCaptioningEnricher {
     }
 
     /// Detect objects in the image
-    fn detect_objects(&self, image_data: &[u8], content_type: &str, image_type: &str, dimensions: (u32, u32)) -> Result<Vec<DetectedObject>, anyhow::Error> {
+    fn detect_objects(&self, image_data: &[u8], _content_type: &str, _image_type: &str, dimensions: (u32, u32)) -> Result<Vec<DetectedObject>, anyhow::Error> {
         let mut objects = Vec::new();
         let complexity = self.analyze_image_complexity(image_data)?;
         

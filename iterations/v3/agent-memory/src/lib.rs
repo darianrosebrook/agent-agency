@@ -52,7 +52,7 @@ use std::sync::Arc;
 
 // Import types from memory_types
 use crate::memory_types::{
-    MemoryConfig, AgentExperience, MemoryId, TaskContext, ContextualMemory, 
+    AgentExperience, MemoryId, TaskContext, ContextualMemory, 
     ContextMatch, ReasoningQuery, ReasoningResult, TimeRange, TemporalAnalysis
 };
 
@@ -69,7 +69,7 @@ pub use decay::{MemoryDecayEngine, DecayStats};
 pub use graph_engine::{KnowledgeGraphEngine, Entity, Relationship, GraphQuery, GraphStats};
 pub use memory_manager::{MemoryManager, MemoryStats};
 pub use temporal_reasoning::{TemporalReasoningEngine};
-pub use memory_types::{MemoryType, TemporalContext, TaskPriority, ExperienceOutcome, AgentFeedback, ExperienceContext};
+pub use memory_types::{MemoryConfig, MemoryType, TemporalContext, TaskPriority, ExperienceOutcome, AgentFeedback, ExperienceContext};
 // pub use prompting_types::*; // TODO: Uncomment when module is created
 
 #[cfg(feature = "embeddings")]

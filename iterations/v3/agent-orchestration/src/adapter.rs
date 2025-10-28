@@ -335,7 +335,7 @@ impl LegacyOrchestratorAdapter {
         artifacts: Vec<ExecutionArtifacts>,
     ) -> TaskExecutionResult {
         let overall_approved = council_result.approved && artifact_verdict.approved;
-        let overall_confidence = (council_result.confidence + artifact_verdict.confidence) / 2.0;
+        let overall_confidence = ((council_result.confidence + artifact_verdict.confidence as f64) / 2.0) as f32;
 
         TaskExecutionResult {
             working_spec: Some(format!("Combined verdict for task")),
@@ -362,6 +362,7 @@ impl LegacyOrchestratorAdapter {
     fn convert_priority(&self, priority: TaskPriority) -> crate::multimodal_orchestration::ProcessingPriority {
         match priority {
             TaskPriority::Low => crate::multimodal_orchestration::ProcessingPriority::Low,
+            TaskPriority::Medium => crate::multimodal_orchestration::ProcessingPriority::Normal,
             TaskPriority::Normal => crate::multimodal_orchestration::ProcessingPriority::Normal,
             TaskPriority::High => crate::multimodal_orchestration::ProcessingPriority::High,
             TaskPriority::Critical => crate::multimodal_orchestration::ProcessingPriority::Critical,

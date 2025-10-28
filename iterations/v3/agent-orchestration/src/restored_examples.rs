@@ -74,6 +74,11 @@ pub async fn example_orchestration_workflow() -> Result<()> {
         lines_added: 800,
         lines_removed: 50,
         lines_modified: 200,
+        files_added: 5,
+        files_modified: 8,
+        files_deleted: 2,
+        lines_deleted: 50,
+        binary_files_changed: 1,
     };
 
     // 4. Set up evidence enrichment coordinator
@@ -207,7 +212,7 @@ pub fn example_task_creation() -> Result<()> {
             data_migration: true,
             external_deps: vec!["database".to_string()],
         },
-        priority: TaskPriority::Medium,
+        priority: TaskPriority::Normal,
         execution_mode: crate::ExecutionMode::Auto,
         task_type: "feature".to_string(),
         risk_tier: Some(crate::council_types::RiskTier::Tier2),

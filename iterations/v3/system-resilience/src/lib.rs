@@ -77,5 +77,5 @@ pub mod memory;
 pub use recovery_api::*;
 pub use recovery_types::*;
 pub use integration::*;
-pub use recovery_metrics::*;
+pub use recovery_metrics::{*, MetricsBackend};
 // pub use source_integrity::{Digest, StreamingHasher, MerkleTree};  // Temporarily disabled

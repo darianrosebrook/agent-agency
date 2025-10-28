@@ -5,19 +5,24 @@
 use std::process::{Command, Stdio};
 use tracing::{info, warn, error};
 
-/// Service for managing local Ollama instance
+/// Service for managing local Ollama instance with multiple models
 pub struct OllamaService {
     base_url: String,
-    model_name: String,
+    default_model: String,
     process_handle: Option<std::process::Child>,
 }
 
 impl OllamaService {
-    /// Create a new Ollama service
+    /// Create a new Ollama service with default model
     pub async fn new() -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+        Self::with_model("gemma3n:e2b").await
+    }
+
+    /// Create a new Ollama service with specified default model
+    pub async fn with_model(default_model: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         Ok(Self {
             base_url: "http://localhost:11434".to_string(),
-            model_name: "gemma3n:e2b".to_string(),
+            default_model: default_model.to_string(),
             process_handle: None,
         })
     }
@@ -114,8 +119,13 @@ impl OllamaService {
         }
     }
 
-    /// Generate text using a model
-    pub async fn generate(&self, model: &str, prompt: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    /// Generate text using the default model
+    pub async fn generate(&self, prompt: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        self.generate_with_model(&self.default_model, prompt).await
+    }
+
+    /// Generate text using a specific model
+    pub async fn generate_with_model(&self, model: &str, prompt: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let client = reqwest::Client::new();
         let request_body = serde_json::json!({
             "model": model,
@@ -142,9 +152,30 @@ impl OllamaService {
         &self.base_url
     }
 
-    /// Get model name
-    pub fn model_name(&self) -> &str {
-        &self.model_name
+    /// Get default model name
+    pub fn default_model(&self) -> &str {
+        &self.default_model
+    }
+
+    /// Set default model
+    pub fn set_default_model(&mut self, model: &str) {
+        self.default_model = model.to_string();
+    }
+
+    /// Get available models
+    pub async fn list_models(&self) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
+        let response = reqwest::get(&format!("{}/api/tags", self.base_url)).await?;
+        let tags: serde_json::Value = response.json().await?;
+
+        if let Some(models) = tags["models"].as_array() {
+            let model_names = models.iter()
+                .filter_map(|model| model["name"].as_str())
+                .map(|name| name.to_string())
+                .collect();
+            Ok(model_names)
+        } else {
+            Ok(vec![])
+        }
     }
 
     /// Wait for Ollama service to start up

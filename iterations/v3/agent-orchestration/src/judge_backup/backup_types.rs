@@ -11,6 +11,8 @@ use uuid::Uuid;
 #[derive(Debug, Clone, PartialEq)]
 pub enum JudgeType {
     Constitutional,     // CAWS compliance and constitutional analysis
+    Technical,          // Technical implementation analysis
+    Quality,            // Quality assessment (alias for QualityAssurance)
     QualityAssurance,
     Security,
     Performance,

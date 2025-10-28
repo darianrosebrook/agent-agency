@@ -8,8 +8,8 @@
 //! - Analyzing temporal patterns
 //! - Managing memory decay and importance
 
-use agent_memory::*;
-use chrono::{DateTime, Utc, Duration};
+use agent_memory::{MemoryConfig, MemorySystem, AgentExperience, MemoryId, TaskContext, TemporalContext, TaskPriority, ExperienceOutcome, AgentFeedback, ReasoningQuery, RelationshipType, TimeRange, MemoryType};
+use chrono::{Utc, Duration};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -21,7 +21,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 1. Initialize the memory system
     println!("1. Initializing Memory System...");
     let memory_config = MemoryConfig::default();
-    let memory_system = Arc::new(MemorySystem::init(memory_config).await?);
+    let memory_system: Arc<MemorySystem> = Arc::new(MemorySystem::init(memory_config).await?);
     println!("✅ Memory system initialized\n");
 
     // 2. Create some sample agent experiences
@@ -33,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Experience 1: Successful code review task
     let experience_1 = AgentExperience {
-        id: MemoryId::new_v4(),
+        id: MemoryId::default(),
         agent_id: agent_id.to_string(),
         task_id: task_id_1.to_string(),
         context: TaskContext {
@@ -130,7 +130,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Store experiences
-    let memory_id_1 = memory_system.store_experience(experience_1.clone()).await?;
+    let memory_id_1: MemoryId = memory_system.store_experience(experience_1.clone()).await?;
     let memory_id_2 = memory_system.store_experience(experience_2.clone()).await?;
 
     println!("✅ Stored 2 agent experiences");

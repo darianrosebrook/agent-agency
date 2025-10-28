@@ -12,10 +12,7 @@ use crate::{DataProcessingResult, DataProcessingError};
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::path::Path;
-use serde::{Deserialize, Serialize};
-use tracing::{debug, info, warn};
-use regex::Regex;
-use std::io::Read;
+use tracing::info;
 use sha2::{Sha256, Digest};
 use chrono::Utc;
 
@@ -771,7 +768,6 @@ impl CaptionsIngestor {
 
     /// Calculate content hash for integrity verification
     fn calculate_content_hash(&self, content: &str) -> String {
-        use sha2::{Sha256, Digest};
         let mut hasher = Sha256::new();
         hasher.update(content.as_bytes());
         format!("{:x}", hasher.finalize())
@@ -1242,7 +1238,6 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
     use std::collections::HashMap;
-    use std::io::Write;
 
     #[tokio::test]
     async fn test_file_ingestor_text() {

@@ -7,6 +7,7 @@ pub mod telemetry;
 pub mod monitoring;
 pub mod metrics;
 pub mod tracing;
+pub mod cache;
 
 // Re-export common types (avoiding conflicts with local types)
 pub use system_configuration::{

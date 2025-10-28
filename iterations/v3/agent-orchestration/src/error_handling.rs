@@ -143,6 +143,16 @@ pub enum ErrorCategory {
     Internal,
     /// Timeout errors
     Timeout,
+    /// Execution and processing errors
+    Execution,
+    /// Logic and algorithmic errors
+    Logic,
+    /// Infrastructure and deployment errors
+    Infrastructure,
+    /// Data processing and storage errors
+    Data,
+    /// Input validation errors
+    Input,
 }
 
 impl std::fmt::Display for ErrorCategory {
@@ -159,6 +169,11 @@ impl std::fmt::Display for ErrorCategory {
             ErrorCategory::Performance => "Performance",
             ErrorCategory::Internal => "Internal",
             ErrorCategory::Timeout => "Timeout",
+            ErrorCategory::Execution => "Execution",
+            ErrorCategory::Logic => "Logic",
+            ErrorCategory::Infrastructure => "Infrastructure",
+            ErrorCategory::Data => "Data",
+            ErrorCategory::Input => "Input",
         };
         write!(f, "{}", category_str)
     }
@@ -171,8 +186,14 @@ pub enum ErrorSeverity {
     Debug,
     /// Info level - normal operation notes
     Info,
+    /// Low level - minor issues
+    Low,
+    /// Medium level - moderate issues
+    Medium,
     /// Warning level - potential issues
     Warning,
+    /// High level - significant issues
+    High,
     /// Error level - operation failures
     Error,
     /// Critical level - system stability at risk
@@ -1115,5 +1136,104 @@ pub mod error_factory {
             required_resources: vec!["security_team".to_string()],
             automated: false,
         })
+    }
+}
+
+impl From<crate::council_errors::CouncilError> for AgencyError {
+    fn from(council_error: crate::council_errors::CouncilError) -> Self {
+        let (category, code, message, severity) = match council_error {
+            crate::council_errors::CouncilError::JudgeError { judge_id, message } => (
+                ErrorCategory::Execution,
+                "JUDGE_ERROR",
+                format!("Judge {} error: {}", judge_id, message),
+                ErrorSeverity::High,
+            ),
+            crate::council_errors::CouncilError::ConsensusFailure { reason } => (
+                ErrorCategory::Logic,
+                "CONSENSUS_FAILURE",
+                format!("Consensus failure: {}", reason),
+                ErrorSeverity::High,
+            ),
+            crate::council_errors::CouncilError::WorkflowTransition { from, to, reason } => (
+                ErrorCategory::Logic,
+                "WORKFLOW_TRANSITION_ERROR",
+                format!("Workflow transition {} -> {} failed: {}", from, to, reason),
+                ErrorSeverity::Medium,
+            ),
+            crate::council_errors::CouncilError::AggregationFailure { reason } => (
+                ErrorCategory::Logic,
+                "AGGREGATION_FAILURE",
+                format!("Verdict aggregation failed: {}", reason),
+                ErrorSeverity::High,
+            ),
+            crate::council_errors::CouncilError::DecisionFailure { algorithm, reason } => (
+                ErrorCategory::Logic,
+                "DECISION_FAILURE",
+                format!("Decision algorithm {} failed: {}", algorithm, reason),
+                ErrorSeverity::High,
+            ),
+            crate::council_errors::CouncilError::ConfigurationError { field, reason } => (
+                ErrorCategory::Configuration,
+                "CONFIG_ERROR",
+                format!("Configuration error in {}: {}", field, reason),
+                ErrorSeverity::Medium,
+            ),
+            crate::council_errors::CouncilError::SessionTimeout { session_id, timeout_seconds } => (
+                ErrorCategory::Timeout,
+                "SESSION_TIMEOUT",
+                format!("Session {} timed out after {} seconds", session_id, timeout_seconds),
+                ErrorSeverity::Medium,
+            ),
+            crate::council_errors::CouncilError::Database(error) => (
+                ErrorCategory::Infrastructure,
+                "DATABASE_ERROR",
+                format!("Database error: {}", error),
+                ErrorSeverity::High,
+            ),
+            crate::council_errors::CouncilError::Serialization(error) => (
+                ErrorCategory::Data,
+                "SERIALIZATION_ERROR",
+                format!("Serialization error: {}", error),
+                ErrorSeverity::Medium,
+            ),
+            crate::council_errors::CouncilError::QuorumFailure { available, required } => (
+                ErrorCategory::Logic,
+                "QUORUM_FAILURE",
+                format!("Quorum not met: {}/{} judges available", available, required),
+                ErrorSeverity::High,
+            ),
+            crate::council_errors::CouncilError::UnresolvedDissent { judge_count } => (
+                ErrorCategory::Logic,
+                "UNRESOLVED_DISSENT",
+                format!("Unresolved dissent from {} judges", judge_count),
+                ErrorSeverity::High,
+            ),
+            crate::council_errors::CouncilError::InvalidInput { message } => (
+                ErrorCategory::Input,
+                "INVALID_INPUT",
+                message,
+                ErrorSeverity::Medium,
+            ),
+            crate::council_errors::CouncilError::ModelNotAvailable(model) => (
+                ErrorCategory::Infrastructure,
+                "MODEL_UNAVAILABLE",
+                format!("Model not available: {}", model),
+                ErrorSeverity::Medium,
+            ),
+            crate::council_errors::CouncilError::InferenceFailed(reason) => (
+                ErrorCategory::Execution,
+                "INFERENCE_FAILED",
+                format!("Inference failed: {}", reason),
+                ErrorSeverity::High,
+            ),
+            crate::council_errors::CouncilError::Timeout(reason) => (
+                ErrorCategory::Timeout,
+                "TIMEOUT_ERROR",
+                reason,
+                ErrorSeverity::Medium,
+            ),
+        };
+
+        AgencyError::new(category, &code, &message, severity, "council", "council_operation")
     }
 }

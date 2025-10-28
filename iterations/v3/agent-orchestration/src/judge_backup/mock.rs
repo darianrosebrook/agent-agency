@@ -295,6 +295,7 @@ impl Judge for MockJudge {
         let context = ReviewContext {
             session_id: "mock_session".to_string(),
             working_spec: format!(r#"{{"title": "{}", "description": "{}", "acceptance_criteria": []}}"#, _title, _description),
+            risk_tier: 2, // Medium risk for mock
             previous_reviews: vec![],
             constraints: std::collections::HashMap::new(),
         };
@@ -331,7 +332,9 @@ pub fn create_mock_judge_panel() -> Vec<MockJudge> {
     vec![
         MockJudge::new(
             JudgeConfig {
+                judge_id: "quality_judge".to_string(),
                 name: "Quality Judge".to_string(),
+                judge_type: "quality".to_string(),
                 specialization: "quality".to_string(),
                 max_response_time_ms: 5000,
                 health_check_interval_ms: 30000,
@@ -340,7 +343,9 @@ pub fn create_mock_judge_panel() -> Vec<MockJudge> {
         ),
         MockJudge::new(
             JudgeConfig {
+                judge_id: "security_judge".to_string(),
                 name: "Security Judge".to_string(),
+                judge_type: "security".to_string(),
                 specialization: "security".to_string(),
                 max_response_time_ms: 5000,
                 health_check_interval_ms: 30000,
@@ -349,7 +354,9 @@ pub fn create_mock_judge_panel() -> Vec<MockJudge> {
         ),
         MockJudge::new(
             JudgeConfig {
+                judge_id: "general_judge".to_string(),
                 name: "General Judge".to_string(),
+                judge_type: "general".to_string(),
                 specialization: "general".to_string(),
                 max_response_time_ms: 5000,
                 health_check_interval_ms: 30000,

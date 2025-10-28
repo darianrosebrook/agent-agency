@@ -1135,7 +1135,6 @@ pub struct HistoryStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
 
     #[tokio::test]
     async fn test_default_operations_stage_creation() {

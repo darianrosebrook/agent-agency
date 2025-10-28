@@ -3,14 +3,14 @@
 //! Manages model quantization for Apple Silicon optimization.
 
 use crate::QuantizationMethod;
-use anyhow::{anyhow, bail, Context, Result};
+// use anyhow::{anyhow, bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
+// use std::fs;
+// use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn};
+// use tracing::{debug, info, warn};
 
 /// Quantization configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -188,17 +188,17 @@ pub struct ValidationResults {
 #[derive(Debug)]
 pub struct QuantizationManager {
     /// Active quantization configurations
-    configs: Arc<RwLock<HashMap<String, QuantizationConfig>>>,
+    _configs: Arc<RwLock<HashMap<String, QuantizationConfig>>>,
     /// Default configuration
-    default_config: QuantizationConfig,
+    _default_config: QuantizationConfig,
 }
 
 impl QuantizationManager {
     /// Create a new quantization manager
     pub fn new() -> Self {
         Self {
-            configs: Arc::new(RwLock::new(HashMap::new())),
-            default_config: QuantizationConfig::default(),
+            _configs: Arc::new(RwLock::new(HashMap::new())),
+            _default_config: QuantizationConfig::default(),
         }
     }
 }
@@ -208,7 +208,8 @@ impl QuantizationManager {
     pub fn test() {}
 }
 
-enum ModelFormat {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ModelFormat {
     ONNX,
     PyTorch,
     TensorFlow,

@@ -461,6 +461,21 @@ pub enum EthicalCategory {
     Cultural,
 }
 
+impl std::fmt::Display for EthicalCategory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EthicalCategory::Harm => write!(f, "Harm"),
+            EthicalCategory::Privacy => write!(f, "Privacy"),
+            EthicalCategory::Discrimination => write!(f, "Discrimination"),
+            EthicalCategory::Transparency => write!(f, "Transparency"),
+            EthicalCategory::Autonomy => write!(f, "Autonomy"),
+            EthicalCategory::Justice => write!(f, "Justice"),
+            EthicalCategory::Sustainability => write!(f, "Sustainability"),
+            EthicalCategory::Cultural => write!(f, "Cultural"),
+        }
+    }
+}
+
 /// Stakeholder impact analysis
 #[derive(Debug, Clone)]
 pub struct StakeholderImpact {

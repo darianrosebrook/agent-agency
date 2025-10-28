@@ -1,0 +1,22 @@
+{
+  "model": "nate/instinct",
+  "total_tests": 1,
+  "passed_tests": 0,
+  "average_score": 0.6,
+  "overall_rating": "FAIL",
+  "results": [
+    {
+      "test": "error_handling",
+      "prompt": "This code has a potential division by zero error. Improve it by:\n\n1. Adding proper error handling\n2. Using type hints\n3. Adding input validation\n4. Providing meaningful error messages\n5. Adding docstring\n\nOriginal code:\n\ndef divide_numbers(a, b):\n    return a / b\n\n# Usage\nresult = divide_numbers(10, 0)\n",
+      "response": "def divide_numbers(a: float, b: float) -> float:\n    if b == 0:\n        raise ValueError(\"Cannot divide by zero\")\n    return a / b\n\n# Usage\ntry:\n    result = divide_numbers(10, 0)\nexcept ValueError as error:\n    print(error)",
+      "criteria": {
+        "handles_division_by_zero": false,
+        "has_type_hints": true,
+        "has_input_validation": true,
+        "has_docstring": false,
+        "meaningful_errors": true
+      },
+      "score": 0.6
+    }
+  ]
+}

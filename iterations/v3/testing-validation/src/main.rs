@@ -23,10 +23,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     info!("✅ Test environment initialized");
 
     // Create services with real integrations
-    let ollama = OllamaService::new(
-        "http://localhost:11434".to_string(),
-        "gemma3n:e2b".to_string(),
-    );
+    let ollama = OllamaService::with_model("gemma3n:e2b").await?;
 
     let postgres = PostgresService::new(
         "localhost".to_string(),

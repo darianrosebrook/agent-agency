@@ -273,7 +273,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_data_processing_system_initialization() {
-        let temp_dir = TempDir::new().unwrap();
+        let _temp_dir = TempDir::new().unwrap();
         let config = DataProcessingConfig::default();
 
         let system = DataProcessingSystem::init(config).await;

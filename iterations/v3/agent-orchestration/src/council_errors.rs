@@ -49,6 +49,9 @@ pub enum CouncilError {
 
     #[error("Inference failed: {0}")]
     InferenceFailed(String),
+
+    #[error("Timeout error: {0}")]
+    Timeout(String),
 }
 
 impl CouncilError {
@@ -89,6 +92,7 @@ impl CouncilError {
             CouncilError::InvalidInput { .. } => "input",
             CouncilError::ModelNotAvailable(_) => "model",
             CouncilError::InferenceFailed(_) => "inference",
+            CouncilError::Timeout(_) => "timeout",
         }
     }
 }

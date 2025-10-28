@@ -12,8 +12,9 @@ use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 use chrono::Utc;
 
-use crate::types::TaskDescriptor;
-use crate::frontier::{Frontier, FrontierConfig, FrontierStats, TaskEntry, TaskStatus};
+use crate::types::{TaskDescriptor, TaskPriority};
+use crate::frontier::{Frontier, FrontierConfig, FrontierStats, TaskEntry, TaskStatus, FrontierError};
+use crate::OrchestrationResult;
 use data_infrastructure::Row; // For SQLx Row trait
 use crate::audit_trail::{
     AuditTrailManager, AuditConfig, AuditLogLevel, AuditOutputFormat,
@@ -26,7 +27,34 @@ use crate::types::OrchestratorConfig;
 
 // Placeholder orchestrator type until main orchestrator is implemented
 #[derive(Debug)]
-pub struct Orchestrator;
+pub struct Orchestrator {
+    config: OrchestratorConfig,
+}
+
+impl Orchestrator {
+    /// Create a new orchestrator with configuration
+    pub fn new_with_dependencies(config: OrchestratorConfig) -> Self {
+        Self { config }
+    }
+
+    /// Execute planning phase for a task
+    pub async fn execute_planning(&self, _task_descriptor: &TaskDescriptor) -> Result<(), String> {
+        // TODO: Implement actual planning logic
+        Ok(())
+    }
+
+    /// Execute a general operation
+    pub async fn execute_operation(&self, _operation: &str, _params: Vec<String>) -> Result<(), String> {
+        // TODO: Implement actual operation execution
+        Ok(())
+    }
+
+    /// Execute council review process
+    pub async fn execute_council_review(&self, _task_id: &str) -> Result<(), String> {
+        // TODO: Implement council review logic
+        Ok(())
+    }
+}
 // use crate::planning::agent::PlanningAgent;
 // use crate::frontier::{Frontier, FrontierConfig, FrontierError};
 // use agent_data_processing::operations::{validate_changeset_with_waiver, WaiverRequest, apply_waiver};
@@ -220,7 +248,7 @@ impl AuditedOrchestrator {
         _changeset: &(),
         _allowlist: &(),
         _budgets: &(),
-        _operation_id: &str,
+        operation_id: &str,
     ) -> Result<(), AuditError> {
         // TODO: Implement file_ops validation
         // Check for violations and generate waiver if needed
@@ -252,11 +280,8 @@ impl AuditedOrchestrator {
                 parameters.insert("risk_level".to_string(), serde_json::Value::String(format!("{:?}", waiver_request.risk_assessment)));
                 parameters.insert("violation_count".to_string(), serde_json::Value::Number(waiver_request.budget_violations.len().into()));
 
-                let severity = if matches!(waiver_request.risk_assessment, file_ops::RiskLevel::Critical) {
-                    crate::audit_trail::AuditSeverity::Error
-                } else {
-                    crate::audit_trail::AuditSeverity::Warning
-                };
+                // TODO: Implement proper file_ops::RiskLevel when available
+                let severity = crate::audit_trail::AuditSeverity::Warning;
 
                 self.audit_manager.file_auditor()
                     .record_operation(

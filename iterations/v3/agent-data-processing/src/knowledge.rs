@@ -858,7 +858,9 @@ mod tests {
             DefaultKnowledgeStage::new().await.unwrap()
         });
 
-        let content = ProcessedContent {
+        let content: ProcessedContent = ProcessedContent {
+            content_type: ContentType::Text,
+            data: ProcessedContentData::Text("John Smith works at Apple Inc in New York.".to_string()),
             text_content: Some("John Smith works at Apple Inc in New York.".to_string()),
             structured_data: None,
             embeddings: None,

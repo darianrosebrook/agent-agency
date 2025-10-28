@@ -218,6 +218,7 @@ pub enum AuditCategory {
     TerminalCommand,
     CouncilDecision,
     AgentThinking,
+    Operation,
     Performance,
     ErrorRecovery,
     Error,
@@ -694,41 +695,38 @@ impl AuditTrailManager {
         let event = AuditEventRow {
             id: uuid::Uuid::new_v4(),
             timestamp: chrono::Utc::now(),
-            correlation_id: Some(result.task_id.clone()),
+            correlation_id: Some(result.artifacts.execution_id.clone()),
             parent_event_id: None,
-            category: serde_json::json!(AuditCategory::Execution),
+            category: serde_json::json!(AuditCategory::CouncilDecision),
             severity: serde_json::json!(AuditSeverity::Info),
             actor: "orchestrator".to_string(),
             operation: "task_execution".to_string(),
-            message: Some(format!("Task {} executed with status {:?}", result.task_id, result.status)),
-            operation_id: Some(result.task_id.clone()),
-            target: Some(result.task_id.clone()),
+            message: Some(format!("Task {} executed", result.artifacts.execution_id)),
+            operation_id: Some(result.artifacts.execution_id.clone()),
+            target: Some(result.artifacts.worker_id.clone()),
             parameters: serde_json::json!({
-                "execution_status": result.status,
-                "duration_ms": result.execution_time_ms,
-                "artifacts_count": result.artifacts.len(),
+                "execution_id": result.artifacts.execution_id,
+                "worker_id": result.artifacts.worker_id,
+                "has_quality_report": result.quality_report.is_some(),
             }),
-            result: serde_json::json!(match result.status {
-                crate::types::ExecutionStatus::Completed => "success",
-                crate::types::ExecutionStatus::Failed => "failed",
-                _ => "unknown",
-            }),
-            performance: Some(serde_json::json!({
-                "duration_ms": result.execution_time_ms,
-            })),
+            result: serde_json::json!("completed"),
+            performance: None, // No timing info available
             context: serde_json::json!({
-                "task_id": result.task_id,
-                "execution_status": result.status,
+                "execution_id": result.artifacts.execution_id,
+                "worker": result.artifacts.worker_id,
             }),
             tags: vec!["orchestration".to_string(), "execution".to_string()],
         };
 
-        self.write_event(event).await
+        // Log the event to console for now (file auditor logs to console/files)
+        tracing::info!("Audit event recorded: {}", serde_json::to_string_pretty(&event).unwrap_or_else(|_| "Failed to serialize".to_string()));
+
+        Ok(())
     }
 }
 
 /// Database row representation of audit event
-#[derive(sqlx::FromRow)]
+#[derive(sqlx::FromRow, serde::Serialize)]
 struct AuditEventRow {
     id: uuid::Uuid,
     timestamp: chrono::DateTime<chrono::Utc>,
@@ -1315,7 +1313,7 @@ mod auditors {
             self.write_event(event).await
         }
 
-        async fn write_event(&self, event: AuditEvent) -> Result<(), AuditError> {
+        pub async fn write_event(&self, event: AuditEvent) -> Result<(), AuditError> {
             let mut stats = self.global_stats.write().await;
             stats.total_events += 1;
             *stats.events_by_category.entry(event.category.clone()).or_insert(0) += 1;

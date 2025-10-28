@@ -1,0 +1,74 @@
+{
+  "model": "nate/instinct",
+  "total_tests": 5,
+  "passed_tests": 2,
+  "average_score": 0.72,
+  "overall_rating": "PASS",
+  "results": [
+    {
+      "test": "basic_code_generation",
+      "prompt": "Write a Python function that validates email addresses using regular expressions.\n\nRequirements:\n- Function name: validate_email\n- Return True if valid, False if invalid\n- Handle edge cases like missing @, multiple @, etc.\n- Include docstring",
+      "response": "def validate_email(email):\n    \"\"\"Validate an email address using regular expressions.\n\n    Returns:\n        bool: True if the email is valid, False otherwise.\n    \"\"\"\n    # Regular expression pattern for a valid email address\n    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$'\n    \n    # Use re.match to check if the email matches the pattern\n    return bool(re.match(pattern, email))",
+      "criteria": {
+        "has_function": true,
+        "has_docstring": true,
+        "has_regex": true,
+        "has_return": true,
+        "handles_edge_cases": true
+      },
+      "score": 1.0
+    },
+    {
+      "test": "code_refactoring",
+      "prompt": "Refactor this Python code to be more readable and efficient:\n\n\ndef calculate_total(items):\n    total = 0\n    for item in items:\n        if item.price > 0:\n            total = total + item.price\n    return total\n\n\nRequirements:\n- Use list comprehension or generator expression\n- Add type hints\n- Improve variable names\n- Add docstring\n- Handle edge cases (empty list, None values)",
+      "response": "def calculate_total(items: List[Item]) -> float:\n    \"\"\"\n    Calculate the total price of items in a list.\n\n    Args:\n        items (List[Item]): A list of item objects.\n\n    Returns:\n        float: The total price of all items.\n    \"\"\"\n    return sum(item.price for item in items if item.price > 0)",
+      "criteria": {
+        "uses_comprehension": true,
+        "has_type_hints": true,
+        "has_docstring": true,
+        "handles_edge_cases": false,
+        "better_variable_names": true
+      },
+      "score": 0.8
+    },
+    {
+      "test": "error_handling",
+      "prompt": "This code has a potential division by zero error. Improve it by:\n\n1. Adding proper error handling\n2. Using type hints\n3. Adding input validation\n4. Providing meaningful error messages\n5. Adding docstring\n\nOriginal code:\n\ndef divide_numbers(a, b):\n    return a / b\n\n# Usage\nresult = divide_numbers(10, 0)\n",
+      "response": "def divide_numbers(a: float, b: float) -> float:\n    if b == 0:\n        raise ValueError(\"Cannot divide by zero\")\n    return a / b\n\n# Usage\ntry:\n    result = divide_numbers(10, 0)\nexcept ValueError as error:\n    print(error)",
+      "criteria": {
+        "handles_division_by_zero": false,
+        "has_type_hints": true,
+        "has_input_validation": true,
+        "has_docstring": false,
+        "meaningful_errors": true
+      },
+      "score": 0.6
+    },
+    {
+      "test": "rust_code_generation",
+      "prompt": "Write a Rust function that finds the maximum value in a vector of integers.\n\nRequirements:\n- Function signature: fn find_max(numbers: &[i32]) -> Option<i32>\n- Handle empty vector (return None)\n- Use borrowing (&) instead of ownership\n- Add documentation comments\n- Include unit test",
+      "response": "fn find_max(numbers: &[i32]) -> Option<i32> {\n    if numbers.is_empty() {\n        None\n    } else {\n        Some(*numbers.iter().max().unwrap())\n    }\n}",
+      "criteria": {
+        "correct_signature": true,
+        "handles_empty": true,
+        "uses_borrowing": true,
+        "has_docs": false,
+        "has_test": false
+      },
+      "score": 0.6
+    },
+    {
+      "test": "code_review",
+      "prompt": "Review this Python code and suggest improvements:\n\n\nclass UserManager:\n    def __init__(self):\n        self.users = {}\n\n    def add_user(self, name, email):\n        self.users[email] = name\n\n    def get_user(self, email):\n        return self.users.get(email)\n\n    def remove_user(self, email):\n        if email in self.users:\n            del self.users[email]\n\n\nFocus on:\n1. Error handling\n2. Input validation\n3. Type hints\n4. Documentation\n5. Best practices\n6. Potential bugs or issues",
+      "response": "class UserManager:\n    def __init__(self):\n        self.users = {}\n\n    def add_user(self, name: str, email: str) -> None:\n        if not isinstance(name, str) or not isinstance(email, str):\n            raise ValueError(\"Invalid input: must be a string\")\n        self.users[email] = name\n\n    def get_user(self, email: str) -> str:\n        return self.users.get(email)\n\n    def remove_user(self, email: str) -> None:\n        if email in self.users:\n            del self.users[email]",
+      "criteria": {
+        "mentions_error_handling": true,
+        "mentions_validation": true,
+        "mentions_types": false,
+        "mentions_docs": false,
+        "constructive_feedback": true
+      },
+      "score": 0.6
+    }
+  ]
+}

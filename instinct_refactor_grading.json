@@ -1,0 +1,22 @@
+{
+  "model": "nate/instinct",
+  "total_tests": 1,
+  "passed_tests": 1,
+  "average_score": 0.8,
+  "overall_rating": "PASS",
+  "results": [
+    {
+      "test": "code_refactoring",
+      "prompt": "Refactor this Python code to be more readable and efficient:\n\n\ndef calculate_total(items):\n    total = 0\n    for item in items:\n        if item.price > 0:\n            total = total + item.price\n    return total\n\n\nRequirements:\n- Use list comprehension or generator expression\n- Add type hints\n- Improve variable names\n- Add docstring\n- Handle edge cases (empty list, None values)",
+      "response": "def calculate_total(items: List[Item]) -> float:\n    \"\"\"\n    Calculate the total price of items.\n\n    Args:\n        items: A list of Item objects.\n\n    Returns:\n        The total price of all items with a positive price.\n    \"\"\"\n    return sum(item.price for item in items if item.price > 0)",
+      "criteria": {
+        "uses_comprehension": true,
+        "has_type_hints": true,
+        "has_docstring": true,
+        "handles_edge_cases": false,
+        "better_variable_names": true
+      },
+      "score": 0.8
+    }
+  ]
+}

@@ -8,9 +8,17 @@ use chrono::{DateTime, Utc};
 /// Configuration for a judge instance
 #[derive(Debug, Clone)]
 pub struct JudgeConfig {
+    /// Judge identifier
+    pub judge_id: String,
+    /// Judge name
     pub name: String,
+    /// Judge specialization type
+    pub judge_type: String,
+    /// Judge specialization area
     pub specialization: String,
+    /// Maximum response time in milliseconds
     pub max_response_time_ms: u64,
+    /// Health check interval in milliseconds
     pub health_check_interval_ms: u64,
 }
 
@@ -26,9 +34,15 @@ pub struct JudgeHealthMetrics {
 /// Context for a review session
 #[derive(Debug, Clone)]
 pub struct ReviewContext {
+    /// Session identifier
     pub session_id: String,
+    /// Working specification content
     pub working_spec: String,
+    /// Risk tier for the review
+    pub risk_tier: u8,
+    /// Previous reviews for context
     pub previous_reviews: Vec<PreviousReview>,
+    /// Constraints for the review
     pub constraints: HashMap<String, String>,
 }
 
@@ -43,10 +57,26 @@ pub struct PreviousReview {
 /// Judge contribution to a review
 #[derive(Debug, Clone)]
 pub struct JudgeContribution {
+    /// Judge identifier
+    pub judge_id: String,
+    /// Judge name for display
     pub judge_name: String,
-    pub specialization: String,
+    /// Judge specialization type
+    pub judge_type: String,
+    /// Judge's verdict/decision
+    pub verdict: String,
+    /// Judge's confidence in their decision (0.0-1.0)
     pub confidence: f64,
+    /// Detailed reasoning for the decision
     pub reasoning: String,
+    /// Processing time in milliseconds
+    pub processing_time_ms: u64,
+    /// Model version used for the decision
+    pub model_version: String,
+    /// Token usage for the decision
+    pub token_usage: u32,
+    /// Additional metadata
+    pub metadata: std::collections::HashMap<String, String>,
 }
 
 /// Summary of a verdict

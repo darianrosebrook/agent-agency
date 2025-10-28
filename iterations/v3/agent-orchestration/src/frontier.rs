@@ -11,6 +11,7 @@ use std::collections::{BinaryHeap, HashMap};
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 use tracing::{debug, info, warn};
+use thiserror::Error;
 
 /// Frontier task queue for orchestration
 #[derive(Debug)]
@@ -114,6 +115,7 @@ impl Frontier {
         debug!("Adding task to frontier: {}", descriptor.task_id);
 
         let priority_score = self.calculate_priority_score(&descriptor);
+        let task_id = descriptor.task_id.clone(); // Clone for later logging
         let task_entry = TaskEntry {
             descriptor,
             priority_score,
@@ -147,7 +149,7 @@ impl Frontier {
             stats.current_queue_size += 1;
         }
 
-        info!("Task added to frontier: {}", task_entry.descriptor.task_id);
+        info!("Task added to frontier: {}", task_id);
         Ok(())
     }
 
@@ -268,7 +270,8 @@ impl Frontier {
         match descriptor.priority {
             TaskPriority::Critical => score += 1000,
             TaskPriority::High => score += 800,
-            TaskPriority::Medium => score += 500,
+            TaskPriority::Normal => score += 500,
+            TaskPriority::Medium => score += 300,
             TaskPriority::Low => score += 200,
         }
 
@@ -392,3 +395,20 @@ impl PartialEq for TaskEntry {
 }
 
 impl Eq for TaskEntry {}
+
+/// Errors that can occur in frontier operations
+#[derive(Error, Debug)]
+pub enum FrontierError {
+    #[error("Task queue is full")]
+    QueueFull,
+    #[error("Task not found: {task_id}")]
+    TaskNotFound { task_id: String },
+    #[error("Task timeout: {task_id}")]
+    TaskTimeout { task_id: String },
+    #[error("Invalid task priority")]
+    InvalidPriority,
+    #[error("Frontier is not initialized")]
+    NotInitialized,
+    #[error("Internal frontier error: {message}")]
+    Internal { message: String },
+}

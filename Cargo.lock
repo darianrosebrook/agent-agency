@@ -191,6 +191,7 @@ dependencies = [
  "fastrand 2.3.0",
  "flate2",
  "futures",
+ "futures-util",
  "indicatif 0.16.2",
  "json5",
  "linfa",

@@ -91,16 +91,16 @@ impl MetricsRegistry {
 /// Counter metric
 #[derive(Debug, Clone)]
 pub struct Counter {
-    name: String,
-    description: String,
+    _name: String,
+    _description: String,
     value: Arc<RwLock<u64>>,
 }
 
 impl Counter {
     fn new(name: String, description: String) -> Self {
         Self {
-            name,
-            description,
+            _name: name,
+            _description: description,
             value: Arc::new(RwLock::new(0)),
         }
     }
@@ -140,16 +140,16 @@ impl CounterHandle {
 /// Gauge metric
 #[derive(Debug, Clone)]
 pub struct Gauge {
-    name: String,
-    description: String,
+    _name: String,
+    _description: String,
     value: Arc<RwLock<f64>>,
 }
 
 impl Gauge {
     fn new(name: String, description: String) -> Self {
         Self {
-            name,
-            description,
+            _name: name,
+            _description: description,
             value: Arc::new(RwLock::new(0.0)),
         }
     }
@@ -211,8 +211,8 @@ impl GaugeHandle {
 /// Histogram metric
 #[derive(Debug, Clone)]
 pub struct Histogram {
-    name: String,
-    description: String,
+    _name: String,
+    _description: String,
     buckets: Vec<f64>,
     counts: Arc<RwLock<Vec<u64>>>,
     sum: Arc<RwLock<f64>>,
@@ -222,8 +222,8 @@ pub struct Histogram {
 impl Histogram {
     fn new(name: String, description: String, buckets: Vec<f64>) -> Self {
         Self {
-            name,
-            description,
+            _name: name,
+            _description: description,
             buckets: buckets.clone(),
             counts: Arc::new(RwLock::new(vec![0; buckets.len()])),
             sum: Arc::new(RwLock::new(0.0)),

@@ -6,11 +6,10 @@
 
 use crate::data_processing_types::*;
 use crate::{DataProcessingResult, DataProcessingError};
-use system_configuration::{SequentialPipeline, SequentialPipelineConfig, PipelineStage as SystemPipelineStage, ExecutablePipeline};
+use system_configuration::{SequentialPipeline, SequentialPipelineConfig, PipelineStage as SystemPipelineStage};
 use system_configuration::PipelineResult as SystemPipelineResult;
 use std::default::Default;
-use std::collections::HashMap;
-use uuid::Uuid;
+use std::collections::HashMap; 
 
 // Local pipeline stage trait for domain-specific stages
 #[async_trait]
@@ -286,6 +285,8 @@ pub struct DataPipeline {
     sequential_pipeline: Arc<SequentialPipeline<DataInput>>,
     /// Keep domain-specific stages for backward compatibility
     domain_stages: Vec<Box<dyn PipelineStage>>,
+    stages: Vec<Box<dyn PipelineStage>>,
+    composite_stage: DataProcessingCompositeStage,
 }
 
 impl DataPipeline {
@@ -295,11 +296,10 @@ impl DataPipeline {
 
         // Create domain-specific stages
         let domain_stages = Self::create_default_stages(&config).await?;
-        let domain_stages_for_composite = Self::create_default_stages(&config).await?;
 
         // Create a single composite stage that wraps all domain stages
         let composite_stage = DataProcessingCompositeStage {
-            stages: domain_stages_for_composite,
+            stages: domain_stages,
         };
 
         let mut sequential_pipeline = SequentialPipeline::new(sequential_config);
@@ -307,9 +307,11 @@ impl DataPipeline {
         sequential_pipeline.add_stage(Box::new(adapter)).await;
 
         Ok(Self {
-            config,
+            config: config.clone(),
             sequential_pipeline: Arc::new(sequential_pipeline),
-            domain_stages,
+            domain_stages: vec![], // Empty since stages are moved to composite_stage
+            stages: vec![], // Empty since stages are moved to composite_stage
+            composite_stage: DataProcessingCompositeStage { stages: Self::create_default_stages(&config).await? },
         })
     }
 
@@ -537,6 +539,7 @@ impl DataPipeline {
 pub fn create_custom_pipeline(
     config: PipelineConfig,
     stages: Vec<Box<dyn PipelineStage>>,
+    composite_stage: DataProcessingCompositeStage,
 ) -> DataPipeline {
     // Create a simple sequential pipeline configuration
     let sequential_config = SequentialPipelineConfig {
@@ -565,6 +568,8 @@ pub fn create_custom_pipeline(
         config,
         sequential_pipeline: Arc::new(sequential_pipeline),
         domain_stages: stages, // Use the provided stages directly
+        stages: vec![], // Empty since we're not using this field
+        composite_stage, // Remove clone since it's moved
     }
 }
 
@@ -627,8 +632,8 @@ mod tests {
             Box::new(MockStage { name: "mock2" }) as Box<dyn PipelineStage>,
         ];
 
-        let pipeline = create_custom_pipeline(config, stages);
-        assert_eq!(pipeline.stages.len(), 2);
+        let pipeline = create_custom_pipeline(config, stages, DataProcessingCompositeStage { stages: vec![] }   );
+        assert_eq!(pipeline.composite_stage.stages.len(), 2);
     }
 
     #[tokio::test]
@@ -636,8 +641,8 @@ mod tests {
         let config = PipelineConfig::default();
         let mut pipeline = DataPipeline::new(config).await.unwrap();
 
-        let initial_count = pipeline.stages.len();
+        let initial_count = pipeline.composite_stage.stages.len();
         pipeline.remove_stage("nonexistent");
-        assert_eq!(pipeline.stages.len(), initial_count);
+        assert_eq!(pipeline.composite_stage.stages.len(), initial_count);
     }
 }
