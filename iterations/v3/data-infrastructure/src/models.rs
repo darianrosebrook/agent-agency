@@ -4,6 +4,39 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+/// Provenance entry model
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProvenanceEntry {
+    pub id: Uuid,
+    pub task_id: Uuid,
+    pub action: String,
+    pub actor: String,
+    pub resource_id: Option<Uuid>,
+    pub resource_type: Option<String>,
+    pub change_summary: String,
+    pub timestamp: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub metadata: serde_json::Value,
+}
+
+/// Waiver model
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Waiver {
+    pub id: Uuid,
+    pub title: String,
+    pub reason: String,
+    pub description: String,
+    pub gates: Vec<String>,
+    pub approved_by: String,
+    pub impact_level: String,
+    pub mitigation_plan: String,
+    pub expires_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub status: String,
+    pub metadata: serde_json::Value,
+}
+
 /// Judge model from database
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Judge {
@@ -676,24 +709,6 @@ pub struct KnowledgeStats {
     pub avg_confidence: f64,
     pub avg_usage_count: f64,
     pub last_updated: DateTime<Utc>,
-}
-
-/// Waiver model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
-pub struct Waiver {
-    pub id: Uuid,
-    pub title: String,
-    pub reason: String,
-    pub description: String,
-    pub gates: Vec<String>,
-    pub approved_by: String,
-    pub impact_level: String,
-    pub mitigation_plan: String,
-    pub expires_at: DateTime<Utc>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    pub status: String,
-    pub metadata: serde_json::Value,
 }
 
 /// Audit log model from database

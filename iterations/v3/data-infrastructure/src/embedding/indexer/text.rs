@@ -181,7 +181,7 @@ impl TextIndexer {
         // Use Ollama embedding provider for real embeddings
         let config = data_infrastructure::embedding::EmbeddingConfig {
             provider: data_infrastructure::embedding::EmbeddingProviderType::Ollama,
-            model_name: "nomic-embed-text".to_string(),
+            model_name: "nomic-embed-text".to_string(), // Better performance and smaller size
             dimension: 768,
             ollama_url: "http://localhost:11434".to_string(),
             timeout_ms: 30000,

@@ -155,7 +155,7 @@ impl Default for EmbeddingConfig {
     fn default() -> Self {
         Self {
             ollama_url: "http://localhost:11434".to_string(),
-            model_name: "embeddinggemma".to_string(),
+            model_name: "nomic-embed-text".to_string(), // Better performance and smaller size
             dimension: 768,
             batch_size: 10,
             cache_size: 1000,

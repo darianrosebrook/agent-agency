@@ -175,14 +175,14 @@ impl SearchOperations {
     async fn generate_embedding_from_api(&self, text: &str) -> Result<Vec<f32>> {
         debug!("Generating embedding for text (length: {})", text.len());
 
-        // Use Ollama embedding provider for real embeddings
-        let config = EmbeddingConfig {
-            provider: EmbeddingProviderType::Ollama,
-            model_name: "nomic-embed-text".to_string(),
-            dimension: 768,
-            ollama_url: "http://localhost:11434".to_string(),
-            timeout_ms: 30000,
-        };
+            // Use Ollama embedding provider for real embeddings
+            let config = EmbeddingConfig {
+                provider: EmbeddingProviderType::Ollama,
+                model_name: "nomic-embed-text".to_string(), // Better performance and smaller size
+                dimension: 768,
+                ollama_url: "http://localhost:11434".to_string(),
+                timeout_ms: 30000,
+            };
 
         let provider = OllamaEmbeddingProvider::new(&config);
         

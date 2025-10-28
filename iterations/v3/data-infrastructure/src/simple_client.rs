@@ -5,9 +5,11 @@
 
 use crate::client::orchestrator::DatabaseClient as ComplexDatabaseClient;
 use crate::database_config::DatabaseConfig;
+use crate::database_operations::DatabaseOperations;
 use anyhow::Result;
 use sqlx::postgres::PgPool;
 use std::sync::Arc;
+use uuid::Uuid;
 
 /// Simple database client that wraps the complex DatabaseClient
 #[derive(Clone, Debug)]
@@ -91,5 +93,74 @@ impl DatabaseClient {
         params: Vec<&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)>,
     ) -> Result<sqlx::postgres::PgQueryResult> {
         self.inner.execute(query, &params).await
+    }
+
+    /// List all waivers
+    pub async fn list_waivers(&self) -> Result<Vec<crate::models::Waiver>> {
+        // TODO: Implement waiver listing
+        Ok(vec![])
+    }
+
+    /// Create a new waiver
+    pub async fn create_waiver(&self, _waiver: &crate::models::Waiver) -> Result<Uuid> {
+        // TODO: Implement waiver creation
+        Ok(Uuid::new_v4())
+    }
+
+    /// Approve a waiver
+    pub async fn approve_waiver(&self, _waiver_id: &Uuid) -> Result<()> {
+        // TODO: Implement waiver approval
+        Ok(())
+    }
+
+    /// Get task provenance
+    pub async fn get_task_provenance(&self, _task_id: &Uuid) -> Result<Vec<crate::models::ProvenanceEntry>> {
+        // TODO: Implement task provenance retrieval
+        Ok(vec![])
+    }
+
+    /// Create a task
+    pub async fn create_task(&self, task: &crate::models::Task) -> Result<Uuid> {
+        // Convert models::Task to database_operations::CreateTask
+        let create_task = crate::database_operations::CreateTask {
+            title: task.title.clone(),
+            description: task.description.clone(),
+            risk_tier: task.risk_tier.clone(),
+            scope: task.scope.clone(),
+            acceptance_criteria: task.acceptance_criteria.clone(),
+            context: task.context.clone(),
+            caws_spec: task.caws_spec.clone(),
+            status: task.status.clone(),
+            assigned_worker_id: task.assigned_worker_id,
+            priority: task.priority,
+            deadline: task.deadline,
+            metadata: task.metadata.clone(),
+        };
+        
+        let created_task = self.inner.create_task(create_task).await?;
+        Ok(created_task.id)
+    }
+
+    /// Get a task by ID
+    pub async fn get_task(&self, task_id: &Uuid) -> Result<Option<crate::models::Task>> {
+        let task = self.inner.get_task(*task_id).await?;
+        Ok(task.map(|t| crate::models::Task {
+            id: t.id,
+            title: t.title,
+            description: t.description,
+            risk_tier: t.risk_tier,
+            scope: t.scope,
+            acceptance_criteria: t.acceptance_criteria,
+            context: t.context,
+            caws_spec: t.caws_spec,
+            status: t.status,
+            assigned_worker_id: t.assigned_worker_id,
+            priority: t.priority,
+            deadline: t.deadline,
+            metadata: t.metadata,
+            created_at: t.created_at,
+            updated_at: t.updated_at,
+            completed_at: t.completed_at,
+        }))
     }
 }

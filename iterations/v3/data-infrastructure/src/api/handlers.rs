@@ -149,10 +149,10 @@ pub async fn create_waiver(
         status: "pending".to_string(),
         metadata,
     }).await {
-        Ok(waiver) => {
-            info!("Created waiver: {}", waiver.id);
+        Ok(waiver_id) => {
+            info!("Created waiver: {}", waiver_id);
             Ok(Json(serde_json::json!({
-                "waiver_id": waiver.id,
+                "waiver_id": waiver_id,
                 "status": "created",
                 "message": "Waiver created successfully"
             })))
@@ -600,21 +600,26 @@ pub async fn submit_task(
         id: uuid::Uuid::new_v4(),
         title: title.to_string(),
         description: description.to_string(),
+        risk_tier: "medium".to_string(),
+        scope: serde_json::json!({}),
+        acceptance_criteria: serde_json::json!({}),
+        context: serde_json::json!({}),
+        caws_spec: None,
         status: "pending".to_string(),
-        priority: priority.to_string(),
-        task_type: task_type.to_string(),
+        assigned_worker_id: None,
+        priority: priority.parse().ok(),
+        deadline: None,
+        metadata: Some(metadata),
         created_at: chrono::Utc::now(),
         updated_at: chrono::Utc::now(),
-        assigned_to: None,
-        due_date: None,
-        metadata,
+        completed_at: None,
     };
     
     match state.db_client.create_task(&task).await {
-        Ok(created_task) => {
-            info!("Created task: {}", created_task.id);
+        Ok(task_id) => {
+            info!("Created task: {}", task_id);
             Ok(Json(serde_json::json!({
-                "task_id": created_task.id,
+                "task_id": task_id,
                 "status": "submitted",
                 "message": "Task submitted successfully"
             })))
@@ -642,11 +647,11 @@ pub async fn get_task_status(
                 "title": task.title,
                 "description": task.description,
                 "priority": task.priority,
-                "task_type": task.task_type,
+                "risk_tier": task.risk_tier,
                 "created_at": task.created_at,
                 "updated_at": task.updated_at,
-                "assigned_to": task.assigned_to,
-                "due_date": task.due_date,
+                "assigned_worker_id": task.assigned_worker_id,
+                "deadline": task.deadline,
                 "metadata": task.metadata
             })))
         }

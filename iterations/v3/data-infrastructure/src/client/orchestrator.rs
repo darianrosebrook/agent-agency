@@ -187,96 +187,70 @@ impl DatabaseOperations for DatabaseClient {
         let id = Uuid::new_v4();
         let now = Utc::now();
         
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO judges (
-                id, name, judge_type, capabilities, status, 
-                performance_metrics, created_at, updated_at, metadata
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            "#,
-            id,
-            judge.name,
-            judge.judge_type as _,
-            serde_json::to_value(&judge.capabilities)?,
-            judge.status,
-            serde_json::to_value(&judge.performance_metrics)?,
-            now,
-            now,
-            serde_json::to_value(&judge.metadata)?
+                id, name, model_name, endpoint, weight, 
+                timeout_ms, optimization_target, is_active, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            "#
         )
+        .bind(id)
+        .bind(&judge.name)
+        .bind(&judge.model_name)
+        .bind(&judge.endpoint)
+        .bind(judge.weight)
+        .bind(judge.timeout_ms)
+        .bind(&judge.optimization_target)
+        .bind(judge.is_active)
+        .bind(now)
+        .bind(now)
         .execute(&self.pool)
         .await?;
         
         Ok(Judge {
             id,
             name: judge.name,
-            judge_type: judge.judge_type,
-            capabilities: judge.capabilities,
-            status: judge.status,
-            performance_metrics: judge.performance_metrics,
+            model_name: judge.model_name,
+            endpoint: judge.endpoint,
+            weight: judge.weight,
+            timeout_ms: judge.timeout_ms,
+            optimization_target: judge.optimization_target,
+            is_active: judge.is_active,
             created_at: now,
             updated_at: now,
-            metadata: judge.metadata,
         })
     }
 
     async fn get_judge(&self, id: Uuid) -> Result<Option<Judge>> {
-        let row = sqlx::query!(
+        let row = sqlx::query_as::<_, Judge>(
             r#"
-            SELECT id, name, judge_type, capabilities, status,
-                   performance_metrics, created_at, updated_at, metadata
+            SELECT id, name, model_name, endpoint, weight,
+                   timeout_ms, optimization_target, is_active, created_at, updated_at
             FROM judges
             WHERE id = $1
-            "#,
-            id
+            "#
         )
+        .bind(id)
         .fetch_optional(&self.pool)
         .await?;
-
-        if let Some(row) = row {
-            Ok(Some(Judge {
-                id: row.id,
-                name: row.name,
-                judge_type: row.judge_type.try_into()?,
-                capabilities: serde_json::from_value(row.capabilities)?,
-                status: row.status,
-                performance_metrics: serde_json::from_value(row.performance_metrics)?,
-                created_at: row.created_at,
-                updated_at: row.updated_at,
-                metadata: serde_json::from_value(row.metadata)?,
-            }))
-        } else {
-            Ok(None)
-        }
+        
+        Ok(row)
     }
 
     async fn get_judges(&self) -> Result<Vec<Judge>> {
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as::<_, Judge>(
             r#"
-            SELECT id, name, judge_type, capabilities, status,
-                   performance_metrics, created_at, updated_at, metadata
+            SELECT id, name, model_name, endpoint, weight,
+                   timeout_ms, optimization_target, is_active, created_at, updated_at
             FROM judges
             ORDER BY created_at DESC
             "#
         )
         .fetch_all(&self.pool)
         .await?;
-
-        let judges = rows.into_iter()
-            .map(|row| Judge {
-                id: row.id,
-                name: row.name,
-                judge_type: row.judge_type.try_into().unwrap_or_default(),
-                capabilities: serde_json::from_value(row.capabilities).unwrap_or_default(),
-                status: row.status,
-                performance_metrics: serde_json::from_value(row.performance_metrics).unwrap_or_default(),
-                created_at: row.created_at,
-                updated_at: row.updated_at,
-                metadata: serde_json::from_value(row.metadata).unwrap_or_default(),
-            })
-            .collect();
-
-        Ok(judges)
+        
+        Ok(rows)
     }
 
     async fn update_judge(&self, _id: Uuid, _judge: UpdateJudge) -> Result<Judge> {
@@ -311,25 +285,30 @@ impl DatabaseOperations for DatabaseClient {
         let id = Uuid::new_v4();
         let now = Utc::now();
         
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO tasks (
-                id, title, description, status, priority, task_type,
-                created_at, updated_at, assigned_to, due_date, metadata
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-            "#,
-            id,
-            task.title,
-            task.description,
-            task.status,
-            task.priority,
-            task.task_type,
-            now,
-            now,
-            task.assigned_to,
-            task.due_date,
-            serde_json::to_value(&task.metadata)?
+                id, title, description, risk_tier, scope, acceptance_criteria,
+                context, caws_spec, status, assigned_worker_id, priority, 
+                deadline, metadata, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            "#
         )
+        .bind(id)
+        .bind(&task.title)
+        .bind(&task.description)
+        .bind(&task.risk_tier)
+        .bind(&task.scope)
+        .bind(&task.acceptance_criteria)
+        .bind(&task.context)
+        .bind(&task.caws_spec)
+        .bind(&task.status)
+        .bind(&task.assigned_worker_id)
+        .bind(&task.priority)
+        .bind(&task.deadline)
+        .bind(&task.metadata)
+        .bind(now)
+        .bind(now)
         .execute(&self.pool)
         .await?;
         
@@ -337,47 +316,37 @@ impl DatabaseOperations for DatabaseClient {
             id,
             title: task.title,
             description: task.description,
+            risk_tier: task.risk_tier,
+            scope: task.scope,
+            acceptance_criteria: task.acceptance_criteria,
+            context: task.context,
+            caws_spec: task.caws_spec,
             status: task.status,
+            assigned_worker_id: task.assigned_worker_id,
             priority: task.priority,
-            task_type: task.task_type,
+            deadline: task.deadline,
+            metadata: task.metadata,
             created_at: now,
             updated_at: now,
-            assigned_to: task.assigned_to,
-            due_date: task.due_date,
-            metadata: task.metadata,
+            completed_at: None,
         })
     }
 
     async fn get_task(&self, id: Uuid) -> Result<Option<Task>> {
-        let row = sqlx::query!(
+        let row = sqlx::query_as::<_, Task>(
             r#"
-            SELECT id, title, description, status, priority, task_type,
-                   created_at, updated_at, assigned_to, due_date, metadata
+            SELECT id, title, description, risk_tier, scope, acceptance_criteria,
+                   context, caws_spec, status, assigned_worker_id, priority,
+                   deadline, metadata, created_at, updated_at
             FROM tasks
             WHERE id = $1
-            "#,
-            id
+            "#
         )
+        .bind(id)
         .fetch_optional(&self.pool)
         .await?;
-
-        if let Some(row) = row {
-            Ok(Some(Task {
-                id: row.id,
-                title: row.title,
-                description: row.description,
-                status: row.status,
-                priority: row.priority,
-                task_type: row.task_type,
-                created_at: row.created_at,
-                updated_at: row.updated_at,
-                assigned_to: row.assigned_to,
-                due_date: row.due_date,
-                metadata: serde_json::from_value(row.metadata)?,
-            }))
-        } else {
-            Ok(None)
-        }
+        
+        Ok(row)
     }
 
     async fn get_tasks(&self) -> Result<Vec<Task>> {

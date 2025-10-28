@@ -53,6 +53,15 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, debug, warn, error};
 
+/// Task component for decomposition analysis
+#[derive(Debug, Clone)]
+struct TaskComponent {
+    component_type: String,
+    description: String,
+    complexity: u8,
+    dependencies: Vec<String>,
+}
+
 /// Policy enforcement tools for compliance and security
 #[derive(Debug)]
 pub struct PolicyEnforcementTools {
@@ -98,74 +107,344 @@ impl PolicyEnforcementTools {
         Ok(Self {})
     }
 
-    /// Stub implementation for CAWS validation
-    pub async fn validate_task_against_caws(&self, _task_description: &str, _spec: &serde_json::Value) -> Result<PolicyValidationResult> {
-        // TODO: CAWS Validation - Implement actual CAWS validation logic
-        // 
-        // COMPLETION CHECKLIST:
-        // [ ] CAWS specification parsing
-        // [ ] Task description analysis
-        // [ ] Policy rule evaluation
-        // [ ] Validation result generation
-        // [ ] Unit tests written (80%+ coverage)
-        // [ ] Integration tests with CAWS system
-        // [ ] Documentation updated
-        // [ ] Performance benchmarks meet SLA
-        // [ ] Security considerations addressed
-        // [ ] Configuration options defined
-        // [ ] Monitoring/metrics implemented
-        // [ ] Logging added for debugging
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Validates tasks against CAWS specifications
-        // - Returns appropriate validation results
-        // - Handles invalid specifications gracefully
-        // - Performance meets requirements
-        //
-        // DEPENDENCIES:
-        // - CAWS specification format: Required
-        // - PolicyValidationResult: Available
-        //
-        // ESTIMATED EFFORT: 12 hours
-        // PRIORITY: HIGH
-        // BLOCKING: Yes - Required for policy compliance
+    /// Real CAWS validation implementation
+    pub async fn validate_task_against_caws(&self, task_description: &str, spec: &serde_json::Value) -> Result<PolicyValidationResult> {
+        use tracing::{info, debug, warn, error};
         
-        Ok(PolicyValidationResult::Allowed) // Stub: always pass
+        info!("Validating task against CAWS specification");
+        
+        // Extract CAWS specification details
+        let spec_id = spec.get("id")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
+        
+        let risk_tier = spec.get("risk_tier")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(3);
+        
+        let change_budget = spec.get("change_budget")
+            .and_then(|v| v.as_object())
+            .unwrap_or(&serde_json::Map::new());
+        
+        let max_files = change_budget.get("max_files")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(100);
+        
+        let max_loc = change_budget.get("max_loc")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(10000);
+        
+        let scope = spec.get("scope")
+            .and_then(|v| v.as_object())
+            .unwrap_or(&serde_json::Map::new());
+        
+        let acceptance_criteria = spec.get("acceptance_criteria")
+            .and_then(|v| v.as_array())
+            .unwrap_or(&vec![]);
+        
+        debug!("CAWS spec analysis: ID={}, RiskTier={}, MaxFiles={}, MaxLOC={}", 
+               spec_id, risk_tier, max_files, max_loc);
+        
+        // Validate task description against CAWS requirements
+        let mut validation_issues = Vec::new();
+        
+        // Check if task description is too vague
+        if task_description.len() < 50 {
+            validation_issues.push("Task description too brief - minimum 50 characters required");
+        }
+        
+        // Check if task description contains required elements
+        let required_elements = ["should", "must", "will", "implement", "create", "update", "fix"];
+        let has_required_element = required_elements.iter().any(|element| {
+            task_description.to_lowercase().contains(element)
+        });
+        
+        if !has_required_element {
+            validation_issues.push("Task description missing required action words (should/must/will/implement/create/update/fix)");
+        }
+        
+        // Check risk tier appropriateness based on task complexity
+        let task_complexity = self.assess_task_complexity(task_description);
+        let recommended_risk_tier = self.recommend_risk_tier(task_complexity);
+        
+        if risk_tier < recommended_risk_tier {
+            validation_issues.push(format!(
+                "Risk tier {} too low for task complexity - recommended tier {}", 
+                risk_tier, recommended_risk_tier
+            ));
+        }
+        
+        // Check scope completeness
+        if scope.is_empty() {
+            validation_issues.push("Scope definition missing - required for CAWS compliance");
+        }
+        
+        // Check acceptance criteria completeness
+        if acceptance_criteria.is_empty() {
+            validation_issues.push("Acceptance criteria missing - required for CAWS compliance");
+        } else {
+            // Validate each acceptance criterion
+            for (i, criterion) in acceptance_criteria.iter().enumerate() {
+                if let Some(criterion_obj) = criterion.as_object() {
+                    if !criterion_obj.contains_key("given") {
+                        validation_issues.push(format!("Acceptance criterion {} missing 'given' condition", i + 1));
+                    }
+                    if !criterion_obj.contains_key("when") {
+                        validation_issues.push(format!("Acceptance criterion {} missing 'when' action", i + 1));
+                    }
+                    if !criterion_obj.contains_key("then") {
+                        validation_issues.push(format!("Acceptance criterion {} missing 'then' outcome", i + 1));
+                    }
+                }
+            }
+        }
+        
+        // Determine validation result
+        if validation_issues.is_empty() {
+            info!("CAWS validation passed for task: {}", spec_id);
+            Ok(PolicyValidationResult::Allowed)
+        } else {
+            warn!("CAWS validation failed for task: {} - {} issues found", spec_id, validation_issues.len());
+            Ok(PolicyValidationResult::Rejected {
+                reason: validation_issues.join("; "),
+                suggestions: vec![
+                    "Provide more detailed task description".to_string(),
+                    "Include clear acceptance criteria".to_string(),
+                    "Define appropriate scope boundaries".to_string(),
+                    "Set appropriate risk tier".to_string(),
+                ],
+            })
+        }
     }
 
-    /// Stub implementation for task decomposition
-    pub async fn decompose_task(&self, _task_description: &str, _context: &str) -> Result<Vec<serde_json::Value>> {
-        // TODO: Task Decomposition - Implement actual task decomposition logic
-        // 
-        // COMPLETION CHECKLIST:
-        // [ ] Task analysis algorithms
-        // [ ] Subtask generation
-        // [ ] Dependency resolution
-        // [ ] Context integration
-        // [ ] Unit tests written (80%+ coverage)
-        // [ ] Integration tests with task system
-        // [ ] Documentation updated
-        // [ ] Performance benchmarks meet SLA
-        // [ ] Security considerations addressed
-        // [ ] Configuration options defined
-        // [ ] Monitoring/metrics implemented
-        // [ ] Logging added for debugging
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Decomposes complex tasks into manageable subtasks
-        // - Maintains task dependencies correctly
-        // - Integrates context information appropriately
-        // - Performance meets requirements
-        //
-        // DEPENDENCIES:
-        // - Task analysis algorithms: Required
-        // - Context management: Available
-        //
-        // ESTIMATED EFFORT: 16 hours
-        // PRIORITY: HIGH
-        // BLOCKING: Yes - Required for task execution
+    /// Assess task complexity based on description
+    fn assess_task_complexity(&self, task_description: &str) -> u8 {
+        let mut complexity_score = 0;
         
-        Ok(vec![]) // Stub: no decomposition
+        // Length factor
+        if task_description.len() > 200 {
+            complexity_score += 1;
+        }
+        
+        // Technical complexity indicators
+        let technical_indicators = [
+            "algorithm", "optimization", "performance", "scalability", 
+            "security", "authentication", "authorization", "encryption",
+            "database", "migration", "refactor", "architecture"
+        ];
+        
+        for indicator in &technical_indicators {
+            if task_description.to_lowercase().contains(indicator) {
+                complexity_score += 1;
+            }
+        }
+        
+        // Multi-component indicators
+        let multi_component_indicators = [
+            "integration", "coordination", "orchestration", "pipeline",
+            "workflow", "chain", "sequence", "parallel"
+        ];
+        
+        for indicator in &multi_component_indicators {
+            if task_description.to_lowercase().contains(indicator) {
+                complexity_score += 1;
+            }
+        }
+        
+        // Risk indicators
+        let risk_indicators = [
+            "critical", "urgent", "production", "deployment", 
+            "rollback", "failure", "error", "exception"
+        ];
+        
+        for indicator in &risk_indicators {
+            if task_description.to_lowercase().contains(indicator) {
+                complexity_score += 1;
+            }
+        }
+        
+        // Convert score to complexity level (1-3)
+        match complexity_score {
+            0..=2 => 1, // Low complexity
+            3..=5 => 2, // Medium complexity
+            _ => 3,     // High complexity
+        }
+    }
+
+    /// Recommend risk tier based on task complexity
+    fn recommend_risk_tier(&self, complexity: u8) -> u64 {
+        match complexity {
+            1 => 3, // Low complexity -> Tier 3
+            2 => 2, // Medium complexity -> Tier 2
+            3 => 1, // High complexity -> Tier 1
+            _ => 3, // Default to Tier 3
+        }
+    }
+
+    /// Real task decomposition implementation
+    pub async fn decompose_task(&self, task_description: &str, context: &str) -> Result<Vec<serde_json::Value>> {
+        use tracing::{info, debug, warn};
+        
+        info!("Decomposing task: {}", task_description);
+        
+        // Analyze task description to identify components
+        let task_components = self.analyze_task_components(task_description);
+        debug!("Identified {} task components", task_components.len());
+        
+        // Generate subtasks based on components
+        let mut subtasks = Vec::new();
+        
+        for (i, component) in task_components.iter().enumerate() {
+            let subtask = self.create_subtask(component, i, context)?;
+            subtasks.push(subtask);
+        }
+        
+        // Add dependency relationships between subtasks
+        self.add_subtask_dependencies(&mut subtasks, &task_components);
+        
+        // Validate decomposition completeness
+        if subtasks.is_empty() {
+            warn!("Task decomposition resulted in no subtasks");
+            return Ok(vec![]);
+        }
+        
+        info!("Task decomposition completed: {} subtasks generated", subtasks.len());
+        Ok(subtasks)
+    }
+
+    /// Analyze task description to identify components
+    fn analyze_task_components(&self, task_description: &str) -> Vec<TaskComponent> {
+        let mut components = Vec::new();
+        
+        // Look for implementation patterns
+        if task_description.to_lowercase().contains("implement") {
+            components.push(TaskComponent {
+                component_type: "implementation".to_string(),
+                description: "Core implementation work".to_string(),
+                complexity: 2,
+                dependencies: vec![],
+            });
+        }
+        
+        // Look for testing patterns
+        if task_description.to_lowercase().contains("test") || 
+           task_description.to_lowercase().contains("testing") {
+            components.push(TaskComponent {
+                component_type: "testing".to_string(),
+                description: "Test implementation and validation".to_string(),
+                complexity: 1,
+                dependencies: vec!["implementation".to_string()],
+            });
+        }
+        
+        // Look for documentation patterns
+        if task_description.to_lowercase().contains("document") || 
+           task_description.to_lowercase().contains("doc") {
+            components.push(TaskComponent {
+                component_type: "documentation".to_string(),
+                description: "Documentation and examples".to_string(),
+                complexity: 1,
+                dependencies: vec!["implementation".to_string()],
+            });
+        }
+        
+        // Look for integration patterns
+        if task_description.to_lowercase().contains("integrate") || 
+           task_description.to_lowercase().contains("integration") {
+            components.push(TaskComponent {
+                component_type: "integration".to_string(),
+                description: "System integration work".to_string(),
+                complexity: 3,
+                dependencies: vec!["implementation".to_string(), "testing".to_string()],
+            });
+        }
+        
+        // Look for optimization patterns
+        if task_description.to_lowercase().contains("optimize") || 
+           task_description.to_lowercase().contains("performance") {
+            components.push(TaskComponent {
+                component_type: "optimization".to_string(),
+                description: "Performance optimization".to_string(),
+                complexity: 2,
+                dependencies: vec!["implementation".to_string()],
+            });
+        }
+        
+        // Look for refactoring patterns
+        if task_description.to_lowercase().contains("refactor") || 
+           task_description.to_lowercase().contains("cleanup") {
+            components.push(TaskComponent {
+                component_type: "refactoring".to_string(),
+                description: "Code refactoring and cleanup".to_string(),
+                complexity: 2,
+                dependencies: vec!["implementation".to_string()],
+            });
+        }
+        
+        // If no specific patterns found, create a generic implementation task
+        if components.is_empty() {
+            components.push(TaskComponent {
+                component_type: "implementation".to_string(),
+                description: "General implementation work".to_string(),
+                complexity: 2,
+                dependencies: vec![],
+            });
+        }
+        
+        components
+    }
+
+    /// Create a subtask from a task component
+    fn create_subtask(&self, component: &TaskComponent, index: usize, context: &str) -> Result<serde_json::Value> {
+        let subtask_id = format!("subtask_{}", index + 1);
+        
+        let subtask = serde_json::json!({
+            "id": subtask_id,
+            "type": component.component_type,
+            "description": component.description,
+            "complexity": component.complexity,
+            "dependencies": component.dependencies,
+            "context": context,
+            "estimated_duration_hours": self.estimate_duration(component.complexity),
+            "priority": self.calculate_priority(component),
+            "status": "pending",
+            "created_at": chrono::Utc::now().to_rfc3339(),
+        });
+        
+        Ok(subtask)
+    }
+
+    /// Add dependency relationships between subtasks
+    fn add_subtask_dependencies(&self, subtasks: &mut Vec<serde_json::Value>, components: &[TaskComponent]) {
+        for (i, subtask) in subtasks.iter_mut().enumerate() {
+            if let Some(subtask_obj) = subtask.as_object_mut() {
+                let dependencies = components[i].dependencies.clone();
+                subtask_obj.insert("dependencies".to_string(), serde_json::to_value(dependencies).unwrap());
+            }
+        }
+    }
+
+    /// Estimate duration based on complexity
+    fn estimate_duration(&self, complexity: u8) -> u8 {
+        match complexity {
+            1 => 2,  // Low complexity -> 2 hours
+            2 => 4,  // Medium complexity -> 4 hours
+            3 => 8,  // High complexity -> 8 hours
+            _ => 4,  // Default -> 4 hours
+        }
+    }
+
+    /// Calculate priority based on component type
+    fn calculate_priority(&self, component: &TaskComponent) -> u8 {
+        match component.component_type.as_str() {
+            "implementation" => 1, // Highest priority
+            "testing" => 2,
+            "integration" => 2,
+            "optimization" => 3,
+            "refactoring" => 3,
+            "documentation" => 4, // Lowest priority
+            _ => 3,
+        }
     }
 
     /// Quality gate validation implementation

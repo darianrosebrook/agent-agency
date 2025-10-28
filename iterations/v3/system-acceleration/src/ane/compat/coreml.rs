@@ -208,39 +208,17 @@ impl MLModel {
         let mut model_ref: u64 = 0;
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
+        // Create model configuration with real settings
+        let config = MLModelConfiguration {
+            compute_units: MLComputeUnits::All, // Use all available compute units (CPU, GPU, ANE)
+            allow_low_precision_accumulation: true, // Allow FP16 accumulation for better performance
+            cpu_only: false, // Enable GPU and ANE acceleration
+        };
+
         let result = unsafe {
             coreml::agentbridge_model_create(
                 path_cstr.as_ptr(),
-                std::ptr::null(), // TODO: Model Configuration - Implement proper model configuration
-                // 
-                // COMPLETION CHECKLIST:
-                // [ ] Model configuration structure implementation
-                // [ ] Configuration parameter validation
-                // [ ] Configuration serialization/deserialization
-                // [ ] Configuration error handling
-                // [ ] Unit tests written (80%+ coverage)
-                // [ ] Integration tests with Core ML
-                // [ ] Documentation updated
-                // [ ] Performance benchmarks meet SLA
-                // [ ] Security considerations addressed
-                // [ ] Configuration options defined
-                // [ ] Monitoring/metrics implemented
-                // [ ] Logging added for debugging
-                //
-                // ACCEPTANCE CRITERIA:
-                // - Model configuration is properly structured
-                // - Configuration parameters are validated
-                // - Configuration errors are handled gracefully
-                // - Performance meets requirements
-                //
-                // DEPENDENCIES:
-                // - Core ML configuration API: Required
-                // - Error handling system: Available
-                //
-                // ESTIMATED EFFORT: 8 hours
-                // PRIORITY: MEDIUM
-                // BLOCKING: No - Current null config works
-                
+                &config, // Pass the real model configuration
                 &mut model_ref,
                 &mut error_ptr
             )
@@ -350,42 +328,58 @@ impl MLModel {
         }
     }
 
-    /// Run prediction on the model with the given features
+    /// Real Core ML prediction implementation
     pub fn prediction_from_features(&self, features: &MLFeatureProvider) -> std::result::Result<MLFeatureProvider, String> {
-        // TODO: Prediction from Features - Implement Core ML prediction interface
-        // 
-        // COMPLETION CHECKLIST:
-        // [ ] Core ML prediction API implementation
-        // [ ] Feature provider integration
-        // [ ] Prediction result handling
-        // [ ] Error handling and validation
-        // [ ] Unit tests written (80%+ coverage)
-        // [ ] Integration tests with Core ML
-        // [ ] Documentation updated
-        // [ ] Performance benchmarks meet SLA
-        // [ ] Security considerations addressed
-        // [ ] Configuration options defined
-        // [ ] Monitoring/metrics implemented
-        // [ ] Logging added for debugging
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Predictions work correctly with feature providers
-        // - Error handling is comprehensive
-        // - Performance meets requirements
-        // - Integration with specific inference APIs
-        //
-        // DEPENDENCIES:
-        // - Core ML prediction API: Required
-        // - Feature provider system: Available
-        //
-        // ESTIMATED EFFORT: 16 hours
-        // PRIORITY: HIGH
-        // BLOCKING: Yes - Required for Core ML functionality
+        use tracing::{info, debug, error};
         
-        // This is a complex operation that would need to be implemented
-        // through the FFI interface. For now, return an error indicating
-        // this needs to be implemented through a more specific inference API.
-        Err("Use the specific inference APIs (run_inference) instead of prediction_from_features".to_string())
+        info!("Running Core ML prediction from features");
+        
+        if !TARGET_APPLE_SILICON {
+            return Err("Core ML not available on this platform".to_string());
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            let mut output_features: u64 = 0;
+            let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+
+            let result = unsafe {
+                coreml::agentbridge_model_run_inference(
+                    self.handle.as_ptr() as u64,
+                    features.ptr.as_ptr() as u64,
+                    &mut output_features,
+                    &mut error_ptr
+                )
+            };
+
+            if result != 0 {
+                let error_msg = if !error_ptr.is_null() {
+                    unsafe {
+                        let cstr = std::ffi::CStr::from_ptr(error_ptr);
+                        let msg = cstr.to_string_lossy().to_string();
+                        coreml::agentbridge_free_string(error_ptr);
+                        msg
+                    }
+                } else {
+                    format!("Core ML prediction failed with error code: {}", result)
+                };
+                
+                error!("Core ML prediction failed: {}", error_msg);
+                return Err(error_msg);
+            }
+
+            debug!("Core ML prediction completed successfully");
+            
+            Ok(MLFeatureProvider {
+                ptr: std::ptr::NonNull::new(output_features as *mut std::ffi::c_void)
+                    .ok_or_else(|| "Failed to create output feature provider".to_string())?
+            })
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            Err("Core ML prediction only supported on macOS".to_string())
+        }
     }
 
     /// Get model information
@@ -1468,18 +1462,20 @@ pub mod coreml {
         Ok(())
     }
 
-    // TEMPORARILY DISABLED: Function uses Tensor and Device types which are not available due to candle-core conflicts
-    /*
-    /// Run inference on a loaded model using opaque reference
+    /// Run inference on a loaded model using opaque reference (real implementation)
     pub fn run_inference(
         model_ref: ModelRef,
         input_name: &str,
         input_data: &[f32],
         input_shape: &[usize],
-    ) -> Result<Tensor> {
+    ) -> Result<InferenceResult> {
+        use tracing::{info, debug, error};
+        
         if !TARGET_APPLE_SILICON {
             return Err(ANEError::Internal("Core ML not available on this platform".to_string()));
         }
+
+        info!("Running Core ML inference for model {} with input shape {:?}", model_ref.id(), input_shape);
 
         #[cfg(target_os = "macos")]
         {
@@ -1520,8 +1516,8 @@ pub mod coreml {
             };
 
             if result != 0 {
-                let error_msg = "Inference failed".to_string(); // TODO: Extract actual error from FFI
-                return Err(ANEError::InferenceFailed(format!("CoreML inference failed: {}", error_msg)));
+                error!("Core ML inference failed with error code: {}", result);
+                return Err(ANEError::InferenceFailed(format!("CoreML inference failed with error code: {}", result)));
             }
 
             // Resize output data to actual size returned by inference
@@ -1533,18 +1529,14 @@ pub mod coreml {
                 output_shape.set_len(actual_shape_len);
             }
 
-            // Convert to candle Tensor
-            let tensor = Tensor::new(&*output_data, &Device::Cpu)
-                .map_err(|e| ANEError::Internal(format!("Failed to create output tensor: {}", e)))?;
+            debug!("Core ML inference completed: {} output values, shape {:?}", output_data.len(), output_shape);
 
-            // Reshape to match output shape
-            if !output_shape.is_empty() {
-                let reshaped = tensor.reshape(&*output_shape)
-                    .map_err(|e| ANEError::Internal(format!("Failed to reshape output tensor: {}", e)))?;
-                Ok(reshaped)
-            } else {
-                Ok(tensor)
-            }
+            Ok(InferenceResult {
+                data: output_data,
+                shape: output_shape,
+                model_id: model_ref.id(),
+                execution_time_ms: 0, // TODO: Measure actual execution time
+            })
         }
 
         #[cfg(not(target_os = "macos"))]
@@ -1552,18 +1544,99 @@ pub mod coreml {
             Err(ANEError::Internal("CoreML inference only supported on macOS".to_string()))
         }
     }
-    */
 }
 
-/// Create input features for Core ML inference
+/// Result of Core ML inference execution
+#[derive(Debug, Clone)]
+pub struct InferenceResult {
+    /// Raw output data from the model
+    pub data: Vec<f32>,
+    /// Shape of the output tensor
+    pub shape: Vec<usize>,
+    /// ID of the model that produced this result
+    pub model_id: u64,
+    /// Execution time in milliseconds
+    pub execution_time_ms: u64,
+}
+
+impl InferenceResult {
+    /// Get the total number of output values
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    /// Check if the result is empty
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+
+    /// Get the output data as a slice
+    pub fn as_slice(&self) -> &[f32] {
+        &self.data
+    }
+
+    /// Get the output shape
+    pub fn shape(&self) -> &[usize] {
+        &self.shape
+    }
+
+    /// Calculate the total number of elements based on shape
+    pub fn total_elements(&self) -> usize {
+        self.shape.iter().product()
+    }
+}
+/// Real input feature creation for Core ML inference
 #[cfg(target_os = "macos")]
 fn create_input_features(
-    _input_name: &str,
-    _input_data: &[f32],
-    _input_shape: &[i32],
+    input_name: &str,
+    input_data: &[f32],
+    input_shape: &[i32],
 ) -> Result<MLFeatureProvider> {
-    // Simplified stub implementation
-    Ok(MLFeatureProvider { ptr: NonNull::new(0x1 as *mut std::ffi::c_void).unwrap() })
+    use tracing::{info, debug};
+    
+    info!("Creating input features for Core ML: {} with shape {:?}", input_name, input_shape);
+    
+    // Convert input name to C string
+    let input_name_cstr = std::ffi::CString::new(input_name)
+        .map_err(|e| format!("Invalid input name: {}", e))?;
+
+    // Create MLMultiArray from input data
+    let ml_array = MLMultiArray::from_slice(input_data, input_shape)?;
+    
+    // Create feature provider with the array
+    let mut feature_provider: u64 = 0;
+    let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+
+    let result = unsafe {
+        coreml::agentbridge_feature_provider_create(
+            input_name_cstr.as_ptr(),
+            ml_array.ptr.as_ptr() as u64,
+            &mut feature_provider,
+            &mut error_ptr
+        )
+    };
+
+    if result != 0 {
+        let error_msg = if !error_ptr.is_null() {
+            unsafe {
+                let cstr = std::ffi::CStr::from_ptr(error_ptr);
+                let msg = cstr.to_string_lossy().to_string();
+                coreml::agentbridge_free_string(error_ptr);
+                msg
+            }
+        } else {
+            format!("Failed to create feature provider with error code: {}", result)
+        };
+        
+        return Err(error_msg);
+    }
+
+    debug!("Input features created successfully for {}", input_name);
+    
+    Ok(MLFeatureProvider {
+        ptr: std::ptr::NonNull::new(feature_provider as *mut std::ffi::c_void)
+            .ok_or_else(|| "Failed to create feature provider pointer".to_string())?
+    })
 }
 
 /// Extract output tensor from Core ML prediction
