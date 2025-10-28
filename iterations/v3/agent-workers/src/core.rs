@@ -6,15 +6,11 @@
 use crate::worker_types::*;
 use crate::mcp_integration::MCPIntegration;
 use crate::execution::ToolExecutor;
-use agent_mcp::{ToolRegistry, ToolExecutionRequest, ExecutionStatus, ExecutionContext, ExecutionPriority};
-use agent_memory::memory_types::{TaskContext, AgentExperience, ContextualMemory};
-use reqwest::Client;
+use agent_mcp::{ToolRegistry, ToolExecutionRequest, types::{ExecutionStatus, ExecutionContext}};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, warn, debug};
-use crate::parallel_types::{WorkerId, TaskResult};
-use anyhow::{Context, Result};
 
 /// Configuration for the MCP worker pool
 #[derive(Debug, Clone)]
@@ -44,7 +40,7 @@ pub struct WorkerHandle {
     pub memory_access: std::sync::Arc<agent_memory::MemorySystem>,
 }
 
-/// Main MCP-based worker pool with shared memory system and HTTP client
+/// Main MCP-based worker pool with shared memory system
 pub struct MCPWorkerPool {
     config: WorkerPoolConfig,
     workers: Arc<RwLock<HashMap<WorkerId, WorkerHandle>>>,
@@ -52,19 +48,16 @@ pub struct MCPWorkerPool {
     stats: Arc<RwLock<WorkerPoolStats>>,
     /// Single shared memory system - all agents access this same instance
     shared_memory_system: Arc<agent_memory::MemorySystem>,
-    /// HTTP client for real service calls
-    http_client: Client,
 }
 
 impl MCPWorkerPool {
-    /// Create a new worker pool with an MCP tool registry and HTTP client
-    pub fn new_with_registry(config: WorkerPoolConfig, tool_registry: Arc<ToolRegistry>, shared_memory: Arc<agent_memory::MemorySystem>, mcp_server_url: String) -> Self {
+    /// Create a new worker pool with an MCP tool registry
+    pub fn new_with_registry(config: WorkerPoolConfig, tool_registry: Arc<ToolRegistry>, shared_memory: Arc<agent_memory::MemorySystem>) -> Self {
         Self {
             config: config.clone(),
             workers: Arc::new(RwLock::new(HashMap::new())),
-            mcp_integration: Arc::new(MCPIntegration::new(tool_registry, mcp_server_url)),
+            mcp_integration: Arc::new(MCPIntegration::new(tool_registry)),
             shared_memory_system: shared_memory,
-            http_client: Client::new(),
             stats: Arc::new(RwLock::new(WorkerPoolStats {
                 total_workers: 0,
                 active_workers: 0,
@@ -87,11 +80,7 @@ impl MCPWorkerPool {
         let memory_config = agent_memory::MemoryConfig::default();
         let shared_memory = Arc::new(agent_memory::MemorySystem::init(memory_config).await.unwrap());
 
-        // Default MCP server URL - can be configured via environment
-        let mcp_server_url = std::env::var("MCP_SERVER_URL")
-            .unwrap_or_else(|_| "http://localhost:3000".to_string());
-
-        Self::new_with_registry(config, tool_registry, shared_memory, mcp_server_url)
+        Self::new_with_registry(config, tool_registry, shared_memory)
     }
 
     /// Get access to the MCP integration layer
@@ -168,7 +157,7 @@ impl MCPWorkerPool {
                 },
             }),
             created_at: chrono::Utc::now(),
-            priority: ExecutionPriority::Normal,
+            priority: agent_mcp::types::ExecutionPriority::Normal,
             requested_by: Some("worker_pool".to_string()),
         };
 
@@ -212,7 +201,7 @@ impl MCPWorkerPool {
         mcp_result: &agent_mcp::ToolExecutionResult,
     ) {
         // Create task context for memory storage
-        let task_context = TaskContext {
+        let task_context = agent_memory::TaskContext {
             task_id: task.id.to_string(),
             task_type: task.name.clone(),
             description: task.description.clone(),
@@ -269,7 +258,7 @@ impl MCPWorkerPool {
         };
 
         // Create and store the agent experience
-        let experience = AgentExperience {
+        let experience = agent_memory::AgentExperience {
             id: uuid::Uuid::new_v4(),
             agent_id: worker.id.to_string(),
             task_id: task.id.to_string(),
@@ -301,8 +290,8 @@ impl MCPWorkerPool {
         &self,
         worker: &WorkerHandle,
         task: &TaskDefinition,
-    ) -> Vec<ContextualMemory> {
-        let task_context = TaskContext {
+    ) -> Vec<agent_memory::ContextualMemory> {
+        let task_context = agent_memory::TaskContext {
             task_id: task.id.to_string(),
             task_type: task.name.clone(),
             description: format!("Similar to: {}", task.description),
@@ -397,82 +386,6 @@ impl MCPWorkerPool {
         } else {
             WorkerHealth::Healthy
         }
-    }
-
-    /// Execute a task using real HTTP calls to external services
-    pub async fn execute_task_via_http(&self, task_context: &TaskContext, service_url: &str) -> Result<TaskResult> {
-        info!("Executing task via HTTP: {}", task_context.task_id);
-        
-        let start_time = std::time::Instant::now();
-        
-        // Create HTTP request payload
-        let payload = serde_json::json!({
-            "task_id": task_context.task_id,
-            "worker_id": task_context.worker_id,
-            "context": task_context,
-            "timeout_ms": task_context.timeout_ms,
-            "metadata": task_context.metadata
-        });
-
-        // Execute via HTTP call
-        let response = self.http_client
-            .post(format!("{}/api/v1/tasks/execute", service_url))
-            .json(&payload)
-            .timeout(std::time::Duration::from_millis(task_context.timeout_ms))
-            .send()
-            .await
-            .context("Failed to send HTTP request to service")?;
-
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("Service error {}: {}", status, error_text));
-        }
-
-        let result: TaskResult = response.json().await
-            .context("Failed to parse service response")?;
-
-        let execution_time = start_time.elapsed().as_millis() as u64;
-        info!("Task execution completed in {}ms: {}", execution_time, task_context.task_id);
-
-        // Update stats
-        {
-            let mut stats = self.stats.write().await;
-            stats.total_tasks_processed += 1;
-            stats.average_execution_time_ms = (stats.average_execution_time_ms + execution_time as f64) / 2.0;
-        }
-
-        Ok(result)
-    }
-
-    /// Health check for external services
-    pub async fn health_check_service(&self, service_url: &str) -> Result<bool> {
-        let url = format!("{}/health", service_url);
-        
-        match self.http_client.get(&url).send().await {
-            Ok(response) => Ok(response.status().is_success()),
-            Err(_) => Ok(false),
-        }
-    }
-
-    /// Get service statistics via HTTP
-    pub async fn get_service_stats(&self, service_url: &str) -> Result<HashMap<String, serde_json::Value>> {
-        let url = format!("{}/api/v1/stats", service_url);
-        
-        let response = self.http_client
-            .get(&url)
-            .send()
-            .await
-            .context("Failed to get service stats")?;
-
-        if !response.status().is_success() {
-            return Err(anyhow::anyhow!("Failed to get stats: {}", response.status()));
-        }
-
-        let stats: HashMap<String, serde_json::Value> = response.json().await
-            .context("Failed to parse stats response")?;
-
-        Ok(stats)
     }
 }
 

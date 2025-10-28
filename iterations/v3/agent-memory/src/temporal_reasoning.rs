@@ -13,6 +13,7 @@ use reqwest::Client;
 use anyhow::{Context, Result};
 
 /// Real HTTP-based temporal analysis service
+#[derive(Debug)]
 pub struct HttpTemporalAnalysisService {
     client: Client,
     base_url: String,
@@ -374,7 +375,7 @@ impl TemporalReasoningEngine {
                 change_points.push(ChangePoint {
                     timestamp,
                     confidence: 0.7,
-                    change_type: if change_magnitude > 0.0 { ChangeType::Spike } else { ChangeType::Drop },
+                    change_type: if change_magnitude > 0.0 { "Spike".to_string() } else { "Drop".to_string() },
                     magnitude: change_magnitude.abs(),
                 });
             }

@@ -3,7 +3,8 @@
 //! BM25 sparse indexing, dense embeddings, and HNSW-based
 //! approximate nearest neighbor search for text documents.
 
-use super::super::embedding_types::*;
+use crate::embedding::embedding_types::*;
+use crate::embedding::provider::EmbeddingProvider;
 use anyhow::Result;
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -179,15 +180,16 @@ impl TextIndexer {
         info!("Generating dense embedding for content (length: {})", content.len());
         
         // Use Ollama embedding provider for real embeddings
-        let config = data_infrastructure::embedding::EmbeddingConfig {
-            provider: data_infrastructure::embedding::EmbeddingProviderType::Ollama,
+        let config = crate::embedding::EmbeddingConfig {
+            ollama_url: "http://localhost:11434".to_string(),
             model_name: "nomic-embed-text".to_string(), // Better performance and smaller size
             dimension: 768,
-            ollama_url: "http://localhost:11434".to_string(),
+            batch_size: 32,
+            cache_size: 1000,
             timeout_ms: 30000,
         };
 
-        let provider = data_infrastructure::embedding::OllamaEmbeddingProvider::new(&config);
+        let provider = crate::embedding::OllamaEmbeddingProvider::new(&config);
         
         // Generate embedding using async runtime
         let handle = Handle::current();

@@ -9,6 +9,7 @@
 
 import fs from "fs";
 import path from "path";
+import { execSync } from "child_process";
 
 const V3_PATH = path.join(process.cwd(), "iterations", "v3");
 
@@ -32,7 +33,43 @@ const KNOWN_GOD_OBJECTS = [
 // Files to check
 const RUST_FILES = [];
 
-// Collect all Rust files
+// Collect staged Rust files only
+function collectStagedRustFiles() {
+  try {
+    // Get staged files
+    const stagedFiles = execSync("git diff --cached --name-only", {
+      encoding: "utf8",
+    })
+      .trim()
+      .split("\n")
+      .filter((file) => file.trim() !== "");
+
+    // Filter for Rust files
+    const rustFiles = stagedFiles.filter((file) => file.endsWith(".rs"));
+
+    // Convert to absolute paths
+    for (const file of rustFiles) {
+      const fullPath = path.resolve(file);
+      if (fs.existsSync(fullPath)) {
+        RUST_FILES.push(fullPath);
+      }
+    }
+
+    console.log(`📁 Found ${rustFiles.length} staged Rust files to check`);
+  } catch (error) {
+    console.warn(`⚠️  Could not get staged files: ${error.message}`);
+    // Fallback to checking all files if git command fails
+    collectAllRustFiles();
+  }
+}
+
+// Fallback: Collect all Rust files (original behavior)
+function collectAllRustFiles() {
+  const V3_PATH = path.join(process.cwd(), "iterations", "v3");
+  collectRustFiles(V3_PATH);
+}
+
+// Collect all Rust files from directory (original function)
 function collectRustFiles(dir) {
   const files = fs.readdirSync(dir);
 
@@ -69,7 +106,7 @@ function getFileSizes() {
 function checkGodObjects() {
   // Ensure files are collected first
   if (RUST_FILES.length === 0) {
-    collectRustFiles(V3_PATH);
+    collectStagedRustFiles();
   }
 
   const violations = [];
@@ -118,7 +155,7 @@ function checkGodObjects() {
 function checkGodObjectRegression() {
   // Ensure files are collected first
   if (RUST_FILES.length === 0) {
-    collectRustFiles(V3_PATH);
+    collectStagedRustFiles();
   }
 
   const violations = [];
@@ -150,11 +187,10 @@ function checkGodObjectRegression() {
 }
 
 function main() {
-  console.log("🔍 Checking for god objects...");
+  console.log("🔍 Checking for god objects in staged files...");
 
-  // Collect files
-  collectRustFiles(V3_PATH);
-  console.log(`📁 Found ${RUST_FILES.length} Rust files to check`);
+  // Collect staged files
+  collectStagedRustFiles();
 
   // Run checks
   const godObjectViolations = checkGodObjects();

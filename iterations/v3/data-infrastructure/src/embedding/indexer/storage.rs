@@ -3,7 +3,7 @@
 //! Database operations for embedding storage, index persistence,
 //! and retrieval with connection pooling and health monitoring.
 
-use super::super::embedding_types::*;
+use crate::embedding::embedding_types::*;
 use anyhow::Result;
 use sqlx::{PgPool, Row};
 use std::collections::HashMap;
@@ -146,7 +146,7 @@ impl EmbeddingStorage {
         .fetch_all(&self.pool)
         .await?;
 
-        let results = rows.into_iter().map(|row: sqlx::postgres::PgRow| {
+        let results: Vec<super::text::TextDocument> = rows.into_iter().map(|row: sqlx::postgres::PgRow| {
             super::text::TextDocument {
                 id: row.get("id"),
                 title: row.get("title"),

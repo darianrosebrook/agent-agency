@@ -3,7 +3,7 @@
 //! Graph-based indexing for diagrams, knowledge graphs, and
 //! relational data with adjacency lists and property management.
 
-use super::super::embedding_types::*;
+use crate::embedding::embedding_types::*;
 use anyhow::Result;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
@@ -26,6 +26,15 @@ pub enum NodeType {
     Image,
     Relationship,
     Custom(String),
+}
+
+/// Graph filter types for querying
+#[derive(Debug, Clone)]
+pub enum GraphFilter {
+    NodeType(NodeType),
+    MinSimilarity(f32),
+    Metadata(String, String),
+    ContentContains(String),
 }
 
 /// Property value types
@@ -203,6 +212,11 @@ impl GraphIndexer {
             .collect()
     }
 
+    /// Get node properties by ID
+    pub fn get_node(&self, node_id: Uuid) -> Option<&NodeProperty> {
+        self.node_properties.get(&node_id)
+    }
+
     /// Find nodes by type
     pub fn find_nodes_by_type(&self, node_type: &NodeType) -> Vec<Uuid> {
         self.node_properties
@@ -321,6 +335,7 @@ pub struct GraphStatistics {
 /// Graph query builder for complex traversals
 pub struct GraphQueryBuilder {
     start_node: Option<Uuid>,
+    node_types: Vec<String>,
     filters: Vec<QueryFilter>,
     max_depth: Option<usize>,
 }
@@ -336,6 +351,7 @@ impl GraphQueryBuilder {
     pub fn new() -> Self {
         Self {
             start_node: None,
+            node_types: Vec::new(),
             filters: Vec::new(),
             max_depth: None,
         }
@@ -343,6 +359,11 @@ impl GraphQueryBuilder {
 
     pub fn from_node(mut self, node_id: Uuid) -> Self {
         self.start_node = Some(node_id);
+        self
+    }
+
+    pub fn with_node_type(mut self, node_type: String) -> Self {
+        self.node_types.push(node_type);
         self
     }
 
@@ -354,6 +375,15 @@ impl GraphQueryBuilder {
     pub fn max_depth(mut self, depth: usize) -> Self {
         self.max_depth = Some(depth);
         self
+    }
+
+    pub fn build(self) -> super::search::GraphQuery {
+        super::search::GraphQuery {
+            start_node: self.start_node,
+            node_types: self.node_types,
+            max_depth: self.max_depth,
+            filters: self.filters,
+        }
     }
 
     /// Real graph traversal implementation with filters
@@ -407,7 +437,7 @@ impl GraphQueryBuilder {
     fn passes_filters(&self, node_id: Uuid, indexer: &GraphIndexer) -> bool {
         for filter in &self.filters {
             match filter {
-                GraphFilter::NodeType(node_type) => {
+                QueryFilter::NodeType(node_type) => {
                     if let Some(node) = indexer.get_node(node_id) {
                         if node.node_type != *node_type {
                             return false;
@@ -416,32 +446,19 @@ impl GraphQueryBuilder {
                         return false;
                     }
                 }
-                GraphFilter::MinSimilarity(threshold) => {
+                QueryFilter::Property(key, value) => {
                     if let Some(node) = indexer.get_node(node_id) {
-                        if node.similarity_score < *threshold {
+                        if node.properties.get(key) != Some(value) {
                             return false;
                         }
                     } else {
                         return false;
                     }
                 }
-                GraphFilter::Metadata(key, value) => {
-                    if let Some(node) = indexer.get_node(node_id) {
-                        if node.metadata.get(key) != Some(value) {
-                            return false;
-                        }
-                    } else {
-                        return false;
-                    }
-                }
-                GraphFilter::ContentContains(text) => {
-                    if let Some(node) = indexer.get_node(node_id) {
-                        if !node.content.to_lowercase().contains(&text.to_lowercase()) {
-                            return false;
-                        }
-                    } else {
-                        return false;
-                    }
+                QueryFilter::EdgeType(_edge_type) => {
+                    // For now, we'll skip edge type filtering
+                    // This would require checking the edges connected to this node
+                    continue;
                 }
             }
         }

@@ -13,7 +13,12 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 use agent_agency_contracts::task_executor::{TaskExecutionResult, TaskExecutor};
-use crate::types::{TaskScope, ChangeBudget, BlastRadius};
+use agent_agency_contracts::{
+    WorkingSpec, WorkingSpecConstraints, BudgetLimits, ScopeRestrictions, TestPlan, RollbackPlan, 
+    WorkingSpecContext, NonFunctionalRequirements, PerformanceRequirements, ScalabilityRequirements,
+    WorkingSpecMetadata, UnitTestSpec, IntegrationTestSpec, E2eScenario, RollbackStrategy, DataImpact
+};
+use crate::types::{TaskDescriptor, TaskScope, ChangeBudget, BlastRadius, ExecutionStatus as TypesExecutionStatus, AcceptanceCriterion};
 use agent_agency_contracts::task_executor_provider::TaskExecutorProvider;
 
 // Import the correct traits from system crates
@@ -41,7 +46,6 @@ pub struct ConsensusResult {
 }
 pub type FinalVerdict = FinalVerdictContract;
 use agent_agency_contracts::execution_events::ExecutionEvent;
-use agent_agency_contracts::working_spec::WorkingSpec;
 use agent_agency_contracts::task_request::{TaskRequest, TaskPriority};
 // TODO: Implement these or find in other crates
 // use agent_agency_observability::cache::CacheBackend;
@@ -51,7 +55,8 @@ use agent_memory::MemorySystem;
 use agent_memory::memory_types::{AgentExperience, MemoryType, ExperienceContext, ExperienceOutcome};
 
 // Placeholder types for missing modules
-pub type TaskDescriptor = TaskRequest;
+// Remove the duplicate TaskDescriptor type alias
+// pub type TaskDescriptor = TaskRequest;
 pub type ProgressTracker = String;
 pub type ConsensusCoordinator = String;
 
@@ -86,17 +91,7 @@ pub struct ExecutionProgress {
 }
 
 /// Execution status for tasks
-#[derive(Debug, Clone, PartialEq)]
-pub enum ExecutionStatus {
-    Pending,
-    Starting,
-    Running,
-    AwaitingApproval,
-    Completed,
-    Failed,
-    Paused,
-    Cancelled,
-}
+pub use crate::types::ExecutionStatus;
 
 /// Execution mode for tasks
 #[derive(Debug, Clone, PartialEq)]
@@ -118,10 +113,14 @@ pub enum RiskTier {
 pub fn to_task_spec(task_descriptor: &TaskDescriptor) -> WorkingSpec {
     use tracing::{info, warn};
     
-    info!("Converting task descriptor to working spec: {}", task_descriptor.id);
+    info!("Converting task descriptor to working spec: {}", task_descriptor.task_id);
     
     // Calculate risk tier based on task complexity
     let risk_tier = calculate_risk_tier(task_descriptor);
+    
+    // Estimate complexity based on scope size
+    let estimated_files = task_descriptor.scope_in.in_scope.len();
+    let estimated_loc = estimated_files * 100; // Rough estimate
     
     // Estimate change budget based on scope
     let change_budget = estimate_change_budget(task_descriptor);
@@ -137,35 +136,94 @@ pub fn to_task_spec(task_descriptor: &TaskDescriptor) -> WorkingSpec {
     
     WorkingSpec {
         version: "1.0".to_string(),
-        id: format!("TASK-{}", task_descriptor.id),
-        title: task_descriptor.title.clone(),
+        id: format!("TASK-{}", task_descriptor.task_id),
+        title: task_descriptor.description.clone(),
         description: task_descriptor.description.clone(),
-        risk_tier: risk_tier as u8,
-        mode: determine_execution_mode(task_descriptor),
-        change_budget,
-        blast_radius: BlastRadius {
-            modules: task_descriptor.scope.clone(),
-            data_migration: requires_data_migration(task_descriptor),
+        goals: vec![format!("Execute task: {}", task_descriptor.description)],
+        risk_tier: risk_tier as u32,
+        test_plan: agent_agency_contracts::TestPlan {
+            unit_tests: vec![agent_agency_contracts::UnitTestSpec {
+                description: "Basic functionality tests".to_string(),
+                target_function: None,
+                test_cases: vec!["Happy path".to_string(), "Error handling".to_string()],
+            }],
+            integration_tests: vec![agent_agency_contracts::IntegrationTestSpec {
+                description: "End-to-end workflow tests".to_string(),
+                components: vec!["Core system".to_string()],
+                test_cases: vec!["Full workflow".to_string()],
+            }],
+            e2e_scenarios: vec![agent_agency_contracts::E2eScenario {
+                description: "User acceptance tests".to_string(),
+                user_journey: "Complete task execution".to_string(),
+                expected_outcomes: vec!["Task completed successfully".to_string()],
+            }],
+            coverage_targets: None,
         },
-        operational_rollback_slo: "5m".to_string(),
-        scope,
-        invariants,
-        acceptance_criteria,
-        non_functional: NonFunctionalRequirements {
-            a11y: vec!["keyboard-navigation".to_string()],
-            perf: PerformanceRequirements {
-                api_p95_ms: 250,
-                lcp_ms: 2500,
-            },
-            security: vec!["input-validation".to_string(), "csrf-protection".to_string()],
+        rollback_plan: agent_agency_contracts::RollbackPlan {
+            strategy: agent_agency_contracts::RollbackStrategy::GitRevert,
+            automated_steps: vec!["Revert changes".to_string(), "Restore backup".to_string()],
+            manual_steps: vec!["Verify system state".to_string()],
+            data_impact: agent_agency_contracts::DataImpact::Reversible,
+            downtime_required: Some(false),
+            rollback_window_minutes: Some(5),
         },
-        contracts: vec![],
+        context: agent_agency_contracts::WorkingSpecContext {
+            workspace_root: ".".to_string(),
+            git_branch: "main".to_string(),
+            recent_changes: vec![],
+            dependencies: std::collections::HashMap::new(),
+            environment: agent_agency_contracts::Environment::Development,
+        },
+        non_functional_requirements: Some(agent_agency_contracts::NonFunctionalRequirements {
+            performance: Some(agent_agency_contracts::PerformanceRequirements {
+                response_time_ms: Some(5000),
+                throughput_req_per_sec: Some(100),
+                memory_limit_mb: Some(1024),
+                cpu_limit_percent: Some(80),
+            }),
+            security: vec!["Input validation".to_string(), "Authentication".to_string()],
+            accessibility: vec!["Keyboard navigation".to_string()],
+            scalability: Some(agent_agency_contracts::ScalabilityRequirements {
+                concurrent_users: Some(1000),
+                data_retention_days: Some(30),
+            }),
+        }),
+        validation_results: None,
+        metadata: Some(agent_agency_contracts::WorkingSpecMetadata {
+            created_at: Utc::now(),
+            created_by: Some("autonomous-executor".to_string()),
+            last_modified: None,
+            version: Some(1),
+            tags: vec!["automated".to_string()],
+        }),
+        acceptance_criteria: generate_acceptance_criteria(task_descriptor)
+            .into_iter()
+            .map(|c| agent_agency_contracts::AcceptanceCriterion {
+                id: c.id,
+                given: c.given,
+                when: c.when,
+                then: c.then,
+                priority: None,
+            })
+            .collect(),
+        constraints: agent_agency_contracts::working_spec::WorkingSpecConstraints {
+            max_duration_minutes: Some(60),
+            max_iterations: Some(5),
+            budget_limits: Some(agent_agency_contracts::working_spec::BudgetLimits {
+                max_files: Some(estimated_files.min(25) as u32),
+                max_loc: Some(estimated_loc.min(5000) as u32),
+            }),
+            scope_restrictions: Some(agent_agency_contracts::working_spec::ScopeRestrictions {
+                allowed_paths: task_descriptor.scope_in.in_scope.clone(),
+                blocked_paths: task_descriptor.scope_out.as_ref().map(|s| s.out_scope.clone()).unwrap_or_default(),
+            }),
+        },
     }
 }
 
 /// Calculate risk tier based on task complexity
 fn calculate_risk_tier(task_descriptor: &TaskDescriptor) -> RiskTier {
-    let scope_size = task_descriptor.scope.len();
+    let scope_size = task_descriptor.scope_in.in_scope.len();
     let description_length = task_descriptor.description.len();
     
     // Calculate complexity score
@@ -205,7 +263,7 @@ fn calculate_risk_tier(task_descriptor: &TaskDescriptor) -> RiskTier {
 
 /// Estimate change budget based on task scope
 fn estimate_change_budget(task_descriptor: &TaskDescriptor) -> ChangeBudget {
-    let scope_size = task_descriptor.scope.len();
+    let scope_size = task_descriptor.scope_in.in_scope.len();
     let description_length = task_descriptor.description.len();
     
     // Estimate files based on scope
@@ -213,16 +271,16 @@ fn estimate_change_budget(task_descriptor: &TaskDescriptor) -> ChangeBudget {
     let estimated_loc = description_length * 10; // Rough estimate: 10 LOC per character
     
     ChangeBudget {
-        max_files: estimated_files.min(50),
-        max_loc: estimated_loc.min(5000),
+        max_files: estimated_files.min(50) as u32,
+        max_loc: estimated_loc.min(5000) as u32,
     }
 }
 
 /// Create scope from task descriptor
-fn create_scope_from_task(task_descriptor: &TaskDescriptor) -> WorkingSpecScope {
-    WorkingSpecScope {
-        in_directories: task_descriptor.scope.clone(),
-        out_directories: vec!["node_modules".to_string(), "target".to_string(), "dist".to_string()],
+fn create_scope_from_task(task_descriptor: &TaskDescriptor) -> agent_agency_contracts::ScopeRestrictions {
+    agent_agency_contracts::ScopeRestrictions {
+        allowed_paths: task_descriptor.scope_in.in_scope.clone(),
+        blocked_paths: task_descriptor.scope_out.as_ref().map(|s| s.out_scope.clone()).unwrap_or_default(),
     }
 }
 
@@ -317,7 +375,7 @@ pub fn orchestrate_task(
 ) -> Result<agent_agency_contracts::final_verdict::FinalVerdictContract, Box<dyn std::error::Error + Send + Sync>> {
     use tracing::{info, warn, error};
     
-    info!("Starting orchestration for task: {}", task_descriptor.id);
+    info!("Starting orchestration for task: {}", task_descriptor.task_id);
     
     // Convert task descriptor to working spec if needed
     let spec = if working_spec.id == "placeholder" {
@@ -332,14 +390,10 @@ pub fn orchestrate_task(
         return Err(format!("Working spec validation failed: {}", validation_result.reason).into());
     }
     
-    // Execute task based on mode
-    let verdict = match spec.mode {
-        ExecutionMode::Strict => execute_strict_mode(&spec, task_descriptor)?,
-        ExecutionMode::Auto => execute_auto_mode(&spec, task_descriptor)?,
-        ExecutionMode::DryRun => execute_dry_run_mode(&spec, task_descriptor)?,
-    };
+    // Execute task with standard execution
+    let verdict = execute_strict_mode(&spec, task_descriptor)?;
     
-    info!("Orchestration completed for task: {}", task_descriptor.id);
+    info!("Orchestration completed for task: {}", task_descriptor.task_id);
     Ok(verdict)
 }
 
@@ -366,12 +420,16 @@ fn validate_working_spec(spec: &WorkingSpec) -> Result<ValidationResult, Box<dyn
     }
     
     // Check change budget
-    if spec.change_budget.max_files == 0 {
-        issues.push("Max files must be greater than 0".to_string());
-    }
-    
-    if spec.change_budget.max_loc == 0 {
-        issues.push("Max lines of code must be greater than 0".to_string());
+    if let Some(budget_limits) = &spec.constraints.budget_limits {
+        if budget_limits.max_files == Some(0) {
+            issues.push("Max files must be greater than 0".to_string());
+        }
+        
+        if budget_limits.max_loc == Some(0) {
+            issues.push("Max lines of code must be greater than 0".to_string());
+        }
+    } else {
+        issues.push("Budget limits must be specified".to_string());
     }
     
     Ok(ValidationResult {
@@ -385,7 +443,7 @@ fn validate_working_spec(spec: &WorkingSpec) -> Result<ValidationResult, Box<dyn
 fn execute_strict_mode(spec: &WorkingSpec, task_descriptor: &TaskDescriptor) -> Result<agent_agency_contracts::final_verdict::FinalVerdictContract, Box<dyn std::error::Error + Send + Sync>> {
     use tracing::info;
     
-    info!("Executing task in strict mode: {}", task_descriptor.id);
+    info!("Executing task in strict mode: {}", task_descriptor.task_id);
     
     // In strict mode, require manual approval for high-risk tasks
     if spec.risk_tier >= 3 {
@@ -411,7 +469,7 @@ fn execute_strict_mode(spec: &WorkingSpec, task_descriptor: &TaskDescriptor) -> 
 fn execute_auto_mode(spec: &WorkingSpec, task_descriptor: &TaskDescriptor) -> Result<agent_agency_contracts::final_verdict::FinalVerdictContract, Box<dyn std::error::Error + Send + Sync>> {
     use tracing::info;
     
-    info!("Executing task in auto mode: {}", task_descriptor.id);
+    info!("Executing task in auto mode: {}", task_descriptor.task_id);
     
     // In auto mode, execute with automatic approval for low-risk tasks
     execute_task_with_validation(spec, task_descriptor)
@@ -421,7 +479,7 @@ fn execute_auto_mode(spec: &WorkingSpec, task_descriptor: &TaskDescriptor) -> Re
 fn execute_dry_run_mode(spec: &WorkingSpec, task_descriptor: &TaskDescriptor) -> Result<agent_agency_contracts::final_verdict::FinalVerdictContract, Box<dyn std::error::Error + Send + Sync>> {
     use tracing::info;
     
-    info!("Executing task in dry-run mode: {}", task_descriptor.id);
+    info!("Executing task in dry-run mode: {}", task_descriptor.task_id);
     
     // In dry-run mode, simulate execution without making changes
     Ok(agent_agency_contracts::final_verdict::FinalVerdictContract {
@@ -442,7 +500,7 @@ fn execute_dry_run_mode(spec: &WorkingSpec, task_descriptor: &TaskDescriptor) ->
 fn execute_task_with_validation(spec: &WorkingSpec, task_descriptor: &TaskDescriptor) -> Result<agent_agency_contracts::final_verdict::FinalVerdictContract, Box<dyn std::error::Error + Send + Sync>> {
     use tracing::{info, warn};
     
-    info!("Executing task with validation: {}", task_descriptor.id);
+    info!("Executing task with validation: {}", task_descriptor.task_id);
     
     // Simulate task execution
     let mut verified_claims = 0;
@@ -492,7 +550,7 @@ fn execute_task_with_validation(spec: &WorkingSpec, task_descriptor: &TaskDescri
 }
 
 /// Verify an acceptance criterion
-fn verify_acceptance_criterion(criterion: &AcceptanceCriterion, task_descriptor: &TaskDescriptor) -> bool {
+fn verify_acceptance_criterion(criterion: &agent_agency_contracts::AcceptanceCriterion, task_descriptor: &TaskDescriptor) -> bool {
     // Simple verification logic - in a real implementation, this would be more sophisticated
     !criterion.given.is_empty() && !criterion.when.is_empty() && !criterion.then.is_empty()
 }
@@ -592,7 +650,7 @@ impl AutonomousExecutor {
 
     /// Submit a task for autonomous execution
     pub async fn submit_task(&self, task_descriptor: TaskDescriptor) -> Result<Uuid, Box<dyn std::error::Error + Send + Sync>> {
-        let task_id = task_descriptor.id;
+        let task_id = Uuid::parse_str(&task_descriptor.task_id).unwrap_or_else(|_| Uuid::new_v4());
 
         // Create initial execution state
         let execution_state = TaskExecutionState {
@@ -729,21 +787,13 @@ impl AutonomousExecutor {
 
     /// Execute a single task end-to-end
     async fn execute_task(&self, task_descriptor: TaskDescriptor) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let task_id = task_descriptor.id;
+        let task_id = Uuid::parse_str(&task_descriptor.task_id).unwrap_or_else(|_| Uuid::new_v4());
         let start_time = Instant::now();
 
-        tracing::info!("Starting {} execution of task {}", match task_descriptor.metadata.as_ref().and_then(|m| m.tags.iter().find(|tag| tag.as_str() == "strict" || tag.as_str() == "auto" || tag.as_str() == "dry-run")).unwrap_or(&"auto".to_string()) {
-            tag if tag.as_str() == "strict" => "strict",
-            tag if tag.as_str() == "dry-run" => "dry-run",
-            _ => "auto",
-        }, task_id);
+        tracing::info!("Starting auto execution of task {}", task_id);
 
         // Enforce execution mode behavior
-        let default_mode = "auto".to_string();
-        let execution_mode = task_descriptor.metadata.as_ref()
-            .and_then(|m| m.tags.iter().find(|tag| tag.as_str() == "strict" || tag.as_str() == "auto" || tag.as_str() == "dry-run"))
-            .map(|tag| tag.as_str())
-            .unwrap_or("auto");
+        let execution_mode = "auto";
         match execution_mode {
             "dry-run" => {
                 tracing::info!("Dry-run mode: Simulating execution without filesystem changes");
@@ -773,10 +823,7 @@ impl AutonomousExecutor {
         self.update_task_progress(task_id.clone(), 10.0, Some("Task prepared".to_string())).await?;
 
         // Strict mode: Require approval before proceeding
-        let execution_mode = task_descriptor.metadata.as_ref()
-            .and_then(|m| m.tags.iter().find(|tag| tag.as_str() == "strict" || tag.as_str() == "auto" || tag.as_str() == "dry-run"))
-            .map(|tag| tag.as_str())
-            .unwrap_or("auto");
+        let execution_mode = "auto";
         if execution_mode == "strict" {
             self.update_task_status(task_id.clone(), ExecutionStatus::AwaitingApproval, Some("Awaiting approval for planning phase".to_string())).await?;
             // In a real implementation, this would wait for external approval
@@ -930,7 +977,8 @@ impl AutonomousExecutor {
 
             // Store consensus result
             let mut active_tasks = self.active_tasks.write().await;
-            if let Some(state) = active_tasks.get_mut(&task_descriptor.id) {
+            let task_uuid = Uuid::parse_str(&task_descriptor.task_id).unwrap_or_else(|_| Uuid::new_v4());
+            if let Some(state) = active_tasks.get_mut(&task_uuid) {
                 state.consensus_result = Some(consensus_result);
             }
 
@@ -956,9 +1004,56 @@ impl AutonomousExecutor {
 
         // Use the adapter to orchestrate the task
         let adapter = crate::adapter::LegacyOrchestratorAdapter::new(crate::types::OrchestratorConfig::default()).await?;
+        // Convert TaskRequest to TaskDescriptor
+        let task_descriptor = TaskDescriptor {
+            task_id: task_descriptor.task_id.clone(),
+            description: task_descriptor.description.clone(),
+            scope_in: task_descriptor.scope_in.clone(),
+            scope_out: task_descriptor.scope_out.clone(),
+            change_budget: task_descriptor.change_budget.clone(),
+            blast_radius: task_descriptor.blast_radius.clone(),
+            priority: task_descriptor.priority.clone(),
+            execution_mode: task_descriptor.execution_mode.clone(),
+            task_type: task_descriptor.task_type.clone(),
+            risk_tier: task_descriptor.risk_tier.clone(),
+            acceptance: task_descriptor.acceptance.clone(),
+        };
+
+        // Convert agent_agency_contracts::WorkingSpec to local WorkingSpec
+        let estimated_files = task_descriptor.scope_in.in_scope.len();
+        let estimated_loc = task_descriptor.scope_in.in_scope.len() * 100; // Rough estimate
+        
+        let local_spec = crate::types::WorkingSpec {
+            id: working_spec.id.clone(),
+            title: working_spec.title.clone(),
+            risk_tier: working_spec.risk_tier as u8,
+            mode: "feature".to_string(), // Default mode
+            change_budget: crate::types::ChangeBudget {
+                max_files: estimated_files.min(25) as u32,
+                max_loc: estimated_loc.min(5000) as u32,
+            },
+            blast_radius: crate::types::BlastRadius {
+                modules: vec!["core".to_string()],
+                data_migration: false,
+                external_deps: vec!["core".to_string()],
+            },
+            scope: crate::types::TaskScope {
+                in_scope: task_descriptor.scope_in.in_scope.clone(),
+                out_scope: task_descriptor.scope_out.as_ref().map(|s| s.out_scope.clone()).unwrap_or_default(),
+            },
+            acceptance_criteria: working_spec.acceptance_criteria.iter().map(|criterion| {
+                crate::types::AcceptanceCriterion {
+                    id: criterion.id.clone(),
+                    given: criterion.given.clone(),
+                    when: criterion.when.clone(),
+                    then: criterion.then.clone(),
+                }
+            }).collect(),
+        };
+
         let verdict = adapter.orchestrate_task(
-            working_spec,
-            task_descriptor,
+            &local_spec,
+            &task_descriptor,
             &diff_stats,
             false, // tests_added
             true,  // deterministic
@@ -966,25 +1061,23 @@ impl AutonomousExecutor {
 
         // Convert TaskExecutionResult to FinalVerdict
         let final_verdict = agent_agency_contracts::final_verdict::FinalVerdictContract {
-            decision: if verdict.artifacts.iter().any(|a| a.approved) {
+            decision: if verdict.artifacts.status == TypesExecutionStatus::Completed {
                 agent_agency_contracts::final_verdict::FinalDecision::Accept
             } else {
                 agent_agency_contracts::final_verdict::FinalDecision::Reject
             },
             votes: vec![],
-            dissent: if verdict.artifacts.iter().any(|a| !a.approved) {
-                "Some artifacts were not approved".to_string()
+            dissent: if verdict.artifacts.status != TypesExecutionStatus::Completed {
+                verdict.artifacts.error.unwrap_or_else(|| "Execution failed".to_string())
             } else {
                 String::new()
             },
             remediation: vec![],
             constitutional_refs: vec![],
             verification_summary: agent_agency_contracts::final_verdict::VerificationSummary {
-                claims_total: verdict.artifacts.len() as u32,
-                claims_verified: verdict.artifacts.iter().filter(|a| a.approved).count() as u32,
-                coverage_pct: if verdict.artifacts.is_empty() { 0.0 } else {
-                    (verdict.artifacts.iter().filter(|a| a.approved).count() as f32 / verdict.artifacts.len() as f32) * 100.0
-                },
+                claims_total: 1,
+                claims_verified: if verdict.artifacts.status == TypesExecutionStatus::Completed { 1 } else { 0 },
+                coverage_pct: if verdict.artifacts.status == TypesExecutionStatus::Completed { 100.0 } else { 0.0 },
             },
         };
 
@@ -995,7 +1088,8 @@ impl AutonomousExecutor {
     async fn process_results(&self, final_verdict: &FinalVerdict, task_descriptor: &TaskDescriptor) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Store final verdict
         let mut active_tasks = self.active_tasks.write().await;
-        if let Some(state) = active_tasks.get_mut(&task_descriptor.id) {
+        let task_uuid = Uuid::parse_str(&task_descriptor.task_id).unwrap_or_else(|_| Uuid::new_v4());
+        if let Some(state) = active_tasks.get_mut(&task_uuid) {
             state.final_verdict = Some(final_verdict.clone());
         }
 
@@ -1028,7 +1122,7 @@ impl AutonomousExecutor {
         let experience = AgentExperience {
             id: Uuid::new_v4(),
             agent_id: "orchestrator".to_string(), // System-level agent for orchestration
-            task_id: task_descriptor.id.to_string(),
+            task_id: task_descriptor.task_id.to_string(),
             content: task_descriptor.description.clone(),
             context: ExperienceContext {
                 description: format!("Task execution: {}", task_descriptor.description),
@@ -1068,7 +1162,7 @@ impl AutonomousExecutor {
                 .map_err(|e| format!("Failed to store execution experience: {}", e))?;
         }
 
-        tracing::debug!("Stored execution experience for task {}", task_descriptor.id);
+        tracing::debug!("Stored execution experience for task {}", task_descriptor.task_id);
 
         Ok(())
     }

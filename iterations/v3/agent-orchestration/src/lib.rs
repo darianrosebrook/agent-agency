@@ -197,9 +197,9 @@ pub use frontier::{
 
 // Multimodal Orchestrator
 pub use multimodal_orchestrator::{
-    KimiK2MultimodalOrchestrator, MultimodalTask, MultimodalProcessingResult,
-    OrchestratorPerformanceStats, OrchestratorError,
+    KimiK2MultimodalOrchestrator, OrchestratorPerformanceStats, OrchestratorError,
 };
+pub use types::{MultimodalTask, MultimodalProcessingResult};
 pub use multimodal_orchestration::OrchestratorConfig;
 
 // Council types

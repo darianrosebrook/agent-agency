@@ -135,6 +135,13 @@ impl From<candle_core::Error> for ANEError {
     }
 }
 
+/// Convert from String to ANEError
+impl From<String> for ANEError {
+    fn from(err: String) -> Self {
+        ANEError::Internal(err)
+    }
+}
+
 /// Helper trait for converting errors to ANEError
 pub trait IntoANEError {
     fn into_ane_error(self) -> ANEError;

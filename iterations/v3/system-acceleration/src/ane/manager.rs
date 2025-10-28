@@ -270,7 +270,7 @@ impl ANEManager {
             is_available: true,
             compute_units: 16, // Heuristic for Apple Silicon
             max_memory_mb: Some(8192), // Conservative estimate
-            supported_precisions: coreml_caps.map(|c| c.supported_precisions.clone()).unwrap_or_default(),
+            supported_precisions: coreml_caps.supported_precisions.clone(),
             ..Default::default()
         }
     }
@@ -525,7 +525,7 @@ impl ANEManager {
         ];
 
         // Query the actual model for its input specifications
-        let actual_inputs = crate::ane::compat::coreml::query_model_inputs(model_ref)?;
+        let actual_inputs = crate::ane::compat::coreml::coreml::query_model_inputs(*model_ref)?;
 
         // Validate input specifications against expectations
         for (expected_name, expected_dtype, expected_shape) in expected_inputs {
@@ -566,7 +566,7 @@ impl ANEManager {
         }
 
         // Query the actual model for its output specifications
-        let actual_outputs = crate::ane::compat::coreml::query_model_outputs(model_ref)?;
+        let actual_outputs = crate::ane::compat::coreml::coreml::query_model_outputs(*model_ref)?;
 
         // Validate output specifications against expectations
         for (expected_name, expected_dtype, expected_shape) in expected_outputs {
@@ -626,14 +626,14 @@ impl ANEManager {
     }
 
     /// Validate shape compatibility between actual and expected shapes
-    fn validate_shape_compatibility(actual_shape: &[usize], expected_shape: &[i32]) -> bool {
+    fn validate_shape_compatibility(actual_shape: &[i32], expected_shape: &[i32]) -> bool {
         if actual_shape.len() != expected_shape.len() {
             return false;
         }
 
         for (actual, expected) in actual_shape.iter().zip(expected_shape.iter()) {
             // Expected shape can have -1 for variable dimensions
-            if *expected != -1 && (*expected as usize) != *actual {
+            if *expected != -1 && (*expected as usize) != (*actual as usize) {
                 return false;
             }
         }

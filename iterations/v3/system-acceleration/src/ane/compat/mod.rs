@@ -3,6 +3,7 @@
 //! This module provides compatibility layers for Core ML and IOKit integration
 //! with proper platform detection and fallback implementations.
 
+pub mod coreml_direct;
 pub mod coreml;
 pub mod iokit;
 

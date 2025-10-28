@@ -274,7 +274,7 @@ pub struct ProcessingResult {
 }
 
 /// Processing status
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ProcessingStatus {
     /// Processing completed successfully
     Completed,

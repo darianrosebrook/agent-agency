@@ -86,6 +86,18 @@ pub enum ExecutionStatus {
     Completed,
     Failed,
     Cancelled,
+    /// Task is starting up
+    Starting,
+    /// Task is paused by user
+    Paused,
+    /// Task is awaiting approval
+    AwaitingApproval,
+    /// Task is in planning phase
+    Planning,
+    /// Task is in consensus phase
+    Consensus,
+    /// Task is in execution phase
+    Execution,
 }
 
 /// Quality report from orchestration
@@ -269,4 +281,43 @@ pub struct DiffStats {
     pub lines_deleted: u32,
     /// Number of binary files changed
     pub binary_files_changed: u32,
+}
+
+/// Multimodal task for processing different content types
+#[derive(Debug, Clone)]
+pub struct MultimodalTask {
+    /// Task ID
+    pub task_id: String,
+    /// Task description
+    pub description: String,
+    /// Content type (text, image, audio, video)
+    pub content_type: String,
+    /// Task data
+    pub data: Vec<u8>,
+    /// Metadata
+    pub metadata: HashMap<String, String>,
+}
+
+/// Result of multimodal processing
+#[derive(Debug, Clone)]
+pub struct MultimodalProcessingResult {
+    /// Task ID
+    pub task_id: String,
+    /// Processing status
+    pub status: ExecutionStatus,
+    /// Processed content
+    pub processed_content: Option<Vec<u8>>,
+    /// Extracted features
+    pub features: HashMap<String, serde_json::Value>,
+    /// Error message if processing failed
+    pub error: Option<String>,
+}
+
+/// Working specification scope
+#[derive(Debug, Clone)]
+pub struct WorkingSpecScope {
+    /// Files and directories included in scope
+    pub in_scope: Vec<String>,
+    /// Files and directories excluded from scope
+    pub out_scope: Vec<String>,
 }

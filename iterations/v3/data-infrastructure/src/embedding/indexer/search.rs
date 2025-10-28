@@ -5,8 +5,8 @@
 
 use super::text::TextIndexer;
 use super::visual::VisualIndexer;
-use super::graph::GraphIndexer;
-use super::super::embedding_types::*;
+use super::graph::{GraphIndexer, GraphQueryBuilder};
+use crate::embedding::embedding_types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -26,7 +26,8 @@ pub struct MultimodalQuery {
 pub struct GraphQuery {
     pub start_node: Option<Uuid>,
     pub node_types: Vec<String>,
-    pub max_depth: usize,
+    pub max_depth: Option<usize>,
+    pub filters: Vec<super::graph::QueryFilter>,
 }
 
 /// Modality weights for result fusion
@@ -172,7 +173,7 @@ impl MultimodalSearchEngine {
         let mut query_builder = GraphQueryBuilder::new();
         
         if let Some(start) = graph_query.start_node {
-            query_builder = query_builder.start_node(start);
+            query_builder = query_builder.from_node(start);
         }
         
         if let Some(max_depth) = graph_query.max_depth {
@@ -181,7 +182,7 @@ impl MultimodalSearchEngine {
         
         // Add filters
         for filter in &graph_query.filters {
-            query_builder = query_builder.add_filter(filter.clone());
+            query_builder = query_builder.with_filter(filter.clone());
         }
         
         // Execute the query

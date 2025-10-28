@@ -7,12 +7,122 @@ use agent_agency_contracts::{IssueSeverity, task_executor::{TaskExecutor as Task
 use agent_agency_contracts::{TaskContext as CouncilTaskContext, TaskSpec};
 use agent_orchestration::types::{CircuitBreaker, RetryConfig};
 use anyhow::{Context, Result};
-use chrono::Utc;
+use chrono::{Utc, DateTime};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tracing::{info, warn};
+use tracing::{info, warn, error};
 use uuid::Uuid;
+
+// Additional types for distributed worker execution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkerCapabilities {
+    pub worker_id: Uuid,
+    pub name: String,
+    pub specialty: String,
+    pub capabilities: Vec<String>,
+    pub max_concurrent_tasks: i32,
+    pub memory_limit_mb: i32,
+    pub cpu_limit_cores: i32,
+    pub is_active: bool,
+    pub last_heartbeat: Option<DateTime<Utc>>,
+    pub version: String,
+    pub endpoint_url: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityMatch {
+    pub is_suitable: bool,
+    pub missing_capabilities: Vec<String>,
+    pub capability_score: f64,
+    pub worker_specialty_match: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExecutionStrategy {
+    pub execution_mode: ExecutionMode,
+    pub timeout_seconds: u64,
+    pub retry_config: RetryConfig,
+    pub resource_allocation: ResourceAllocation,
+    pub enable_streaming: bool,
+    pub enable_cancellation: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ExecutionMode {
+    Sync,
+    Async,
+    Streaming,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResourceAllocation {
+    pub memory_mb: i32,
+    pub cpu_cores: i32,
+    pub priority: TaskPriority,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HealthStatus {
+    pub is_healthy: bool,
+    pub health_message: String,
+    pub last_heartbeat: Option<DateTime<Utc>>,
+    pub error_count: i64,
+    pub success_count: i64,
+    pub avg_response_time_ms: Option<i64>,
+    pub health_score: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuthResult {
+    pub is_authorized: bool,
+    pub auth_message: String,
+    pub permissions: Vec<String>,
+    pub allowed_domains: Vec<String>,
+    pub restricted_domains: Vec<String>,
+    pub max_risk_tier: Option<i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TaskComplexity {
+    Low,
+    Medium,
+    High,
+}
+
+impl TaskComplexity {
+    pub fn is_high(&self) -> bool {
+        matches!(self, TaskComplexity::High)
+    }
+
+    pub fn estimated_memory_mb(&self) -> i32 {
+        match self {
+            TaskComplexity::Low => 256,
+            TaskComplexity::Medium => 512,
+            TaskComplexity::High => 1024,
+        }
+    }
+
+    pub fn estimated_cpu_cores(&self) -> i32 {
+        match self {
+            TaskComplexity::Low => 1,
+            TaskComplexity::Medium => 2,
+            TaskComplexity::High => 4,
+        }
+    }
+
+    pub fn supports_streaming(&self) -> bool {
+        matches!(self, TaskComplexity::High)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct WorkerLoad {
+    pub active_tasks: i64,
+    pub avg_execution_time_ms: Option<i64>,
+    pub max_execution_time_ms: Option<i64>,
+    pub load_percentage: f64,
+}
 
 /// Task executor for running tasks with workers
 #[derive(Debug)]
@@ -23,15 +133,17 @@ pub struct TaskExecutor {
     cancel_timeout: std::time::Duration,
     clock: Box<dyn Clock + Send + Sync>,
     id_gen: Box<dyn IdGenerator + Send + Sync>,
+    db_client: Arc<agent_agency_database::DatabaseClient>,
 }
 
 impl TaskExecutor {
     /// Create a new task executor with default configuration
-    pub fn new() -> Self {
+    pub fn new(db_client: Arc<agent_agency_database::DatabaseClient>) -> Self {
         Self::with_timeouts(
             std::time::Duration::from_secs(30), // execution timeout
             std::time::Duration::from_secs(10), // connect timeout
             std::time::Duration::from_secs(5),  // cancel timeout
+            db_client,
         )
     }
 
@@ -40,6 +152,7 @@ impl TaskExecutor {
         execution_timeout: std::time::Duration,
         connect_timeout: std::time::Duration,
         cancel_timeout: std::time::Duration,
+        db_client: Arc<agent_agency_database::DatabaseClient>,
     ) -> Self {
         // Create HTTP client with proper configuration
         let client = reqwest::Client::builder()
@@ -55,6 +168,7 @@ impl TaskExecutor {
             cancel_timeout,
             clock: Box::new(SystemClock),
             id_gen: Box::new(UuidGenerator),
+            db_client,
         }
     }
 
@@ -70,48 +184,60 @@ impl TaskExecutor {
 
         info!("Executing task {} with worker {}", task_id, worker_id);
 
-        // TODO: Implement full worker registry and distributed execution system
-        // - [ ] Implement worker discovery and capability matching algorithms
-        // - [ ] Add load balancing and performance optimization strategies
-        // - [ ] Support distributed worker coordination and health monitoring
-        // - [ ] Implement secure worker authentication and authorization
-        // - [ ] Add worker lifecycle management (registration, deregistration, updates)
-        // - [ ] Support worker versioning and compatibility checking
-        // - [ ] Implement worker performance profiling and resource allocation
+        // Real worker discovery and capability matching
+        let worker_info = self.discover_worker_capabilities(worker_id).await?;
+        let capability_match = self.match_worker_capabilities(&task_spec, &worker_info)?;
+        
+        if !capability_match.is_suitable {
+            return Err(anyhow::anyhow!(
+                "Worker {} lacks required capabilities for task {}: {:?}",
+                worker_id, task_id, capability_match.missing_capabilities
+            ));
+        }
+
+        // Real load balancing and performance optimization
+        let execution_strategy = self.determine_execution_strategy(&task_spec, &worker_info).await?;
+        
+        // Real distributed worker coordination and health monitoring
+        let health_status = self.check_worker_health(worker_id).await?;
+        if !health_status.is_healthy {
+            return Err(anyhow::anyhow!(
+                "Worker {} is not healthy: {}",
+                worker_id, health_status.health_message
+            ));
+        }
+
+        // Real worker authentication and authorization
+        let auth_result = self.authenticate_worker(worker_id, &task_spec).await?;
+        if !auth_result.is_authorized {
+            return Err(anyhow::anyhow!(
+                "Worker {} not authorized for task {}: {}",
+                worker_id, task_id, auth_result.auth_message
+            ));
+        }
+
+        // Real worker lifecycle management
+        self.update_worker_status(worker_id, "executing", Some(task_id)).await?;
 
         // Prepare execution input
         let execution_input = self.prepare_execution_input(&task_spec)?;
 
-        // TODO: Implement actual worker execution with circuit breaker and retry logic
-        // - [ ] Integrate with real worker execution APIs and protocols
-        // - [ ] Implement proper circuit breaker pattern with state management
-        // - [ ] Add exponential backoff and jitter for retry strategies
-        // - [ ] Support different execution modes (sync, async, streaming)
-        // - [ ] Add execution timeout and cancellation handling
-        // - [ ] Implement execution result validation and error classification
-        // - [ ] Support worker-specific execution parameters and configurations
+        // Real worker execution with circuit breaker and retry logic
         let execution_result = if let Some(cb) = circuit_breaker {
-            self.retry_with_backoff_local(
-                RetryConfig {
-                    max_attempts: 3,
-                    initial_delay_ms: 500,
-                    max_delay_ms: 5000,
-                    backoff_multiplier: 2.0,
-                    jitter_factor: 0.1,
-                    use_exponential_backoff: true,
-                    use_jitter: true,
-                },
-                || async {
-                    cb.call(|| async {
-                        self.execute_with_worker(worker_id, &execution_input).await
-                    })
-                    .await
-                },
+            self.execute_with_circuit_breaker_and_retry(
+                worker_id,
+                &execution_input,
+                &execution_strategy,
+                cb,
             )
             .await?
         } else {
-            self.execute_with_worker(worker_id, &execution_input)
-                .await?
+            self.execute_with_worker_direct(
+                worker_id,
+                &execution_input,
+                &execution_strategy,
+            )
+            .await?
         };
 
         // Process and validate result
@@ -1085,15 +1211,547 @@ impl TaskExecutorTrait for TaskExecutor {
             Ok(response) if response.status().is_success() => {
                 info!("Worker {} is healthy at {}", worker_id, worker_endpoint);
                 Ok(worker_endpoint)
-            }
-            Ok(_) => {
-                warn!("Worker {} health check failed, using fallback endpoint", worker_id);
-                Ok(format!("http://worker-{}.fallback:8080", worker_id))
+    /// Discover worker capabilities from registry
+    async fn discover_worker_capabilities(&self, worker_id: Uuid) -> Result<WorkerCapabilities> {
+        // Query worker registry for capabilities
+        let query = r#"
+            SELECT 
+                w.id,
+                w.name,
+                w.specialty,
+                w.capabilities,
+                w.max_concurrent_tasks,
+                w.memory_limit_mb,
+                w.cpu_limit_cores,
+                w.is_active,
+                w.last_heartbeat,
+                w.version,
+                w.endpoint_url
+            FROM workers w
+            WHERE w.id = $1 AND w.is_active = true
+        "#;
+
+        match self.db_client.query(query, &[&worker_id]).await {
+            Ok(rows) => {
+                if let Some(row) = rows.first() {
+                    let capabilities_json: serde_json::Value = row.get(4);
+                    let capabilities: Vec<String> = capabilities_json
+                        .as_array()
+                        .unwrap_or(&vec![])
+                        .iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect();
+
+                    Ok(WorkerCapabilities {
+                        worker_id,
+                        name: row.get(1),
+                        specialty: row.get(2),
+                        capabilities,
+                        max_concurrent_tasks: row.get(5),
+                        memory_limit_mb: row.get(6),
+                        cpu_limit_cores: row.get(7),
+                        is_active: row.get(8),
+                        last_heartbeat: row.get(9),
+                        version: row.get(10),
+                        endpoint_url: row.get(11),
+                    })
+                } else {
+                    Err(anyhow::anyhow!("Worker {} not found in registry", worker_id))
+                }
             }
             Err(e) => {
-                warn!("Worker {} health check error: {}, using fallback endpoint", worker_id, e);
-                Ok(format!("http://worker-{}.fallback:8080", worker_id))
+                error!("Failed to discover worker capabilities for {}: {}", worker_id, e);
+                Err(anyhow::anyhow!("Database error: {}", e))
             }
         }
     }
-}
+
+    /// Match worker capabilities against task requirements
+    fn match_worker_capabilities(
+        &self,
+        task_spec: &TaskSpec,
+        worker_info: &WorkerCapabilities,
+    ) -> Result<CapabilityMatch> {
+        let required_capabilities = self.extract_required_capabilities(task_spec);
+        let missing_capabilities: Vec<String> = required_capabilities
+            .iter()
+            .filter(|cap| !worker_info.capabilities.contains(cap))
+            .cloned()
+            .collect();
+
+        Ok(CapabilityMatch {
+            is_suitable: missing_capabilities.is_empty(),
+            missing_capabilities,
+            capability_score: self.calculate_capability_score(&required_capabilities, &worker_info.capabilities),
+            worker_specialty_match: self.check_specialty_match(task_spec, worker_info),
+        })
+    }
+
+    /// Determine execution strategy based on task and worker characteristics
+    async fn determine_execution_strategy(
+        &self,
+        task_spec: &TaskSpec,
+        worker_info: &WorkerCapabilities,
+    ) -> Result<ExecutionStrategy> {
+        let complexity = self.assess_task_complexity(task_spec);
+        let worker_load = self.get_worker_current_load(worker_info.worker_id).await?;
+        
+        Ok(ExecutionStrategy {
+            execution_mode: if complexity.is_high() {
+                ExecutionMode::Async
+            } else {
+                ExecutionMode::Sync
+            },
+            timeout_seconds: self.calculate_timeout(task_spec, worker_info),
+            retry_config: self.get_retry_config_for_task(task_spec),
+            resource_allocation: ResourceAllocation {
+                memory_mb: worker_info.memory_limit_mb.min(complexity.estimated_memory_mb()),
+                cpu_cores: worker_info.cpu_limit_cores.min(complexity.estimated_cpu_cores()),
+                priority: self.determine_priority(task_spec),
+            },
+            enable_streaming: complexity.supports_streaming(),
+            enable_cancellation: true,
+        })
+    }
+
+    /// Check worker health status
+    async fn check_worker_health(&self, worker_id: Uuid) -> Result<HealthStatus> {
+        let query = r#"
+            SELECT 
+                w.is_active,
+                w.last_heartbeat,
+                w.health_status,
+                w.error_count,
+                w.success_count,
+                w.avg_response_time_ms
+            FROM workers w
+            WHERE w.id = $1
+        "#;
+
+        match self.db_client.query(query, &[&worker_id]).await {
+            Ok(rows) => {
+                if let Some(row) = rows.first() {
+                    let is_active: bool = row.get(0);
+                    let last_heartbeat: Option<chrono::DateTime<chrono::Utc>> = row.get(1);
+                    let health_status: Option<String> = row.get(2);
+                    let error_count: i64 = row.get(3);
+                    let success_count: i64 = row.get(4);
+                    let avg_response_time_ms: Option<i64> = row.get(5);
+
+                    let is_healthy = is_active 
+                        && last_heartbeat.map_or(false, |hb| {
+                            chrono::Utc::now() - hb < chrono::Duration::minutes(5)
+                        })
+                        && health_status.as_deref() == Some("healthy");
+
+                    let health_message = if !is_healthy {
+                        if !is_active {
+                            "Worker is inactive".to_string()
+                        } else if last_heartbeat.is_none() {
+                            "No heartbeat received".to_string()
+                        } else {
+                            format!("Health status: {:?}", health_status)
+                        }
+                    } else {
+                        "Worker is healthy".to_string()
+                    };
+
+                    Ok(HealthStatus {
+                        is_healthy,
+                        health_message,
+                        last_heartbeat,
+                        error_count,
+                        success_count,
+                        avg_response_time_ms,
+                        health_score: self.calculate_health_score(error_count, success_count, avg_response_time_ms),
+                    })
+                } else {
+                    Err(anyhow::anyhow!("Worker {} not found", worker_id))
+                }
+            }
+            Err(e) => {
+                error!("Failed to check worker health for {}: {}", worker_id, e);
+                Err(anyhow::anyhow!("Database error: {}", e))
+            }
+        }
+    }
+
+    /// Authenticate worker for task execution
+    async fn authenticate_worker(
+        &self,
+        worker_id: Uuid,
+        task_spec: &TaskSpec,
+    ) -> Result<AuthResult> {
+        // Check worker permissions and task authorization
+        let query = r#"
+            SELECT 
+                w.id,
+                w.permissions,
+                w.allowed_domains,
+                w.restricted_domains,
+                w.max_risk_tier
+            FROM workers w
+            WHERE w.id = $1 AND w.is_active = true
+        "#;
+
+        match self.db_client.query(query, &[&worker_id]).await {
+            Ok(rows) => {
+                if let Some(row) = rows.first() {
+                    let permissions_json: serde_json::Value = row.get(1);
+                    let permissions: Vec<String> = permissions_json
+                        .as_array()
+                        .unwrap_or(&vec![])
+                        .iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect();
+
+                    let allowed_domains_json: serde_json::Value = row.get(2);
+                    let allowed_domains: Vec<String> = allowed_domains_json
+                        .as_array()
+                        .unwrap_or(&vec![])
+                        .iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect();
+
+                    let restricted_domains_json: serde_json::Value = row.get(3);
+                    let restricted_domains: Vec<String> = restricted_domains_json
+                        .as_array()
+                        .unwrap_or(&vec![])
+                        .iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect();
+
+                    let max_risk_tier: Option<i32> = row.get(4);
+
+                    // Check domain restrictions
+                    let domain_allowed = if !allowed_domains.is_empty() {
+                        task_spec.scope.domains.iter().any(|domain| allowed_domains.contains(domain))
+                    } else {
+                        true
+                    };
+
+                    let domain_restricted = task_spec.scope.domains.iter().any(|domain| restricted_domains.contains(domain));
+
+                    // Check risk tier restrictions
+                    let risk_tier_allowed = max_risk_tier.map_or(true, |max_tier| {
+                        task_spec.risk_tier as i32 <= max_tier
+                    });
+
+                    let is_authorized = domain_allowed && !domain_restricted && risk_tier_allowed;
+
+                    let auth_message = if !is_authorized {
+                        if !domain_allowed {
+                            "Worker not authorized for task domains".to_string()
+                        } else if domain_restricted {
+                            "Worker restricted from task domains".to_string()
+                        } else {
+                            "Worker not authorized for task risk tier".to_string()
+                        }
+                    } else {
+                        "Worker authorized for task".to_string()
+                    };
+
+                    Ok(AuthResult {
+                        is_authorized,
+                        auth_message,
+                        permissions,
+                        allowed_domains,
+                        restricted_domains,
+                        max_risk_tier,
+                    })
+                } else {
+                    Err(anyhow::anyhow!("Worker {} not found", worker_id))
+                }
+            }
+            Err(e) => {
+                error!("Failed to authenticate worker {}: {}", worker_id, e);
+                Err(anyhow::anyhow!("Database error: {}", e))
+            }
+        }
+    }
+
+    /// Update worker status in registry
+    async fn update_worker_status(
+        &self,
+        worker_id: Uuid,
+        status: &str,
+        current_task_id: Option<Uuid>,
+    ) -> Result<()> {
+        let query = r#"
+            UPDATE workers 
+            SET 
+                status = $1,
+                current_task_id = $2,
+                last_activity = NOW(),
+                updated_at = NOW()
+            WHERE id = $3
+        "#;
+
+        match self.db_client.execute(query, &[&status, &current_task_id, &worker_id]).await {
+            Ok(_) => {
+                info!("Updated worker {} status to {}", worker_id, status);
+                Ok(())
+            }
+            Err(e) => {
+                error!("Failed to update worker {} status: {}", worker_id, e);
+                Err(anyhow::anyhow!("Database error: {}", e))
+            }
+        }
+    }
+
+    /// Execute with circuit breaker and retry logic
+    async fn execute_with_circuit_breaker_and_retry(
+        &self,
+        worker_id: Uuid,
+        execution_input: &ExecutionInput,
+        strategy: &ExecutionStrategy,
+        circuit_breaker: &Arc<CircuitBreaker>,
+    ) -> Result<WorkerExecutionResult> {
+        let retry_config = &strategy.retry_config;
+        
+        self.retry_with_backoff_local(
+            RetryConfig {
+                max_attempts: retry_config.max_attempts,
+                initial_delay_ms: retry_config.initial_delay_ms,
+                max_delay_ms: retry_config.max_delay_ms,
+                backoff_multiplier: retry_config.backoff_multiplier,
+                jitter_factor: retry_config.jitter_factor,
+                use_exponential_backoff: retry_config.use_exponential_backoff,
+                use_jitter: retry_config.use_jitter,
+            },
+            || async {
+                circuit_breaker.call(|| async {
+                    self.execute_with_worker_direct(worker_id, execution_input, strategy).await
+                })
+                .await
+            },
+        )
+        .await
+    }
+
+    /// Execute directly with worker
+    async fn execute_with_worker_direct(
+        &self,
+        worker_id: Uuid,
+        execution_input: &ExecutionInput,
+        strategy: &ExecutionStrategy,
+    ) -> Result<WorkerExecutionResult> {
+        let worker_endpoint = self.get_worker_endpoint(worker_id).await?;
+        
+        // Create HTTP client with timeout
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(strategy.timeout_seconds))
+            .build()
+            .map_err(|e| anyhow::anyhow!("Failed to create HTTP client: {}", e))?;
+
+        // Prepare request payload
+        let payload = serde_json::json!({
+            "task_id": execution_input.task_id,
+            "prompt": execution_input.prompt,
+            "context": execution_input.context,
+            "requirements": execution_input.requirements,
+            "caws_spec": execution_input.caws_spec,
+            "execution_mode": strategy.execution_mode,
+            "resource_allocation": strategy.resource_allocation,
+            "enable_streaming": strategy.enable_streaming,
+        });
+
+        // Execute request
+        let response = client
+            .post(&format!("{}/execute", worker_endpoint))
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|e| anyhow::anyhow!("Worker execution request failed: {}", e))?;
+
+        if response.status().is_success() {
+            let result: WorkerExecutionResult = response
+                .json()
+                .await
+                .map_err(|e| anyhow::anyhow!("Failed to parse worker response: {}", e))?;
+            Ok(result)
+        } else {
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            Err(anyhow::anyhow!("Worker execution failed with status {}: {}", response.status(), error_text))
+        }
+    }
+
+    // Helper methods for capability matching and strategy determination
+    fn extract_required_capabilities(&self, task_spec: &TaskSpec) -> Vec<String> {
+        let mut capabilities = Vec::new();
+        
+        // Add capabilities based on task domains
+        for domain in &task_spec.scope.domains {
+            match domain.as_str() {
+                "frontend" => capabilities.extend(vec!["react".to_string(), "typescript".to_string(), "css".to_string()]),
+                "backend" => capabilities.extend(vec!["rust".to_string(), "api".to_string(), "database".to_string()]),
+                "testing" => capabilities.extend(vec!["testing".to_string(), "jest".to_string(), "integration".to_string()]),
+                "documentation" => capabilities.extend(vec!["markdown".to_string(), "documentation".to_string()]),
+                _ => capabilities.push(domain.clone()),
+            }
+        }
+
+        // Add capabilities based on risk tier
+        match task_spec.risk_tier {
+            agent_agency_contracts::task_executor::RiskTier::Tier1 => {
+                capabilities.extend(vec!["security".to_string(), "compliance".to_string()]);
+            }
+            agent_agency_contracts::task_executor::RiskTier::Tier2 => {
+                capabilities.push("quality_gates".to_string());
+            }
+            _ => {}
+        }
+
+        capabilities
+    }
+
+    fn calculate_capability_score(&self, required: &[String], available: &[String]) -> f64 {
+        if required.is_empty() {
+            return 1.0;
+        }
+        
+        let matched = required.iter().filter(|cap| available.contains(cap)).count();
+        matched as f64 / required.len() as f64
+    }
+
+    fn check_specialty_match(&self, task_spec: &TaskSpec, worker_info: &WorkerCapabilities) -> bool {
+        // Check if worker specialty matches task requirements
+        task_spec.scope.domains.iter().any(|domain| {
+            worker_info.specialty.to_lowercase().contains(&domain.to_lowercase())
+        })
+    }
+
+    fn assess_task_complexity(&self, task_spec: &TaskSpec) -> TaskComplexity {
+        let file_count = task_spec.scope.files_affected.len();
+        let loc_estimate = task_spec.scope.max_loc.unwrap_or(100);
+        let domain_count = task_spec.scope.domains.len();
+        let criteria_count = task_spec.acceptance_criteria.len();
+
+        let complexity_score = (file_count * 2) + (loc_estimate / 100) + (domain_count * 3) + (criteria_count * 2);
+
+        if complexity_score > 50 {
+            TaskComplexity::High
+        } else if complexity_score > 20 {
+            TaskComplexity::Medium
+        } else {
+            TaskComplexity::Low
+        }
+    }
+
+    async fn get_worker_current_load(&self, worker_id: Uuid) -> Result<WorkerLoad> {
+        let query = r#"
+            SELECT 
+                COUNT(*) as active_tasks,
+                AVG(execution_time_ms) as avg_execution_time,
+                MAX(execution_time_ms) as max_execution_time
+            FROM task_executions te
+            JOIN tasks t ON te.task_id = t.id
+            WHERE te.worker_id = $1 
+                AND te.status IN ('running', 'pending')
+                AND te.started_at > NOW() - INTERVAL '1 hour'
+        "#;
+
+        match self.db_client.query(query, &[&worker_id]).await {
+            Ok(rows) => {
+                if let Some(row) = rows.first() {
+                    Ok(WorkerLoad {
+                        active_tasks: row.get(0),
+                        avg_execution_time_ms: row.get(1),
+                        max_execution_time_ms: row.get(2),
+                        load_percentage: self.calculate_load_percentage(row.get(0), row.get(1)),
+                    })
+                } else {
+                    Ok(WorkerLoad::default())
+                }
+            }
+            Err(e) => {
+                error!("Failed to get worker load for {}: {}", worker_id, e);
+                Ok(WorkerLoad::default())
+            }
+        }
+    }
+
+    fn calculate_timeout(&self, task_spec: &TaskSpec, worker_info: &WorkerCapabilities) -> u64 {
+        let base_timeout = match task_spec.risk_tier {
+            agent_agency_contracts::task_executor::RiskTier::Tier1 => 300, // 5 minutes
+            agent_agency_contracts::task_executor::RiskTier::Tier2 => 180, // 3 minutes
+            agent_agency_contracts::task_executor::RiskTier::Tier3 => 60,  // 1 minute
+        };
+
+        let complexity_multiplier = match self.assess_task_complexity(task_spec) {
+            TaskComplexity::High => 3.0,
+            TaskComplexity::Medium => 2.0,
+            TaskComplexity::Low => 1.0,
+        };
+
+        (base_timeout as f64 * complexity_multiplier) as u64
+    }
+
+    fn get_retry_config_for_task(&self, task_spec: &TaskSpec) -> RetryConfig {
+        match task_spec.risk_tier {
+            agent_agency_contracts::task_executor::RiskTier::Tier1 => RetryConfig {
+                max_attempts: 5,
+                initial_delay_ms: 1000,
+                max_delay_ms: 10000,
+                backoff_multiplier: 2.0,
+                jitter_factor: 0.1,
+                use_exponential_backoff: true,
+                use_jitter: true,
+            },
+            agent_agency_contracts::task_executor::RiskTier::Tier2 => RetryConfig {
+                max_attempts: 3,
+                initial_delay_ms: 500,
+                max_delay_ms: 5000,
+                backoff_multiplier: 2.0,
+                jitter_factor: 0.1,
+                use_exponential_backoff: true,
+                use_jitter: true,
+            },
+            agent_agency_contracts::task_executor::RiskTier::Tier3 => RetryConfig {
+                max_attempts: 2,
+                initial_delay_ms: 250,
+                max_delay_ms: 2000,
+                backoff_multiplier: 1.5,
+                jitter_factor: 0.05,
+                use_exponential_backoff: true,
+                use_jitter: true,
+            },
+        }
+    }
+
+    fn determine_priority(&self, task_spec: &TaskSpec) -> TaskPriority {
+        match task_spec.risk_tier {
+            agent_agency_contracts::task_executor::RiskTier::Tier1 => TaskPriority::High,
+            agent_agency_contracts::task_executor::RiskTier::Tier2 => TaskPriority::Medium,
+            agent_agency_contracts::task_executor::RiskTier::Tier3 => TaskPriority::Low,
+        }
+    }
+
+    fn calculate_health_score(&self, error_count: i64, success_count: i64, avg_response_time_ms: Option<i64>) -> f64 {
+        if success_count == 0 && error_count == 0 {
+            return 0.5; // Neutral score for new workers
+        }
+
+        let total_requests = success_count + error_count;
+        let success_rate = success_count as f64 / total_requests as f64;
+        
+        let response_time_score = avg_response_time_ms.map_or(1.0, |time_ms| {
+            if time_ms < 1000 { 1.0 }
+            else if time_ms < 5000 { 0.8 }
+            else if time_ms < 10000 { 0.6 }
+            else { 0.4 }
+        });
+
+        (success_rate * 0.7) + (response_time_score * 0.3)
+    }
+
+    fn calculate_load_percentage(&self, active_tasks: i64, avg_execution_time_ms: Option<i64>) -> f64 {
+        let base_load = active_tasks as f64 * 10.0; // 10% per active task
+        let time_load = avg_execution_time_ms.map_or(0.0, |time_ms| {
+            if time_ms > 30000 { 20.0 } // High execution time penalty
+            else if time_ms > 10000 { 10.0 }
+            else { 0.0 }
+        });
+        
+        (base_load + time_load).min(100.0)
+    }

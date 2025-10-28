@@ -978,6 +978,8 @@ class HiddenTodoAnalyzer:
             'file_path': relative_path,
             'language': language,
             'total_comments': len(comments),
+            'total_lines': self._count_file_lines(file_path),
+            'comment_lines': len(comments),
             'hidden_todos': defaultdict(list),
             'all_comments': []
         }
@@ -1043,6 +1045,14 @@ class HiddenTodoAnalyzer:
                 })
 
         return file_analysis
+
+    def _count_file_lines(self, file_path: Path) -> int:
+        """Count total lines in a file."""
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                return sum(1 for _ in f)
+        except Exception:
+            return 0
 
     def analyze_directory(self, languages: Optional[List[str]] = None, min_confidence: float = 0.7, v3_only: bool = False) -> Dict:
         """Analyze all files in the directory for hidden TODO patterns with improved accuracy."""
@@ -1236,7 +1246,7 @@ class HiddenTodoAnalyzer:
                             all_results['summary']['low_confidence_todos'] += 1
 
                         # Count patterns
-                        for pattern in data['matched_patterns']:
+                        for pattern in data.get('matches', []):
                             self.pattern_stats[pattern] += 1
 
                 if filtered_todos:
@@ -1251,18 +1261,245 @@ class HiddenTodoAnalyzer:
 
                     # Add to patterns
                     for line_num, data in filtered_todos.items():
-                        for pattern in data['matched_patterns']:
+                        for pattern in data.get('matches', []):
                             all_results['patterns'][pattern].append({
                                 'file': str(file_path),
                                 'line': line_num,
                                 'confidence': data['confidence_score'],
-                                'text': data['text']
+                                'text': data['comment']
                             })
 
         # Finalize pattern counts
         all_results['summary']['pattern_counts'] = dict(self.pattern_stats)
 
         return all_results
+
+    def analyze_staged_files_with_dependencies(self, min_confidence: float = 0.7, 
+                                             dependency_resolution: bool = True) -> Dict:
+        """
+        Analyze staged files for hidden TODOs with dependency resolution.
+        
+        This method:
+        1. Gets staged files from git
+        2. Analyzes them for hidden TODOs
+        3. Resolves dependencies to determine if TODOs are blocking
+        4. Returns results with dependency information
+        """
+        import subprocess
+        
+        try:
+            # Get staged files
+            result = subprocess.run(['git', 'diff', '--cached', '--name-only'], 
+                                  capture_output=True, text=True, check=True)
+            staged_files = [f.strip() for f in result.stdout.split('\n') if f.strip()]
+            
+            # Filter for supported file types
+            supported_extensions = set()
+            for lang_config in self.language_patterns.values():
+                supported_extensions.update(lang_config['extensions'])
+            
+            staged_files = [f for f in staged_files 
+                          if any(f.endswith(ext) for ext in supported_extensions)]
+            
+            if not staged_files:
+                return {
+                    'summary': {
+                        'staged_files': 0,
+                        'analyzed_files': 0,
+                        'total_hidden_todos': 0,
+                        'blocking_todos': 0,
+                        'non_blocking_todos': 0,
+                        'dependency_resolution_enabled': dependency_resolution
+                    },
+                    'files': {},
+                    'dependencies': {},
+                    'blocking_analysis': {}
+                }
+            
+            print(f"📁 Found {len(staged_files)} staged files to analyze")
+            
+            # Analyze staged files
+            analysis_results = self.analyze_files(staged_files, min_confidence)
+            
+            # Add dependency resolution if enabled
+            if dependency_resolution:
+                dependency_info = self._resolve_todo_dependencies(analysis_results)
+                analysis_results['dependencies'] = dependency_info
+                analysis_results['blocking_analysis'] = self._analyze_blocking_todos(
+                    analysis_results, dependency_info)
+            
+            # Update summary with staged file info
+            analysis_results['summary']['staged_files'] = len(staged_files)
+            analysis_results['summary']['analyzed_files'] = len(staged_files)
+            analysis_results['summary']['dependency_resolution_enabled'] = dependency_resolution
+            
+            return analysis_results
+            
+        except subprocess.CalledProcessError as e:
+            print(f"Error getting staged files: {e}")
+            return {
+                'summary': {
+                    'staged_files': 0,
+                    'analyzed_files': 0,
+                    'total_hidden_todos': 0,
+                    'blocking_todos': 0,
+                    'non_blocking_todos': 0,
+                    'dependency_resolution_enabled': False,
+                    'error': str(e)
+                },
+                'files': {},
+                'dependencies': {},
+                'blocking_analysis': {}
+            }
+
+    def _resolve_todo_dependencies(self, analysis_results: Dict) -> Dict:
+        """
+        Resolve dependencies for TODOs found in staged files.
+        
+        Returns dependency information for each TODO.
+        """
+        dependencies = {}
+        
+        for file_path, file_data in analysis_results['files'].items():
+            file_deps = {}
+            
+            for line_num, todo_data in file_data['hidden_todos'].items():
+                todo_text = todo_data['comment']
+                todo_deps = self._extract_dependencies_from_todo(todo_text, file_path)
+                file_deps[line_num] = todo_deps
+            
+            if file_deps:
+                dependencies[file_path] = file_deps
+        
+        return dependencies
+
+    def _extract_dependencies_from_todo(self, todo_text: str, file_path: str) -> Dict:
+        """
+        Extract dependency information from TODO text using the engineering-grade template.
+        
+        Looks for:
+        - DEPENDENCIES section
+        - BLOCKING status
+        - CAWS Tier
+        - Required/Optional dependencies
+        """
+        dependencies = {
+            'blocking': False,
+            'caws_tier': None,
+            'required_deps': [],
+            'optional_deps': [],
+            'estimated_effort': None,
+            'priority': 'Medium'
+        }
+        
+        # Look for DEPENDENCIES section
+        deps_match = re.search(r'DEPENDENCIES:\s*\n((?:- .*\n?)*)', todo_text, re.MULTILINE)
+        if deps_match:
+            deps_text = deps_match.group(1)
+            for line in deps_text.split('\n'):
+                line = line.strip()
+                if line.startswith('- '):
+                    dep_text = line[2:].strip()
+                    if '(Required)' in dep_text:
+                        dependencies['required_deps'].append(dep_text.replace('(Required)', '').strip())
+                    elif '(Optional)' in dep_text:
+                        dependencies['optional_deps'].append(dep_text.replace('(Optional)', '').strip())
+                    else:
+                        # Default to required if not specified
+                        dependencies['required_deps'].append(dep_text)
+        
+        # Look for BLOCKING status
+        blocking_match = re.search(r'BLOCKING:\s*{Yes|No}', todo_text)
+        if blocking_match:
+            dependencies['blocking'] = 'Yes' in blocking_match.group(0)
+        
+        # Look for CAWS Tier
+        tier_match = re.search(r'CAWS Tier:\s*(\d+)', todo_text)
+        if tier_match:
+            dependencies['caws_tier'] = int(tier_match.group(1))
+        
+        # Look for PRIORITY
+        priority_match = re.search(r'PRIORITY:\s*{Critical|High|Medium|Low}', todo_text)
+        if priority_match:
+            dependencies['priority'] = priority_match.group(0).split(':')[1].strip()
+        
+        # Look for ESTIMATED EFFORT
+        effort_match = re.search(r'ESTIMATED EFFORT:\s*([^\\n]+)', todo_text)
+        if effort_match:
+            dependencies['estimated_effort'] = effort_match.group(1).strip()
+        
+        return dependencies
+
+    def _analyze_blocking_todos(self, analysis_results: Dict, dependency_info: Dict) -> Dict:
+        """
+        Analyze which TODOs are blocking based on dependency resolution.
+        """
+        blocking_analysis = {
+            'blocking_todos': [],
+            'non_blocking_todos': [],
+            'critical_blockers': [],
+            'dependency_summary': {
+                'total_required_deps': 0,
+                'resolved_deps': 0,
+                'unresolved_deps': 0
+            }
+        }
+        
+        for file_path, file_data in analysis_results['files'].items():
+            file_deps = dependency_info.get(file_path, {})
+            
+            for line_num, todo_data in file_data['hidden_todos'].items():
+                todo_deps = file_deps.get(line_num, {})
+                
+                # Determine if TODO is blocking
+                is_blocking = self._is_todo_blocking(todo_deps, file_path)
+                
+                todo_info = {
+                    'file': file_path,
+                    'line': line_num,
+                    'text': todo_data['comment'],
+                    'confidence': todo_data['confidence_score'],
+                    'dependencies': todo_deps,
+                    'blocking': is_blocking
+                }
+                
+                if is_blocking:
+                    blocking_analysis['blocking_todos'].append(todo_info)
+                    
+                    # Check if it's critical
+                    if todo_deps.get('priority') == 'Critical' or todo_deps.get('caws_tier') == 1:
+                        blocking_analysis['critical_blockers'].append(todo_info)
+                else:
+                    blocking_analysis['non_blocking_todos'].append(todo_info)
+                
+                # Update dependency summary
+                required_deps = todo_deps.get('required_deps', [])
+                blocking_analysis['dependency_summary']['total_required_deps'] += len(required_deps)
+                # For now, assume all dependencies are unresolved (would need actual resolution logic)
+                blocking_analysis['dependency_summary']['unresolved_deps'] += len(required_deps)
+        
+        return blocking_analysis
+
+    def _is_todo_blocking(self, todo_deps: Dict, file_path: str) -> bool:
+        """
+        Determine if a TODO is blocking based on its dependencies and context.
+        """
+        # Explicit blocking flag
+        if todo_deps.get('blocking', False):
+            return True
+        
+        # High priority or critical tier
+        if todo_deps.get('priority') in ['Critical', 'High']:
+            return True
+        
+        if todo_deps.get('caws_tier') == 1:
+            return True
+        
+        # Has required dependencies (simplified check)
+        if todo_deps.get('required_deps'):
+            return True
+        
+        return False
 
     def generate_report(self, results: Dict) -> str:
         """Generate a comprehensive report with enhanced accuracy information."""
@@ -1380,6 +1617,10 @@ def main():
                         action='store_true', help='Warning mode - only warn, never fail')
     parser.add_argument('--v3-only',
                         action='store_true', help='Only analyze v3 folder (matches user search scope)')
+    parser.add_argument('--staged-only',
+                        action='store_true', help='Only analyze staged files with dependency resolution')
+    parser.add_argument('--disable-dependency-resolution',
+                        action='store_true', help='Disable dependency resolution for staged files')
 
     args = parser.parse_args()
 
@@ -1388,8 +1629,14 @@ def main():
         enable_code_stub_scan=not args.disable_code_stub_scan,
     )
 
+    # Analyze staged files with dependency resolution
+    if args.staged_only:
+        results = analyzer.analyze_staged_files_with_dependencies(
+            args.min_confidence, 
+            dependency_resolution=not args.disable_dependency_resolution
+        )
     # Analyze specific files or entire directory
-    if args.files:
+    elif args.files:
         results = analyzer.analyze_files(args.files, args.min_confidence)
     else:
         results = analyzer.analyze_directory(args.languages, args.min_confidence, args.v3_only)
@@ -1432,7 +1679,10 @@ def main():
         print(f"Report saved to: {args.output_md}")
     else:
         # Print report to console
-        print("\n" + analyzer.generate_report(results))
+        try:
+            print("\n" + analyzer.generate_report(results))
+        except Exception as e:
+            print(f"⚠️  Could not generate report: {e}")
 
     # Handle CI mode and warn-only mode
     summary = results['summary']

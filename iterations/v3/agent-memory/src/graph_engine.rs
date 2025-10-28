@@ -83,6 +83,7 @@ pub enum RelationshipType {
 }
 
 /// Real HTTP-based entity extraction service
+#[derive(Debug)]
 pub struct HttpEntityExtractionService {
     client: Client,
     base_url: String,

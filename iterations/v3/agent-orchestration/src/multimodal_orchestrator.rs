@@ -3,7 +3,8 @@
 //! Unified orchestrator that integrates ingestors, CoreML experts, parallel workers,
 //! and enhancements for end-to-end multimodal agent execution.
 
-use crate::multimodal_orchestration::{ProcessingStatus, MultimodalTask, MultimodalProcessingResult};
+use crate::multimodal_orchestration::ProcessingStatus;
+use crate::types::{MultimodalTask, MultimodalProcessingResult};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -104,7 +105,7 @@ impl KimiK2MultimodalOrchestrator {
         use std::time::Instant;
         
         let start_time = Instant::now();
-        let task_id = task.id.clone();
+        let task_id = task.task_id.clone();
         
         info!("Executing multimodal task: {}", task_id);
         
@@ -186,20 +187,20 @@ impl KimiK2MultimodalOrchestrator {
         
         Ok(MultimodalProcessingResult {
             task_id,
-            status: if overall_success { ProcessingStatus::Completed } else { ProcessingStatus::Failed },
-            result: serde_json::json!({
+            status: if overall_success { crate::types::ExecutionStatus::Completed } else { crate::types::ExecutionStatus::Failed },
+            processed_content: Some(task.data.clone()),
+            features: serde_json::json!({
                 "stage_results": stage_results,
                 "overall_success": overall_success,
                 "total_duration_ms": total_duration
-            }),
-            execution_time_ms: total_duration,
-            metadata: HashMap::new(),
+            }).as_object().unwrap().iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
+            error: if overall_success { None } else { Some("Processing failed".to_string()) },
         })
     }
 
     /// Execute ingestion stage
     async fn execute_ingestion_stage(&self, task: &MultimodalTask) -> Result<serde_json::Value, String> {
-        debug!("Executing ingestion stage for task: {}", task.id);
+        debug!("Executing ingestion stage for task: {}", task.task_id);
         
         // Simulate ingestion processing
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -213,7 +214,7 @@ impl KimiK2MultimodalOrchestrator {
 
     /// Execute enrichment stage
     async fn execute_enrichment_stage(&self, task: &MultimodalTask) -> Result<serde_json::Value, String> {
-        debug!("Executing enrichment stage for task: {}", task.id);
+        debug!("Executing enrichment stage for task: {}", task.task_id);
         
         // Simulate enrichment processing
         tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
@@ -227,7 +228,7 @@ impl KimiK2MultimodalOrchestrator {
 
     /// Execute indexing stage
     async fn execute_indexing_stage(&self, task: &MultimodalTask) -> Result<serde_json::Value, String> {
-        debug!("Executing indexing stage for task: {}", task.id);
+        debug!("Executing indexing stage for task: {}", task.task_id);
         
         // Simulate indexing processing
         tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
@@ -241,7 +242,7 @@ impl KimiK2MultimodalOrchestrator {
 
     /// Execute validation stage
     async fn execute_validation_stage(&self, task: &MultimodalTask) -> Result<serde_json::Value, String> {
-        debug!("Executing validation stage for task: {}", task.id);
+        debug!("Executing validation stage for task: {}", task.task_id);
         
         // Simulate validation processing
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
@@ -255,7 +256,7 @@ impl KimiK2MultimodalOrchestrator {
 
     /// Execute execution stage
     async fn execute_execution_stage(&self, task: &MultimodalTask) -> Result<serde_json::Value, String> {
-        debug!("Executing execution stage for task: {}", task.id);
+        debug!("Executing execution stage for task: {}", task.task_id);
         
         // Simulate execution processing
         tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
@@ -302,37 +303,37 @@ impl Default for OrchestratorConfig {
     }
 }
 
-/// Real task structure for multimodal processing
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MultimodalTask {
-    pub id: String,
-    pub description: String,
-    pub requirements: Vec<String>,
-    pub priority: u8,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-}
+// Remove duplicate MultimodalTask struct - use the one from lib.rs
+// #[derive(Debug, Clone, Serialize, Deserialize)]
+// pub struct MultimodalTask {
+//     pub id: String,
+//     pub description: String,
+//     pub requirements: Vec<String>,
+//     pub priority: u8,
+//     pub created_at: chrono::DateTime<chrono::Utc>,
+// }
 
-impl MultimodalTask {
-    pub fn new(id: String, description: String, requirements: Vec<String>, priority: u8) -> Self {
-        Self {
-            id,
-            description,
-            requirements,
-            priority,
-            created_at: chrono::Utc::now(),
-        }
-    }
-}
+// impl MultimodalTask {
+//     pub fn new(id: String, description: String, requirements: Vec<String>, priority: u8) -> Self {
+//         Self {
+//             id,
+//             description,
+//             requirements,
+//             priority,
+//             created_at: chrono::Utc::now(),
+//         }
+//     }
+// }
 
-/// Real result structure for multimodal processing
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MultimodalProcessingResult {
-    pub task_id: String,
-    pub status: ProcessingStatus,
-    pub result: serde_json::Value,
-    pub execution_time_ms: u64,
-    pub metadata: HashMap<String, serde_json::Value>,
-}
+// Remove duplicate MultimodalProcessingResult struct - use the one from lib.rs
+// #[derive(Debug, Clone, Serialize, Deserialize)]
+// pub struct MultimodalProcessingResult {
+//     pub task_id: String,
+//     pub status: ProcessingStatus,
+//     pub result: serde_json::Value,
+//     pub execution_time_ms: u64,
+//     pub metadata: HashMap<String, serde_json::Value>,
+// }
 
 /// Real performance statistics structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
