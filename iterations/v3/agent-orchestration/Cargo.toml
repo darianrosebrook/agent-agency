@@ -71,11 +71,11 @@ console = "0.16"
 
 # Local workspace crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
-data-infrastructure = { path = "../data-infrastructure" }
+# data-infrastructure = { path = "../data-infrastructure", optional = true }  # Removed to break circular dependency - will add back with proper feature gating
 # system-acceleration = { path = "../system-acceleration" }  # Temporarily disabled due to compilation errors
-agent-memory = { path = "../agent-memory", features = ["database"] }
+agent-memory = { path = "../agent-memory", optional = true, features = ["database"] }
 system-resilience = { path = "../system-resilience" }
-agent-data-processing = { path = "../agent-data-processing" }  
+# agent-data-processing = { path = "../agent-data-processing", optional = true }  # Removed to break circular dependency - use local ContentType instead  
 development-tools = { path = "../development-tools", optional = true }
 
 # Observability dependency  

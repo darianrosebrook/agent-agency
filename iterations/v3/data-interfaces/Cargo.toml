@@ -34,8 +34,9 @@ lazy_static = "1.4"
 # Local crates
 agent-workers = { path = "../agent-workers" }
 agent-orchestration = { path = "../agent-orchestration" }
-agent-data-processing = { path = "../agent-data-processing" } 
+agent-data-processing = { path = "../agent-data-processing", optional = true } 
 agent-agency-contracts = { path = "../agent-agency-contracts" }
+data-infrastructure = { path = "../data-infrastructure" }  # orchestration feature disabled by default to avoid circular dependency
 system-configuration = { path = "../system-configuration" }
 
 [[bin]]

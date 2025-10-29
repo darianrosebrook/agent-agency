@@ -20,7 +20,7 @@ futures = "0.3"
 rand = "0.8"
 
 # Database integration
-data-infrastructure = { path = "../data-infrastructure" }
+data-infrastructure = { path = "../data-infrastructure", optional = true }
 
 # Local crates
 system-configuration = { path = "../system-configuration" }
