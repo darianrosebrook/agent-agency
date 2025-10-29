@@ -18,6 +18,7 @@ uuid.workspace = true
 chrono.workspace = true
 anyhow.workspace = true
 clap = { version = "4.0", features = ["derive"] }
+num_cpus = "1.0"
 regex = "1.10"
 walkdir = "2.4"
 sqlx.workspace = true
@@ -55,7 +56,10 @@ nix = { version = "0.27", features = ["fs"] }
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["handleapi", "minwinbase", "processthreadsapi", "psapi", "sysinfoapi"] }
 
-# System metrics collection
+# System metrics collection - temporarily disabled
+# sysinfo = "0.30"
+procfs = "0.16"
+
 [target.'cfg(target_os = "macos")'.dependencies]
 system-configuration = { path = "../system-configuration" }
 

@@ -65,8 +65,8 @@ glob = "0.3"
 governor = "0.6"
 nonzero_ext = "0.3"
 
-# Integration with agent-memory (optional to avoid circular dependencies)
-agent-memory = { path = "../agent-memory", optional = true, features = ["database"] }
+# Integration with agent-memory (removed to avoid circular dependencies)
+# agent-memory = { path = "../agent-memory", optional = true, features = ["database"] }
 
 # Integration with system-resilience
 system-resilience = { path = "../system-resilience", optional = true }
@@ -88,7 +88,7 @@ futures = "0.3"
 
 [features]
 default = ["workspace-integration"] 
-memory-integration = ["agent-memory"]
+# memory-integration = ["agent-memory"]  # Removed to avoid circular dependencies
 workspace-integration = ["system-resilience"]
 embeddings = ["data-infrastructure"] # Re-enabled for conditional compilation
 

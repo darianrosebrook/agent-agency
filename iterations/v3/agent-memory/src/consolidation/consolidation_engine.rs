@@ -158,47 +158,60 @@ impl MemoryConsolidationEngine {
 #[async_trait::async_trait]
 impl ConsolidationEngine for MemoryConsolidationEngine {
     async fn consolidate(&self, config: &ConsolidationConfig) -> MemoryResult<ConsolidationResult> {
-        // This would need actual memory data - for now return empty result
-        Ok(ConsolidationResult {
-            consolidated_memories: 0,
-            created_clusters: 0,
-            generated_summaries: 0,
-            removed_duplicates: 0,
-            processing_time_ms: 0,
-            consolidation_timestamp: chrono::Utc::now(),
-        })
+        // PLACEHOLDER: Real consolidation not implemented
+        // Per session rules: throw error instead of returning mock data
+        // Dependency: Requires memory data access and actual consolidation pipeline
+        return Err(crate::MemoryError::Other(format!(
+            "PLACEHOLDER: ConsolidationEngine::consolidate not implemented. Requires: \
+            Memory data access, semantic clustering, summarization, deduplication pipelines. \
+            Config: clustering={}, summarization={}, deduplication={}",
+            config.enable_semantic_clustering,
+            config.enable_summarization,
+            config.enable_deduplication
+        )));
     }
 
-    async fn consolidate_subset(&self, _memory_ids: &[crate::memory_types::MemoryId], _config: &ConsolidationConfig) -> MemoryResult<ConsolidationResult> {
-        // Implementation pending
-        Ok(ConsolidationResult {
-            consolidated_memories: 0,
-            created_clusters: 0,
-            generated_summaries: 0,
-            removed_duplicates: 0,
-            processing_time_ms: 0,
-            consolidation_timestamp: chrono::Utc::now(),
-        })
+    async fn consolidate_subset(&self, memory_ids: &[crate::memory_types::MemoryId], config: &ConsolidationConfig) -> MemoryResult<ConsolidationResult> {
+        // PLACEHOLDER: Real subset consolidation not implemented
+        // Per session rules: throw error instead of returning mock data
+        // Dependency: Requires memory subset access and consolidation pipeline
+        return Err(crate::MemoryError::Other(format!(
+            "PLACEHOLDER: ConsolidationEngine::consolidate_subset not implemented. Requires: \
+            Memory subset access, consolidation pipeline. \
+            Memory IDs: {}, Config enabled: clustering={}",
+            memory_ids.len(),
+            config.enable_semantic_clustering
+        )));
     }
 
     async fn get_stats(&self) -> MemoryResult<ConsolidationStats> {
-        Ok(ConsolidationStats {
-            total_memories_processed: 0,
-            active_clusters: 0,
-            total_summaries: 0,
-            deduplication_savings: 0,
-            average_cluster_size: 0.0,
-            last_consolidation: Some(chrono::Utc::now()),
-        })
+        // Note: This might legitimately return zeros if no consolidation has run
+        // But if called without proper stats tracking, it's a placeholder
+        // For now, return error to indicate stats tracking not implemented
+        return Err(crate::MemoryError::Other(
+            "PLACEHOLDER: ConsolidationEngine::get_stats not implemented. Requires: \
+            Stats tracking system integration".to_string()
+        ));
     }
 
     async fn rebuild_clusters(&self) -> MemoryResult<()> {
-        // Implementation pending
-        Ok(())
+        // PLACEHOLDER: Real cluster rebuilding not implemented
+        // Per session rules: throw error instead of returning mock data
+        // Dependency: Requires cluster storage and rebuilding algorithm
+        return Err(crate::MemoryError::Other(
+            "PLACEHOLDER: ConsolidationEngine::rebuild_clusters not implemented. Requires: \
+            Cluster storage system, cluster rebuilding algorithm".to_string()
+        ));
     }
 
     async fn get_clusters(&self) -> MemoryResult<Vec<MemoryCluster>> {
-        Ok(Vec::new())
+        // PLACEHOLDER: Real cluster retrieval not implemented
+        // Per session rules: throw error instead of returning mock data
+        // Dependency: Requires cluster storage system
+        return Err(crate::MemoryError::Other(
+            "PLACEHOLDER: ConsolidationEngine::get_clusters not implemented. Requires: \
+            Cluster storage system integration".to_string()
+        ));
     }
 }
 

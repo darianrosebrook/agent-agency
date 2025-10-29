@@ -140,9 +140,29 @@ impl DeploymentOrchestrator {
 
     /// Route an inference request through deployment logic
     pub async fn route_inference_request(&self, model_id: &str, input: InferenceInput) -> Result<InferenceInput, ModelManagementError> {
-        // For now, just pass through - in full implementation would handle A/B testing, load balancing, etc.
         debug!("Routing inference request for model {}", model_id);
+        
+        // Use load balancer for traffic distribution
+        if self.config.enable_performance_routing {
+            self.load_balancer.route_request(model_id, &input).await?;
+        }
+        
         Ok(input)
+    }
+
+    /// Get deployment configuration
+    pub fn get_config(&self) -> &DeploymentConfig {
+        &self.config
+    }
+
+    /// Update deployment configuration
+    pub fn update_config(&mut self, config: DeploymentConfig) {
+        self.config = config;
+    }
+
+    /// Get load balancer for traffic management
+    pub fn get_load_balancer(&self) -> &Arc<LoadBalancer> {
+        &self.load_balancer
     }
 
     /// Perform a hot-swap operation

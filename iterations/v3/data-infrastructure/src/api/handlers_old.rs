@@ -203,7 +203,7 @@ pub async fn get_waiver(
         .map_err(|_| StatusCode::BAD_REQUEST)?;
     
     match state.db_client.get_waiver(&waiver_uuid).await {
-        Ok(waiver) => {
+        Ok(Some(waiver)) => {
             Ok(Json(serde_json::json!({
                 "id": waiver.id,
                 "title": waiver.title,
@@ -220,6 +220,9 @@ pub async fn get_waiver(
                 "metadata": waiver.metadata,
                 "status": "success"
             })))
+        }
+        Ok(None) => {
+            Err(StatusCode::NOT_FOUND)
         }
         Err(e) => {
             error!("Failed to get waiver {}: {}", waiver_id, e);
@@ -249,7 +252,7 @@ pub async fn update_waiver(
 
     // Build update query dynamically based on provided fields
     let mut update_fields = Vec::new();
-    let mut query_params: Vec<Box<dyn tokio_postgres::types::ToSql + Sync>> = Vec::new();
+    let mut query_params: Vec<Box<dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync>> = Vec::new();
     let mut param_count = 0;
 
     if let Some(title) = title {
@@ -273,13 +276,13 @@ pub async fn update_waiver(
     if let Some(expires_at) = expires_at {
         param_count += 1;
         update_fields.push(format!("expires_at = ${}", param_count));
-        query_params.push(Box::new(expires_at) as Box<dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync>);
+        query_params.push(Box::new(expires_at));
     }
 
     if let Some(metadata) = metadata {
         param_count += 1;
         update_fields.push(format!("metadata = ${}", param_count));
-        query_params.push(Box::new(metadata) as Box<dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync>);
+        query_params.push(Box::new(metadata));
     }
 
     if update_fields.is_empty() {
@@ -288,7 +291,7 @@ pub async fn update_waiver(
 
     param_count += 1;
     update_fields.push(format!("updated_at = ${}", param_count));
-    query_params.push(Box::new(chrono::Utc::now()) as Box<dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync>);
+    query_params.push(Box::new(chrono::Utc::now()));
 
     param_count += 1;
     let query = format!(
@@ -296,7 +299,7 @@ pub async fn update_waiver(
         update_fields.join(", "),
         param_count
     );
-    query_params.push(Box::new(waiver_uuid) as Box<dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync>);
+    query_params.push(Box::new(waiver_uuid));
 
     match state.db_client.execute(&query, &query_params.iter().map(|p| p.as_ref()).collect::<Vec<_>>()).await {
         Ok(rows_affected) => {
@@ -328,18 +331,13 @@ pub async fn delete_waiver(
         .map_err(|_| StatusCode::BAD_REQUEST)?;
     
     match state.db_client.delete_waiver(&waiver_uuid).await {
-        Ok(rows_affected) => {
-            if rows_affected > 0 {
-                info!("Deleted waiver: {}", waiver_id);
-                Ok(Json(serde_json::json!({
-                    "status": "success",
-                    "waiver_id": waiver_id,
-                    "message": "Waiver deleted successfully",
-                    "rows_affected": rows_affected
-                })))
-            } else {
-                Err(StatusCode::NOT_FOUND)
-            }
+        Ok(()) => {
+            info!("Deleted waiver: {}", waiver_id);
+            Ok(Json(serde_json::json!({
+                "status": "success",
+                "waiver_id": waiver_id,
+                "message": "Waiver deleted successfully"
+            })))
         }
         Err(e) => {
             error!("Failed to delete waiver {}: {}", waiver_id, e);
@@ -475,26 +473,26 @@ pub async fn validate_waiver(
     State(state): State<AppState>,
     Json(waiver_data): Json<serde_json::Value>
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    let mut validation_errors = Vec::new();
+    let mut validation_errors: Vec<String> = Vec::new();
     let mut warnings = Vec::new();
 
     // Required field validation
     if !waiver_data.get("title").and_then(|v| v.as_str()).is_some() {
-        validation_errors.push("Title is required");
+        validation_errors.push("Title is required".to_string());
     }
 
     if !waiver_data.get("reason").and_then(|v| v.as_str()).is_some() {
-        validation_errors.push("Reason is required");
+        validation_errors.push("Reason is required".to_string());
     }
 
     if !waiver_data.get("description").and_then(|v| v.as_str()).is_some() {
-        validation_errors.push("Description is required");
+        validation_errors.push("Description is required".to_string());
     }
 
     // Gates validation
     if let Some(gates) = waiver_data.get("gates").and_then(|v| v.as_array()) {
         if gates.is_empty() {
-            validation_errors.push("At least one gate must be specified");
+            validation_errors.push("At least one gate must be specified".to_string());
         } else {
             // Validate gate names against known gates
             let valid_gates = ["test_coverage", "linting", "security_scan", "performance", "documentation"];
@@ -521,12 +519,12 @@ pub async fn validate_waiver(
         if let Ok(expiry) = chrono::DateTime::parse_from_rfc3339(expires_at) {
             let now = chrono::Utc::now();
             if expiry <= now {
-                validation_errors.push("Expiration date must be in the future");
+                validation_errors.push("Expiration date must be in the future".to_string());
             } else if expiry > now + chrono::Duration::days(365) {
                 warnings.push("Expiration date is more than 1 year in the future".to_string());
             }
         } else {
-            validation_errors.push("Invalid expiration date format. Use RFC3339 format");
+            validation_errors.push("Invalid expiration date format. Use RFC3339 format".to_string());
         }
     }
 

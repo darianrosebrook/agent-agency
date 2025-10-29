@@ -24,7 +24,27 @@ Before editing, _ask with a Targeted Edit Plan_ if any are true:
 - Requires deleting files or renaming public symbols.
 - Introduces a new dependency or build tool.
 - Affects security, persistence, auth, or infra.
-- Touches > 10 files or > 300 LOC.
+- Exceeds change budget limits (see Scope Management).
+- Triggers emergency waiver conditions (see Waiver System).
+
+### Change Budget Enforcement
+
+**Automatic Detection:**
+- Files outside `scope.in` boundaries
+- Exceeding `max_files` or `max_loc` limits
+- High complexity changes (> 10 cyclomatic complexity)
+
+**Emergency Override Conditions:**
+- Security vulnerabilities with active exploitation
+- Production system completely down
+- Data corruption in progress
+- Regulatory compliance deadline
+
+**Waiver Requirements:**
+- Root cause analysis
+- Minimal fix description
+- Risk assessment and mitigation plan
+- Timeline for comprehensive solution
 
 **Targeted Edit Plan (TEP)** must include:
 

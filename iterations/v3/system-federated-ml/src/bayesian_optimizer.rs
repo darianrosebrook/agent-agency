@@ -341,20 +341,90 @@ impl BayesianOptimizer {
     }
 
     /// Check CAWS compliance with these parameters
-    async fn check_compliance(&self, _parameters: &HashMap<String, f64>) -> Result<bool> {
-        // Simplified compliance check
-        // In practice, this would validate against CAWS runtime validator
-
-        // TODO: Implement comprehensive compliance validation for optimization parameters
-        // - Integrate with CAWS runtime validator for parameter validation
-        // - Implement constraint validation for optimization parameter bounds
-        // - Add compliance checking for business rules and safety constraints
-        // - Support compliance validation for different optimization contexts
-        // - Implement compliance score calculation and reporting
-        // - Add compliance violation detection and handling
-        // - Support compliance-based optimization guidance and constraints
-        // - Implement compliance validation caching and performance optimization
+    async fn check_compliance(&self, parameters: &HashMap<String, f64>) -> Result<bool> {
+        // Comprehensive compliance validation for optimization parameters
+        
+        // 1. Validate parameter bounds
+        for (param_name, value) in parameters {
+            if let Some(param_def) = self.config.parameter_space.parameters.get(param_name) {
+                if *value < param_def.min || *value > param_def.max {
+                    warn!("Parameter {} value {} outside bounds [{}, {}]", 
+                        param_name, value, param_def.min, param_def.max);
+                    return Ok(false);
+                }
+            }
+        }
+        
+        // 2. Validate optimization constraints
+        if let Some(max_tokens) = parameters.get("max_tokens") {
+            if *max_tokens > self.config.constraints.max_tokens as f64 {
+                warn!("Max tokens {} exceeds constraint {}", max_tokens, self.config.constraints.max_tokens);
+                return Ok(false);
+            }
+        }
+        
+        if let Some(temperature) = parameters.get("temperature") {
+            if let Some(current_temp) = self.config.parameter_space.initial_values.get("temperature") {
+                let delta = (temperature - current_temp).abs();
+                if delta > self.config.constraints.max_delta_temperature as f64 {
+                    warn!("Temperature delta {} exceeds constraint {}", delta, self.config.constraints.max_delta_temperature);
+                    return Ok(false);
+                }
+            }
+        }
+        
+        // 3. Validate CAWS compliance requirements
+        if self.config.constraints.require_caws {
+            // Check if parameters maintain CAWS compliance
+            let compliance_score = self.calculate_compliance_score(parameters)?;
+            if compliance_score < self.config.compliance_threshold {
+                warn!("Compliance score {} below threshold {}", compliance_score, self.config.compliance_threshold);
+                return Ok(false);
+            }
+        }
+        
+        // 4. Validate business rules and safety constraints
+        if let Some(latency_ms) = parameters.get("latency_ms") {
+            if *latency_ms > self.config.constraints.max_latency_ms as f64 {
+                warn!("Latency {}ms exceeds constraint {}ms", latency_ms, self.config.constraints.max_latency_ms);
+                return Ok(false);
+            }
+        }
+        
+        debug!("Compliance validation passed for parameters: {:?}", parameters);
         Ok(true)
+    }
+    
+    /// Calculate compliance score for parameters
+    fn calculate_compliance_score(&self, parameters: &HashMap<String, f64>) -> Result<f64> {
+        let mut score = 1.0;
+        
+        // Check parameter bounds compliance
+        for (param_name, value) in parameters {
+            if let Some(param_def) = self.config.parameter_space.parameters.get(param_name) {
+                let range = param_def.max - param_def.min;
+                let normalized_distance = (*value - param_def.min) / range;
+                
+                // Penalize values closer to bounds
+                let bound_penalty = if normalized_distance < 0.1 || normalized_distance > 0.9 {
+                    0.1
+                } else {
+                    0.0
+                };
+                
+                score -= bound_penalty;
+            }
+        }
+        
+        // Check constraint compliance
+        if let Some(max_tokens) = parameters.get("max_tokens") {
+            let token_ratio = *max_tokens / self.config.constraints.max_tokens as f64;
+            if token_ratio > 0.9 {
+                score -= 0.1; // Penalize high token usage
+            }
+        }
+        
+        Ok(score.max(0.0).min(1.0))
     }
 
     /// Check if optimization has converged

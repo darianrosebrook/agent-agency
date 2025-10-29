@@ -65,4 +65,15 @@ impl LoadBalancer {
     pub fn get_traffic_allocation(&self, model_id: &str) -> f64 {
         self.allocations.get(model_id).copied().unwrap_or(1.0)
     }
+
+    /// Route a request through the load balancer
+    pub async fn route_request(&self, model_id: &str, _input: &crate::InferenceInput) -> Result<(), ModelManagementError> {
+        // Check if model has traffic allocation
+        if let Some(allocation) = self.allocations.get(model_id) {
+            tracing::debug!("Routing request to model {} with {}% allocation", model_id, allocation * 100.0);
+        } else {
+            tracing::debug!("Model {} not found in load balancer allocations", model_id);
+        }
+        Ok(())
+    }
 }

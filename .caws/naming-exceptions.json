@@ -1,0 +1,33 @@
+{
+  "version": "1.0.0",
+  "description": "Controlled exceptions for banned naming patterns",
+  "schema": {
+    "exceptions": [
+      {
+        "file_pattern": "string (glob pattern)",
+        "modifier": "string (banned modifier)",
+        "reason": "string (architectural justification)",
+        "approved_by": "string (engineer email)",
+        "approved_at": "string (ISO 8601 date)",
+        "expires_at": "string (ISO 8601 date)",
+        "review_required": "boolean"
+      }
+    ]
+  },
+  "exceptions": [
+    {
+      "file_pattern": "**/unified-client.ts",
+      "modifier": "unified",
+      "reason": "Official unified client contract per API standards body specification",
+      "approved_by": "darianrosebrook@example.com",
+      "approved_at": "2025-10-28T19:32:25.505Z",
+      "expires_at": "2026-04-26T19:32:25.505Z",
+      "review_required": true
+    }
+  ],
+  "enforcement_levels": {
+    "commit": "warning",
+    "push": "block",
+    "ci": "fail"
+  }
+}

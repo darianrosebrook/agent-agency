@@ -14,7 +14,7 @@ alwaysApply: true
 
 - [ ] `npm run lint` shows **zero errors** (ESLint, TypeScript, etc.)
 - [ ] `npm run typecheck` passes with **zero TypeScript errors**
-- [ ] No TODOs, PLACEHOLDERs, or MOCK DATA in production code (`src/`)
+- [ ] No TODOs, PLACEHOLDERs, or MOCK DATA in production code (`src/`) (verified via `todo_analyzer.py`)
 - [ ] No unused imports or dead code
 - [ ] Code formatting consistent (Prettier/ESLint rules)
 

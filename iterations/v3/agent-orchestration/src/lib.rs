@@ -17,8 +17,8 @@
 // TYPE DEFINITIONS
 // ============================================================================
 
-use std::sync::Arc;
-use serde::{Deserialize, Serialize};
+mod progress_tracker;
+mod consensus_coordinator;
 
 // Re-export types for convenience
 pub use crate::council_types::TaskPriority;

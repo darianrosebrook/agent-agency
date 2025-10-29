@@ -3,7 +3,8 @@
 
 use crate::memory_types::*;
 use crate::MemoryResult;
-use data_infrastructure::{DatabaseClient, DatabaseConfig, Row};
+use sqlx::{PgPool, Row};
+use sqlx::postgres::PgRow;
 use std::sync::Arc;
 use std::collections::HashMap;
 use chrono::{DateTime, Utc, Duration};
@@ -198,7 +199,7 @@ pub struct CausalityRelationship {
 /// Temporal reasoning engine for time-based memory analysis
 #[derive(Debug)]
 pub struct TemporalReasoningEngine {
-    db_client: Arc<DatabaseClient>,
+    db_pool: Arc<PgPool>,
     config: TemporalConfig,
     temporal_service: Arc<HttpTemporalAnalysisService>,
 }
@@ -206,8 +207,16 @@ pub struct TemporalReasoningEngine {
 impl TemporalReasoningEngine {
     /// Create a new temporal reasoning engine
     pub async fn new(config: &TemporalConfig) -> MemoryResult<Self> {
-        let db_config = data_infrastructure::DatabaseConfig::default();
-        let db_client = Arc::new(DatabaseClient::new(db_config).await?);
+        // Get database URL from environment
+        let database_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgresql://localhost/agent_agency_v3".to_string());
+
+        // Create direct database connection pool
+        let db_pool = Arc::new(
+            PgPool::connect(&database_url)
+                .await
+                .context("Failed to connect to database for temporal reasoning")?
+        );
 
         // Get temporal analysis service URL from environment or use default
         let temporal_url = std::env::var("TEMPORAL_ANALYSIS_SERVICE_URL")
@@ -253,7 +262,7 @@ impl TemporalReasoningEngine {
         .bind(agent_id)
         .bind(time_range.start)
         .bind(time_range.end)
-        .fetch_all(self.db_client.pool())
+        .fetch_all(&*self.db_pool)
         .await?;
 
         let mut trends = Vec::new();
@@ -408,7 +417,7 @@ impl TemporalReasoningEngine {
         .bind(agent_id)
         .bind(time_range.start)
         .bind(time_range.end)
-        .fetch_all(self.db_client.pool())
+        .fetch_all(&*self.db_pool)
         .await?;
 
         for row in correlations {
@@ -430,7 +439,7 @@ impl TemporalReasoningEngine {
                 )
                 .bind(agent_id)
                 .bind(&task_type)
-                .fetch_one(self.db_client.pool())
+                .fetch_one(&*self.db_pool)
                 .await?;
 
                 let learned_count: i64 = capability_growth.try_get("learned_count")?;
@@ -527,7 +536,7 @@ impl TemporalReasoningEngine {
         .bind(agent_id)
         .bind(time_range.start)
         .bind(time_range.end)
-        .fetch_all(self.db_client.pool())
+        .fetch_all(&*self.db_pool)
         .await?;
 
         let mut capability_evolution = Vec::new();
@@ -605,7 +614,7 @@ impl TemporalReasoningEngine {
             "#,
         )
         .bind(agent_id)
-        .fetch_all(self.db_client.pool())
+        .fetch_all(&*self.db_pool)
         .await?;
 
         if historical_data.len() < 3 {

@@ -9,6 +9,10 @@
 
 import fs from "fs";
 import path from "path";
+import {
+  processViolations,
+  getEnforcementLevel,
+} from "./shared-exception-framework.js";
 
 const V3_PATH = path.join(process.cwd(), "iterations", "v3");
 
@@ -279,8 +283,8 @@ function getDuplicateTraits() {
 }
 
 // Check for regression (increase in functional duplication)
-function checkDuplicationRegression() {
-  const violations = [];
+function checkDuplicationRegression(context = "commit") {
+  const rawViolations = [];
 
   // Check problematic filename duplicates (excluding Rust conventions)
   const filenameDuplicates = getProblematicFilenameDuplicates();
@@ -290,8 +294,10 @@ function checkDuplicationRegression() {
   // Note: Having multiple manager.rs, types.rs, config.rs files across crates is normal architecture
   if (filenameCount > 100) {
     // Very high threshold - architectural duplication is expected and good
-    violations.push({
+    rawViolations.push({
       type: "problematic_filename_duplication",
+      file: "multiple",
+      relativePath: "multiple",
       issue: `Excessive duplicate filenames (excluding Rust conventions): ${filenameCount}`,
       details: filenameDuplicates,
       threshold: 100,
@@ -304,8 +310,10 @@ function checkDuplicationRegression() {
   const structCount = Object.keys(structDuplicates).length;
 
   if (structCount > DUPLICATE_STRUCT_THRESHOLD) {
-    violations.push({
+    rawViolations.push({
       type: "struct_duplication_regression",
+      file: "multiple",
+      relativePath: "multiple",
       issue: `Duplicate struct names increased from ${DUPLICATE_STRUCT_THRESHOLD} to ${structCount}`,
       details: structDuplicates,
       threshold: DUPLICATE_STRUCT_THRESHOLD,
@@ -318,8 +326,10 @@ function checkDuplicationRegression() {
   const functionCount = Object.keys(functionDuplicates).length;
 
   if (functionCount > DUPLICATE_FUNCTION_THRESHOLD) {
-    violations.push({
+    rawViolations.push({
       type: "function_duplication_regression",
+      file: "multiple",
+      relativePath: "multiple",
       issue: `Problematic duplicate function names (excluding expected patterns): ${functionCount}`,
       details: functionDuplicates,
       threshold: DUPLICATE_FUNCTION_THRESHOLD,
@@ -332,8 +342,10 @@ function checkDuplicationRegression() {
   const traitCount = Object.keys(traitDuplicates).length;
 
   if (traitCount > DUPLICATE_TRAIT_THRESHOLD) {
-    violations.push({
+    rawViolations.push({
       type: "trait_duplication_regression",
+      file: "multiple",
+      relativePath: "multiple",
       issue: `Duplicate trait names increased from ${DUPLICATE_TRAIT_THRESHOLD} to ${traitCount}`,
       details: traitDuplicates,
       threshold: DUPLICATE_TRAIT_THRESHOLD,
@@ -341,7 +353,14 @@ function checkDuplicationRegression() {
     });
   }
 
-  return violations;
+  // Process violations with exception handling
+  const result = processViolations("duplication", rawViolations, context);
+
+  return {
+    violations: result.violations,
+    warnings: result.warnings,
+    enforcementLevel: result.enforcementLevel,
+  };
 }
 
 function main() {
@@ -352,7 +371,8 @@ function main() {
   console.log(`📁 Found ${RUST_FILES.length} Rust files to check`);
 
   // Check for regression
-  const violations = checkDuplicationRegression();
+  const context = process.env.CAWS_ENFORCEMENT_CONTEXT || "commit";
+  const results = checkDuplicationRegression(context);
 
   // Get current duplication stats for reporting
   const problematicFilenameDuplicates = getProblematicFilenameDuplicates();
@@ -403,13 +423,26 @@ function main() {
     }
   }
 
-  if (violations.length === 0) {
+  // Report warnings (approved exceptions)
+  if (results.warnings.length > 0) {
+    console.log(`   ℹ️  ${results.warnings.length} approved exceptions in use`);
+    for (const warning of results.warnings) {
+      console.log(
+        `      📋 ${warning.violation.file}: ${warning.exception.reason}`
+      );
+    }
+  }
+
+  if (results.violations.length === 0) {
     console.log("✅ No functional duplication regression detected");
     process.exit(0);
   } else {
     console.log(`🚨 Functional duplication regression detected!`);
+    console.log(
+      `   🔧 Enforcement level: ${results.enforcementLevel.toUpperCase()}`
+    );
 
-    for (const violation of violations) {
+    for (const violation of results.violations) {
       console.log("");
       console.log(`❌ ${violation.type.toUpperCase().replace(/_/g, " ")}`);
       console.log(`   Issue: ${violation.issue}`);
@@ -436,7 +469,14 @@ function main() {
       "🔧 Functional duplication must not increase. Focus on consolidating duplicate business logic."
     );
     console.log("💡 See: docs/refactoring.md for consolidation strategies");
-    process.exit(1);
+
+    if (results.enforcementLevel === "warning") {
+      console.log("⚠️  Warning mode - commit allowed but review required");
+      process.exit(0);
+    } else {
+      console.log(`🚫 ${results.enforcementLevel} mode - action blocked`);
+      process.exit(1);
+    }
   }
 }
 

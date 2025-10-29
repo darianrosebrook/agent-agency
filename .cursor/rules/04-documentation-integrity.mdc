@@ -42,7 +42,7 @@ alwaysApply: true
 
 Before documenting any feature, verify:
 
-- [ ] Feature fully implemented (not placeholder/mock)
+- [ ] Feature fully implemented (not placeholder/mock) - verified via `todo_analyzer.py`
 - [ ] Feature tested end-to-end
 - [ ] Feature handles error cases
 - [ ] Feature documented in user-facing docs

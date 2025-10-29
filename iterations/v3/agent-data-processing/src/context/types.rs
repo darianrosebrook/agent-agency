@@ -349,15 +349,22 @@ pub struct ContextStats {
     pub oldest_context_age_hours: u64,
     /// Compression ratio
     pub compression_ratio: f64,
+    /// Enhanced lifecycle metrics
+    pub lifecycle_metrics: ContextLifecycleMetrics,
 }
 
-impl Default for ContextConfig {
+impl Default for ContextStats {
     fn default() -> Self {
         Self {
-            storage: ContextStorageConfig::default(),
-            folding: ContextFoldingConfig::default(),
-            performance: PerformanceConfig::default(),
-            working_memory: WorkingMemoryConfig::default(),
+            total_contexts: 0,
+            total_storage_size: 0,
+            working_memory_contexts: 0,
+            folded_contexts: 0,
+            average_context_size: 0,
+            recent_accesses: 0,
+            oldest_context_age_hours: 0,
+            compression_ratio: 1.0,
+            lifecycle_metrics: ContextLifecycleMetrics::default(),
         }
     }
 }
@@ -383,12 +390,161 @@ impl Default for RetrievalOptions {
     }
 }
 
-impl Default for FoldingOptions {
+/// Enhanced context lifecycle metrics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextLifecycleMetrics {
+    /// Folding frequency by strategy
+    pub folding_frequency: HashMap<String, u64>,
+    /// Storage efficiency gains (compression ratios)
+    pub storage_efficiency: StorageEfficiencyMetrics,
+    /// Retrieval latency by source
+    pub retrieval_latency: RetrievalLatencyMetrics,
+    /// Access pattern analysis
+    pub access_patterns: AccessPatternMetrics,
+    /// Health monitoring data
+    pub health_metrics: ContextHealthMetrics,
+}
+
+/// Storage efficiency metrics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StorageEfficiencyMetrics {
+    /// Average compression ratio
+    pub avg_compression_ratio: f64,
+    /// Storage savings (bytes)
+    pub storage_savings_bytes: u64,
+    /// Compression effectiveness by strategy
+    pub compression_by_strategy: HashMap<String, f64>,
+}
+
+/// Retrieval latency metrics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RetrievalLatencyMetrics {
+    /// Working memory retrieval latency (ms)
+    pub working_memory_latency_ms: f64,
+    /// Database retrieval latency (ms)
+    pub database_latency_ms: f64,
+    /// Archive retrieval latency (ms)
+    pub archive_latency_ms: f64,
+    /// Average retrieval latency (ms)
+    pub avg_retrieval_latency_ms: f64,
+}
+
+/// Access pattern metrics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccessPatternMetrics {
+    /// Hot contexts (frequently accessed)
+    pub hot_contexts: Vec<Uuid>,
+    /// Cold contexts (rarely accessed)
+    pub cold_contexts: Vec<Uuid>,
+    /// Access frequency distribution
+    pub access_frequency_distribution: HashMap<String, u64>,
+    /// Predictive prefetch accuracy
+    pub prefetch_accuracy: f64,
+}
+
+/// Context health metrics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextHealthMetrics {
+    /// Orphaned contexts count
+    pub orphaned_contexts: u64,
+    /// Storage usage trend (bytes/hour)
+    pub storage_usage_trend: f64,
+    /// Storage limit proximity (0.0-1.0)
+    pub storage_limit_proximity: f64,
+    /// Health alerts
+    pub health_alerts: Vec<HealthAlert>,
+}
+
+/// Health alert
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HealthAlert {
+    /// Alert type
+    pub alert_type: HealthAlertType,
+    /// Alert message
+    pub message: String,
+    /// Alert severity
+    pub severity: AlertSeverity,
+    /// Alert timestamp
+    pub timestamp: DateTime<Utc>,
+}
+
+/// Health alert types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum HealthAlertType {
+    /// Storage limit approaching
+    StorageLimitApproaching,
+    /// Orphaned contexts detected
+    OrphanedContexts,
+    /// Performance degradation
+    PerformanceDegradation,
+    /// Access pattern anomaly
+    AccessPatternAnomaly,
+}
+
+/// Alert severity levels
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AlertSeverity {
+    /// Low severity
+    Low,
+    /// Medium severity
+    Medium,
+    /// High severity
+    High,
+    /// Critical severity
+    Critical,
+}
+
+impl Default for ContextLifecycleMetrics {
     fn default() -> Self {
         Self {
-            compression_level: Some(6),
-            max_summary_length: Some(1000),
-            archive_location: None,
+            folding_frequency: HashMap::new(),
+            storage_efficiency: StorageEfficiencyMetrics::default(),
+            retrieval_latency: RetrievalLatencyMetrics::default(),
+            access_patterns: AccessPatternMetrics::default(),
+            health_metrics: ContextHealthMetrics::default(),
+        }
+    }
+}
+
+impl Default for StorageEfficiencyMetrics {
+    fn default() -> Self {
+        Self {
+            avg_compression_ratio: 1.0,
+            storage_savings_bytes: 0,
+            compression_by_strategy: HashMap::new(),
+        }
+    }
+}
+
+impl Default for RetrievalLatencyMetrics {
+    fn default() -> Self {
+        Self {
+            working_memory_latency_ms: 0.0,
+            database_latency_ms: 0.0,
+            archive_latency_ms: 0.0,
+            avg_retrieval_latency_ms: 0.0,
+        }
+    }
+}
+
+impl Default for AccessPatternMetrics {
+    fn default() -> Self {
+        Self {
+            hot_contexts: Vec::new(),
+            cold_contexts: Vec::new(),
+            access_frequency_distribution: HashMap::new(),
+            prefetch_accuracy: 0.0,
+        }
+    }
+}
+
+impl Default for ContextHealthMetrics {
+    fn default() -> Self {
+        Self {
+            orphaned_contexts: 0,
+            storage_usage_trend: 0.0,
+            storage_limit_proximity: 0.0,
+            health_alerts: Vec::new(),
         }
     }
 }

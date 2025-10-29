@@ -3,7 +3,8 @@
 
 use crate::memory_types::*;
 use crate::MemoryResult;
-use data_infrastructure::{DatabaseClient, DatabaseConfig, Row};
+use sqlx::{PgPool, Row};
+use sqlx::postgres::PgRow;
 use std::sync::Arc;
 use regex::Regex;
 use chrono::{DateTime, Utc};
@@ -223,7 +224,7 @@ pub struct ExtractedRelationship {
 /// Knowledge Graph Engine for entity and relationship management
 #[derive(Debug)]
 pub struct KnowledgeGraphEngine {
-    db_client: Arc<DatabaseClient>,
+    db_pool: Arc<PgPool>,
     config: GraphConfig,
     entity_cache: dashmap::DashMap<String, Entity>,
     relationship_cache: dashmap::DashMap<String, Relationship>,
@@ -233,8 +234,16 @@ pub struct KnowledgeGraphEngine {
 impl KnowledgeGraphEngine {
     /// Create a new knowledge graph engine
     pub async fn new(config: &GraphConfig) -> MemoryResult<Self> {
-        let db_config = data_infrastructure::DatabaseConfig::default();
-        let db_client = Arc::new(DatabaseClient::new(db_config).await?);
+        // Get database URL from environment
+        let database_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgresql://localhost/agent_agency_v3".to_string());
+
+        // Create direct database connection pool
+        let db_pool = Arc::new(
+            PgPool::connect(&database_url)
+                .await
+                .context("Failed to connect to database for knowledge graph")?
+        );
 
         // Get entity extraction service URL from environment or use default
         let extraction_url = std::env::var("ENTITY_EXTRACTION_SERVICE_URL")
@@ -471,7 +480,7 @@ impl KnowledgeGraphEngine {
             "SELECT id FROM knowledge_graph_entities WHERE id = $1",
         )
         .bind(&entity.id)
-        .fetch_optional(self.db_client.pool())
+        .fetch_optional(&*self.db_pool)
         .await?;
 
         if existing.is_some() {
@@ -493,7 +502,7 @@ impl KnowledgeGraphEngine {
             .bind(entity.confidence)
             .bind(entity.updated_at)
             .bind(&entity.source_memories.iter().map(|id| id.to_string()).collect::<Vec<_>>())
-            .execute(self.db_client.pool())
+            .execute(&*self.db_pool)
             .await?;
         } else {
             // Insert new entity
@@ -515,7 +524,7 @@ impl KnowledgeGraphEngine {
             .bind(entity.created_at)
             .bind(entity.updated_at)
             .bind(&entity.source_memories.iter().map(|id| id.to_string()).collect::<Vec<_>>())
-            .execute(self.db_client.pool())
+            .execute(&*self.db_pool)
             .await?;
         }
 
@@ -534,7 +543,7 @@ impl KnowledgeGraphEngine {
             "SELECT id FROM knowledge_graph_relationships WHERE id = $1",
         )
         .bind(&relationship_id)
-        .fetch_optional(self.db_client.pool())
+        .fetch_optional(&*self.db_pool)
         .await?;
 
         if existing.is_some() {
@@ -552,7 +561,7 @@ impl KnowledgeGraphEngine {
             .bind(relationship.confidence)
             .bind(relationship.updated_at)
             .bind(&relationship.source_memories.iter().map(|id| id.to_string()).collect::<Vec<_>>())
-            .execute(self.db_client.pool())
+            .execute(&*self.db_pool)
             .await?;
         } else {
             // Insert new relationship
@@ -575,7 +584,7 @@ impl KnowledgeGraphEngine {
             .bind(relationship.created_at)
             .bind(relationship.updated_at)
             .bind(&relationship.source_memories.iter().map(|id| id.to_string()).collect::<Vec<_>>())
-            .execute(self.db_client.pool())
+            .execute(&*self.db_pool)
             .await?;
         }
 
@@ -602,7 +611,7 @@ impl KnowledgeGraphEngine {
         .bind(EntityType::Task as i32)
         .bind(&context.task_type)
         .bind(limit as i32)
-        .fetch_all(self.db_client.pool())
+        .fetch_all(&*self.db_pool)
         .await?;
 
         for row in similar_tasks {
@@ -619,7 +628,7 @@ impl KnowledgeGraphEngine {
             )
             .bind(&entity_id)
             .bind(RelationshipType::Performs as i32)
-            .fetch_all(self.db_client.pool())
+            .fetch_all(&*self.db_pool)
             .await?;
 
             for memory_row in memories {
@@ -713,7 +722,7 @@ impl KnowledgeGraphEngine {
                 "#,
             )
             .bind(current_entity)
-            .fetch_all(self.db_client.pool())
+            .fetch_all(&*self.db_pool)
             .await?;
 
             for row in related {
@@ -741,11 +750,11 @@ impl KnowledgeGraphEngine {
     /// Get graph statistics
     pub async fn get_graph_stats(&self) -> MemoryResult<GraphStats> {
         let entity_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM knowledge_graph_entities")
-            .fetch_one(self.db_client.pool())
+            .fetch_one(&*self.db_pool)
             .await?;
 
         let relationship_count = sqlx::query_scalar("SELECT COUNT(*) FROM knowledge_graph_relationships")
-            .fetch_one(self.db_client.pool())
+            .fetch_one(&*self.db_pool)
             .await?;
 
         Ok(GraphStats {

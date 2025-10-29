@@ -35,6 +35,10 @@ For an example on how to improve the clarity of the TODOs that were found, see t
     //    - Implement ANE monitoring and reporting
 ```
 
+The analyzer now includes engineering-grade TODO format suggestions. Use --engineering-suggestions to get
+recommendations for upgrading TODOs to the CAWS-compliant format with completion checklists, acceptance
+criteria, dependencies, and governance information.
+
 @author: @darianrosebrook
 @date: 2025-10-17
 @version: 2.0.0
@@ -450,6 +454,65 @@ class HiddenTodoAnalyzer:
             r'console\.(log|warn|error|info)',
             r'\blogging\s+implementation\b',
         ]
+
+        # Engineering-grade TODO template patterns (for suggestions)
+        self.engineering_grade_patterns = {
+            'completion_checklist': [
+                r'COMPLETION CHECKLIST:',
+                r'COMPLETION CRITERIA:',
+                r'CHECKLIST:',
+                r'\[ \]',
+                r'\[x\]',
+            ],
+            'acceptance_criteria': [
+                r'ACCEPTANCE CRITERIA:',
+                r'ACCEPTANCE:',
+                r'CRITERIA:',
+                r'REQUIREMENTS:',
+            ],
+            'dependencies': [
+                r'DEPENDENCIES:',
+                r'DEPENDS ON:',
+                r'REQUIRES:',
+                r'BLOCKED BY:',
+            ],
+            'governance': [
+                r'CAWS TIER:',
+                r'TIER:',
+                r'PRIORITY:',
+                r'BLOCKING:',
+                r'ESTIMATED EFFORT:',
+                r'EFFORT:',
+                r'GOVERNANCE:',
+            ],
+            'structured_format': [
+                r'// TODO:.*?\n.*?//\s*COMPLETION',
+                r'// TODO:.*?\n.*?//\s*ACCEPTANCE',
+                r'// TODO:.*?\n.*?//\s*DEPENDENCIES',
+            ]
+        }
+
+        # Patterns that suggest a TODO needs engineering-grade format
+        self.needs_engineering_format_patterns = {
+            'vague_todos': [
+                r'\bTODO\b.*?(implement|add|fix|complete|do)\b.*?$',
+                r'\bFIXME\b.*?(implement|add|fix|complete|do)\b.*?$',
+                r'\bHACK\b.*?(implement|add|fix|complete|do)\b.*?$',
+            ],
+            'missing_structure': [
+                r'\bTODO\b.*?(?!.*COMPLETION CHECKLIST)(?!.*ACCEPTANCE CRITERIA)(?!.*DEPENDENCIES).*$',
+                r'\bFIXME\b.*?(?!.*COMPLETION CHECKLIST)(?!.*ACCEPTANCE CRITERIA)(?!.*DEPENDENCIES).*$',
+            ],
+            'single_line_todos': [
+                r'^\s*//\s*TODO\b.*?$',
+                r'^\s*#\s*TODO\b.*?$',
+            ],
+            'business_critical': [
+                r'\bTODO\b.*?(auth|security|payment|billing|database|persist|save|store)\b',
+                r'\bTODO\b.*?(critical|important|essential|required|must)\b',
+                r'\bFIXME\b.*?(auth|security|payment|billing|database|persist|save|store)\b',
+            ]
+        }
 
         # Context clues that suggest documentation rather than TODO
         self.documentation_indicators = [
@@ -958,6 +1021,139 @@ class HiddenTodoAnalyzer:
             'context_score': context_score
         }
 
+    def analyze_engineering_grade_suggestions(self, comment: str, line_num: int, file_path: Path) -> Dict[str, Any]:
+        """Analyze a TODO comment to suggest engineering-grade format improvements."""
+        normalized = comment.strip()
+        if not normalized:
+            return {}
+
+        # Only analyze explicit TODOs
+        if not re.search(r'\b(TODO|FIXME|HACK)\b', normalized, re.IGNORECASE):
+            return {}
+
+        suggestions = {
+            'needs_engineering_format': False,
+            'missing_elements': [],
+            'suggested_tier': None,
+            'priority_level': 'Medium',
+            'template_suggestion': None,
+            'confidence': 0.0
+        }
+
+        # Check if already has engineering-grade structure
+        has_structure = False
+        for category, patterns in self.engineering_grade_patterns.items():
+            for pattern in patterns:
+                if re.search(pattern, normalized, re.IGNORECASE):
+                    has_structure = True
+                    break
+            if has_structure:
+                break
+
+        if not has_structure:
+            suggestions['needs_engineering_format'] = True
+            suggestions['confidence'] = 0.8
+
+            # Check what's missing
+            missing_elements = []
+            
+            # Check for completion checklist
+            if not any(re.search(pattern, normalized, re.IGNORECASE) for pattern in self.engineering_grade_patterns['completion_checklist']):
+                missing_elements.append('completion_checklist')
+            
+            # Check for acceptance criteria
+            if not any(re.search(pattern, normalized, re.IGNORECASE) for pattern in self.engineering_grade_patterns['acceptance_criteria']):
+                missing_elements.append('acceptance_criteria')
+            
+            # Check for dependencies
+            if not any(re.search(pattern, normalized, re.IGNORECASE) for pattern in self.engineering_grade_patterns['dependencies']):
+                missing_elements.append('dependencies')
+            
+            # Check for governance info
+            if not any(re.search(pattern, normalized, re.IGNORECASE) for pattern in self.engineering_grade_patterns['governance']):
+                missing_elements.append('governance')
+
+            suggestions['missing_elements'] = missing_elements
+
+            # Determine suggested CAWS tier based on content
+            if any(re.search(pattern, normalized, re.IGNORECASE) for pattern in self.needs_engineering_format_patterns['business_critical']):
+                suggestions['suggested_tier'] = 1
+                suggestions['priority_level'] = 'Critical'
+                suggestions['confidence'] = 0.9
+            elif any(re.search(pattern, normalized, re.IGNORECASE) for pattern in self.needs_engineering_format_patterns['vague_todos']):
+                suggestions['suggested_tier'] = 2
+                suggestions['priority_level'] = 'High'
+                suggestions['confidence'] = 0.7
+            else:
+                suggestions['suggested_tier'] = 3
+                suggestions['priority_level'] = 'Medium'
+                suggestions['confidence'] = 0.6
+
+            # Generate template suggestion
+            suggestions['template_suggestion'] = self._generate_template_suggestion(normalized, suggestions, file_path)
+
+        return suggestions
+
+    def _generate_template_suggestion(self, todo_text: str, suggestions: Dict[str, Any], file_path: Path) -> str:
+        """Generate a suggested engineering-grade TODO template based on the original TODO."""
+        # Extract the main TODO description
+        todo_match = re.search(r'\b(TODO|FIXME|HACK)\b[:\s]*(.*?)$', todo_text, re.IGNORECASE)
+        if not todo_match:
+            return ""
+        
+        todo_type = todo_match.group(1).upper()
+        description = todo_match.group(2).strip()
+        
+        # Determine language-specific comment prefix
+        language = self.detect_language(file_path)
+        if language in ['rust', 'javascript', 'typescript', 'go', 'java', 'csharp', 'cpp', 'c']:
+            comment_prefix = "//"
+        elif language in ['python', 'ruby', 'shell', 'yaml']:
+            comment_prefix = "#"
+        else:
+            comment_prefix = "//"
+
+        tier = suggestions.get('suggested_tier', 2)
+        priority = suggestions.get('priority_level', 'Medium')
+        
+        template = f"""{comment_prefix} {todo_type}: {description}
+{comment_prefix}       <One-sentence context & why this exists>
+{comment_prefix}
+{comment_prefix} COMPLETION CHECKLIST:
+{comment_prefix} [ ] Primary functionality implemented
+{comment_prefix} [ ] API/data structures defined & stable
+{comment_prefix} [ ] Error handling + validation aligned with error taxonomy
+{comment_prefix} [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+{comment_prefix} [ ] Integration tests for external systems/contracts
+{comment_prefix} [ ] Documentation: public API + system behavior
+{comment_prefix} [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+{comment_prefix} [ ] Security posture reviewed (inputs, authz, sandboxing)
+{comment_prefix} [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+{comment_prefix} [ ] Configurability and feature flags defined if relevant
+{comment_prefix} [ ] Failure-mode cards documented (degradation paths)
+{comment_prefix}
+{comment_prefix} ACCEPTANCE CRITERIA:
+{comment_prefix} - <User-facing measurable behavior>
+{comment_prefix} - <Invariant or schema contract requirements>
+{comment_prefix} - <Performance/statistical bounds>
+{comment_prefix} - <Interoperation requirements or protocol contract>
+{comment_prefix}
+{comment_prefix} DEPENDENCIES:
+{comment_prefix} - <System or feature this relies on> (Required/Optional)
+{comment_prefix} - <Interop/contract references>
+{comment_prefix} - File path(s)/module links to dependent code
+{comment_prefix}
+{comment_prefix} ESTIMATED EFFORT: <Number + confidence range>
+{comment_prefix} PRIORITY: {priority}
+{comment_prefix} BLOCKING: {{Yes/No}} – If Yes: explicitly list what it blocks
+{comment_prefix}
+{comment_prefix} GOVERNANCE:
+{comment_prefix} - CAWS Tier: {tier} (impacts rigor, provenance, review policy)
+{comment_prefix} - Change Budget: <LOC or file count> (if relevant)
+{comment_prefix} - Reviewer Requirements: <Roles or domain expertise>"""
+
+        return template
+
     def analyze_file(self, file_path: Path) -> Dict:
         """Analyze a single file for hidden TODO patterns."""
         language = self.detect_language(file_path)
@@ -986,15 +1182,22 @@ class HiddenTodoAnalyzer:
 
         for line_num, comment in comments:
             analysis = self.analyze_comment(comment, line_num, file_path)
+            engineering_suggestions = self.analyze_engineering_grade_suggestions(comment, line_num, file_path)
 
             if analysis and analysis['matches']:
-                file_analysis['hidden_todos'][line_num] = {
+                todo_data = {
                     'comment': comment,
                     'matches': analysis['matches'],
                     'confidence_score': analysis['confidence_score'],
                     'confidence_breakdown': analysis['confidence_breakdown'],
                     'context_score': analysis['context_score']
                 }
+                
+                # Add engineering-grade suggestions if available
+                if engineering_suggestions and engineering_suggestions.get('needs_engineering_format'):
+                    todo_data['engineering_suggestions'] = engineering_suggestions
+                
+                file_analysis['hidden_todos'][line_num] = todo_data
 
             # Store all comments for analysis
             file_analysis['all_comments'].append({
@@ -1264,9 +1467,12 @@ class HiddenTodoAnalyzer:
                         for pattern in data.get('matches', []):
                             all_results['patterns'][pattern].append({
                                 'file': str(file_path),
+                                'language': file_analysis['language'],
                                 'line': line_num,
-                                'confidence': data['confidence_score'],
-                                'text': data['comment']
+                                'comment': data['comment'],
+                                'patterns': [pattern],
+                                'confidence_score': data['confidence_score'],
+                                'context_score': data.get('context_score', 0.0)
                             })
 
         # Finalize pattern counts
@@ -1552,14 +1758,52 @@ class HiddenTodoAnalyzer:
                 report.append(f"- `{file_path}` ({language}): {count} high-confidence TODOs")
             report.append("")
 
+        # Engineering-grade TODO suggestions
+        engineering_suggestions = []
+        for file_path, file_data in results['files'].items():
+            for line_num, todo_data in file_data['hidden_todos'].items():
+                if 'engineering_suggestions' in todo_data:
+                    suggestions = todo_data['engineering_suggestions']
+                    if suggestions.get('needs_engineering_format'):
+                        engineering_suggestions.append({
+                            'file': file_path,
+                            'line': line_num,
+                            'language': file_data['language'],
+                            'original_comment': todo_data['comment'],
+                            'suggestions': suggestions
+                        })
+
+        if engineering_suggestions:
+            report.append("## Engineering-Grade TODO Suggestions")
+            report.append("")
+            report.append("The following TODOs should be upgraded to the engineering-grade format:")
+            report.append("")
+            
+            for suggestion in engineering_suggestions[:10]:  # Limit to top 10
+                report.append(f"### `{suggestion['file']}:{suggestion['line']}` ({suggestion['language']})")
+                report.append(f"**Original:** {suggestion['original_comment'][:100]}...")
+                report.append(f"**Suggested Tier:** {suggestion['suggestions']['suggested_tier']}")
+                report.append(f"**Priority:** {suggestion['suggestions']['priority_level']}")
+                report.append(f"**Missing Elements:** {', '.join(suggestion['suggestions']['missing_elements'])}")
+                report.append("")
+                report.append("**Suggested Template:**")
+                report.append("```")
+                report.append(suggestion['suggestions']['template_suggestion'])
+                report.append("```")
+                report.append("")
+            
+            if len(engineering_suggestions) > 10:
+                report.append(f"... and {len(engineering_suggestions) - 10} more TODOs need engineering-grade format")
+                report.append("")
+
         # Pattern categories with confidence scores
         if results['patterns']:
             report.append("## Pattern Categories by Confidence")
             for category, items in results['patterns'].items():
                 if items:
-                    high_conf_items = [item for item in items if item['confidence_score'] >= 0.9]
-                    medium_conf_items = [item for item in items if 0.6 <= item['confidence_score'] < 0.9]
-                    low_conf_items = [item for item in items if item['confidence_score'] < 0.6]
+                    high_conf_items = [item for item in items if 'confidence_score' in item and item['confidence_score'] >= 0.9]
+                    medium_conf_items = [item for item in items if 'confidence_score' in item and 0.6 <= item['confidence_score'] < 0.9]
+                    low_conf_items = [item for item in items if 'confidence_score' in item and item['confidence_score'] < 0.6]
                     
                     if high_conf_items or medium_conf_items:
                         report.append(f"### {category.replace('_', ' ').title()} ({len(items)} items)")
@@ -1621,6 +1865,8 @@ def main():
                         action='store_true', help='Only analyze staged files with dependency resolution')
     parser.add_argument('--disable-dependency-resolution',
                         action='store_true', help='Disable dependency resolution for staged files')
+    parser.add_argument('--engineering-suggestions',
+                        action='store_true', help='Include engineering-grade TODO format suggestions')
 
     args = parser.parse_args()
 

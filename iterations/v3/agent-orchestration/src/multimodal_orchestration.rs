@@ -185,6 +185,7 @@ pub enum ProcessingPriority {
     Critical,
 }
 
+#[derive(Debug, PartialEq)]
 pub enum ContentType {
     Text,
     Image,
@@ -990,7 +991,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_orchestrator_creation() {
-        let orchestrator = MultimodalOrchestrator::new();
+        let orchestrator = MultimodalOrchestrator::new().await.unwrap();
         let stats = orchestrator.get_processing_stats().await.unwrap();
         
         assert_eq!(stats.total_documents_processed, 0);

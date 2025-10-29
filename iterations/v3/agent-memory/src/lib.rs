@@ -166,11 +166,16 @@ impl MemorySystem {
     /// Initialize the complete memory system
     pub async fn init(config: MemoryConfig) -> MemoryResult<Self> {
         // Create workspace registry first
-        let db_config = data_infrastructure::DatabaseConfig::default();
-        let db_client = Arc::new(data_infrastructure::DatabaseClient::new(db_config).await?);
+        let database_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgresql://localhost/agent_agency_v3".to_string());
+        let db_pool = Arc::new(
+            sqlx::PgPool::connect(&database_url)
+                .await
+                .context("Failed to connect to database for memory system")?
+        );
         let workspace_registry = Arc::new(workspace_registry::WorkspaceRegistry::new(
             config.workspace_config.access_config.clone(),
-            db_client,
+            db_pool,
         ));
         workspace_registry.initialize().await?;
 
@@ -188,7 +193,7 @@ impl MemorySystem {
             &config.decay_config,
             Arc::clone(&workspace_registry)
         ).await?;
-        let context_manager = MemoryContextManager::new(&config.context_config).await?;
+        let context_manager = MemoryContextManager::new(config.context_config.clone()).await?;
 
         Ok(Self {
             manager,

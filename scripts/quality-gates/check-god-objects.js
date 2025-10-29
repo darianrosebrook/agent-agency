@@ -10,6 +10,10 @@
 import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
+import {
+  processViolations,
+  getEnforcementLevel,
+} from "./shared-exception-framework.js";
 
 const V3_PATH = path.join(process.cwd(), "iterations", "v3");
 
@@ -103,52 +107,56 @@ function getFileSizes() {
 }
 
 // Check for god objects
-function checkGodObjects() {
+function checkGodObjects(context = "commit") {
   // Ensure files are collected first
   if (RUST_FILES.length === 0) {
     collectStagedRustFiles();
   }
 
-  const violations = [];
+  const rawViolations = [];
   const fileSizes = getFileSizes();
 
   for (const [filePath, size] of Object.entries(fileSizes)) {
     const relativePath = path.relative(V3_PATH, filePath);
 
     if (size >= GOD_OBJECT_THRESHOLDS.severe) {
-      violations.push({
+      rawViolations.push({
         type: "severe_god_object",
         file: filePath,
         relativePath,
         size,
         threshold: GOD_OBJECT_THRESHOLDS.severe,
-        severity: "block",
         message: `SEVERE god object: ${size} LOC exceeds ${GOD_OBJECT_THRESHOLDS.severe} LOC limit`,
       });
     } else if (size >= GOD_OBJECT_THRESHOLDS.critical) {
-      violations.push({
+      rawViolations.push({
         type: "critical_god_object",
         file: filePath,
         relativePath,
         size,
         threshold: GOD_OBJECT_THRESHOLDS.critical,
-        severity: "block",
         message: `CRITICAL god object: ${size} LOC exceeds ${GOD_OBJECT_THRESHOLDS.critical} LOC limit`,
       });
     } else if (size >= GOD_OBJECT_THRESHOLDS.warning) {
-      violations.push({
+      rawViolations.push({
         type: "warning_god_object",
         file: filePath,
         relativePath,
         size,
         threshold: GOD_OBJECT_THRESHOLDS.warning,
-        severity: "warn",
         message: `WARNING: ${size} LOC approaches god object territory (${GOD_OBJECT_THRESHOLDS.warning}+ LOC)`,
       });
     }
   }
 
-  return violations;
+  // Process violations with exception handling
+  const result = processViolations("god_objects", rawViolations, context);
+
+  return {
+    violations: result.violations,
+    warnings: result.warnings,
+    enforcementLevel: result.enforcementLevel,
+  };
 }
 
 // Check for new god objects (regression)

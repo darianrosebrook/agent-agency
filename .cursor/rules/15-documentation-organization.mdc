@@ -1,8 +1,8 @@
 ---
-description: Prevent documentation bloat by enforcing proper organization of temporary files, session reports, and implementation tracking documents. Maintain clean project structure by ensuring documentation follows established patterns.
+description: Maintain clean architectural documentation by separating temporal project management docs from core system documentation. Focus on focused commits over summary documents.
 globs: [
   "docs/**/*.md",
-  "docs/**/*.txt",
+  "docs/**/*.txt", 
   "docs/**/*.json",
   "docs/**/*.yaml",
   "docs/**/*.yml",
@@ -11,142 +11,167 @@ globs: [
 ]
 alwaysApply: true
 ---
-# Documentation Organization & Summary Bloat Prevention
+# Documentation Organization & Architectural Focus
 
-## Purpose
+## Core Principle
 
-Prevent documentation bloat by enforcing proper organization of temporary files, session reports, and implementation tracking documents. Maintain clean project structure by ensuring documentation follows established patterns.
+**Focus on architectural documentation over temporal summaries.** The `/docs` folder contains only maintainable, architectural documentation that defines the system's design and contracts. Project management documentation belongs in `docs-status/` (git-ignored).
 
-## Core Principles
+## Documentation Hierarchy
 
-### 📁 Documentation Hierarchy
+### ✅ Core Documentation (`docs/`)
 
-**Root Directory** - Essential project files only:
-- `README.md` - Main project overview and setup
-- `CHANGELOG.md` - Version history and release notes
-- `agents.md` - Core agent system documentation
-- Configuration files (package.json, Cargo.toml, etc.)
-
-**Documentation Directory** (`docs/`) - Active project documentation:
-- Architecture documents (`README.md`, component docs)
-- API documentation
+**Architectural Documentation Only:**
+- System design and architecture
+- API contracts and interfaces  
+- Component specifications
+- Integration patterns
+- Deployment architecture
 - User guides and tutorials
-- Active development documentation
 
-**Archive Directory** (`docs/archive/`) - Historical and reference materials:
-- Session summaries and progress reports
-- Implementation tracking documents
-- Completed project phases
-- Historical assessments and audits
+**Examples:**
+- `agent-agency.md` - Core system architecture
+- `api/` - API documentation and contracts
+- `components/` - Component specifications
+- `deployment/` - Infrastructure documentation
 
-### 🚫 Prohibited Documentation Patterns
+### ✅ Project Management (`docs-status/`)
 
-**Never create these in root or active directories:**
-- `SESSION_*_SUMMARY.md` - Session reports
-- `IMPLEMENTATION_STATUS.md` - Progress tracking
-- `TODO_*_COMPLETE.md` - Task completion reports
-- `*_SUMMARY.md` - Generic summary files
-- `*_REPORT.md` - Status reports
+**Temporal Documentation (Git-Ignored):**
+- Implementation progress tracking
+- Status reports and checklists
+- Session summaries and roadmaps
+- Development milestones
+- Audit reports and assessments
+
+**Examples:**
+- `IMPLEMENTATION_STATUS.md`
+- `SESSION_COMPLETION_SUMMARY.md`
+- `DEVELOPMENT_ROADMAP.md`
+- `AUDIT_REPORTS/`
+
+### 🚫 Prohibited in Core Documentation
+
+**Never create these in `/docs` or root:**
+- `*_SUMMARY.md` - Session or progress summaries
+- `*_STATUS.md` - Implementation status reports
+- `*_ROADMAP.md` - Development roadmaps
+- `*_CHECKLIST.md` - Task checklists
+- `*_PROGRESS.md` - Progress tracking
 - `*_AUDIT.md` - Audit documents
-- `*_CHECKLIST.md` - Checklist documents
-- `PHASE*_*.md` - Phase tracking documents
-- `NEXT_ACTIONS.md` - Action item lists
+- `*_REPORT.md` - Status reports
+- `SESSION_*.md` - Session documentation
+- `IMPLEMENTATION_*.md` - Implementation tracking
 
-### ✅ Approved Documentation Locations
+## Workflow: Focused Commits Over Summaries
 
-| Document Type | Location | Examples |
-|---------------|----------|----------|
-| **Session Reports** | `docs/archive/session-reports/` | `EXTENDED_SESSION_SUMMARY.md`, `SESSION_COMPLETION_SUMMARY.md` |
-| **Implementation Tracking** | `docs/archive/implementation-tracking/` | `IMPLEMENTATION_STATUS.md`, `DEPLOYMENT_READINESS.md` |
-| **Project Assessments** | `docs/archive/implementation-tracking/` | `EXECUTIVE_BRIEFING.md`, `SECURITY_HARDENING_AUDIT.md` |
-| **Multi-Project Docs** | `docs/archive/multimodal-rag/` | `MULTIMODAL_RAG_*.md` |
-| **Core Documentation** | `docs/` | `agent-agency.md`, component READMEs |
-| **Version History** | Root | `CHANGELOG.md` |
+### ✅ Preferred Approach
 
-### 🔧 Enforcement Rules
+**Instead of summary documents, use:**
+- **Focused commits** with clear, descriptive messages
+- **PR descriptions** that explain the change and its impact
+- **Commit history** as the primary record of progress
+- **Architectural documentation** that explains the system design
 
-**File Creation Restrictions:**
-- Summary files must use `docs/archive/session-reports/` prefix
-- Implementation tracking must use `docs/archive/implementation-tracking/` prefix
-- Audit documents must use `docs/archive/implementation-tracking/` prefix
-- Project-specific docs must use appropriate `docs/archive/` subdirectory
+### ✅ When Documentation is Required
 
-**Naming Conventions:**
-- Session reports: `SESSION_*_SUMMARY.md` or `*_SESSION_*.md`
-- Implementation tracking: `*_STATUS.md`, `*_READINESS.md`, `*_CHECKLIST.md`
-- Assessments: `*_BRIEFING.md`, `*_AUDIT.md`, `*_ASSESSMENT.md`
+**Create architectural docs for:**
+- New system components or APIs
+- Integration patterns and contracts
+- Deployment and infrastructure changes
+- User-facing features and guides
 
-### 📝 Documentation Workflow
+**Create project management docs in `docs-status/` for:**
+- Complex multi-session work tracking
+- External stakeholder reporting
+- Compliance and audit requirements
 
-**Before creating new documentation:**
+## Enforcement Rules
 
-1. **Determine document type:**
-   - Session summary? → `docs/archive/session-reports/`
-   - Implementation status? → `docs/archive/implementation-tracking/`
-   - Project assessment? → `docs/archive/implementation-tracking/`
-   - Core documentation? → `docs/`
+### File Creation Guidelines
 
-2. **Check existing structure:**
-   - Use established naming patterns
-   - Follow existing organization in archive directories
+**Before creating any documentation:**
 
-3. **Consider permanence:**
-   - Temporary tracking? → Archive location
-   - Permanent documentation? → `docs/` location
+1. **Ask: "Is this architectural or temporal?"**
+   - Architectural → `docs/`
+   - Temporal/Project Management → `docs-status/`
 
-### 🚨 Violation Consequences
+2. **Ask: "Will this be useful to future maintainers?"**
+   - Yes → Core documentation
+   - No → Project management docs
 
-**Automatic Prevention:**
-- IDE should warn when creating files in inappropriate locations
-- Pre-commit hooks should block commits of summary files to root directories
-- Documentation lints should flag misplaced files
+3. **Ask: "Does this document system design or implementation progress?"**
+   - System design → `docs/`
+   - Implementation progress → `docs-status/`
 
-**Manual Correction:**
-- Move misplaced files to appropriate archive locations
-- Update file references in related documentation
-- Clean up duplicate or redundant documentation
+### Automatic Detection
 
-### 📋 Maintenance Guidelines
+**Pre-commit hooks will flag:**
+- Files matching temporal patterns in `/docs`
+- Summary documents in root directory
+- Status reports outside `docs-status/`
 
-**Regular Cleanup:**
-- Review `docs/archive/` quarterly for outdated content
-- Archive completed implementation tracking to compressed storage
-- Maintain clear separation between active and historical documentation
+**Manual cleanup required for:**
+- Misplaced temporal documentation
+- Outdated summary documents
+- Redundant progress tracking
 
-**Documentation Standards:**
-- Use consistent naming across similar document types
-- Include creation date and author in archived documents
-- Maintain links between related documents in different categories
+## Quality Gates
 
-### 🎯 Quality Gates
+### Documentation Review Checklist
 
-**Documentation Quality Checklist:**
-- [ ] Document type matches intended location
-- [ ] Naming follows established patterns
-- [ ] Content is appropriately scoped (not too broad/narrow)
-- [ ] References to other documents are accurate
-- [ ] Document provides unique value (not redundant)
+- [ ] Document serves architectural purpose (not temporal tracking)
+- [ ] Content is useful to future maintainers
+- [ ] No redundant information with commit history
+- [ ] Follows established naming conventions
+- [ ] Located in appropriate directory
 
-**Archive Organization Checklist:**
-- [ ] Files are in correct category subdirectory
-- [ ] Related files are grouped together
-- [ ] Archive structure is logical and discoverable
-- [ ] Historical documents are properly dated
+### Violation Response
 
-### 📚 Examples
+**For misplaced temporal docs:**
+1. Move to `docs-status/` directory
+2. Update any references
+3. Commit the reorganization
+4. Document the correct location pattern
 
-**✅ Correct Placement:**
+**For redundant summaries:**
+1. Delete the summary document
+2. Ensure commit history is clear
+3. Use PR descriptions for context
+4. Focus on architectural documentation
+
+## Examples
+
+### ✅ Correct: Architectural Documentation
+
 ```
-docs/archive/session-reports/SESSION_COMPLETION_SUMMARY.md
-docs/archive/implementation-tracking/IMPLEMENTATION_STATUS.md
-docs/archive/multimodal-rag/MULTIMODAL_RAG_FINAL_REPORT.md
-```
-
-**❌ Incorrect Placement:**
-```
-SESSION_COMPLETION_SUMMARY.md (in root)
-IMPLEMENTATION_STATUS.md (in root)
-docs/MULTIMODAL_RAG_FINAL_REPORT.md (should be in archive)
+docs/
+├── agent-agency.md          # Core system architecture
+├── api/
+│   └── contracts.md         # API specifications
+├── components/
+│   └── orchestrator.md      # Component design
+└── deployment/
+    └── infrastructure.md    # Deployment architecture
 ```
 
-This rule ensures the project maintains a clean, organized documentation structure that separates essential project information from temporary tracking and historical records.
+### ✅ Correct: Project Management Documentation
+
+```
+docs-status/
+├── IMPLEMENTATION_STATUS.md     # Progress tracking
+├── SESSION_COMPLETION_SUMMARY.md # Session reports
+├── DEVELOPMENT_ROADMAP.md        # Planning documents
+└── AUDIT_REPORTS/               # Compliance docs
+```
+
+### ❌ Incorrect: Temporal Docs in Core
+
+```
+docs/
+├── SESSION_SUMMARY.md           # Should be in docs-status/
+├── IMPLEMENTATION_PROGRESS.md   # Should be in docs-status/
+└── TODO_COMPLETION_REPORT.md    # Should be in docs-status/
+```
+
+This rule ensures maintainers can focus on core architecture without being distracted by temporal status reports, while project management documentation remains available in the git-ignored `docs-status/` directory.

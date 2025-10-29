@@ -6,11 +6,14 @@ This directory contains modular rule files that Cursor uses to guide development
 
 ### Always Applied (Core Governance)
 
-- `01-claims-verification.mdc` - Production readiness claims require verification
+- `00-claims-verification.mdc` - Production readiness claims require verification
 - `02-testing-standards.mdc` - Comprehensive testing standards and verification
 - `03-infrastructure-standards.mdc` - Infrastructure, deployment, and operational standards
 - `04-documentation-integrity.mdc` - Documentation must match implementation reality
 - `05-production-readiness-checklist.mdc` - Quick reference checklist for production readiness
+- `17-scope-management-waivers.mdc` - Scope management, change budgets, and emergency waiver procedures
+- `18-implementation-completeness.mdc` - Anti-fake implementation guardrails and completeness verification
+- `19-language-agnostic-standards.mdc` - Universal engineering standards across all programming languages
 
 ## How MDC Works
 
@@ -36,6 +39,25 @@ These rules enforce CAWS quality tiers:
 | 🔴 **T1** | 90%+     | 70%+     | Auth, billing, migrations   |
 | 🟡 **T2** | 80%+     | 50%+     | Features, APIs, data writes |
 | 🟢 **T3** | 70%+     | 30%+     | UI, internal tools          |
+
+## Comprehensive Coverage Areas
+
+### Core Engineering Standards
+- **Production Readiness**: Rigorous verification requirements and evidence-based claims
+- **Testing Standards**: Complete testing pyramid with coverage thresholds and quality gates
+- **Infrastructure**: Database, API, security, monitoring, and deployment standards
+- **Documentation**: Engineering-grade content with reality alignment verification
+
+### Advanced Quality Controls
+- **Scope Management**: Change budget enforcement with emergency waiver procedures
+- **Implementation Completeness**: Anti-fake implementation guardrails and stub detection
+- **Language-Agnostic Standards**: Universal patterns across all programming languages
+- **Duplication Prevention**: Canonical naming and refactor strategies
+
+### Risk-Based Enforcement
+- **Tier 1 (Critical)**: 90%+ coverage, 70%+ mutation, manual review required
+- **Tier 2 (Standard)**: 80%+ coverage, 50%+ mutation, optional review
+- **Tier 3 (Low Risk)**: 70%+ coverage, 30%+ mutation, optional review
 
 ## Usage
 

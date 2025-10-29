@@ -63,6 +63,11 @@ pub mod parallel_types;
 pub mod error;
 pub mod worker;
 
+// Refactored modules for better organization
+pub mod learning_system;
+pub mod bridges;
+pub mod execution_stats;
+
 // Consolidated from worker/ crate (CLI interface)
 pub mod cli;
 

@@ -1,0 +1,84 @@
+{
+  "version": "1.0.0",
+  "description": "Controlled exceptions for quality gates",
+  "gates": {
+    "naming": {
+      "description": "Naming convention violations",
+      "enforcement_levels": {
+        "commit": "warning",
+        "push": "block",
+        "ci": "fail"
+      }
+    },
+    "god_objects": {
+      "description": "Files exceeding size thresholds",
+      "enforcement_levels": {
+        "commit": "warning",
+        "push": "block",
+        "ci": "fail"
+      }
+    },
+    "duplication": {
+      "description": "Functional duplication violations",
+      "enforcement_levels": {
+        "commit": "warning",
+        "push": "block",
+        "ci": "fail"
+      }
+    },
+    "documentation": {
+      "description": "Documentation quality violations",
+      "enforcement_levels": {
+        "commit": "warning",
+        "push": "warning",
+        "ci": "block"
+      }
+    },
+    "code_freeze": {
+      "description": "Code freeze violations during crisis response",
+      "enforcement_levels": {
+        "commit": "warning",
+        "push": "block",
+        "ci": "fail"
+      }
+    }
+  },
+  "exceptions": [
+    {
+      "id": "ex_1761680458993_vv2yg46d4",
+      "gate": "god_objects",
+      "file_pattern": "**/migration.rs",
+      "violation_type": "severe_god_object",
+      "reason": "Legacy migration file that cannot be decomposed",
+      "approved_by": "darianrosebrook@example.com",
+      "approved_at": "2025-10-28T19:40:58.993Z",
+      "expires_at": "2026-01-26T19:40:58.993Z",
+      "review_required": true,
+      "context": "all"
+    },
+    {
+      "id": "ex_1761680675535_fnnemvbnl",
+      "gate": "duplication",
+      "file_pattern": "**/common.rs",
+      "violation_type": "trait_duplication_regression",
+      "reason": "Shared trait across multiple modules",
+      "approved_by": "darianrosebrook@example.com",
+      "approved_at": "2025-10-28T19:44:35.535Z",
+      "expires_at": "2025-11-27T19:44:35.535Z",
+      "review_required": true,
+      "context": "all"
+    },
+    {
+      "id": "ex_1761680816967_tbxhnx1ea",
+      "gate": "documentation",
+      "file_pattern": "**/.cursor/plans/*.plan.md",
+      "violation_type": "UNFOUNDED_ACHIEVEMENT",
+      "reason": "Planning documents contain aspirational language",
+      "approved_by": "darianrosebrook@example.com",
+      "approved_at": "2025-10-28T19:46:56.967Z",
+      "expires_at": "2026-01-26T19:46:56.967Z",
+      "review_required": true,
+      "context": "all"
+    }
+  ]
+}

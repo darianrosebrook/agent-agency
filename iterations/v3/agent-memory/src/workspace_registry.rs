@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::memory_types::{WorkspaceEntry, WorkspaceAccess, WorkspaceAccessConfig};
 use crate::{MemoryError, MemoryResult};
-use data_infrastructure::DatabaseClient;
+use sqlx::PgPool;
 
 /// Workspace registry for managing workspace access controls
 #[derive(Debug)]
@@ -21,17 +21,17 @@ pub struct WorkspaceRegistry {
     config: WorkspaceAccessConfig,
     /// Registry of known workspaces
     workspaces: Arc<RwLock<HashMap<String, WorkspaceEntry>>>,
-    /// Database client for persistence
-    db_client: Arc<DatabaseClient>,
+    /// Database pool for persistence
+    db_pool: Arc<PgPool>,
 }
 
 impl WorkspaceRegistry {
     /// Create a new workspace registry
-    pub fn new(config: WorkspaceAccessConfig, db_client: Arc<DatabaseClient>) -> Self {
+    pub fn new(config: WorkspaceAccessConfig, db_pool: Arc<PgPool>) -> Self {
         Self {
             config,
             workspaces: Arc::new(RwLock::new(HashMap::new())),
-            db_client,
+            db_pool,
         }
     }
 
@@ -284,15 +284,15 @@ impl WorkspaceRegistry {
 mod tests {
     use super::*;
     use tempfile::TempDir;
-    use data_infrastructure::DatabaseConfig;
 
     #[tokio::test]
     async fn test_workspace_registration() {
         let temp_dir = TempDir::new().unwrap();
         let config = WorkspaceAccessConfig::default();
-        let db_config = DatabaseConfig::default();
-        let db_client = Arc::new(DatabaseClient::new(db_config).await.unwrap());
-        let registry = WorkspaceRegistry::new(config, db_client);
+        let database_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgresql://localhost/agent_agency_v3".to_string());
+        let db_pool = Arc::new(PgPool::connect(&database_url).await.unwrap());
+        let registry = WorkspaceRegistry::new(config, db_pool);
 
         // Test registering a workspace
         let workspace_id = registry.register_workspace(temp_dir.path(), WorkspaceAccess::Enabled).await.unwrap();
@@ -307,9 +307,10 @@ mod tests {
     async fn test_access_control() {
         let temp_dir = TempDir::new().unwrap();
         let config = WorkspaceAccessConfig::default();
-        let db_config = DatabaseConfig::default();
-        let db_client = Arc::new(DatabaseClient::new(db_config).await.unwrap());
-        let registry = WorkspaceRegistry::new(config, db_client);
+        let database_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgresql://localhost/agent_agency_v3".to_string());
+        let db_pool = Arc::new(PgPool::connect(&database_url).await.unwrap());
+        let registry = WorkspaceRegistry::new(config, db_pool);
 
         // Register blocked workspace
         let blocked_path = temp_dir.path().join("blocked");

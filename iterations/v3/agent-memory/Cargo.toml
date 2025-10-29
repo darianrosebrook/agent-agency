@@ -57,7 +57,8 @@ sha2 = "0.10"
 config = { workspace = true }
 
 # Integration with existing services
-data-infrastructure = { path = "../data-infrastructure", optional = true }
+# data-infrastructure = { path = "../data-infrastructure", optional = true }  # Removed to break circular dependency - now using direct sqlx
+# agent-data-processing = { path = "../agent-data-processing", optional = true, features = ["embeddings"] }  # Removed to break circular dependency - not actually used
 
 [dev-dependencies]
 tokio-test = "0.4"
@@ -65,10 +66,10 @@ tempfile = "3.8"
 criterion = { version = "0.5", features = ["html_reports"] }
 
 [features]
-default = ["graph-reasoning"]
-embeddings = ["data-infrastructure"]  
+default = ["graph-reasoning", "database"]
+embeddings = []  # Now uses direct sqlx, no external dependencies
 graph-reasoning = []
 temporal-analysis = []
 context-offloading = []
 provenance-tracking = []
-database = ["data-infrastructure"] 
+database = []  # Now uses direct sqlx, always available 

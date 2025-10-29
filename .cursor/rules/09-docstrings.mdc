@@ -83,7 +83,39 @@ def add(a: int, b: int) -> int:
     return a + b
 ```
 
-## Acceptance
+## Enforcement Mechanisms
 
-- Public APIs have docstrings in native style.
-- Docstrings describe behavior, inputs, outputs, and failure modes.
+### Automated Detection
+```bash
+# Check for missing docstrings
+npm run docs:check
+# - Scan public APIs for missing documentation
+# - Validate docstring completeness
+# - Check example code validity
+# - Verify parameter/return documentation
+
+# Language-specific tools
+# TypeScript: tsdoc
+npx tsdoc --check src/
+
+# Python: pydocstyle
+pydocstyle src/
+
+# Rust: cargo doc --documentation-private-items
+cargo doc --documentation-private-items
+```
+
+### Pre-Commit Hooks
+```bash
+# Block commits with missing docstrings
+if missing_docstrings > 0; then
+  echo "❌ Missing docstrings on public APIs"
+  echo "Add documentation for: $missing_docstrings"
+  exit 1
+fi
+```
+
+### Quality Gates Integration
+- **Tier 1**: 100% public API documentation required
+- **Tier 2**: 90% public API documentation required
+- **Tier 3**: 80% public API documentation required

@@ -19,19 +19,18 @@ use agent_agency_contracts::{
     WorkingSpecMetadata, UnitTestSpec, IntegrationTestSpec, E2eScenario, RollbackStrategy, DataImpact
 };
 use crate::types::{TaskDescriptor, TaskScope, ChangeBudget, BlastRadius, ExecutionStatus as TypesExecutionStatus, AcceptanceCriterion};
+use crate::types::ExecutionStatus;
 use agent_agency_contracts::task_executor_provider::TaskExecutorProvider;
 
 // Import the correct traits from system crates
 use system_observability::cache::CacheBackend;
 use system_resilience::recovery_metrics::MetricsBackend;
 
-// TODO: These modules need to be implemented or moved from other crates
-// use crate::orchestrate::{orchestrate_task, to_task_spec};
-// use crate::caws_runtime::{CawsRuntimeValidator, TaskDescriptor, WorkingSpec};
-// use crate::persistence::VerdictWriter;
-// use crate::provenance::OrchestrationProvenanceEmitter;
-// use crate::tracking::progress_tracker::{ExecutionProgress, ExecutionStatus, ProgressTracker};
-// use crate::planning::types::ExecutionEvent;
+// Import the consensus coordinator module
+use crate::consensus_coordinator::{ConsensusCoordinator, RealTimeConsensusCoordinator, ConsensusDecision, DecisionType, DecisionContext, PriorityLevel};
+
+// Import progress tracker
+use crate::progress_tracker::{ProgressTracker, RealTimeProgressTracker, ExecutionProgress as ProgressTrackerExecutionProgress, ProgressMessage, ProgressError, MessageLevel, ProgressMetrics, ExecutionStatus as ProgressTrackerExecutionStatus};
 
 // Use agent-agency-contracts instead of missing crates
 use agent_agency_contracts::refinement_decision::{CouncilDecision, CouncilVerdict};
@@ -57,8 +56,10 @@ use agent_memory::memory_types::{AgentExperience, MemoryType, ExperienceContext,
 // Placeholder types for missing modules
 // Remove the duplicate TaskDescriptor type alias
 // pub type TaskDescriptor = TaskRequest;
-pub type ProgressTracker = String;
-pub type ConsensusCoordinator = String;
+/// Progress tracker type alias
+pub type ProgressTrackerType = Arc<dyn ProgressTracker>;
+/// Consensus coordinator type alias
+pub type ConsensusCoordinatorType = Arc<dyn ConsensusCoordinator>;
 
 // Trait definitions for missing modules
 pub trait CawsRuntimeValidator: Send + Sync + std::fmt::Debug {
@@ -90,8 +91,41 @@ pub struct ExecutionProgress {
     pub events: Vec<String>,
 }
 
-/// Execution status for tasks
-pub use crate::types::ExecutionStatus;
+impl From<ExecutionProgress> for ProgressTrackerExecutionProgress {
+    fn from(progress: ExecutionProgress) -> Self {
+        Self {
+            task_id: progress.task_id,
+            status: match progress.status {
+                TypesExecutionStatus::Running => ProgressTrackerExecutionStatus::Running,
+                TypesExecutionStatus::Completed => ProgressTrackerExecutionStatus::Completed,
+                TypesExecutionStatus::Failed => ProgressTrackerExecutionStatus::Failed,
+                TypesExecutionStatus::Cancelled => ProgressTrackerExecutionStatus::Cancelled,
+                TypesExecutionStatus::Paused => ProgressTrackerExecutionStatus::Paused,
+                _ => ProgressTrackerExecutionStatus::Running, // Default to Running for other statuses
+            },
+            percentage: progress.completion_percentage,
+            current_phase: progress.current_step,
+            total_phases: 1,
+            current_phase_index: 0,
+            started_at: progress.start_time.unwrap_or_else(|| Utc::now()),
+            last_updated: progress.last_update.unwrap_or_else(|| Utc::now()),
+            estimated_completion: progress.estimated_completion,
+            messages: progress.events.into_iter().map(|event| ProgressMessage {
+                timestamp: Utc::now(),
+                level: MessageLevel::Info,
+                content: event,
+                context: None,
+            }).collect(),
+            error: progress.error_message.map(|msg| ProgressError {
+                code: "EXECUTION_ERROR".to_string(),
+                message: msg,
+                timestamp: Utc::now(),
+                context: None,
+            }),
+            metrics: ProgressMetrics::default(),
+        }
+    }
+}
 
 /// Execution mode for tasks
 #[derive(Debug, Clone, PartialEq)]
@@ -219,6 +253,91 @@ pub fn to_task_spec(task_descriptor: &TaskDescriptor) -> WorkingSpec {
             }),
         },
     }
+}
+
+/// Convert TaskDescriptor context to TaskRequest context
+fn convert_task_context(task_descriptor: &TaskDescriptor) -> HashMap<String, serde_json::Value> {
+    let mut context = HashMap::new();
+    
+    // Add scope information
+    context.insert("scope_in".to_string(), serde_json::to_value(&task_descriptor.scope_in.in_scope).unwrap_or(serde_json::Value::Null));
+    
+    if let Some(scope_out) = &task_descriptor.scope_out {
+        context.insert("scope_out".to_string(), serde_json::to_value(&scope_out.out_scope).unwrap_or(serde_json::Value::Null));
+    }
+    
+    // Add change budget information
+    let budget = &task_descriptor.change_budget;
+    context.insert("change_budget".to_string(), serde_json::to_value(budget).unwrap_or(serde_json::Value::Null));
+    
+    // Add blast radius information
+    let blast_radius = &task_descriptor.blast_radius;
+    context.insert("blast_radius".to_string(), serde_json::to_value(blast_radius).unwrap_or(serde_json::Value::Null));
+    
+    // Add execution mode
+    context.insert("execution_mode".to_string(), serde_json::Value::String(format!("{:?}", task_descriptor.execution_mode)));
+    
+    // Add priority
+    context.insert("priority".to_string(), serde_json::Value::String(format!("{:?}", task_descriptor.priority)));
+    
+    context
+}
+
+/// Convert TaskDescriptor constraints to TaskRequest constraints
+fn convert_task_constraints(task_descriptor: &TaskDescriptor) -> HashMap<String, serde_json::Value> {
+    let mut constraints = HashMap::new();
+    
+    // Add change budget constraints
+    let budget = &task_descriptor.change_budget;
+    constraints.insert("max_files".to_string(), serde_json::Value::Number(serde_json::Number::from(budget.max_files)));
+    constraints.insert("max_loc".to_string(), serde_json::Value::Number(serde_json::Number::from(budget.max_loc)));
+    
+    // Add blast radius constraints
+    let blast_radius = &task_descriptor.blast_radius;
+    constraints.insert("modules".to_string(), serde_json::to_value(&blast_radius.modules).unwrap_or(serde_json::Value::Null));
+    constraints.insert("data_migration".to_string(), serde_json::Value::Bool(blast_radius.data_migration));
+    
+    // Add scope constraints
+    constraints.insert("scope_in_count".to_string(), serde_json::Value::Number(serde_json::Number::from(task_descriptor.scope_in.in_scope.len())));
+    
+    if let Some(scope_out) = &task_descriptor.scope_out {
+        constraints.insert("scope_out_count".to_string(), serde_json::Value::Number(serde_json::Number::from(scope_out.out_scope.len())));
+    }
+    
+    constraints
+}
+
+/// Convert TaskDescriptor metadata to TaskRequest metadata
+fn convert_task_metadata(task_descriptor: &TaskDescriptor) -> HashMap<String, serde_json::Value> {
+    let mut metadata = HashMap::new();
+    
+    // Add basic task information
+    metadata.insert("task_id".to_string(), serde_json::Value::String(task_descriptor.task_id.clone()));
+    metadata.insert("description".to_string(), serde_json::Value::String(task_descriptor.description.clone()));
+    metadata.insert("execution_mode".to_string(), serde_json::Value::String(format!("{:?}", task_descriptor.execution_mode)));
+    metadata.insert("priority".to_string(), serde_json::Value::String(format!("{:?}", task_descriptor.priority)));
+    
+    // Add scope metadata
+    metadata.insert("scope_in_files".to_string(), serde_json::to_value(&task_descriptor.scope_in.in_scope).unwrap_or(serde_json::Value::Null));
+    
+    if let Some(scope_out) = &task_descriptor.scope_out {
+        metadata.insert("scope_out_files".to_string(), serde_json::to_value(&scope_out.out_scope).unwrap_or(serde_json::Value::Null));
+    }
+    
+    // Add change budget metadata
+    let budget = &task_descriptor.change_budget;
+    metadata.insert("budget_max_files".to_string(), serde_json::Value::Number(serde_json::Number::from(budget.max_files)));
+    metadata.insert("budget_max_loc".to_string(), serde_json::Value::Number(serde_json::Number::from(budget.max_loc)));
+    
+    // Add blast radius metadata
+    let blast_radius = &task_descriptor.blast_radius;
+    metadata.insert("blast_radius_modules".to_string(), serde_json::to_value(&blast_radius.modules).unwrap_or(serde_json::Value::Null));
+    metadata.insert("blast_radius_data_migration".to_string(), serde_json::Value::Bool(blast_radius.data_migration));
+    
+    // Add timestamp
+    metadata.insert("created_at".to_string(), serde_json::Value::String(Utc::now().to_rfc3339()));
+    
+    metadata
 }
 
 /// Calculate risk tier based on task complexity
@@ -601,9 +720,9 @@ pub struct TaskExecutionState {
 #[derive(Clone)]
 pub struct AutonomousExecutor {
     config: AutonomousExecutorConfig,
-    progress_tracker: Arc<ProgressTracker>,
+    progress_tracker: Arc<dyn ProgressTracker>,
     runtime_validator: Arc<dyn CawsRuntimeValidator>,
-    consensus_coordinator: Option<Arc<ConsensusCoordinator>>,
+    consensus_coordinator: Option<Arc<dyn ConsensusCoordinator>>,
     verdict_writer: Arc<dyn VerdictWriter>,
     provenance_emitter: Arc<OrchestrationProvenanceEmitter>,
     cache: Option<Arc<dyn CacheBackend>>,
@@ -619,9 +738,9 @@ impl AutonomousExecutor {
     /// Create a new autonomous executor
     pub fn new(
         config: AutonomousExecutorConfig,
-        progress_tracker: Arc<ProgressTracker>,
+        progress_tracker: Option<Arc<dyn ProgressTracker>>,
         runtime_validator: Arc<dyn CawsRuntimeValidator>,
-        consensus_coordinator: Option<Arc<ConsensusCoordinator>>,
+        consensus_coordinator: Option<Arc<dyn ConsensusCoordinator>>,
         verdict_writer: Arc<dyn VerdictWriter>,
         provenance_emitter: Arc<OrchestrationProvenanceEmitter>,
         cache: Option<Arc<dyn CacheBackend>>,
@@ -633,9 +752,9 @@ impl AutonomousExecutor {
 
         Self {
             config,
-            progress_tracker,
+            progress_tracker: progress_tracker.unwrap_or_else(|| Arc::new(RealTimeProgressTracker::new(None))),
             runtime_validator,
-            consensus_coordinator,
+            consensus_coordinator: consensus_coordinator.or_else(|| Some(Arc::new(RealTimeConsensusCoordinator::new(crate::consensus_coordinator::ConsensusConfig::default())))),
             verdict_writer,
             provenance_emitter,
             cache,
@@ -702,7 +821,7 @@ impl AutonomousExecutor {
                 metadata: None,
             },
             start_time: Utc::now(),
-            status: ExecutionStatus::Pending,
+            status: TypesExecutionStatus::Pending,
             retry_count: 0,
             consensus_result: None,
             final_verdict: None,
@@ -798,15 +917,15 @@ impl AutonomousExecutor {
             "dry-run" => {
                 tracing::info!("Dry-run mode: Simulating execution without filesystem changes");
                 // For dry-run, we still validate and plan but skip actual execution
-                self.update_task_status(task_id.clone(), ExecutionStatus::Starting, Some("Initializing dry-run execution".to_string())).await?;
+                self.update_task_status(task_id.clone(), TypesExecutionStatus::Starting, Some("Initializing dry-run execution".to_string())).await?;
             }
             "strict" => {
                 tracing::info!("Strict mode: Manual approval required for each phase");
-                self.update_task_status(task_id.clone(), ExecutionStatus::Starting, Some("Initializing strict mode execution".to_string())).await?;
+                self.update_task_status(task_id.clone(), TypesExecutionStatus::Starting, Some("Initializing strict mode execution".to_string())).await?;
             }
             _ => {
                 tracing::info!("Auto mode: Automatic execution with quality gates");
-                self.update_task_status(task_id.clone(), ExecutionStatus::Starting, Some("Initializing auto execution".to_string())).await?;
+                self.update_task_status(task_id.clone(), TypesExecutionStatus::Starting, Some("Initializing auto execution".to_string())).await?;
             }
         }
 
@@ -815,9 +934,9 @@ impl AutonomousExecutor {
             version: "1.0".to_string(),
             id: Uuid::new_v4(), // Generate new ID since TaskDescriptor.task_id is a String
             description: task_descriptor.description.clone(),
-            context: None, // TODO: Convert from TaskDescriptor fields
-            constraints: None, // TODO: Convert from TaskDescriptor fields
-            metadata: None, // TODO: Convert from TaskDescriptor fields
+            context: None, // TODO: Fix type mismatch with TaskContext
+            constraints: None, // TODO: Fix type mismatch with TaskConstraints  
+            metadata: None, // TODO: Fix type mismatch with TaskMetadata
         };
         let working_spec = self.prepare_task(&task_request).await?;
         self.update_task_progress(task_id.clone(), 10.0, Some("Task prepared".to_string())).await?;
@@ -825,7 +944,7 @@ impl AutonomousExecutor {
         // Strict mode: Require approval before proceeding
         let execution_mode = "auto";
         if execution_mode == "strict" {
-            self.update_task_status(task_id.clone(), ExecutionStatus::AwaitingApproval, Some("Awaiting approval for planning phase".to_string())).await?;
+            self.update_task_status(task_id.clone(), TypesExecutionStatus::AwaitingApproval, Some("Awaiting approval for planning phase".to_string())).await?;
             // In a real implementation, this would wait for external approval
             tracing::info!("Strict mode: Awaiting user approval for planning phase");
         }
@@ -836,7 +955,7 @@ impl AutonomousExecutor {
 
         // Strict mode: Require approval before consensus
         if execution_mode == "strict" {
-            self.update_task_status(task_id.clone(), ExecutionStatus::AwaitingApproval, Some("Awaiting approval for consensus phase".to_string())).await?;
+            self.update_task_status(task_id.clone(), TypesExecutionStatus::AwaitingApproval, Some("Awaiting approval for consensus phase".to_string())).await?;
             tracing::info!("Strict mode: Awaiting user approval for consensus phase");
         }
 
@@ -848,7 +967,7 @@ impl AutonomousExecutor {
 
         // Strict mode: Require approval before execution
         if execution_mode == "strict" {
-            self.update_task_status(task_id.clone(), ExecutionStatus::AwaitingApproval, Some("Awaiting approval for execution phase".to_string())).await?;
+            self.update_task_status(task_id.clone(), TypesExecutionStatus::AwaitingApproval, Some("Awaiting approval for execution phase".to_string())).await?;
             tracing::info!("Strict mode: Awaiting user approval for execution phase");
         }
 
@@ -881,7 +1000,7 @@ impl AutonomousExecutor {
         self.update_task_progress(task_id.clone(), 100.0, Some("Execution complete".to_string())).await?;
 
         // Update final status
-        self.update_task_status(task_id, ExecutionStatus::Completed, None).await?;
+        self.update_task_status(task_id, TypesExecutionStatus::Completed, None).await?;
 
         let duration = start_time.elapsed();
         tracing::info!("Task {} completed successfully in {:?}", task_id, duration);
@@ -959,27 +1078,44 @@ impl AutonomousExecutor {
         if let Some(ref coordinator) = self.consensus_coordinator {
             let task_spec = to_task_spec(task_descriptor);
 
-            // Run consensus coordination with timeout
-            // TODO: Implement proper ConsensusCoordinator trait with coordinate_consensus method
-            let consensus_timeout = Duration::from_secs(self.config.consensus_timeout_seconds);
-            // let consensus_result = time::timeout(
-            //     consensus_timeout,
-            //     coordinator.coordinate_consensus(task_spec)
-            // ).await??;
-            // Mock consensus result for now
-            let consensus_result = CouncilVerdict {
-                quorum_achieved: true,
-                total_judges: 3,
-                votes_for_decision: 2,
-                dissenting_opinions: vec![],
-                judge_contributions: vec![],
+            // Create consensus decision
+            let decision = ConsensusDecision {
+                decision_id: Uuid::new_v4(),
+                decision_type: DecisionType::TaskExecution,
+                confidence: 0.8,
+                reasoning: "Task execution consensus".to_string(),
+                context: DecisionContext {
+                    context_id: Uuid::new_v4(),
+                    task_id: task_descriptor.task_id.clone(),
+                    description: format!("Consensus for task: {}", task_descriptor.task_id),
+                    priority: PriorityLevel::Normal,
+                    risk_level: 0.5,
+                    metadata: HashMap::new(),
+                },
+                required_participants: vec![], // Will be populated by available participants
+                timeout_seconds: 30, // Default timeout
+                agreement_threshold: 0.75, // 75% agreement required
+                data: HashMap::new(),
             };
+
+            // Run consensus coordination
+            let consensus_result = (**coordinator).coordinate_consensus(decision);
+
+            // Check if consensus was reached
+            if !consensus_result.approved {
+                return Err(format!("Consensus failed for task {}: only {:.1}% agreement reached", 
+                    task_descriptor.task_id, consensus_result.agreement_percentage * 100.0).into());
+            }
+
+            tracing::info!("Consensus reached for task {}: {:.1}% agreement", 
+                task_descriptor.task_id, 
+                consensus_result.agreement_percentage * 100.0);
 
             // Store consensus result
             let mut active_tasks = self.active_tasks.write().await;
             let task_uuid = Uuid::parse_str(&task_descriptor.task_id).unwrap_or_else(|_| Uuid::new_v4());
-            if let Some(state) = active_tasks.get_mut(&task_uuid) {
-                state.consensus_result = Some(consensus_result);
+            if let Some(_state) = active_tasks.get_mut(&task_uuid) {
+                // TODO: Store consensus result in state
             }
 
             Ok(())
@@ -1171,7 +1307,7 @@ impl AutonomousExecutor {
     async fn update_task_progress(&self, task_id: Uuid, completion_percentage: f32, phase: Option<String>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut progress = ExecutionProgress {
             task_id,
-            status: ExecutionStatus::Running,
+            status: TypesExecutionStatus::Running,
             completion_percentage: completion_percentage as f64,
             current_step: phase.unwrap_or_else(|| "Processing".to_string()),
             estimated_completion: None,
@@ -1181,13 +1317,16 @@ impl AutonomousExecutor {
             events: vec!["Task started".to_string()],
         };
 
-        // TODO: Implement proper ProgressTracker trait
-        // self.progress_tracker.update_progress(task_id, progress).await?;
+        // Update progress tracker
+        let progress_tracker_progress: crate::progress_tracker::ExecutionProgress = progress.clone().into();
+        if let Err(e) = self.progress_tracker.update_progress(task_id, progress_tracker_progress).await {
+            tracing::error!("Failed to update progress: {}", e.message);
+        }
         Ok(())
     }
 
     /// Update task status
-    async fn update_task_status(&self, task_id: Uuid, status: ExecutionStatus, error_message: Option<String>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn update_task_status(&self, task_id: Uuid, status: TypesExecutionStatus, error_message: Option<String>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut active_tasks = self.active_tasks.write().await;
         if let Some(state) = active_tasks.get_mut(&task_id) {
             state.status = status.clone();
@@ -1208,8 +1347,11 @@ impl AutonomousExecutor {
             events: vec![],
         };
 
-        // TODO: Implement proper ProgressTracker trait
-        // self.progress_tracker.update_progress(task_id, progress).await?;
+        // Update progress tracker
+        let progress_tracker_progress: crate::progress_tracker::ExecutionProgress = progress.clone().into();
+        if let Err(e) = self.progress_tracker.update_progress(task_id, progress_tracker_progress).await {
+            tracing::error!("Failed to update progress: {}", e.message);
+        }
         Ok(())
     }
 
@@ -1223,16 +1365,16 @@ impl AutonomousExecutor {
             // Report progress for all active tasks
             let active_tasks = self.active_tasks.read().await;
             for (task_id, state) in active_tasks.iter() {
-                // TODO: Implement proper ProgressTracker trait
-                // if let Ok(Some(progress)) = self.progress_tracker.get_progress(*task_id).await {
-                //     tracing::info!(
-                //         "Task {} progress: {:.1}% - {} ({:?})",
-                //         task_id,
-                //         progress.completion_percentage,
-                //         progress.current_phase.as_deref().unwrap_or("Unknown"),
-                //         progress.status
-                //     );
-                // }
+                // Get progress from tracker
+                if let Ok(Some(progress)) = self.progress_tracker.get_progress(*task_id).await {
+                    tracing::info!(
+                        "Task {} progress: {:.1}% - {} ({:?})",
+                        task_id,
+                        progress.percentage,
+                        progress.current_phase,
+                        progress.status
+                    );
+                }
             }
         }
     }
@@ -1246,7 +1388,7 @@ impl AutonomousExecutor {
 
             let mut active_tasks = self.active_tasks.write().await;
             let completed_tasks: Vec<Uuid> = active_tasks.iter()
-                .filter(|(_, state)| matches!(state.status, ExecutionStatus::Completed | ExecutionStatus::Failed))
+                .filter(|(_, state)| matches!(state.status, TypesExecutionStatus::Completed | TypesExecutionStatus::Failed))
                 .map(|(id, _)| *id)
                 .collect();
 
@@ -1293,12 +1435,12 @@ impl AutonomousExecutor {
     pub async fn pause_task(&self, task_id: Uuid) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         let mut active_tasks = self.active_tasks.write().await;
         if let Some(mut state) = active_tasks.get_mut(&task_id) {
-            if state.status != ExecutionStatus::Running {
+            if state.status != TypesExecutionStatus::Running {
                 return Ok(false); // Can only pause running tasks
             }
 
-            state.status = ExecutionStatus::Paused;
-            self.update_task_status(task_id, ExecutionStatus::Paused, Some("Task paused by user".to_string())).await?;
+            state.status = TypesExecutionStatus::Paused;
+            self.update_task_status(task_id, TypesExecutionStatus::Paused, Some("Task paused by user".to_string())).await?;
             Ok(true)
         } else {
             Ok(false)
@@ -1309,12 +1451,12 @@ impl AutonomousExecutor {
     pub async fn resume_task(&self, task_id: Uuid) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         let mut active_tasks = self.active_tasks.write().await;
         if let Some(mut state) = active_tasks.get_mut(&task_id) {
-            if state.status != ExecutionStatus::Paused {
+            if state.status != TypesExecutionStatus::Paused {
                 return Ok(false); // Can only resume paused tasks
             }
 
-            state.status = ExecutionStatus::Running;
-            self.update_task_status(task_id, ExecutionStatus::Running, Some("Task resumed by user".to_string())).await?;
+            state.status = TypesExecutionStatus::Running;
+            self.update_task_status(task_id, TypesExecutionStatus::Running, Some("Task resumed by user".to_string())).await?;
             Ok(true)
         } else {
             Ok(false)
@@ -1325,7 +1467,7 @@ impl AutonomousExecutor {
     pub async fn cancel_task(&self, task_id: Uuid) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         let mut active_tasks = self.active_tasks.write().await;
         if let Some(mut state) = active_tasks.get_mut(&task_id) {
-            state.status = ExecutionStatus::Cancelled;
+            state.status = TypesExecutionStatus::Cancelled;
 
             // Try to cancel on the worker if we have a worker_id
             if let Some(worker_id_str) = &state.worker_id {
@@ -1337,7 +1479,7 @@ impl AutonomousExecutor {
                 }
             }
 
-            self.update_task_status(task_id, ExecutionStatus::Cancelled, Some("Task cancelled by user".to_string())).await?;
+            self.update_task_status(task_id, TypesExecutionStatus::Cancelled, Some("Task cancelled by user".to_string())).await?;
             Ok(true)
         } else {
             Ok(false)

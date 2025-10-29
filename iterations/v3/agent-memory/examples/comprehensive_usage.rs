@@ -7,8 +7,8 @@
 //! - Performing multi-hop reasoning
 //! - Analyzing temporal patterns
 //! - Managing memory decay and importance
-
-use agent_memory::{MemoryConfig, MemorySystem, AgentExperience, MemoryId, TaskContext, TemporalContext, TaskPriority, ExperienceOutcome, AgentFeedback, ReasoningQuery, RelationshipType, TimeRange, MemoryType};
+use agent_memory::{MemoryConfig, MemorySystem, TimeRange, MemoryType, RelationshipType};
+use agent_memory::memory_types::{AgentExperience, MemoryId, TaskContext, ExperienceOutcome, ReasoningQuery};
 use chrono::{Utc, Duration};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -36,19 +36,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         id: MemoryId::default(),
         agent_id: agent_id.to_string(),
         task_id: task_id_1.to_string(),
+        content: "Review pull request for authentication middleware implementation".to_string(),
         context: TaskContext {
+            agent_id: agent_id.to_string(),
             task_id: task_id_1.to_string(),
             task_type: "code_review".to_string(),
             description: "Review pull request for authentication middleware implementation".to_string(),
-            domain: vec!["security".to_string(), "authentication".to_string()],
+            keywords: vec!["security".to_string(), "authentication".to_string()],
             entities: vec!["middleware".to_string(), "JWT".to_string()],
-            temporal_context: Some(TemporalContext {
-                start_time: Utc::now() - Duration::hours(2),
-                deadline: Some(Utc::now() - Duration::hours(1)),
-                priority: TaskPriority::High,
-                recurrence_pattern: None,
-            }),
-            metadata: HashMap::new(),
+            timestamp: Utc::now() - Duration::hours(2),
         },
         input: serde_json::json!({
             "files": ["auth_middleware.rs", "tests.rs"],
@@ -60,20 +56,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "approved": true
         }),
         outcome: ExperienceOutcome {
+            quality_score: 0.9,
+            error_message: None,
+            metadata: HashMap::new(),
             success: true,
             performance_score: Some(0.9),
             learned_capabilities: vec!["security_review".to_string(), "middleware_patterns".to_string()],
-            failure_reasons: vec![],
-            success_factors: vec!["thorough_analysis".to_string(), "clear_feedback".to_string()],
             execution_time_ms: Some(4500),
-            tokens_used: Some(1200),
-            feedback: Some(AgentFeedback {
-                quality_score: Some(0.95),
-                relevance_score: Some(0.9),
-                accuracy_score: Some(0.95),
-                comments: vec!["Excellent attention to security details".to_string()],
-                evaluator_id: Some("senior-dev-001".to_string()),
-            }),
         },
         memory_type: MemoryType::Episodic,
         timestamp: Utc::now() - Duration::hours(2),
@@ -82,22 +71,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Experience 2: Database optimization task
     let experience_2 = AgentExperience {
+        content: "Optimize slow database queries in user management system".to_string(),
         id: MemoryId::new_v4(),
         agent_id: agent_id.to_string(),
         task_id: task_id_2.to_string(),
         context: TaskContext {
+            agent_id: agent_id.to_string(),
             task_id: task_id_2.to_string(),
             task_type: "database_optimization".to_string(),
             description: "Optimize slow database queries in user management system".to_string(),
-            domain: vec!["database".to_string(), "performance".to_string()],
+            keywords: vec!["database".to_string(), "performance".to_string()],
             entities: vec!["PostgreSQL".to_string(), "indexes".to_string()],
-            temporal_context: Some(TemporalContext {
-                start_time: Utc::now() - Duration::hours(1),
-                deadline: Some(Utc::now() - Duration::minutes(30)),
-                priority: TaskPriority::Medium,
-                recurrence_pattern: None,
-            }),
-            metadata: HashMap::new(),
+            timestamp: Utc::now() - Duration::hours(1),
         },
         input: serde_json::json!({
             "query_count": 15,
@@ -109,20 +94,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "performance_improvement": "75%"
         }),
         outcome: ExperienceOutcome {
+            quality_score: 0.85,
+            error_message: None,
+            metadata: HashMap::new(),
             success: true,
             performance_score: Some(0.85),
             learned_capabilities: vec!["query_optimization".to_string(), "index_strategy".to_string()],
-            failure_reasons: vec![],
-            success_factors: vec!["systematic_analysis".to_string(), "effective_indexing".to_string()],
             execution_time_ms: Some(3200),
-            tokens_used: Some(800),
-            feedback: Some(AgentFeedback {
-                quality_score: Some(0.88),
-                relevance_score: Some(0.85),
-                accuracy_score: Some(0.9),
-                comments: vec!["Good optimization strategy".to_string()],
-                evaluator_id: Some("dba-001".to_string()),
-            }),
         },
         memory_type: MemoryType::Episodic,
         timestamp: Utc::now() - Duration::hours(1),
@@ -141,18 +119,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("3. Retrieving Contextual Memories...");
 
     let current_context = TaskContext {
+        agent_id: agent_id.to_string(),
         task_id: "task-003".to_string(),
         task_type: "security_audit".to_string(),
         description: "Perform security audit on authentication system with JWT tokens".to_string(),
-        domain: vec!["security".to_string(), "authentication".to_string()],
+        keywords: vec!["security".to_string(), "authentication".to_string()],
         entities: vec!["JWT".to_string(), "authentication".to_string()],
-        temporal_context: Some(TemporalContext {
-            start_time: Utc::now(),
-            deadline: Some(Utc::now() + Duration::hours(4)),
-            priority: TaskPriority::High,
-            recurrence_pattern: None,
-        }),
-        metadata: HashMap::new(),
+        timestamp: Utc::now(),
     };
 
     let contextual_memories = memory_system.retrieve_contextual_memories(&current_context, 5).await?;
@@ -171,15 +144,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("4. Performing Multi-Hop Reasoning...");
 
     let reasoning_query = ReasoningQuery {
+        start_entity: "agent:agent-001".to_string(),
+        target_entity: "capability:security_review".to_string(),
         start_entities: vec!["agent:agent-001".to_string()],
         target_entities: vec!["capability:security_review".to_string()],
         relationship_types: vec![RelationshipType::LearnsFrom, RelationshipType::Performs],
         max_hops: 2,
         min_confidence: 0.5,
-        time_range: Some(TimeRange {
-            start: Utc::now() - Duration::days(7),
-            end: Utc::now(),
-        }),
     };
 
     let reasoning_result = memory_system.perform_reasoning(reasoning_query).await?;
