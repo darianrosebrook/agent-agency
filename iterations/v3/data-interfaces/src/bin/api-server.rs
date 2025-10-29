@@ -10,11 +10,12 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use std::env;
 
-use agent_agency_v3::{
-    interfaces::api::{RestApi, ApiConfig},
-    orchestration::{orchestrate::Orchestrator, tracking::ProgressTracker},
-};
-use agent_agency_database::DatabaseClient;
+use data_infrastructure::api::server::RestApi;
+use data_infrastructure::api::types::ApiConfig;
+use data_infrastructure::client::orchestrator::DatabaseClient;
+use data_infrastructure::DatabaseConfig;
+use agent_orchestration::audited_orchestrator::Orchestrator;
+use agent_orchestration::progress_tracker::{ProgressTracker, RealTimeProgressTracker};
 
 #[derive(Parser)]
 #[command(name = "agent-agency-api")]
@@ -120,28 +121,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!(" API key authentication enabled");
     }
 
-    // TODO: Implement comprehensive service initialization and dependency injection
-    // - Create proper dependency injection container with service registration
-    // - Implement service lifecycle management with startup/shutdown hooks
-    // - Add service health checks and dependency validation
-    // - Support service configuration loading from multiple sources
-    // - Implement service discovery and registration mechanisms
-    // - Add service monitoring and telemetry collection
-    // - Support service versioning and compatibility management
-    // - Implement service failover and recovery strategies
-    let orchestrator = Arc::new(Orchestrator::new(
-        // TODO: Initialize with proper configuration
-        Default::default(),
-        Arc::new(ProgressTracker::new(Default::default(), None)),
-    ));
-
-    let progress_tracker = Arc::new(ProgressTracker::new(Default::default(), None));
-
-    // Initialize database client
+    // Initialize database client first (required for other services)
     let database_url = env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgresql://localhost/agent_agency_v3".to_string());
-    let db_client = Arc::new(DatabaseClient::new(&database_url).await
-        .expect("Failed to connect to database"));
+    let db_config = DatabaseConfig {
+        database_url: database_url.clone(),
+        host: None,
+        port: None,
+        database: None,
+        username: None,
+        password: None,
+        max_connections: Some(10),
+        min_connections: Some(2),
+        connection_timeout_seconds: Some(30),
+        idle_timeout_seconds: Some(600),
+        max_lifetime_seconds: Some(3600),
+        ssl_mode: None,
+        pool_timeout_seconds: Some(30),
+    };
+    let db_client = Arc::new(
+        DatabaseClient::new(db_config).await
+            .expect("Failed to connect to database")
+    );
+
+    // Initialize orchestrator with real configuration
+    use agent_orchestration::types::OrchestratorConfig;
+    let orchestrator_config = OrchestratorConfig::default();
+    let orchestrator = Arc::new(Orchestrator::new_with_dependencies(orchestrator_config));
+
+    // Initialize progress tracker with real implementation
+    let progress_tracker: Arc<dyn ProgressTracker> = Arc::new(RealTimeProgressTracker::new(None));
 
     // Configure API
     let api_config = ApiConfig {

@@ -18,12 +18,10 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-// TODO: Add orchestration module when available
-// use crate::orchestration::orchestrate::Orchestrator;
-// use crate::orchestration::planning::types::{WorkingSpec, ExecutionArtifacts};
-// use crate::orchestration::quality::QualityReport;
-// use crate::orchestration::tracking::{ProgressTracker, ExecutionProgress};
-// use crate::self_prompting_agent::loop_controller::{SelfPromptingLoop, SelfPromptingEvent, ExecutionMode};
+#[cfg(feature = "orchestration")]
+use agent_orchestration::audited_orchestrator::Orchestrator;
+#[cfg(feature = "orchestration")]
+use agent_orchestration::progress_tracker::{ProgressTracker, ExecutionProgress};
 use crate::simple_client::DatabaseClient;
 
 use super::{ApiError, Result, ApiConfig, TaskSubmissionRequest, TaskSubmissionResponse, TaskStatusResponse, DashboardTaskSummary, DashboardDiffSummary, TaskResultResponse, SavedQueryResponse, SaveQueryRequest, WorkingSpec, ExecutionArtifacts, QualityReport, ChangeBudget, BlastRadius, Scope, AcceptanceCriterion, NonFunctionalRequirements, PerformanceRequirements, Contract, ArtifactMetadata};
@@ -85,74 +83,28 @@ pub struct Orchestrator {
 }
 
 impl Orchestrator {
-    pub async fn orchestrate_task(&self, _description: &str, _execution_mode: String) -> Result<ExecutionArtifacts> {
-        Ok(ExecutionArtifacts {
-            task_id: self.id,
-            working_spec: Some(WorkingSpec {
-                id: "stub_spec".to_string(),
-                title: "Stub Working Spec".to_string(),
-                description: _description.to_string(),
-                risk_tier: 2,
-                mode: "feature".to_string(),
-                change_budget: ChangeBudget {
-                    max_files: 25,
-                    max_loc: 1000,
-                },
-                blast_radius: BlastRadius {
-                    modules: vec!["stub".to_string()],
-                    data_migration: false,
-                },
-                operational_rollback_slo: "5m".to_string(),
-                scope: Scope {
-                    r#in: vec!["src/".to_string()],
-                    out: vec!["node_modules/".to_string()],
-                },
-                invariants: vec!["Stub invariant".to_string()],
-                acceptance: vec![AcceptanceCriterion {
-                    id: "A1".to_string(),
-                    given: "Given stub condition".to_string(),
-                    when: "When stub action".to_string(),
-                    then: "Then stub result".to_string(),
-                }],
-                non_functional: NonFunctionalRequirements {
-                    a11y: vec!["keyboard-navigation".to_string()],
-                    perf: PerformanceRequirements {
-                        api_p95_ms: 250,
-                        lcp_ms: 2500,
-                    },
-                    security: vec!["input-validation".to_string()],
-                },
-                contracts: vec![Contract {
-                    r#type: "openapi".to_string(),
-                    path: "docs/api/stub.yaml".to_string(),
-                }],
-                created_at: Utc::now(),
-            }),
-            quality_report: Some(QualityReport {
-                task_id: self.id,
-                score: 0.95,
-                details: "Stub quality report".to_string(),
-                overall_score: 0.95,
-                checks_passed: 10,
-                checks_failed: 0,
-            }),
-            artifacts: vec![ArtifactMetadata {
-                id: Uuid::new_v4(),
-                name: "stub_artifact".to_string(),
-                content_type: "text/plain".to_string(),
-                size: 100,
-            }],
-        })
+    pub async fn orchestrate_task(&self, description: &str, _execution_mode: String) -> Result<ExecutionArtifacts> {
+        // PLACEHOLDER: Real task orchestration not implemented
+        // Per session rules: throw error instead of returning stub artifacts
+        // Dependency: Requires integration with agent-orchestration crate's Orchestrator
+        return Err(ApiError::Internal(format!(
+            "PLACEHOLDER: Orchestrator::orchestrate_task not implemented. Requires: \
+            Integration with agent-orchestration crate Orchestrator. \
+            Task description: {}, Execution mode: {}",
+            description.chars().take(100).collect::<String>(),
+            _execution_mode
+        )));
     }
 }
 // use super::middleware;
 
 /// REST API server
+#[cfg(feature = "orchestration")]
 #[derive(Clone)]
 pub struct RestApi {
     __config: ApiConfig,
     orchestrator: Arc<Orchestrator>,
-    progress_tracker: Arc<ProgressTracker>,
+    progress_tracker: Arc<dyn ProgressTracker>,
     active_tasks: Arc<RwLock<HashMap<Uuid, TaskState>>>,
     pub db_client: Arc<DatabaseClient>,
 }
@@ -184,11 +136,12 @@ enum TaskStatus {
     Failed,
 }
 
+#[cfg(feature = "orchestration")]
 impl RestApi {
     pub fn new(
         config: ApiConfig,
         orchestrator: Arc<Orchestrator>,
-        progress_tracker: Arc<ProgressTracker>,
+        progress_tracker: Arc<dyn ProgressTracker>,
         db_client: Arc<DatabaseClient>,
     ) -> Self {
         Self {

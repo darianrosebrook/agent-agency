@@ -66,13 +66,15 @@ half = "2.4"
 
 # Local crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
+agent-orchestration = { path = "../agent-orchestration", optional = true }
 system-configuration = { path = "../system-configuration" }
 system-quality-security = { path = "../system-quality-security" }
 agent-mcp = { path = "../agent-mcp" }
 
 [features]
-default = []
+default = []  # Disable orchestration by default to break circular dependency
 mcp = []
+orchestration = ["agent-orchestration"]
 
 [dev-dependencies]
 tokio-test = "0.4"
