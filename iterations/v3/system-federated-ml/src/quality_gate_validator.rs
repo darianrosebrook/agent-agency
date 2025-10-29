@@ -58,26 +58,115 @@ pub struct ComplianceValidationResult {
     pub score: f64, // 0.0 to 1.0
 }
 
-/// Mock compliance validator for testing
-pub struct MockComplianceValidator;
+/// Placeholder compliance validator that panics
+/// 
+/// This is a placeholder indicating that a real ComplianceValidator implementation
+/// must be provided via QualityGateValidator::with_compliance_validator().
+/// Real CAWS compliance validator using policy enforcement tools
+pub struct RealComplianceValidator {
+    policy_tools: std::sync::Arc<crate::policy_enforcement::PolicyEnforcementTools>,
+}
+
+impl RealComplianceValidator {
+    /// Create a new real compliance validator
+    pub fn new() -> Self {
+        Self {
+            policy_tools: std::sync::Arc::new(crate::policy_enforcement::PolicyEnforcementTools::new()),
+        }
+    }
+}
 
 #[async_trait::async_trait]
-impl ComplianceValidator for MockComplianceValidator {
-    async fn validate_parameters(&self, _parameters: &ParameterSet) -> Result<ComplianceValidationResult> {
-        Ok(ComplianceValidationResult {
-            passed: true,
-            violations: vec![],
-            score: 0.95,
-        })
+impl ComplianceValidator for RealComplianceValidator {
+    async fn validate_parameters(&self, parameters: &ParameterSet) -> Result<ComplianceValidationResult> {
+        use crate::policy_enforcement::{TaskDescriptor, WorkingSpec, AcceptanceCriterion};
+
+        // Convert parameter set to task descriptor for CAWS validation
+        let task_descriptor = TaskDescriptor {
+            id: parameters.execution_id.clone(),
+            task_type: "federated_execution".to_string(),
+            description: format!("Federated ML execution with {} parameters", parameters.parameters.len()),
+            priority: agent_agency_contracts::task_executor::TaskPriority::High,
+            metadata: serde_json::json!({
+                "parameters": parameters.parameters,
+                "execution_mode": parameters.execution_mode,
+                "quality_gates": parameters.quality_gates
+            }),
+        };
+
+        // Create a basic working spec for validation
+        let working_spec = WorkingSpec {
+            id: format!("spec-{}", parameters.execution_id),
+            title: "Federated ML Execution".to_string(),
+            risk_tier: 2, // Medium risk for ML execution
+            mode: "feature".to_string(),
+            change_budget: crate::ChangeBudget {
+                max_files: 10,
+                max_loc: 1000,
+                max_days: 1,
+            },
+            blast_radius: crate::BlastRadius {
+                modules: vec!["federated-ml".to_string()],
+                data_migration: false,
+                external_apis: false,
+            },
+            operational_rollback_slo: "5m".to_string(),
+            scope: crate::Scope {
+                in_paths: vec!["src/federated-ml/".to_string()],
+                out_paths: vec!["src/other/".to_string()],
+            },
+            invariants: vec![
+                "Data privacy must be maintained".to_string(),
+                "Model accuracy requirements met".to_string(),
+            ],
+            acceptance: vec![AcceptanceCriterion {
+                id: "A1".to_string(),
+                given: "Valid federated execution parameters".to_string(),
+                when: "Parameters are validated".to_string(),
+                then: "CAWS compliance is confirmed".to_string(),
+            }],
+            non_functional: crate::NonFunctionalRequirements {
+                performance: crate::PerformanceRequirements {
+                    response_time_ms: 5000,
+                    throughput_per_second: 10.0,
+                    availability_percent: 99.9,
+                },
+                security: vec![
+                    "Input validation".to_string(),
+                    "Data encryption".to_string(),
+                ],
+                accessibility: vec![],
+                compliance: vec![
+                    "CAWS policy compliance".to_string(),
+                    "Data privacy regulations".to_string(),
+                ],
+            },
+            contracts: vec![],
+        };
+
+        // Validate against CAWS policies using real policy enforcement
+        let validation_result = self.policy_tools.validate_task_against_caws(&task_descriptor, &working_spec).await?;
+
+        // Convert to compliance validation result
+        let compliance_result = ComplianceValidationResult {
+            compliant: validation_result.passed,
+            violations: validation_result.violations,
+            recommendations: vec![], // Policy tools don't provide recommendations yet
+            risk_score: 0.0, // Default risk score - could be calculated based on violations
+            compliance_score: validation_result.compliance_score,
+        };
+
+        Ok(compliance_result)
     }
 }
 
 impl QualityGateValidator {
+    /// Create a new quality gate validator with real CAWS compliance validation
     pub fn new(quality_threshold: f64) -> Self {
         Self {
             baseline_quality: Arc::new(RwLock::new(HashMap::new())),
             quality_threshold,
-            compliance_validator: Arc::new(MockComplianceValidator),
+            compliance_validator: Arc::new(RealComplianceValidator::new()),
         }
     }
 

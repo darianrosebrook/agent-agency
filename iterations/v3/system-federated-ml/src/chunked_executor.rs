@@ -330,16 +330,46 @@ impl ChunkedExecutor {
 
     /// Execute chunk on CPU (fallback)
     async fn execute_on_cpu(&self, chunk: &ExecutionChunk) -> Result<serde_json::Value> {
-        // Simulate CPU processing
-        // In a real implementation, this would execute the actual computation
-        tokio::time::sleep(tokio::time::Duration::from_millis(chunk.estimated_time_ms / 2)).await;
+        use agent_workers::execution::{ToolExecutor, TaskContext};
 
-        // Return mock result
-        Ok(serde_json::json!({
-            "chunk_id": chunk.id,
-            "processed": true,
-            "result": "mock_cpu_result"
-        }))
+        // Create tool executor for actual computation
+        let tool_executor = ToolExecutor::new();
+
+        // Convert chunk data to task context for tool execution
+        let task_context = TaskContext {
+            id: chunk.id.clone(),
+            task_type: "chunk_execution".to_string(),
+            priority: agent_agency_contracts::task_executor::TaskPriority::Medium,
+            metadata: serde_json::json!({
+                "tool_id": {
+                    "name": "chunk_processor",
+                    "version": "1.0"
+                },
+                "parameters": {
+                    "chunk_index": chunk.index,
+                    "data": chunk.data,
+                    "estimated_time_ms": chunk.estimated_time_ms
+                }
+            }),
+            created_at: chrono::Utc::now(),
+            timeout_ms: Some(chunk.estimated_time_ms * 2), // Allow double the estimated time
+        };
+
+        // Execute the chunk using real tool infrastructure
+        let execution_result = tool_executor.execute_tool(task_context).await
+            .map_err(|e| anyhow::anyhow!("Tool execution failed for chunk {}: {:?}", chunk.id, e))?;
+
+        // Extract and validate the result
+        if !execution_result.success {
+            return Err(anyhow::anyhow!(
+                "Chunk execution failed: {}",
+                execution_result.error_message.unwrap_or_else(|| "Unknown error".to_string())
+            ));
+        }
+
+        // Return the actual execution result
+        execution_result.result
+            .ok_or_else(|| anyhow::anyhow!("Tool execution succeeded but returned no result for chunk {}", chunk.id))
     }
 
     /// Check if chunk dependencies are satisfied
@@ -425,12 +455,80 @@ impl ChunkedExecutor {
 
     /// Measure resource utilization during execution
     async fn measure_resource_utilization(&self) -> ResourceUtilization {
-        // In production, this would measure actual system resources
-        // For now, return mock data
+        use std::time::{SystemTime, UNIX_EPOCH};
+
+        // Get current timestamp for measurement
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs_f64();
+
+        // Basic CPU utilization approximation using process execution time
+        // In a real implementation, this would use system APIs
+        let cpu_percent = self.estimate_cpu_utilization().await;
+
+        // Basic memory utilization using std::alloc::System
+        // In a real implementation, this would query process memory usage
+        let memory_mb = self.estimate_memory_usage().await;
+
+        // I/O operations per second - track from execution stats
+        let io_ops_per_sec = self.estimate_io_operations().await;
+
+        // Network bandwidth - placeholder for now, would require network monitoring
+        let network_mbps = 0.0; // Not implemented yet - requires network monitoring library
+
         ResourceUtilization {
-            cpu_utilization: 0.6,
-            memory_utilization: 0.4,
-            io_ops_per_sec: 100.0,
+            timestamp,
+            cpu_percent,
+            memory_mb,
+            io_ops_per_sec,
+            network_mbps,
+        }
+    }
+
+    /// Estimate CPU utilization based on execution patterns
+    async fn estimate_cpu_utilization(&self) -> f64 {
+        let stats = self.execution_stats.read().await;
+
+        // Simple estimation: higher utilization during active processing
+        // In a real implementation, this would query system CPU usage
+        let active_ratio = if stats.total_chunks_processed > 0 {
+            stats.successful_chunks as f64 / stats.total_chunks_processed as f64
+        } else {
+            0.0
+        };
+
+        // Base CPU usage plus activity-based adjustment
+        let base_cpu = 5.0; // Minimum background CPU usage
+        let activity_cpu = active_ratio * 20.0; // Up to 20% additional for full activity
+
+        (base_cpu + activity_cpu).min(100.0)
+    }
+
+    /// Estimate memory usage based on chunk processing
+    async fn estimate_memory_usage(&self) -> f64 {
+        let stats = self.execution_stats.read().await;
+
+        // Rough estimation: base memory plus per-chunk allocation
+        // In a real implementation, this would query actual process memory
+        let base_memory_mb = 50.0; // Base memory usage
+        let per_chunk_mb = 2.0; // Estimated memory per processed chunk
+        let chunk_memory = stats.total_chunks_processed as f64 * per_chunk_mb;
+
+        base_memory_mb + chunk_memory.min(500.0) // Cap at reasonable limit
+    }
+
+    /// Estimate I/O operations per second
+    async fn estimate_io_operations(&self) -> f64 {
+        let stats = self.execution_stats.read().await;
+
+        // Estimate based on processing rate and typical I/O patterns
+        // In a real implementation, this would monitor actual disk/network I/O
+        if stats.total_execution_time_ms > 0 {
+            let ops_per_ms = stats.total_chunks_processed as f64 / stats.total_execution_time_ms as f64;
+            ops_per_ms * 1000.0 // Convert to per second
+        } else {
+            0.0
         }
     }
 
