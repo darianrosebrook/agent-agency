@@ -1,0 +1,46 @@
+[package]
+name = "engine-coreml"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+readme = "README.md"
+
+[dependencies]
+# Core dependencies
+tokio.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+chrono = { version = "0.4", features = ["serde"] }
+
+# Contracts (stable interface)
+agent-agency-contracts = { path = "../agent-agency-contracts" }
+
+# Model management for hot-swapping (optional for now)
+agent-model-management = { path = "../agent-model-management", optional = true }
+
+# Real system acceleration for Mistral inference
+system-acceleration = { path = "../system-acceleration" }
+
+# Caching and performance
+blake3 = "1.5"
+dashmap = "6.0"
+arc-swap = "1.7"
+enum-map = "2.7"
+
+# JSON schema validation
+jsonschema = { version = "0.17", default-features = false, features = ["draft202012"] }
+
+[features]
+default = []
+test-mock = []
+
+[dev-dependencies]
+tokio-test = "0.4"
+
+[[bin]]
+name = "engine-coreml-demo"
+path = "src/demo.rs"

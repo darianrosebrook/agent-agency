@@ -238,13 +238,12 @@ mod tests {
         assert_eq!(metrics.sessions_total, 1);
 
         // Create mock verdict
-        let verdict = JudgeVerdict {
+        let verdict = agent_agency_contracts::JudgeVerdict {
             score: 0.85,
             label: VerdictLabel::Pass,
             rationale: "Good spec".to_string(),
             violations: vec![],
             evidence_refs: vec![],
-            role: JudgeType::Constitutional,
         };
 
         let final_decision = crate::FinalDecision {
@@ -256,8 +255,11 @@ mod tests {
             recommended_actions: vec!["Proceed".to_string()],
         };
 
-        // Record evaluation
-        metrics.record_evaluation(Duration::from_millis(150), &final_decision.judge_verdicts, &final_decision);
+        // Record evaluation - create tuples of (JudgeType, JudgeVerdict)
+        let judge_verdicts_with_types: Vec<(JudgeType, agent_agency_contracts::JudgeVerdict)> = vec![
+            (JudgeType::Constitutional, verdict.clone()),
+        ];
+        metrics.record_evaluation(Duration::from_millis(150), &judge_verdicts_with_types, &final_decision);
 
         assert_eq!(metrics.evaluation_latency_ms, vec![150]);
         assert_eq!(metrics.verdicts_by_label[&VerdictLabel::Pass], 1);

@@ -1,0 +1,23 @@
+[package]
+name = "system-common-interfaces"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+readme = "README.md"
+
+[dependencies]
+# Workspace dependencies
+serde.workspace = true
+serde_json.workspace = true
+async-trait.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+
+# Minimal external dependencies to avoid cycles
+anyhow = "1.0"
+
+# HTTP client for health checks
+reqwest = { version = "0.11", features = ["json"] }

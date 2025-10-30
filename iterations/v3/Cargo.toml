@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "agent-agency-contracts",  # Core contracts and type definitions
+    "agent-constitutional-council",  # Four-judge constitutional oversight framework
     "agent-data-processing",  # NEW: Unified data processing pipeline consolidating ingestors/enrichers/indexers/knowledge/file-ops
     "agent-workers",  # NEW: Consolidated MCP-based worker system
     "agent-mcp",  # Consolidated MCP implementation

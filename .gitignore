@@ -82,9 +82,13 @@ target/
 
 # Temporal project management documentation
 docs-status/
+docs/archive/
 docs/archive/implementation-tracking/
 docs/archive/session-reports/
 docs/archive/summaries/
+docs/archive/analysis/
+docs/archive/caws/
+docs/archive/plans/
 
 # Analysis and report files (generated)
 *_analysis_report.md
