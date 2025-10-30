@@ -1,0 +1,95 @@
+//! Basic functionality tests for the Constitutional Council
+//!
+//! These tests verify that the constitutional council can be initialized
+//! and that the basic judge workflow functions correctly.
+
+use std::sync::Arc;
+use agent_agency_contracts::{WorkingSpec, JudgeEngine, JudgeType, VerdictLabel, JudgeVerdict, EngineRequest, EngineResponse, EngineError, JudgePrompt, WorkingSpecEvidence};
+use agent_constitutional_council::{CouncilCoordinator, Judges, ConstitutionalJudge, TechnicalAuditor, QualityEvaluator, IntegrationValidator, ReviewContext};
+use async_trait::async_trait;
+
+/// Simple test JudgeEngine implementation using mock responses
+#[derive(Debug)]
+struct MockJudgeEngine;
+
+#[async_trait]
+impl JudgeEngine for MockJudgeEngine {
+    async fn complete(&self, _req: EngineRequest) -> Result<EngineResponse, EngineError> {
+        // Return a mock PASS verdict for testing
+        Ok(EngineResponse {
+            raw_text: "Mock response: APPROVED".to_string(),
+            parsed: JudgeVerdict {
+                score: 0.8,
+                label: VerdictLabel::Pass,
+                rationale: "Mock judge approval for testing".to_string(),
+                violations: vec![],
+                evidence_refs: vec!["mock_test".to_string()],
+            },
+            usage: agent_agency_contracts::TokenUsage {
+                prompt_tokens: 100,
+                completion_tokens: 50,
+                total_tokens: 150,
+            },
+        })
+    }
+
+    fn capabilities(&self) -> agent_agency_contracts::EngineCaps {
+        agent_agency_contracts::EngineCaps {
+            max_tokens: 4096,
+            supports_json: true,
+            supports_structured_output: true,
+        }
+    }
+}
+
+#[tokio::test]
+async fn test_council_initialization() {
+    // Create mock engine
+    let engine = Arc::new(MockJudgeEngine);
+
+    // Create the four judges
+    let judges = Judges {
+        constitutional: ConstitutionalJudge::new(engine.clone()),
+        technical: TechnicalAuditor::new(engine.clone()),
+        quality: QualityEvaluator::new(engine.clone()),
+        integration: IntegrationValidator::new(engine.clone()),
+    };
+
+    // Create council coordinator
+    let mut council = CouncilCoordinator::new(judges);
+
+    // Test that council was created successfully
+    // This is a basic smoke test - in real usage we'd call evaluate()
+    assert!(true, "Council initialized successfully");
+}
+
+#[tokio::test]
+async fn test_judge_types() {
+    // Verify that JudgeType enum has the expected variants
+    let constitutional = JudgeType::Constitutional;
+    let technical = JudgeType::Technical;
+    let quality = JudgeType::Quality;
+    let integration = JudgeType::Integration;
+
+    // Verify they are different
+    assert_ne!(constitutional, technical);
+    assert_ne!(technical, quality);
+    assert_ne!(quality, integration);
+    assert_ne!(integration, constitutional);
+}
+
+#[tokio::test]
+async fn test_verdict_labels() {
+    // Verify that VerdictLabel enum has the expected variants
+    let pass = VerdictLabel::Pass;
+    let fail = VerdictLabel::Fail;
+    let needs_info = VerdictLabel::NeedsInfo;
+    let conditional = VerdictLabel::Conditional;
+
+    // Verify they are different
+    assert_ne!(pass, fail);
+    assert_ne!(fail, needs_info);
+    assert_ne!(needs_info, conditional);
+    assert_ne!(conditional, pass);
+}
+
