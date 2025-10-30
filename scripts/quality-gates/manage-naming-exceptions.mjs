@@ -133,11 +133,11 @@ function listExceptions() {
   const now = new Date();
 
   if (config.exceptions.length === 0) {
-    console.log("📋 No exceptions configured");
+    console.log("No exceptions configured");
     return;
   }
 
-  console.log(`📋 ${config.exceptions.length} exceptions configured:`);
+  console.log(`${config.exceptions.length} exceptions configured:`);
   console.log("");
 
   config.exceptions.forEach((exception, index) => {
@@ -231,7 +231,7 @@ function setEnforcementLevels(commitLevel, pushLevel, ciLevel) {
 // Show help
 function showHelp() {
   console.log(`
-🔧 CAWS Naming Exception Manager
+CAWS Naming Exception Manager
 
 Usage:
   node scripts/quality-gates/manage-naming-exceptions.js <command> [options]
