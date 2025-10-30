@@ -1,0 +1,650 @@
+//! Planning Storage Layer - Dual Storage (File + Database)
+//!
+//! Provides persistent storage for execution plans with versioning,
+//! session recovery, and dual storage strategy (file for specs, DB for state).
+//!
+//! @author @darianrosebrook
+
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use uuid::Uuid;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use anyhow::{anyhow, Result};
+use data_infrastructure::{
+    DatabaseOperations,
+    models::{ExecutionPlan as DbExecutionPlan, PlanningSession as DbPlanningSession, Milestone as DbMilestone, PlanningAuditEvent, PlanningTelemetry},
+};
+
+use crate::planning::plan_types::{ExecutionPlan, PlanGenerationContext};
+
+/// Planning storage with dual persistence strategy
+pub struct PlanningStorage {
+    /// Database operations for state storage
+    db_ops: Arc<dyn DatabaseOperations>,
+
+    /// File system storage for plan specifications
+    file_storage: FileStorage,
+
+    /// In-memory cache for active sessions
+    session_cache: Arc<RwLock<HashMap<Uuid, CachedSession>>>,
+
+    /// Storage configuration
+    config: StorageConfig,
+}
+
+/// File storage for plan specifications
+pub struct FileStorage {
+    /// Base directory for plan files
+    plans_dir: PathBuf,
+
+    /// Base directory for working specs
+    specs_dir: PathBuf,
+}
+
+/// Cached session data for fast access
+#[derive(Debug, Clone)]
+pub struct CachedSession {
+    /// Session data
+    session: DbPlanningSession,
+
+    /// Last accessed timestamp
+    last_accessed: DateTime<Utc>,
+
+    /// Whether session has unsaved changes
+    dirty: bool,
+}
+
+/// Storage configuration
+#[derive(Debug, Clone)]
+pub struct StorageConfig {
+    /// Maximum cache size for sessions
+    max_cache_size: usize,
+
+    /// Cache eviction time in seconds
+    cache_eviction_seconds: u64,
+
+    /// Auto-save interval in seconds
+    auto_save_interval_seconds: u64,
+
+    /// Whether to enable versioning
+    enable_versioning: bool,
+
+    /// Maximum versions to keep
+    max_versions: usize,
+}
+
+impl Default for StorageConfig {
+    fn default() -> Self {
+        Self {
+            max_cache_size: 100,
+            cache_eviction_seconds: 300, // 5 minutes
+            auto_save_interval_seconds: 60, // 1 minute
+            enable_versioning: true,
+            max_versions: 10,
+        }
+    }
+}
+
+impl PlanningStorage {
+    /// Create new planning storage
+    pub fn new(
+        db_ops: Arc<dyn DatabaseOperations>,
+        plans_dir: PathBuf,
+        specs_dir: PathBuf,
+        config: StorageConfig,
+    ) -> Self {
+        Self {
+            db_ops,
+            file_storage: FileStorage { plans_dir, specs_dir },
+            session_cache: Arc::new(RwLock::new(HashMap::new())),
+            config,
+        }
+    }
+
+    /// Store execution plan with dual persistence
+    pub async fn store_execution_plan(&self, plan: &ExecutionPlan) -> Result<()> {
+        // Store plan specification as YAML file
+        self.file_storage.store_plan_spec(plan).await?;
+
+        // Store plan metadata and state in database
+        self.store_plan_to_database(plan).await?;
+
+        // Create initial planning session
+        self.create_planning_session(plan).await?;
+
+        Ok(())
+    }
+
+    /// Load execution plan from storage
+    pub async fn load_execution_plan(&self, plan_id: Uuid) -> Result<Option<ExecutionPlan>> {
+        // Try to load from database first (for state)
+        if let Some(db_plan) = self.db_ops.get_execution_plan(plan_id).await? {
+            // Load plan spec from file
+            if let Some(plan_spec) = self.file_storage.load_plan_spec(plan_id).await? {
+                // Merge file spec with database state
+                let plan = self.merge_plan_data(plan_spec, db_plan)?;
+                Ok(Some(plan))
+            } else {
+                // Plan spec missing, reconstruct from DB
+                let plan = self.reconstruct_plan_from_db(db_plan)?;
+                Ok(Some(plan))
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Update execution plan state
+    pub async fn update_execution_plan(&self, plan: &ExecutionPlan) -> Result<()> {
+        // Update database state
+        self.update_plan_in_database(plan).await?;
+
+        // Update cached session if exists
+        self.update_cached_session(plan).await?;
+
+        Ok(())
+    }
+
+    /// Create new planning session
+    pub async fn create_planning_session(&self, plan: &ExecutionPlan) -> Result<Uuid> {
+        let session_id = Uuid::new_v4();
+
+        let session = CreatePlanningSession {
+            id: session_id,
+            plan_id: plan.contract_plan.id,
+            orchestrator_id: plan.orchestration_meta.orchestrator_id.clone(),
+            worker_pool_id: plan.orchestration_meta.worker_pool_id.clone(),
+            council_session_id: plan.orchestration_meta.council_session_id,
+            audit_correlation_id: plan.orchestration_meta.audit_correlation_id,
+            status: "active".to_string(),
+            execution_state: serde_json::to_value(&plan.execution_state).unwrap_or_default(),
+        };
+
+        let db_session = self.db_ops.create_planning_session(session).await?;
+
+        // Cache the session
+        let cached = CachedSession {
+            session: db_session,
+            last_accessed: Utc::now(),
+            dirty: false,
+        };
+
+        let mut cache = self.session_cache.write().await;
+        cache.insert(session_id, cached);
+
+        Ok(session_id)
+    }
+
+    /// Get planning session with caching
+    pub async fn get_planning_session(&self, session_id: Uuid) -> Result<Option<DbPlanningSession>> {
+        // Check cache first
+        {
+            let cache = self.session_cache.read().await;
+            if let Some(cached) = cache.get(&session_id) {
+                // Update last accessed
+                let mut updated_cached = cached.clone();
+                updated_cached.last_accessed = Utc::now();
+
+                // Update cache (we need to drop the read lock first)
+                drop(cache);
+                let mut cache = self.session_cache.write().await;
+                cache.insert(session_id, updated_cached);
+
+                return Ok(Some(cached.session.clone()));
+            }
+        }
+
+        // Load from database
+        if let Some(session) = self.db_ops.get_planning_session(session_id).await? {
+            // Cache the session
+            let cached = CachedSession {
+                session: session.clone(),
+                last_accessed: Utc::now(),
+                dirty: false,
+            };
+
+            let mut cache = self.session_cache.write().await;
+            self.evict_old_cache_entries(&mut cache).await;
+            cache.insert(session_id, cached);
+
+            Ok(Some(session))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Update planning session
+    pub async fn update_planning_session(&self, session_id: Uuid, execution_state: serde_json::Value) -> Result<()> {
+        let update = UpdatePlanningSession {
+            execution_state,
+            completed_at: None, // Will be set when session completes
+        };
+
+        self.db_ops.update_planning_session(session_id, update).await?;
+
+        // Update cache
+        let mut cache = self.session_cache.write().await;
+        if let Some(cached) = cache.get_mut(&session_id) {
+            cached.dirty = false;
+            cached.last_accessed = Utc::now();
+        }
+
+        Ok(())
+    }
+
+    /// Log planning audit event
+    pub async fn log_audit_event(&self, event: AuditEvent) -> Result<()> {
+        let db_event = CreatePlanningAuditEvent {
+            id: Uuid::new_v4(),
+            plan_id: event.plan_id,
+            milestone_id: event.milestone_id,
+            worker_id: event.worker_id,
+            event_type: event.event_type,
+            description: event.description,
+            metadata: event.metadata,
+        };
+
+        self.db_ops.create_planning_audit_event(db_event).await?;
+        Ok(())
+    }
+
+    /// Store planning telemetry
+    pub async fn store_telemetry(&self, plan_id: Uuid, metric_type: String, metric_value: serde_json::Value) -> Result<()> {
+        let telemetry = CreatePlanningTelemetry {
+            id: Uuid::new_v4(),
+            plan_id,
+            metric_type,
+            metric_value,
+            metadata: serde_json::Value::Object(serde_json::Map::new()),
+        };
+
+        self.db_ops.create_planning_telemetry(telemetry).await?;
+        Ok(())
+    }
+
+    /// Recover session state after restart
+    pub async fn recover_session_state(&self, session_id: Uuid) -> Result<Option<ExecutionPlan>> {
+        if let Some(session) = self.get_planning_session(session_id).await? {
+            // Load the plan
+            if let Some(plan) = self.load_execution_plan(session.plan_id).await? {
+                // Restore execution state from session
+                let execution_state: Option<crate::planning::plan_types::ActiveExecutionState> =
+                    serde_json::from_value(session.execution_state).ok();
+
+                let mut recovered_plan = plan;
+                recovered_plan.execution_state = execution_state;
+
+                Ok(Some(recovered_plan))
+            } else {
+                Ok(None)
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// List all execution plans
+    pub async fn list_execution_plans(&self) -> Result<Vec<DbExecutionPlan>> {
+        self.db_ops.get_execution_plans().await
+    }
+
+    /// Delete execution plan (soft delete by marking as cancelled)
+    pub async fn delete_execution_plan(&self, plan_id: Uuid) -> Result<()> {
+        // Update plan state to cancelled
+        let update = UpdateExecutionPlan {
+            state: Some("cancelled".to_string()),
+            completed_at: Some(Utc::now()),
+            ..Default::default()
+        };
+
+        self.db_ops.update_execution_plan(plan_id, update).await?;
+        Ok(())
+    }
+
+    /// Clean up old cache entries
+    async fn evict_old_cache_entries(&self, cache: &mut HashMap<Uuid, CachedSession>) {
+        let now = Utc::now();
+        let eviction_threshold = chrono::Duration::seconds(self.config.cache_eviction_seconds as i64);
+
+        // Remove entries older than threshold
+        cache.retain(|_, cached| {
+            now.signed_duration_since(cached.last_accessed) < eviction_threshold
+        });
+
+        // If still over max size, remove oldest entries
+        if cache.len() > self.config.max_cache_size {
+            let mut entries: Vec<_> = cache.iter().collect();
+            entries.sort_by(|a, b| a.1.last_accessed.cmp(&b.1.last_accessed));
+
+            let to_remove: Vec<Uuid> = entries.into_iter()
+                .take(cache.len() - self.config.max_cache_size)
+                .map(|(id, _)| *id)
+                .collect();
+
+            for id in to_remove {
+                cache.remove(&id);
+            }
+        }
+    }
+
+    /// Update cached session
+    async fn update_cached_session(&self, plan: &ExecutionPlan) -> Result<()> {
+        let mut cache = self.session_cache.write().await;
+        if let Some(cached) = cache.get_mut(&plan.contract_plan.session_id) {
+            // Update execution state in cache
+            if let Some(execution_state) = &plan.execution_state {
+                cached.session.execution_state = serde_json::to_value(execution_state)
+                    .unwrap_or(cached.session.execution_state.clone());
+                cached.dirty = true;
+            }
+            cached.last_accessed = Utc::now();
+        }
+        Ok(())
+    }
+
+    /// Store plan to database
+    async fn store_plan_to_database(&self, plan: &ExecutionPlan) -> Result<()> {
+        let create_plan = CreateExecutionPlan {
+            id: plan.contract_plan.id,
+            session_id: plan.contract_plan.session_id,
+            working_spec_id: plan.contract_plan.working_spec_id.clone(),
+            title: plan.contract_plan.title.clone(),
+            overview: plan.contract_plan.overview.clone(),
+            state: plan.contract_plan.state.to_string(),
+            milestones: serde_json::to_value(&plan.contract_plan.milestones)?,
+            dependency_graph: serde_json::to_value(&plan.contract_plan.dependency_graph)?,
+            change_budget: serde_json::to_value(&plan.contract_plan.change_budget)?,
+            quality_gates: serde_json::to_value(&plan.contract_plan.quality_gates)?,
+            evidence_requirements: serde_json::to_value(&plan.contract_plan.evidence_requirements)?,
+            active_waivers: serde_json::to_value(&plan.contract_plan.active_waivers)?,
+            metadata: serde_json::to_value(&plan.contract_plan.metadata)?,
+        };
+
+        self.db_ops.create_execution_plan(create_plan).await?;
+        Ok(())
+    }
+
+    /// Update plan in database
+    async fn update_plan_in_database(&self, plan: &ExecutionPlan) -> Result<()> {
+        let update = UpdateExecutionPlan {
+            state: Some(plan.contract_plan.state.to_string()),
+            milestones: Some(serde_json::to_value(&plan.contract_plan.milestones)?),
+            dependency_graph: Some(serde_json::to_value(&plan.contract_plan.dependency_graph)?),
+            updated_at: Some(Utc::now()),
+            approved_at: plan.contract_plan.approved_at,
+            completed_at: plan.contract_plan.completed_at,
+            ..Default::default()
+        };
+
+        self.db_ops.update_execution_plan(plan.contract_plan.id, update).await?;
+        Ok(())
+    }
+
+    /// Merge plan data from file and database
+    fn merge_plan_data(&self, file_plan: ExecutionPlan, db_plan: DbExecutionPlan) -> Result<ExecutionPlan> {
+        // Use file plan as base, but update with latest DB state
+        let mut merged = file_plan;
+        merged.contract_plan.state = db_plan.state.parse()
+            .unwrap_or(merged.contract_plan.state);
+        merged.contract_plan.updated_at = db_plan.updated_at;
+        merged.contract_plan.approved_at = db_plan.approved_at;
+        merged.contract_plan.completed_at = db_plan.completed_at;
+
+        Ok(merged)
+    }
+
+    /// Reconstruct plan from database (when file is missing)
+    fn reconstruct_plan_from_db(&self, db_plan: DbExecutionPlan) -> Result<ExecutionPlan> {
+        // This would reconstruct the full plan from database data
+        // For now, return a minimal plan
+        Err(anyhow!("Plan reconstruction from DB not yet implemented - PLACEHOLDER"))
+    }
+}
+
+impl FileStorage {
+    /// Store plan specification as YAML file
+    async fn store_plan_spec(&self, plan: &ExecutionPlan) -> Result<()> {
+        let plan_path = self.plans_dir.join(format!("{}.plan.yml", plan.contract_plan.id));
+
+        // Create parent directories if needed
+        if let Some(parent) = plan_path.parent() {
+            tokio::fs::create_dir_all(parent).await?;
+        }
+
+        // Serialize plan to YAML
+        let yaml_content = serde_yaml::to_string(plan)?;
+        tokio::fs::write(plan_path, yaml_content).await?;
+
+        Ok(())
+    }
+
+    /// Load plan specification from YAML file
+    async fn load_plan_spec(&self, plan_id: Uuid) -> Result<Option<ExecutionPlan>> {
+        let plan_path = self.plans_dir.join(format!("{}.plan.yml", plan_id));
+
+        if !plan_path.exists() {
+            return Ok(None);
+        }
+
+        let yaml_content = tokio::fs::read_to_string(plan_path).await?;
+        let plan: ExecutionPlan = serde_yaml::from_str(&yaml_content)?;
+
+        Ok(Some(plan))
+    }
+}
+
+// Database operation types (should be imported from data-infrastructure)
+use data_infrastructure::{
+    CreateExecutionPlan, UpdateExecutionPlan, CreatePlanningSession, UpdatePlanningSession,
+    CreatePlanningAuditEvent, CreatePlanningTelemetry,
+};
+
+/// Audit event for storage operations
+#[derive(Debug, Clone)]
+pub struct AuditEvent {
+    pub plan_id: Uuid,
+    pub milestone_id: Option<String>,
+    pub worker_id: Option<Uuid>,
+    pub event_type: String,
+    pub description: String,
+    pub timestamp: DateTime<Utc>,
+    pub metadata: serde_json::Value,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    // Mock database operations for testing
+    struct MockDatabaseOps;
+
+    #[async_trait::async_trait]
+    impl DatabaseOperations for MockDatabaseOps {
+        async fn create_execution_plan(&self, _plan: CreateExecutionPlan) -> Result<data_infrastructure::models::ExecutionPlan> {
+            Ok(data_infrastructure::models::ExecutionPlan {
+                id: Uuid::new_v4(),
+                session_id: Uuid::new_v4(),
+                working_spec_id: "test".to_string(),
+                title: "Test Plan".to_string(),
+                overview: "Test overview".to_string(),
+                state: "draft".to_string(),
+                milestones: serde_json::Value::Array(vec![]),
+                dependency_graph: serde_json::Value::Object(serde_json::Map::new()),
+                change_budget: serde_json::Value::Object(serde_json::Map::new()),
+                quality_gates: serde_json::Value::Object(serde_json::Map::new()),
+                evidence_requirements: serde_json::Value::Array(vec![]),
+                active_waivers: serde_json::Value::Array(vec![]),
+                metadata: serde_json::Value::Object(serde_json::Map::new()),
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+                approved_at: None,
+                completed_at: None,
+            })
+        }
+
+        async fn get_execution_plan(&self, _id: Uuid) -> Result<Option<data_infrastructure::models::ExecutionPlan>> {
+            Ok(None)
+        }
+
+        async fn get_execution_plans(&self) -> Result<Vec<data_infrastructure::models::ExecutionPlan>> {
+            Ok(vec![])
+        }
+
+        async fn update_execution_plan(&self, _id: Uuid, _update: UpdateExecutionPlan) -> Result<data_infrastructure::models::ExecutionPlan> {
+            Err(anyhow!("Not implemented"))
+        }
+
+        async fn delete_execution_plan(&self, _id: Uuid) -> Result<()> {
+            Ok(())
+        }
+
+        async fn create_planning_session(&self, session: CreatePlanningSession) -> Result<data_infrastructure::models::PlanningSession> {
+            Ok(data_infrastructure::models::PlanningSession {
+                id: session.id,
+                plan_id: session.plan_id,
+                orchestrator_id: session.orchestrator_id,
+                worker_pool_id: session.worker_pool_id,
+                council_session_id: session.council_session_id,
+                audit_correlation_id: session.audit_correlation_id,
+                status: session.status,
+                execution_state: session.execution_state,
+                started_at: Utc::now(),
+                completed_at: None,
+                created_at: Utc::now(),
+            })
+        }
+
+        async fn get_planning_session(&self, _id: Uuid) -> Result<Option<data_infrastructure::models::PlanningSession>> {
+            Ok(None)
+        }
+
+        async fn get_planning_sessions(&self, _plan_id: Uuid) -> Result<Vec<data_infrastructure::models::PlanningSession>> {
+            Ok(vec![])
+        }
+
+        async fn update_planning_session(&self, _id: Uuid, _update: UpdatePlanningSession) -> Result<data_infrastructure::models::PlanningSession> {
+            Err(anyhow!("Not implemented"))
+        }
+
+        async fn create_planning_audit_event(&self, _event: CreatePlanningAuditEvent) -> Result<data_infrastructure::models::PlanningAuditEvent> {
+            Err(anyhow!("Not implemented"))
+        }
+
+        async fn get_planning_audit_events(&self, _plan_id: Uuid) -> Result<Vec<data_infrastructure::models::PlanningAuditEvent>> {
+            Ok(vec![])
+        }
+
+        async fn create_planning_telemetry(&self, _telemetry: CreatePlanningTelemetry) -> Result<data_infrastructure::models::PlanningTelemetry> {
+            Err(anyhow!("Not implemented"))
+        }
+
+        async fn get_planning_telemetry(&self, _plan_id: Uuid, _metric_type: Option<String>) -> Result<Vec<data_infrastructure::models::PlanningTelemetry>> {
+            Ok(vec![])
+        }
+
+        // Stub implementations for other required methods
+        async fn create_provenance_entry(&self, _entry: data_infrastructure::CreateProvenanceEntry) -> Result<data_infrastructure::models::ProvenanceEntry> { Err(anyhow!("Not implemented")) }
+        async fn get_provenance_entries(&self, _limit: Option<i64>) -> Result<Vec<data_infrastructure::models::ProvenanceEntry>> { Ok(vec![]) }
+        async fn create_waiver(&self, _waiver: data_infrastructure::CreateWaiver) -> Result<data_infrastructure::models::Waiver> { Err(anyhow!("Not implemented")) }
+        async fn get_waivers(&self, _status: Option<String>) -> Result<Vec<data_infrastructure::models::Waiver>> { Ok(vec![]) }
+        async fn update_waiver(&self, _id: Uuid, _update: data_infrastructure::UpdateWaiver) -> Result<data_infrastructure::models::Waiver> { Err(anyhow!("Not implemented")) }
+        async fn create_judge(&self, _judge: data_infrastructure::CreateJudge) -> Result<data_infrastructure::models::Judge> { Err(anyhow!("Not implemented")) }
+        async fn get_judges(&self) -> Result<Vec<data_infrastructure::models::Judge>> { Ok(vec![]) }
+        async fn update_judge(&self, _id: Uuid, _update: data_infrastructure::UpdateJudge) -> Result<data_infrastructure::models::Judge> { Err(anyhow!("Not implemented")) }
+        async fn create_worker(&self, _worker: data_infrastructure::CreateWorker) -> Result<data_infrastructure::models::Worker> { Err(anyhow!("Not implemented")) }
+        async fn get_workers(&self) -> Result<Vec<data_infrastructure::models::Worker>> { Ok(vec![]) }
+        async fn update_worker(&self, _id: Uuid, _update: data_infrastructure::UpdateWorker) -> Result<data_infrastructure::models::Worker> { Err(anyhow!("Not implemented")) }
+        async fn create_task(&self, _task: data_infrastructure::CreateTask) -> Result<data_infrastructure::models::Task> { Err(anyhow!("Not implemented")) }
+        async fn get_tasks(&self, _status: Option<String>) -> Result<Vec<data_infrastructure::models::Task>> { Ok(vec![]) }
+        async fn update_task(&self, _id: Uuid, _update: data_infrastructure::UpdateTask) -> Result<data_infrastructure::models::Task> { Err(anyhow!("Not implemented")) }
+        async fn get_task(&self, _id: Uuid) -> Result<Option<data_infrastructure::models::Task>> { Ok(None) }
+        async fn delete_task(&self, _id: Uuid) -> Result<()> { Ok(()) }
+        async fn create_milestone(&self, _milestone: data_infrastructure::CreateMilestone) -> Result<data_infrastructure::models::Milestone> { Err(anyhow!("Not implemented")) }
+        async fn get_milestones(&self, _plan_id: Uuid) -> Result<Vec<data_infrastructure::models::Milestone>> { Ok(vec![]) }
+        async fn update_milestone(&self, _plan_id: Uuid, _milestone_id: String, _update: data_infrastructure::UpdateMilestone) -> Result<data_infrastructure::models::Milestone> { Err(anyhow!("Not implemented")) }
+    }
+
+    #[tokio::test]
+    async fn test_planning_storage_creation() {
+        let db_ops = Arc::new(MockDatabaseOps);
+        let plans_dir = PathBuf::from("/tmp/plans");
+        let specs_dir = PathBuf::from("/tmp/specs");
+        let config = StorageConfig::default();
+
+        let storage = PlanningStorage::new(db_ops, plans_dir, specs_dir, config);
+        // Storage created successfully
+        assert!(true);
+    }
+
+    #[tokio::test]
+    async fn test_session_caching() {
+        let db_ops = Arc::new(MockDatabaseOps);
+        let plans_dir = PathBuf::from("/tmp/plans");
+        let specs_dir = PathBuf::from("/tmp/specs");
+        let config = StorageConfig::default();
+
+        let storage = PlanningStorage::new(db_ops, plans_dir, specs_dir, config);
+
+        // Test session creation
+        let plan = create_test_execution_plan();
+        let session_id = storage.create_planning_session(&plan).await.unwrap();
+
+        // Test session retrieval (should be cached)
+        let session = storage.get_planning_session(session_id).await.unwrap().unwrap();
+        assert_eq!(session.id, session_id);
+    }
+
+    fn create_test_execution_plan() -> ExecutionPlan {
+        use crate::planning::plan_types::{OrchestrationMetadata, ExecutionContext, ResourceInventory};
+
+        ExecutionPlan {
+            contract_plan: agent_agency_contracts::planning_io::ExecutionPlan {
+                id: Uuid::new_v4(),
+                session_id: Uuid::new_v4(),
+                working_spec_id: "test-spec".to_string(),
+                title: "Test Plan".to_string(),
+                overview: "Test overview".to_string(),
+                state: agent_agency_contracts::planning_io::PlanState::Draft,
+                milestones: vec![],
+                dependency_graph: Default::default(),
+                change_budget: Default::default(),
+                quality_gates: Default::default(),
+                evidence_requirements: vec![],
+                active_waivers: vec![],
+                metadata: Default::default(),
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+                approved_at: None,
+                completed_at: None,
+            },
+            orchestration_meta: OrchestrationMetadata {
+                orchestrator_id: "test-orchestrator".to_string(),
+                worker_pool_id: "test-pool".to_string(),
+                council_session_id: Some("test-council".to_string()),
+                audit_correlation_id: Uuid::new_v4(),
+                planning_engine: "test-engine".to_string(),
+                planning_version: "1.0.0".to_string(),
+            },
+            execution_context: ExecutionContext {
+                session_start: Utc::now(),
+                working_directory: "/tmp".to_string(),
+                environment: std::collections::HashMap::new(),
+                available_resources: ResourceInventory {
+                    available_cpu_cores: 4,
+                    available_memory_mb: 8192,
+                    available_disk_mb: 102400,
+                    available_network_mbps: 100.0,
+                    available_workers: std::collections::HashMap::new(),
+                },
+                worker_assignments: std::collections::HashMap::new(),
+                parallel_batches: vec![],
+            },
+            execution_state: None,
+        }
+    }
+}
