@@ -4,9 +4,6 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 /**
  * Hidden TODO Pattern Analyzer (Node.js)
  *
@@ -51,67 +48,67 @@ class HiddenTodoAnalyzer {
     // Define sophisticated hidden TODO patterns
     this.hiddenTodoPatterns = [
       // Incomplete implementation patterns
-      /\\bnot\\s+yet\\s+implemented\\b/i,
-      /\\bmissing\\s+implementation\\b/i,
-      /\\bincomplete\\s+implementation\\b/i,
-      /\\bpartial\\s+implementation\\b/i,
-      /\\bunimplemented\\b/i,
-      /\\bnot\\s+done\\b/i,
-      /\\bpending\\s+implementation\\b/i,
-      /\\bto\\s+be\\s+implemented\\b/i,
-      /\\bwill\\s+be\\s+implemented\\b/i,
-      /\\bcoming\\s+soon\\b/i,
-      /\\bwork\\s+in\\s+progress\\b/i,
-      /\\bwip\\b/i,
+      /\bnot\s+yet\s+implemented\b/i,
+      /\bmissing\s+implementation\b/i,
+      /\bincomplete\s+implementation\b/i,
+      /\bpartial\s+implementation\b/i,
+      /\bunimplemented\b/i,
+      /\bnot\s+done\b/i,
+      /\bpending\s+implementation\b/i,
+      /\bto\s+be\s+implemented\b/i,
+      /\bwill\s+be\s+implemented\b/i,
+      /\bcoming\s+soon\b/i,
+      /\bwork\s+in\s+progress\b/i,
+      /\bwip\b/i,
 
       // Placeholder code patterns
-      /\\bplaceholder\\s+code\\b/i,
-      /\\bplaceholder\\s+implementation\\b/i,
-      /\\bstub\\s+implementation\\b/i,
-      /\\bdummy\\s+implementation\\b/i,
-      /\\bfake\\s+implementation\\b/i,
-      /\\bsimplified\\s+.*?\\s+implementation\\b/i,
-      /\\bfor\\s+now\\b.*?just|simply|only\\b/i,
-      /\\btemporary\\s+implementation\\b/i,
-      /\\bmock\\s+implementation\\b/i,
-      /\\bsample\\s+implementation\\b/i,
+      /\bplaceholder\s+code\b/i,
+      /\bplaceholder\s+implementation\b/i,
+      /\bstub\s+implementation\b/i,
+      /\bdummy\s+implementation\b/i,
+      /\bfake\s+implementation\b/i,
+      /\bsimplified\s+.*?\s+implementation\b/i,
+      /\bfor\s+now\b.*?(just|simply|only)\b/i,
+      /\btemporary\s+implementation\b/i,
+      /\bmock\s+implementation\b/i,
+      /\bsample\s+implementation\b/i,
 
       // Temporary solution patterns
-      /\\btemporary\\s+solution\\b/i,
-      /\\btemporary\\s+fix\\b/i,
-      /\\bquick\\s+fix\\b/i,
-      /\\bworkaround\\b/i,
-      /\\bhack\\b.*?fix|solution\\b/i,
-      /\\bband-aid\\s+solution\\b/i,
-      /\\bkludge\\b/i,
-      /\\bcrude\\s+solution\\b/i,
-      /\\brough\\s+implementation\\b/i,
+      /\btemporary\s+solution\b/i,
+      /\btemporary\s+fix\b/i,
+      /\bquick\s+fix\b/i,
+      /\bworkaround\b/i,
+      /\bhack\b.*?(fix|solution)\b/i,
+      /\bband-aid\s+solution\b/i,
+      /\bkludge\b/i,
+      /\bcrude\s+solution\b/i,
+      /\brough\s+implementation\b/i,
 
       // Hardcoded value patterns
-      /\\bhardcoded\\s+value\\b/i,
-      /\\bmagic\\s+number\\b/i,
-      /\\bmagic\\s+string\\b/i,
-      /\\bconstant\\s+value\\b.*?replace|change|make\\s+configurable\\b/i,
-      /\\bfixed\\s+value\\b/i,
-      /\\bstatic\\s+value\\b/i,
-      /\\bhardcoded\\s+constant\\b/i,
+      /\bhardcoded\s+value\b/i,
+      /\bmagic\s+number\b/i,
+      /\bmagic\s+string\b/i,
+      /\bconstant\s+value\b.*?(replace|change|make\s+configurable)\b/i,
+      /\bfixed\s+value\b/i,
+      /\bstatic\s+value\b/i,
+      /\bhardcoded\s+constant\b/i,
 
       // Future improvement patterns
-      /\\bin\\s+production\\b.*?implement|add|fix\\b/i,
-      /\\bin\\s+a\\s+real\\s+implementation\\b/i,
-      /\\beventually\\b.*?implement|add|fix\\b/i,
-      /\\bshould\\s+be\\b.*?implemented|added|fixed\\b/i,
-      /\\bwould\\s+be\\b.*?implemented|added|fixed\\b/i,
-      /\\bmight\\s+be\\b.*?implemented|added|fixed\\b/i,
-      /\\bcould\\s+be\\b.*?implemented|added|fixed\\b/i,
-      /\\blater\\b.*?implement|add|fix\\b/i,
-      /\\bsomeday\\b.*?implement|add|fix\\b/i,
+      /\bin\s+production\b.*?(implement|add|fix)\b/i,
+      /\bin\s+a\s+real\s+implementation\b/i,
+      /\beventually\b.*?(implement|add|fix)\b/i,
+      /\bshould\s+be\b.*?(implemented|added|fixed)\b/i,
+      /\bwould\s+be\b.*?(implemented|added|fixed)\b/i,
+      /\bmight\s+be\b.*?(implemented|added|fixed)\b/i,
+      /\bcould\s+be\b.*?(implemented|added|fixed)\b/i,
+      /\blater\b.*?(implement|add|fix)\b/i,
+      /\bsomeday\b.*?(implement|add|fix)\b/i,
     ];
 
     // Language-specific code stub detection
     this.codeStubPatterns = {
       javascript: {
-        functionStub: /function\s+\w+\(.*\)\s*\{/g,
+        functionStub: /^\s*function\s+\w+\([^)]*\)\s*\{\s*\}\s*$/g,
         throwNotImpl:
           /throw\s+new\s+Error\(\s*["'`](TODO|Not\s+Implemented|Not\s+Yet\s+Implemented)["'`]/i,
         returnTodo: /return\s+(null|undefined);\s*\/\/\s*(TODO|PLACEHOLDER)/i,
@@ -120,7 +117,7 @@ class HiddenTodoAnalyzer {
         returnMock: /return\s+\{.*?\};\s*\/\/\s*(MOCK|FAKE|DUMMY)/i,
       },
       typescript: {
-        functionStub: /(async\s+)?function\s+\w+\(.*\)\s*\{/g,
+        functionStub: /^\s*(async\s+)?function\s+\w+\([^)]*\)\s*\{\s*\}\s*$/g,
         throwNotImpl:
           /throw\s+new\s+Error\(\s*["'`](TODO|Not\s+Implemented|Not\s+Yet\s+Implemented)["'`]/i,
         returnTodo: /return\s+(null|undefined);\s*\/\/\s*(TODO|PLACEHOLDER)/i,
@@ -138,7 +135,8 @@ class HiddenTodoAnalyzer {
         emptyFunction: /^\s*def\s+\w+\(.*\):\s*pass\s*$/gm,
       },
       rust: {
-        functionStub: /^\s*(async\s+)?fn\s+\w+\(.*\)\s*->\s*\w+\s*\{/gm,
+        functionStub:
+          /^\s*(async\s+)?fn\s+\w+\([^)]*\)(\s*->\s*[^ \t{]+)?\s*\{\s*\}\s*$/gm,
         todoMacro: /^\s*todo!\(\)/gm,
         unimplementedMacro: /^\s*unimplemented!\(\)/gm,
         panicStub: /^\s*panic!\("TODO"\)/gm,
@@ -146,7 +144,7 @@ class HiddenTodoAnalyzer {
           /^\s*Default::default\(\);?\s*\/\/\s*(TODO|PLACEHOLDER)/gm,
       },
       go: {
-        functionStub: /^\s*func\s+\w+\(.*\)\s*\w*\s*\{/gm,
+        functionStub: /^\s*func\s+\w+\([^)]*\)\s*\w*\s*\{\s*\}\s*$/gm,
         panicStub: /^\s*panic\("TODO"\)/gm,
         returnNil: /^\s*return\s+nil;?\s*\/\/\s*(TODO|PLACEHOLDER)/gm,
       },
@@ -214,7 +212,7 @@ class HiddenTodoAnalyzer {
     engineeringSuggestions = false
   ) {
     const allIssues = [];
-    const filesToAnalyze = scopedFiles || this.findFilesToAnalyze();
+    const filesToAnalyze = scopedFiles ?? this.findFilesToAnalyze();
 
     if (showProgress && filesToAnalyze.length > 0) {
       console.error(
@@ -344,7 +342,7 @@ class HiddenTodoAnalyzer {
   /**
    * Analyze TODO comment for engineering-grade format suggestions
    */
-  analyzeEngineeringSuggestions(comment, filePath) {
+  analyzeEngineeringSuggestions(comment) {
     const normalized = comment.trim();
     if (!normalized) {
       return { needsEngineeringFormat: false };
@@ -364,17 +362,11 @@ class HiddenTodoAnalyzer {
       priority: "Medium",
     };
 
-    // Check if already has engineering-grade structure
-    const hasStructure = this.checkEngineeringGradeStructure(normalized);
-
-    if (!hasStructure) {
+    // Check what's missing
+    const missing = this.identifyMissingElements(normalized);
+    if (missing.length > 0) {
       suggestions.needsEngineeringFormat = true;
-
-      // Check what's missing
-      const missing = this.identifyMissingElements(normalized);
       suggestions.missingElements = missing;
-
-      // Generate suggestions
       suggestions.suggestions = this.generateSuggestionsText(missing);
       suggestions.templateSuggestion = this.generateTemplateSuggestion(
         normalized,
@@ -413,15 +405,10 @@ class HiddenTodoAnalyzer {
       ],
     };
 
-    for (const [category, categoryPatterns] of Object.entries(patterns)) {
-      for (const pattern of categoryPatterns) {
-        if (pattern.test(comment)) {
-          return true;
-        }
-      }
-    }
-
-    return false;
+    const found = Object.values(patterns).some((group) =>
+      group.some((p) => p.test(comment))
+    );
+    return found;
   }
 
   /**
@@ -632,8 +619,11 @@ class HiddenTodoAnalyzer {
     const issues = [];
 
     try {
-      const content = fs.readFileSync(filePath, "utf8");
-      const lines = content.split("\\n");
+      const absPath = path.isAbsolute(filePath)
+        ? filePath
+        : path.join(this.projectRoot, filePath);
+      const content = fs.readFileSync(absPath, "utf8");
+      const lines = content.split("\n");
       const fileExt = path.extname(filePath).toLowerCase();
       const language = this.detectLanguage(fileExt);
 
@@ -643,45 +633,58 @@ class HiddenTodoAnalyzer {
 
         // Check for hidden TODO patterns in comments
         if (this.isCommentLine(line, language)) {
-          const confidence = this.calculateConfidence(line, language);
+          let confidence = this.calculateConfidence(line);
 
-          if (confidence >= 0.6) {
-            let foundMatch = false;
-
-            // Check hidden TODO patterns first
+          // Check hidden TODO patterns - if any match, set base confidence
+          let foundHiddenTodo = false;
+          
+          // Skip organizational comments that happen to match patterns
+          const isOrganizationalComment = /\bpatterns?\b|\bcategories?\b|\b(examples?|tests?)\s+(of|for)\b/i.test(line);
+          
+          if (!isOrganizationalComment) {
             for (const pattern of this.hiddenTodoPatterns) {
               if (pattern.test(line)) {
-                let message = `Hidden incomplete implementation detected: '${line.trim()}'`;
-                let suggestedFix =
-                  "Replace with complete implementation or remove TODO marker";
-
-                // Add engineering suggestions if requested
-                if (engineeringSuggestions) {
-                  const engineeringData = this.analyzeEngineeringSuggestions(
-                    line,
-                    filePath
-                  );
-                  if (engineeringData.needsEngineeringFormat) {
-                    message += `\n\n💡 Engineering-grade format suggestions:\n${engineeringData.suggestions}`;
-                    suggestedFix =
-                      engineeringData.templateSuggestion || suggestedFix;
-                  }
+                foundHiddenTodo = true;
+                // If confidence is below threshold, set to base level for hidden TODOs
+                if (confidence < 0.6) {
+                  confidence = Math.max(confidence, 0.6);
                 }
-
-                issues.push(
-                  new QualityIssue(
-                    filePath,
-                    originalLineNum,
-                    "error",
-                    "HIDDEN_TODO",
-                    message,
-                    confidence,
-                    suggestedFix
-                  )
-                );
-                foundMatch = true;
-                break; // Only report one issue per line
+                break;
               }
+            }
+          }
+
+          if (foundHiddenTodo || confidence >= 0.6) {
+            let foundMatch = false;
+
+            // Report hidden TODO patterns if found
+            if (foundHiddenTodo) {
+              let message = `Hidden incomplete implementation detected: '${line.trim()}'`;
+              let suggestedFix =
+                "Replace with complete implementation or remove TODO marker";
+
+              // Add engineering suggestions if requested
+              if (engineeringSuggestions) {
+                const engineeringData = this.analyzeEngineeringSuggestions(line);
+                if (engineeringData.needsEngineeringFormat) {
+                  message += `\n\n💡 Engineering-grade format suggestions:\n${engineeringData.suggestions}`;
+                  suggestedFix =
+                    engineeringData.templateSuggestion || suggestedFix;
+                }
+              }
+
+              issues.push(
+                new QualityIssue(
+                  absPath,
+                  originalLineNum,
+                  "error",
+                  "HIDDEN_TODO",
+                  message,
+                  confidence,
+                  suggestedFix
+                )
+              );
+              foundMatch = true;
             }
 
             // If no hidden pattern matched but confidence is high and it's an explicit TODO,
@@ -693,10 +696,7 @@ class HiddenTodoAnalyzer {
 
               // Add engineering suggestions if requested
               if (engineeringSuggestions) {
-                const engineeringData = this.analyzeEngineeringSuggestions(
-                  line,
-                  filePath
-                );
+                const engineeringData = this.analyzeEngineeringSuggestions(line);
                 if (engineeringData.needsEngineeringFormat) {
                   message += `\n\n💡 Engineering-grade format suggestions:\n${engineeringData.suggestions}`;
                   suggestedFix =
@@ -706,7 +706,7 @@ class HiddenTodoAnalyzer {
 
               issues.push(
                 new QualityIssue(
-                  filePath,
+                  absPath,
                   originalLineNum,
                   "warning", // Explicit TODOs are warnings, not errors
                   "EXPLICIT_TODO",
@@ -728,7 +728,7 @@ class HiddenTodoAnalyzer {
             if (matches) {
               issues.push(
                 new QualityIssue(
-                  filePath,
+                  absPath,
                   originalLineNum,
                   "error",
                   "CODE_STUB",
@@ -835,7 +835,7 @@ class HiddenTodoAnalyzer {
   /**
    * Calculate confidence score for a potential hidden TODO
    */
-  calculateConfidence(line, language) {
+  calculateConfidence(line) {
     let score = 0.0;
 
     // Check for TODO indicators (increase score)
@@ -911,6 +911,35 @@ class HiddenTodoAnalyzer {
       );
     }
 
+    if (outputFormat === "md") {
+      const errors = issues.filter((i) => i.severity === "error");
+      const warnings = issues.filter((i) => i.severity === "warning");
+      const lines = [];
+      lines.push(`# Hidden TODO Analysis Report`);
+      lines.push(``);
+      lines.push(
+        `- **Files analyzed:** ${new Set(issues.map((i) => i.file_path)).size}`
+      );
+      lines.push(`- **Total issues:** ${issues.length}`);
+      lines.push(`- **Errors:** ${errors.length}`);
+      lines.push(`- **Warnings:** ${warnings.length}`);
+      if (issues.length) {
+        lines.push(``);
+        lines.push(`## Top issues`);
+        for (const issue of issues.slice(0, 10)) {
+          const rel = path.relative(this.projectRoot, issue.file_path);
+          const pct = (issue.confidence * 100).toFixed(1);
+          lines.push(
+            `- \`${rel}:${issue.line_number}\` — ${issue.rule_id} (${pct}%)`
+          );
+          lines.push(`  - ${issue.message}`);
+          if (issue.suggested_fix)
+            lines.push(`  - _Suggestion:_ ${issue.suggested_fix}`);
+        }
+      }
+      return lines.join("\n");
+    }
+
     const report = [];
 
     // Group by severity
@@ -972,7 +1001,7 @@ class HiddenTodoAnalyzer {
       }
     }
 
-    return report.join("\\n");
+    return report.join("\n");
   }
 }
 
@@ -1009,36 +1038,38 @@ async function main() {
         break;
       case "--scoped-files":
         // Read scoped files from stdin or file
-        const scopedArg = args[++i];
-        if (scopedArg === "-") {
-          // Read from stdin (async approach for reliability)
-          const stdinData = [];
-          process.stdin.on("data", (chunk) => stdinData.push(chunk));
-          await new Promise((resolve) => {
-            process.stdin.on("end", () => {
-              scopedFiles = Buffer.concat(stdinData)
-                .toString()
-                .trim()
-                .split("\n")
-                .filter(Boolean);
-              resolve();
+        {
+          const scopedArg = args[++i];
+          if (scopedArg === "-") {
+            // Read from stdin (async approach for reliability)
+            const stdinData = [];
+            process.stdin.on("data", (chunk) => stdinData.push(chunk));
+            await new Promise((resolve) => {
+              process.stdin.on("end", () => {
+                scopedFiles = Buffer.concat(stdinData)
+                  .toString()
+                  .trim()
+                  .split("\n")
+                  .filter(Boolean);
+                resolve();
+              });
             });
-          });
-        } else if (
-          fs.existsSync(scopedArg) &&
-          (scopedArg.endsWith(".txt") ||
-            scopedArg.endsWith(".list") ||
-            scopedArg.includes("files"))
-        ) {
-          // Read from file (only if it looks like a file list)
-          scopedFiles = fs
-            .readFileSync(scopedArg, "utf8")
-            .trim()
-            .split("\n")
-            .filter(Boolean);
-        } else {
-          // Treat as a single file path from command line
-          scopedFiles = [scopedArg];
+          } else if (
+            fs.existsSync(scopedArg) &&
+            (scopedArg.endsWith(".txt") ||
+              scopedArg.endsWith(".list") ||
+              scopedArg.includes("files"))
+          ) {
+            // Read from file (only if it looks like a file list)
+            scopedFiles = fs
+              .readFileSync(scopedArg, "utf8")
+              .trim()
+              .split("\n")
+              .filter(Boolean);
+          } else {
+            // Treat as a single file path from command line
+            scopedFiles = [scopedArg];
+          }
         }
         break;
       case "--engineering-suggestions":
@@ -1131,7 +1162,10 @@ EXAMPLES:
 }
 
 // Run CLI if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (
+  process.argv[1] &&
+  fileURLToPath(import.meta.url) === path.resolve(process.argv[1])
+) {
   main();
 }
 
