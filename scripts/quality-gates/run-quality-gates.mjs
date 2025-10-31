@@ -770,9 +770,8 @@ class QualityGateRunner {
         return await this.runBasicDocumentationChecks();
       }
 
-      // TODO: Update doc linter to support file filtering. For transparency, announce scope here.
       console.log(
-        `    File scope: ${this.filesToCheck.length} files (linter currently scans repo)`
+        `    File scope: ${this.filesToCheck.length} files (respecting .gitignore)`
       );
 
       console.log('    Starting documentation quality scan...');

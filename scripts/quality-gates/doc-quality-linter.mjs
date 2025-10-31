@@ -13,6 +13,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import ignore from 'ignore';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -75,6 +76,30 @@ class DocumentationQualityLinter {
       'docs/archive/aspirational/',
       'docs/archive/misleading-claims/',
     ];
+
+    // Load .gitignore patterns
+    this.gitignore = this.loadGitignore();
+  }
+
+  loadGitignore() {
+    try {
+      const gitignorePath = path.join(this.projectRoot, '.gitignore');
+      if (fs.existsSync(gitignorePath)) {
+        const gitignoreContent = fs.readFileSync(gitignorePath, 'utf8');
+        return ignore().add(gitignoreContent);
+      }
+    } catch (error) {
+      // If we can't load .gitignore, just ignore nothing
+      console.warn('Warning: Could not load .gitignore file');
+    }
+    return ignore(); // Empty ignore rules
+  }
+
+  shouldIgnoreFile(filePath) {
+    // Get relative path from project root
+    const relativePath = path.relative(this.projectRoot, filePath);
+    // Check if the file should be ignored by .gitignore
+    return this.gitignore.ignores(relativePath);
   }
 
   lintFile(filePath) {
@@ -194,11 +219,16 @@ class DocumentationQualityLinter {
     // Use scoped files if provided, otherwise find all documentation files
     let filesToLint = [];
     if (scopedFiles && scopedFiles.length > 0) {
-      // Filter scoped files to only documentation files
+      // Filter scoped files to only documentation files that aren't git-ignored
       const docExtensions = ['.md', '.txt', '.rst', '.adoc'];
-      filesToLint = scopedFiles.filter((file) =>
-        docExtensions.includes(path.extname(file).toLowerCase())
-      );
+      filesToLint = scopedFiles.filter((file) => {
+        const isDocFile = docExtensions.includes(path.extname(file).toLowerCase());
+        const isIgnored = this.shouldIgnoreFile(file);
+        return isDocFile && !isIgnored;
+      });
+      if (showProgress) {
+        console.log(`   Found ${filesToLint.length} documentation files in scope (respecting .gitignore)`);
+      }
     } else {
       // Find all documentation files (legacy behavior)
       const findFiles = (dir, extensions) => {
@@ -246,7 +276,10 @@ class DocumentationQualityLinter {
               } else if (stat.isFile()) {
                 const ext = path.extname(entry);
                 if (extensions.includes(ext)) {
-                  files.push(fullPath);
+                  // Check if file should be ignored by .gitignore
+                  if (!this.shouldIgnoreFile(fullPath)) {
+                    files.push(fullPath);
+                  }
                 }
               }
             }
