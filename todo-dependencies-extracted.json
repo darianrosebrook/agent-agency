@@ -1,0 +1,2721 @@
+[
+  {
+    "file": "iterations/v3/agent-data-processing/src/pipeline.rs",
+    "line": 111,
+    "comment": "This is a simplified conversion - in practice you might want more sophisticated logic",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-data-processing/src/pipeline.rs",
+    "line": 307,
+    "comment": "Estimate file size - in practice this would read the file",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-data-processing/src/pipeline.rs",
+    "line": 697,
+    "comment": "Estimate file size - in practice this would read the file",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-memory/src/decay.rs",
+    "line": 269,
+    "comment": "/ Apply custom decay formula (simplified implementation)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-memory/src/decay.rs",
+    "line": 271,
+    "comment": "For now, fall back to exponential decay",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-memory/src/graph_engine.rs",
+    "line": 691,
+    "comment": "/ Find paths between entities (simplified implementation)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-memory/src/lib.rs",
+    "line": 26,
+    "comment": "pub mod prompting_types; // TODO: Create this module",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": [
+        "this"
+      ]
+    }
+  },
+  {
+    "file": "iterations/v3/agent-memory/src/lib.rs",
+    "line": 69,
+    "comment": "pub use context_management::{FoldedContext, ContextSummary, ArchivedContext}; // TODO: Implement these types",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "these",
+        "these"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-memory/src/lib.rs",
+    "line": 75,
+    "comment": "pub use prompting_types::*; // TODO: Uncomment when module is created",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": [
+        "when"
+      ]
+    }
+  },
+  {
+    "file": "iterations/v3/agent-memory/src/memory_manager.rs",
+    "line": 130,
+    "comment": "For now, use a simple query - can be optimized later with proper query builders",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-memory/src/memory_service_adapter.rs",
+    "line": 36,
+    "comment": "For now, ensure we at least persist the embedding + scoring attributes.",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-model-management/src/model_orchestration_service.rs",
+    "line": 241,
+    "comment": "In a real implementation, this would load the model",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-model-management/src/model_orchestration_service.rs",
+    "line": 242,
+    "comment": "For now, we just mark it as ready",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/adapter.rs",
+    "line": 227,
+    "comment": "TODO: Implement audit trail recording for TaskExecutionResult",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "audit"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/autonomous_executor.rs",
+    "line": 49,
+    "comment": "TODO: Implement these or find in other crates",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "these"
+      ],
+      "modules": [],
+      "mentioned_in_comment": [
+        "other"
+      ]
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/autonomous_executor.rs",
+    "line": 52,
+    "comment": "TODO: Re-enable when agent_memory exports MemorySystem",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": [
+        "agent_memory",
+        "agent_memory"
+      ]
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/autonomous_executor.rs",
+    "line": 733,
+    "comment": "Simple verification logic - in a real implementation, this would be more sophisticated",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/autonomous_executor.rs",
+    "line": 1017,
+    "comment": "In a real implementation, this would wait for external approval",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/autonomous_executor.rs",
+    "line": 1187,
+    "comment": "TODO: Store consensus result in state",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/autonomous_executor.rs",
+    "line": 1324,
+    "comment": "TODO: Use actual confidence scoring when available in FinalVerdictContract",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/autonomous_executor.rs",
+    "line": 1326,
+    "comment": "TODO: Use actual execution stats when available in FinalVerdictContract",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/autonomous_executor.rs",
+    "line": 1487,
+    "comment": "TODO: Implement proper ConsensusCoordinator trait with health_check method",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "consensuscoordinator",
+        "proper"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/autonomous_executor.rs",
+    "line": 1633,
+    "comment": "This is a conceptual test - in a real implementation, we'd:",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/autonomous_integration.rs",
+    "line": 383,
+    "comment": "For now, just log it",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/council.rs",
+    "line": 432,
+    "comment": "Simplified: just take first N available",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/council.rs",
+    "line": 436,
+    "comment": "Simplified: shuffle and take first N",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/council.rs",
+    "line": 444,
+    "comment": "Simplified: sort by specialization score and take top N",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/council.rs",
+    "line": 1225,
+    "comment": "For now, return a basic approval result",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/council.rs",
+    "line": 1226,
+    "comment": "TODO: Implement full judge review process",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "full"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/lib.rs",
+    "line": 52,
+    "comment": "TODO: These modules were moved during refactor - need to locate or recreate",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": [
+        "these"
+      ]
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/lib.rs",
+    "line": 156,
+    "comment": "TODO: These re-exports reference missing modules",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": [
+        "missing"
+      ]
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/lib.rs",
+    "line": 205,
+    "comment": "TODO: These re-exports reference missing modules",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": [
+        "missing"
+      ]
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/lib.rs",
+    "line": 229,
+    "comment": "TODO: These re-exports reference missing modules",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": [
+        "missing"
+      ]
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/lib.rs",
+    "line": 237,
+    "comment": "TODO: These re-exports reference missing modules",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": [
+        "missing"
+      ]
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/lib.rs",
+    "line": 263,
+    "comment": "TODO: Implement AgentOrchestrationService when dependencies are available",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "agentorchestrationservice"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/multimodal_orchestration.rs",
+    "line": 18,
+    "comment": "TODO: Re-enable when agent_data_processing dependency is added",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": [
+        "agent_data_processing"
+      ]
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/multimodal_orchestration.rs",
+    "line": 447,
+    "comment": "TODO: Fix audit event construction",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/multimodal_orchestration.rs",
+    "line": 525,
+    "comment": "TODO: Fix audit event construction",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/multimodal_orchestration.rs",
+    "line": 873,
+    "comment": "TODO: Implement actual planning logic",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "actual"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/multimodal_orchestration.rs",
+    "line": 907,
+    "comment": "TODO: Implement actual planning logic",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "actual"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/multimodal_orchestration.rs",
+    "line": 983,
+    "comment": "For now, we'll create a simple text block from metadata",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/council_review.rs",
+    "line": 14,
+    "comment": "TODO: Integrate with real constitutional council",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/council_review.rs",
+    "line": 345,
+    "comment": "/ Council verdict types (simplified for planning)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "verdict"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/council_review.rs",
+    "line": 517,
+    "comment": "TODO: Submit to real council for full evaluation",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/council_review.rs",
+    "line": 518,
+    "comment": "For now, provide stub approval with basic checks",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/council_review.rs",
+    "line": 590,
+    "comment": "For now, assume conditions are met if quality requirements are satisfied",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/council_review.rs",
+    "line": 702,
+    "comment": "For now, return empty vec",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/factory.rs",
+    "line": 10,
+    "comment": "TODO: Use real external dependencies",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/factory.rs",
+    "line": 108,
+    "comment": "Create TODO integration",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/factory.rs",
+    "line": 186,
+    "comment": "/ Enable TODO tracking",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/orchestrator_integration.rs",
+    "line": 5,
+    "comment": "! TODO: This is a placeholder for the real implementation.",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/orchestrator_integration.rs",
+    "line": 51,
+    "comment": "/ TODO integration for quality gates",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/orchestrator_integration.rs",
+    "line": 173,
+    "comment": "Create worker pool (simplified - would integrate with real worker system)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/orchestrator_integration.rs",
+    "line": 176,
+    "comment": "Create audit trail (simplified - would integrate with real audit system)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/orchestrator_integration.rs",
+    "line": 446,
+    "comment": "For now, just test that the struct can be created conceptually",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "the"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 1,
+    "comment": "! TODO Integration - Quality Gate Enforcement with Dependency Tracking",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 3,
+    "comment": "! Integrates TODO template system into planning workflow.",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 16,
+    "comment": "/ TODO integration with planning workflow",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 18,
+    "comment": "/ TODO template system",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 24,
+    "comment": "/ Active TODO instances by plan ID",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 38,
+    "comment": "/ Create new TODO integration",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 51,
+    "comment": "/ Initialize TODO tracking for a plan",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 56,
+    "comment": "Create TODO instance",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 77,
+    "comment": "Get the TODO instance (would need to access the system)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 78,
+    "comment": "For now, check if critical quality gates are satisfied",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 82,
+    "comment": "/ Complete TODO step when milestone is completed",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 87,
+    "comment": "Map milestone to TODO step",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 100,
+    "comment": "/ Check for blocked progress due to TODO requirements",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 109,
+    "comment": "This would integrate with the actual TODO system to check dependencies",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 132,
+    "comment": "/ Get TODO progress for plan",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 138,
+    "comment": "For now, return a placeholder",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 157,
+    "comment": "/ Map milestone ID to TODO step ID",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 169,
+    "comment": "/ Persist plan-todo association",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 172,
+    "comment": "For now, just log",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 203,
+    "comment": "For now, assume gates pass",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 229,
+    "comment": "For now, return true (gates pass)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 265,
+    "comment": "Initialize TODO tracking",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 279,
+    "comment": "Mark corresponding TODO step as complete",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+    "line": 288,
+    "comment": "Clean up TODO instance",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+    "line": 1,
+    "comment": "! TODO Template System - Dependency Tracking with Quality Gate Enforcement",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+    "line": 3,
+    "comment": "! Templates for structured TODO tracking with dependency management.",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "for"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+    "line": 15,
+    "comment": "/ TODO template with dependency tracking",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+    "line": 52,
+    "comment": "/ Individual TODO step in a template",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+    "line": 107,
+    "comment": "/ Dependency between TODO steps",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+    "line": 142,
+    "comment": "/ Active TODO instance",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+    "line": 151,
+    "comment": "/ Plan ID this TODO is associated with",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+    "line": 154,
+    "comment": "/ Milestone ID this TODO is associated with (optional)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+    "line": 182,
+    "comment": "/ Step status in a TODO instance",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+    "line": 273,
+    "comment": "/ TODO template system",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+    "line": 278,
+    "comment": "/ Active TODO instances",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+    "line": 292,
+    "comment": "/ Create new TODO template system",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+    "line": 301,
+    "comment": "/ Register a TODO template",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+    "line": 311,
+    "comment": "/ Create TODO instance from template",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+    "line": 337,
+    "comment": "/ Start working on a TODO step",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+    "line": 365,
+    "comment": "/ Complete a TODO step",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+    "line": 397,
+    "comment": "/ Fail a TODO step",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+    "line": 688,
+    "comment": "For now, check that required gates are verified",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+    "line": 701,
+    "comment": "/ Progress information for TODO instance",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/waiver_integration.rs",
+    "line": 317,
+    "comment": "Note: In a real implementation, you'd have an update_waiver method",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/waiver_integration.rs",
+    "line": 318,
+    "comment": "For now, we'll just count them",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/waiver_integration.rs",
+    "line": 422,
+    "comment": "In a real implementation, this would notify the constitutional council",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/waiver_integration.rs",
+    "line": 423,
+    "comment": "For now, just log the emergency",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-orchestration/src/planning/waiver_integration.rs",
+    "line": 431,
+    "comment": "TODO: Implement council notification",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "council"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/evidence/code_analysis.rs",
+    "line": 4,
+    "comment": "TODO: Add CodeAnalysisEngine module or remove this dependency",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": [
+        "codeanalysisengine"
+      ]
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/learning_service.rs",
+    "line": 217,
+    "comment": "Get available actions (simplified)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/learning_service.rs",
+    "line": 313,
+    "comment": "/ Get recent patterns (simplified implementation)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/learning_service.rs",
+    "line": 346,
+    "comment": "Get available actions for next state (simplified)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/learning_service.rs",
+    "line": 351,
+    "comment": "For now, we just update Q-learning directly",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/planning_agent/planner.rs",
+    "line": 157,
+    "comment": "TODO: Implement sophisticated goal extraction using NLP with acceptance criteria:",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "sophisticated"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/planning_agent/planner.rs",
+    "line": 168,
+    "comment": "Simplified acceptance criteria generation",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/planning_agent/planner.rs",
+    "line": 579,
+    "comment": "/ ML model for priority prediction (simplified)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/planning_agent/planner.rs",
+    "line": 602,
+    "comment": "/ Validation function (simplified)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/planning_agent/planner.rs",
+    "line": 919,
+    "comment": "TODO: Enhance stakeholder requirement extraction with NLP with acceptance criteria:",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/planning_agent/planner.rs",
+    "line": 978,
+    "comment": "Estimate effort (simplified)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/planning_agent/planner.rs",
+    "line": 1231,
+    "comment": "TODO: Implement topological sort for goal hierarchy with acceptance criteria:",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "topological"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/planning_agent/planner.rs",
+    "line": 1239,
+    "comment": "Detect circular dependencies (simplified)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/planning_agent/planner.rs",
+    "line": 1275,
+    "comment": "/ Detect circular dependencies (simplified implementation)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/planning_agent/planner.rs",
+    "line": 1277,
+    "comment": "This is a simplified circular dependency detection",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/planning_agent/planning_caws_integration.rs",
+    "line": 125,
+    "comment": "In a real implementation, this would hold CAWS service client,",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": [
+        "caws"
+      ]
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/planning_agent/planning_caws_integration.rs",
+    "line": 143,
+    "comment": "This is a simplified implementation. In practice, this would:",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/planning_agent/validation_pipeline.rs",
+    "line": 14,
+    "comment": "TODO: Add common_pipeline dependency or implement validation pipeline locally",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "validation"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/agent_caws_integration.rs",
+    "line": 20,
+    "comment": "Stub implementation - would validate against CAWS spec",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/agent_caws_integration.rs",
+    "line": 31,
+    "comment": "Stub implementation - would check CAWS quality gates",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/agent_caws_integration.rs",
+    "line": 41,
+    "comment": "Stub implementation - would record in CAWS provenance",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/agent_caws_integration.rs",
+    "line": 56,
+    "comment": "Stub implementation - would validate YAML/JSON spec",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/context.rs",
+    "line": 27,
+    "comment": "Stub implementation - would allocate context based on budget",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/context.rs",
+    "line": 128,
+    "comment": "Stub implementation - would read from files",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/integration.rs",
+    "line": 64,
+    "comment": "Stub implementation - would use sophisticated selection logic",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/integration.rs",
+    "line": 127,
+    "comment": "Stub implementation - would break task into subtasks and coordinate",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/learning_bridge.rs",
+    "line": 18,
+    "comment": "Stub implementation - would forward to learning system",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/learning_bridge.rs",
+    "line": 25,
+    "comment": "Stub implementation - would query learning system",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/learning_bridge.rs",
+    "line": 53,
+    "comment": "Stub implementation",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/learning_bridge.rs",
+    "line": 59,
+    "comment": "Stub implementation",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/loop_controller.rs",
+    "line": 70,
+    "comment": "Generate prompt (stub implementation)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/loop_controller.rs",
+    "line": 79,
+    "comment": "Execute task (stub implementation)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/loop_controller.rs",
+    "line": 134,
+    "comment": "Stub implementation - in real system this would use prompting strategies",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/loop_controller.rs",
+    "line": 150,
+    "comment": "Stub implementation - would use model registry to execute task",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/loop_controller.rs",
+    "line": 183,
+    "comment": "Stub implementation - would analyze evaluation and refine task",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/policy_hooks.rs",
+    "line": 18,
+    "comment": "Stub implementation - would adapt agent behavior",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/policy_hooks.rs",
+    "line": 52,
+    "comment": "Stub implementation - would update policy rules",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/policy_hooks.rs",
+    "line": 94,
+    "comment": "Stub implementation - would check safety constraints",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/rl_signals.rs",
+    "line": 27,
+    "comment": "Stub implementation - would analyze state and generate RL signal",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/rl_signals.rs",
+    "line": 75,
+    "comment": "Stub implementation - would adjust policy based on RL signal",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/rl_signals.rs",
+    "line": 97,
+    "comment": "Stub implementation - would apply the adjustment to the running system",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/rl_signals.rs",
+    "line": 126,
+    "comment": "Stub implementation - would update Q-values or policy",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/rl_signals.rs",
+    "line": 136,
+    "comment": "Stub implementation - would query learned policy",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/rl_signals.rs",
+    "line": 170,
+    "comment": "Stub implementation - would randomly sample",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/sandbox.rs",
+    "line": 32,
+    "comment": "Stub implementation - would execute in isolated environment",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/sandbox.rs",
+    "line": 56,
+    "comment": "Stub implementation - would create temp file safely",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/sandbox.rs",
+    "line": 66,
+    "comment": "Stub implementation - would cleanup temporary files and resources",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/sandbox.rs",
+    "line": 143,
+    "comment": "Stub implementation - would check actual resource usage",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-research/src/self_prompting_agent/sandbox.rs",
+    "line": 144,
+    "comment": "For now, assume within limits",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+    "line": 35,
+    "comment": "TODO: OrchestratorHandle - Sequential execution fallback for complex tasks",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+    "line": 493,
+    "comment": "TODO: Update progress tracking with worker completion",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+    "line": 494,
+    "comment": "For now, just collect the results",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+    "line": 514,
+    "comment": "TODO: Integrate with worker pool to get available workers for learning selection",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+    "line": 515,
+    "comment": "For now, use existing worker spawning logic",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+    "line": 539,
+    "comment": "TODO: Update worker performance profiles when the structure is finalized",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "the"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+    "line": 568,
+    "comment": "TODO: Generate configuration recommendations when optimize_configuration method exists",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+    "line": 569,
+    "comment": "TODO: Send learning signals to council when methods exist",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+    "line": 637,
+    "comment": "TODO: Implement proper artifact conversion from worker results",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "proper"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+    "line": 638,
+    "comment": "For now, return minimal artifacts",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+    "line": 655,
+    "comment": "This is a simplified conversion - in practice would need proper mapping",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+    "line": 770,
+    "comment": "TODO: Add convert_to_complex_task method when integrating with orchestration",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+    "line": 896,
+    "comment": "TODO: Get actual queue metrics",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+    "line": 2044,
+    "comment": "In a real implementation, this would send metrics to a monitoring system",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+    "line": 2045,
+    "comment": "For now, we'll just log the metrics",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+    "line": 2110,
+    "comment": "In a real implementation, this would send the signal to the council system",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+    "line": 2111,
+    "comment": "For now, we'll just log it",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+    "line": 2127,
+    "comment": "In a real implementation, this would receive feedback from the council",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+    "line": 2128,
+    "comment": "For now, we'll return None to indicate no feedback available",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+    "line": 2139,
+    "comment": "In a real implementation, this would get recommendations from the council",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+    "line": 2140,
+    "comment": "For now, we'll return an empty vector",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/decomposition/mod.rs",
+    "line": 54,
+    "comment": "TODO: Integrate with council for consensus validation of decomposition strategy",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/decomposition/mod.rs",
+    "line": 465,
+    "comment": "In a real implementation, this would consider:",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/decomposition/mod.rs",
+    "line": 471,
+    "comment": "For now, apply a simple optimization",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/decomposition/mod.rs",
+    "line": 513,
+    "comment": "Placeholder implementation",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/decomposition/mod.rs",
+    "line": 514,
+    "comment": "In a real implementation, this would track which patterns are covered by which subtasks",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/executor.rs",
+    "line": 472,
+    "comment": "For now, create basic validation rules from waivers",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/executor.rs",
+    "line": 542,
+    "comment": "/ TODO: Implement actual worker execution instead of simulation",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "actual"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/executor.rs",
+    "line": 555,
+    "comment": "TODO: Implement actual HTTP call to worker instead of simulation",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "actual"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/executor.rs",
+    "line": 1164,
+    "comment": "Basic health check - in a real implementation this would check actual worker connections",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/executor.rs",
+    "line": 1176,
+    "comment": "Basic stats - in a real implementation this would track actual metrics",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/executor.rs",
+    "line": 1189,
+    "comment": "Basic implementation - in a real implementation this would cancel the actual task",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/executor.rs",
+    "line": 1190,
+    "comment": "For now, just return success",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/executor.rs",
+    "line": 1199,
+    "comment": "In a real implementation, this would:",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/executor.rs",
+    "line": 1205,
+    "comment": "For now, use a simple pattern based on worker ID",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/parallel.rs",
+    "line": 301,
+    "comment": "Simple dependency calculation - in a real implementation,",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/parallel.rs",
+    "line": 320,
+    "comment": "For now, default to fully parallel",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/parallel.rs",
+    "line": 321,
+    "comment": "In a real implementation, this would analyze the task characteristics",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/agent-workers/src/parallel.rs",
+    "line": 337,
+    "comment": "Simple dependency check - in a real implementation,",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/data-infrastructure/src/api/handlers/system_monitoring.rs",
+    "line": 17,
+    "comment": "/ Get task provenance (stub implementation)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/data-infrastructure/src/api/handlers/system_monitoring.rs",
+    "line": 90,
+    "comment": "TODO: Implement proxy request functionality when orchestrator client is available",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "proxy"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/data-infrastructure/src/api/handlers/system_monitoring.rs",
+    "line": 174,
+    "comment": "TODO: Implement AI service when available",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "ai"
+      ],
+      "modules": [],
+      "mentioned_in_comment": [
+        "ai"
+      ]
+    }
+  },
+  {
+    "file": "iterations/v3/data-infrastructure/src/api/server.rs",
+    "line": 168,
+    "comment": "TODO: Add API key authentication middleware when needed",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/data-infrastructure/src/file_operations/git_workspace.rs",
+    "line": 445,
+    "comment": "TODO: Implement comprehensive async testing infrastructure",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "comprehensive"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/data-infrastructure/src/file_operations/temp_workspace.rs",
+    "line": 644,
+    "comment": "Dependency validation (simplified)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/data-infrastructure/src/file_operations/temp_workspace.rs",
+    "line": 825,
+    "comment": "Simplified dependency validation",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/data-infrastructure/src/file_operations/temp_workspace.rs",
+    "line": 833,
+    "comment": "Check for self-referential patches (simplified check)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/data-infrastructure/src/file_operations/temp_workspace.rs",
+    "line": 893,
+    "comment": "Simplified verification - check if patch was applied",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/data-infrastructure/src/file_operations/temp_workspace.rs",
+    "line": 1120,
+    "comment": "TODO: Implement persistent changeset storage",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "persistent"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/data-infrastructure/src/file_operations/temp_workspace.rs",
+    "line": 1179,
+    "comment": "TODO: Implement comprehensive async testing infrastructure",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "comprehensive"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/data-infrastructure/src/file_operations/temp_workspace.rs",
+    "line": 1186,
+    "comment": "PLACEHOLDER: Relying on integration tests for now",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/data-infrastructure/src/file_operations_service.rs",
+    "line": 190,
+    "comment": "In a real implementation, we'd need a way to get the workspace from the registry",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/data-infrastructure/src/file_operations_service.rs",
+    "line": 210,
+    "comment": "NOTE: This creates a second workspace instance - in a real implementation, we'd",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/data-infrastructure/src/lib.rs",
+    "line": 79,
+    "comment": "For now, return healthy - will integrate with real worker pool later",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/system-common-interfaces/src/memory.rs",
+    "line": 74,
+    "comment": "/ Memory service interface to be implemented by concrete backends",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": [
+        "memory"
+      ]
+    }
+  },
+  {
+    "file": "iterations/v3/system-observability/src/learning_service.rs",
+    "line": 90,
+    "comment": "Calculate average confidence (simplified)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/system-observability/src/learning_service.rs",
+    "line": 119,
+    "comment": "Simple Q-learning update (assuming no next state for now)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/testing-validation/src/harness/assertions.rs",
+    "line": 503,
+    "comment": "Calculate reward based on detection accuracy (simplified)",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/testing-validation/src/scenarios/claim_verification.rs",
+    "line": 24,
+    "comment": "TODO: Implement claim verification test cases",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "claim"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/testing-validation/src/scenarios/human_intervention.rs",
+    "line": 165,
+    "comment": "TODO: When AutonomousExecutor is available in test harness, use real pause/resume/cancel",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": [
+        "autonomousexecutor"
+      ]
+    }
+  },
+  {
+    "file": "iterations/v3/testing-validation/src/scenarios/multi_agent_coordination.rs",
+    "line": 24,
+    "comment": "TODO: Implement multi-agent coordination test cases",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "multi"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/testing-validation/src/scenarios/performance_scalability.rs",
+    "line": 133,
+    "comment": "TODO: Export health_metrics module in system-observability/lib.rs or use direct path access",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": [
+        "health_metrics"
+      ]
+    }
+  },
+  {
+    "file": "iterations/v3/testing-validation/src/scenarios/performance_scalability.rs",
+    "line": 134,
+    "comment": "For now, we use sysinfo directly for real system metrics",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/testing-validation/src/scenarios/reflexive_learning.rs",
+    "line": 24,
+    "comment": "TODO: Implement reflexive learning test cases",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "reflexive"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/testing-validation/src/scenarios/self_prompting_loops.rs",
+    "line": 24,
+    "comment": "TODO: Implement self-prompting loop test cases",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [
+        "self"
+      ],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/testing-validation/src/services/postgres.rs",
+    "line": 48,
+    "comment": "In a real CI environment, you might need to start it via docker-compose",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  },
+  {
+    "file": "iterations/v3/testing-validation/src/services/postgres.rs",
+    "line": 51,
+    "comment": "For now, just check if we can connect to an existing instance",
+    "dependencies": {
+      "imports": [],
+      "functions": [],
+      "structs": [],
+      "modules": [],
+      "mentioned_in_comment": []
+    }
+  }
+]

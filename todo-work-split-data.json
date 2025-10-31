@@ -1,0 +1,1266 @@
+{
+  "critical_e2e": [
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/orchestrator_integration.rs",
+      "line": "5",
+      "comment": "! TODO: This is a placeholder for the real implementation.",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/orchestrator_integration.rs",
+      "line": "175",
+      "comment": "TODO: Add method to MCPWorkerPool to list registered workers for available_workers()",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/orchestrator_integration.rs",
+      "line": "416",
+      "comment": "TODO: Add method to MCPWorkerPool to list registered workers",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/orchestrator_integration.rs",
+      "line": "417",
+      "comment": "For now, we need to track registered workers internally or add a method",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/orchestrator_integration.rs",
+      "line": "420",
+      "comment": "Workaround: Register a default worker if pool is empty",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 0.9,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/orchestrator_integration.rs",
+      "line": "433",
+      "comment": "For now, create a placeholder worker info based on stats",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/orchestrator_integration.rs",
+      "line": "617",
+      "comment": "For now, just test that the struct can be created conceptually",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+      "line": "25",
+      "comment": "/ Active TODO instances by plan ID",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 0.94,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+      "line": "66",
+      "comment": "/ Initialize TODO tracking for a plan",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+      "line": "150",
+      "comment": "/ Check for blocked progress due to TODO requirements",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+      "line": "198",
+      "comment": "/ Get TODO progress for plan",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+      "line": "272",
+      "comment": "/ Persist plan-todo association",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+      "line": "276",
+      "comment": "/ - Complete audit history of plan-TODO associations",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+      "line": "281",
+      "comment": "/ and auditability. A dedicated table could be added later if query performance",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 0.9,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+      "line": "466",
+      "comment": "Initialize TODO tracking",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/waiver_integration.rs",
+      "line": "336",
+      "comment": "Note: In a real implementation, you'd have an update_waiver method",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 0.94,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/waiver_integration.rs",
+      "line": "337",
+      "comment": "For now, we'll just count them",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-research/src/planning_agent/planning_caws_integration.rs",
+      "line": "125",
+      "comment": "In a real implementation, this would hold CAWS service client,",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-research/src/planning_agent/planning_caws_integration.rs",
+      "line": "143",
+      "comment": "This is a simplified implementation. In practice, this would:",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 0.94,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-research/src/self_prompting_agent/agent_caws_integration.rs",
+      "line": "131",
+      "comment": "For now, we check basic quality indicators that are always applicable",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+      "line": "2406",
+      "comment": "TODO: When council integration is available:",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/data-infrastructure/src/file_operations/git_workspace.rs",
+      "line": "445",
+      "comment": "TODO: Implement comprehensive async testing infrastructure",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/data-infrastructure/src/file_operations/temp_workspace.rs",
+      "line": "1506",
+      "comment": "TODO: Implement comprehensive async testing infrastructure",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/data-infrastructure/src/file_operations/temp_workspace.rs",
+      "line": "1513",
+      "comment": "PLACEHOLDER: Relying on integration tests for now",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/data-infrastructure/src/simple_client.rs",
+      "line": "263",
+      "comment": "/ TODO: Implement DatabaseClientTrait adapter for agent-research integration",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/testing-validation/src/scenarios/claim_verification.rs",
+      "line": "24",
+      "comment": "TODO: Implement claim verification test cases",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/testing-validation/src/scenarios/multi_agent_coordination.rs",
+      "line": "24",
+      "comment": "TODO: Implement multi-agent coordination test cases",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/testing-validation/src/scenarios/reflexive_learning.rs",
+      "line": "24",
+      "comment": "TODO: Implement reflexive learning test cases",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/testing-validation/src/scenarios/security_privacy.rs",
+      "line": "541",
+      "comment": "Test 4: Verify hash integrity (simplified check)",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/testing-validation/src/scenarios/self_prompting_loops.rs",
+      "line": "24",
+      "comment": "TODO: Implement self-prompting loop test cases",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/testing-validation/src/services/postgres.rs",
+      "line": "48",
+      "comment": "In a real CI environment, you might need to start it via docker-compose",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/testing-validation/src/services/postgres.rs",
+      "line": "51",
+      "comment": "For now, just check if we can connect to an existing instance",
+      "category": "e2e_testing",
+      "priority": "CRITICAL",
+      "confidence": 1.0,
+      "language": "rust"
+    }
+  ],
+  "other_critical": [],
+  "high_priority": [
+    {
+      "file": "iterations/v3/data-infrastructure/src/simple_client.rs",
+      "line": "298",
+      "comment": "/ BLOCKING: None (workaround: pass SimpleClient directly)",
+      "category": "api_handlers",
+      "priority": "HIGH",
+      "confidence": 0.9,
+      "language": "rust"
+    }
+  ],
+  "medium_priority": [
+    {
+      "file": "iterations/v3/agent-orchestration/src/council.rs",
+      "line": "172",
+      "comment": "/ TODO: Implement council learning API client for adaptive learning",
+      "category": "api_handlers",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-research/src/learning_service.rs",
+      "line": "384",
+      "comment": "TODO: Get available actions for next_state from context",
+      "category": "api_handlers",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-research/src/learning_service.rs",
+      "line": "392",
+      "comment": "For now, use standard Q-learning update without next_state max",
+      "category": "api_handlers",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/data-infrastructure/src/api/handlers/system_monitoring.rs",
+      "line": "248",
+      "comment": "For now, return error indicating dependency is not available",
+      "category": "api_handlers",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/data-infrastructure/src/client/orchestrator.rs",
+      "line": "113",
+      "comment": "For now, just log the audit entry",
+      "category": "api_handlers",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/data-infrastructure/src/client/orchestrator.rs",
+      "line": "783",
+      "comment": "Create a verdict_id from the task_id for now (may need adjustment based on actual schema)",
+      "category": "api_handlers",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/data-infrastructure/src/client/orchestrator.rs",
+      "line": "838",
+      "comment": "For now, returning empty as schema relationship is unclear",
+      "category": "api_handlers",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/data-infrastructure/src/client/orchestrator.rs",
+      "line": "1099",
+      "comment": "For now, we just verify the struct can be created",
+      "category": "api_handlers",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/system-common-interfaces/src/memory.rs",
+      "line": "74",
+      "comment": "/ Memory service interface to be implemented by concrete backends",
+      "category": "api_handlers",
+      "priority": "MEDIUM",
+      "confidence": 0.9,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-research/src/self_prompting_agent/sandbox.rs",
+      "line": "79",
+      "comment": "For now, validate operation and return success",
+      "category": "database",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-research/src/self_prompting_agent/sandbox.rs",
+      "line": "258",
+      "comment": "For now, use basic estimation with fallback",
+      "category": "database",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-research/src/self_prompting_agent/sandbox.rs",
+      "line": "269",
+      "comment": "For now, estimate based on configuration and active processes",
+      "category": "database",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-research/src/self_prompting_agent/sandbox.rs",
+      "line": "275",
+      "comment": "Note: This is a simplified approximation",
+      "category": "database",
+      "priority": "MEDIUM",
+      "confidence": 0.94,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+      "line": "2421",
+      "comment": "In a real implementation, this would receive feedback from the council",
+      "category": "database",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+      "line": "2422",
+      "comment": "For now, we'll return None to indicate no feedback available",
+      "category": "database",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/data-infrastructure/src/file_operations/temp_workspace.rs",
+      "line": "779",
+      "comment": "Dependency validation (simplified)",
+      "category": "file_ops",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/data-infrastructure/src/file_operations/temp_workspace.rs",
+      "line": "1011",
+      "comment": "In a real implementation, check if file exists in workspace",
+      "category": "file_ops",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/data-infrastructure/src/file_operations/temp_workspace.rs",
+      "line": "1012",
+      "comment": "For now, assume missing dependencies are warnings, not errors",
+      "category": "file_ops",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/data-infrastructure/src/file_operations/temp_workspace.rs",
+      "line": "1163",
+      "comment": "This is a simplified verification - in a full implementation, would:",
+      "category": "file_ops",
+      "priority": "MEDIUM",
+      "confidence": 0.94,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/system-resources/src/lib.rs",
+      "line": "95",
+      "comment": "PLACEHOLDER: In a real implementation, this would track allocations by task_id",
+      "category": "infrastructure",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/system-resources/src/lib.rs",
+      "line": "96",
+      "comment": "For now, search through pools to find allocation",
+      "category": "infrastructure",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/system-resources/src/lib.rs",
+      "line": "203",
+      "comment": "In a real implementation, we'd check if pool contains allocation",
+      "category": "infrastructure",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/system-resources/src/lib.rs",
+      "line": "204",
+      "comment": "For now, return first pool (would need allocation tracking)",
+      "category": "infrastructure",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-memory/src/decay.rs",
+      "line": "269",
+      "comment": "/ Apply custom decay formula (simplified implementation)",
+      "category": "memory",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-memory/src/decay.rs",
+      "line": "282",
+      "comment": "For now, fall back to exponential decay",
+      "category": "memory",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-model-management/src/lib.rs",
+      "line": "154",
+      "comment": "PLACEHOLDER: In a real implementation, this would:",
+      "category": "model",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-model-management/src/lib.rs",
+      "line": "160",
+      "comment": "For now, simulate validation",
+      "category": "model",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-model-management/src/lib.rs",
+      "line": "171",
+      "comment": "In a real implementation, this would update the model's inference parameters",
+      "category": "model",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/council.rs",
+      "line": "523",
+      "comment": "Simplified: shuffle and take first N",
+      "category": "model",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/execution_strategy.rs",
+      "line": "258",
+      "comment": "For now, simulate task execution",
+      "category": "model",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/execution_strategy.rs",
+      "line": "296",
+      "comment": "For now, execute sequentially",
+      "category": "model",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/execution_strategy.rs",
+      "line": "311",
+      "comment": "For now, execute sequentially",
+      "category": "model",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/autonomous_executor.rs",
+      "line": "1314",
+      "comment": "For now, use the contract plan's metadata to build working spec",
+      "category": "orchestration",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/consensus_coordinator.rs",
+      "line": "89",
+      "comment": "In a real implementation, this might check:",
+      "category": "orchestration",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+      "line": "763",
+      "comment": "Note: Using the simplified structure expected by the bridge",
+      "category": "orchestration",
+      "priority": "MEDIUM",
+      "confidence": 0.94,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+      "line": "780",
+      "comment": "This is a simplified conversion - in practice would need proper mapping",
+      "category": "orchestration",
+      "priority": "MEDIUM",
+      "confidence": 0.94,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+      "line": "1109",
+      "comment": "For now, return None to indicate analysis not yet available",
+      "category": "orchestration",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+      "line": "1110",
+      "comment": "TODO: Define RootCauseAnalysis type in learning module and implement conversion",
+      "category": "orchestration",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+      "line": "2433",
+      "comment": "In a real implementation, this would get recommendations from the council",
+      "category": "orchestration",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+      "line": "2434",
+      "comment": "For now, we'll return an empty vector",
+      "category": "orchestration",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-workers/src/decomposition/mod.rs",
+      "line": "54",
+      "comment": "TODO: Integrate with council for consensus validation of decomposition strategy",
+      "category": "orchestration",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-workers/src/executor.rs",
+      "line": "667",
+      "comment": "For now, we extract from waivers and rules only",
+      "category": "orchestration",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-workers/src/executor.rs",
+      "line": "1431",
+      "comment": "In a real implementation, this would:",
+      "category": "orchestration",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-workers/src/executor.rs",
+      "line": "1437",
+      "comment": "For now, use a simple pattern based on worker ID",
+      "category": "orchestration",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/data-infrastructure/src/lib.rs",
+      "line": "86",
+      "comment": "For now, SimpleWorkerPool is a placeholder that always returns healthy.",
+      "category": "orchestration",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-memory/src/lib.rs",
+      "line": "32",
+      "comment": "pub mod prompting_types; // TODO: Create this module or import from agent-research",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-memory/src/lib.rs",
+      "line": "75",
+      "comment": "pub use context_management::{FoldedContext, ContextSummary, ArchivedContext}; // TODO: Implement these types",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-memory/src/lib.rs",
+      "line": "82",
+      "comment": "pub use prompting_types::*; // TODO: Uncomment when module is created or imported from agent-research",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/lib.rs",
+      "line": "52",
+      "comment": "TODO: These modules were moved during refactor - need to locate or recreate",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/lib.rs",
+      "line": "156",
+      "comment": "TODO: These re-exports reference missing modules",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/lib.rs",
+      "line": "205",
+      "comment": "TODO: These re-exports reference missing modules",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/lib.rs",
+      "line": "229",
+      "comment": "TODO: These re-exports reference missing modules",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/lib.rs",
+      "line": "237",
+      "comment": "TODO: These re-exports reference missing modules",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/council_review.rs",
+      "line": "311",
+      "comment": "/ Council verdict types (simplified for planning)",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/council_review.rs",
+      "line": "567",
+      "comment": "Note: contributions field may be private, so we use an empty vec for now",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 0.94,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/council_review.rs",
+      "line": "622",
+      "comment": "For now, assume refinements are tracked separately",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/council_review.rs",
+      "line": "755",
+      "comment": "For now, return minimal result",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/factory.rs",
+      "line": "10",
+      "comment": "TODO: Use real external dependencies",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/factory.rs",
+      "line": "186",
+      "comment": "/ Enable TODO tracking",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+      "line": "3",
+      "comment": "! Templates for structured TODO tracking with dependency management.",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+      "line": "107",
+      "comment": "/ Dependency between TODO steps",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 0.94,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+      "line": "153",
+      "comment": "/ of TODO progress within the context of a larger planning workflow.",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+      "line": "156",
+      "comment": "/ Milestone ID this TODO is associated with (optional).",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+      "line": "284",
+      "comment": "/ Active TODO instances",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 0.94,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-research/src/planning_agent/planner.rs",
+      "line": "778",
+      "comment": "/ ML model for priority prediction (simplified)",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-research/src/planning_agent/planner.rs",
+      "line": "801",
+      "comment": "/ Validation function (simplified)",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-research/src/planning_agent/planner.rs",
+      "line": "1219",
+      "comment": "Estimate effort (simplified)",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/agent-research/src/planning_agent/planner.rs",
+      "line": "1522",
+      "comment": "Detect circular dependencies (simplified)",
+      "category": "planning",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/system-quality-security/src/data_encryption.rs",
+      "line": "216",
+      "comment": "This is a simplified implementation - in production would use proper key management",
+      "category": "security",
+      "priority": "MEDIUM",
+      "confidence": 0.94,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/system-quality-security/src/data_encryption.rs",
+      "line": "269",
+      "comment": "For now, we'll use AES_256_GCM as a fallback",
+      "category": "security",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    },
+    {
+      "file": "iterations/v3/system-quality-security/src/privacy_anonymization.rs",
+      "line": "437",
+      "comment": "Simplified k-anonymity calculation",
+      "category": "security",
+      "priority": "MEDIUM",
+      "confidence": 1.0,
+      "language": "rust"
+    }
+  ],
+  "critical_e2e_by_file": {
+    "iterations/v3/agent-orchestration/src/planning/orchestrator_integration.rs": [
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/orchestrator_integration.rs",
+        "line": "5",
+        "comment": "! TODO: This is a placeholder for the real implementation.",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/orchestrator_integration.rs",
+        "line": "175",
+        "comment": "TODO: Add method to MCPWorkerPool to list registered workers for available_workers()",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/orchestrator_integration.rs",
+        "line": "416",
+        "comment": "TODO: Add method to MCPWorkerPool to list registered workers",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/orchestrator_integration.rs",
+        "line": "417",
+        "comment": "For now, we need to track registered workers internally or add a method",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/orchestrator_integration.rs",
+        "line": "420",
+        "comment": "Workaround: Register a default worker if pool is empty",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 0.9,
+        "language": "rust"
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/orchestrator_integration.rs",
+        "line": "433",
+        "comment": "For now, create a placeholder worker info based on stats",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/orchestrator_integration.rs",
+        "line": "617",
+        "comment": "For now, just test that the struct can be created conceptually",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      }
+    ],
+    "iterations/v3/agent-orchestration/src/planning/todo_integration.rs": [
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+        "line": "25",
+        "comment": "/ Active TODO instances by plan ID",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 0.94,
+        "language": "rust"
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+        "line": "66",
+        "comment": "/ Initialize TODO tracking for a plan",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+        "line": "150",
+        "comment": "/ Check for blocked progress due to TODO requirements",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+        "line": "198",
+        "comment": "/ Get TODO progress for plan",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+        "line": "272",
+        "comment": "/ Persist plan-todo association",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+        "line": "276",
+        "comment": "/ - Complete audit history of plan-TODO associations",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+        "line": "281",
+        "comment": "/ and auditability. A dedicated table could be added later if query performance",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 0.9,
+        "language": "rust"
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_integration.rs",
+        "line": "466",
+        "comment": "Initialize TODO tracking",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      }
+    ],
+    "iterations/v3/agent-orchestration/src/planning/waiver_integration.rs": [
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/waiver_integration.rs",
+        "line": "336",
+        "comment": "Note: In a real implementation, you'd have an update_waiver method",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 0.94,
+        "language": "rust"
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/waiver_integration.rs",
+        "line": "337",
+        "comment": "For now, we'll just count them",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      }
+    ],
+    "iterations/v3/agent-research/src/planning_agent/planning_caws_integration.rs": [
+      {
+        "file": "iterations/v3/agent-research/src/planning_agent/planning_caws_integration.rs",
+        "line": "125",
+        "comment": "In a real implementation, this would hold CAWS service client,",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      },
+      {
+        "file": "iterations/v3/agent-research/src/planning_agent/planning_caws_integration.rs",
+        "line": "143",
+        "comment": "This is a simplified implementation. In practice, this would:",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 0.94,
+        "language": "rust"
+      }
+    ],
+    "iterations/v3/agent-research/src/self_prompting_agent/agent_caws_integration.rs": [
+      {
+        "file": "iterations/v3/agent-research/src/self_prompting_agent/agent_caws_integration.rs",
+        "line": "131",
+        "comment": "For now, we check basic quality indicators that are always applicable",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      }
+    ],
+    "iterations/v3/agent-workers/src/coordinator_old.rs": [
+      {
+        "file": "iterations/v3/agent-workers/src/coordinator_old.rs",
+        "line": "2406",
+        "comment": "TODO: When council integration is available:",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      }
+    ],
+    "iterations/v3/data-infrastructure/src/file_operations/git_workspace.rs": [
+      {
+        "file": "iterations/v3/data-infrastructure/src/file_operations/git_workspace.rs",
+        "line": "445",
+        "comment": "TODO: Implement comprehensive async testing infrastructure",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      }
+    ],
+    "iterations/v3/data-infrastructure/src/file_operations/temp_workspace.rs": [
+      {
+        "file": "iterations/v3/data-infrastructure/src/file_operations/temp_workspace.rs",
+        "line": "1506",
+        "comment": "TODO: Implement comprehensive async testing infrastructure",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      },
+      {
+        "file": "iterations/v3/data-infrastructure/src/file_operations/temp_workspace.rs",
+        "line": "1513",
+        "comment": "PLACEHOLDER: Relying on integration tests for now",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      }
+    ],
+    "iterations/v3/data-infrastructure/src/simple_client.rs": [
+      {
+        "file": "iterations/v3/data-infrastructure/src/simple_client.rs",
+        "line": "263",
+        "comment": "/ TODO: Implement DatabaseClientTrait adapter for agent-research integration",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      }
+    ],
+    "iterations/v3/testing-validation/src/scenarios/claim_verification.rs": [
+      {
+        "file": "iterations/v3/testing-validation/src/scenarios/claim_verification.rs",
+        "line": "24",
+        "comment": "TODO: Implement claim verification test cases",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      }
+    ],
+    "iterations/v3/testing-validation/src/scenarios/multi_agent_coordination.rs": [
+      {
+        "file": "iterations/v3/testing-validation/src/scenarios/multi_agent_coordination.rs",
+        "line": "24",
+        "comment": "TODO: Implement multi-agent coordination test cases",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      }
+    ],
+    "iterations/v3/testing-validation/src/scenarios/reflexive_learning.rs": [
+      {
+        "file": "iterations/v3/testing-validation/src/scenarios/reflexive_learning.rs",
+        "line": "24",
+        "comment": "TODO: Implement reflexive learning test cases",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      }
+    ],
+    "iterations/v3/testing-validation/src/scenarios/security_privacy.rs": [
+      {
+        "file": "iterations/v3/testing-validation/src/scenarios/security_privacy.rs",
+        "line": "541",
+        "comment": "Test 4: Verify hash integrity (simplified check)",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      }
+    ],
+    "iterations/v3/testing-validation/src/scenarios/self_prompting_loops.rs": [
+      {
+        "file": "iterations/v3/testing-validation/src/scenarios/self_prompting_loops.rs",
+        "line": "24",
+        "comment": "TODO: Implement self-prompting loop test cases",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      }
+    ],
+    "iterations/v3/testing-validation/src/services/postgres.rs": [
+      {
+        "file": "iterations/v3/testing-validation/src/services/postgres.rs",
+        "line": "48",
+        "comment": "In a real CI environment, you might need to start it via docker-compose",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      },
+      {
+        "file": "iterations/v3/testing-validation/src/services/postgres.rs",
+        "line": "51",
+        "comment": "For now, just check if we can connect to an existing instance",
+        "category": "e2e_testing",
+        "priority": "CRITICAL",
+        "confidence": 1.0,
+        "language": "rust"
+      }
+    ]
+  },
+  "other_critical_by_file": {}
+}

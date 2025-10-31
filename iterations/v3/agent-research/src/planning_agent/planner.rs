@@ -14,13 +14,13 @@ use priority_queue::PriorityQueue;
 use lru::LruCache;
 use serde::{Deserialize, Serialize};
 
-use crate::planning_errors::{PlanningError, PlanningResult};
-use crate::caws_integration::CawsValidator;
-use crate::validation_pipeline::ValidationPipeline;
-use crate::refinement_engine::RefinementEngine;
+use crate::planning_agent::planning_errors::{PlanningError, PlanningResult};
+use crate::planning_agent::planning_caws_integration::CawsValidator;
+use crate::planning_agent::validation_pipeline::ValidationPipeline;
+use crate::planning_agent::refinement_engine::RefinementEngine;
 use system_configuration::types::*;
-use crate::validation::*;
-use crate::spec_generation::*;
+use crate::planning_agent::validation::*;
+use crate::planning_agent::spec_generation::*;
 
 /// The main Planning Agent
 pub struct PlanningAgent {
@@ -154,27 +154,226 @@ impl PlanningAgent {
     // Helper methods for working spec generation...
 
     fn extract_goals_from_description(&self, description: &str) -> PlanningResult<Vec<String>> {
-        // TODO: Implement sophisticated goal extraction using NLP with acceptance criteria:
-        // - [ ] Integrate with NLP models for semantic understanding and goal identification
-        // - [ ] Parse complex requirements into actionable, measurable goals
-        // - [ ] Handle ambiguous or incomplete descriptions with clarification requests
-        // - [ ] Extract temporal dependencies and goal hierarchies
-        // - [ ] Validate goal completeness and consistency
-        // - [ ] Generate goal decomposition for complex multi-step tasks
-        Ok(vec![format!("Successfully complete: {}", description)])
+        // Extract goals using pattern matching and sentence analysis
+        let mut goals = Vec::new();
+        
+        // Split into sentences for better goal extraction
+        let sentences: Vec<&str> = description.split(|c: char| c == '.' || c == '!' || c == '?')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .collect();
+
+        for sentence in sentences {
+            // Look for action verbs and goal indicators
+            let sentence_lower = sentence.to_lowercase();
+            
+            // Goal patterns: "need to", "should", "must", "implement", "create", "add", "build"
+            let goal_keywords = ["need to", "should", "must", "implement", "create", "add", "build", 
+                                 "develop", "establish", "set up", "configure", "integrate"];
+            
+            let is_goal_sentence = goal_keywords.iter().any(|keyword| sentence_lower.contains(keyword));
+            
+            if is_goal_sentence {
+                // Extract goal by finding the core action
+                let goal = self.extract_core_goal_from_sentence(sentence);
+                if !goal.is_empty() && !goals.contains(&goal) {
+                    goals.push(goal);
+                }
+            }
+        }
+
+        // If no goals found via pattern matching, create a high-level goal from description
+        if goals.is_empty() {
+            // Try to extract key phrases
+            let key_phrases = self.extract_key_phrases(description);
+            if !key_phrases.is_empty() {
+                goals.extend(key_phrases);
+            } else {
+                // Fallback: create a single goal from the description
+                goals.push(format!("Successfully complete: {}", description.trim()));
+            }
+        }
+
+        // Validate and deduplicate goals
+        goals = self.validate_and_deduplicate_goals(goals);
+
+        Ok(goals)
+    }
+
+    /// Extract core goal from a sentence
+    fn extract_core_goal_from_sentence(&self, sentence: &str) -> String {
+        // Remove common prefixes and extract the action
+        let mut goal = sentence.trim().to_string();
+        
+        // Remove leading "we need to", "we should", etc.
+        let prefixes = ["we need to ", "we should ", "we must ", "need to ", "should ", "must "];
+        for prefix in &prefixes {
+            if goal.to_lowercase().starts_with(prefix) {
+                goal = goal[prefix.len()..].trim().to_string();
+                break;
+            }
+        }
+        
+        // Capitalize first letter
+        if !goal.is_empty() {
+            let mut chars: Vec<char> = goal.chars().collect();
+            chars[0] = chars[0].to_uppercase().next().unwrap_or(chars[0]);
+            goal = chars.into_iter().collect();
+        }
+        
+        goal
+    }
+
+    /// Extract key phrases from description
+    fn extract_key_phrases(&self, description: &str) -> Vec<String> {
+        let mut phrases = Vec::new();
+        
+        // Look for bullet points or numbered lists
+        for line in description.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("- ") || trimmed.starts_with("* ") || 
+               trimmed.matches(char::is_numeric).next().is_some() && trimmed.contains('.') {
+                let phrase = trimmed
+                    .trim_start_matches(|c: char| c == '-' || c == '*' || c == ' ' || c.is_numeric() || c == '.')
+                    .trim()
+                    .to_string();
+                if !phrase.is_empty() {
+                    phrases.push(phrase);
+                }
+            }
+        }
+        
+        phrases
+    }
+
+    /// Validate and deduplicate goals
+    fn validate_and_deduplicate_goals(&self, goals: Vec<String>) -> Vec<String> {
+        let mut unique_goals = Vec::new();
+        
+        for goal in goals {
+            // Skip empty or too short goals
+            if goal.trim().len() < 5 {
+                continue;
+            }
+            
+            // Check for duplicates using similarity
+            let is_duplicate = unique_goals.iter().any(|existing| {
+                jaro_winkler(existing, &goal) > 0.85
+            });
+            
+            if !is_duplicate {
+                unique_goals.push(goal);
+            }
+        }
+        
+        unique_goals
     }
 
     fn generate_acceptance_criteria(&self, description: &str) -> PlanningResult<Vec<agent_agency_contracts::working_spec::AcceptanceCriterion>> {
-        // Simplified acceptance criteria generation
-        Ok(vec![
-            agent_agency_contracts::working_spec::AcceptanceCriterion {
+        // Generate acceptance criteria based on description analysis
+        let mut criteria = Vec::new();
+        
+        // Extract key actions and outcomes from description
+        let sentences: Vec<&str> = description.split(|c: char| c == '.' || c == '!' || c == '?')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .collect();
+
+        for (idx, sentence) in sentences.iter().enumerate() {
+            // Create acceptance criterion for each meaningful sentence
+            let sentence_lower = sentence.to_lowercase();
+            
+            // Skip if it's just a conjunction or filler
+            if sentence_lower.len() < 10 || 
+               sentence_lower.starts_with("and ") || 
+               sentence_lower.starts_with("or ") ||
+               sentence_lower.starts_with("but ") {
+                continue;
+            }
+            
+            // Extract the "when" condition and "then" outcome
+            let (given, when, then) = self.parse_acceptance_criterion(sentence);
+            
+            criteria.push(agent_agency_contracts::working_spec::AcceptanceCriterion {
+                id: format!("A{}", idx + 1),
+                given,
+                when,
+                then,
+                priority: self.determine_criterion_priority(sentence),
+            });
+        }
+
+        // If no criteria extracted, create a default one
+        if criteria.is_empty() {
+            criteria.push(agent_agency_contracts::working_spec::AcceptanceCriterion {
                 id: "A1".to_string(),
                 given: "Valid task request".to_string(),
                 when: format!("Task is executed: {}", description),
                 then: "Task completes successfully with all requirements met".to_string(),
                 priority: Some(agent_agency_contracts::working_spec::MoSCoWPriority::Must),
-            }
-        ])
+            });
+        }
+
+        Ok(criteria)
+    }
+
+    /// Parse a sentence into acceptance criterion components
+    fn parse_acceptance_criterion(&self, sentence: &str) -> (String, String, String) {
+        let sentence_lower = sentence.to_lowercase();
+        
+        // Try to find "when" and "then" patterns
+        if let Some(when_idx) = sentence_lower.find("when ") {
+            let when_part = &sentence[when_idx + 5..];
+            let then_part = if let Some(then_idx) = when_part.to_lowercase().find(" then ") {
+                &when_part[then_idx + 6..]
+            } else {
+                "expected outcome occurs"
+            };
+            
+            return (
+                "Given the system state".to_string(),
+                when_part.trim().to_string(),
+                then_part.trim().to_string(),
+            );
+        }
+        
+        // Fallback: split sentence into given/when/then
+        let words: Vec<&str> = sentence.split_whitespace().collect();
+        if words.len() >= 3 {
+            let split_point = words.len() / 3;
+            let given_words = words[..split_point].join(" ");
+            let when_words = words[split_point..split_point * 2].join(" ");
+            let then_words = words[split_point * 2..].join(" ");
+            
+            (
+                format!("Given {}", given_words),
+                format!("When {}", when_words),
+                format!("Then {}", then_words),
+            )
+        } else {
+            (
+                "Given valid input".to_string(),
+                format!("When {}", sentence),
+                "Then the operation completes successfully".to_string(),
+            )
+        }
+    }
+
+    /// Determine priority for acceptance criterion
+    fn determine_criterion_priority(&self, sentence: &str) -> Option<agent_agency_contracts::working_spec::MoSCoWPriority> {
+        let sentence_lower = sentence.to_lowercase();
+        
+        // Check for priority indicators
+        if sentence_lower.contains("must") || sentence_lower.contains("required") || 
+           sentence_lower.contains("critical") || sentence_lower.contains("essential") {
+            Some(agent_agency_contracts::working_spec::MoSCoWPriority::Must)
+        } else if sentence_lower.contains("should") || sentence_lower.contains("important") {
+            Some(agent_agency_contracts::working_spec::MoSCoWPriority::Should)
+        } else if sentence_lower.contains("could") || sentence_lower.contains("nice to have") {
+            Some(agent_agency_contracts::working_spec::MoSCoWPriority::Could)
+        } else {
+            Some(agent_agency_contracts::working_spec::MoSCoWPriority::Must) // Default
+        }
     }
 
     fn generate_title_from_description(&self, description: &str) -> String {
@@ -914,22 +1113,64 @@ impl AdvancedGoalAnalyzer {
         score.min(1.0f64)
     }
 
-    /// Extract stakeholder requirement from sentence
+    /// Extract stakeholder requirement from sentence with improved pattern matching
     fn extract_stakeholder_requirement(&self, sentence: &str) -> Option<String> {
-        // TODO: Enhance stakeholder requirement extraction with NLP with acceptance criteria:
-        // - [ ] Integrate NLP models for semantic understanding of requirements
-        // - [ ] Implement entity recognition for stakeholders and requirements
-        // - [ ] Add requirement classification (functional, non-functional, constraints)
-        // - [ ] Support complex sentence structures and implicit requirements
-        // - [ ] Provide confidence scores for extracted requirements
-        if let Some(want_idx) = sentence.to_lowercase().find("want") {
-            let after_want = &sentence[want_idx + 4..];
-            Some(format!("Stakeholder wants {}", after_want.trim()))
-        } else if let Some(need_idx) = sentence.to_lowercase().find("need") {
-            let after_need = &sentence[need_idx + 4..];
-            Some(format!("Stakeholder needs {}", after_need.trim()))
+        // Enhanced requirement extraction using multiple patterns
+        let sentence_lower = sentence.to_lowercase();
+        
+        // Pattern 1: "X wants/needs Y"
+        if let Some(want_idx) = sentence_lower.find(" wants ") {
+            let before_want = &sentence[..want_idx];
+            let after_want = &sentence[want_idx + 7..];
+            
+            // Extract stakeholder name
+            let stakeholder = before_want.split_whitespace().last().unwrap_or("Stakeholder");
+            let requirement = after_want.trim().trim_end_matches('.').trim();
+            
+            return Some(format!("{} wants {}", stakeholder, requirement));
+        }
+        
+        if let Some(need_idx) = sentence_lower.find(" needs ") {
+            let before_need = &sentence[..need_idx];
+            let after_need = &sentence[need_idx + 7..];
+            
+            let stakeholder = before_need.split_whitespace().last().unwrap_or("Stakeholder");
+            let requirement = after_need.trim().trim_end_matches('.').trim();
+            
+            return Some(format!("{} needs {}", stakeholder, requirement));
+        }
+        
+        // Pattern 2: "Requirement: ..." or "Requirement is ..."
+        if let Some(req_idx) = sentence_lower.find("requirement") {
+            let after_req = &sentence[req_idx + 11..];
+            if !after_req.trim().is_empty() {
+                // Clean up common prefixes
+                let cleaned = after_req
+                    .trim_start_matches(|c: char| c == ':' || c == ' ' || c == 'i' || c == 's' || c == ' ')
+                    .trim()
+                    .trim_end_matches('.')
+                    .to_string();
+                
+                if !cleaned.is_empty() {
+                    return Some(cleaned);
+                }
+            }
+        }
+        
+        // Pattern 3: "The system should/must/can ..."
+        if let Some(should_idx) = sentence_lower.find("should ") {
+            return Some(sentence[should_idx + 7..].trim().trim_end_matches('.').to_string());
+        }
+        
+        if let Some(must_idx) = sentence_lower.find("must ") {
+            return Some(sentence[must_idx + 5..].trim().trim_end_matches('.').to_string());
+        }
+        
+        // Fallback: return the sentence if it's substantial enough
+        if sentence.trim().len() > 10 {
+            Some(sentence.trim().trim_end_matches('.').to_string())
         } else {
-            Some(sentence.to_string())
+            None
         }
     }
 
@@ -1228,13 +1469,55 @@ impl GoalDependencyAnalyzer {
             }
         }
 
-        // TODO: Implement topological sort for goal hierarchy with acceptance criteria:
-        // - [ ] Implement proper topological sorting algorithm for dependency resolution
-        // - [ ] Detect and handle circular dependencies in goal hierarchies
-        // - [ ] Generate multi-level dependency hierarchies with proper ordering
-        // - [ ] Add hierarchy validation and cycle detection
-        // - [ ] Support parallel execution of independent goals at same level
-        hierarchy_levels.push(root_goals.clone());
+        // Implement topological sort for goal hierarchy using Kahn's algorithm
+        // This properly orders goals based on their dependencies
+        // Note: dependency_graph[goal_id] = list of goals that goal_id depends on
+        let mut sorted_levels = Vec::new();
+        let mut in_degree = HashMap::new();
+        let mut ready_queue = VecDeque::new();
+        
+        // Initialize in-degree counts
+        // In-degree = number of goals that depend on this goal
+        for goal_id in dependency_graph.keys() {
+            let mut count = 0;
+            // Count how many goals have this goal in their dependency list
+            for (_, deps) in dependency_graph.iter() {
+                if deps.contains(goal_id) {
+                    count += 1;
+                }
+            }
+            in_degree.insert(goal_id.clone(), count);
+            
+            if count == 0 {
+                ready_queue.push_back(goal_id.clone());
+            }
+        }
+        
+        // Process goals level by level
+        while !ready_queue.is_empty() {
+            let current_level = Vec::from_iter(ready_queue.drain(..));
+            sorted_levels.push(current_level.clone());
+            
+            // For each goal in current level, reduce in-degree of goals that depend on this goal
+            for goal_id in &current_level {
+                // Find all goals that have this goal in their dependency list
+                // (i.e., goals that depend on this goal)
+                for (dependent_goal_id, deps) in dependency_graph.iter() {
+                    if deps.contains(goal_id) {
+                        if let Some(current_in_degree) = in_degree.get_mut(dependent_goal_id) {
+                            *current_in_degree -= 1;
+                            
+                            if *current_in_degree == 0 {
+                                ready_queue.push_back(dependent_goal_id.clone());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Update hierarchy_levels with properly sorted levels
+        hierarchy_levels = sorted_levels;
 
         // Detect circular dependencies (simplified)
         let circular_dependencies = self.detect_circular_dependencies(&dependency_graph);
@@ -1272,23 +1555,80 @@ impl GoalDependencyAnalyzer {
         (a_lower.contains("cheap") && b_lower.contains("high quality"))
     }
 
-    /// Detect circular dependencies (simplified implementation)
+    /// Detect circular dependencies using depth-first search
     fn detect_circular_dependencies(&self, dependency_graph: &HashMap<String, Vec<String>>) -> Vec<Vec<String>> {
-        // This is a simplified circular dependency detection
-        // A full implementation would use topological sort
+        // Use DFS to detect cycles in the dependency graph
         let mut circular_deps = Vec::new();
+        let mut visited = HashSet::new();
+        let mut recursion_stack = HashSet::new();
+        let mut path = Vec::new();
 
-        for (goal_id, deps) in dependency_graph {
-            for dep in deps {
-                if let Some(dep_deps) = dependency_graph.get(dep) {
-                    if dep_deps.contains(goal_id) {
-                        circular_deps.push(vec![goal_id.clone(), dep.clone()]);
+        fn dfs(
+            node: &str,
+            graph: &HashMap<String, Vec<String>>,
+            visited: &mut HashSet<String>,
+            recursion_stack: &mut HashSet<String>,
+            path: &mut Vec<String>,
+            cycles: &mut Vec<Vec<String>>,
+        ) {
+            visited.insert(node.to_string());
+            recursion_stack.insert(node.to_string());
+            path.push(node.to_string());
+
+            if let Some(deps) = graph.get(node) {
+                for dep in deps {
+                    if !visited.contains(dep) {
+                        dfs(dep, graph, visited, recursion_stack, path, cycles);
+                    } else if recursion_stack.contains(dep) {
+                        // Found a cycle - extract the cycle path
+                        if let Some(cycle_start) = path.iter().position(|x| x == dep) {
+                            let cycle = path[cycle_start..].to_vec();
+                            cycles.push(cycle);
+                        }
                     }
                 }
             }
+
+            recursion_stack.remove(node);
+            path.pop();
         }
 
-        circular_deps
+        for goal_id in dependency_graph.keys() {
+            if !visited.contains(goal_id) {
+                dfs(
+                    goal_id,
+                    dependency_graph,
+                    &mut visited,
+                    &mut recursion_stack,
+                    &mut path,
+                    &mut circular_deps,
+                );
+            }
+        }
+
+        // Deduplicate cycles (same cycle might be detected from different starting points)
+        let mut unique_cycles = Vec::new();
+        for cycle in circular_deps {
+            let mut normalized_cycle = cycle.clone();
+            // Rotate cycle to start from smallest ID for consistent representation
+            if let Some(min_idx) = normalized_cycle.iter().enumerate()
+                .min_by_key(|(_, id)| id.as_str())
+                .map(|(idx, _)| idx) {
+                normalized_cycle.rotate_left(min_idx);
+            }
+            
+            // Check if this cycle is already in unique_cycles
+            let is_duplicate = unique_cycles.iter().any(|existing: &Vec<String>| {
+                existing.len() == normalized_cycle.len() &&
+                existing.iter().zip(normalized_cycle.iter()).all(|(a, b)| a == b)
+            });
+            
+            if !is_duplicate {
+                unique_cycles.push(normalized_cycle);
+            }
+        }
+
+        unique_cycles
     }
 }
 

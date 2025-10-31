@@ -29,6 +29,12 @@ pub mod planning_agent;
 // Self-prompting agent modules (consolidated from self-prompting-agent crate)
 pub mod self_prompting_agent;
 
+// Research types module
+pub mod research_types;
+
+// Learning service module
+pub mod learning_service;
+
 #[cfg(test)]
 mod tests;
 

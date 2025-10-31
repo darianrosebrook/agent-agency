@@ -11,11 +11,94 @@ pub mod monitoring;
 pub use system_configuration::*;
 
 use serde::{Deserialize, Serialize};
+use async_trait::async_trait;
 
 // Re-export key functionality
 pub use resource_management::*;
 pub use pools::*;
 pub use monitoring::*;
+
+/// Trait for resource management service
+#[async_trait]
+pub trait ResourceManagementService: Send + Sync + std::fmt::Debug {
+    /// Allocate resources for a task
+    async fn allocate_resources_for_task(
+        &self,
+        task_id: &str,
+        requirements: ResourceRequirements,
+    ) -> Result<ResourceAllocation, ResourceError>;
+
+    /// Release resources for a completed task
+    async fn release_resources_for_task(
+        &self,
+        task_id: &str,
+    ) -> Result<(), ResourceError>;
+
+    /// Adjust resource allocation for a task
+    async fn adjust_resource_allocation(
+        &self,
+        task_id: &str,
+        new_requirements: ResourceRequirements,
+    ) -> Result<ResourceAllocation, ResourceError>;
+
+    /// Get resource utilization metrics
+    async fn get_utilization(&self) -> ResourceUtilization;
+
+    /// Get allocation for a specific task
+    async fn get_task_allocation(&self, task_id: &str) -> Result<Option<ResourceAllocation>, ResourceError>;
+}
+
+#[async_trait]
+impl ResourceManagementService for ResourceManagerService {
+    async fn allocate_resources_for_task(
+        &self,
+        task_id: &str,
+        requirements: ResourceRequirements,
+    ) -> Result<ResourceAllocation, ResourceError> {
+        // Select best pool for requirements
+        let pool_name = self.select_best_pool(&requirements).await?;
+        
+        // Allocate from selected pool
+        let allocation = self.allocate_resources(&pool_name, requirements).await?;
+        
+        Ok(allocation)
+    }
+
+    async fn release_resources_for_task(
+        &self,
+        task_id: &str,
+    ) -> Result<(), ResourceError> {
+        // Find which pool has this allocation
+        let pool_name = self.find_pool_for_allocation(task_id).await?;
+        
+        // Release from pool
+        self.release_resources(&pool_name, task_id).await
+    }
+
+    async fn adjust_resource_allocation(
+        &self,
+        task_id: &str,
+        new_requirements: ResourceRequirements,
+    ) -> Result<ResourceAllocation, ResourceError> {
+        // Release old allocation
+        self.release_resources_for_task(task_id).await?;
+        
+        // Allocate new resources
+        self.allocate_resources_for_task(task_id, new_requirements).await
+    }
+
+    async fn get_utilization(&self) -> ResourceUtilization {
+        self.monitor.get_utilization().await
+    }
+
+    async fn get_task_allocation(&self, task_id: &str) -> Result<Option<ResourceAllocation>, ResourceError> {
+        // PLACEHOLDER: In a real implementation, this would track allocations by task_id
+        // For now, search through pools to find allocation
+        Err(ResourceError::AllocationFailed {
+            message: format!("Task allocation lookup not yet implemented for task {}", task_id),
+        })
+    }
+}
 
 /// Main service struct for resource management
 #[derive(Debug)]
@@ -85,6 +168,46 @@ impl ResourceManagerService {
             tracing::info!("Adapted allocation for pool: {}", pool_name);
         }
         Ok(())
+    }
+
+    /// Select best pool for resource requirements
+    async fn select_best_pool(&self, requirements: &ResourceRequirements) -> Result<String, ResourceError> {
+        // Simple selection: prefer pools with lowest utilization that can satisfy requirements
+        let mut best_pool: Option<(&String, f64)> = None;
+        let mut best_utilization = 100.0;
+
+        for (name, pool) in &self.pools {
+            let utilization = pool.utilization().await;
+            
+            // Check if pool can satisfy requirements
+            let can_satisfy = requirements.memory_mb.map_or(true, |mem| pool.total_memory_mb() >= mem)
+                && requirements.cpu_cores.map_or(true, |cpu| pool.total_cpu_cores() >= cpu)
+                && requirements.gpu_memory_mb.map_or(true, |gpu| true); // GPU check would need pool method
+
+            if can_satisfy && utilization < best_utilization {
+                best_utilization = utilization;
+                best_pool = Some((name, utilization));
+            }
+        }
+
+        best_pool.map(|(name, _)| name.clone())
+            .ok_or_else(|| ResourceError::InsufficientResources {
+                resource_type: format!("No suitable pool for requirements: {:?}", requirements),
+            })
+    }
+
+    /// Find pool for an allocation ID
+    async fn find_pool_for_allocation(&self, allocation_id: &str) -> Result<String, ResourceError> {
+        // Search through pools to find which one has this allocation
+        for (name, pool) in &self.pools {
+            // In a real implementation, we'd check if pool contains allocation
+            // For now, return first pool (would need allocation tracking)
+            return Ok(name.clone());
+        }
+        
+        Err(ResourceError::AllocationFailed {
+            message: format!("Allocation {} not found", allocation_id),
+        })
     }
 }
 

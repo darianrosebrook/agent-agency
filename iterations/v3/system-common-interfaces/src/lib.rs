@@ -38,12 +38,22 @@ pub mod observability;
 pub mod health;
 pub mod config;
 pub mod types;
+pub mod file_operations;
+pub mod learning;
+pub mod model_orchestration;
+pub mod memory;
+pub mod common;
 
 pub use database::*;
-pub use observability::*;
-pub use health::*;
+pub use observability::{ObservabilityInterface, TracingInterface, LoggingInterface, HealthMonitoringInterface, PerformanceMonitoringInterface, MetricValue, MetricType, ObsValue, SpanHandle, SpanStatus, PerformanceMetrics as ObsPerformanceMetrics, PerformanceMetric, SystemPerformanceStats, HealthReport as ObsHealthReport, ComponentHealth};
+pub use health::{HealthCheck, HealthCheckRegistry, HealthCheckExecutor, HealthCheckResult, HealthCheckInfo, HealthReport, HealthSummary, HealthCheckScheduler, ScheduledCheckStatus, DependencyHealthCheck, DependencyHealth, DatabaseHealthCheck, HttpHealthCheck};
 pub use config::*;
 pub use types::*;
+pub use file_operations::*;
+pub use learning::*;
+pub use model_orchestration::{ModelOrchestrator, InferenceRequest as OrchestratorInferenceRequest, InferenceResponse, RoutingDecision, RoutingStrategy, ModelInstance, ModelCapabilities, PerformanceCharacteristics, ModelStatistics, OrchestrationStatistics, OrchestrationError, OrchestrationResult, Priority as OrchestratorPriority, PerformanceRequirements as OrchestratorPerformanceRequirements, QualityRequirements as OrchestratorQualityRequirements};
+pub use memory::*;
+pub use common::*;
 
 /// Common result type
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;

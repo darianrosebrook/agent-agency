@@ -701,6 +701,11 @@ mod tests {
         async fn get_planning_telemetry(&self, _plan_id: Uuid, _metric_type: Option<String>) -> anyhow::Result<Vec<data_infrastructure::models::PlanningTelemetry>> {
             Ok(vec![])
         }
+        
+        // Waiver operations
+        async fn get_waivers(&self, _status: Option<String>) -> anyhow::Result<Vec<data_infrastructure::models::Waiver>> { Ok(vec![]) }
+        async fn create_waiver(&self, _waiver: data_infrastructure::CreateWaiver) -> anyhow::Result<data_infrastructure::models::Waiver> { Err(anyhow!("Not implemented")) }
+        async fn update_waiver(&self, _id: Uuid, _update: data_infrastructure::UpdateWaiver) -> anyhow::Result<data_infrastructure::models::Waiver> { Err(anyhow!("Not implemented")) }
     }
 
     #[test]

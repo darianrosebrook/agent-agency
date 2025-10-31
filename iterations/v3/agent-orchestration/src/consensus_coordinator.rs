@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use async_trait::async_trait;
 
 /// Configuration for consensus coordination
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -22,9 +23,14 @@ impl Default for ConsensusConfig {
 }
 
 /// Trait for consensus coordination
+#[async_trait]
 pub trait ConsensusCoordinator: Send + Sync {
     fn make_decision(&self, context: DecisionContext) -> ConsensusDecision;
     fn coordinate_consensus(&self, decision: ConsensusDecision) -> ConsensusResult;
+    
+    /// Check the health status of the consensus coordinator
+    /// Returns true if healthy, false otherwise
+    async fn health_check(&self) -> Result<bool, String>;
 }
 
 /// Consensus result
@@ -76,6 +82,15 @@ impl ConsensusCoordinator for RealTimeConsensusCoordinator {
             participants: vec!["default".to_string()],
             reasoning: "Default consensus".to_string(),
         }
+    }
+    
+    async fn health_check(&self) -> Result<bool, String> {
+        // Real-time consensus coordinator is always healthy if it can respond
+        // In a real implementation, this might check:
+        // - Connection to consensus backend
+        // - Response time thresholds
+        // - Participant availability
+        Ok(true)
     }
 }
 

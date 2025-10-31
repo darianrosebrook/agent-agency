@@ -11,7 +11,7 @@ use anyhow::Result;
 // use agent_constitutional_council::CouncilCoordinator;
 // use system_federated_ml::tool_chain_planner::ToolChainPlanner;
 // use agent_research::evidence::collector::EvidenceCollector as ResearchEvidenceCollector;
-// use data_infrastructure::DatabaseOperations;
+use data_infrastructure::DatabaseOperations;
 
 // Stub types for missing dependencies
 #[derive(Debug)]
@@ -24,14 +24,6 @@ pub struct ToolChainPlanner;
 
 #[derive(Debug)]
 pub struct ResearchEvidenceCollector;
-
-pub trait DatabaseOperations {
-    fn create_execution_plan(&self, _plan: serde_json::Value) -> Result<serde_json::Value, String> { Ok(serde_json::Value::Null) }
-    fn get_execution_plan(&self, _id: uuid::Uuid) -> Result<Option<serde_json::Value>, String> { Ok(None) }
-    fn get_execution_plans(&self) -> Result<Vec<serde_json::Value>, String> { Ok(vec![]) }
-    fn update_execution_plan(&self, _id: uuid::Uuid, _update: serde_json::Value) -> Result<serde_json::Value, String> { Err("Not implemented".to_string()) }
-    fn delete_execution_plan(&self, _id: uuid::Uuid) -> Result<(), String> { Ok(()) }
-}
 
 use crate::planning::{
     plan_generator::PlanGenerator,
@@ -69,7 +61,7 @@ impl PlanningSystemFactory {
         // Quality enforcement
         todo_integration: Arc<TodoIntegration>,
 
-        // Infrastructure
+        // Infrastructure - use real database operations
         db_ops: Arc<dyn DatabaseOperations>,
     ) -> Result<OrchestratorPlanningIntegration> {
         Ok(OrchestratorPlanningIntegration::new(

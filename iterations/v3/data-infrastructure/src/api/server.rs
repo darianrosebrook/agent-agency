@@ -24,7 +24,8 @@ use agent_orchestration::audited_orchestrator::Orchestrator;
 use agent_orchestration::progress_tracker::{ProgressTracker, ExecutionProgress};
 use crate::simple_client::DatabaseClient;
 
-use super::{ApiError, Result, ApiConfig, TaskSubmissionRequest, TaskSubmissionResponse, TaskStatusResponse, DashboardTaskSummary, DashboardDiffSummary, TaskResultResponse, SavedQueryResponse, SaveQueryRequest, WorkingSpec, ExecutionArtifacts, QualityReport, ChangeBudget, BlastRadius, Scope, AcceptanceCriterion, NonFunctionalRequirements, PerformanceRequirements, Contract, ArtifactMetadata};
+use super::{ApiError, Result, TaskSubmissionRequest, TaskSubmissionResponse, TaskStatusResponse, DashboardTaskSummary, DashboardDiffSummary, TaskResultResponse, SavedQueryResponse, SaveQueryRequest, WorkingSpec, ExecutionArtifacts, QualityReport, ChangeBudget, BlastRadius, Scope, AcceptanceCriterion, NonFunctionalRequirements, PerformanceRequirements, Contract, ArtifactMetadata};
+use super::types::ApiConfig;
 // use super::handlers::{get_metrics, get_dashboard_data, get_diff_summary, list_tasks, acknowledge_slo_alert, list_slos, get_slo_status, get_slo_measurements, list_slo_alerts, create_waiver, approve_waiver, get_task_provenance, list_provenance_records, link_provenance_to_commit, verify_provenance_trailer, get_provenance_by_commit, cancel_task, pause_task, resume_task, list_saved_queries, save_query, delete_saved_query, list_waivers, health_check, submit_task, get_task_status, get_task_result};
 
 // Stub types for compilation
@@ -87,7 +88,7 @@ impl Orchestrator {
         // PLACEHOLDER: Real task orchestration not implemented
         // Per session rules: throw error instead of returning stub artifacts
         // Dependency: Requires integration with agent-orchestration crate's Orchestrator
-        return Err(ApiError::Internal(format!(
+        return Err(ApiError::InternalError(format!(
             "PLACEHOLDER: Orchestrator::orchestrate_task not implemented. Requires: \
             Integration with agent-orchestration crate Orchestrator. \
             Task description: {}, Execution mode: {}",
@@ -162,19 +163,20 @@ impl RestApi {
         };
 
         // This router is not used in main.rs - routes are created directly there
-        let router = Router::new()
+        let mut router = Router::new()
             .route("/health", get(|| async { "OK" }));
 
-        // TODO: Add API key authentication middleware when needed
-        // if self.config.require_api_key {
-        //     let api_keys = self.config.api_keys.clone();
-        //     router = router.layer(axum::middleware::from_fn(move |headers: axum::http::HeaderMap, request: axum::http::Request<_>, next: axum::middleware::Next| async move {
-        //         match middleware::api_key_auth(headers, api_keys.clone()).await {
-        //             Ok(_) => Ok(next.run(request).await),
-        //             Err(status) => Err(status),
-        //         }
-        //     }));
-        // }
+        // Add API key authentication middleware when configured
+        if self.__config.require_api_key {
+            let api_keys = self.__config.api_keys.clone();
+            router = router.layer(axum::middleware::from_fn(move |mut request: axum::http::Request<axum::body::Body>, next: axum::middleware::Next| async move {
+                let headers = request.headers().clone();
+                match crate::api::middleware::api_key_auth(headers, api_keys.clone()).await {
+                    Ok(_) => Ok(next.run(request).await),
+                    Err(status) => Err(status.into_response()),
+                }
+            }));
+        }
 
         router
     }
@@ -588,6 +590,7 @@ impl RestApi {
 }
 
 /// API server state
+#[cfg(feature = "orchestration")]
 #[derive(Clone)]
 pub struct ApiState {
     pub api: Arc<RestApi>,

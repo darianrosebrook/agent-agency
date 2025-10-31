@@ -17,6 +17,8 @@ pub mod input_validation;
 pub mod integrity_service;
 pub mod integrity_types;
 pub mod keystore;
+pub mod data_encryption;
+pub mod privacy_anonymization;
 pub mod policies;
 pub mod policy_audit;
 pub mod policy_types;
@@ -34,6 +36,7 @@ pub mod storage;
 pub mod tampering_detector;
 
 // Configuration and audit modules are included in existing modules
+pub mod config;
 
 // Provenance modules (consolidated from provenance crate)
 pub mod git_integration;
@@ -46,6 +49,7 @@ pub mod storage_new;
 pub use authentication::*;
 pub use checks::*;
 pub use command_execution::*;
+pub use config::*;
 pub use enforcer::*;
 pub use file_access::*;
 pub use gates_config::*;
@@ -54,6 +58,8 @@ pub use input_validation::*;
 pub use integrity_service::*;
 pub use integrity_types::*;
 pub use keystore::*;
+pub use data_encryption::*;
+pub use privacy_anonymization::*;
 pub use policies::*;
 pub use policy_audit::*;
 pub use policy_types::*;

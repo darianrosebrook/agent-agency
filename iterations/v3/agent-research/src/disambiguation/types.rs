@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use chrono;
 
 /// Trait for embedding providers
 pub trait EmbeddingProvider: Send + Sync {
@@ -120,4 +121,221 @@ impl Default for DisambiguationConfig {
             domain_context: HashMap::new(),
         }
     }
+}
+
+/// Language enumeration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Language {
+    English,
+    Spanish,
+    French,
+    German,
+    Chinese,
+    Japanese,
+    Other(String),
+}
+
+/// Unresolvable ambiguity
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UnresolvableAmbiguity {
+    pub text: String,
+    pub reason: UnresolvableReason,
+    pub context: Option<String>,
+}
+
+/// Reason why ambiguity cannot be resolved
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum UnresolvableReason {
+    InsufficientContext,
+    MultipleValidInterpretations,
+    DomainSpecific,
+    AmbiguousReference,
+    MissingKnowledge,
+}
+
+/// Named entity
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NamedEntity {
+    pub name: String,
+    pub entity_type: EntityType,
+    pub start_pos: usize,
+    pub end_pos: usize,
+    pub confidence: f64,
+    pub context: Option<String>,
+}
+
+/// Knowledge base source
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum KbSource {
+    Internal,
+    External,
+    DomainSpecific,
+    General,
+}
+
+/// Knowledge base result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KnowledgeBaseResult {
+    pub entity: String,
+    pub result: String,
+    pub source: KbSource,
+    pub confidence: f64,
+    pub metadata: HashMap<String, String>,
+}
+
+/// Related entity
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RelatedEntity {
+    pub entity: String,
+    pub relation: String,
+    pub related_to: String,
+    pub confidence: f64,
+}
+
+/// Historical entity analysis
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HistoricalEntityAnalysis {
+    pub entity: String,
+    pub occurrences: Vec<EntityOccurrence>,
+    pub trends: Vec<Trend>,
+    pub confidence: f64,
+}
+
+/// Entity occurrence in history
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EntityOccurrence {
+    pub text: String,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    pub context: String,
+}
+
+/// Trend in entity usage
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Trend {
+    pub metric: String,
+    pub value: f64,
+    pub direction: TrendDirection,
+}
+
+/// Trend direction
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TrendDirection {
+    Increasing,
+    Decreasing,
+    Stable,
+}
+
+/// Entity relationship
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EntityRelationship {
+    pub entity1: String,
+    pub entity2: String,
+    pub relationship_type: RelationshipType,
+    pub strength: f64,
+    pub context: Option<String>,
+}
+
+/// Relationship type
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RelationshipType {
+    PartOf,
+    RelatedTo,
+    Causes,
+    Precedes,
+    DependsOn,
+    Other(String),
+}
+
+/// Resolved entity
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResolvedEntity {
+    pub original: String,
+    pub resolved: String,
+    pub entity_type: EntityType,
+    pub confidence: f64,
+    pub resolution_method: ResolutionMethod,
+}
+
+/// Resolution method
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ResolutionMethod {
+    Context,
+    KnowledgeBase,
+    Embedding,
+    Pattern,
+}
+
+/// Context-aware disambiguation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextAwareDisambiguation {
+    pub entity: String,
+    pub context: HashMap<String, String>,
+    pub candidates: Vec<ResolvedEntity>,
+    pub selected: Option<ResolvedEntity>,
+}
+
+/// Domain integration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DomainIntegration {
+    pub domain: String,
+    pub entities: Vec<String>,
+    pub relationships: Vec<EntityRelationship>,
+    pub confidence: f64,
+}
+
+/// External knowledge entity
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExternalKnowledgeEntity {
+    pub id: String,
+    pub name: String,
+    pub source: String,
+    pub entity_type: EntityType,
+    pub metadata: HashMap<String, String>,
+}
+
+/// Ingestion channel
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum IngestionChannel {
+    File,
+    Api,
+    Database,
+    Stream,
+    Other(String),
+}
+
+/// Ingestion candidate
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IngestionCandidate {
+    pub content: String,
+    pub channel: IngestionChannel,
+    pub metadata: HashMap<String, String>,
+    pub priority: u32,
+}
+
+/// Ingestion cache entry
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IngestionCacheEntry {
+    pub key: String,
+    pub content: String,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    pub ttl_seconds: u64,
+}
+
+/// Ingestion pipeline statistics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IngestionPipelineStats {
+    pub total_ingested: u64,
+    pub successful: u64,
+    pub failed: u64,
+    pub average_processing_time_ms: f64,
+    pub last_ingestion: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+/// Referent information for pronoun resolution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReferentInfo {
+    pub referent: String,
+    pub entity_type: EntityType,
+    pub confidence: f64,
+    pub context: Option<String>,
 }

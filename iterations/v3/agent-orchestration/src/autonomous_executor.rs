@@ -18,6 +18,7 @@ use agent_agency_contracts::{
     WorkingSpecContext, NonFunctionalRequirements, PerformanceRequirements, ScalabilityRequirements,
     WorkingSpecMetadata, UnitTestSpec, IntegrationTestSpec, E2eScenario, RollbackStrategy, DataImpact
 };
+use agent_agency_contracts::task_request::{TaskRequest, TaskContext, TaskConstraints, TaskMetadata, RiskTier, BudgetLimits as RequestBudgetLimits, ScopeRestrictions as RequestScopeRestrictions, Environment, TaskPriority as RequestTaskPriority};
 use crate::types::{TaskDescriptor, TaskScope, ChangeBudget, BlastRadius, ExecutionStatus as TypesExecutionStatus, AcceptanceCriterion};
 use crate::types::ExecutionStatus;
 use agent_agency_contracts::task_executor_provider::TaskExecutorProvider;
@@ -46,12 +47,70 @@ pub struct ConsensusResult {
 pub type FinalVerdict = FinalVerdictContract;
 use agent_agency_contracts::execution_events::ExecutionEvent;
 use agent_agency_contracts::task_request::{TaskRequest, TaskPriority};
-// TODO: Implement these or find in other crates
-// use agent_agency_observability::cache::CacheBackend;
-// use agent_agency_observability::metrics::MetricsBackend;
-// TODO: Re-enable when agent_memory exports MemorySystem
+// CacheBackend and MetricsBackend are already imported from system crates (lines 26-27)
+// MemorySystem is exported from agent_memory crate
+#[cfg(feature = "memory")]
 use agent_memory::MemorySystem;
+#[cfg(feature = "memory")]
 use agent_memory::memory_types::{AgentExperience, MemoryType, ExperienceContext, ExperienceOutcome};
+
+// Fallback types when memory feature is disabled
+#[cfg(not(feature = "memory"))]
+#[derive(Debug, Clone)]
+pub enum MemoryType {
+    Episodic,
+    Semantic,
+    Procedural,
+}
+
+#[cfg(not(feature = "memory"))]
+pub mod memory_types {
+    use super::*;
+    use chrono::Utc;
+    use std::collections::HashMap;
+
+    #[derive(Debug, Clone)]
+    pub struct AgentExperience {
+        pub id: uuid::Uuid,
+        pub agent_id: String,
+        pub task_id: String,
+        pub content: String,
+        pub context: ExperienceContext,
+        pub input: String,
+        pub output: String,
+        pub outcome: ExperienceOutcome,
+        pub memory_type: MemoryType,
+        pub timestamp: chrono::DateTime<Utc>,
+        pub metadata: HashMap<String, serde_json::Value>,
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct ExperienceContext {
+        pub description: String,
+        pub domain: Vec<String>,
+        pub task_type: String,
+        pub temporal_context: Option<TemporalContext>,
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct ExperienceOutcome {
+        pub success: bool,
+        pub performance_score: Option<f32>,
+        pub quality_score: f64,
+        pub error_message: Option<String>,
+        pub execution_time_ms: Option<u64>,
+        pub learned_capabilities: Vec<String>,
+        pub metadata: HashMap<String, serde_json::Value>,
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct TemporalContext {
+        pub timestamp: chrono::DateTime<Utc>,
+        pub duration: Option<std::time::Duration>,
+        pub sequence_number: Option<u64>,
+        pub priority: crate::TaskPriority,
+    }
+}
 
 // Placeholder types for missing modules
 // Remove the duplicate TaskDescriptor type alias
@@ -73,6 +132,20 @@ pub trait VerdictWriter: Send + Sync + std::fmt::Debug {
 #[derive(Debug)]
 pub struct OrchestrationProvenanceEmitter {
     pub id: String,
+}
+
+impl OrchestrationProvenanceEmitter {
+    pub fn new() -> Self {
+        Self {
+            id: uuid::Uuid::new_v4().to_string(),
+        }
+    }
+}
+
+impl Default for OrchestrationProvenanceEmitter {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 // Traits imported from system crates above
@@ -569,7 +642,11 @@ fn execute_strict_mode(spec: &WorkingSpec, task_descriptor: &TaskDescriptor) -> 
         return Ok(agent_agency_contracts::final_verdict::FinalVerdictContract {
             decision: agent_agency_contracts::final_verdict::FinalDecision::Reject,
             votes: vec![],
-            dissent: "High-risk task requires manual approval in strict mode".to_string(),
+            dissent: format!(
+                "High-risk task (risk_tier: {}) requires manual approval in strict mode for task {}",
+                spec.risk_tier,
+                task_descriptor.task_id
+            ),
             remediation: vec!["Request manual approval for high-risk task".to_string()],
             constitutional_refs: vec![],
             verification_summary: agent_agency_contracts::final_verdict::VerificationSummary {
@@ -623,7 +700,7 @@ fn execute_task_with_validation(spec: &WorkingSpec, task_descriptor: &TaskDescri
     
     // Simulate task execution
     let mut verified_claims = 0;
-    let mut total_claims = spec.acceptance_criteria.len();
+    let total_claims = spec.acceptance_criteria.len();
     
     for criterion in &spec.acceptance_criteria {
         // Simulate verification of each acceptance criterion
@@ -670,8 +747,54 @@ fn execute_task_with_validation(spec: &WorkingSpec, task_descriptor: &TaskDescri
 
 /// Verify an acceptance criterion
 fn verify_acceptance_criterion(criterion: &agent_agency_contracts::AcceptanceCriterion, task_descriptor: &TaskDescriptor) -> bool {
-    // Simple verification logic - in a real implementation, this would be more sophisticated
-    !criterion.given.is_empty() && !criterion.when.is_empty() && !criterion.then.is_empty()
+    // Basic validation: all required fields must be present and non-empty
+    if criterion.id.is_empty() {
+        return false;
+    }
+    
+    if criterion.given.is_empty() || criterion.when.is_empty() || criterion.then.is_empty() {
+        return false;
+    }
+    
+    // Validate criterion structure: given should describe context, when should describe action, then should describe outcome
+    let given_lower = criterion.given.to_lowercase();
+    let when_lower = criterion.when.to_lowercase();
+    let then_lower = criterion.then.to_lowercase();
+    
+    // Check that given describes a precondition/context
+    let has_context_keywords = given_lower.contains("given") || 
+                              given_lower.contains("when") ||
+                              given_lower.contains("if") ||
+                              given_lower.contains("context") ||
+                              given_lower.contains("precondition");
+    
+    // Check that when describes an action
+    let has_action_keywords = when_lower.contains("when") ||
+                             when_lower.contains("action") ||
+                             when_lower.contains("execute") ||
+                             when_lower.contains("perform") ||
+                             when_lower.contains("trigger");
+    
+    // Check that then describes an expected outcome
+    let has_outcome_keywords = then_lower.contains("then") ||
+                              then_lower.contains("should") ||
+                              then_lower.contains("expect") ||
+                              then_lower.contains("result") ||
+                              then_lower.contains("outcome");
+    
+    // Criterion is valid if it has proper structure OR if it's a simple format (doesn't require keywords)
+    let has_proper_structure = has_context_keywords || has_action_keywords || has_outcome_keywords;
+    
+    // Also validate that the criterion is relevant to the task
+    let task_desc_lower = task_descriptor.description.to_lowercase();
+    let criterion_text = format!("{} {} {}", criterion.given, criterion.when, criterion.then).to_lowercase();
+    
+    // Check for relevance: criterion should mention task-related concepts
+    let is_relevant = task_desc_lower.split_whitespace().any(|word| {
+        word.len() > 3 && criterion_text.contains(word)
+    }) || criterion_text.len() > 50; // Allow longer criteria even without keyword matches
+    
+    has_proper_structure && is_relevant
 }
 
 /// Validation result
@@ -728,7 +851,10 @@ pub struct AutonomousExecutor {
     cache: Option<Arc<dyn CacheBackend>>,
     metrics: Option<Arc<dyn MetricsBackend>>,
     task_executor_provider: TaskExecutorProvider,
+    #[cfg(feature = "memory")]
     memory_system: Option<Arc<MemorySystem>>,
+    /// Planning integration for execution plan generation and execution
+    planning_integration: Option<Arc<crate::planning::orchestrator_integration::OrchestratorPlanningIntegration>>,
     active_tasks: Arc<RwLock<HashMap<Uuid, TaskExecutionState>>>,
     task_queue: mpsc::UnboundedSender<TaskDescriptor>,
     task_receiver: Arc<RwLock<mpsc::UnboundedReceiver<TaskDescriptor>>>,
@@ -746,7 +872,9 @@ impl AutonomousExecutor {
         cache: Option<Arc<dyn CacheBackend>>,
         metrics: Option<Arc<dyn MetricsBackend>>,
         task_executor_provider: TaskExecutorProvider,
+        #[cfg(feature = "memory")]
         memory_system: Option<Arc<MemorySystem>>,
+        planning_integration: Option<Arc<crate::planning::orchestrator_integration::OrchestratorPlanningIntegration>>,
     ) -> Self {
         let (task_sender, task_receiver) = mpsc::unbounded_channel();
 
@@ -760,11 +888,19 @@ impl AutonomousExecutor {
             cache,
             metrics,
             task_executor_provider,
+            #[cfg(feature = "memory")]
             memory_system,
+            planning_integration,
             active_tasks: Arc::new(RwLock::new(HashMap::new())),
             task_queue: task_sender,
             task_receiver: Arc::new(RwLock::new(task_receiver)),
         }
+    }
+
+    /// Inject memory system after construction
+    #[cfg(feature = "memory")]
+    pub fn set_memory_system(&mut self, memory_system: Arc<MemorySystem>) {
+        self.memory_system = Some(memory_system);
     }
 
     /// Submit a task for autonomous execution
@@ -904,59 +1040,178 @@ impl AutonomousExecutor {
         Ok(())
     }
 
+    /// Convert TaskDescriptor to TaskRequest with proper type conversions
+    fn convert_task_descriptor_to_request(&self, task_descriptor: &TaskDescriptor) -> Result<TaskRequest, Box<dyn std::error::Error + Send + Sync>> {
+        use std::path::PathBuf;
+        use std::process::Command;
+        
+        // Get current git branch
+        let git_branch = std::env::current_dir()
+            .ok()
+            .and_then(|dir| {
+                Command::new("git")
+                    .args(["branch", "--show-current"])
+                    .current_dir(&dir)
+                    .output()
+                    .ok()
+                    .and_then(|output| {
+                        if output.status.success() {
+                            String::from_utf8(output.stdout)
+                                .ok()
+                                .map(|s| s.trim().to_string())
+                        } else {
+                            None
+                        }
+                    })
+            })
+            .unwrap_or_else(|| "main".to_string()); // Fallback to "main" if git command fails
+        
+        // Convert TaskScope to TaskContext
+        let context = Some(TaskContext {
+            workspace_root: std::env::current_dir()
+                .unwrap_or_else(|_| PathBuf::from("."))
+                .to_string_lossy()
+                .to_string(),
+            git_branch,
+            recent_changes: vec![], // Could be populated from git history
+            dependencies: HashMap::new(), // Could be populated from package.json/Cargo.toml
+            environment: Environment::Development,
+        });
+        
+        // Convert ChangeBudget and BlastRadius to TaskConstraints
+        let constraints = Some(TaskConstraints {
+            risk_tier: match task_descriptor.risk_tier {
+                Some(crate::council_types::RiskTier::Tier1) => RiskTier::Tier1,
+                Some(crate::council_types::RiskTier::Tier2) => RiskTier::Tier2,
+                Some(crate::council_types::RiskTier::Tier3) => RiskTier::Tier3,
+                None => match task_descriptor.priority {
+                    crate::types::TaskPriority::Critical | crate::types::TaskPriority::High => RiskTier::Tier1,
+                    crate::types::TaskPriority::Medium | crate::types::TaskPriority::Normal => RiskTier::Tier2,
+                    crate::types::TaskPriority::Low => RiskTier::Tier3,
+                },
+            },
+            max_duration_minutes: None, // Could be configured per task type
+            max_iterations: None, // Could be configured per task type
+            budget_limits: Some(RequestBudgetLimits {
+                max_files: Some(task_descriptor.change_budget.max_files as u32),
+                max_loc: Some(task_descriptor.change_budget.max_loc as u32),
+            }),
+            scope_restrictions: Some(RequestScopeRestrictions {
+                allowed_paths: task_descriptor.scope_in.in_scope.clone(),
+                blocked_paths: task_descriptor.scope_out.as_ref()
+                    .map(|s| s.out_scope.clone())
+                    .unwrap_or_default(),
+            }),
+        });
+        
+        // Convert task metadata
+        let metadata = Some(TaskMetadata {
+            requester: None, // Could be populated from execution context
+            priority: match task_descriptor.priority {
+                crate::types::TaskPriority::Low => Some(RequestTaskPriority::Low),
+                crate::types::TaskPriority::Medium | crate::types::TaskPriority::Normal => Some(RequestTaskPriority::Normal),
+                crate::types::TaskPriority::High => Some(RequestTaskPriority::High),
+                crate::types::TaskPriority::Critical => Some(RequestTaskPriority::Urgent),
+            },
+            tags: vec![
+                task_descriptor.task_type.clone(),
+                format!("risk-tier-{}", task_descriptor.risk_tier.map(|t| t as u8).unwrap_or(2)),
+            ],
+        });
+        
+        Ok(TaskRequest {
+            version: "1.0".to_string(),
+            id: Uuid::parse_str(&task_descriptor.task_id)
+                .unwrap_or_else(|_| Uuid::new_v4()),
+            description: task_descriptor.description.clone(),
+            context,
+            constraints,
+            metadata,
+        })
+    }
+
     /// Execute a single task end-to-end
     async fn execute_task(&self, task_descriptor: TaskDescriptor) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let task_id = Uuid::parse_str(&task_descriptor.task_id).unwrap_or_else(|_| Uuid::new_v4());
         let start_time = Instant::now();
 
-        tracing::info!("Starting auto execution of task {}", task_id);
+        tracing::info!("Starting execution of task {} in mode {:?}", task_id, task_descriptor.execution_mode);
 
         // Enforce execution mode behavior
-        let execution_mode = "auto";
-        match execution_mode {
-            "dry-run" => {
+        match task_descriptor.execution_mode {
+            ExecutionMode::DryRun => {
                 tracing::info!("Dry-run mode: Simulating execution without filesystem changes");
                 // For dry-run, we still validate and plan but skip actual execution
                 self.update_task_status(task_id.clone(), TypesExecutionStatus::Starting, Some("Initializing dry-run execution".to_string())).await?;
             }
-            "strict" => {
+            ExecutionMode::Strict => {
                 tracing::info!("Strict mode: Manual approval required for each phase");
                 self.update_task_status(task_id.clone(), TypesExecutionStatus::Starting, Some("Initializing strict mode execution".to_string())).await?;
             }
-            _ => {
+            ExecutionMode::Auto => {
                 tracing::info!("Auto mode: Automatic execution with quality gates");
                 self.update_task_status(task_id.clone(), TypesExecutionStatus::Starting, Some("Initializing auto execution".to_string())).await?;
             }
         }
 
         // Phase 1: Validate and prepare task
-        let task_request = TaskRequest {
-            version: "1.0".to_string(),
-            id: Uuid::new_v4(), // Generate new ID since TaskDescriptor.task_id is a String
-            description: task_descriptor.description.clone(),
-            context: None, // TODO: Fix type mismatch with TaskContext
-            constraints: None, // TODO: Fix type mismatch with TaskConstraints  
-            metadata: None, // TODO: Fix type mismatch with TaskMetadata
-        };
+        let task_request = self.convert_task_descriptor_to_request(&task_descriptor)?;
         let working_spec = self.prepare_task(&task_request).await?;
         self.update_task_progress(task_id.clone(), 10.0, Some("Task prepared".to_string())).await?;
 
         // Strict mode: Require approval before proceeding
-        let execution_mode = "auto";
-        if execution_mode == "strict" {
-            self.update_task_status(task_id.clone(), TypesExecutionStatus::AwaitingApproval, Some("Awaiting approval for planning phase".to_string())).await?;
-            // In a real implementation, this would wait for external approval
-            tracing::info!("Strict mode: Awaiting user approval for planning phase");
+        match task_descriptor.execution_mode {
+            ExecutionMode::Strict => {
+                self.update_task_status(task_id.clone(), TypesExecutionStatus::AwaitingApproval, Some("Awaiting approval for planning phase".to_string())).await?;
+                tracing::info!("Strict mode: Awaiting user approval for planning phase");
+                self.wait_for_approval(task_id.clone(), "planning phase").await?;
+            }
+            _ => {}
         }
 
         // Phase 2: Planning and validation
+        // If planning integration is available, use it for full planning-aware execution
+        if let Some(ref planning_integration) = self.planning_integration {
+            tracing::info!("Using planning integration for task {}", task_id);
+            match planning_integration.execute_planning_task(&task_descriptor).await {
+                Ok(planning_result) => {
+                    tracing::info!("Planning execution completed successfully for task {}", task_id);
+                    self.update_task_progress(task_id.clone(), 90.0, Some(format!(
+                        "Planning execution complete: {} milestones, {} evidence artifacts",
+                        planning_result.execution_result.milestone_results.len(),
+                        planning_result.evidence_count
+                    ))).await?;
+                    
+                    // Update final status based on planning result
+                    let final_status = if planning_result.quality_verified {
+                        TypesExecutionStatus::Completed
+                    } else {
+                        TypesExecutionStatus::Failed
+                    };
+                    self.update_task_status(task_id.clone(), final_status, Some(
+                        format!("Planning execution completed with quality_verified: {}", planning_result.quality_verified)
+                    )).await?;
+                    return Ok(());
+                }
+                Err(e) => {
+                    tracing::warn!("Planning integration execution failed for task {}, falling back to standard workflow: {}", task_id, e);
+                    // Fall through to standard validation and execution workflow
+                }
+            }
+        }
+        
+        // Standard planning and validation workflow
         self.validate_task(&working_spec, &task_descriptor).await?;
         self.update_task_progress(task_id.clone(), 25.0, Some("Planning and validation complete".to_string())).await?;
 
         // Strict mode: Require approval before consensus
-        if execution_mode == "strict" {
-            self.update_task_status(task_id.clone(), TypesExecutionStatus::AwaitingApproval, Some("Awaiting approval for consensus phase".to_string())).await?;
-            tracing::info!("Strict mode: Awaiting user approval for consensus phase");
+        match task_descriptor.execution_mode {
+            ExecutionMode::Strict => {
+                self.update_task_status(task_id.clone(), TypesExecutionStatus::AwaitingApproval, Some("Awaiting approval for consensus phase".to_string())).await?;
+                tracing::info!("Strict mode: Awaiting user approval for consensus phase");
+                self.wait_for_approval(task_id.clone(), "consensus phase").await?;
+            }
+            _ => {}
         }
 
         // Phase 3: Consensus coordination (if enabled)
@@ -966,31 +1221,38 @@ impl AutonomousExecutor {
         }
 
         // Strict mode: Require approval before execution
-        if execution_mode == "strict" {
-            self.update_task_status(task_id.clone(), TypesExecutionStatus::AwaitingApproval, Some("Awaiting approval for execution phase".to_string())).await?;
-            tracing::info!("Strict mode: Awaiting user approval for execution phase");
+        match task_descriptor.execution_mode {
+            ExecutionMode::Strict => {
+                self.update_task_status(task_id.clone(), TypesExecutionStatus::AwaitingApproval, Some("Awaiting approval for execution phase".to_string())).await?;
+                tracing::info!("Strict mode: Awaiting user approval for execution phase");
+                self.wait_for_approval(task_id.clone(), "execution phase").await?;
+            }
+            _ => {}
         }
 
         // Phase 4: Execute task orchestration (skip for dry-run)
-        let final_verdict = if execution_mode == "dry-run" {
-            tracing::info!("Dry-run mode: Skipping actual orchestration, simulating results");
-            // Create a mock verdict for dry-run
-            agent_agency_contracts::final_verdict::FinalVerdictContract {
-                decision: agent_agency_contracts::final_verdict::FinalDecision::Accept,
-                votes: vec![],
-                dissent: String::new(),
-                remediation: vec![],
-                constitutional_refs: vec![],
-                verification_summary: agent_agency_contracts::final_verdict::VerificationSummary {
-                    claims_total: 1,
-                    claims_verified: 1,
-                    coverage_pct: 100.0,
-                },
+        let final_verdict = match task_descriptor.execution_mode {
+            ExecutionMode::DryRun => {
+                tracing::info!("Dry-run mode: Skipping actual orchestration, simulating results");
+                // Create a mock verdict for dry-run
+                agent_agency_contracts::final_verdict::FinalVerdictContract {
+                    decision: agent_agency_contracts::final_verdict::FinalDecision::Accept,
+                    votes: vec![],
+                    dissent: String::new(),
+                    remediation: vec![],
+                    constitutional_refs: vec![],
+                    verification_summary: agent_agency_contracts::final_verdict::VerificationSummary {
+                        claims_total: 1,
+                        claims_verified: 1,
+                        coverage_pct: 100.0,
+                    },
+                }
             }
-        } else {
-            match self.execute_orchestration(&working_spec, &task_descriptor).await {
-                Ok(verdict) => verdict,
-                Err(e) => return Err(e),
+            ExecutionMode::Strict | ExecutionMode::Auto => {
+                match self.execute_orchestration(&working_spec, &task_descriptor).await {
+                    Ok(verdict) => verdict,
+                    Err(e) => return Err(e),
+                }
             }
         };
         self.update_task_progress(task_id.clone(), 80.0, Some("Task orchestration complete".to_string())).await?;
@@ -1016,6 +1278,94 @@ impl AutonomousExecutor {
 
     /// Prepare task specification
     async fn prepare_task(&self, task_request: &agent_agency_contracts::TaskRequest) -> Result<WorkingSpec, Box<dyn std::error::Error + Send + Sync>> {
+        // If planning integration is available, use it to generate execution plan and working spec
+        // Otherwise, fall back to basic working spec generation
+        if let Some(ref planning_integration) = self.planning_integration {
+            // Convert TaskRequest to TaskDescriptor for planning integration
+            let task_descriptor = TaskDescriptor {
+                task_id: task_request.id.to_string(),
+                description: task_request.description.clone(),
+                scope_in: TaskScope {
+                    in_scope: vec![],
+                    out_scope: vec![],
+                },
+                scope_out: None,
+                change_budget: ChangeBudget {
+                    max_files: 25,
+                    max_loc: 1000,
+                },
+                blast_radius: BlastRadius {
+                    modules: vec![],
+                    data_migration: false,
+                    external_deps: vec![],
+                },
+                priority: TaskPriority::Normal,
+                execution_mode: ExecutionMode::Auto,
+                task_type: "autonomous_task".to_string(),
+                risk_tier: None,
+                acceptance: None,
+            };
+
+            // Execute planning task which generates execution plan and working spec
+            match planning_integration.execute_planning_task(&task_descriptor).await {
+                Ok(planning_result) => {
+                    tracing::info!("Planning integration generated execution plan for task {}", task_request.id);
+                    // Convert planning execution plan to working spec
+                    // For now, use the contract plan's metadata to build working spec
+                    let contract_plan = &planning_result.execution_plan.contract_plan;
+                    let working_spec = WorkingSpec {
+                        version: "1.0".to_string(),
+                        id: contract_plan.id.to_string(),
+                        title: task_request.description.clone(),
+                        description: task_request.description.clone(),
+                        goals: contract_plan.milestones.iter()
+                            .map(|m| m.description.clone())
+                            .collect(),
+                        risk_tier: 2, // Default tier, could be extracted from planning metadata
+                        constraints: agent_agency_contracts::working_spec::WorkingSpecConstraints {
+                            max_duration_minutes: None,
+                            max_iterations: None,
+                            budget_limits: Some(agent_agency_contracts::working_spec::BudgetLimits {
+                                max_files: Some(25),
+                                max_loc: Some(1000),
+                            }),
+                            scope_restrictions: None,
+                        },
+                        acceptance_criteria: vec![],
+                        test_plan: agent_agency_contracts::working_spec::TestPlan {
+                            unit_tests: vec![],
+                            integration_tests: vec![],
+                            e2e_scenarios: vec![],
+                            coverage_targets: None,
+                        },
+                        rollback_plan: agent_agency_contracts::working_spec::RollbackPlan {
+                            strategy: agent_agency_contracts::working_spec::RollbackStrategy::ManualRevert,
+                            automated_steps: vec![],
+                            manual_steps: vec![],
+                            data_impact: agent_agency_contracts::working_spec::DataImpact::None,
+                            downtime_required: Some(false),
+                            rollback_window_minutes: Some(30),
+                        },
+                        context: agent_agency_contracts::working_spec::WorkingSpecContext {
+                            workspace_root: ".".to_string(),
+                            git_branch: "main".to_string(),
+                            recent_changes: vec![],
+                            dependencies: std::collections::HashMap::new(),
+                            environment: agent_agency_contracts::task_request::Environment::Development,
+                        },
+                        non_functional_requirements: None,
+                        validation_results: None,
+                        metadata: None,
+                    };
+                    return Ok(working_spec);
+                }
+                Err(e) => {
+                    tracing::warn!("Planning integration failed for task {}, falling back to basic spec generation: {}", task_request.id, e);
+                    // Fall through to basic working spec generation
+                }
+            }
+        }
+
         // Generate working spec from task descriptor
         // This would involve planning and specification generation
         let working_spec = WorkingSpec {
@@ -1114,8 +1464,17 @@ impl AutonomousExecutor {
             // Store consensus result
             let mut active_tasks = self.active_tasks.write().await;
             let task_uuid = Uuid::parse_str(&task_descriptor.task_id).unwrap_or_else(|_| Uuid::new_v4());
-            if let Some(_state) = active_tasks.get_mut(&task_uuid) {
-                // TODO: Store consensus result in state
+            if let Some(state) = active_tasks.get_mut(&task_uuid) {
+                // Convert ConsensusResult to CouncilVerdict and store in state
+                state.consensus_result = Some(
+                    CouncilVerdict {
+                        quorum_achieved: consensus_result.approved,
+                        total_judges: 1, // Simplified for testing
+                        votes_for_decision: if consensus_result.approved { 1 } else { 0 },
+                        dissenting_opinions: vec![],
+                        judge_contributions: vec![],
+                    }
+                );
             }
 
             Ok(())
@@ -1233,26 +1592,71 @@ impl AutonomousExecutor {
         self.verdict_writer.write_verdict(final_verdict)?;
 
         // Store execution experience in memory system
-        if let Some(memory_system) = &self.memory_system {
-            self.store_execution_experience(memory_system, final_verdict, task_descriptor).await?;
+        #[cfg(feature = "memory")]
+        {
+            if let Some(memory_system) = &self.memory_system {
+                self.store_execution_experience(memory_system, final_verdict, task_descriptor).await?;
+            }
         }
 
         Ok(())
     }
 
     /// Store execution experience in memory system
+    #[cfg(feature = "memory")]
     async fn store_execution_experience(
         &self,
-        _memory_system: &Arc<MemorySystem>,
+        memory_system: &Arc<MemorySystem>,
         final_verdict: &FinalVerdict,
         task_descriptor: &TaskDescriptor,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Extract execution details from verdict
-        // TODO: Use actual confidence scoring when available in FinalVerdictContract
         let success = final_verdict.decision == agent_agency_contracts::final_verdict::FinalDecision::Accept;
-        // TODO: Use actual execution stats when available in FinalVerdictContract
-        let execution_time_ms = 1000.0; // Placeholder
-        let performance_score = if success { 0.8 } else { 0.3 }; // Simple scoring
+        
+        // Calculate confidence from votes: weighted average of vote weights
+        // Higher weight votes contribute more to confidence
+        let confidence_score = if !final_verdict.votes.is_empty() {
+            let total_weight: f32 = final_verdict.votes.iter().map(|v| v.weight).sum();
+            let weighted_sum: f32 = final_verdict.votes.iter()
+                .map(|v| {
+                    let vote_confidence = match v.verdict {
+                        agent_agency_contracts::final_verdict::VoteVerdict::Pass => 1.0,
+                        agent_agency_contracts::final_verdict::VoteVerdict::Fail => 0.0,
+                        agent_agency_contracts::final_verdict::VoteVerdict::Uncertain => 0.5,
+                    };
+                    v.weight * vote_confidence
+                })
+                .sum();
+            if total_weight > 0.0 {
+                weighted_sum / total_weight
+            } else {
+                0.5 // Default confidence if no weights
+            }
+        } else {
+            // Fallback: use verification coverage as confidence indicator
+            final_verdict.verification_summary.coverage_pct / 100.0
+        };
+        
+        // Calculate execution time from task execution state
+        let task_uuid = Uuid::parse_str(&task_descriptor.task_id).unwrap_or_else(|_| Uuid::new_v4());
+        let execution_time_ms = {
+            let active_tasks = self.active_tasks.read().await;
+            if let Some(state) = active_tasks.get(&task_uuid) {
+                let duration = chrono::Utc::now() - state.start_time;
+                duration.num_milliseconds() as f64
+            } else {
+                1000.0 // Fallback if state not found
+            }
+        };
+        
+        // Calculate performance score based on success, confidence, and verification coverage
+        let performance_score = if success {
+            // Successful execution: base score on confidence and verification coverage
+            (confidence_score * 0.6 + (final_verdict.verification_summary.coverage_pct / 100.0) * 0.4) as f64
+        } else {
+            // Failed execution: lower score based on confidence
+            confidence_score as f64 * 0.3
+        };
 
         // Create memory experience
         let experience = AgentExperience {
@@ -1293,13 +1697,22 @@ impl AutonomousExecutor {
         };
 
         // Store in memory system
-        if let Some(memory_system) = &self.memory_system {
-            let _memory_id = memory_system.store_experience(experience).await
-                .map_err(|e| format!("Failed to store execution experience: {}", e))?;
-        }
+        let _memory_id = memory_system.store_experience(experience).await
+            .map_err(|e| format!("Failed to store execution experience: {}", e))?;
 
         tracing::debug!("Stored execution experience for task {}", task_descriptor.task_id);
 
+        Ok(())
+    }
+
+    /// Store execution experience in memory system (fallback when memory disabled)
+    #[cfg(not(feature = "memory"))]
+    async fn store_execution_experience(
+        &self,
+        _final_verdict: &FinalVerdict,
+        _task_descriptor: &TaskDescriptor,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // No memory storage without memory feature
         Ok(())
     }
 
@@ -1402,14 +1815,19 @@ impl AutonomousExecutor {
     /// Perform health checks
     async fn perform_health_checks(&self) {
         // Check consensus coordinator health
-        // TODO: Implement proper ConsensusCoordinator trait with health_check method
-        // if let Some(ref coordinator) = self.consensus_coordinator {
-        //     if let Ok(health) = coordinator.health_check().await {
-        //         if !health {
-        //             tracing::warn!("Consensus coordinator health check failed");
-        //         }
-        //     }
-        // }
+        if let Some(ref coordinator) = self.consensus_coordinator {
+            match coordinator.health_check().await {
+                Ok(true) => {
+                    tracing::debug!("Consensus coordinator health check passed");
+                }
+                Ok(false) => {
+                    tracing::warn!("Consensus coordinator health check failed");
+                }
+                Err(e) => {
+                    tracing::warn!("Consensus coordinator health check error: {}", e);
+                }
+            }
+        }
 
         // Check cache health
         if let Some(ref cache) = self.cache {
@@ -1422,6 +1840,65 @@ impl AutonomousExecutor {
         if let Some(ref metrics) = self.metrics {
             let active_task_count = self.active_tasks.read().await.len() as u64;
             let _ = metrics.gauge("autonomous_executor_active_tasks", &[], active_task_count as f64).await;
+        }
+    }
+
+    /// Wait for approval when task is in AwaitingApproval status
+    /// 
+    /// This method polls the task status until it's no longer AwaitingApproval.
+    /// It will timeout after 1 hour or return early if the task is cancelled.
+    async fn wait_for_approval(&self, task_id: Uuid, phase: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        use tracing::{info, warn};
+        
+        const MAX_WAIT_TIME: Duration = Duration::from_secs(3600); // 1 hour timeout
+        const POLL_INTERVAL: Duration = Duration::from_secs(2); // Poll every 2 seconds
+        
+        let start_time = Instant::now();
+        let mut interval = time::interval(POLL_INTERVAL);
+        
+        info!("Waiting for approval for task {} in {}", task_id, phase);
+        
+        loop {
+            // Check timeout
+            if start_time.elapsed() > MAX_WAIT_TIME {
+                warn!("Approval timeout for task {} in {} after {:?}", task_id, phase, MAX_WAIT_TIME);
+                self.update_task_status(task_id, TypesExecutionStatus::Failed, Some(format!("Approval timeout after {:?}", MAX_WAIT_TIME))).await?;
+                return Err(format!("Approval timeout for task {} in {}", task_id, phase).into());
+            }
+            
+            // Poll task status
+            interval.tick().await;
+            
+            if let Some(state) = self.get_task_status(task_id).await {
+                match state.status {
+                    TypesExecutionStatus::AwaitingApproval => {
+                        // Still waiting, continue polling
+                        continue;
+                    }
+                    TypesExecutionStatus::Cancelled => {
+                        warn!("Task {} was cancelled during approval wait", task_id);
+                        return Err(format!("Task {} was cancelled during approval wait", task_id).into());
+                    }
+                    TypesExecutionStatus::Starting | TypesExecutionStatus::Planning | TypesExecutionStatus::Consensus | TypesExecutionStatus::Execution => {
+                        // Status changed to a non-awaiting state, approval granted
+                        info!("Approval granted for task {} in {}, proceeding to {:?}", task_id, phase, state.status);
+                        return Ok(());
+                    }
+                    TypesExecutionStatus::Failed => {
+                        warn!("Task {} failed during approval wait", task_id);
+                        return Err(format!("Task {} failed during approval wait", task_id).into());
+                    }
+                    _ => {
+                        // Other statuses (Completed, Paused, etc.) - treat as approval granted
+                        info!("Task {} status changed to {:?} during approval wait, proceeding", task_id, state.status);
+                        return Ok(());
+                    }
+                }
+            } else {
+                // Task not found - this shouldn't happen but handle gracefully
+                warn!("Task {} not found during approval wait", task_id);
+                return Err(format!("Task {} not found during approval wait", task_id).into());
+            }
         }
     }
 
@@ -1491,6 +1968,135 @@ impl AutonomousExecutor {
 mod tests {
     use super::*;
 
+    /// Test autonomous task submission and status tracking
+    ///
+    /// This test verifies the complete workflow:
+    /// 1. Submit a task using AutonomousExecutor::submit_task()
+    /// 2. Monitor task progress via get_task_status()
+    /// 3. Verify task state is properly initialized
+    /// 4. Check that task is queued for execution
+    #[tokio::test]
+    async fn test_task_submission_and_status_tracking() {
+        use crate::consensus_coordinator::RealTimeConsensusCoordinator;
+        use crate::progress_tracker::RealTimeProgressTracker;
+        use agent_agency_contracts::task_executor_provider::MockTaskExecutorProvider;
+
+        // Mock implementations for testing
+        #[derive(Debug)]
+        struct MockCawsRuntimeValidator;
+        impl CawsRuntimeValidator for MockCawsRuntimeValidator {
+            fn validate(&self, _spec: &WorkingSpec) -> Result<(), String> {
+                Ok(())
+            }
+        }
+
+        #[derive(Debug)]
+        struct MockVerdictWriter;
+        impl VerdictWriter for MockVerdictWriter {
+            fn write_verdict(&self, _verdict: &agent_agency_contracts::final_verdict::FinalVerdictContract) -> Result<(), String> {
+                Ok(())
+            }
+        }
+
+        // Create test configuration
+        let config = AutonomousExecutorConfig {
+            max_concurrent_tasks: 5,
+            task_timeout_seconds: 300,
+            progress_report_interval_seconds: 10,
+            enable_auto_retry: true,
+            max_retry_attempts: 3,
+            enable_consensus: true,
+            consensus_timeout_seconds: 60,
+        };
+
+        // Create mock dependencies
+        let runtime_validator = Arc::new(MockCawsRuntimeValidator);
+        let verdict_writer = Arc::new(MockVerdictWriter);
+        let provenance_emitter = Arc::new(OrchestrationProvenanceEmitter::new());
+        let task_executor_provider = MockTaskExecutorProvider::new();
+
+        // Create executor
+        let executor = AutonomousExecutor::new(
+            config,
+            Some(Arc::new(RealTimeProgressTracker::new(None))),
+            runtime_validator,
+            Some(Arc::new(RealTimeConsensusCoordinator::new(crate::consensus_coordinator::ConsensusConfig::default()))),
+            verdict_writer,
+            provenance_emitter,
+            None, // cache
+            None, // metrics
+            task_executor_provider,
+            #[cfg(feature = "memory")]
+            None, // memory_system
+            None, // planning_integration
+        );
+
+        // Create a test task descriptor
+        let task_descriptor = TaskDescriptor {
+            task_id: "test-task-001".to_string(),
+            description: "Create a simple hello world function in Rust".to_string(),
+            scope_in: TaskScope {
+                in_scope: vec!["src/main.rs".to_string()],
+                out_scope: vec![],
+            },
+            scope_out: TaskScope {
+                in_scope: vec![],
+                out_scope: vec![],
+            },
+            change_budget: ChangeBudget {
+                max_files: 5,
+                max_loc: 100,
+            },
+            blast_radius: BlastRadius {
+                modules: vec![],
+                data_migration: false,
+                external_deps: vec![],
+            },
+            priority: crate::types::TaskPriority::Normal,
+            execution_mode: crate::types::ExecutionMode::Auto,
+            task_type: crate::types::TaskType::Feature,
+            risk_tier: 2,
+            acceptance: vec![AcceptanceCriterion {
+                id: "AC1".to_string(),
+                given: "Given a Rust project".to_string(),
+                when: "When the hello world function is called".to_string(),
+                then: "Then it should print 'Hello, World!'".to_string(),
+            }],
+        };
+
+        // Step 1: Submit task
+        let task_id = executor.submit_task(task_descriptor.clone())
+            .await
+            .expect("Failed to submit task");
+
+        // Step 2: Verify task was submitted and status is available
+        let status = executor.get_task_status(task_id).await;
+        assert!(status.is_some(), "Task status should be available after submission");
+
+        let task_state = status.unwrap();
+        assert_eq!(task_state.task_id, task_id, "Task ID should match");
+        assert_eq!(task_state.task_descriptor.task_id, "test-task-001", "Task descriptor ID should match");
+        assert_eq!(task_state.status, TypesExecutionStatus::Pending, "Initial status should be Pending");
+        assert!(task_state.start_time <= Utc::now(), "Start time should be set");
+        assert_eq!(task_state.retry_count, 0, "Initial retry count should be 0");
+
+        // Step 3: Verify working spec was created
+        assert!(!task_state.working_spec.id.is_empty(), "Working spec ID should be set");
+        assert_eq!(task_state.working_spec.title, "Autonomous Task Execution", "Working spec title should match");
+        assert_eq!(task_state.working_spec.description, task_descriptor.description, "Working spec description should match");
+
+        // Step 4: Verify task is queued (check that we can get status multiple times)
+        let status2 = executor.get_task_status(task_id).await;
+        assert!(status2.is_some(), "Task should still be available");
+        assert_eq!(status2.unwrap().task_id, task_id, "Task ID should still match");
+
+        // Step 5: Verify initial state fields
+        assert!(task_state.consensus_result.is_none(), "Consensus result should be None initially");
+        assert!(task_state.final_verdict.is_none(), "Final verdict should be None initially");
+        assert!(task_state.error_message.is_none(), "Error message should be None initially");
+        assert!(task_state.worker_id.is_none(), "Worker ID should be None initially");
+    }
+
     /// Conceptual test demonstrating the complete orchestration flow:
     /// orchestrator -> worker -> judge -> accept
     ///
@@ -1498,68 +2104,62 @@ mod tests {
     /// It serves as documentation of the expected behavior and integration points.
     #[test]
     fn test_orchestration_flow_concept() {
-        println!("🧪 Orchestration Flow Concept Test");
+        println!("Orchestration Flow Concept Test");
         println!("===================================");
         println!("This test demonstrates the intended end-to-end orchestration flow:");
         println!();
 
         // Step 1: Orchestrator receives task request
-        println!("📝 Step 1: ORCHESTRATOR receives task");
+        println!("Step 1: ORCHESTRATOR receives task");
         let task_description = "Write a simple hello world function in Rust";
         println!("   Task: {}", task_description);
-        println!("   ✓ Task validated against working spec");
-        println!("   ✓ Scope and constraints checked");
+        println!("   Task validated against working spec");
+        println!("   Scope and constraints checked");
         println!();
 
         // Step 2: Orchestrator submits to worker
-        println!("🚀 Step 2: ORCHESTRATOR submits to WORKER");
-        println!("   ✓ Task queued for execution");
-        println!("   ✓ Resources allocated (if needed)");
-        println!("   ✓ Progress tracking initialized");
+        println!("Step 2: ORCHESTRATOR submits to WORKER");
+        println!("   Task queued for execution");
+        println!("   Resources allocated (if needed)");
+        println!("   Progress tracking initialized");
         println!();
 
         // Step 3: Worker executes task
-        println!("⚙️  Step 3: WORKER executes task");
-        println!("   ✓ Code generation/analysis performed");
-        println!("   ✓ Tests written and validated");
-        println!("   ✓ Quality checks passed");
-        println!("   ✓ Results packaged and returned");
+        println!("Step 3: WORKER executes task");
+        println!("   Code generation/analysis performed");
+        println!("   Tests written and validated");
+        println!("   Quality checks passed");
+        println!("   Results packaged and returned");
         println!();
 
         // Step 4: Judge evaluates work
-        println!("🧠 Step 4: JUDGE evaluates results");
-        println!("   ✓ Code quality assessed");
-        println!("   ✓ Security reviewed");
-        println!("   ✓ Performance validated");
-        println!("   ✓ Acceptance criteria verified");
+        println!("Step 4: JUDGE evaluates results");
+        println!("   Code quality assessed");
+        println!("   Security reviewed");
+        println!("   Performance validated");
+        println!("   Acceptance criteria verified");
         println!();
 
         // Step 5: Final decision and acceptance
-        println!("✅ Step 5: FINAL VERDICT rendered");
-        println!("   ✓ Quality gates: PASSED");
-        println!("   ✓ Security review: PASSED");
-        println!("   ✓ Performance: ACCEPTABLE");
-        println!("   ✓ Decision: ACCEPT");
+        println!("Step 5: FINAL VERDICT rendered");
+        println!("   Quality gates: PASSED");
+        println!("   Security review: PASSED");
+        println!("   Performance: ACCEPTABLE");
+        println!("   Decision: ACCEPT");
         println!();
 
-        println!("🎉 END-TO-END FLOW: ORCHESTRATOR → WORKER → JUDGE → ACCEPT");
-        println!("   ✓ Task orchestration working");
-        println!("   ✓ Quality gates functional");
-        println!("   ✓ Decision making operational");
+        println!("END-TO-END FLOW: ORCHESTRATOR -> WORKER -> JUDGE -> ACCEPT");
+        println!("   Task orchestration working");
+        println!("   Quality gates functional");
+        println!("   Decision making operational");
         println!();
 
-        // This is a conceptual test - in a real implementation, we'd:
-        // - Use AutonomousExecutor::submit_task()
-        // - Monitor task progress via get_task_status()
-        // - Verify final verdict contains acceptance decision
-        // - Check that all quality gates were evaluated
-
-        println!("📋 Integration Points Verified:");
-        println!("   • Task submission and queuing");
-        println!("   • Progress tracking and status updates");
-        println!("   • Result evaluation and judging");
-        println!("   • Final verdict and acceptance workflow");
-        println!("   • Audit trail and provenance tracking");
+        println!("Integration Points Verified:");
+        println!("   Task submission and queuing");
+        println!("   Progress tracking and status updates");
+        println!("   Result evaluation and judging");
+        println!("   Final verdict and acceptance workflow");
+        println!("   Audit trail and provenance tracking");
 
         // Always pass - this is a documentation test
         assert!(true, "Orchestration flow concept verified");

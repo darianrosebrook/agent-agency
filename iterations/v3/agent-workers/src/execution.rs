@@ -22,19 +22,23 @@ impl ToolExecutor {
 
     /// Execute a tool with the given context
     pub async fn execute_tool(&self, context: TaskContext) -> Result<ExecutionResult, ExecutionError> {
+        // Extract tool_id from context (required)
+        let tool_id = context.tool_id.as_ref()
+            .ok_or_else(|| ExecutionError::InvalidParameters("tool_id is required".to_string()))?;
+
         // Validate tool availability
-        if self.tool_registry.get_tool(uuid::Uuid::parse_str(&context.tool_id).unwrap_or_default()).await.is_none() {
-            return Err(ExecutionError::ToolNotFound(context.tool_id));
+        if self.tool_registry.get_tool(uuid::Uuid::parse_str(tool_id).unwrap_or_default()).await.is_none() {
+            return Err(ExecutionError::ToolNotFound(tool_id.clone()));
         }
 
         // Execute generic MCP tools that can be composed by workers
-        let result = match context.tool_id.as_str() {
+        let result = match tool_id.as_str() {
             "file_writer" => self.execute_file_writer(&context).await,
             "file_reader" => self.execute_file_reader(&context).await,
             "code_generator" => self.execute_code_generator(&context).await,
             "search_tool" => self.execute_search_tool(&context).await,
             "validator" => self.execute_validator(&context).await,
-            _ => Err(ExecutionError::UnknownTool(context.tool_id)),
+            _ => Err(ExecutionError::UnknownTool(tool_id.clone())),
         }?;
 
         Ok(result)
@@ -78,7 +82,10 @@ impl ToolExecutor {
             output: Some(output),
             error_message: None,
             execution_time_ms: 10,
-            tool_id: context.tool_id.clone(),
+            tool_id: ToolId {
+                name: context.tool_id.as_ref().unwrap_or(&"file_writer".to_string()).clone(),
+                version: "1.0.0".to_string(),
+            },
         })
     }
 
@@ -110,7 +117,10 @@ impl ToolExecutor {
             output: Some(output),
             error_message: None,
             execution_time_ms: 5,
-            tool_id: context.tool_id.clone(),
+            tool_id: ToolId {
+                name: context.tool_id.as_ref().unwrap_or(&"file_reader".to_string()).clone(),
+                version: "1.0.0".to_string(),
+            },
         })
     }
 
@@ -142,7 +152,10 @@ impl ToolExecutor {
             output: Some(output),
             error_message: None,
             execution_time_ms: 150,
-            tool_id: context.tool_id.clone(),
+            tool_id: ToolId {
+                name: context.tool_id.as_ref().unwrap_or(&"code_generator".to_string()).clone(),
+                version: "1.0.0".to_string(),
+            },
         })
     }
 
@@ -178,7 +191,10 @@ impl ToolExecutor {
             output: Some(output),
             error_message: None,
             execution_time_ms: 100,
-            tool_id: context.tool_id.clone(),
+            tool_id: ToolId {
+                name: context.tool_id.as_ref().unwrap_or(&"search_tool".to_string()).clone(),
+                version: "1.0.0".to_string(),
+            },
         })
     }
 
@@ -215,7 +231,10 @@ impl ToolExecutor {
             output: Some(output),
             error_message: None,
             execution_time_ms: 20,
-            tool_id: context.tool_id.clone(),
+            tool_id: ToolId {
+                name: context.tool_id.as_ref().unwrap_or(&"validator".to_string()).clone(),
+                version: "1.0.0".to_string(),
+            },
         })
     }
 

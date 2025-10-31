@@ -5,14 +5,16 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::fs;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use sha2::{Digest, Sha256};
-use crate::{Workspace, ChangeSet, AllowList, Budgets, ChangeSetId, FileOpsError, Result, validate_changeset};
+use serde::{Deserialize, Serialize};
+use crate::file_operations::{Workspace, ChangeSet, AllowList, Budgets, ChangeSetId, FileOpsError, Result, validate_changeset, Patch, Hunk};
+use crate::client::orchestrator::DatabaseClient;
 
 /// Temp directory mirror workspace for safe file operations
 pub struct TempMirrorWorkspace {
@@ -26,6 +28,8 @@ pub struct TempMirrorWorkspace {
     applied_changesets: Vec<(ChangeSetId, ChangeSet)>,
     /// Changeset application engine for advanced operations
     changeset_engine: Arc<ChangesetApplicationEngine>,
+    /// Optional database client for persistent changeset storage
+    db_client: Option<Arc<DatabaseClient>>,
 }
 
 /// Comprehensive changeset application and management system
@@ -259,6 +263,15 @@ pub struct ChangesetMetrics {
 impl TempMirrorWorkspace {
     /// Create a new temp mirror workspace
     pub async fn new(project_path: &Path, task_id: &str) -> Result<Self> {
+        Self::new_with_db(project_path, task_id, None).await
+    }
+
+    /// Create a new temp mirror workspace with optional database client for persistent storage
+    pub async fn new_with_db(
+        project_path: &Path,
+        task_id: &str,
+        db_client: Option<Arc<DatabaseClient>>,
+    ) -> Result<Self> {
         let source_root = project_path.canonicalize()
             .map_err(|e| FileOpsError::Path(format!("Cannot canonicalize project path: {}", e)))?;
 
@@ -276,13 +289,135 @@ impl TempMirrorWorkspace {
         // Mirror source to workspace using rsync if available, otherwise manual copy
         Self::mirror_directory(&source_root, &workspace_path).await?;
 
+        // Initialize changeset storage if database client is provided
+        if let Some(ref db) = db_client {
+            Self::ensure_changeset_table(db).await?;
+        }
+
         Ok(Self {
             source_root,
             workspace_path,
             task_id: task_id.to_string(),
             applied_changesets: Vec::new(),
             changeset_engine: Arc::new(ChangesetApplicationEngine::new()),
+            db_client,
         })
+    }
+
+    /// Ensure the changeset storage table exists
+    async fn ensure_changeset_table(db: &DatabaseClient) -> Result<()> {
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS changeset_storage (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                changeset_id TEXT NOT NULL,
+                task_id TEXT NOT NULL,
+                workspace_path TEXT NOT NULL,
+                changeset_data JSONB NOT NULL,
+                checksum TEXT NOT NULL,
+                applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                metadata JSONB DEFAULT '{}'::jsonb
+            )
+            "#
+        )
+        .execute(db.pool())
+        .await
+        .map_err(|e| FileOpsError::Path(format!("Failed to create changeset table: {}", e)))?;
+
+        sqlx::query(
+            r#"
+            CREATE INDEX IF NOT EXISTS idx_changeset_storage_changeset_id 
+            ON changeset_storage(changeset_id)
+            "#
+        )
+        .execute(db.pool())
+        .await
+        .map_err(|e| FileOpsError::Path(format!("Failed to create changeset index: {}", e)))?;
+
+        sqlx::query(
+            r#"
+            CREATE INDEX IF NOT EXISTS idx_changeset_storage_task_id 
+            ON changeset_storage(task_id)
+            "#
+        )
+        .execute(db.pool())
+        .await
+        .map_err(|e| FileOpsError::Path(format!("Failed to create task index: {}", e)))?;
+
+        Ok(())
+    }
+
+    /// Store a changeset persistently in the database
+    async fn store_changeset(
+        &self,
+        changeset_id: &ChangeSetId,
+        changeset: &ChangeSet,
+    ) -> Result<()> {
+        if let Some(ref db) = self.db_client {
+            let changeset_json = serde_json::to_value(changeset)
+                .map_err(|e| FileOpsError::Path(format!("Failed to serialize changeset: {}", e)))?;
+            
+            let mut hasher = Sha256::new();
+            hasher.update(changeset_json.to_string().as_bytes());
+            let checksum = format!("{:x}", hasher.finalize());
+
+            sqlx::query(
+                r#"
+                INSERT INTO changeset_storage (
+                    changeset_id, task_id, workspace_path, changeset_data, checksum, metadata
+                ) VALUES ($1, $2, $3, $4, $5, $6)
+                "#
+            )
+            .bind(&changeset_id.0)
+            .bind(&self.task_id)
+            .bind(self.workspace_path.to_string_lossy().as_ref())
+            .bind(&changeset_json)
+            .bind(&checksum)
+            .bind(serde_json::json!({}))
+            .execute(db.pool())
+            .await
+            .map_err(|e| FileOpsError::Path(format!("Failed to store changeset: {}", e)))?;
+
+            Ok(())
+        } else {
+            // No database client, store in memory only
+            self.applied_changesets.push((changeset_id.clone(), changeset.clone()));
+            Ok(())
+        }
+    }
+
+    /// Retrieve a changeset from persistent storage
+    async fn get_changeset(&self, changeset_id: &ChangeSetId) -> Result<Option<ChangeSet>> {
+        if let Some(ref db) = self.db_client {
+            let row = sqlx::query(
+                r#"
+                SELECT changeset_data FROM changeset_storage
+                WHERE changeset_id = $1 AND task_id = $2
+                ORDER BY applied_at DESC
+                LIMIT 1
+                "#
+            )
+            .bind(&changeset_id.0)
+            .bind(&self.task_id)
+            .fetch_optional(db.pool())
+            .await
+            .map_err(|e| FileOpsError::Path(format!("Failed to retrieve changeset: {}", e)))?;
+
+            if let Some(row) = row {
+                let changeset_json: serde_json::Value = row.get("changeset_data");
+                let changeset: ChangeSet = serde_json::from_value(changeset_json)
+                    .map_err(|e| FileOpsError::Path(format!("Failed to deserialize changeset: {}", e)))?;
+                Ok(Some(changeset))
+            } else {
+                Ok(None)
+            }
+        } else {
+            // No database client, check in-memory storage
+            Ok(self.applied_changesets.iter()
+                .find(|(id, _)| id == changeset_id)
+                .map(|(_, cs)| cs.clone()))
+        }
     }
 
     /// Apply changeset with comprehensive validation, conflict detection, and rollback support
@@ -369,7 +504,7 @@ impl TempMirrorWorkspace {
     }
 
     /// Apply a single patch
-    async fn apply_single_patch(&self, patch: &crate::Patch) -> Result<()> {
+    async fn apply_single_patch(&self, patch: &Patch) -> Result<()> {
         let file_path = self.workspace_path.join(&patch.path);
 
         // Ensure parent directory exists
@@ -395,7 +530,7 @@ impl TempMirrorWorkspace {
     }
 
     /// Apply hunks to file content
-    fn apply_hunks_to_content(&self, content: &str, hunks: &[crate::Hunk]) -> Result<String> {
+    fn apply_hunks_to_content(&self, content: &str, hunks: &[Hunk]) -> Result<String> {
         let mut lines: Vec<String> = content.lines().map(|s| s.to_string()).collect();
         let mut offset: i32 = 0;
 
@@ -798,7 +933,7 @@ impl ChangesetApplicationEngine {
     }
 
     /// Helper methods for validation and conflict detection
-    async fn validate_patch_integrity(&self, patch: &crate::Patch) -> Result<bool> {
+    async fn validate_patch_integrity(&self, patch: &Patch) -> Result<bool> {
         // Calculate checksum of patch content
         let content = format!("{:?}", patch); // Simplified checksum
         let mut hasher = Sha256::new();
@@ -808,7 +943,7 @@ impl ChangesetApplicationEngine {
         Ok(true)
     }
 
-    fn validate_patch_content(&self, patch: &crate::Patch) -> Result<bool> {
+    fn validate_patch_content(&self, patch: &Patch) -> Result<bool> {
         // Check for potentially problematic patterns
         for hunk in &patch.hunks {
             for line in hunk.lines.lines() {
@@ -822,19 +957,101 @@ impl ChangesetApplicationEngine {
     }
 
     async fn validate_changeset_dependencies(&self, changeset: &ChangeSet) -> Result<bool> {
-        // Simplified dependency validation
-        // In real implementation, check for circular dependencies, missing prerequisites, etc.
-        let mut file_dependencies = HashMap::new();
+        // Validate changeset dependencies
+        // Check for circular dependencies, missing prerequisites, and self-referential patches
+        
+        let mut file_dependencies: HashMap<String, Vec<String>> = HashMap::new();
+        let mut files_modified: HashSet<String> = HashSet::new();
 
+        // Build dependency graph from patches
         for patch in &changeset.patches {
-            file_dependencies.insert(&patch.path, &patch.hunks);
+            files_modified.insert(patch.path.clone());
+            
+            // Extract file dependencies from patch content
+            // Look for imports, includes, or other file references in patch content
+            let mut deps = Vec::new();
+            for hunk in &patch.hunks {
+                for line in hunk.lines.lines() {
+                    // Check for Rust imports (use statements)
+                    if line.trim().starts_with("use ") || line.trim().starts_with("mod ") {
+                        if let Some(ref_file) = extract_file_reference(line) {
+                            deps.push(ref_file);
+                        }
+                    }
+                    // Check for other common patterns (imports, includes, etc.)
+                    if line.contains("include!") || line.contains("include_str!") {
+                        if let Some(ref_file) = extract_file_reference(line) {
+                            deps.push(ref_file);
+                        }
+                    }
+                }
+            }
+            
+            if !deps.is_empty() {
+                file_dependencies.insert(patch.path.clone(), deps);
+            }
         }
 
-        // Check for self-referential patches (simplified check)
+        // Check for circular dependencies using DFS
+        let mut visited = HashSet::new();
+        let mut rec_stack = HashSet::new();
+        
+        for file in file_dependencies.keys() {
+            if !visited.contains(file) {
+                if self.has_circular_dependency(file, &file_dependencies, &mut visited, &mut rec_stack) {
+                    return Ok(false);
+                }
+            }
+        }
+
+        // Check that all referenced files are either being modified or exist
+        for (file, deps) in &file_dependencies {
+            for dep in deps {
+                if !files_modified.contains(dep) {
+                    // In a real implementation, check if file exists in workspace
+                    // For now, assume missing dependencies are warnings, not errors
+                }
+            }
+        }
+
+        // Check for self-referential patches (patch modifies file that it depends on)
+        for (file, deps) in &file_dependencies {
+            if deps.contains(file) {
+                return Ok(false);
+            }
+        }
+
         Ok(true)
     }
 
-    fn detect_file_conflicts(&self, patch: &crate::Patch, current_content: &str) -> Result<Vec<ConflictingLines>> {
+    /// Helper to detect circular dependencies using DFS
+    fn has_circular_dependency(
+        &self,
+        file: &str,
+        graph: &HashMap<String, Vec<String>>,
+        visited: &mut HashSet<String>,
+        rec_stack: &mut HashSet<String>,
+    ) -> bool {
+        visited.insert(file.to_string());
+        rec_stack.insert(file.to_string());
+
+        if let Some(deps) = graph.get(file) {
+            for dep in deps {
+                if !visited.contains(dep) {
+                    if self.has_circular_dependency(dep, graph, visited, rec_stack) {
+                        return true;
+                    }
+                } else if rec_stack.contains(dep) {
+                    return true; // Circular dependency detected
+                }
+            }
+        }
+
+        rec_stack.remove(file);
+        false
+    }
+
+    fn detect_file_conflicts(&self, patch: &Patch, current_content: &str) -> Result<Vec<ConflictingLines>> {
         let mut conflicts = Vec::new();
         let current_lines: Vec<&str> = current_content.lines().collect();
 
@@ -867,8 +1084,60 @@ impl ChangesetApplicationEngine {
 
         Ok(conflicts)
     }
+}
 
-    async fn apply_single_patch_atomic(&self, patch: &crate::Patch, workspace_path: &Path) -> Result<u64> {
+/// Helper function to extract file reference from import/include statements
+fn extract_file_reference(line: &str) -> Option<String> {
+    // Extract file path from Rust use/mod statements
+    // Examples: "use crate::module::submodule;" -> "module/submodule.rs"
+    //           "mod my_module;" -> "my_module.rs"
+    //           "include_str!(\"file.txt\")" -> "file.txt"
+    
+    let line = line.trim();
+    
+    // Handle Rust use statements: use crate::path::to::module;
+    if line.starts_with("use ") {
+        let parts: Vec<&str> = line
+            .trim_start_matches("use ")
+            .trim_end_matches(';')
+            .split("::")
+            .collect();
+        
+        if parts.len() > 1 && parts[0] == "crate" {
+            // Convert crate path to file path
+            let module_path = parts[1..].join("/");
+            return Some(format!("{}.rs", module_path));
+        } else if !parts.is_empty() {
+            // External crate or relative path
+            let module_path = parts.join("/");
+            return Some(format!("{}.rs", module_path));
+        }
+    }
+    
+    // Handle mod statements: mod my_module;
+    if line.starts_with("mod ") {
+        let module_name = line
+            .trim_start_matches("mod ")
+            .trim_end_matches(';')
+            .split_whitespace()
+            .next()?;
+        return Some(format!("{}.rs", module_name));
+    }
+    
+    // Handle include macros: include_str!("file.txt")
+    if line.contains("include_str!") || line.contains("include!") {
+        if let Some(start) = line.find('"') {
+            if let Some(end) = line[start + 1..].find('"') {
+                return Some(line[start + 1..start + 1 + end].to_string());
+            }
+        }
+    }
+    
+    None
+}
+
+impl ChangesetApplicationEngine {
+    async fn apply_single_patch_atomic(&self, patch: &Patch, workspace_path: &Path) -> Result<u64> {
         let file_path = workspace_path.join(&patch.path);
         let io_operations = 1; // Simplified count
 
@@ -889,10 +1158,48 @@ impl ChangesetApplicationEngine {
         Ok(io_operations)
     }
 
-    fn verify_patch_application(&self, _patch: &crate::Patch, current_content: &str) -> bool {
-        // Simplified verification - check if patch was applied
-        // In real implementation, would do more thorough verification
-        !current_content.is_empty()
+    fn verify_patch_application(&self, patch: &Patch, current_content: &str) -> bool {
+        // Verify patch application by checking that expected changes are present
+        // This is a simplified verification - in a full implementation, would:
+        // 1. Calculate expected content hash after patch application
+        // 2. Calculate actual content hash
+        // 3. Compare hunks against actual content
+        // 4. Verify all expected additions are present
+        // 5. Verify all expected deletions are absent
+        
+        if current_content.is_empty() {
+            return false;
+        }
+        
+        // Check that patch hunks can be matched in content
+        let content_lines: Vec<&str> = current_content.lines().collect();
+        
+        for hunk in &patch.hunks {
+            let start_line = (hunk.old_start as usize).saturating_sub(1);
+            
+            // Verify context lines match (if old_start is within bounds)
+            if start_line < content_lines.len() {
+                let hunk_lines: Vec<&str> = hunk.lines.lines().collect();
+                let context_lines: Vec<&str> = hunk_lines
+                    .iter()
+                    .filter(|line| line.starts_with(' '))
+                    .map(|line| line.trim_start())
+                    .collect();
+                
+                // Check if context matches expected
+                for (i, expected_context) in context_lines.iter().take(3).enumerate() {
+                    let line_idx = start_line + i;
+                    if line_idx < content_lines.len() {
+                        if content_lines[line_idx].trim() != expected_context.trim() {
+                            // Context mismatch - patch may not have been applied correctly
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        
+        true
     }
 
     async fn restore_from_backup(&self, backup_path: &Path, workspace_path: &Path) -> Result<()> {
@@ -1035,7 +1342,7 @@ impl ChangesetApplicationEngine {
     }
 
     /// Apply hunks to file content
-    fn apply_hunks_to_content(&self, content: &str, hunks: &[crate::Hunk]) -> Result<String> {
+    fn apply_hunks_to_content(&self, content: &str, hunks: &[Hunk]) -> Result<String> {
         let mut lines: Vec<String> = content.lines().map(|s| s.to_string()).collect();
         let mut offset: i32 = 0;
 
@@ -1108,41 +1415,61 @@ impl Workspace for TempMirrorWorkspace {
         // Apply patches
         self.apply_patches(changeset).await?;
 
-        // Track applied changeset for rollback
-        // Note: In real implementation, we'd store this persistently
-        // self.applied_changesets.push((changeset_id.clone(), changeset.clone()));
+        // Store changeset persistently for rollback
+        self.store_changeset(&changeset_id, changeset).await?;
 
         Ok(changeset_id)
     }
 
-    async fn revert(&self, _changeset_id: &ChangeSetId) -> Result<()> {
-        // Find the changeset to revert
-          // TODO: Implement persistent changeset storage
-          // - Create changeset database schema and models
-          // - Implement changeset serialization and storage
-          // - Add changeset retrieval and replay capabilities
-          // - Support changeset versioning and conflict resolution
-          // - Implement changeset cleanup and retention policies
-          // - Add changeset integrity validation and checksums
-          // PLACEHOLDER: Implement persistent changeset storage
-          // - Replace in-memory storage with database persistence
-          // - Add changeset indexing and search capabilities
-          // - Implement changeset compression and optimization
-          // - Support distributed changeset storage and replication
-          // - Add changeset backup and disaster recovery
-          // - Implement changeset analytics and monitoring
+    async fn revert(&self, changeset_id: &ChangeSetId) -> Result<()> {
+        // Retrieve the changeset from persistent storage
+        let changeset = self.get_changeset(changeset_id).await?
+            .ok_or_else(|| FileOpsError::Path(format!("Changeset not found: {}", changeset_id.0)))?;
 
-        // Since we don't have persistent changeset tracking yet,
-        // we'll restore from the most recent snapshot
-        // Implemented: Comprehensive changeset application system
-        // -  Add changeset validation and conflict detection
-        // -  Implement atomic changeset application with rollback
-        // -  Support partial changeset application and recovery
-        // -  Add changeset dependency resolution and ordering
-        // -  Implement changeset progress tracking and status
-        // -  Add changeset application performance monitoring
+        // Create a reverse changeset by inverting all patches
+        let mut reverse_patches = Vec::new();
+        for patch in changeset.patches.iter().rev() {
+            let mut reverse_hunks = Vec::new();
+            for hunk in patch.hunks.iter().rev() {
+                // Invert the hunk: swap old and new
+                let reverse_hunk = Hunk {
+                    old_start: hunk.old_start + hunk.new_lines,
+                    old_lines: hunk.new_lines,
+                    new_lines: hunk.old_lines,
+                    lines: {
+                        // Invert the lines: swap + and -
+                        hunk.lines
+                            .lines()
+                            .map(|line| {
+                                if line.starts_with('+') {
+                                    format!("-{}", &line[1..])
+                                } else if line.starts_with('-') {
+                                    format!("+{}", &line[1..])
+                                } else {
+                                    line.to_string()
+                                }
+                            })
+                            .collect::<Vec<_>>()
+                            .join("\n")
+                    },
+                };
+                reverse_hunks.push(reverse_hunk);
+            }
+            reverse_patches.push(Patch {
+                path: patch.path.clone(),
+                hunks: reverse_hunks,
+                expected_prev_sha256: None, // Cannot validate on revert
+            });
+        }
 
-        Err(FileOpsError::Path("Revert not yet implemented for temp workspace".to_string()))
+        let reverse_changeset = ChangeSet {
+            patches: reverse_patches,
+        };
+
+        // Apply the reverse changeset to revert the original
+        self.apply_patches(&reverse_changeset).await?;
+
+        Ok(())
     }
 
     async fn promote(&self) -> Result<()> {

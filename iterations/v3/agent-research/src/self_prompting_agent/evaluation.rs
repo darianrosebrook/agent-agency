@@ -5,7 +5,7 @@
 use std::sync::Arc;
 use async_trait::async_trait;
 
-use crate::prompting_types::{TaskResult, EvalReport, EvalStatus, SelfPromptingAgentError};
+use crate::self_prompting_agent::prompting_types::{TaskResult, EvalReport, EvalStatus, SelfPromptingAgentError};
 
 /// Evaluation orchestrator
 pub struct EvaluationOrchestrator {

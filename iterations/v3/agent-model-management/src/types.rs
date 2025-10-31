@@ -226,6 +226,54 @@ pub struct PerformanceDelta {
     pub significance: f64,
 }
 
+/// Model tuning parameters
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TuningParameters {
+    /// Parameters to tune (temperature, top_p, top_k, etc.)
+    pub parameters: HashMap<String, serde_json::Value>,
+    
+    /// Target performance metrics
+    pub target_performance: Option<PerformanceTargets>,
+    
+    /// Validation criteria before applying
+    pub validation_criteria: Option<TuningValidation>,
+}
+
+/// Validation criteria for parameter tuning
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TuningValidation {
+    /// Minimum acceptable latency improvement (ms)
+    pub min_latency_improvement_ms: Option<f64>,
+    
+    /// Minimum acceptable throughput improvement (%)
+    pub min_throughput_improvement_pct: Option<f64>,
+    
+    /// Maximum acceptable error rate increase
+    pub max_error_rate_increase: Option<f64>,
+    
+    /// Required test duration (seconds) before applying
+    pub test_duration_secs: Option<u64>,
+}
+
+/// Result of parameter tuning operation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TuningResult {
+    /// Model ID that was tuned
+    pub model_id: String,
+    
+    /// Success status
+    pub success: bool,
+    
+    /// Parameters that were applied
+    pub applied_parameters: HashMap<String, serde_json::Value>,
+    
+    /// Performance improvement metrics
+    pub performance_delta: PerformanceDelta,
+    
+    /// Completion timestamp
+    pub completed_at: chrono::DateTime<chrono::Utc>,
+}
+
 /// Model metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelMetrics {

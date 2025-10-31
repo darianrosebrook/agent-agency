@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use tokio::fs;
 use uuid::Uuid;
-use crate::{Workspace, ChangeSet, AllowList, Budgets, ChangeSetId, FileOpsError, Result, validate_changeset};
+use crate::file_operations::{Workspace, ChangeSet, AllowList, Budgets, ChangeSetId, FileOpsError, Result, validate_changeset, Patch, Hunk};
 
 /// Git worktree-based workspace for safe file operations
 pub struct GitWorktreeWorkspace {
@@ -81,7 +81,93 @@ impl GitWorktreeWorkspace {
 
     /// Create a Git worktree
     fn create_git_worktree(repo_path: &Path, branch_name: &str, worktree_path: &Path) -> Result<()> {
-        // Create the worktree
+        tracing::info!("Creating Git worktree: branch={}, path={:?}", branch_name, worktree_path);
+        
+        // List all existing worktrees and remove any that use this branch
+        let list_output = Command::new("git")
+            .args(["worktree", "list"])
+            .current_dir(repo_path)
+            .output()
+            .map_err(|e| FileOpsError::Io(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Failed to list worktrees: {}", e)
+            )))?;
+
+        if list_output.status.success() {
+            let worktree_list = String::from_utf8_lossy(&list_output.stdout);
+            tracing::debug!("Existing worktrees:\n{}", worktree_list);
+            
+            for line in worktree_list.lines() {
+                // Format: <path> <commit> [<branch>]
+                if line.contains(&format!("[{}]", branch_name)) || line.contains(&format!(" {}", branch_name)) {
+                    // Extract worktree path (first field)
+                    if let Some(path_str) = line.split_whitespace().next() {
+                        let existing_worktree_path = PathBuf::from(path_str);
+                        tracing::info!("Removing existing worktree at: {:?}", existing_worktree_path);
+                        // Remove the worktree
+                        let remove_output = Command::new("git")
+                            .args(["worktree", "remove", "--force", &existing_worktree_path.to_string_lossy()])
+                            .current_dir(repo_path)
+                            .output()
+                            .map_err(|e| FileOpsError::Io(std::io::Error::new(
+                                std::io::ErrorKind::Other,
+                                format!("Failed to remove existing worktree: {}", e)
+                            )))?;
+
+                        if !remove_output.status.success() {
+                            tracing::warn!("Failed to remove worktree at {}: {}", 
+                                existing_worktree_path.display(),
+                                String::from_utf8_lossy(&remove_output.stderr));
+                        } else {
+                            tracing::info!("Successfully removed existing worktree");
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check if worktree directory still exists and remove it manually
+        if worktree_path.exists() {
+            tracing::info!("Removing existing worktree directory: {:?}", worktree_path);
+            let _ = std::fs::remove_dir_all(worktree_path);
+        }
+
+        // Check if branch still exists and delete it if it does
+        let branch_exists_output = Command::new("git")
+            .args(["branch", "--list", branch_name])
+            .current_dir(repo_path)
+            .output()
+            .map_err(|e| FileOpsError::Io(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Failed to check branch existence: {}", e)
+            )))?;
+
+        if branch_exists_output.status.success() {
+            let branch_output = String::from_utf8_lossy(&branch_exists_output.stdout);
+            if !branch_output.trim().is_empty() {
+                tracing::info!("Branch {} exists, deleting it", branch_name);
+                // Branch exists, delete it
+                let delete_output = Command::new("git")
+                    .args(["branch", "-D", branch_name])
+                    .current_dir(repo_path)
+                    .output()
+                    .map_err(|e| FileOpsError::Io(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!("Failed to delete existing branch: {}", e)
+                    )))?;
+
+                if !delete_output.status.success() {
+                    let stderr = String::from_utf8_lossy(&delete_output.stderr);
+                    tracing::warn!("Failed to delete existing branch {}: {}", branch_name, stderr);
+                    // Don't fail here - try to create worktree anyway
+                } else {
+                    tracing::info!("Successfully deleted branch {}", branch_name);
+                }
+            }
+        }
+
+        // Create the worktree with new branch
+        tracing::info!("Creating worktree with branch {} at {:?}", branch_name, worktree_path);
         let output = Command::new("git")
             .args(["worktree", "add", "-b", branch_name, &worktree_path.to_string_lossy()])
             .current_dir(repo_path)
@@ -93,7 +179,26 @@ impl GitWorktreeWorkspace {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            tracing::error!("Git worktree creation failed. stderr: {}, stdout: {}", stderr, stdout);
             return Err(FileOpsError::Path(format!("Git worktree creation failed: {}", stderr)));
+        }
+
+        tracing::info!("Successfully created Git worktree at {:?}", worktree_path);
+        
+        // Verify worktree was created
+        let verify_output = Command::new("git")
+            .args(["worktree", "list"])
+            .current_dir(repo_path)
+            .output()
+            .map_err(|e| FileOpsError::Io(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Failed to verify worktree: {}", e)
+            )))?;
+
+        if verify_output.status.success() {
+            let verify_list = String::from_utf8_lossy(&verify_output.stdout);
+            tracing::debug!("Worktree list after creation:\n{}", verify_list);
         }
 
         Ok(())
@@ -108,7 +213,7 @@ impl GitWorktreeWorkspace {
     }
 
     /// Apply a single patch
-    async fn apply_single_patch(&self, patch: &crate::Patch) -> Result<()> {
+    async fn apply_single_patch(&self, patch: &Patch) -> Result<()> {
         let file_path = self.worktree_path.join(&patch.path);
 
         // Read current file content
@@ -129,7 +234,7 @@ impl GitWorktreeWorkspace {
     }
 
     /// Apply hunks to file content
-    fn apply_hunks_to_content(&self, content: &str, hunks: &[crate::Hunk]) -> Result<String> {
+    fn apply_hunks_to_content(&self, content: &str, hunks: &[Hunk]) -> Result<String> {
         let mut lines: Vec<String> = content.lines().map(|s| s.to_string()).collect();
         let mut offset: i32 = 0;
 
@@ -275,6 +380,14 @@ impl Workspace for GitWorktreeWorkspace {
 
 impl Drop for GitWorktreeWorkspace {
     fn drop(&mut self) {
+        // Don't remove worktree in test mode - let tests verify files before cleanup
+        // In production, the worktree should be cleaned up, but for E2E tests we need
+        // to keep it alive so tests can verify the changes
+        if std::env::var("CAWS_KEEP_WORKTREES").is_ok() || std::env::var("TEST_MODE").is_ok() {
+            tracing::info!("Keeping worktree alive for testing: {:?}", self.worktree_path);
+            return;
+        }
+        
         // Clean up worktree on drop
         let _ = Command::new("git")
             .args(["worktree", "remove", &self.worktree_path.to_string_lossy()])

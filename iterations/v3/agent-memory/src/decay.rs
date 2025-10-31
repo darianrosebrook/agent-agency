@@ -4,7 +4,7 @@
 use crate::memory_types::*;
 use crate::workspace_registry;
 use crate::MemoryResult;
-use data_infrastructure::{DatabaseClient, DatabaseConfig, Row};
+use sqlx::{Row, PgPool};
 use std::sync::Arc;
 use chrono::{DateTime, Utc, Duration};
 use serde::{Deserialize, Serialize};
@@ -13,19 +13,16 @@ use tracing::{info, debug, warn};
 /// Memory decay engine for managing importance and decay
 #[derive(Debug)]
 pub struct MemoryDecayEngine {
-    db_client: Arc<DatabaseClient>,
+    db_pool: PgPool,
     config: DecayConfig,
     workspace_registry: Option<Arc<crate::workspace_registry::WorkspaceRegistry>>,
 }
 
 impl MemoryDecayEngine {
     /// Create a new decay engine
-    pub async fn new(config: &DecayConfig) -> MemoryResult<Self> {
-        let db_config = DatabaseConfig::default();
-        let db_client = Arc::new(DatabaseClient::new(db_config).await?);
-
+    pub async fn new(config: &DecayConfig, db_pool: PgPool) -> MemoryResult<Self> {
         Ok(Self {
-            db_client,
+            db_pool,
             config: config.clone(),
             workspace_registry: None,
         })
@@ -34,13 +31,11 @@ impl MemoryDecayEngine {
     /// Create a new decay engine with workspace registry
     pub async fn new_with_workspace_registry(
         config: &DecayConfig,
+        db_pool: PgPool,
         workspace_registry: Arc<crate::workspace_registry::WorkspaceRegistry>
     ) -> MemoryResult<Self> {
-        let db_config = DatabaseConfig::default();
-        let db_client = Arc::new(DatabaseClient::new(db_config).await?);
-
         Ok(Self {
-            db_client,
+            db_pool,
             config: config.clone(),
             workspace_registry: Some(workspace_registry),
         })
@@ -121,7 +116,7 @@ impl MemoryDecayEngine {
                 .bind(workspace_decay_multiplier)
                 .bind(self.config.minimum_memory_strength)
                 .bind(now)
-                .execute(self.db_client.pool())
+                .execute(&self.db_pool)
                 .await?;
 
                 total_decayed += updated.rows_affected() as usize;
@@ -195,7 +190,7 @@ impl MemoryDecayEngine {
                 )
                 .bind(workspace.id)
                 .bind(self.config.minimum_memory_strength)
-                .execute(self.db_client.pool())
+                .execute(&self.db_pool)
                 .await?;
 
                 cleaned_count += 1;
@@ -223,7 +218,7 @@ impl MemoryDecayEngine {
         .bind(self.config.base_decay_rate)
         .bind(now)
         .bind(self.config.minimum_memory_strength)
-        .execute(self.db_client.pool())
+        .execute(&self.db_pool)
         .await?;
 
         Ok(updated.rows_affected() as usize)
@@ -244,7 +239,7 @@ impl MemoryDecayEngine {
         .bind(now)
         .bind(self.config.base_decay_rate)
         .bind(self.config.minimum_memory_strength)
-        .execute(self.db_client.pool())
+        .execute(&self.db_pool)
         .await?;
 
         Ok(updated.rows_affected() as usize)
@@ -265,7 +260,7 @@ impl MemoryDecayEngine {
         .bind(now)
         .bind(self.config.base_decay_rate)
         .bind(self.config.minimum_memory_strength)
-        .execute(self.db_client.pool())
+        .execute(&self.db_pool)
         .await?;
 
         Ok(updated.rows_affected() as usize)
@@ -273,9 +268,19 @@ impl MemoryDecayEngine {
 
     /// Apply custom decay formula (simplified implementation)
     async fn apply_custom_decay(&self, now: DateTime<Utc>, _formula: &str) -> MemoryResult<usize> {
+        // PLACEHOLDER: Custom decay formula parsing and evaluation
+        // Option 1: Use PostgreSQL's expression evaluation (requires careful validation to prevent SQL injection)
+        //   - Use PostgreSQL's EXECUTE format() with validated formula
+        //   - Validate formula syntax (whitelist allowed functions: importance_score, decay_factor, age_days, LN, EXP, etc.)
+        //   - Prevent arbitrary SQL execution
+        // Option 2: Use Rust formula parser library (e.g., fasteval, meval, or custom parser)
+        //   - Parse mathematical expressions (e.g., "importance_score * (1 - decay_factor^2)")
+        //   - Evaluate expressions with database values (importance_score, decay_factor, age_days)
+        //   - Support time-based functions (e.g., age_days, last_accessed)
+        //   - Validate formula syntax and safety (prevent SQL injection, infinite loops)
+        // 
         // For now, fall back to exponential decay
-        // In a full implementation, this would parse and evaluate custom formulas
-        warn!("Custom decay formulas not fully implemented, using exponential decay");
+        warn!("Custom decay formulas require formula parser dependency - using exponential decay fallback");
         self.apply_exponential_decay(now).await
     }
 
@@ -296,7 +301,7 @@ impl MemoryDecayEngine {
         )
         .bind(self.config.importance_boost_factor)
         .bind(cutoff)
-        .execute(self.db_client.pool())
+        .execute(&self.db_pool)
         .await?;
 
         Ok(updated.rows_affected() as usize)
@@ -314,7 +319,7 @@ impl MemoryDecayEngine {
               AND last_accessed < NOW() - INTERVAL '7 days'
             "#,
         )
-        .fetch_all(self.db_client.pool())
+        .fetch_all(&self.db_pool)
         .await?;
 
         let mut consolidated = 0;
@@ -337,7 +342,7 @@ impl MemoryDecayEngine {
             )
             .bind(memory_id)
             .bind(consolidation_boost)
-            .execute(self.db_client.pool())
+            .execute(&self.db_pool)
             .await?;
 
             consolidated += 1;
@@ -387,7 +392,7 @@ impl MemoryDecayEngine {
         )
         .bind(memory_id)
         .bind(boost_factor)
-        .execute(self.db_client.pool())
+        .execute(&self.db_pool)
         .await?;
 
         info!("Boosted importance of memory {} by factor {}", memory_id, boost_factor);
@@ -404,7 +409,7 @@ impl MemoryDecayEngine {
             "#,
         )
         .bind(min_importance)
-        .execute(self.db_client.pool())
+        .execute(&self.db_pool)
         .await?;
 
         let protected_count = updated.rows_affected() as usize;
@@ -431,7 +436,7 @@ impl MemoryDecayEngine {
             FROM memory_embeddings
             "#,
         )
-        .fetch_one(self.db_client.pool())
+        .fetch_one(&self.db_pool)
         .await?;
 
         Ok(DecayStats {
@@ -454,7 +459,7 @@ impl MemoryDecayEngine {
             SET decay_factor = 1.0, importance_score = 1.0, access_count = 0
             "#,
         )
-        .execute(self.db_client.pool())
+        .execute(&self.db_pool)
         .await?;
 
         Ok(())

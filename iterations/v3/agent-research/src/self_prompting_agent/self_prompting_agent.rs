@@ -4,11 +4,11 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::info;
 
-use crate::evaluation::EvaluationOrchestrator;
-use crate::loop_controller::{SelfPromptingLoop, SelfPromptingResult, SelfPromptingEvent};
-use crate::models::ModelRegistry;
-use crate::sandbox::SandboxEnvironment;
-use crate::prompting_types::{Task, SelfPromptingAgentError, ExecutionMode, SafetyMode};
+use crate::self_prompting_agent::evaluation::EvaluationOrchestrator;
+use crate::self_prompting_agent::loop_controller::{SelfPromptingLoop, SelfPromptingResult, SelfPromptingEvent};
+use crate::self_prompting_agent::models::ModelRegistry;
+use crate::self_prompting_agent::sandbox::SandboxEnvironment;
+use crate::self_prompting_agent::prompting_types::{Task, SelfPromptingAgentError, ExecutionMode, SafetyMode};
 
 /// Configuration for the self-prompting agent
 #[derive(Debug, Clone)]

@@ -99,6 +99,8 @@ pub mod frontier;
 // pub mod cqrs_router;
 // pub mod artifacts;
 pub mod autonomous_executor;
+pub mod autonomous_file_editor;
+pub mod autonomous_integration;
 // pub mod caws_runtime;
 // pub mod cqrs;
 // pub mod db;
@@ -170,6 +172,18 @@ pub use multimodal_orchestration::{
 // Autonomous executor exports
 pub use autonomous_executor::{
     AutonomousExecutor, AutonomousExecutorConfig, TaskExecutionState,
+};
+
+// Autonomous file editor exports
+pub use autonomous_file_editor::{
+    AutonomousFileEditor, FileChange, ChangeType, RiskAssessment, RiskLevel,
+    ChangesetPreview, AutonomousFileEditError,
+};
+
+// Autonomous integration exports
+pub use autonomous_integration::{
+    AutonomousAgentIntegration, AutonomousExecutionResult, AutonomousHealthStatus,
+    AutonomousIntegrationError,
 };
 
 // Audit trail exports
@@ -246,56 +260,159 @@ pub struct AgentOrchestrationService {
     pub audit_trail: audit_trail::AuditTrailManager,
 }
 
-// TODO: Implement AgentOrchestrationService when dependencies are available
-// impl AgentOrchestrationService {
-//     /// Create a new Agent Orchestration Service
-//     pub async fn new(config: OrchestrationConfig) -> Result<Self, OrchestrationError> {
-//         let council = council::Council::new(config.council_config).await?;
-//         let orchestrator = multimodal_orchestration::MultimodalOrchestrator::new(config.orchestrator_config)?;
-//         let autonomous_executor = autonomous_executor::AutonomousExecutor::new(config.executor_config);
-//         let audit_trail = audit_trail::AuditTrailManager::new(config.audit_config);
-//
-//         Ok(Self {
-//             council,
-//             orchestrator,
-//             autonomous_executor,
-//             audit_trail,
-//         })
-//     }
-//
-//     /// Execute a task with full orchestration and governance
-//     ///
-//     /// This method coordinates the complete lifecycle:
-//     /// 1. Council review and approval
-//     /// 2. Task orchestration and execution
-//     /// 3. Audit trail recording
-//     /// 4. Quality assurance and monitoring
-//     pub async fn execute_orchestrated_task(
-//         &self,
-//         task: OrchestratedTask,
-//     ) -> Result<OrchestrationResult, OrchestrationError> {
-//         // 1. Council review
-//         let council_session = self.council.start_session().await?;
-//         let decision = council_session.review_task(&task).await?;
-//
-//         if !decision.approved {
-//             return Err(OrchestrationError::CouncilRejection(decision.reason));
-//         }
-//
-//         // 2. Execute task
-//         let execution_result = self.orchestrator.process_task(task).await?;
-//
-//         // 3. Record audit trail
-//         self.audit_trail.record_execution(&execution_result).await?;
-//
-//         // 4. Return comprehensive result
-//         Ok(OrchestrationResult {
-//             council_decision: decision,
-//             execution_result,
-//             audit_id: self.audit_trail.last_audit_id(),
-//         })
-//     }
-// }
+impl AgentOrchestrationService {
+    /// Create a new Agent Orchestration Service
+    pub async fn new(config: OrchestrationConfig) -> Result<Self, OrchestrationError> {
+        let council = council::Council::new(config.council_config).await
+            .map_err(|e| OrchestrationError::CouncilError(e))?;
+        
+        let orchestrator = multimodal_orchestration::MultimodalOrchestrator::new().await
+            .map_err(|e| OrchestrationError::ExecutionError(Box::new(e)))?;
+        
+        let executor_config = config.executor_config;
+        let autonomous_executor = autonomous_executor::AutonomousExecutor::new(executor_config);
+        
+        let audit_trail = audit_trail::AuditTrailManager::new(config.audit_config);
+
+        Ok(Self {
+            council,
+            orchestrator,
+            autonomous_executor,
+            audit_trail,
+        })
+    }
+
+    /// Execute a task with full orchestration and governance
+    ///
+    /// This method coordinates the complete lifecycle:
+    /// 1. Council review and approval
+    /// 2. Task orchestration and execution
+    /// 3. Audit trail recording
+    /// 4. Quality assurance and monitoring
+    pub async fn execute_orchestrated_task(
+        &self,
+        task: OrchestratedTask,
+    ) -> Result<OrchestrationResult, OrchestrationError> {
+        // Convert OrchestratedTask to TaskDescriptor for council review
+        let task_descriptor = self.to_task_descriptor(&task);
+        
+        // 1. Council review and approval
+        let council_session = self.council.start_session(&task_descriptor).await
+            .map_err(|e| OrchestrationError::CouncilError(e))?;
+        
+        let consensus_result = council_session.review_task(&task).await
+            .map_err(|e| OrchestrationError::CouncilError(e))?;
+
+        if !consensus_result.approved {
+            return Err(OrchestrationError::CouncilRejection(consensus_result.reason));
+        }
+
+        // Convert ConsensusResult to CouncilDecision for result
+        let council_decision = self.convert_consensus_to_decision(&consensus_result);
+
+        // 2. Execute task using planning orchestrator
+        let execution_result = self.orchestrator.execute_planning_with_audit(
+            &task.description,
+            None, // No additional context
+        ).await
+            .map_err(|e| OrchestrationError::ExecutionError(Box::new(e)))?;
+
+        // 3. Create TaskExecutionResult for audit trail
+        let task_execution_result = crate::types::TaskExecutionResult {
+            artifacts: crate::types::ExecutionArtifacts {
+                execution_id: task.id.clone(),
+                worker_id: "orchestrator".to_string(),
+                output_files: vec![],
+                diff_stats: crate::types::DiffStats::default(),
+            },
+            status: match execution_result.status {
+                multimodal_orchestration::ProcessingStatus::Completed => crate::types::ExecutionStatus::Completed,
+                multimodal_orchestration::ProcessingStatus::Failed => crate::types::ExecutionStatus::Failed,
+                multimodal_orchestration::ProcessingStatus::InProgress => crate::types::ExecutionStatus::Running,
+                _ => crate::types::ExecutionStatus::Pending,
+            },
+            quality_report: None, // Would be populated from execution analysis
+        };
+
+        // 4. Record audit trail
+        self.audit_trail.record_execution(&task_execution_result).await
+            .map_err(|e| OrchestrationError::AuditError(e.to_string()))?;
+
+        // 5. Return comprehensive result
+        Ok(OrchestrationResult {
+            council_decision,
+            execution_result,
+            audit_id: Some(task.id.clone()), // Use task ID as audit correlation ID
+        })
+    }
+
+    /// Convert OrchestratedTask to TaskDescriptor
+    fn to_task_descriptor(&self, task: &OrchestratedTask) -> crate::types::TaskDescriptor {
+        crate::types::TaskDescriptor {
+            task_id: task.id.clone(),
+            description: task.description.clone(),
+            scope_in: crate::types::TaskScope {
+                in_scope: vec![],
+                out_scope: vec![],
+            },
+            scope_out: crate::types::TaskScope {
+                in_scope: vec![],
+                out_scope: vec![],
+            },
+            change_budget: crate::types::ChangeBudget {
+                max_files: 25,
+                max_loc: 1000,
+            },
+            blast_radius: crate::types::BlastRadius {
+                modules: vec![],
+                data_migration: false,
+                external_deps: vec![],
+            },
+            priority: match task.priority {
+                TaskPriority::Low => crate::types::TaskPriority::Low,
+                TaskPriority::Medium => crate::types::TaskPriority::Medium,
+                TaskPriority::Normal => crate::types::TaskPriority::Normal,
+                TaskPriority::High => crate::types::TaskPriority::High,
+                TaskPriority::Critical => crate::types::TaskPriority::Critical,
+            },
+            execution_mode: crate::types::ExecutionMode::Auto,
+            task_type: crate::types::TaskType::Feature,
+            risk_tier: match task.priority {
+                TaskPriority::Critical | TaskPriority::High => 1,
+                TaskPriority::Medium | TaskPriority::Normal => 2,
+                TaskPriority::Low => 3,
+            },
+            acceptance: vec![],
+        }
+    }
+
+    /// Convert ConsensusResult to CouncilDecision
+    fn convert_consensus_to_decision(&self, consensus: &crate::autonomous_executor::ConsensusResult) -> verdict_aggregation::CouncilDecision {
+        if consensus.approved {
+            verdict_aggregation::CouncilDecision::Approve {
+                confidence: consensus.confidence as f64,
+                quality_score: consensus.confidence as f64,
+                risk_assessment: verdict_aggregation::AggregatedRiskAssessment {
+                    overall_risk: verdict_aggregation::RiskLevel::Low,
+                    risk_factors: vec![],
+                    mitigation_suggestions: vec![],
+                    confidence: consensus.confidence as f64,
+                },
+            }
+        } else {
+            verdict_aggregation::CouncilDecision::Reject {
+                confidence: consensus.confidence as f64,
+                critical_issues: vec![verdict_aggregation::CriticalIssue {
+                    issue_type: "Council Rejection".to_string(),
+                    severity: verdict_aggregation::RiskSeverity::High,
+                    description: consensus.reason.clone(),
+                    impact: 1.0,
+                }],
+                alternative_approaches: vec![],
+            }
+        }
+    }
+}
 
 /// Configuration for the Agent Orchestration Service
 #[derive(Debug, Clone)]

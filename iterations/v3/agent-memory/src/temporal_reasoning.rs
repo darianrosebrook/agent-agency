@@ -235,7 +235,7 @@ impl TemporalReasoningEngine {
         }
 
         Ok(Self {
-            db_client,
+            db_pool,
             config: config.clone(),
             temporal_service,
         })

@@ -15,111 +15,29 @@ use chrono::Utc;
 // Import OrchestrationError from lib.rs
 use crate::OrchestrationError;
 
-// TODO: Re-enable when agent_data_processing dependency is added
-// use agent_data_processing::{
-//     ingestion::{IngestionStage, UnifiedIngestor, CaptionsIngestor, DiagramsIngestor, VideoIngestor, SlidesIngestor, FileWatcher},
-//     enrichment::{EnrichmentStage, UnifiedEnrichmentStage, VisionEnricher, AsrEnricher, EntityEnricher, VisualCaptioningEnricher, CircuitBreaker},
-//     indexing::{IndexingStage, UnifiedIndexer, Bm25Indexer, HnswIndexer, JobScheduler},
-//     Block, EnrichedBlock, BlockData, EnrichedContent, ExtractedEntity, VisualElement, VisualElementType, ExtractedTopic,
-//     DataInput, DataSource, ContentType,
-// };
-
-// Temporary stub types until agent_data_processing is available
-#[derive(Debug, Clone)]
-pub struct UnifiedIngestor;
-#[derive(Debug, Clone)]
-pub struct FileWatcher;
-#[derive(Debug, Clone)]
-pub struct UnifiedEnrichmentStage;
-#[derive(Debug, Clone)]
-pub struct UnifiedIndexer;
-#[derive(Debug, Clone)]
-pub struct JobScheduler;
-
-impl UnifiedIngestor {
-    pub fn new() -> Self {
-        Self
-    }
-
-    pub async fn ingest(&self, _data_input: DataInput) -> Result<ProcessingOutput> {
-        Ok(ProcessingOutput {
-            id: ProcessingId::new(),
-            blocks: vec![],
-            metadata: std::collections::HashMap::new(),
-        })
-    }
-}
-
-impl FileWatcher {
-    pub fn new(_paths: Vec<String>, _patterns: Vec<String>) -> Self {
-        Self
-    }
-
-    pub async fn watch(&self, _directory_path: &std::path::Path) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl UnifiedEnrichmentStage {
-    pub async fn new() -> Result<Self> {
-        Ok(Self)
-    }
-
-    pub async fn enrich_blocks(&self, _blocks: Vec<Block>) -> Result<Vec<EnrichedBlock>> {
-        Ok(vec![])
-    }
-}
-
-impl UnifiedIndexer {
-    pub fn new(_dimensions: usize, _neighbors: usize) -> Self {
-        Self
-    }
-
-    pub async fn index_blocks(&self, _blocks: Vec<Block>) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl JobScheduler {
-    pub fn new() -> Self {
-        Self
-    }
-
-    pub fn get_active_job_count(&self) -> usize {
-        0
-    }
-}
-use crate::coreml::{CoreMLManager, CoreMLModelType, InferenceResult};
+// Import real types from agent_data_processing
+use agent_data_processing::{
+    ingestion::{IngestionStage, UnifiedIngestor, FileWatcher},
+    enrichment::{EnrichmentStage, UnifiedEnrichmentStage, EnrichmentCircuitBreakerConfig},
+    indexing::{IndexingStage, UnifiedIndexer, JobScheduler},
+    Block, EnrichedBlock, BlockData, EnrichedContent, ExtractedEntity, VisualElement, VisualElementType, ExtractedTopic,
+    DataInput, DataSource, ContentType, ProcessingOutput, ProcessingId, ProcessedContent, DataContent, ProcessingContext, ProcessingPriority,
+};
 use crate::audit_trail::{
     AuditTrailManager, AuditConfig, AuditLogLevel, AuditOutputFormat,
     AuditEvent, AuditCategory, AuditSeverity, AuditResult, AuditPerformance,
 };
 use crate::error_handling::{CircuitBreaker, CircuitBreakerState, CircuitBreakerStats};
-use data_infrastructure::DatabaseClient;
+use system_common_interfaces::DatabaseAuditOperations;
 use tracing::{debug, info, warn};
-// Stub types until agent_data_processing is available
-#[derive(Clone)]
-pub struct Block {
-    pub id: String,
-    pub content: String,
-    pub metadata: std::collections::HashMap<String, String>,
-}
 
-pub struct EnrichedBlock {
-    pub id: String,
-    pub content: String,
-    pub metadata: std::collections::HashMap<String, String>,
-}
+// Use available crates instead
+// ConsensusCoordinator is not available in contracts, use placeholder
+pub type ConsensusCoordinator = String;
 
-pub struct BlockData {
-    pub content: String,
-    pub metadata: std::collections::HashMap<String, String>,
-}
-
-pub struct EnrichedContent {
-    pub content: String,
-    pub metadata: std::collections::HashMap<String, String>,
-}
+// Placeholder types for missing modules
+pub type KnowledgeSeeker = String;
+pub type OrchestratorConfig = String;
 
 /// Context for tracking active operations
 #[derive(Debug, Clone)]
@@ -136,83 +54,22 @@ pub struct OperationContext {
     pub correlation_id: Option<String>,
 }
 
-pub struct ExtractedEntity {
-    pub name: String,
-    pub entity_type: String,
-    pub confidence: f64,
-}
-
-pub struct VisualElement {
-    pub element_type: String,
-    pub content: String,
-    pub metadata: std::collections::HashMap<String, String>,
-}
-
-pub enum VisualElementType {
-    Diagram,
-    Chart,
-    Image,
-    Table,
-}
-
-pub struct ExtractedTopic {
-    pub topic: String,
-    pub confidence: f64,
-}
-
-pub struct DataInput {
-    pub id: String,
-    pub source: DataSource,
-    pub content: String,
-    pub processing_context: ProcessingContext,
-}
-
-pub enum DataSource {
-    File(String),
-    Url(String),
-    Text(String),
-}
-
-pub struct ProcessingContext {
-    pub priority: ProcessingPriority,
-    pub metadata: std::collections::HashMap<String, String>,
-}
-
-pub enum ProcessingPriority {
-    Low,
-    Normal,
-    High,
-    Critical,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum ContentType {
-    Text,
-    Image,
-    Video,
-    Audio,
-    Document,
-}
-
-pub struct ProcessingId(String);
-
-impl ProcessingId {
-    pub fn new() -> Self {
-        Self(uuid::Uuid::new_v4().to_string())
-    }
-}
-
-impl std::fmt::Display for ProcessingId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-pub struct ProcessingOutput {
-    pub id: ProcessingId,
-    pub blocks: Vec<Block>,
-    pub metadata: std::collections::HashMap<String, String>,
-}
+// Import real types from agent_data_processing
+use agent_data_processing::{
+    ingestion::{IngestionStage, UnifiedIngestor, FileWatcher},
+    enrichment::{EnrichmentStage, UnifiedEnrichmentStage, EnrichmentCircuitBreakerConfig},
+    indexing::{IndexingStage, UnifiedIndexer, JobScheduler},
+    Block, EnrichedBlock, BlockData, EnrichedContent, ExtractedEntity, VisualElement, VisualElementType, ExtractedTopic,
+    DataInput, DataSource, ContentType, ProcessingOutput, ProcessingId, ProcessedContent, DataContent, ProcessingContext, ProcessingPriority, FileSource,
+};
+use crate::coreml::{CoreMLManager, CoreMLModelType, InferenceResult};
+use crate::audit_trail::{
+    AuditTrailManager, AuditConfig, AuditLogLevel, AuditOutputFormat,
+    AuditEvent, AuditCategory, AuditSeverity, AuditResult, AuditPerformance,
+};
+use crate::error_handling::{CircuitBreaker, CircuitBreakerState, CircuitBreakerStats};
+use system_common_interfaces::DatabaseAuditOperations;
+use tracing::{debug, info, warn};
 
 // Use available crates instead
 // ConsensusCoordinator is not available in contracts, use placeholder
@@ -225,7 +82,6 @@ use std::path::{Path, PathBuf};
 use serde_json;
 
 /// Multimodal document processing orchestrator
-#[derive(Debug)]
 pub struct MultimodalOrchestrator {
     /// Unified ingestor for all content types
     unified_ingestor: UnifiedIngestor,
@@ -251,8 +107,14 @@ pub struct MultimodalOrchestrator {
     circuit_breakers: HashMap<String, Arc<CircuitBreaker>>,
     /// Active operation contexts for correlation
     active_contexts: Arc<RwLock<HashMap<String, OperationContext>>>,
-    /// Database client for audit persistence
-    db_client: Option<Arc<DatabaseClient>>,
+    /// Database audit operations for audit persistence
+    /// 
+    /// Provides audit trail persistence without requiring full database operations.
+    /// Inject a DatabaseAuditOperations implementation (e.g., from data-infrastructure)
+    /// via `set_database_audit_operations()` or `with_db_audit_ops()`.
+    db_audit_ops: Option<Arc<dyn DatabaseAuditOperations>>,
+    /// Planning integration for planning-aware task execution
+    planning_integration: Option<Arc<crate::planning::orchestrator_integration::OrchestratorPlanningIntegration>>,
 }
 
 /// Processing result for document pipeline
@@ -293,12 +155,34 @@ pub enum ProcessingStatus {
     Cancelled,
 }
 
+impl std::fmt::Debug for MultimodalOrchestrator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MultimodalOrchestrator")
+            .field("unified_ingestor", &self.unified_ingestor)
+            .field("file_watcher", &self.file_watcher)
+            .field("unified_enricher", &self.unified_enricher)
+            .field("unified_indexer", &self.unified_indexer)
+            .field("job_scheduler", &self.job_scheduler)
+            .field("circuit_breaker", &self.circuit_breaker)
+            .field("coreml_manager", &self.coreml_manager.is_some())
+            .field("knowledge_seeker", &self.knowledge_seeker.is_some())
+            .field("council_coordinator", &self.council_coordinator.is_some())
+            .field("audit_trail", &self.audit_trail.is_some())
+            .field("circuit_breakers", &self.circuit_breakers.len())
+            .field("active_contexts", &"<async>")
+            .field("db_audit_ops", &self.db_audit_ops.is_some())
+            .finish()
+    }
+}
+
 impl MultimodalOrchestrator {
     /// Create new multimodal orchestrator
     pub async fn new() -> Result<Self> {
         // Initialize unified components
         let unified_ingestor = UnifiedIngestor::new();
-        let unified_enricher = UnifiedEnrichmentStage::new().await?;
+        let unified_enricher = UnifiedEnrichmentStage::new(
+            EnrichmentCircuitBreakerConfig::default()
+        );
         let unified_indexer = UnifiedIndexer::new(768, 32); // 768-dim embeddings, 32 neighbors
 
         // Initialize Core ML manager
@@ -341,8 +225,16 @@ impl MultimodalOrchestrator {
             audit_trail: None,
             circuit_breakers: HashMap::new(),
             active_contexts: Arc::new(RwLock::new(HashMap::new())),
-            db_client: None,
+            db_audit_ops: None,
+            planning_integration: None,
         })
+    }
+
+    /// Create new multimodal orchestrator with database audit operations
+    pub async fn with_db_audit_ops(db_audit_ops: Arc<dyn DatabaseAuditOperations>) -> Result<Self> {
+        let mut orchestrator = Self::new().await?;
+        orchestrator.db_audit_ops = Some(db_audit_ops);
+        Ok(orchestrator)
     }
 
     /// Set knowledge seeker for research integration
@@ -365,14 +257,19 @@ impl MultimodalOrchestrator {
         self.circuit_breakers.extend(circuit_breakers);
     }
 
-    /// Set database client for audit persistence
-    pub fn set_database_client(&mut self, db_client: Arc<DatabaseClient>) {
-        self.db_client = Some(db_client);
+    /// Set database audit operations for audit persistence
+    pub fn set_database_audit_operations(&mut self, db_audit_ops: Arc<dyn DatabaseAuditOperations>) {
+        self.db_audit_ops = Some(db_audit_ops);
     }
 
     /// Set council coordinator for decision-making
     pub fn set_council_coordinator(&mut self, coordinator: Arc<ConsensusCoordinator>) {
         self.council_coordinator = Some(coordinator);
+    }
+
+    /// Set planning integration for planning-aware task execution
+    pub fn set_planning_integration(&mut self, planning_integration: Arc<crate::planning::orchestrator_integration::OrchestratorPlanningIntegration>) {
+        self.planning_integration = Some(planning_integration);
     }
 
     /// Record operation start for audit trail
@@ -383,6 +280,27 @@ impl MultimodalOrchestrator {
         description: Option<String>,
         correlation_id: Option<String>,
     ) -> Result<(), crate::audit_trail::AuditError> {
+        // Persist to database if available
+        if let Some(db_audit_ops) = &self.db_audit_ops {
+            let audit_entry = system_common_interfaces::CreateAuditEntry {
+                entity_type: "multimodal_operation".to_string(),
+                entity_id: Uuid::parse_str(operation_id).unwrap_or_else(|_| Uuid::new_v4()),
+                action: format!("start_{}", operation_type),
+                details: serde_json::json!({
+                    "operation_type": operation_type,
+                    "description": description,
+                    "correlation_id": correlation_id,
+                }),
+                user_id: None,
+                ip_address: None,
+                timestamp: Some(Utc::now()),
+            };
+            
+            if let Err(e) = db_audit_ops.create_audit_entry(audit_entry).await {
+                warn!("Failed to persist audit entry to database: {}", e);
+            }
+        }
+
         if let Some(audit_manager) = &self.audit_trail {
             let mut contexts = self.active_contexts.write().await;
             contexts.insert(operation_id.to_string(), OperationContext {
@@ -393,33 +311,10 @@ impl MultimodalOrchestrator {
                 correlation_id: correlation_id.clone(),
             });
 
-            // TODO: Fix audit event construction
-            /*
-            let _ = audit_manager.record_event(AuditEvent {
-                event_id: Uuid::new_v4(),
-                timestamp: Utc::now(),
-                correlation_id: Some(operation_id.to_string()),
-                parent_event_id: None,
-                category: AuditCategory::Operation,
-                severity: AuditSeverity::Info,
-                actor: "multimodal_orchestrator".to_string(),
-                operation: format!("start_{}", operation_type),
-                message: Some(description.unwrap_or_else(|| format!("Starting {} operation", operation_type))),
-                operation_id: Some(operation_id.to_string()),
-                target: Some(operation_type.to_string()),
-                parameters: HashMap::new(),
-                result: AuditResult::Success { data: None },
-                performance: Some(AuditPerformance {
-                    duration: std::time::Duration::from_millis(0),
-                    cpu_time_us: None,
-                    memory_bytes: Some(0),
-                    io_operations: None,
-                    network_bytes: None,
-                }),
-                context: HashMap::new(),
-                tags: vec!["multimodal".to_string(), operation_type.to_string()],
-            }).await;
-            */
+            // Audit trail is already recorded via db_audit_ops.create_audit_entry() above
+            // The AuditTrailManager doesn't have a generic record_event method - it uses
+            // specialized auditors (file_auditor, terminal_auditor, etc.) for specific event types.
+            // For multimodal operations, we use the database audit operations interface.
         }
         Ok(())
     }
@@ -432,6 +327,31 @@ impl MultimodalOrchestrator {
         duration: Duration,
         metadata: Option<HashMap<String, serde_json::Value>>,
     ) -> Result<(), crate::audit_trail::AuditError> {
+        // Persist to database if available
+        if let Some(db_audit_ops) = &self.db_audit_ops {
+            if let Some(context) = self.active_contexts.read().await.get(operation_id) {
+                let audit_entry = system_common_interfaces::CreateAuditEntry {
+                    entity_type: "multimodal_operation".to_string(),
+                    entity_id: Uuid::parse_str(operation_id).unwrap_or_else(|_| Uuid::new_v4()),
+                    action: format!("complete_{}", context.operation_type),
+                    details: serde_json::json!({
+                        "success": success,
+                        "duration_ms": duration.as_millis(),
+                        "operation_type": context.operation_type,
+                        "correlation_id": context.correlation_id,
+                        "metadata": metadata,
+                    }),
+                    user_id: None,
+                    ip_address: None,
+                    timestamp: Some(Utc::now()),
+                };
+                
+                if let Err(e) = db_audit_ops.create_audit_entry(audit_entry).await {
+                    warn!("Failed to persist audit entry to database: {}", e);
+                }
+            }
+        }
+
         if let Some(audit_manager) = &self.audit_trail {
             let mut contexts = self.active_contexts.write().await;
             if let Some(context) = contexts.remove(operation_id) {
@@ -446,31 +366,10 @@ impl MultimodalOrchestrator {
                 };
                 let severity = if success { AuditSeverity::Info } else { AuditSeverity::Error };
 
-                // TODO: Fix audit event construction
-                // let _ = audit_manager.record_event(AuditEvent {
-                //     event_id: Uuid::new_v4(),
-                //     timestamp: Utc::now(),
-                //     correlation_id: context.correlation_id,
-                //     parent_event_id: None,
-                //     category: AuditCategory::Operation,
-                //     severity,
-                //     actor: "multimodal_orchestrator".to_string(),
-                //     operation: format!("complete_{}", context.operation_type),
-                //     message: Some(format!("Completed {} operation in {:?}", context.operation_type, duration)),
-                //     operation_id: Some(operation_id.to_string()),
-                //     target: Some(context.operation_type),
-                //     parameters: metadata.unwrap_or_default().into_iter().map(|(k, v)| (k, serde_json::to_value(v).unwrap_or(serde_json::Value::Null))).collect(),
-                //     result,
-                //     performance: Some(AuditPerformance {
-                //         duration,
-                //         cpu_time_us: None,
-                //         memory_bytes: None,
-                //         io_operations: None,
-                //         network_bytes: None,
-                //     }),
-                //     context: HashMap::new(),
-                //     tags: vec!["multimodal".to_string(), "completion".to_string()],
-                // }).await;
+                // Audit trail is already recorded via db_audit_ops.create_audit_entry() above
+                // The AuditTrailManager doesn't have a generic record_event method - it uses
+                // specialized auditors (file_auditor, terminal_auditor, etc.) for specific event types.
+                // For multimodal operations, we use the database audit operations interface.
             }
         }
         Ok(())
@@ -512,13 +411,34 @@ impl MultimodalOrchestrator {
         
         let content_type = detect_content_type_from_path(file_path);
         
+        // Create proper DataInput with real types
+        use agent_data_processing::{FileSource, ProcessingId as ProcId};
         let data_input = DataInput {
-            id: ProcessingId::new().0,
-            source: DataSource::File(file_path.display().to_string()),
-            content: file_path.display().to_string(),
+            id: ProcId::new(),
+            source: DataSource::File(FileSource {
+                path: file_path.to_path_buf(),
+                content_type: content_type.clone(),
+                size_bytes: file_metadata.len(),
+                last_modified: file_metadata.modified()
+                    .ok()
+                    .and_then(|t| {
+                        use std::time::{SystemTime, UNIX_EPOCH};
+                        t.duration_since(UNIX_EPOCH)
+                            .ok()
+                            .map(|d| chrono::DateTime::from_timestamp(d.as_secs() as i64, 0))
+                            .flatten()
+                    })
+                    .unwrap_or_else(|| chrono::Utc::now()),
+            }),
+            content: DataContent::File(file_path.to_path_buf()),
+            metadata: HashMap::new(),
             processing_context: ProcessingContext {
+                request_id: uuid::Uuid::new_v4().to_string(),
+                user_id: None,
+                project_scope: Some("multimodal_orchestration".to_string()),
                 priority: ProcessingPriority::Normal,
-                metadata: std::collections::HashMap::new(),
+                deadline: None,
+                tags: vec!["multimodal_orchestration".to_string()],
             },
         };
 
@@ -739,19 +659,13 @@ impl MultimodalOrchestrator {
     /// Index enriched blocks
     async fn index_blocks(&self, blocks: &[EnrichedBlock]) -> Result<usize> {
         // Use unified indexer to handle indexing
-        // Convert EnrichedBlock back to Block for indexing
-        let blocks_for_indexing: Vec<Block> = blocks.iter().map(|eb| Block {
-            id: eb.id.clone(),
-            content: eb.content.clone(),
-            metadata: eb.metadata.clone(),
-        }).collect();
-
-        let indexed = self.unified_indexer
-            .index_blocks(blocks_for_indexing)
+        // UnifiedIndexer.index_blocks() takes Vec<EnrichedBlock>, not Vec<Block>
+        self.unified_indexer
+            .index_blocks(blocks.to_vec())
             .await
             .context("Failed to index blocks")?;
 
-        Ok(0) // Return count of indexed items
+        Ok(blocks.len()) // Return count of indexed items
     }
 
     /// Execute planning with comprehensive audit trail
@@ -791,10 +705,72 @@ impl MultimodalOrchestrator {
 
         // Execute the actual planning operation with circuit breaker protection
         let planning_start = Instant::now();
-        let result = if let Some(circuit_breaker) = self.circuit_breakers.get("llm_service") {
-            // Protect LLM/planning calls with circuit breaker
+        let result = if let Some(ref planning_integration) = self.planning_integration {
+            // Use real planning integration if available
+            // Convert task_description to TaskDescriptor for planning system
+            let task_descriptor = crate::types::TaskDescriptor {
+                task_id: Uuid::new_v4().to_string(),
+                description: task_description.to_string(),
+                scope_in: crate::types::TaskScope {
+                    in_scope: vec![],
+                    out_scope: vec![],
+                },
+                scope_out: crate::types::TaskScope {
+                    in_scope: vec![],
+                    out_scope: vec![],
+                },
+                change_budget: crate::types::ChangeBudget {
+                    max_files: 25,
+                    max_loc: 1000,
+                },
+                blast_radius: crate::types::BlastRadius {
+                    modules: vec![],
+                    data_migration: false,
+                    external_deps: vec![],
+                },
+                priority: crate::types::TaskPriority::Normal,
+                execution_mode: crate::types::ExecutionMode::Auto,
+                task_type: crate::types::TaskType::Feature,
+                risk_tier: 2,
+                acceptance: vec![],
+            };
+
+            // Execute planning task with real planning system
+            match planning_integration.execute_planning_task(&task_descriptor).await {
+                Ok(planning_result) => {
+                    // Convert PlanningTaskResult to ProcessingResult
+                    ProcessingResult {
+                        document_id: planning_result.task_id,
+                        status: if planning_result.quality_verified {
+                            ProcessingStatus::Completed
+                        } else {
+                            ProcessingStatus::Failed
+                        },
+                        blocks_processed: planning_result.evidence_count,
+                        blocks_enriched: planning_result.evidence_count,
+                        blocks_indexed: planning_result.evidence_count,
+                        processing_time_ms: planning_start.elapsed().as_millis() as u64,
+                        error_message: None,
+                    }
+                },
+                Err(e) => {
+                    // Planning failed - return error result
+                    ProcessingResult {
+                        document_id: Uuid::new_v4(),
+                        status: ProcessingStatus::Failed,
+                        blocks_processed: 0,
+                        blocks_enriched: 0,
+                        blocks_indexed: 0,
+                        processing_time_ms: planning_start.elapsed().as_millis() as u64,
+                        error_message: Some(format!("Planning failed: {}", e)),
+                    }
+                }
+            }
+        } else if let Some(circuit_breaker) = self.circuit_breakers.get("llm_service") {
+            // Protect LLM/planning calls with circuit breaker (fallback when planning integration not available)
             match circuit_breaker.execute(|| async {
-                // TODO: Implement actual planning logic
+                // PLACEHOLDER: Planning integration not available, using fallback stub
+                // Dependency: OrchestratorPlanningIntegration should be set via set_planning_integration()
                 Ok(ProcessingResult {
                     document_id: Uuid::new_v4(),
                     status: ProcessingStatus::Completed,
@@ -802,7 +778,7 @@ impl MultimodalOrchestrator {
                     blocks_enriched: 0,
                     blocks_indexed: 0,
                     processing_time_ms: planning_start.elapsed().as_millis() as u64,
-                    error_message: None,
+                    error_message: Some("Planning integration not configured".to_string()),
                 })
             }).await {
                 Ok(result) => result,
@@ -827,8 +803,9 @@ impl MultimodalOrchestrator {
                 }
             }
         } else {
-            // No circuit breaker - direct execution
-            // TODO: Implement actual planning logic
+            // No circuit breaker - direct execution (fallback when planning integration not available)
+            // PLACEHOLDER: Planning integration not available, using fallback stub
+            // Dependency: OrchestratorPlanningIntegration should be set via set_planning_integration()
             ProcessingResult {
                 document_id: Uuid::new_v4(),
                 status: ProcessingStatus::Completed,
@@ -836,7 +813,7 @@ impl MultimodalOrchestrator {
                 blocks_enriched: 0,
                 blocks_indexed: 0,
                 processing_time_ms: planning_start.elapsed().as_millis() as u64,
-                error_message: None,
+                error_message: Some("Planning integration not configured".to_string()),
             }
         };
 
@@ -898,45 +875,30 @@ fn detect_content_type_from_path(path: &Path) -> ContentType {
 
 /// Convert ingestion output to blocks
 fn convert_ingestion_output_to_blocks(output: ProcessingOutput) -> Result<Vec<Block>> {
-    use agent_data_processing::DataContent;
+    use agent_data_processing::ProcessingId as ProcId;
+    use agent_data_processing::ProcessedContentData;
+    use std::collections::HashMap;
     
+    // Create blocks from ProcessedContent
+    // ProcessingOutput doesn't have a blocks field - we need to create them from processed_content
     let mut blocks = Vec::new();
     
-    // Extract text content as blocks
-    // For now, we'll create a simple text block from metadata
-    let text = serde_json::to_string(&output.metadata).unwrap_or_else(|_| "".to_string());
-
-    if !text.is_empty() {
-        // Split text into chunks (simple implementation - in production would use proper chunking)
-        let chunk_size = 1000; // characters per block
-        let mut start = 0;
-        
-        while start < text.len() {
-            let end = std::cmp::min(start + chunk_size, text.len());
-            let chunk = text[start..end].to_string();
-            
-            let block = Block {
-                id: ProcessingId::new().to_string(),
-                content: chunk,
-                metadata: output.metadata.clone(),
-            };
-            
-            blocks.push(block);
-            start = end;
-        }
-    }
-
-    // If no text content, create a single block from structured data
-    if blocks.is_empty() {
-        let content = serde_json::to_string(&output.metadata)
-            .unwrap_or_else(|_| "No content".to_string());
-        
-        blocks.push(Block {
-            id: ProcessingId::new().to_string(),
-            content: content,
-            metadata: output.metadata.clone(),
-        });
-    }
+    // Extract text content for the block
+    let block_data = match &output.processed_content.data {
+        ProcessedContentData::Text(text) => BlockData::Text(text.clone()),
+        ProcessedContentData::Binary(data) => BlockData::Binary(data.clone()),
+        ProcessedContentData::Structured(data) => BlockData::Structured(data.clone()),
+    };
+    
+    // Create a single block from the processed content
+    let block = Block {
+        id: output.id.clone(),
+        content_type: output.processed_content.content_type.clone(),
+        data: block_data,
+        metadata: output.extracted_metadata.clone(),
+    };
+    
+    blocks.push(block);
     
     Ok(blocks)
 }

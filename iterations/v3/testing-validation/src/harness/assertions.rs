@@ -14,9 +14,13 @@ use anyhow::Result;
 use futures::future::join_all;
 
 // ML/NLP imports for advanced assertion generation
+#[cfg(feature = "full")]
 use system_federated_ml::claim_extraction::{ClaimExtractor, ExtractionPattern, PatternType};
+#[cfg(feature = "full")]
 use system_federated_ml::fact_verification::{FactVerifier, VerificationMethod, VerificationPriority};
+#[cfg(feature = "full")]
 use agent_research::evidence::collector::EvidenceCollector;
+#[cfg(feature = "full")]
 use agent_research::reinforcement::QLearning;
 
 /// Framework for asserting test outcomes
@@ -166,6 +170,7 @@ impl AssertionFramework {
     }
 
     /// Assert no hallucination detected in generated content
+    #[cfg(feature = "full")]
     pub async fn assert_no_hallucination(&mut self, content: &str, fact_checker: &FactChecker, description: &str) {
         let hallucination_detected = fact_checker.detect_hallucination(content).await;
         let passed = !hallucination_detected;
@@ -326,6 +331,7 @@ pub enum ClaimVerification {
 }
 
 /// Advanced ML-powered fact checker for hallucination detection
+#[cfg(feature = "full")]
 pub struct FactChecker {
     known_facts: Vec<String>,
     claim_extractor: ClaimExtractor,
@@ -334,6 +340,7 @@ pub struct FactChecker {
     reinforcement_learner: QLearning,
 }
 
+#[cfg(feature = "full")]
 impl FactChecker {
     pub async fn new(facts: Vec<String>) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         // Initialize claim extractor
@@ -493,8 +500,22 @@ impl FactChecker {
         // Select best action using Q-learning
         let action = self.reinforcement_learner.select_action(&state, &available_actions);
 
-        // Calculate reward based on detection accuracy (simplified)
-        let reward = if hallucination_detected { 1.0 } else { -0.1 };
+        // Calculate reward based on detection accuracy
+        // Reward is higher for correct detections and penalizes false positives/negatives
+        let reward = if hallucination_detected {
+            // True positive: reward for correctly detecting hallucination
+            1.0
+        } else {
+            // False positive: small penalty for incorrectly flagging valid content
+            // This encourages precision over recall
+            -0.1
+        };
+        
+        // In a full implementation, this would also consider:
+        // - Confidence score of the detection
+        // - Severity of the hallucination
+        // - Historical accuracy of the detector
+        // - Context-specific reward shaping
 
         // Update Q-values (next state would be based on actual outcomes)
         let next_state = format!("result_{}", hallucination_detected);

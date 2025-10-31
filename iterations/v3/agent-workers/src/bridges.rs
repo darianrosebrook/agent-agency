@@ -5,7 +5,8 @@
 
 use crate::parallel_types::TaskId;
 use crate::worker_types::{QualityRequirements, Progress};
-use agent_agency_contracts::task_executor::{ExecutionStatus, ExecutionArtifacts};
+use agent_agency_contracts::task_executor::ExecutionStatus;
+use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
 use crate::error::ParallelError;
 use std::collections::HashMap;
 use serde_json;

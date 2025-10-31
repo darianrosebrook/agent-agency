@@ -547,12 +547,12 @@ mod tests {
             Ok(vec![])
         }
 
-        // Stub implementations for other required methods
+        // Waiver operations
+        async fn get_waivers(&self, _status: Option<String>) -> Result<Vec<data_infrastructure::models::Waiver>> { Ok(vec![]) }
+        async fn create_waiver(&self, _waiver: data_infrastructure::CreateWaiver) -> Result<data_infrastructure::models::Waiver> { Err(anyhow!("Not implemented")) }
+        async fn update_waiver(&self, _id: Uuid, _update: data_infrastructure::UpdateWaiver) -> Result<data_infrastructure::models::Waiver> { Err(anyhow!("Not implemented")) }
         async fn create_provenance_entry(&self, _entry: data_infrastructure::CreateProvenanceEntry) -> Result<data_infrastructure::models::ProvenanceEntry> { Err(anyhow!("Not implemented")) }
         async fn get_provenance_entries(&self, _limit: Option<i64>) -> Result<Vec<data_infrastructure::models::ProvenanceEntry>> { Ok(vec![]) }
-        async fn create_waiver(&self, _waiver: data_infrastructure::CreateWaiver) -> Result<data_infrastructure::models::Waiver> { Err(anyhow!("Not implemented")) }
-        async fn get_waivers(&self, _status: Option<String>) -> Result<Vec<data_infrastructure::models::Waiver>> { Ok(vec![]) }
-        async fn update_waiver(&self, _id: Uuid, _update: data_infrastructure::UpdateWaiver) -> Result<data_infrastructure::models::Waiver> { Err(anyhow!("Not implemented")) }
         async fn create_judge(&self, _judge: data_infrastructure::CreateJudge) -> Result<data_infrastructure::models::Judge> { Err(anyhow!("Not implemented")) }
         async fn get_judges(&self) -> Result<Vec<data_infrastructure::models::Judge>> { Ok(vec![]) }
         async fn update_judge(&self, _id: Uuid, _update: data_infrastructure::UpdateJudge) -> Result<data_infrastructure::models::Judge> { Err(anyhow!("Not implemented")) }

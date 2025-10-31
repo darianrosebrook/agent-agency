@@ -23,8 +23,15 @@ pub mod graph_engine;
 pub mod memory_manager;
 pub mod memory_types;
 pub mod temporal_reasoning;
-// pub mod prompting_types; // TODO: Create this module
+// NOTE: prompting_types module exists in agent-research crate at:
+//   agent-research/src/self_prompting_agent/prompting_types.rs
+// It contains types for self-prompting agents: Task, TaskType, TaskResult, ExecutionMode, etc.
+// If agent-memory needs prompting types, it can either:
+//   1. Import from agent-research: `use agent_research::self_prompting_agent::prompting_types::*;`
+//   2. Create its own prompting_types module if memory-specific types are needed
+// pub mod prompting_types; // TODO: Create this module or import from agent-research
 pub mod workspace_registry;
+pub mod memory_service_adapter;
 
 // New feature modules for enhanced memory capabilities
 pub mod vector_search;
@@ -49,6 +56,7 @@ pub mod context_offloading;
 pub mod provenance;
 
 use std::sync::Arc;
+use anyhow::{Context, Result};
 
 // Import types from memory_types
 use crate::memory_types::{
@@ -70,7 +78,8 @@ pub use graph_engine::{KnowledgeGraphEngine, Entity, Relationship, GraphQuery, G
 pub use memory_manager::{MemoryManager, MemoryStats};
 pub use temporal_reasoning::{TemporalReasoningEngine};
 pub use memory_types::{MemoryConfig, MemoryType, TemporalContext, TaskPriority, ExperienceOutcome, AgentFeedback, ExperienceContext};
-// pub use prompting_types::*; // TODO: Uncomment when module is created
+// NOTE: prompting_types exists in agent-research crate. See note above for import options.
+// pub use prompting_types::*; // TODO: Uncomment when module is created or imported from agent-research
 
 #[cfg(feature = "embeddings")]
 pub use embedding_integration::{EmbeddingIntegration, MemoryEmbedding};
@@ -175,12 +184,13 @@ impl MemorySystem {
         );
         let workspace_registry = Arc::new(workspace_registry::WorkspaceRegistry::new(
             config.workspace_config.access_config.clone(),
-            db_pool,
+            db_pool.clone(),
         ));
         workspace_registry.initialize().await?;
 
         let manager = MemoryManager::new_with_registry(
             config.clone(),
+            (*db_pool).clone(),
             Arc::clone(&workspace_registry)
         ).await?;
         let graph_engine = KnowledgeGraphEngine::new(&config.graph_config).await?;
@@ -191,6 +201,7 @@ impl MemorySystem {
         let temporal_engine = TemporalReasoningEngine::new(&config.temporal_config).await?;
         let decay_engine = MemoryDecayEngine::new_with_workspace_registry(
             &config.decay_config,
+            (*db_pool).clone(),
             Arc::clone(&workspace_registry)
         ).await?;
         let context_manager = MemoryContextManager::new(config.context_config.clone()).await?;

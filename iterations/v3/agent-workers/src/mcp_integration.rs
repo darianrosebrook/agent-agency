@@ -3,7 +3,8 @@
 //! Provides the bridge between workers and the agent-mcp crate's tool registry.
 //! Services register their capabilities as MCP tools that workers can discover and use.
 
-use agent_mcp::{ToolRegistry, MCPTool, ToolExecutionRequest, ToolExecutionResult, types::{ToolType, ToolCapability, ToolParameters, ParameterDefinition, ParameterConstraint, ToolManifest, CawsComplianceConfig, CawsComplianceStatus}};
+use agent_mcp::{ToolRegistry, ToolExecutionRequest, ToolExecutionResult};
+use agent_mcp::mcp_types::{MCPTool, ToolType, ToolCapability, ToolParameters, ParameterDefinition, ParameterConstraint, ToolManifest, CawsComplianceConfig, CawsComplianceStatus};
 use anyhow::{Context, Result};
 use reqwest::Client;
 use std::sync::Arc;
@@ -234,7 +235,7 @@ pub fn create_parameter(
     required: bool,
     default_value: Option<serde_json::Value>,
 ) -> ParameterDefinition {
-    use agent_mcp::types::ParameterType;
+    use agent_mcp::mcp_types::ParameterType;
 
     let parameter_type = match param_type {
         "string" => ParameterType::String,

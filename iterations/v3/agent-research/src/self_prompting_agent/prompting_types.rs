@@ -151,4 +151,7 @@ pub enum SelfPromptingAgentError {
 
     #[error("Task validation error: {0}")]
     Validation(String),
+
+    #[error("Learning error: {0}")]
+    Learning(String),
 }

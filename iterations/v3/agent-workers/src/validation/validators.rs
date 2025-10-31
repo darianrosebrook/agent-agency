@@ -10,10 +10,16 @@ pub struct CompilationValidator;
 #[async_trait]
 impl super::gates::QualityValidatorTrait for CompilationValidator {
     async fn validate(&self, context: &ValidationContext) -> ValidationResult {
+        // Get package name and workspace root, using defaults if not provided
+        let package_name = context.package_name.as_deref().unwrap_or("agent-workers");
+        let workspace_root = context.workspace_root.as_deref().unwrap_or_else(|| {
+            std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
+        });
+        
         // Run cargo check on the package
         let output = match tokio::process::Command::new("cargo")
-            .args(["check", "--package", &context.package_name])
-            .current_dir(&context.workspace_root)
+            .args(["check", "--package", package_name])
+            .current_dir(workspace_root)
             .output()
             .await {
                 Ok(output) => output,
@@ -62,10 +68,16 @@ impl TestValidator {
 #[async_trait]
 impl super::gates::QualityValidatorTrait for TestValidator {
     async fn validate(&self, context: &ValidationContext) -> ValidationResult {
+        // Get package name and workspace root, using defaults if not provided
+        let package_name = context.package_name.as_deref().unwrap_or("agent-workers");
+        let workspace_root = context.workspace_root.as_deref().unwrap_or_else(|| {
+            std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
+        });
+        
         // Run tests
         let test_output = match tokio::process::Command::new("cargo")
-            .args(["test", "--package", &context.package_name])
-            .current_dir(&context.workspace_root)
+            .args(["test", "--package", package_name])
+            .current_dir(workspace_root)
             .output()
             .await {
                 Ok(output) => output,
@@ -88,7 +100,7 @@ impl super::gates::QualityValidatorTrait for TestValidator {
         }
 
         // Try to get coverage (if cargo-tarpaulin is available)
-        match get_test_coverage(&context.workspace_root, &context.package_name).await {
+        match get_test_coverage(workspace_root, package_name).await {
             Ok(coverage) => {
                 if coverage >= self.min_coverage {
                     ValidationResult::Pass {
@@ -128,10 +140,16 @@ pub struct LintValidator;
 #[async_trait]
 impl super::gates::QualityValidatorTrait for LintValidator {
     async fn validate(&self, context: &ValidationContext) -> ValidationResult {
+        // Get package name and workspace root, using defaults if not provided
+        let package_name = context.package_name.as_deref().unwrap_or("agent-workers");
+        let workspace_root = context.workspace_root.as_deref().unwrap_or_else(|| {
+            std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
+        });
+        
         // Run clippy
         let output = match tokio::process::Command::new("cargo")
-            .args(["clippy", "--package", &context.package_name, "--", "-D", "warnings"])
-            .current_dir(&context.workspace_root)
+            .args(["clippy", "--package", package_name, "--", "-D", "warnings"])
+            .current_dir(workspace_root)
             .output()
             .await {
                 Ok(output) => output,
@@ -175,10 +193,15 @@ pub struct SecurityValidator;
 #[async_trait]
 impl super::gates::QualityValidatorTrait for SecurityValidator {
     async fn validate(&self, context: &ValidationContext) -> ValidationResult {
+        // Get workspace root, using default if not provided
+        let workspace_root = context.workspace_root.as_deref().unwrap_or_else(|| {
+            std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
+        });
+        
         // Run cargo audit if available
         match tokio::process::Command::new("cargo")
             .args(["audit"])
-            .current_dir(&context.workspace_root)
+            .current_dir(workspace_root)
             .output()
             .await
         {
@@ -237,8 +260,9 @@ impl PerformanceValidator {
 #[async_trait]
 impl super::gates::QualityValidatorTrait for PerformanceValidator {
     async fn validate(&self, context: &ValidationContext) -> ValidationResult {
-        // Check if execution time is within bounds
-        let execution_time_ms = context.execution_time.as_millis() as u64;
+        // Get execution time, defaulting to 0 if not provided
+        let execution_time = context.execution_time.unwrap_or_default();
+        let execution_time_ms = execution_time.as_millis() as u64;
 
         if execution_time_ms <= self.max_response_time_ms {
             ValidationResult::Pass {
@@ -270,10 +294,16 @@ pub struct DocumentationValidator;
 #[async_trait]
 impl super::gates::QualityValidatorTrait for DocumentationValidator {
     async fn validate(&self, context: &ValidationContext) -> ValidationResult {
+        // Get package name and workspace root, using defaults if not provided
+        let package_name = context.package_name.as_deref().unwrap_or("agent-workers");
+        let workspace_root = context.workspace_root.as_deref().unwrap_or_else(|| {
+            std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
+        });
+        
         // Run cargo doc to check documentation
         let output = match tokio::process::Command::new("cargo")
-            .args(["doc", "--package", &context.package_name, "--no-deps"])
-            .current_dir(&context.workspace_root)
+            .args(["doc", "--package", package_name, "--no-deps"])
+            .current_dir(workspace_root)
             .output()
             .await {
                 Ok(output) => output,

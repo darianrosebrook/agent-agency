@@ -4,8 +4,10 @@
 //! consolidated from the parallel-workers/ crate.
 
 use crate::worker_types::*;
+use crate::parallel_types::{TaskDependency, ParallelExecutionPlan, CoordinationStrategy, DependencyType, SubTask, TaskResult, WorkerId, SubTaskId, SubTaskStatus, Priority as ParallelPriority};
 use crate::decomposition::TaskDecomposer;
-use crate::execution::{ToolExecutor, ExecutionContext};
+use crate::execution::ToolExecutor;
+use crate::worker_types::TaskContext;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -111,12 +113,21 @@ impl ParallelCoordinator {
             let subtask = subtask.clone();
 
             let handle = tokio::spawn(async move {
-                let context = ExecutionContext {
-                    task_id: subtask.id,
-                    worker_id: WorkerId::new_v4(), // Would be assigned by worker pool
-                    tool_id: subtask.tool_id.clone(),
-                    parameters: subtask.parameters.clone(),
-                    timeout: std::time::Duration::from_secs(60),
+                let tool_id = subtask.metadata.get("pattern_type")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| "general-purpose".to_string());
+                
+                let context = TaskContext {
+                    task_id: subtask.id.0,
+                    worker_id: WorkerId::new().0,
+                    start_time: chrono::Utc::now(),
+                    timeout_ms: subtask.estimated_duration.as_millis() as u64,
+                    retry_count: 0,
+                    max_retries: 3,
+                    metadata: HashMap::new(),
+                    tool_id: Some(tool_id),
+                    parameters: HashMap::new(), // Parameters would come from subtask metadata if needed
                 };
 
                 tool_executor.execute_tool(context).await
@@ -174,12 +185,21 @@ impl ParallelCoordinator {
                 let task = task.clone();
 
                 let handle = tokio::spawn(async move {
-                    let context = ExecutionContext {
-                        task_id: task.id,
-                        worker_id: WorkerId::new_v4(),
-                        tool_id: task.tool_id.clone(),
-                        parameters: task.parameters.clone(),
-                        timeout: std::time::Duration::from_secs(60),
+                    let tool_id = task.metadata.get("pattern_type")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| "general-purpose".to_string());
+                    
+                    let context = TaskContext {
+                        task_id: task.id.0,
+                        worker_id: WorkerId::new().0,
+                        start_time: chrono::Utc::now(),
+                        timeout_ms: 60000,
+                        retry_count: 0,
+                        max_retries: 3,
+                        metadata: HashMap::new(),
+                        tool_id: Some(tool_id),
+                        parameters: HashMap::new(), // Parameters would come from subtask metadata if needed
                     };
 
                     tool_executor.execute_tool(context).await
@@ -225,12 +245,21 @@ impl ParallelCoordinator {
                     .find(|t| t.id == failed_result.task_id)
                     .ok_or(ParallelError::SubtaskNotFound)?;
 
-                let context = ExecutionContext {
-                    task_id: subtask.id,
-                    worker_id: WorkerId::new_v4(),
-                    tool_id: subtask.tool_id.clone(),
-                    parameters: subtask.parameters.clone(),
-                    timeout: std::time::Duration::from_secs(120), // Longer timeout for retry
+                let tool_id = subtask.metadata.get("pattern_type")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| "general-purpose".to_string());
+                
+                let context = TaskContext {
+                    task_id: subtask.id.0,
+                    worker_id: WorkerId::new().0,
+                    start_time: chrono::Utc::now(),
+                    timeout_ms: 120000, // Longer timeout for retry
+                    retry_count: 1,
+                    max_retries: 3,
+                    metadata: HashMap::new(),
+                    tool_id: Some(tool_id),
+                    parameters: HashMap::new(), // Parameters would come from subtask metadata if needed
                 };
 
                 let retry_result = self.tool_executor.execute_tool(context).await?;
@@ -276,37 +305,202 @@ impl ParallelCoordinator {
     /// Create subtasks from task analysis
     async fn create_subtasks(&self, analysis: &crate::decomposition::TaskAnalysis, main_task: &TaskDefinition) -> Result<Vec<SubTask>, ParallelError> {
         let mut subtasks = Vec::new();
+        let task_id = crate::parallel_types::TaskId(main_task.id);
 
         // Create subtasks based on analysis patterns
-        for pattern in &analysis.patterns {
+        for (idx, pattern) in analysis.patterns.iter().enumerate() {
+            let (title, description) = self.extract_pattern_info(pattern);
+            let complexity = self.calculate_pattern_complexity(pattern);
+            let priority = self.convert_priority(&main_task.priority);
+            
             let subtask = SubTask {
-                id: TaskId::new_v4(),
-                parent_task_id: main_task.id,
-                name: format!("{}-subtask-{}", main_task.name, subtasks.len()),
-                description: pattern.description.clone(),
-                tool_id: self.select_tool_for_pattern(pattern).await?,
-                parameters: main_task.parameters.clone(),
-                priority: main_task.priority,
+                id: SubTaskId::new(),
+                parent_task_id: task_id.clone(),
+                title,
+                description,
+                complexity,
+                dependencies: vec![],
+                assigned_worker: None,
+                status: SubTaskStatus::Pending,
+                priority,
+                estimated_duration: std::time::Duration::from_secs(60 * (idx + 1) as u64),
+                metadata: {
+                    let mut meta = HashMap::new();
+                    meta.insert("pattern_index".to_string(), serde_json::json!(idx));
+                    meta.insert("pattern_type".to_string(), serde_json::json!(self.get_pattern_type_name(pattern)));
+                    meta
+                },
             };
             subtasks.push(subtask);
         }
 
         Ok(subtasks)
     }
+    
+    /// Extract title and description from TaskPattern enum
+    fn extract_pattern_info(&self, pattern: &crate::decomposition::TaskPattern) -> (String, String) {
+        match pattern {
+            crate::decomposition::TaskPattern::CompilationErrors { error_groups } => {
+                let count: usize = error_groups.iter().map(|eg| eg.error_count).sum();
+                (
+                    format!("Fix {} compilation errors", count),
+                    format!("Resolve {} compilation errors across {} files", 
+                        count, error_groups.len())
+                )
+            }
+            crate::decomposition::TaskPattern::RefactoringOperations { operations } => {
+                (
+                    format!("Refactor {} operations", operations.len()),
+                    format!("Perform {} refactoring operations", operations.len())
+                )
+            }
+            crate::decomposition::TaskPattern::TestingGaps { missing_tests } => {
+                (
+                    format!("Add {} missing tests", missing_tests.len()),
+                    format!("Implement {} missing test cases", missing_tests.len())
+                )
+            }
+            crate::decomposition::TaskPattern::DocumentationNeeds { files_needing_docs } => {
+                (
+                    format!("Document {} files", files_needing_docs.len()),
+                    format!("Add documentation for {} files", files_needing_docs.len())
+                )
+            }
+        }
+    }
+    
+    /// Calculate complexity score for a pattern
+    fn calculate_pattern_complexity(&self, pattern: &crate::decomposition::TaskPattern) -> f64 {
+        match pattern {
+            crate::decomposition::TaskPattern::CompilationErrors { error_groups } => 
+                error_groups.len() as f64 * 2.0,
+            crate::decomposition::TaskPattern::RefactoringOperations { operations } => 
+                operations.len() as f64 * 3.0,
+            crate::decomposition::TaskPattern::TestingGaps { missing_tests } => 
+                missing_tests.len() as f64 * 1.5,
+            crate::decomposition::TaskPattern::DocumentationNeeds { files_needing_docs } => 
+                files_needing_docs.len() as f64 * 0.5,
+        }
+    }
+    
+    /// Convert TaskPriority to ParallelPriority
+    fn convert_priority(&self, priority: &TaskPriority) -> ParallelPriority {
+        match priority {
+            TaskPriority::Low => ParallelPriority::Low,
+            TaskPriority::Medium => ParallelPriority::Medium,
+            TaskPriority::High => ParallelPriority::High,
+            TaskPriority::Critical => ParallelPriority::Critical,
+        }
+    }
+    
+    /// Get pattern type name as string
+    fn get_pattern_type_name(&self, pattern: &crate::decomposition::TaskPattern) -> String {
+        match pattern {
+            crate::decomposition::TaskPattern::CompilationErrors { .. } => "CompilationErrors".to_string(),
+            crate::decomposition::TaskPattern::RefactoringOperations { .. } => "RefactoringOperations".to_string(),
+            crate::decomposition::TaskPattern::TestingGaps { .. } => "TestingGaps".to_string(),
+            crate::decomposition::TaskPattern::DocumentationNeeds { .. } => "DocumentationNeeds".to_string(),
+        }
+    }
 
-    /// Calculate dependencies between subtasks
+    /// Calculate dependencies between subtasks by analyzing:
+    /// - Explicit dependency lists
+    /// - File references in metadata/description
+    /// - Input/output relationships
+    /// - Resource dependencies
+    /// - Tool-based dependencies
     async fn calculate_dependencies(&self, subtasks: &[SubTask]) -> Result<Vec<TaskDependency>, ParallelError> {
+        use std::collections::{HashMap, HashSet};
+        
         let mut dependencies = Vec::new();
+        let mut file_to_tasks: HashMap<String, HashSet<usize>> = HashMap::new();
 
-        // Simple dependency calculation - in a real implementation,
-        // this would analyze the task relationships
+        // Build file reference map from metadata and descriptions
+        for (idx, subtask) in subtasks.iter().enumerate() {
+            let mut files = HashSet::new();
+            
+            // Extract files from description
+            if let Some(files_in_desc) = self.extract_file_references(&subtask.description) {
+                files.extend(files_in_desc);
+            }
+            
+            // Extract files from metadata
+            if let Some(files_metadata) = subtask.metadata.get("files")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect::<HashSet<_>>())
+            {
+                files.extend(files_metadata);
+            }
+            
+            // Extract input/output files from metadata
+            if let Some(input_files) = subtask.metadata.get("input_files")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect::<HashSet<_>>())
+            {
+                files.extend(input_files);
+            }
+            
+            if let Some(output_files) = subtask.metadata.get("output_files")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect::<HashSet<_>>())
+            {
+                files.extend(output_files);
+            }
+            
+            // Map files to tasks
+            for file in files {
+                file_to_tasks.entry(file).or_insert_with(HashSet::new).insert(idx);
+            }
+        }
+
+        // Analyze dependencies
         for (i, subtask) in subtasks.iter().enumerate() {
-            for j in 0..i {
-                if self.has_dependency(subtask, &subtasks[j]) {
+            // Check explicit dependencies first
+            for dep_id in &subtask.dependencies {
+                if let Some(j) = subtasks.iter().position(|s| s.id == *dep_id) {
+                    if j < i {
+                        dependencies.push(TaskDependency {
+                            dependent_task: subtask.id,
+                            dependency_task: subtasks[j].id,
+                            dependency_type: DependencyType::Sequential,
+                        });
+                    }
+                }
+            }
+            
+            // Check file-based dependencies
+            let task1_files = self.get_task_files(subtask);
+            for (j, subtask2) in subtasks.iter().enumerate() {
+                if j >= i {
+                    continue;
+                }
+                
+                let task2_files = self.get_task_files(subtask2);
+                
+                // Data dependency: task1 reads files that task2 writes
+                let data_dependency = !task1_files.is_empty() && 
+                    !task2_files.is_empty() &&
+                    task1_files.iter().any(|f| task2_files.contains(f));
+                
+                // Resource dependency: same files accessed
+                let resource_dependency = !task1_files.is_empty() &&
+                    !task2_files.is_empty() &&
+                    task1_files.iter().any(|f| task2_files.contains(f));
+                
+                // Use has_dependency for specialty/tool-based dependencies
+                if self.has_dependency(subtask, subtask2) || data_dependency || resource_dependency {
+                    let dep_type = if data_dependency {
+                        DependencyType::Data
+                    } else if resource_dependency {
+                        DependencyType::Resource
+                    } else {
+                        DependencyType::Sequential
+                    };
+                    
                     dependencies.push(TaskDependency {
                         dependent_task: subtask.id,
-                        dependency_task: subtasks[j].id,
-                        dependency_type: DependencyType::Completion,
+                        dependency_task: subtask2.id,
+                        dependency_type: dep_type,
                     });
                 }
             }
@@ -314,29 +508,155 @@ impl ParallelCoordinator {
 
         Ok(dependencies)
     }
-
-    /// Select coordination strategy based on task analysis
-    fn select_coordination_strategy(&self, _analysis: &crate::decomposition::TaskAnalysis) -> CoordinationStrategy {
-        // For now, default to fully parallel
-        // In a real implementation, this would analyze the task characteristics
-        CoordinationStrategy::FullyParallel
+    
+    /// Extract file references from description text
+    fn extract_file_references(&self, description: &str) -> Option<HashSet<String>> {
+        use regex::Regex;
+        
+        // Match common file path patterns
+        let file_pattern = Regex::new(r#"(?:^|\s)(?:\./)?([a-zA-Z0-9_\-./]+\.(?:rs|ts|tsx|js|jsx|py|go|java|cpp|h|hpp|md|json|yaml|yml|toml|sh|sql|css|html))(?:\s|$)"#)
+            .ok()?;
+        
+        let mut files = HashSet::new();
+        for cap in file_pattern.captures_iter(description) {
+            if let Some(file) = cap.get(1) {
+                files.insert(file.as_str().to_string());
+            }
+        }
+        
+        if files.is_empty() {
+            None
+        } else {
+            Some(files)
+        }
+    }
+    
+    /// Get all files referenced by a task (from metadata and description)
+    fn get_task_files(&self, subtask: &SubTask) -> HashSet<String> {
+        let mut files = HashSet::new();
+        
+        // Extract from description
+        if let Some(desc_files) = self.extract_file_references(&subtask.description) {
+            files.extend(desc_files);
+        }
+        
+        // Extract from metadata
+        if let Some(files_array) = subtask.metadata.get("files")
+            .and_then(|v| v.as_array())
+        {
+            for v in files_array {
+                if let Some(f) = v.as_str() {
+                    files.insert(f.to_string());
+                }
+            }
+        }
+        
+        // Extract input/output files
+        if let Some(input_files) = subtask.metadata.get("input_files")
+            .and_then(|v| v.as_array())
+        {
+            for v in input_files {
+                if let Some(f) = v.as_str() {
+                    files.insert(f.to_string());
+                }
+            }
+        }
+        
+        if let Some(output_files) = subtask.metadata.get("output_files")
+            .and_then(|v| v.as_array())
+        {
+            for v in output_files {
+                if let Some(f) = v.as_str() {
+                    files.insert(f.to_string());
+                }
+            }
+        }
+        
+        files
     }
 
-    /// Select appropriate tool for a task pattern
-    async fn select_tool_for_pattern(&self, pattern: &crate::decomposition::TaskPattern) -> Result<ToolId, ParallelError> {
-        match pattern.pattern_type.as_str() {
-            "react-component" => Ok("react-generator".to_string()),
-            "file-editing" => Ok("file-editor".to_string()),
-            "research" => Ok("research-assistant".to_string()),
-            _ => Ok("general-purpose".to_string()),
+    /// Select coordination strategy based on task analysis
+    fn select_coordination_strategy(&self, analysis: &crate::decomposition::TaskAnalysis) -> CoordinationStrategy {
+        // Analyze task characteristics to determine optimal coordination strategy
+        
+        // Factor 1: Parallelization score - higher score favors parallel execution
+        let parallelization_score = analysis.subtask_scores.parallelization_score;
+        
+        // Factor 2: Task complexity - high complexity may need sequential dependencies
+        let complexity_score = analysis.complexity_score;
+        
+        // Factor 3: Number of patterns - more patterns may benefit from parallel execution
+        let pattern_count = analysis.patterns.len();
+        
+        // Factor 4: Recommended workers - if few workers, sequential may be better
+        let recommended_workers = analysis.recommended_workers;
+        
+        // Decision logic:
+        // - High parallelization score (>0.7) + many workers (>4) -> FullyParallel
+        // - Medium parallelization (0.4-0.7) + dependencies -> SequentialDependencies
+        // - Low parallelization (<0.4) or high complexity -> SequentialDependencies
+        // - Otherwise -> Adaptive
+        
+        if parallelization_score > 0.7 && recommended_workers > 4 && pattern_count > 2 {
+            CoordinationStrategy::FullyParallel
+        } else if parallelization_score < 0.4 || complexity_score > 0.8 {
+            CoordinationStrategy::SequentialDependencies
+        } else if parallelization_score >= 0.4 && parallelization_score <= 0.7 {
+            CoordinationStrategy::SequentialDependencies
+        } else {
+            CoordinationStrategy::Adaptive
         }
     }
 
+    /// Select appropriate tool for a task pattern
+    async fn select_tool_for_pattern(&self, pattern: &crate::decomposition::TaskPattern) -> Result<String, ParallelError> {
+        // Map TaskPattern enum variants to tool identifiers
+        let tool_id = match pattern {
+            crate::decomposition::TaskPattern::CompilationErrors { .. } => "compilation-fixer".to_string(),
+            crate::decomposition::TaskPattern::RefactoringOperations { .. } => "refactoring-assistant".to_string(),
+            crate::decomposition::TaskPattern::TestingGaps { .. } => "test-generator".to_string(),
+            crate::decomposition::TaskPattern::DocumentationNeeds { .. } => "documentation-generator".to_string(),
+        };
+        Ok(tool_id)
+    }
+
     /// Check if two subtasks have a dependency
-    fn has_dependency(&self, _task1: &SubTask, _task2: &SubTask) -> bool {
-        // Simple dependency check - in a real implementation,
-        // this would analyze the actual task relationships
-        false
+    fn has_dependency(&self, task1: &SubTask, task2: &SubTask) -> bool {
+        // Analyze task relationships to detect dependencies
+        
+        // Dependency 1: Explicit dependency list
+        // Check if task1 explicitly depends on task2
+        if task1.dependencies.contains(&task2.id) {
+            return true;
+        }
+        
+        // Dependency 2: Description-based dependencies
+        // Some tasks naturally depend on others (e.g., testing depends on compilation)
+        let desc1 = task1.description.to_lowercase();
+        let desc2 = task2.description.to_lowercase();
+        
+        let specialty_dependency = 
+            (desc1.contains("test") && desc2.contains("compile")) ||
+            (desc1.contains("refactor") && desc2.contains("compile")) ||
+            (desc1.contains("document") && desc2.contains("refactor")) ||
+            (desc1.contains("document") && desc2.contains("compile"));
+        
+        // Dependency 3: Tool-based dependencies (check metadata for tool info)
+        // Some tools depend on outputs from other tools
+        let tool_dependency = {
+            let tool1 = task1.metadata.get("pattern_type")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let tool2 = task2.metadata.get("pattern_type")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            
+            (tool1.contains("test") && tool2.contains("compile")) ||
+            (tool1.contains("document") && tool2.contains("refactor")) ||
+            (tool1.contains("document") && tool2.contains("compile"))
+        };
+        
+        specialty_dependency || tool_dependency
     }
 }
 

@@ -8,6 +8,10 @@ pub mod monitoring;
 pub mod metrics;
 pub mod tracing;
 pub mod cache;
+pub mod learning_service;
+pub mod health_metrics;
+pub mod health_types;
+pub mod core;
 
 // Re-export common types (avoiding conflicts with local types)
 pub use system_configuration::{
@@ -23,6 +27,9 @@ pub use telemetry::*;
 pub use monitoring::*;
 pub use metrics::*;
 pub use tracing::*;
+pub use learning_service::*;
+pub use health_metrics::MetricsCollector;
+pub use core::ResponseTimePercentiles;
 
 /// Main service struct for telemetry management
 #[derive(Debug)]

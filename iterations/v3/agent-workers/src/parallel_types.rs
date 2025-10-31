@@ -269,6 +269,31 @@ pub enum WorkerSpecialty {
     General,
 }
 
+/// Dependency between tasks (used in parallel execution)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskDependency {
+    pub dependent_task: SubTaskId,
+    pub dependency_task: SubTaskId,
+    pub dependency_type: DependencyType,
+}
+
+/// Parallel execution plan
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParallelExecutionPlan {
+    pub main_task: crate::worker_types::TaskDefinition,
+    pub subtasks: Vec<SubTask>,
+    pub dependencies: Vec<TaskDependency>,
+    pub coordination_strategy: CoordinationStrategy,
+}
+
+/// Coordination strategy for parallel execution
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CoordinationStrategy {
+    FullyParallel,
+    SequentialDependencies,
+    Adaptive,
+}
+
 /// Result type for parallel operations
 pub type ParallelResult<T> = Result<T, ParallelError>;
 

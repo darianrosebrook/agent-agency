@@ -28,7 +28,7 @@
 //! ```
 
 use crate::mcp_integration::{MCPIntegration, create_tool_definition, create_parameter};
-use agent_mcp::{MCPTool, types::{ToolType, ToolCapability, ParameterDefinition}};
+use agent_mcp::{MCPTool, mcp_types::{ToolType, ToolCapability, ParameterDefinition}};
 use std::sync::Arc;
 use tracing::{info, warn};
 

@@ -461,17 +461,42 @@ impl DecompositionEngine {
 
     /// Apply adaptive optimization based on system state
     fn apply_adaptive_optimization(&self, subtasks: &mut [SubTask]) -> Result<(), DecompositionError> {
-        // Placeholder for adaptive optimization logic
-        // In a real implementation, this would consider:
-        // - Current system load
-        // - Available workers
-        // - Historical performance data
-        // - Resource constraints
+        // Adaptive optimization based on task characteristics
+        // 
+        // Current implementation uses task properties for optimization.
+        // Future enhancements would integrate:
+        // - Current system load (via MetricsCollector from system-observability)
+        // - Available workers (via WorkerPool.get_stats() or MCPWorkerPool)
+        // - Historical performance data (via learning system metrics)
+        // - Resource constraints (via system metrics)
         
-        // For now, apply a simple optimization
+        // Optimization strategy 1: Priority-based ordering
+        // High priority tasks should be executed first
         subtasks.sort_by(|a, b| {
             b.priority.cmp(&a.priority)
                 .then(a.estimated_effort.cmp(&b.estimated_effort))
+        });
+        
+        // Optimization strategy 2: Dependency-aware ordering
+        // Tasks with fewer dependencies should be executed earlier
+        // This allows more parallelization opportunities
+        subtasks.sort_by(|a, b| {
+            a.dependencies.len().cmp(&b.dependencies.len())
+                .then(b.priority.cmp(&a.priority))
+        });
+        
+        // Optimization strategy 3: Effort-based batching
+        // Group similar-effort tasks together for better load balancing
+        // This helps when workers have different capabilities
+        subtasks.sort_by(|a, b| {
+            let effort_diff = (a.estimated_effort.as_secs() as i64 - b.estimated_effort.as_secs() as i64).abs();
+            if effort_diff < 60 {
+                // Similar effort - prioritize by priority
+                b.priority.cmp(&a.priority)
+            } else {
+                // Different effort - prioritize shorter tasks
+                a.estimated_effort.cmp(&b.estimated_effort)
+            }
         });
         
         Ok(())
@@ -497,23 +522,101 @@ impl DecompositionEngine {
         Ok(())
     }
 
-    /// Check for circular dependencies
+    /// Check for circular dependencies using depth-first search
     fn has_circular_dependencies(&self, subtasks: &[SubTask]) -> bool {
-        // Simple circular dependency detection
+        // Build a dependency graph for efficient traversal
+        use std::collections::{HashMap, HashSet};
+        
+        let mut graph: HashMap<SubTaskId, Vec<SubTaskId>> = HashMap::new();
+        let mut all_task_ids = HashSet::new();
+        
+        // Build graph and collect all task IDs
         for subtask in subtasks {
-            if subtask.dependencies.contains(&subtask.id) {
+            all_task_ids.insert(subtask.id.clone());
+            let deps = subtask.dependencies.clone();
+            graph.insert(subtask.id.clone(), deps);
+        }
+        
+        // Check for self-referential dependencies (task depends on itself)
+        for (task_id, deps) in &graph {
+            if deps.contains(task_id) {
                 return true;
             }
         }
+        
+        // Use DFS to detect cycles in the dependency graph
+        let mut visited = HashSet::new();
+        let mut rec_stack = HashSet::new();
+        
+        for task_id in &all_task_ids {
+            if !visited.contains(task_id) {
+                if self.detect_cycle_dfs(task_id, &graph, &mut visited, &mut rec_stack) {
+                    return true;
+                }
+            }
+        }
+        
+        false
+    }
+    
+    /// Helper function for DFS cycle detection
+    fn detect_cycle_dfs(
+        &self,
+        task_id: &SubTaskId,
+        graph: &HashMap<SubTaskId, Vec<SubTaskId>>,
+        visited: &mut HashSet<SubTaskId>,
+        rec_stack: &mut HashSet<SubTaskId>,
+    ) -> bool {
+        visited.insert(task_id.clone());
+        rec_stack.insert(task_id.clone());
+        
+        if let Some(deps) = graph.get(task_id) {
+            for dep in deps {
+                if !visited.contains(dep) {
+                    if self.detect_cycle_dfs(dep, graph, visited, rec_stack) {
+                        return true;
+                    }
+                } else if rec_stack.contains(dep) {
+                    // Found a back edge - cycle detected
+                    return true;
+                }
+            }
+        }
+        
+        rec_stack.remove(task_id);
         false
     }
 
     /// Count how many patterns are covered by subtasks
     fn count_covered_patterns(&self, subtasks: &[SubTask], analysis: &TaskAnalysis) -> usize {
-        // Placeholder implementation
-        // In a real implementation, this would track which patterns are covered by which subtasks
-        analysis.patterns.len().min(subtasks.len())
-    }
+        // Track which patterns are covered by analyzing subtask specialties
+        // Each subtask is created from a specific pattern, so we can map subtask specialty to pattern type
+        let mut covered_pattern_indices = std::collections::HashSet::new();
+        
+        for subtask in subtasks {
+            // Map subtask specialty to pattern index
+            // Subtasks are created sequentially from patterns, so we can infer pattern coverage
+            // by checking if the subtask's specialty matches any pattern's requirements
+            for (pattern_idx, pattern) in analysis.patterns.iter().enumerate() {
+                let matches_pattern = match (&subtask.specialty, pattern) {
+                    (WorkerSpecialty::CompilationErrors { .. }, TaskPattern::CompilationErrors { .. }) => true,
+                    (WorkerSpecialty::Refactoring { .. }, TaskPattern::RefactoringOperations { .. }) => true,
+                    (WorkerSpecialty::Testing { .. }, TaskPattern::TestFailures { .. }) => true,
+                    (WorkerSpecialty::Documentation { .. }, TaskPattern::DocumentationGaps { .. }) => true,
+                    (WorkerSpecialty::Performance { .. }, TaskPattern::PerformanceIssues { .. }) => true,
+                    (WorkerSpecialty::Security { .. }, TaskPattern::SecurityVulnerabilities { .. }) => true,
+                    (WorkerSpecialty::DependencyManagement { .. }, TaskPattern::DependencyUpdates { .. }) => true,
+                    (WorkerSpecialty::CodeQuality { .. }, TaskPattern::CodeQualityIssues { .. }) => true,
+                    _ => false,
+                };
+                
+                if matches_pattern {
+                    covered_pattern_indices.insert(pattern_idx);
+                }
+            }
+        }
+        
+        covered_pattern_indices.len()
     }
 }
 

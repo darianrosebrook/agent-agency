@@ -6,6 +6,11 @@ edition = "2021"
 [dependencies]
 # Dependencies for testing validation
 agent-orchestration = { path = "../agent-orchestration" }
+agent-agency-contracts = { path = "../agent-agency-contracts" }
+data-infrastructure = { path = "../data-infrastructure" }
+system-common-interfaces = { path = "../system-common-interfaces" }
+system-quality-security = { path = "../system-quality-security" }
+system-observability = { path = "../system-observability" }
 tokio = { version = "1", features = ["full", "process"] }
 async-trait = "0.1"
 serde = { version = "1", features = ["derive"] }
@@ -17,15 +22,23 @@ uuid = { version = "1", features = ["v4"] }
 regex = "1"
 reqwest = { version = "0.11", features = ["json"] }
 tokio-postgres = "0.7"
+bb8 = "0.8"
+bb8-postgres = "0.8"
+refinery = { version = "0.8", features = ["tokio-postgres"] }
 git2 = "0.19"
 thiserror = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
+sysinfo = "0.31"
+ring = "0.17"
+base64 = "0.22"
 
 # ML/NLP dependencies for assertion generation
-system-federated-ml = { path = "../system-federated-ml" }
-agent-research = { path = "../agent-research" }
+system-federated-ml = { path = "../system-federated-ml", optional = true }
+agent-research = { path = "../agent-research", optional = true }
 anyhow = "1.0"
 futures = "0.3"
 
 [features]
+default = []
+full = ["agent-research", "system-federated-ml"]
 e2e = []

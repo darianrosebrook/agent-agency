@@ -24,7 +24,7 @@ pub mod stage;
 // Re-export public API
 pub use types::{
     // Core types
-    Language, DisambiguationResult,
+    Language, DisambiguationResult, ReferentInfo,
     // Ambiguity types
     Ambiguity, AmbiguityType, UnresolvableAmbiguity, UnresolvableReason,
     // Entity types

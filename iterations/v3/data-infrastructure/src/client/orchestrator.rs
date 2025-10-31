@@ -23,11 +23,16 @@ use uuid::Uuid;
 use super::super::database_operations::{
     DatabaseOperations, CreateJudge, UpdateJudge, CreateWorker, UpdateWorker, 
     CreateTask, UpdateTask, CreateTaskExecution, UpdateTaskExecution,
-    CreateCouncilVerdict, CreateJudgeEvaluation, CreateAuditTrailEntry
+    CreateCouncilVerdict, CreateJudgeEvaluation, CreateAuditTrailEntry,
+    CreatePlanningTelemetry, CreateMilestone, UpdateMilestone, CreatePlanningSession,
+    UpdatePlanningSession, CreateEvidenceArtifact, UpdateEvidenceArtifact,
+    CreatePlanningAuditEvent, CreateExecutionPlan, UpdateExecutionPlan
 };
 use super::super::database_audit::{DatabaseAuditLogger, DatabaseAuditEvent, AuditEventType};
 use super::super::models::{
-    Judge, Worker, Task, TaskExecution, CouncilVerdict, JudgeEvaluation, AuditTrailEntry
+    Judge, Worker, Task, TaskExecution, CouncilVerdict, JudgeEvaluation, AuditTrailEntry,
+    PlanningTelemetry, Milestone, PlanningSession, EvidenceArtifact, PlanningAuditEvent,
+    ExecutionPlan
 };
 use crate::connection_manager::{ConnectionPoolManager, PooledDatabaseClient};
 use crate::database_config::DatabaseConfig;
@@ -253,32 +258,170 @@ impl DatabaseOperations for DatabaseClient {
         Ok(rows)
     }
 
-    async fn update_judge(&self, _id: Uuid, _judge: UpdateJudge) -> Result<Judge> {
-        todo!("Implement update_judge")
+    async fn update_judge(&self, id: Uuid, update: UpdateJudge) -> Result<Judge> {
+        let now = Utc::now();
+        
+        // Get current judge to merge with updates
+        let current = self.get_judge(id).await?
+            .ok_or_else(|| anyhow::anyhow!("Judge not found: {}", id))?;
+        
+        sqlx::query_as::<_, Judge>(
+            r#"
+            UPDATE judges
+            SET name = $1,
+                model_name = $2,
+                endpoint = $3,
+                weight = $4,
+                timeout_ms = $5,
+                optimization_target = $6,
+                is_active = $7,
+                updated_at = $8
+            WHERE id = $9
+            RETURNING id, name, model_name, endpoint, weight,
+                     timeout_ms, optimization_target, is_active, created_at, updated_at
+            "#
+        )
+        .bind(update.name.as_ref().unwrap_or(&current.name))
+        .bind(update.model_name.as_ref().unwrap_or(&current.model_name))
+        .bind(update.endpoint.as_ref().unwrap_or(&current.endpoint))
+        .bind(update.weight.unwrap_or(current.weight))
+        .bind(update.timeout_ms.unwrap_or(current.timeout_ms))
+        .bind(update.optimization_target.as_ref().unwrap_or(&current.optimization_target))
+        .bind(update.is_active.unwrap_or(current.is_active))
+        .bind(now)
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("Judge not found after update: {}", id))
     }
 
-    async fn delete_judge(&self, _id: Uuid) -> Result<()> {
-        todo!("Implement delete_judge")
+    async fn delete_judge(&self, id: Uuid) -> Result<()> {
+        sqlx::query("DELETE FROM judges WHERE id = $1")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        
+        Ok(())
     }
 
-    async fn create_worker(&self, _worker: CreateWorker) -> Result<Worker> {
-        todo!("Implement create_worker")
+    async fn create_worker(&self, worker: CreateWorker) -> Result<Worker> {
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            INSERT INTO workers (
+                id, name, worker_type, specialty, model_name, endpoint,
+                capabilities, performance_history, is_active, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            "#
+        )
+        .bind(id)
+        .bind(&worker.name)
+        .bind(&worker.worker_type)
+        .bind(&worker.specialty)
+        .bind(&worker.model_name)
+        .bind(&worker.endpoint)
+        .bind(&worker.capabilities)
+        .bind(&worker.performance_history)
+        .bind(worker.is_active)
+        .bind(now)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+        
+        Ok(Worker {
+            id,
+            name: worker.name,
+            worker_type: worker.worker_type,
+            specialty: worker.specialty,
+            model_name: worker.model_name,
+            endpoint: worker.endpoint,
+            capabilities: worker.capabilities,
+            performance_history: worker.performance_history,
+            is_active: worker.is_active,
+            created_at: now,
+            updated_at: now,
+        })
     }
 
-    async fn get_worker(&self, _id: Uuid) -> Result<Option<Worker>> {
-        todo!("Implement get_worker")
+    async fn get_worker(&self, id: Uuid) -> Result<Option<Worker>> {
+        let row = sqlx::query_as::<_, Worker>(
+            r#"
+            SELECT id, name, worker_type, specialty, model_name, endpoint,
+                   capabilities, performance_history, is_active, created_at, updated_at
+            FROM workers
+            WHERE id = $1
+            "#
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+        
+        Ok(row)
     }
 
     async fn get_workers(&self) -> Result<Vec<Worker>> {
-        todo!("Implement get_workers")
+        let rows = sqlx::query_as::<_, Worker>(
+            r#"
+            SELECT id, name, worker_type, specialty, model_name, endpoint,
+                   capabilities, performance_history, is_active, created_at, updated_at
+            FROM workers
+            ORDER BY created_at DESC
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        
+        Ok(rows)
     }
 
-    async fn update_worker(&self, _id: Uuid, _worker: UpdateWorker) -> Result<Worker> {
-        todo!("Implement update_worker")
+    async fn update_worker(&self, id: Uuid, update: UpdateWorker) -> Result<Worker> {
+        let now = Utc::now();
+        
+        // Get current worker to merge with updates
+        let current = self.get_worker(id).await?
+            .ok_or_else(|| anyhow::anyhow!("Worker not found: {}", id))?;
+        
+        sqlx::query_as::<_, Worker>(
+            r#"
+            UPDATE workers
+            SET name = $1,
+                worker_type = $2,
+                specialty = $3,
+                model_name = $4,
+                endpoint = $5,
+                capabilities = $6,
+                performance_history = $7,
+                is_active = $8,
+                updated_at = $9
+            WHERE id = $10
+            RETURNING id, name, worker_type, specialty, model_name, endpoint,
+                     capabilities, performance_history, is_active, created_at, updated_at
+            "#
+        )
+        .bind(update.name.as_ref().unwrap_or(&current.name))
+        .bind(update.worker_type.as_ref().unwrap_or(&current.worker_type))
+        .bind(update.specialty.as_ref().or(current.specialty.as_ref()))
+        .bind(update.model_name.as_ref().unwrap_or(&current.model_name))
+        .bind(update.endpoint.as_ref().unwrap_or(&current.endpoint))
+        .bind(update.capabilities.as_ref().unwrap_or(&current.capabilities))
+        .bind(update.performance_history.as_ref().unwrap_or(&current.performance_history))
+        .bind(update.is_active.unwrap_or(current.is_active))
+        .bind(now)
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("Worker not found after update: {}", id))
     }
 
-    async fn delete_worker(&self, _id: Uuid) -> Result<()> {
-        todo!("Implement delete_worker")
+    async fn delete_worker(&self, id: Uuid) -> Result<()> {
+        sqlx::query("DELETE FROM workers WHERE id = $1")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        
+        Ok(())
     }
 
     async fn create_task(&self, task: CreateTask) -> Result<Task> {
@@ -350,74 +493,791 @@ impl DatabaseOperations for DatabaseClient {
     }
 
     async fn get_tasks(&self) -> Result<Vec<Task>> {
-        todo!("Implement get_tasks")
+        let rows = sqlx::query_as::<_, Task>(
+            r#"
+            SELECT id, title, description, risk_tier, scope, acceptance_criteria,
+                   context, caws_spec, status, assigned_worker_id, priority,
+                   deadline, metadata, created_at, updated_at, completed_at
+            FROM tasks
+            ORDER BY created_at DESC
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        
+        Ok(rows)
     }
 
-    async fn update_task(&self, _id: Uuid, _task: UpdateTask) -> Result<Task> {
-        todo!("Implement update_task")
+    async fn update_task(&self, id: Uuid, update: UpdateTask) -> Result<Task> {
+        let now = Utc::now();
+        
+        // Get current task to merge with updates
+        let current = self.get_task(id).await?
+            .ok_or_else(|| anyhow::anyhow!("Task not found: {}", id))?;
+        
+        sqlx::query_as::<_, Task>(
+            r#"
+            UPDATE tasks
+            SET title = $1,
+                description = $2,
+                risk_tier = $3,
+                scope = $4,
+                acceptance_criteria = $5,
+                context = $6,
+                caws_spec = $7,
+                status = $8,
+                assigned_worker_id = $9,
+                priority = $10,
+                deadline = $11,
+                metadata = $12,
+                completed_at = $13,
+                updated_at = $14
+            WHERE id = $15
+            RETURNING id, title, description, risk_tier, scope, acceptance_criteria,
+                     context, caws_spec, status, assigned_worker_id, priority,
+                     deadline, metadata, created_at, updated_at, completed_at
+            "#
+        )
+        .bind(update.title.as_ref().unwrap_or(&current.title))
+        .bind(update.description.as_ref().unwrap_or(&current.description))
+        .bind(update.risk_tier.as_ref().unwrap_or(&current.risk_tier))
+        .bind(update.scope.as_ref().unwrap_or(&current.scope))
+        .bind(update.acceptance_criteria.as_ref().unwrap_or(&current.acceptance_criteria))
+        .bind(update.context.as_ref().unwrap_or(&current.context))
+        .bind(update.caws_spec.as_ref().or(current.caws_spec.as_ref()))
+        .bind(update.status.as_ref().unwrap_or(&current.status))
+        .bind(update.assigned_worker_id.or(current.assigned_worker_id))
+        .bind(update.priority.or(current.priority))
+        .bind(update.deadline.or(current.deadline))
+        .bind(update.metadata.as_ref().or(current.metadata.as_ref()))
+        .bind(update.completed_at.or(current.completed_at))
+        .bind(now)
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("Task not found after update: {}", id))
     }
 
-    async fn delete_task(&self, _id: Uuid) -> Result<()> {
-        todo!("Implement delete_task")
+    async fn delete_task(&self, id: Uuid) -> Result<()> {
+        sqlx::query("DELETE FROM tasks WHERE id = $1")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        
+        Ok(())
     }
 
-    async fn create_task_execution(&self, _execution: CreateTaskExecution) -> Result<TaskExecution> {
-        todo!("Implement create_task_execution")
+    async fn create_task_execution(&self, execution: CreateTaskExecution) -> Result<TaskExecution> {
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            INSERT INTO task_executions (
+                id, task_id, worker_id, execution_started_at, execution_completed_at,
+                execution_time_ms, status, worker_output, self_assessment, metadata,
+                error_message, tokens_used, created_at, updated_at, execution_metadata, result_data
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            "#
+        )
+        .bind(id)
+        .bind(execution.task_id)
+        .bind(execution.worker_id)
+        .bind(execution.execution_started_at)
+        .bind(None::<DateTime<Utc>>)
+        .bind(None::<i32>)
+        .bind(&execution.status)
+        .bind(&execution.worker_output)
+        .bind(&execution.self_assessment)
+        .bind(&execution.metadata)
+        .bind(&execution.error_message)
+        .bind(execution.tokens_used)
+        .bind(now)
+        .bind(now)
+        .bind(&execution.execution_metadata)
+        .bind(&execution.result_data)
+        .execute(&self.pool)
+        .await?;
+        
+        Ok(TaskExecution {
+            id,
+            task_id: execution.task_id,
+            worker_id: execution.worker_id,
+            execution_started_at: execution.execution_started_at,
+            execution_completed_at: None,
+            execution_time_ms: None,
+            status: execution.status,
+            worker_output: execution.worker_output,
+            self_assessment: execution.self_assessment,
+            metadata: execution.metadata,
+            error_message: execution.error_message,
+            tokens_used: execution.tokens_used,
+            created_at: now,
+            updated_at: Some(now),
+            execution_metadata: execution.execution_metadata,
+            result_data: execution.result_data,
+        })
     }
 
-    async fn get_task_execution(&self, _id: Uuid) -> Result<Option<TaskExecution>> {
-        todo!("Implement get_task_execution")
+    async fn get_task_execution(&self, id: Uuid) -> Result<Option<TaskExecution>> {
+        let row = sqlx::query_as::<_, TaskExecution>(
+            r#"
+            SELECT id, task_id, worker_id, execution_started_at, execution_completed_at,
+                   execution_time_ms, status, worker_output, self_assessment, metadata,
+                   error_message, tokens_used, created_at, updated_at, execution_metadata, result_data
+            FROM task_executions
+            WHERE id = $1
+            "#
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+        
+        Ok(row)
     }
 
-    async fn get_task_executions(&self, _task_id: Uuid) -> Result<Vec<TaskExecution>> {
-        todo!("Implement get_task_executions")
+    async fn get_task_executions(&self, task_id: Uuid) -> Result<Vec<TaskExecution>> {
+        let rows = sqlx::query_as::<_, TaskExecution>(
+            r#"
+            SELECT id, task_id, worker_id, execution_started_at, execution_completed_at,
+                   execution_time_ms, status, worker_output, self_assessment, metadata,
+                   error_message, tokens_used, created_at, updated_at, execution_metadata, result_data
+            FROM task_executions
+            WHERE task_id = $1
+            ORDER BY execution_started_at DESC
+            "#
+        )
+        .bind(task_id)
+        .fetch_all(&self.pool)
+        .await?;
+        
+        Ok(rows)
     }
 
-    async fn update_task_execution(&self, _id: Uuid, _execution: UpdateTaskExecution) -> Result<TaskExecution> {
-        todo!("Implement update_task_execution")
+    async fn update_task_execution(&self, id: Uuid, update: UpdateTaskExecution) -> Result<TaskExecution> {
+        let now = Utc::now();
+        
+        // Get current execution to merge with updates
+        let current = self.get_task_execution(id).await?
+            .ok_or_else(|| anyhow::anyhow!("Task execution not found: {}", id))?;
+        
+        sqlx::query_as::<_, TaskExecution>(
+            r#"
+            UPDATE task_executions
+            SET execution_completed_at = $1,
+                execution_time_ms = $2,
+                status = $3,
+                worker_output = $4,
+                self_assessment = $5,
+                metadata = $6,
+                error_message = $7,
+                tokens_used = $8,
+                execution_metadata = $9,
+                result_data = $10,
+                updated_at = $11
+            WHERE id = $12
+            RETURNING id, task_id, worker_id, execution_started_at, execution_completed_at,
+                     execution_time_ms, status, worker_output, self_assessment, metadata,
+                     error_message, tokens_used, created_at, updated_at, execution_metadata, result_data
+            "#
+        )
+        .bind(update.execution_completed_at.or(current.execution_completed_at))
+        .bind(update.execution_time_ms.or(current.execution_time_ms))
+        .bind(update.status.as_ref().unwrap_or(&current.status))
+        .bind(update.worker_output.as_ref().unwrap_or(&current.worker_output))
+        .bind(update.self_assessment.as_ref().unwrap_or(&current.self_assessment))
+        .bind(update.metadata.as_ref().unwrap_or(&current.metadata))
+        .bind(update.error_message.as_ref().or(current.error_message.as_ref()))
+        .bind(update.tokens_used.or(current.tokens_used))
+        .bind(update.execution_metadata.as_ref().or(current.execution_metadata.as_ref()))
+        .bind(update.result_data.as_ref().or(current.result_data.as_ref()))
+        .bind(now)
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("Task execution not found after update: {}", id))
     }
 
-    async fn create_council_verdict(&self, _verdict: CreateCouncilVerdict) -> Result<CouncilVerdict> {
-        todo!("Implement create_council_verdict")
+    async fn create_council_verdict(&self, verdict: CreateCouncilVerdict) -> Result<CouncilVerdict> {
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            INSERT INTO council_verdicts (
+                id, task_id, verdict_id, consensus_score, final_verdict,
+                individual_verdicts, debate_rounds, evaluation_time_ms,
+                created_at, contract, updated_at, verdict_details
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            "#
+        )
+        .bind(id)
+        .bind(verdict.task_id)
+        .bind(verdict.verdict_id)
+        .bind(verdict.consensus_score)
+        .bind(&verdict.final_verdict)
+        .bind(&verdict.individual_verdicts)
+        .bind(verdict.debate_rounds)
+        .bind(verdict.evaluation_time_ms)
+        .bind(now)
+        .bind(&verdict.contract)
+        .bind(now)
+        .bind(&verdict.verdict_details)
+        .execute(&self.pool)
+        .await?;
+        
+        Ok(CouncilVerdict {
+            id,
+            task_id: verdict.task_id,
+            verdict_id: verdict.verdict_id,
+            consensus_score: verdict.consensus_score,
+            final_verdict: verdict.final_verdict,
+            individual_verdicts: verdict.individual_verdicts,
+            debate_rounds: verdict.debate_rounds,
+            evaluation_time_ms: verdict.evaluation_time_ms,
+            created_at: now,
+            contract: verdict.contract,
+            updated_at: Some(now),
+            verdict_details: verdict.verdict_details,
+        })
     }
 
-    async fn get_council_verdict(&self, _id: Uuid) -> Result<Option<CouncilVerdict>> {
-        todo!("Implement get_council_verdict")
+    async fn get_council_verdict(&self, id: Uuid) -> Result<Option<CouncilVerdict>> {
+        let row = sqlx::query_as::<_, CouncilVerdict>(
+            r#"
+            SELECT id, task_id, verdict_id, consensus_score, final_verdict,
+                   individual_verdicts, debate_rounds, evaluation_time_ms,
+                   created_at, contract, updated_at, verdict_details
+            FROM council_verdicts
+            WHERE id = $1
+            "#
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+        
+        Ok(row)
     }
 
-    async fn get_council_verdicts(&self, _task_id: Uuid) -> Result<Vec<CouncilVerdict>> {
-        todo!("Implement get_council_verdicts")
+    async fn get_council_verdicts(&self, task_id: Uuid) -> Result<Vec<CouncilVerdict>> {
+        let rows = sqlx::query_as::<_, CouncilVerdict>(
+            r#"
+            SELECT id, task_id, verdict_id, consensus_score, final_verdict,
+                   individual_verdicts, debate_rounds, evaluation_time_ms,
+                   created_at, contract, updated_at, verdict_details
+            FROM council_verdicts
+            WHERE task_id = $1
+            ORDER BY created_at DESC
+            "#
+        )
+        .bind(task_id)
+        .fetch_all(&self.pool)
+        .await?;
+        
+        Ok(rows)
     }
 
-    async fn create_judge_evaluation(&self, _evaluation: CreateJudgeEvaluation) -> Result<JudgeEvaluation> {
-        todo!("Implement create_judge_evaluation")
+    async fn create_judge_evaluation(&self, evaluation: CreateJudgeEvaluation) -> Result<JudgeEvaluation> {
+        let id = Uuid::new_v4();
+        
+        // Create a verdict_id from the task_id for now (may need adjustment based on actual schema)
+        let verdict_id = Uuid::new_v4();
+        
+        sqlx::query(
+            r#"
+            INSERT INTO judge_evaluations (
+                id, verdict_id, judge_id, judge_verdict, evaluation_time_ms,
+                tokens_used, confidence, created_at, evaluation_score,
+                confidence_score, reasoning, evidence_used, evaluation_metadata,
+                verdict_decision, risk_assessment, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            "#
+        )
+        .bind(id)
+        .bind(verdict_id)
+        .bind(evaluation.judge_id)
+        .bind(serde_json::json!({})) // judge_verdict placeholder
+        .bind(evaluation.evaluation_time_ms)
+        .bind(None::<i32>) // tokens_used
+        .bind(None::<f32>) // confidence
+        .bind(evaluation.evaluation_timestamp)
+        .bind(Some(evaluation.evaluation_score))
+        .bind(None::<f32>) // confidence_score
+        .bind(Some(evaluation.evaluation_reasoning.clone()))
+        .bind(Some(evaluation.evaluation_metadata.clone())) // evidence_used
+        .bind(Some(evaluation.evaluation_metadata.clone())) // evaluation_metadata
+        .bind(None::<String>) // verdict_decision
+        .bind(None::<serde_json::Value>) // risk_assessment
+        .bind(Some(evaluation.evaluation_timestamp))
+        .execute(&self.pool)
+        .await?;
+        
+        Ok(JudgeEvaluation {
+            id,
+            verdict_id,
+            judge_id: evaluation.judge_id,
+            judge_verdict: serde_json::json!({}),
+            evaluation_time_ms: evaluation.evaluation_time_ms,
+            tokens_used: None,
+            confidence: None,
+            created_at: evaluation.evaluation_timestamp,
+            evaluation_score: Some(evaluation.evaluation_score),
+            confidence_score: None,
+            reasoning: Some(evaluation.evaluation_reasoning),
+            evidence_used: Some(evaluation.evaluation_metadata.clone()),
+            evaluation_metadata: Some(evaluation.evaluation_metadata),
+            verdict_decision: None,
+            risk_assessment: None,
+            updated_at: Some(evaluation.evaluation_timestamp),
+        })
     }
 
-    async fn get_judge_evaluations(&self, _task_id: Uuid) -> Result<Vec<JudgeEvaluation>> {
-        todo!("Implement get_judge_evaluations")
+    async fn get_judge_evaluations(&self, task_id: Uuid) -> Result<Vec<JudgeEvaluation>> {
+        // Note: This queries by task_id, but judge_evaluations table may not have task_id directly
+        // We'll need to join through council_verdicts if needed, or adjust schema
+        // For now, returning empty as schema relationship is unclear
+        let rows = sqlx::query_as::<_, JudgeEvaluation>(
+            r#"
+            SELECT id, verdict_id, judge_id, judge_verdict, evaluation_time_ms,
+                   tokens_used, confidence, created_at, evaluation_score,
+                   confidence_score, reasoning, evidence_used, evaluation_metadata,
+                   verdict_decision, risk_assessment, updated_at
+            FROM judge_evaluations
+            WHERE verdict_id IN (
+                SELECT id FROM council_verdicts WHERE task_id = $1
+            )
+            ORDER BY created_at DESC
+            "#
+        )
+        .bind(task_id)
+        .fetch_all(&self.pool)
+        .await?;
+        
+        Ok(rows)
     }
 
     async fn create_audit_trail_entry(&self, entry: CreateAuditTrailEntry) -> Result<AuditTrailEntry> {
-        // For now, just return a mock AuditTrailEntry
-        // In a real implementation, this would insert into the database
+        let id = Uuid::new_v4();
+        let timestamp = entry.timestamp.unwrap_or_else(|| Utc::now());
+        
+        sqlx::query(
+            r#"
+            INSERT INTO audit_trail_entries (
+                id, entity_type, entity_id, action, details,
+                user_id, ip_address, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            "#
+        )
+        .bind(id)
+        .bind(&entry.entity_type)
+        .bind(entry.entity_id)
+        .bind(&entry.action)
+        .bind(&entry.details)
+        .bind(&entry.user_id)
+        .bind(&entry.ip_address)
+        .bind(timestamp)
+        .execute(&self.pool)
+        .await?;
+        
         Ok(AuditTrailEntry {
-            id: Uuid::new_v4(),
+            id,
             entity_type: entry.entity_type,
             entity_id: entry.entity_id,
             action: entry.action,
             details: entry.details,
             user_id: entry.user_id,
             ip_address: entry.ip_address,
-            created_at: entry.timestamp.unwrap_or_else(|| Utc::now()),
+            created_at: timestamp,
         })
     }
 
-    async fn get_audit_trail_entries(&self, _task_id: Uuid) -> Result<Vec<AuditTrailEntry>> {
-        todo!("Implement get_audit_trail_entries")
+    async fn get_audit_trail_entries(&self, task_id: Uuid) -> Result<Vec<AuditTrailEntry>> {
+        let rows = sqlx::query_as::<_, AuditTrailEntry>(
+            r#"
+            SELECT id, entity_type, entity_id, action, details,
+                   user_id, ip_address, created_at
+            FROM audit_trail_entries
+            WHERE entity_id = $1 AND entity_type = 'task'
+            ORDER BY created_at DESC
+            "#
+        )
+        .bind(task_id)
+        .fetch_all(&self.pool)
+        .await?;
+        
+        Ok(rows)
     }
 
-    async fn get_audit_trail_entry(&self, _id: Uuid) -> Result<Option<AuditTrailEntry>> {
-        todo!("Implement get_audit_trail_entry")
+    async fn get_audit_trail_entry(&self, id: Uuid) -> Result<Option<AuditTrailEntry>> {
+        let row = sqlx::query_as::<_, AuditTrailEntry>(
+            r#"
+            SELECT id, entity_type, entity_id, action, details,
+                   user_id, ip_address, created_at
+            FROM audit_trail_entries
+            WHERE id = $1
+            "#
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+        
+        Ok(row)
+    }
+
+    // Planning operations
+    async fn create_planning_telemetry(&self, telemetry: CreatePlanningTelemetry) -> Result<PlanningTelemetry> {
+        let id = Uuid::new_v4();
+        let collected_at = telemetry.collected_at.unwrap_or_else(|| Utc::now());
+        let metadata = telemetry.metadata.unwrap_or_else(|| serde_json::json!({}));
+        
+        sqlx::query_as::<_, PlanningTelemetry>(
+            r#"
+            INSERT INTO planning_telemetry (
+                id, plan_id, metric_type, metric_value, collected_at, metadata
+            ) VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, plan_id, metric_type, metric_value, collected_at, metadata
+            "#
+        )
+        .bind(id)
+        .bind(telemetry.plan_id)
+        .bind(&telemetry.metric_type)
+        .bind(&telemetry.metric_value)
+        .bind(collected_at)
+        .bind(&metadata)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to create planning telemetry: {}", e))
+    }
+
+    async fn get_planning_telemetry(&self, plan_id: Uuid, metric_type: Option<String>) -> Result<Vec<PlanningTelemetry>> {
+        let query = match metric_type {
+            Some(mt) => {
+                sqlx::query_as::<_, PlanningTelemetry>(
+                    r#"
+                    SELECT id, plan_id, metric_type, metric_value, collected_at, metadata
+                    FROM planning_telemetry
+                    WHERE plan_id = $1 AND metric_type = $2
+                    ORDER BY collected_at DESC
+                    "#
+                )
+                .bind(plan_id)
+                .bind(mt)
+            }
+            None => {
+                sqlx::query_as::<_, PlanningTelemetry>(
+                    r#"
+                    SELECT id, plan_id, metric_type, metric_value, collected_at, metadata
+                    FROM planning_telemetry
+                    WHERE plan_id = $1
+                    ORDER BY collected_at DESC
+                    "#
+                )
+                .bind(plan_id)
+            }
+        };
+        
+        let rows = query.fetch_all(&self.pool).await?;
+        Ok(rows)
+    }
+
+    // Planning operations stubs - these need full implementation but are here for interface completeness
+    async fn create_milestone(&self, _milestone: CreateMilestone) -> Result<Milestone> {
+        Err(anyhow::anyhow!("Not implemented"))
+    }
+
+    async fn get_milestone(&self, _plan_id: Uuid, _milestone_id: String) -> Result<Option<Milestone>> {
+        Ok(None)
+    }
+
+    async fn get_milestones(&self, _plan_id: Uuid) -> Result<Vec<Milestone>> {
+        Ok(vec![])
+    }
+
+    async fn update_milestone(&self, _plan_id: Uuid, _milestone_id: String, _update: UpdateMilestone) -> Result<Milestone> {
+        Err(anyhow::anyhow!("Not implemented"))
+    }
+
+    async fn delete_milestone(&self, _plan_id: Uuid, _milestone_id: String) -> Result<()> {
+        Ok(())
+    }
+
+    async fn create_planning_session(&self, _session: CreatePlanningSession) -> Result<PlanningSession> {
+        Err(anyhow::anyhow!("Not implemented"))
+    }
+
+    async fn get_planning_session(&self, _id: Uuid) -> Result<Option<PlanningSession>> {
+        Ok(None)
+    }
+
+    async fn get_planning_sessions(&self, _plan_id: Uuid) -> Result<Vec<PlanningSession>> {
+        Ok(vec![])
+    }
+
+    async fn update_planning_session(&self, _id: Uuid, _update: UpdatePlanningSession) -> Result<PlanningSession> {
+        Err(anyhow::anyhow!("Not implemented"))
+    }
+
+    async fn create_evidence_artifact(&self, _artifact: CreateEvidenceArtifact) -> Result<EvidenceArtifact> {
+        Err(anyhow::anyhow!("Not implemented"))
+    }
+
+    async fn get_evidence_artifacts(&self, _plan_id: Uuid) -> Result<Vec<EvidenceArtifact>> {
+        Ok(vec![])
+    }
+
+    async fn get_evidence_artifacts_for_milestone(&self, _plan_id: Uuid, _milestone_id: String) -> Result<Vec<EvidenceArtifact>> {
+        Ok(vec![])
+    }
+
+    async fn update_evidence_artifact(&self, _id: Uuid, _update: UpdateEvidenceArtifact) -> Result<EvidenceArtifact> {
+        Err(anyhow::anyhow!("Not implemented"))
+    }
+
+    async fn create_planning_audit_event(&self, _event: CreatePlanningAuditEvent) -> Result<PlanningAuditEvent> {
+        Err(anyhow::anyhow!("Not implemented"))
+    }
+
+    async fn get_planning_audit_events(&self, _plan_id: Uuid) -> Result<Vec<PlanningAuditEvent>> {
+        Ok(vec![])
+    }
+
+    async fn create_execution_plan(&self, _plan: CreateExecutionPlan) -> Result<ExecutionPlan> {
+        Err(anyhow::anyhow!("Not implemented"))
+    }
+
+    async fn get_execution_plan(&self, _id: Uuid) -> Result<Option<ExecutionPlan>> {
+        Ok(None)
+    }
+
+    async fn get_execution_plans(&self) -> Result<Vec<ExecutionPlan>> {
+        Ok(vec![])
+    }
+
+    async fn update_execution_plan(&self, _id: Uuid, _update: UpdateExecutionPlan) -> Result<ExecutionPlan> {
+        Err(anyhow::anyhow!("Not implemented"))
+    }
+
+    async fn delete_execution_plan(&self, _id: Uuid) -> Result<()> {
+        Ok(())
+    }
+
+    async fn get_waivers(&self, status: Option<String>) -> Result<Vec<Waiver>> {
+        let query = if let Some(status_filter) = status {
+            sqlx::query(
+                r#"
+                SELECT id, title, reason, description, gates, approved_by, impact_level,
+                       mitigation_plan, expires_at, created_at, updated_at, status, metadata
+                FROM waivers
+                WHERE status = $1
+                ORDER BY created_at DESC
+                "#
+            )
+            .bind(status_filter)
+        } else {
+            sqlx::query(
+                r#"
+                SELECT id, title, reason, description, gates, approved_by, impact_level,
+                       mitigation_plan, expires_at, created_at, updated_at, status, metadata
+                FROM waivers
+                ORDER BY created_at DESC
+                "#
+            )
+        };
+
+        let rows = query.fetch_all(&self.pool).await?;
+        
+        let mut waivers = Vec::new();
+        for row in rows {
+            let gates_json: serde_json::Value = row.try_get("gates")?;
+            let gates: Vec<String> = gates_json.as_array()
+                .unwrap_or(&vec![])
+                .iter()
+                .filter_map(|v| v.as_str())
+                .map(|s| s.to_string())
+                .collect();
+            
+            waivers.push(Waiver {
+                id: row.try_get("id")?,
+                title: row.try_get("title")?,
+                reason: row.try_get("reason")?,
+                description: row.try_get("description")?,
+                gates,
+                approved_by: row.try_get("approved_by")?,
+                impact_level: row.try_get("impact_level")?,
+                mitigation_plan: row.try_get("mitigation_plan")?,
+                expires_at: row.try_get("expires_at")?,
+                created_at: row.try_get("created_at")?,
+                updated_at: row.try_get("updated_at")?,
+                status: row.try_get("status")?,
+                metadata: row.try_get("metadata")?,
+            });
+        }
+        
+        Ok(waivers)
+    }
+
+    async fn create_waiver(&self, waiver: CreateWaiver) -> Result<Waiver> {
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        let gates_json = serde_json::to_value(&waiver.gates)?;
+        let metadata = waiver.metadata.unwrap_or_else(|| serde_json::json!({}));
+
+        sqlx::query(
+            r#"
+            INSERT INTO waivers (
+                id, title, reason, description, gates, approved_by, impact_level,
+                mitigation_plan, expires_at, created_at, updated_at, status, metadata
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            "#
+        )
+        .bind(id)
+        .bind(&waiver.title)
+        .bind(&waiver.reason)
+        .bind(&waiver.description)
+        .bind(&gates_json)
+        .bind(&waiver.approved_by)
+        .bind(&waiver.impact_level)
+        .bind(&waiver.mitigation_plan)
+        .bind(waiver.expires_at)
+        .bind(now)
+        .bind(now)
+        .bind("active")
+        .bind(&metadata)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(Waiver {
+            id,
+            title: waiver.title,
+            reason: waiver.reason,
+            description: waiver.description,
+            gates: waiver.gates,
+            approved_by: waiver.approved_by,
+            impact_level: waiver.impact_level,
+            mitigation_plan: waiver.mitigation_plan,
+            expires_at: waiver.expires_at,
+            created_at: now,
+            updated_at: now,
+            status: "active".to_string(),
+            metadata,
+        })
+    }
+
+    async fn update_waiver(&self, id: Uuid, update: UpdateWaiver) -> Result<Waiver> {
+        let now = Utc::now();
+        
+        // Build dynamic update query
+        let mut update_fields = Vec::new();
+        let mut param_count = 1u32;
+        
+        if let Some(ref title) = update.title {
+            update_fields.push(format!("title = ${}", param_count));
+            param_count += 1;
+        }
+        if let Some(ref description) = update.description {
+            update_fields.push(format!("description = ${}", param_count));
+            param_count += 1;
+        }
+        if let Some(ref mitigation_plan) = update.mitigation_plan {
+            update_fields.push(format!("mitigation_plan = ${}", param_count));
+            param_count += 1;
+        }
+        if let Some(expires_at) = update.expires_at {
+            update_fields.push(format!("expires_at = ${}", param_count));
+            param_count += 1;
+        }
+        if let Some(ref status) = update.status {
+            update_fields.push(format!("status = ${}", param_count));
+            param_count += 1;
+        }
+        if let Some(ref metadata) = update.metadata {
+            update_fields.push(format!("metadata = ${}", param_count));
+            param_count += 1;
+        }
+        
+        // Always update updated_at
+        update_fields.push(format!("updated_at = ${}", param_count));
+        param_count += 1;
+        
+        // Add WHERE clause
+        update_fields.push(format!("id = ${}", param_count));
+        
+        if update_fields.len() == 2 {
+            // Only updated_at and id - nothing to update
+            return Err(anyhow::anyhow!("No fields to update"));
+        }
+        
+        let query_str = format!(
+            "UPDATE waivers SET {} WHERE id = ${}",
+            update_fields[..update_fields.len()-1].join(", "),
+            param_count
+        );
+        
+        let mut query = sqlx::query(&query_str);
+        
+        if let Some(ref title) = update.title {
+            query = query.bind(title);
+        }
+        if let Some(ref description) = update.description {
+            query = query.bind(description);
+        }
+        if let Some(ref mitigation_plan) = update.mitigation_plan {
+            query = query.bind(mitigation_plan);
+        }
+        if let Some(expires_at) = update.expires_at {
+            query = query.bind(expires_at);
+        }
+        if let Some(ref status) = update.status {
+            query = query.bind(status);
+        }
+        if let Some(ref metadata) = update.metadata {
+            query = query.bind(metadata);
+        }
+        query = query.bind(now).bind(id);
+        
+        query.execute(&self.pool).await?;
+        
+        // Fetch updated waiver
+        let row = sqlx::query(
+            r#"
+            SELECT id, title, reason, description, gates, approved_by, impact_level,
+                   mitigation_plan, expires_at, created_at, updated_at, status, metadata
+            FROM waivers
+            WHERE id = $1
+            "#
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+        
+        match row {
+            Some(row) => {
+                let gates_json: serde_json::Value = row.try_get("gates")?;
+                let gates: Vec<String> = gates_json.as_array()
+                    .unwrap_or(&vec![])
+                    .iter()
+                    .filter_map(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .collect();
+                
+                Ok(Waiver {
+                    id: row.try_get("id")?,
+                    title: row.try_get("title")?,
+                    reason: row.try_get("reason")?,
+                    description: row.try_get("description")?,
+                    gates,
+                    approved_by: row.try_get("approved_by")?,
+                    impact_level: row.try_get("impact_level")?,
+                    mitigation_plan: row.try_get("mitigation_plan")?,
+                    expires_at: row.try_get("expires_at")?,
+                    created_at: row.try_get("created_at")?,
+                    updated_at: row.try_get("updated_at")?,
+                    status: row.try_get("status")?,
+                    metadata: row.try_get("metadata")?,
+                })
+            }
+            None => Err(anyhow::anyhow!("Waiver not found after update"))
+        }
     }
 }
 

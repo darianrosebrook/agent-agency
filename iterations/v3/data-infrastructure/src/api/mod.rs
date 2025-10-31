@@ -15,6 +15,7 @@ pub mod api_types;
 pub mod api_errors;
 pub mod middleware;
 pub mod server;
+#[cfg(feature = "orchestration")]
 pub mod handlers;
 pub mod types;
 pub mod health;
@@ -23,7 +24,11 @@ pub mod health;
 pub use api_types::*;
 pub use api_errors::{ApiError, Result};
 pub use middleware::*;
+
+// Conditionally re-export server types if orchestration feature is enabled
+#[cfg(feature = "orchestration")]
 pub use server::{RestApi, ApiState};
 
-// Re-export commonly used handler functions
+// Re-export commonly used handler functions (only available with orchestration feature)
+#[cfg(feature = "orchestration")]
 pub use handlers::*;

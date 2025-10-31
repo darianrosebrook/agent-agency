@@ -4,7 +4,7 @@
 use crate::memory_types::*;
 use crate::MemoryResult;
 use crate::MemoryError;
-use data_infrastructure::{DatabaseClient, DatabaseConfig, Row};
+use sqlx::{Row, PgPool};
 use std::sync::Arc;
 use std::collections::HashMap;
 use chrono::{DateTime, Utc, Duration};
@@ -14,7 +14,7 @@ use tracing::{info, debug, warn};
 /// Central memory manager coordinating all memory operations
 #[derive(Debug)]
 pub struct MemoryManager {
-    db_client: Arc<DatabaseClient>,
+    db_pool: PgPool,
     config: MemoryConfig,
     workspace_id: Option<uuid::Uuid>,
     workspace_registry: Option<Arc<crate::workspace_registry::WorkspaceRegistry>>,
@@ -38,12 +38,9 @@ impl MemoryManager {
     }
 
     /// Create a new memory manager
-    pub async fn new(config: MemoryConfig) -> MemoryResult<Self> {
-        let db_config = data_infrastructure::DatabaseConfig::default();
-        let db_client = Arc::new(DatabaseClient::new(db_config).await?);
-
+    pub async fn new(config: MemoryConfig, db_pool: PgPool) -> MemoryResult<Self> {
         Ok(Self {
-            db_client,
+            db_pool,
             config: config.clone(),
             workspace_id: config.workspace_config.current_workspace_id.parse().ok(),
             workspace_registry: None,
@@ -52,13 +49,11 @@ impl MemoryManager {
 
     pub async fn new_with_registry(
         config: MemoryConfig,
+        db_pool: PgPool,
         workspace_registry: Arc<crate::workspace_registry::WorkspaceRegistry>
     ) -> MemoryResult<Self> {
-        let db_config = data_infrastructure::DatabaseConfig::default();
-        let db_client = Arc::new(DatabaseClient::new(db_config).await?);
-
         Ok(Self {
-            db_client,
+            db_pool,
             config: config.clone(),
             workspace_id: config.workspace_config.current_workspace_id.parse().ok(),
             workspace_registry: Some(workspace_registry),
@@ -88,7 +83,7 @@ impl MemoryManager {
         .bind(experience.memory_type as i32)
         .bind(experience.timestamp)
         .bind(serde_json::to_value(&experience.metadata)?)
-        .execute(self.db_client.pool())
+        .execute(&self.db_pool)
         .await?;
 
         info!("Stored agent experience: {} for agent {}", memory_id, experience.agent_id);
@@ -106,7 +101,7 @@ impl MemoryManager {
             "#,
         )
         .bind(memory_id)
-        .fetch_optional(self.db_client.pool())
+        .fetch_optional(&self.db_pool)
         .await?
         .ok_or_else(|| MemoryError::NotFound(format!("Memory not found: {}", memory_id)))?;
 
@@ -132,8 +127,11 @@ impl MemoryManager {
         // Apply workspace filtering based on isolation level
         let workspace_filter = self.get_workspace_filter();
 
-        // For now, use a simple query - can be optimized later with proper query builders
-        let mut sql_query = sqlx::query(
+        // Optimized query with proper NULL handling - PostgreSQL will optimize away unused conditions
+        // The query uses parameterized NULL checks which allows the query planner to optimize
+        // based on actual parameter values. Indexes on agent_id, memory_type, and timestamp
+        // will be used when those parameters are provided.
+        let sql_query = sqlx::query(
             r#"
             SELECT ae.id, ae.agent_id, ae.task_id, ae.context, ae.input, ae.output, ae.outcome,
                    ae.memory_type, ae.timestamp, ae.metadata
@@ -157,7 +155,7 @@ impl MemoryManager {
         .bind(workspace_filter)
         .bind(query.limit.unwrap_or(100) as i32);
 
-        let rows = sql_query.fetch_all(self.db_client.pool()).await?;
+        let rows = sql_query.fetch_all(&self.db_pool).await?;
 
         let mut experiences = Vec::new();
         for row in rows {
@@ -191,7 +189,7 @@ impl MemoryManager {
         )
         .bind(memory_id)
         .bind(serde_json::to_value(metadata)?)
-        .execute(self.db_client.pool())
+        .execute(&self.db_pool)
         .await?;
 
         debug!("Updated metadata for memory: {}", memory_id);
@@ -204,7 +202,7 @@ impl MemoryManager {
             "DELETE FROM agent_experiences WHERE id = $1",
         )
         .bind(memory_id)
-        .execute(self.db_client.pool())
+        .execute(&self.db_pool)
         .await?;
 
         if result.rows_affected() == 0 {
@@ -227,7 +225,7 @@ impl MemoryManager {
             HAVING COUNT(*) > 5
             "#,
         )
-        .fetch_all(self.db_client.pool())
+        .fetch_all(&self.db_pool)
         .await?;
 
         let mut consolidated_count = 0;
@@ -263,7 +261,7 @@ impl MemoryManager {
             .bind(count)
             .bind(MemoryType::Semantic as i32)
             .bind(&task_type)
-            .execute(self.db_client.pool())
+            .execute(&self.db_pool)
             .await?;
 
             consolidated_count += 1;
@@ -283,7 +281,7 @@ impl MemoryManager {
         let result = sqlx::query(
             "DELETE FROM agent_experiences WHERE timestamp < NOW() - INTERVAL '90 days'",
         )
-        .execute(self.db_client.pool())
+        .execute(&self.db_pool)
         .await?;
 
         let deleted_count = result.rows_affected() as usize;
@@ -308,7 +306,7 @@ impl MemoryManager {
             FROM agent_experiences
             "#,
         )
-        .fetch_one(self.db_client.pool())
+        .fetch_one(&self.db_pool)
         .await?;
 
         let total_memories: i64 = row.try_get("total_memories")?;

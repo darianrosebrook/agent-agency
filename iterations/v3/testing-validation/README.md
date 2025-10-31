@@ -88,6 +88,150 @@ Task Submission → Arbiter Orchestration → Council Governance → Worker Exec
 - Scope compliance (no unrelated file modifications)
 - Mutation score meets tier requirements
 
+### 2. CAWS Constitutional Authority Tests
+
+**Objective**: Validate agents operate under CAWS governance with proper waiver management.
+
+**What it tests**:
+- Working spec validation and compliance
+- Waiver creation and approval workflows
+- Budget enforcement (max_files, max_loc)
+- Scope boundary enforcement
+- CAWS verdict generation and provenance
+
+**Key validations**:
+- Agents cannot bypass CAWS policies
+- Waivers require proper justification
+- Budget violations are blocked
+- Provenance chains are immutable
+- CAWS verdicts are properly signed
+
+### 3. Self-Prompting Loop Tests
+
+**Objective**: Validate iterative improvement with satisficing logic and evaluation frameworks.
+
+**What it tests**:
+- Satisficing logic (good enough vs. endless optimization)
+- Evaluation framework integration
+- Iteration limits and quality ceilings
+- Model hot-swapping during loops
+- Progress tracking and stopping criteria
+
+**Key validations**:
+- Loops stop at quality thresholds
+- Iteration limits prevent infinite cycles
+- Model performance improves over iterations
+- Evaluation scores correlate with quality
+- Satisficing prevents over-optimization
+
+### 4. Human Intervention Tests
+
+**Objective**: Validate pause/resume/cancel capabilities with real-time control.
+
+**What it tests**:
+- Task pause and resume functionality
+- Task cancellation with cleanup
+- Real-time status monitoring
+- Human override capabilities
+- Intervention API integration
+
+**Key validations**:
+- Paused tasks can be resumed
+- Cancelled tasks clean up resources
+- Status updates are real-time
+- Human interventions override automation
+- Intervention API is secure
+
+### 5. Reflexive Learning Tests
+
+**Objective**: Validate continuous improvement through feedback loops and performance tracking.
+
+**What it tests**:
+- Performance data collection
+- Learning from task outcomes
+- Model selection optimization
+- Curriculum learning progression
+- Adaptive resource allocation
+
+**Key validations**:
+- Performance metrics are collected
+- Learning improves future performance
+- Model selection becomes more optimal
+- Resource allocation adapts
+- Curriculum progression works
+
+### 6. Multi-Agent Coordination Tests
+
+**Objective**: Validate agent-to-agent communication, arbitration, and conflict resolution.
+
+**What it tests**:
+- Agent communication protocols
+- Arbitration mechanisms
+- Conflict resolution strategies
+- Task decomposition and delegation
+- Consensus formation
+
+**Key validations**:
+- Agents can communicate effectively
+- Arbitration resolves conflicts
+- Tasks are properly decomposed
+- Consensus is reached
+- Coordination scales
+
+### 7. Claim Extraction & Verification Tests
+
+**Objective**: Validate factual accuracy, hallucination detection, and evidence-based reasoning.
+
+**What it tests**:
+- Claim extraction from outputs
+- Evidence verification
+- Hallucination detection
+- Contextual disambiguation
+- Factual accuracy validation
+
+**Key validations**:
+- Claims are properly extracted
+- Evidence is verifiable
+- Hallucinations are detected
+- Context is properly handled
+- Accuracy scores are meaningful
+
+### 8. Performance & Scalability Tests
+
+**Objective**: Validate operation under load, resource constraints, and optimization strategies.
+
+**What it tests**:
+- Resource utilization monitoring
+- Performance under concurrent load
+- Memory and CPU optimization
+- Response time SLAs
+- Scalability with multiple agents
+
+**Key validations**:
+- Performance meets SLAs under load
+- Resource usage stays within bounds
+- Concurrent operations work correctly
+- Memory leaks are prevented
+- CPU usage scales appropriately
+
+### 9. Security & Privacy Tests
+
+**Objective**: Validate safe operation, data protection, and audit compliance.
+
+**What it tests**:
+- Input validation and sanitization
+- Secure communication protocols
+- Data encryption and access controls
+- Audit trail integrity
+- Privacy protection measures
+
+**Key validations**:
+- No security vulnerabilities exploited
+- Data is properly encrypted
+- Access controls work correctly
+- Audit trails are tamper-proof
+- Privacy regulations are complied with
+
 ### 2. Autonomous Research and Summary
 
 **Objective**: Test research and summarization capabilities with citation validation.
@@ -120,6 +264,108 @@ Task Submission → Arbiter Orchestration → Council Governance → Worker Exec
 - Mutation score exceeds 90% threshold
 - Implementation is CAWS compliant
 
+## Implementation Roadmap & Test Specifications
+
+### Phase 1: Core Infrastructure (1-2 weeks)
+
+**Priority**: High - Foundation for all other tests
+
+**Deliverables**:
+1. **CAWS Constitutional Authority Tests**
+   - Working spec validation and compliance
+   - Waiver creation and approval workflows
+   - Budget enforcement (max_files, max_loc)
+   - Scope boundary enforcement
+   - CAWS verdict generation and provenance
+
+2. **Self-Prompting Loop Tests**
+   - Satisficing logic implementation
+   - Evaluation framework integration
+   - Iteration limits and quality ceilings
+   - Model hot-swapping during loops
+   - Progress tracking and stopping criteria
+
+**Success Criteria**:
+- Agents cannot bypass CAWS policies
+- Loops stop at quality thresholds
+- Budget violations are blocked
+- Provenance chains are immutable
+
+### Phase 2: Human & Reflexive Systems (2-3 weeks)
+
+**Priority**: High - Core autonomous capabilities
+
+**Deliverables**:
+1. **Human Intervention Tests**
+   - Task pause and resume functionality
+   - Task cancellation with cleanup
+   - Real-time status monitoring
+   - Human override capabilities
+   - Intervention API integration
+
+2. **Reflexive Learning Tests**
+   - Performance data collection
+   - Learning from task outcomes
+   - Model selection optimization
+   - Curriculum learning progression
+   - Adaptive resource allocation
+
+**Success Criteria**:
+- Paused tasks can be resumed
+- Cancelled tasks clean up resources
+- Performance metrics are collected
+- Learning improves future performance
+
+### Phase 3: Multi-Agent & Verification (3-4 weeks)
+
+**Priority**: Medium - Advanced coordination
+
+**Deliverables**:
+1. **Multi-Agent Coordination Tests**
+   - Agent communication protocols
+   - Arbitration mechanisms
+   - Conflict resolution strategies
+   - Task decomposition and delegation
+   - Consensus formation
+
+2. **Claim Extraction & Verification Tests**
+   - Claim extraction from outputs
+   - Evidence verification
+   - Hallucination detection
+   - Contextual disambiguation
+   - Factual accuracy validation
+
+**Success Criteria**:
+- Agents can communicate effectively
+- Arbitration resolves conflicts
+- Claims are properly extracted
+- Evidence is verifiable
+
+### Phase 4: Production Readiness (2-3 weeks)
+
+**Priority**: Medium - Production validation
+
+**Deliverables**:
+1. **Performance & Scalability Tests**
+   - Resource utilization monitoring
+   - Performance under concurrent load
+   - Memory and CPU optimization
+   - Response time SLAs
+   - Scalability with multiple agents
+
+2. **Security & Privacy Tests**
+   - Input validation and sanitization
+   - Secure communication protocols
+   - Data encryption and access controls
+   - Audit trail integrity
+   - Privacy protection measures
+
+**Success Criteria**:
+- Performance meets SLAs under load
+- No security vulnerabilities exploited
+- Resource usage stays within bounds
+- Data is properly encrypted
+
 ## Prerequisites
 
 ### Required Software
@@ -149,6 +395,253 @@ brew install ollama
 # Pull required model
 ollama pull gemma3n:e2b
 ```
+
+## Detailed Test Implementation Plan
+
+### CAWS Constitutional Authority Test Suite
+
+**Test File**: `src/scenarios/caws_governance.rs`
+
+**Test Cases**:
+1. **Working Spec Validation Test**
+   - Create invalid working spec (missing risk_tier)
+   - Verify CAWS validation fails with appropriate error
+   - Fix spec and verify validation passes
+
+2. **Budget Enforcement Test**
+   - Set max_files=5 in working spec
+   - Attempt to modify 10 files
+   - Verify operation is blocked
+   - Create waiver and verify operation succeeds
+
+3. **Scope Boundary Test**
+   - Define scope.in with specific directories
+   - Attempt to modify files outside scope
+   - Verify changes are rejected
+   - Update scope and verify changes succeed
+
+4. **Waiver Workflow Test**
+   - Create waiver request for budget violation
+   - Verify waiver requires justification
+   - Test waiver approval/denial process
+   - Verify approved waivers enable blocked operations
+
+5. **Provenance Chain Test**
+   - Execute task with CAWS compliance
+   - Verify CAWS verdict is generated
+   - Check provenance chain immutability
+   - Validate Git trailer integration
+
+### Self-Prompting Loop Test Suite
+
+**Test File**: `src/scenarios/self_prompting_loops.rs`
+
+**Test Cases**:
+1. **Satisficing Logic Test**
+   - Configure loop with quality threshold 0.85
+   - Run loop that reaches threshold after 2 iterations
+   - Verify loop stops (satisficed) not max iterations
+
+2. **Iteration Limit Test**
+   - Set max_iterations=3
+   - Configure loop that never reaches threshold
+   - Verify loop stops after 3 iterations with "max-iterations" reason
+
+3. **Quality Ceiling Test**
+   - Run loop with no improvement after 2 iterations
+   - Verify loop stops with "quality-ceiling" reason
+   - Check no_change_streak tracking
+
+4. **Model Hot-Swap Test**
+   - Start loop with Model A
+   - Configure failure condition for Model A
+   - Verify Model B is selected for next iteration
+   - Test ModelSwapped event emission
+
+5. **Evaluation Framework Integration Test**
+   - Run complete loop with real evaluation
+   - Verify evaluation scores correlate with quality
+   - Test progress tracking and stopping criteria
+
+### Human Intervention Test Suite
+
+**Test File**: `src/scenarios/human_intervention.rs`
+
+**Test Cases**:
+1. **Task Pause/Resume Test**
+   - Start long-running autonomous task
+   - Issue pause command via intervention API
+   - Verify task state is saved and execution stops
+   - Issue resume command and verify continuation
+
+2. **Task Cancellation Test**
+   - Start autonomous task
+   - Issue cancel command
+   - Verify task terminates and resources are cleaned up
+   - Check cleanup includes worktrees and temp files
+
+3. **Real-time Monitoring Test**
+   - Start task and connect monitoring stream
+   - Verify status updates are real-time
+   - Test progress indicators and metrics
+   - Validate monitoring doesn't impact performance
+
+4. **Human Override Test**
+   - Start autonomous task
+   - Human provides manual direction
+   - Verify automation yields to human input
+   - Test override logging and provenance
+
+5. **Intervention API Security Test**
+   - Test authentication requirements
+   - Verify authorization controls
+   - Test rate limiting and abuse prevention
+   - Validate audit trail for interventions
+
+### Reflexive Learning Test Suite
+
+**Test File**: `src/scenarios/reflexive_learning.rs`
+
+**Test Cases**:
+1. **Performance Data Collection Test**
+   - Run multiple tasks through system
+   - Verify performance metrics are collected
+   - Check data persistence and aggregation
+   - Validate metric accuracy
+
+2. **Learning Adaptation Test**
+   - Establish baseline performance
+   - Run learning algorithm on collected data
+   - Verify model selection improves
+   - Test resource allocation optimization
+
+3. **Curriculum Progression Test**
+   - Configure multi-stage curriculum
+   - Run tasks through progression
+   - Verify difficulty adjustment
+   - Test failure mode mitigation
+
+4. **Adaptive Resource Allocation Test**
+   - Monitor resource usage patterns
+   - Verify allocation adapts to task complexity
+   - Test budget adjustments
+   - Validate performance improvements
+
+### Multi-Agent Coordination Test Suite
+
+**Test File**: `src/scenarios/multi_agent_coordination.rs`
+
+**Test Cases**:
+1. **Agent Communication Test**
+   - Start multiple agents
+   - Verify inter-agent communication
+   - Test message passing and coordination
+   - Validate protocol compliance
+
+2. **Arbitration Mechanism Test**
+   - Create conflicting agent outputs
+   - Test arbitration resolution
+   - Verify consensus formation
+   - Check arbitration logging
+
+3. **Task Decomposition Test**
+   - Submit complex task
+   - Verify proper decomposition
+   - Test subtask delegation
+   - Validate coordination
+
+4. **Conflict Resolution Test**
+   - Engineer conflicting agent behaviors
+   - Test resolution strategies
+   - Verify system stability
+   - Check outcome quality
+
+### Claim Extraction & Verification Test Suite
+
+**Test File**: `src/scenarios/claim_verification.rs`
+
+**Test Cases**:
+1. **Claim Extraction Test**
+   - Provide LLM output with claims
+   - Verify claims are properly extracted
+   - Test atomic claim decomposition
+   - Validate extraction accuracy
+
+2. **Evidence Verification Test**
+   - Extract claims from output
+   - Test evidence verification process
+   - Verify CAWS compliance checking
+   - Validate verification results
+
+3. **Hallucination Detection Test**
+   - Provide output with potential hallucinations
+   - Test detection mechanisms
+   - Verify false positive/negative rates
+   - Validate accuracy scoring
+
+4. **Contextual Disambiguation Test**
+   - Provide ambiguous output
+   - Test disambiguation resolution
+   - Verify context handling
+   - Validate resolution accuracy
+
+### Performance & Scalability Test Suite
+
+**Test File**: `src/scenarios/performance_scalability.rs`
+
+**Test Cases**:
+1. **Resource Utilization Test**
+   - Monitor CPU, memory, disk usage
+   - Test under various loads
+   - Verify resource bounds
+   - Check optimization effectiveness
+
+2. **Concurrent Load Test**
+   - Run multiple agents simultaneously
+   - Test coordination under load
+   - Verify performance scaling
+   - Check resource contention handling
+
+3. **SLA Compliance Test**
+   - Test response time requirements
+   - Verify throughput targets
+   - Check performance degradation
+   - Validate optimization strategies
+
+4. **Memory Leak Prevention Test**
+   - Run extended test scenarios
+   - Monitor memory usage over time
+   - Verify no leaks occur
+   - Test garbage collection effectiveness
+
+### Security & Privacy Test Suite
+
+**Test File**: `src/scenarios/security_privacy.rs`
+
+**Test Cases**:
+1. **Input Validation Test**
+   - Test various input types
+   - Verify sanitization works
+   - Check for injection vulnerabilities
+   - Validate error handling
+
+2. **Data Encryption Test**
+   - Test data at rest encryption
+   - Verify in-transit encryption
+   - Check key management
+   - Validate access controls
+
+3. **Audit Trail Integrity Test**
+   - Test audit log generation
+   - Verify tamper resistance
+   - Check log completeness
+   - Validate chain of custody
+
+4. **Privacy Protection Test**
+   - Test data anonymization
+   - Verify privacy controls
+   - Check compliance requirements
+   - Validate access logging
 
 ## Running Tests
 
@@ -431,6 +924,244 @@ jobs:
 - **Council Validation**: Governance decisions properly tested
 - **CAWS Compliance**: Quality standards enforced
 - **Provenance Tracking**: All operations properly logged
+
+## Test Implementation Dependencies & Prerequisites
+
+### Core Infrastructure Requirements
+
+Before implementing the new test suites, the following components must be available:
+
+#### 1. CAWS Working Spec Validation (`system-common-interfaces`)
+- Working spec schema validation
+- Risk tier enforcement
+- Scope boundary checking
+- Budget validation logic
+
+#### 2. Waiver System (`system-common-interfaces`)
+- Waiver creation and approval workflow
+- Budget exception handling
+- Justification requirements
+- Approval chain management
+
+#### 3. Provenance System (`system-quality-security`)
+- CAWS verdict generation
+- Git trailer integration
+- Immutable audit chains
+- Provenance tracking APIs
+
+#### 4. Evaluation Framework (`agent-orchestration`)
+- Text transformation evaluator
+- Code quality evaluator
+- Design token compliance evaluator
+- Satisficing logic implementation
+
+#### 5. Self-Prompting Loop Controller (`agent-orchestration`)
+- Iteration management
+- Quality threshold monitoring
+- Model hot-swapping
+- Progress tracking
+
+#### 6. Intervention API (`data-interfaces`)
+- Task pause/resume/cancel endpoints
+- Real-time status monitoring
+- Human override capabilities
+- Intervention audit logging
+
+#### 7. Reflexive Learning System (`reflexive-learning`)
+- Performance data collection
+- Learning algorithm implementation
+- Curriculum progression
+- Adaptive resource allocation
+
+#### 8. Multi-Agent Communication (`agent-orchestration`)
+- Agent-to-agent messaging
+- Arbitration mechanisms
+- Conflict resolution strategies
+- Consensus formation
+
+#### 9. Claim Extraction & Verification (`system-quality-security`)
+- Claim extraction algorithms
+- Evidence verification
+- Hallucination detection
+- Contextual disambiguation
+
+### Implementation Priority Matrix
+
+| Component | Priority | Estimated Effort | Dependencies |
+|-----------|----------|------------------|--------------|
+| CAWS Validation | Critical | 1 week | None |
+| Waiver System | Critical | 1 week | CAWS Validation |
+| Evaluation Framework | Critical | 2 weeks | CAWS Validation |
+| Self-Prompting Loops | Critical | 2 weeks | Evaluation Framework |
+| Intervention API | High | 1 week | Task Management |
+| Reflexive Learning | High | 3 weeks | Performance Monitoring |
+| Multi-Agent Comm | Medium | 2 weeks | Agent Orchestration |
+| Claim Verification | Medium | 2 weeks | Evaluation Framework |
+| Performance Tests | Medium | 1 week | Monitoring Infrastructure |
+| Security Tests | Low | 1 week | Security Infrastructure |
+
+### Next Steps Implementation
+
+#### Immediate Actions (Next 1-2 weeks)
+
+1. **Extend Current Test Infrastructure**
+   - Add new scenario enums to `lib.rs`
+   - Update `scenarios/mod.rs` with new modules
+   - Extend `TestEnvironment` for new service requirements
+
+2. **Implement CAWS Governance Tests**
+   - Create `src/scenarios/caws_governance.rs`
+   - Add working spec validation tests
+   - Implement budget enforcement tests
+   - Add waiver workflow tests
+
+3. **Enhance Evaluation Framework**
+   - Extend evaluators in `harness/assertions.rs`
+   - Add satisficing logic to evaluation framework
+   - Implement quality threshold monitoring
+
+#### Short-term Goals (Next 4-6 weeks)
+
+1. **Complete Core Autonomous Tests**
+   - Self-prompting loop tests
+   - Human intervention tests
+   - Reflexive learning tests
+
+2. **Multi-Agent Coordination**
+   - Agent communication tests
+   - Arbitration mechanism tests
+   - Conflict resolution tests
+
+3. **Quality Assurance**
+   - Claim extraction and verification
+   - Performance and scalability tests
+   - Security and privacy tests
+
+#### Success Metrics
+
+- **Test Coverage**: 90%+ coverage for autonomous flows
+- **Integration Validation**: All real service interactions tested
+- **CAWS Compliance**: 100% of tests pass CAWS validation
+- **Performance**: Tests complete within 5 minutes each
+- **Reliability**: 95%+ test success rate in CI
+
+## 🏗️ Current Implementation Status
+
+### ✅ **Implemented (Infrastructure)**
+- **Core Test Runner** (`lib.rs`, `main.rs`): Complete E2E test orchestration with CLI support
+- **Test Metrics** (`lib.rs`): Comprehensive metrics collection for all test categories
+- **Service Infrastructure** (`harness/`, `services/`): Local service management and test environment setup
+- **Test Scenarios Framework** (`scenarios/mod.rs`): Modular test organization with conditional compilation
+
+### ✅ **Implemented (Test Scenarios)**
+
+#### CAWS Governance Test Suite (`scenarios/caws_governance.rs`)
+Complete implementation with 5 sub-tests:
+- Working spec validation testing
+- Budget enforcement testing
+- Scope boundary enforcement testing
+- Waiver workflow testing
+- Provenance chain validation testing
+- **Integration Status**: Uses real validation logic (JSON schema validation)
+
+#### Human Intervention Test Suite (`scenarios/human_intervention.rs`)
+Complete implementation with 5 sub-tests:
+- Task pause/resume functionality
+- Task cancellation with cleanup
+- Real-time status monitoring
+- Human override capabilities
+- Intervention API security
+- **Integration Status**: 
+  - ✅ Checks real `OrchestratorService` availability
+  - 🚧 TODO: Integrate with `AutonomousExecutor` when test harness provides it
+  - 📝 **Dependency**: `AutonomousExecutor` requires runtime_validator, verdict_writer, and other dependencies
+
+#### Performance & Scalability Test Suite (`scenarios/performance_scalability.rs`)
+Complete implementation with 4 sub-tests:
+- Resource utilization monitoring
+- Concurrent load testing
+- SLA compliance verification
+- Memory leak prevention
+- **Integration Status**:
+  - ✅ Uses real `sysinfo` crate for system metrics (CPU, memory, disk)
+  - ✅ Real concurrent task execution with `tokio::spawn`
+  - ✅ Real P95 percentile calculation
+  - 🚧 TODO: Export `health_metrics` module in `system-observability/lib.rs` for centralized metrics
+  - 📝 **Dependency**: `system-observability::health_metrics::MetricsCollector` not exported in lib.rs
+
+#### Security & Privacy Test Suite (`scenarios/security_privacy.rs`)
+Complete implementation with 4 sub-tests:
+- Input validation and sanitization
+- Data encryption and access controls
+- Audit trail integrity
+- Privacy protection measures
+- **Integration Status**:
+  - ✅ Uses real `system-quality-security::input_validation`
+  - ✅ Real SQL injection detection via `validate_sql_safe()`
+  - ✅ Real XSS detection via `validate_string_input()`
+  - ✅ Real input sanitization
+  - ✅ **Real PostgreSQL database operations** for audit trail testing
+  - ✅ Real database table creation, inserts, queries, and cleanup
+  - ✅ Real chronological ordering verification from database
+  - 🚧 TODO: Data encryption service (needs implementation)
+  - 🚧 TODO: Privacy anonymization service (needs implementation)
+  - 📝 **Dependencies**: Encryption and anonymization services need to be implemented
+
+### 🚧 **Next Implementation Phase**
+
+**Priority 1: Self-Prompting Loops Test Suite** (Requires `full` feature flag)
+- Satisficing logic validation
+- Iteration limit enforcement
+- Quality ceiling verification
+- Model hot-swapping testing
+- Evaluation framework integration
+
+**Priority 2: Reflexive Learning Test Suite** (Requires `full` feature flag)
+- Performance data collection
+- Learning adaptation verification
+- Curriculum progression testing
+- Adaptive resource allocation
+- Continuous improvement validation
+
+**Priority 3: Multi-Agent Coordination Test Suite** (Requires `full` feature flag)
+- Agent communication protocols
+- Arbitration and conflict resolution
+- Task decomposition strategies
+- Consensus formation mechanisms
+- Resource sharing coordination
+
+**Priority 4: Claim Extraction & Verification Test Suite** (Requires `full` feature flag)
+- Claim extraction accuracy
+- Evidence verification reliability
+- Hallucination detection effectiveness
+- Contextual disambiguation
+- Factual accuracy assessment
+
+## 🧪 **Ready for Testing**
+
+The test infrastructure is now complete and ready for execution. You can run individual test scenarios:
+
+```bash
+# Run CAWS governance tests
+cargo run -- --caws-governance
+
+# Run human intervention tests
+cargo run -- --human-intervention
+
+# Run performance tests
+cargo run -- --performance-scalability
+
+# Run security tests
+cargo run -- --security-privacy
+
+# Run all available tests (non-full feature)
+cargo run -- --all
+
+# Run legacy autonomous workflow test
+cargo run -- --autonomous
+```
+
+**Note**: Self-prompting loops, reflexive learning, multi-agent coordination, and claim verification tests require the `full` feature flag and are currently implemented as placeholder structures.
 
 ## Contributing
 

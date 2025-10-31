@@ -114,6 +114,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
+ "system-common-interfaces",
  "system-configuration 0.1.0",
  "tempfile",
  "thiserror 1.0.69",
@@ -132,14 +133,12 @@ dependencies = [
 name = "agent-memory"
 version = "0.1.0"
 dependencies = [
- "agent-data-processing",
  "anyhow",
  "async-trait",
  "chrono",
  "config",
  "criterion",
  "dashmap 5.5.3",
- "data-infrastructure",
  "flate2",
  "half",
  "ndarray 0.15.6",
@@ -150,6 +149,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "sqlx",
+ "system-common-interfaces",
  "tempfile",
  "thiserror 1.0.69",
  "tokio",
@@ -184,7 +184,6 @@ name = "agent-orchestration"
 version = "0.1.0"
 dependencies = [
  "agent-agency-contracts",
- "agent-data-processing",
  "agent-memory",
  "anyhow",
  "async-trait",
@@ -195,7 +194,6 @@ dependencies = [
  "comrak",
  "console 0.16.1",
  "crossbeam",
- "data-infrastructure",
  "development-tools",
  "fastrand 2.3.0",
  "flate2",
@@ -224,6 +222,7 @@ dependencies = [
  "sqlx",
  "statrs",
  "strsim 0.11.1",
+ "system-common-interfaces",
  "system-observability",
  "system-resilience",
  "tempfile",
@@ -251,6 +250,7 @@ dependencies = [
  "agent-data-processing",
  "agent-memory",
  "agent-orchestration",
+ "agent-workers",
  "ammonia",
  "anyhow",
  "async-trait",
@@ -277,6 +277,7 @@ dependencies = [
  "once_cell",
  "parking_lot 0.12.5",
  "petgraph",
+ "priority-queue",
  "prometheus",
  "pulldown-cmark",
  "qdrant-client",
@@ -293,6 +294,7 @@ dependencies = [
  "strsim 0.10.0",
  "system-acceleration",
  "system-configuration 0.1.0",
+ "system-observability",
  "tendril",
  "thiserror 1.0.69",
  "tokio",
@@ -301,6 +303,7 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "uuid",
+ "walkdir",
 ]
 
 [[package]]
@@ -332,7 +335,9 @@ dependencies = [
  "reqwest 0.11.27",
  "serde",
  "serde_json",
+ "sqlx",
  "syn 2.0.108",
+ "system-observability",
  "system-resilience",
  "tdigest 0.1.1",
  "thiserror 1.0.69",
@@ -2404,6 +2409,7 @@ version = "0.1.0"
 dependencies = [
  "agent-agency-contracts",
  "agent-mcp",
+ "agent-orchestration",
  "anyhow",
  "async-trait",
  "axum",
@@ -2431,6 +2437,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "sqlx",
+ "system-common-interfaces",
  "system-configuration 0.1.0",
  "system-quality-security",
  "tar",
@@ -2460,6 +2467,7 @@ dependencies = [
  "axum",
  "chrono",
  "clap",
+ "data-infrastructure",
  "futures-util",
  "lazy_static",
  "notify",
@@ -7405,6 +7413,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "priority-queue"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0bda9164fe05bc9225752d54aae413343c36f684380005398a6a8fde95fe785"
+dependencies = [
+ "autocfg",
+ "indexmap 1.9.3",
+]
+
+[[package]]
 name = "proc-macro-crate"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9626,6 +9644,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "system-common-interfaces"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "system-configuration"
 version = "0.1.0"
 dependencies = [
@@ -9751,7 +9784,6 @@ dependencies = [
  "core-foundation 0.9.4",
  "crossbeam",
  "dashmap 5.5.3",
- "data-infrastructure",
  "futures",
  "hdrhistogram",
  "libc",
@@ -9769,6 +9801,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "sysinfo",
+ "system-common-interfaces",
  "system-configuration 0.1.0",
  "tdigest 0.2.3",
  "tempfile",
@@ -9816,6 +9849,7 @@ dependencies = [
  "pathdiff",
  "pkcs8",
  "rand 0.8.5",
+ "rand_distr 0.4.3",
  "regex",
  "reqwest 0.11.27",
  "ring 0.17.9",

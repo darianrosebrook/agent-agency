@@ -124,3 +124,47 @@ pub struct TaskExecutionStats {
     pub p95_execution_time_ms: f64,
     pub p99_execution_time_ms: f64,
 }
+
+/// Task requirements for execution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskRequirements {
+    pub required_languages: Vec<String>,
+    pub required_frameworks: Vec<String>,
+    pub required_domains: Vec<String>,
+    pub min_quality_score: f32,
+    pub min_caws_awareness: f32,
+    pub max_execution_time_ms: Option<u64>,
+    pub preferred_worker_type: Option<String>,
+    pub context_length_estimate: usize,
+}
+
+/// Task context for execution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskContext {
+    pub task_id: Uuid,
+    pub worker_id: Uuid,
+    pub start_time: DateTime<Utc>,
+    pub timeout_ms: u64,
+    pub retry_count: u32,
+    pub max_retries: u32,
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+/// Task scope definition
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskScope {
+    pub domains: Vec<String>,
+    pub files_affected: Vec<String>,
+    pub max_loc: Option<u32>,
+}
+
+/// Execution status for tasks
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ExecutionStatus {
+    Pending,
+    Running,
+    Completed,
+    Failed,
+    Cancelled,
+    Timeout,
+}

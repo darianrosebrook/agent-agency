@@ -83,6 +83,30 @@ pub enum RelationshipType {
     Other,
 }
 
+impl RelationshipType {
+    /// Convert from database integer representation
+    fn from_i32(value: i32) -> Self {
+        match value {
+            0 => RelationshipType::Performs,
+            1 => RelationshipType::Requires,
+            2 => RelationshipType::Enables,
+            3 => RelationshipType::Conflicts,
+            4 => RelationshipType::Improves,
+            5 => RelationshipType::LearnsFrom,
+            6 => RelationshipType::CollaboratesWith,
+            7 => RelationshipType::Manages,
+            8 => RelationshipType::Creates,
+            9 => RelationshipType::Uses,
+            10 => RelationshipType::Contains,
+            11 => RelationshipType::RelatedTo,
+            12 => RelationshipType::Causes,
+            13 => RelationshipType::Prevents,
+            14 => RelationshipType::SimilarTo,
+            _ => RelationshipType::Other,
+        }
+    }
+}
+
 /// Real HTTP-based entity extraction service
 #[derive(Debug)]
 pub struct HttpEntityExtractionService {
@@ -262,7 +286,7 @@ impl KnowledgeGraphEngine {
         }
 
         Ok(Self {
-            db_client,
+            db_pool,
             config: config.clone(),
             entity_cache: dashmap::DashMap::new(),
             relationship_cache: dashmap::DashMap::new(),
@@ -618,12 +642,13 @@ impl KnowledgeGraphEngine {
             let entity_id: String = row.try_get("id")?;
             let memory_path = vec![format!("Similar task: {}", entity_id)];
 
-            // Find memories associated with this entity
-            let memories = sqlx::query(
+            // Find memories associated with this entity via relationships
+            let relationships = sqlx::query(
                 r#"
-                SELECT id FROM knowledge_graph_relationships
+                SELECT source_memories FROM knowledge_graph_relationships
                 WHERE (source_entity = $1 OR target_entity = $1)
                   AND relationship_type = $2
+                  AND array_length(source_memories, 1) > 0
                 "#,
             )
             .bind(&entity_id)
@@ -631,10 +656,17 @@ impl KnowledgeGraphEngine {
             .fetch_all(&*self.db_pool)
             .await?;
 
-            for memory_row in memories {
-                // This is simplified - would need to join with actual memory IDs
-                // For now, just return placeholder
-                related_memories.push((MemoryId::new_v4(), memory_path.clone()));
+            for rel_row in relationships {
+                // Extract memory IDs from the source_memories array
+                // PostgreSQL UUID arrays are returned as Vec<uuid::Uuid> by sqlx
+                let source_memories: Option<Vec<uuid::Uuid>> = rel_row.try_get("source_memories")?;
+                
+                if let Some(memory_ids) = source_memories {
+                    for memory_id in memory_ids {
+                        // MemoryId is a type alias for uuid::Uuid, so we can use it directly
+                        related_memories.push((memory_id, memory_path.clone()));
+                    }
+                }
             }
         }
 
@@ -680,15 +712,16 @@ impl KnowledgeGraphEngine {
         })
     }
 
-    /// Find paths between entities (simplified implementation)
+    /// Find paths between entities using breadth-first search
     async fn find_paths(&self, start: &str, targets: &[String], max_hops: usize) -> MemoryResult<Vec<ReasoningPath>> {
         let mut paths = Vec::new();
 
-        // Simple breadth-first search implementation
-        let mut queue = vec![(vec![start.to_string()], vec![], 1.0, 0)];
-        let mut visited = std::collections::HashSet::new();
+        // Breadth-first search implementation using VecDeque for FIFO queue
+        use std::collections::VecDeque;
+        let mut queue = VecDeque::new();
+        queue.push_back((vec![start.to_string()], vec![], 1.0, 0));
 
-        while let Some((current_path, relationships, confidence, hops)) = queue.pop() {
+        while let Some((current_path, relationships, confidence, hops)) = queue.pop_front() {
             if hops >= max_hops {
                 continue;
             }
@@ -703,14 +736,17 @@ impl KnowledgeGraphEngine {
                     confidence,
                     length: hops,
                 });
+                // Continue searching for more paths (up to a limit)
+                if paths.len() >= 10 {
+                    break;
+                }
                 continue;
             }
 
-            // Avoid cycles
-            if visited.contains(current_entity) {
+            // Avoid cycles within the same path
+            if current_path.iter().filter(|&e| e == current_entity).count() > 1 {
                 continue;
             }
-            visited.insert(current_entity.clone());
 
             // Find relationships from current entity
             let related = sqlx::query(
@@ -718,6 +754,7 @@ impl KnowledgeGraphEngine {
                 SELECT target_entity, relationship_type, strength, confidence
                 FROM knowledge_graph_relationships
                 WHERE source_entity = $1 AND confidence >= 0.5
+                ORDER BY strength DESC, confidence DESC
                 LIMIT 10
                 "#,
             )
@@ -731,18 +768,29 @@ impl KnowledgeGraphEngine {
                 let strength: f32 = row.try_get("strength")?;
                 let rel_confidence: f32 = row.try_get("confidence")?;
 
+                // Skip if target is already in current path (avoid cycles)
+                if current_path.contains(&target) {
+                    continue;
+                }
+
                 let mut new_path = current_path.clone();
-                new_path.push(target);
+                new_path.push(target.clone());
 
                 let mut new_relationships = relationships.clone();
-                new_relationships.push(format!("{:?}", RelationshipType::RelatedTo));
+                // Use actual relationship type from database
+                let relationship_type = RelationshipType::from_i32(rel_type);
+                new_relationships.push(format!("{:?}", relationship_type));
 
+                // Calculate confidence as product of path confidence, relationship strength, and relationship confidence
                 let new_confidence = confidence * strength * rel_confidence;
                 let new_hops = hops + 1;
 
-                queue.push((new_path, new_relationships, new_confidence, new_hops));
+                queue.push_back((new_path, new_relationships, new_confidence, new_hops));
             }
         }
+
+        // Sort paths by confidence (descending)
+        paths.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal));
 
         Ok(paths)
     }

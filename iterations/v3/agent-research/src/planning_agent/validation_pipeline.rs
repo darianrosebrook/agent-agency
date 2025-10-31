@@ -2,16 +2,18 @@
 //!
 //! The validation pipeline orchestrates multiple validation stages
 //! including CAWS compliance, constraint validation, and risk assessment.
-//! Now uses common-pipeline framework for standardized patterns.
+//! Uses system-configuration validation pipeline for standardized patterns.
 
 use std::sync::Arc;
 use async_trait::async_trait;
 
-use crate::planning_errors::{PlanningError, PlanningResult};
-use crate::caws_integration::{CawsValidator, ValidationContext};
-use system_configuration::types::{ValidationStatus, ValidationResults, ValidationIssue, IssueSeverity};
+use crate::planning_agent::planning_errors::{PlanningError, PlanningResult};
+use crate::planning_agent::planning_caws_integration::{CawsValidator, ValidationContext};
+use system_configuration::types::{ValidationStatus, ValidationResults as DomainValidationResults, ValidationIssue, IssueSeverity};
+use system_configuration::validation::{ValidationPipeline as SystemValidationPipeline, ValidationStage as SystemValidationStage, ValidationResult, ValidationSeverity, ValidationPipelineConfig as SystemValidationPipelineConfig};
+use system_configuration::config::PipelineConfig;
+use system_configuration::error::{PipelineResult, PipelineError};
 use agent_agency_contracts::ContractKind;
-use common_pipeline::{ValidationPipeline as CommonValidationPipeline, ValidationStage as CommonValidationStage, ValidationResult as CommonValidationResult, ValidationPipelineConfig as CommonValidationConfig, ValidationSeverity as CommonValidationSeverity};
 
 /// Validation stage in the pipeline
 #[derive(Debug, Clone, PartialEq)]
@@ -23,7 +25,7 @@ pub enum ValidationStage {
     DependencyValidation,
 }
 
-/// Adapter to convert domain-specific validation stages to common validation stages
+/// Adapter to convert domain-specific validation stages to system-configuration validation stages
 pub struct ValidationStageAdapter {
     stage_type: ValidationStage,
     caws_validator: Option<Arc<dyn CawsValidator>>,
@@ -39,7 +41,7 @@ impl ValidationStageAdapter {
 }
 
 #[async_trait]
-impl CommonValidationStage for ValidationStageAdapter {
+impl SystemValidationStage for ValidationStageAdapter {
     fn name(&self) -> &str {
         match self.stage_type {
             ValidationStage::SchemaValidation => "schema_validation",
@@ -50,10 +52,10 @@ impl CommonValidationStage for ValidationStageAdapter {
         }
     }
 
-    async fn validate(&self, input: &serde_json::Value) -> common_pipeline::PipelineResult<Vec<CommonValidationResult>> {
+    async fn validate(&self, input: &serde_json::Value) -> PipelineResult<Vec<ValidationResult>> {
         // Convert serde_json::Value to WorkingSpec
         let working_spec: agent_agency_contracts::working_spec::WorkingSpec = serde_json::from_value(input.clone())
-            .map_err(|e| common_pipeline::PipelineError::Validation(e.to_string()))?;
+            .map_err(|e| PipelineError::Validation(e.to_string()))?;
 
         // Run the appropriate validation based on stage type
         let results = match self.stage_type {
@@ -66,32 +68,36 @@ impl CommonValidationStage for ValidationStageAdapter {
             ValidationStage::CawsValidation => {
                 if let Some(validator) = &self.caws_validator {
                     // Use the CAWS validator
-                    match validator.validate_working_spec(&working_spec).await {
+                    match validator.validate_working_spec(&working_spec, &ValidationContext {
+                        risk_tier: agent_agency_contracts::task_request::RiskTier::from(working_spec.risk_tier),
+                        environment: agent_agency_contracts::task_request::Environment::Development,
+                        options: Default::default(),
+                    }).await {
                         Ok(validation_result) => {
                             validation_result.violations.into_iter().map(|violation| {
                                 let severity = match violation.severity {
-                                    crate::caws_integration::ViolationSeverity::Error =>
-                                        CommonValidationSeverity::Error,
-                                    crate::caws_integration::ViolationSeverity::Warning =>
-                                        CommonValidationSeverity::Warning,
-                                    crate::caws_integration::ViolationSeverity::Info =>
-                                        CommonValidationSeverity::Info,
+                                    crate::planning_agent::planning_caws_integration::ViolationSeverity::Error =>
+                                        ValidationSeverity::Error,
+                                    crate::planning_agent::planning_caws_integration::ViolationSeverity::Warning =>
+                                        ValidationSeverity::Warning,
+                                    crate::planning_agent::planning_caws_integration::ViolationSeverity::Info =>
+                                        ValidationSeverity::Info,
                                 };
 
-                                CommonValidationResult::fail(severity, violation.code, violation.message)
+                                ValidationResult::fail(severity, violation.code, violation.message)
                             }).collect()
                         }
                         Err(e) => {
-                            vec![CommonValidationResult::fail(
-                                CommonValidationSeverity::Error,
+                            vec![ValidationResult::fail(
+                                ValidationSeverity::Error,
                                 "caws_validation_error",
                                 format!("CAWS validation failed: {}", e)
                             )]
                         }
                     }
                 } else {
-                    vec![CommonValidationResult::fail(
-                        CommonValidationSeverity::Error,
+                    vec![ValidationResult::fail(
+                        ValidationSeverity::Error,
                         "caws_validator_missing",
                         "CAWS validator not configured"
                     )]
@@ -109,21 +115,21 @@ impl CommonValidationStage for ValidationStageAdapter {
     }
 
     /// Validate working spec schema structure
-    fn validate_schema(&self, spec: &agent_agency_contracts::working_spec::WorkingSpec) -> Vec<CommonValidationResult> {
+    fn validate_schema(&self, spec: &agent_agency_contracts::working_spec::WorkingSpec) -> Vec<ValidationResult> {
         let mut results = Vec::new();
 
         // Check required fields
         if spec.id.is_empty() {
-            results.push(CommonValidationResult::fail(
-                CommonValidationSeverity::Error,
+            results.push(ValidationResult::fail(
+                ValidationSeverity::Error,
                 "missing_id",
                 "Working spec must have a non-empty ID"
             ));
         }
 
         if spec.title.is_empty() {
-            results.push(CommonValidationResult::fail(
-                CommonValidationSeverity::Error,
+            results.push(ValidationResult::fail(
+                ValidationSeverity::Error,
                 "missing_title",
                 "Working spec must have a non-empty title"
             ));
@@ -131,8 +137,8 @@ impl CommonValidationStage for ValidationStageAdapter {
 
         // Validate ID format (should be PREFIX-NUMBER)
         if !spec.id.is_empty() && !self.is_valid_id_format(&spec.id) {
-            results.push(CommonValidationResult::fail(
-                CommonValidationSeverity::Error,
+            results.push(ValidationResult::fail(
+                ValidationSeverity::Error,
                 "invalid_id_format",
                 "ID must follow format PREFIX-NUMBER (e.g., FEAT-001, FIX-042)"
             ));
@@ -140,8 +146,8 @@ impl CommonValidationStage for ValidationStageAdapter {
 
         // Validate risk tier
         if spec.risk_tier < 1 || spec.risk_tier > 3 {
-            results.push(CommonValidationResult::fail(
-                CommonValidationSeverity::Error,
+            results.push(ValidationResult::fail(
+                ValidationSeverity::Error,
                 "invalid_risk_tier",
                 "Risk tier must be between 1 and 3"
             ));
@@ -149,16 +155,16 @@ impl CommonValidationStage for ValidationStageAdapter {
 
         // Validate change budget
         if spec.change_budget.max_files == 0 {
-            results.push(CommonValidationResult::fail(
-                CommonValidationSeverity::Error,
+            results.push(ValidationResult::fail(
+                ValidationSeverity::Error,
                 "invalid_max_files",
                 "Max files must be greater than 0"
             ));
         }
 
         if spec.change_budget.max_loc == 0 {
-            results.push(CommonValidationResult::fail(
-                CommonValidationSeverity::Error,
+            results.push(ValidationResult::fail(
+                ValidationSeverity::Error,
                 "invalid_max_loc",
                 "Max lines of code must be greater than 0"
             ));
@@ -166,8 +172,8 @@ impl CommonValidationStage for ValidationStageAdapter {
 
         // Validate scope
         if spec.scope.in_directories.is_empty() {
-            results.push(CommonValidationResult::fail(
-                CommonValidationSeverity::Error,
+            results.push(ValidationResult::fail(
+                ValidationSeverity::Error,
                 "empty_scope_in",
                 "Scope must include at least one input directory"
             ));
@@ -175,8 +181,8 @@ impl CommonValidationStage for ValidationStageAdapter {
 
         // Validate acceptance criteria
         if spec.acceptance_criteria.is_empty() {
-            results.push(CommonValidationResult::fail(
-                CommonValidationSeverity::Error,
+            results.push(ValidationResult::fail(
+                ValidationSeverity::Error,
                 "missing_acceptance_criteria",
                 "Working spec must have at least one acceptance criterion"
             ));
@@ -185,24 +191,24 @@ impl CommonValidationStage for ValidationStageAdapter {
         // Validate each acceptance criterion
         for (i, criterion) in spec.acceptance_criteria.iter().enumerate() {
             if criterion.given.is_empty() {
-                results.push(CommonValidationResult::fail(
-                    CommonValidationSeverity::Error,
+                results.push(ValidationResult::fail(
+                    ValidationSeverity::Error,
                     format!("acceptance_criterion_{}_missing_given", i),
                     format!("Acceptance criterion {} must have a 'given' condition", i + 1)
                 ));
             }
 
             if criterion.when.is_empty() {
-                results.push(CommonValidationResult::fail(
-                    CommonValidationSeverity::Error,
+                results.push(ValidationResult::fail(
+                    ValidationSeverity::Error,
                     format!("acceptance_criterion_{}_missing_when", i),
                     format!("Acceptance criterion {} must have a 'when' action", i + 1)
                 ));
             }
 
             if criterion.then.is_empty() {
-                results.push(CommonValidationResult::fail(
-                    CommonValidationSeverity::Error,
+                results.push(ValidationResult::fail(
+                    ValidationSeverity::Error,
                     format!("acceptance_criterion_{}_missing_then", i),
                     format!("Acceptance criterion {} must have a 'then' outcome", i + 1)
                 ));
@@ -210,28 +216,28 @@ impl CommonValidationStage for ValidationStageAdapter {
         }
 
         if results.is_empty() {
-            results.push(CommonValidationResult::pass("schema_validation", "Schema validation passed"));
+            results.push(ValidationResult::pass("schema_validation", "Schema validation passed"));
         }
 
         results
     }
 
     /// Validate constraints and business rules
-    fn validate_constraints(&self, spec: &agent_agency_contracts::working_spec::WorkingSpec) -> Vec<CommonValidationResult> {
+    fn validate_constraints(&self, spec: &agent_agency_contracts::working_spec::WorkingSpec) -> Vec<ValidationResult> {
         let mut results = Vec::new();
 
         // Validate change budget constraints
         if spec.change_budget.max_files > 100 {
-            results.push(CommonValidationResult::fail(
-                CommonValidationSeverity::Warning,
+            results.push(ValidationResult::fail(
+                ValidationSeverity::Warning,
                 "large_change_budget",
                 "Change budget exceeds recommended maximum of 100 files"
             ));
         }
 
         if spec.change_budget.max_loc > 10000 {
-            results.push(CommonValidationResult::fail(
-                CommonValidationSeverity::Warning,
+            results.push(ValidationResult::fail(
+                ValidationSeverity::Warning,
                 "large_loc_budget",
                 "Lines of code budget exceeds recommended maximum of 10,000"
             ));
@@ -240,8 +246,8 @@ impl CommonValidationStage for ValidationStageAdapter {
         // Validate scope boundaries
         for dir in &spec.scope.in_directories {
             if dir.contains("node_modules") || dir.contains(".git") || dir.contains("target/") {
-                results.push(CommonValidationResult::fail(
-                    CommonValidationSeverity::Error,
+                results.push(ValidationResult::fail(
+                    ValidationSeverity::Error,
                     "invalid_scope_directory",
                     format!("Scope directory '{}' should not include build artifacts or dependencies", dir)
                 ));
@@ -254,8 +260,8 @@ impl CommonValidationStage for ValidationStageAdapter {
                                  spec.scope.in_directories.len() > 10;
 
         if is_high_risk_change && spec.risk_tier < 2 {
-            results.push(CommonValidationResult::fail(
-                CommonValidationSeverity::Warning,
+            results.push(ValidationResult::fail(
+                ValidationSeverity::Warning,
                 "risk_tier_mismatch",
                 "High-impact changes should use risk tier 2 or higher"
             ));
@@ -263,8 +269,8 @@ impl CommonValidationStage for ValidationStageAdapter {
 
         // Validate operational rollback SLAs
         if spec.operational_rollback_slo.is_empty() {
-            results.push(CommonValidationResult::fail(
-                CommonValidationSeverity::Error,
+            results.push(ValidationResult::fail(
+                ValidationSeverity::Error,
                 "missing_rollback_slo",
                 "Operational rollback SLO must be specified"
             ));
@@ -273,8 +279,8 @@ impl CommonValidationStage for ValidationStageAdapter {
         // Validate acceptance criteria are measurable
         for (i, criterion) in spec.acceptance_criteria.iter().enumerate() {
             if !self.is_measurable_criterion(criterion) {
-                results.push(CommonValidationResult::fail(
-                    CommonValidationSeverity::Warning,
+                results.push(ValidationResult::fail(
+                    ValidationSeverity::Warning,
                     format!("acceptance_criterion_{}_not_measurable", i),
                     format!("Acceptance criterion {} should be more specific and measurable", i + 1)
                 ));
@@ -282,14 +288,14 @@ impl CommonValidationStage for ValidationStageAdapter {
         }
 
         if results.is_empty() {
-            results.push(CommonValidationResult::pass("constraint_validation", "Constraint validation passed"));
+            results.push(ValidationResult::pass("constraint_validation", "Constraint validation passed"));
         }
 
         results
     }
 
     /// Assess risk factors
-    fn assess_risk(&self, spec: &agent_agency_contracts::working_spec::WorkingSpec) -> Vec<CommonValidationResult> {
+    fn assess_risk(&self, spec: &agent_agency_contracts::working_spec::WorkingSpec) -> Vec<ValidationResult> {
         let mut results = Vec::new();
         let mut risk_score = 0.0;
 
@@ -313,14 +319,14 @@ impl CommonValidationStage for ValidationStageAdapter {
 
         // Assess risk level
         if risk_score > 0.7 {
-            results.push(CommonValidationResult::fail(
-                CommonValidationSeverity::Error,
+            results.push(ValidationResult::fail(
+                ValidationSeverity::Error,
                 "high_risk_change",
                 format!("High risk change detected (score: {:.2}). Consider breaking into smaller changes.", risk_score)
             ));
         } else if risk_score > 0.5 {
-            results.push(CommonValidationResult::fail(
-                CommonValidationSeverity::Warning,
+            results.push(ValidationResult::fail(
+                ValidationSeverity::Warning,
                 "medium_risk_change",
                 format!("Medium risk change detected (score: {:.2}). Ensure adequate testing and monitoring.", risk_score)
             ));
@@ -344,8 +350,8 @@ impl CommonValidationStage for ValidationStageAdapter {
             }
 
             if !recommendations.is_empty() {
-                results.push(CommonValidationResult::fail(
-                    CommonValidationSeverity::Info,
+                results.push(ValidationResult::fail(
+                    ValidationSeverity::Info,
                     "risk_mitigation_recommendations",
                     format!("Risk mitigation: {}", recommendations.join("; "))
                 ));
@@ -353,21 +359,21 @@ impl CommonValidationStage for ValidationStageAdapter {
         }
 
         if results.is_empty() {
-            results.push(CommonValidationResult::pass("risk_assessment", "Risk assessment passed"));
+            results.push(ValidationResult::pass("risk_assessment", "Risk assessment passed"));
         }
 
         results
     }
 
     /// Validate dependencies
-    fn validate_dependencies(&self, spec: &agent_agency_contracts::working_spec::WorkingSpec) -> Vec<CommonValidationResult> {
+    fn validate_dependencies(&self, spec: &agent_agency_contracts::working_spec::WorkingSpec) -> Vec<ValidationResult> {
         let mut results = Vec::new();
 
         // Check for external service dependencies
         let external_services = self.extract_external_dependencies(spec);
         for service in external_services {
-            results.push(CommonValidationResult::fail(
-                CommonValidationSeverity::Info,
+            results.push(ValidationResult::fail(
+                ValidationSeverity::Info,
                 "external_dependency",
                 format!("External dependency detected: {}. Ensure service availability.", service)
             ));
@@ -375,8 +381,8 @@ impl CommonValidationStage for ValidationStageAdapter {
 
         // Check for database dependencies
         if spec.scope.in_directories.iter().any(|dir| dir.contains("migration") || dir.contains("schema")) {
-            results.push(CommonValidationResult::fail(
-                CommonValidationSeverity::Warning,
+            results.push(ValidationResult::fail(
+                ValidationSeverity::Warning,
                 "database_dependency",
                 "Database schema changes detected. Ensure migration compatibility and rollback procedures."
             ));
@@ -384,8 +390,8 @@ impl CommonValidationStage for ValidationStageAdapter {
 
         // Check for API dependencies
         if spec.scope.in_directories.iter().any(|dir| dir.contains("api") || dir.contains("endpoint")) {
-            results.push(CommonValidationResult::fail(
-                CommonValidationSeverity::Warning,
+            results.push(ValidationResult::fail(
+                ValidationSeverity::Warning,
                 "api_dependency",
                 "API changes detected. Ensure backward compatibility and versioning strategy."
             ));
@@ -393,15 +399,15 @@ impl CommonValidationStage for ValidationStageAdapter {
 
         // Check for configuration dependencies
         if spec.scope.in_directories.iter().any(|dir| dir.contains("config") || dir.contains("env")) {
-            results.push(CommonValidationResult::fail(
-                CommonValidationSeverity::Info,
+            results.push(ValidationResult::fail(
+                ValidationSeverity::Info,
                 "config_dependency",
                 "Configuration changes detected. Ensure environment compatibility."
             ));
         }
 
         if results.is_empty() {
-            results.push(CommonValidationResult::pass("dependency_validation", "Dependency validation passed"));
+            results.push(ValidationResult::pass("dependency_validation", "Dependency validation passed"));
         }
 
         results
@@ -462,9 +468,9 @@ impl CommonValidationStage for ValidationStageAdapter {
 }
 
 /// Validation pipeline that orchestrates multiple validation stages
-/// Now wraps common-pipeline ValidationPipeline with domain-specific functionality
+/// Uses system-configuration ValidationPipeline with domain-specific functionality
 pub struct ValidationPipeline {
-    common_pipeline: CommonValidationPipeline,
+    system_pipeline: SystemValidationPipeline,
     caws_validator: Arc<dyn CawsValidator>,
     config: ValidationPipelineConfig,
 }
@@ -498,21 +504,21 @@ impl ValidationPipeline {
         caws_validator: Arc<dyn CawsValidator>,
         config: ValidationPipelineConfig,
     ) -> Self {
-        // Create common pipeline config
-        let common_config = CommonValidationConfig {
-            base: common_pipeline::PipelineConfig::default(),
+        // Create system-configuration pipeline config
+        let system_config = SystemValidationPipelineConfig {
+            base: PipelineConfig::default(),
             stop_on_first_error: config.strict_mode,
             severity_threshold: if config.strict_mode {
-                CommonValidationSeverity::Warning
+                ValidationSeverity::Warning
             } else {
-                CommonValidationSeverity::Error
+                ValidationSeverity::Error
             },
             enable_validation_caching: true,
             max_validation_time: std::time::Duration::from_secs(config.caws_timeout_seconds),
             collect_all_errors: !config.skip_expensive_validations,
         };
 
-        let mut common_pipeline = CommonValidationPipeline::new(common_config);
+        let mut system_pipeline = SystemValidationPipeline::new(system_config);
 
         // Add validation stages
         let stages = vec![
@@ -536,11 +542,11 @@ impl ValidationPipeline {
                 stage_type,
                 Some(Arc::clone(&caws_validator))
             );
-            common_pipeline.add_stage(Box::new(adapter));
+            system_pipeline.add_stage(Box::new(adapter));
         }
 
         Self {
-            common_pipeline,
+            system_pipeline,
             caws_validator,
             config,
         }
@@ -550,34 +556,34 @@ impl ValidationPipeline {
     pub async fn validate_working_spec(
         &self,
         working_spec: &agent_agency_contracts::working_spec::WorkingSpec,
-    ) -> PlanningResult<ValidationResults> {
-        // Convert WorkingSpec to JSON for common pipeline
+    ) -> PlanningResult<DomainValidationResults> {
+        // Convert WorkingSpec to JSON for system-configuration pipeline
         let input = serde_json::to_value(working_spec)
             .map_err(|e| PlanningError::ValidationError(format!("Failed to serialize working spec: {}", e)))?;
 
-        // Execute validation through common pipeline
-        let common_results = self.common_pipeline.execute(input).await
+        // Execute validation through system-configuration pipeline
+        let system_results = self.system_pipeline.execute(input).await
             .map_err(|e| PlanningError::ValidationError(format!("Pipeline execution failed: {}", e)))?;
 
-        // Convert common results to domain-specific results
+        // Convert system-configuration results to domain-specific results
         let mut all_issues = Vec::new();
 
-        for common_result in common_results.results {
+        for result in system_results.results {
             let issue = ValidationIssue {
-                severity: match common_result.severity {
-                    CommonValidationSeverity::Critical => IssueSeverity::Error,
-                    CommonValidationSeverity::Error => IssueSeverity::Error,
-                    CommonValidationSeverity::Warning => IssueSeverity::Warning,
-                    CommonValidationSeverity::Info => IssueSeverity::Info,
+                severity: match result.severity {
+                    ValidationSeverity::Critical => IssueSeverity::Error,
+                    ValidationSeverity::Error => IssueSeverity::Error,
+                    ValidationSeverity::Warning => IssueSeverity::Warning,
+                    ValidationSeverity::Info => IssueSeverity::Info,
                 },
-                category: common_result.category,
-                description: common_result.message,
-                suggestion: common_result.suggestion,
+                category: result.category,
+                description: result.message,
+                suggestion: result.suggestion,
             };
             all_issues.push(issue);
         }
 
-        let validation_status = if common_results.overall_passed {
+        let validation_status = if system_results.overall_passed {
             ValidationStatus::Valid
         } else if all_issues.iter().any(|i| i.severity == IssueSeverity::Error) {
             ValidationStatus::Invalid
@@ -585,10 +591,11 @@ impl ValidationPipeline {
             ValidationStatus::Warnings
         };
 
-        Ok(ValidationResults {
+        Ok(DomainValidationResults {
             status: validation_status,
             issues: all_issues,
             applied_refinements: Vec::new(), // TODO: track refinements
         })
     }
+}
 

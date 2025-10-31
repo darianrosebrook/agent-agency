@@ -3,17 +3,29 @@
 //! This module contains all API handlers organized by functionality.
 //! Each submodule focuses on a specific domain to improve maintainability.
 
+#[cfg(feature = "orchestration")]
 pub mod waiver_management;
+#[cfg(feature = "orchestration")]
 pub mod slo_management;
+#[cfg(feature = "orchestration")]
 pub mod provenance_management;
+#[cfg(feature = "orchestration")]
 pub mod task_management;
+#[cfg(feature = "orchestration")]
 pub mod query_management;
+#[cfg(feature = "orchestration")]
 pub mod system_monitoring;
 
 // Re-export all handlers for easy access
+#[cfg(feature = "orchestration")]
 pub use waiver_management::*;
+#[cfg(feature = "orchestration")]
 pub use slo_management::*;
+#[cfg(feature = "orchestration")]
 pub use provenance_management::*;
+#[cfg(feature = "orchestration")]
 pub use task_management::*;
+#[cfg(feature = "orchestration")]
 pub use query_management::*;
+#[cfg(feature = "orchestration")]
 pub use system_monitoring::*;

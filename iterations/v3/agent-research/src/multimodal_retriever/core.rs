@@ -11,7 +11,7 @@ use super::fusion::FusionEngine;
 use super::query_processing::QueryProcessor;
 
 // Import the embedding service types that the context provider expects
-use data_infrastructure::embedding::embedding_types::{MultimodalSearchResult, SearchResultFeature, ContentType};
+use data_infrastructure::embedding::embedding_types::{SearchResultFeature, ContentType};
 
 /// Configuration for multimodal retrieval
 #[derive(Debug, Clone, Serialize, Deserialize)]

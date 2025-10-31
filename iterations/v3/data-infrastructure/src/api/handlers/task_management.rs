@@ -12,7 +12,7 @@ use serde_json;
 use tracing::{info, error};
 use uuid::Uuid;
 
-use crate::api::server::ApiState;
+use crate::api::ApiState;
 
 /// Cancel a task
 pub async fn cancel_task(Path(task_id): Path<String>) -> Json<serde_json::Value> {

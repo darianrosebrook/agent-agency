@@ -12,7 +12,7 @@ use serde_json;
 use tracing::{info, error};
 use uuid::Uuid;
 
-use crate::api::server::ApiState;
+use crate::api::ApiState;
 
 /// List all waivers with optional filtering
 pub async fn list_waivers(State(state): State<ApiState>) -> Result<Json<serde_json::Value>, StatusCode> {

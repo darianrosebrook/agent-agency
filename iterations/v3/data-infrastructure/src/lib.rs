@@ -46,10 +46,15 @@ pub mod system_observability;
 pub mod caching;
 pub mod embedding;
 pub mod file_operations;
+pub mod file_operations_service;
 
 // Export core database types
 pub use database_config::DatabaseConfig;
 pub use simple_client::DatabaseClient;
+pub use simple_client::ProvenanceClientAdapter;
+
+// Export database operations factory
+pub use database_operations::{create_database_operations, create_database_audit_operations, DatabaseOperations};
 
 // Re-export sqlx Row type for convenience
 pub use sqlx::Row;
@@ -72,7 +77,50 @@ impl SimpleWorkerPool {
 #[async_trait::async_trait]
 impl WorkerPoolHealth for SimpleWorkerPool {
     async fn health_check(&self) -> Result<(), String> {
-        // For now, return healthy - will integrate with real worker pool later
+        // DEPENDENCY: Real worker pool implementation not yet available
+        // When integrated, this should:
+        // 1. Check worker registry for available workers
+        // 2. Verify worker health endpoints are responding
+        // 3. Check worker capacity and load
+        // 4. Return error if critical workers are unavailable
+        //
+        // For now, SimpleWorkerPool is a placeholder that always returns healthy.
+        // Real implementation requires:
+        // - Worker registry service (agent-workers crate)
+        // - Worker health check endpoints
+        // - Worker pool metrics and monitoring
+        Ok(())
+    }
+}
+
+/// System health monitor combining database and worker pool health
+#[derive(Debug)]
+pub struct SystemHealthMonitor {
+    database_health: Arc<health::DatabaseHealthMonitor>,
+    worker_pool: Arc<dyn WorkerPoolHealth>,
+}
+
+impl SystemHealthMonitor {
+    pub fn new(
+        database_health: Arc<health::DatabaseHealthMonitor>,
+        worker_pool: Arc<dyn WorkerPoolHealth>,
+    ) -> Self {
+        Self {
+            database_health,
+            worker_pool,
+        }
+    }
+
+    /// Perform comprehensive health check
+    pub async fn health_check(&self) -> Result<(), String> {
+        // Check database health
+        self.database_health.perform_health_check()
+            .await
+            .map_err(|e| format!("Database health check failed: {}", e))?;
+
+        // Check worker pool health
+        self.worker_pool.health_check().await?;
+
         Ok(())
     }
 }
@@ -85,7 +133,7 @@ pub struct AppState {
     pub audit_logger: std::sync::Arc<audit::AuditLogger>,
     pub keystore: std::sync::Arc<dyn system_quality_security::Keystore>,
     pub sandbox: std::sync::Arc<dyn system_quality_security::Sandbox>,
-    pub health_monitor: std::sync::Arc<dyn std::fmt::Debug + Send + Sync>, // Placeholder for health monitor
+    pub health_monitor: Arc<SystemHealthMonitor>,
     pub alert_manager: std::sync::Arc<api_alerts::AlertManager>,
     pub rate_limiter: std::sync::Arc<rate_limiter::RateLimiter>,
     pub backend_host: String,

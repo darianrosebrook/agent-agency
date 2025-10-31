@@ -13,13 +13,54 @@ use crate::judge_backup::{Judge, JudgeContribution, JudgeConfig, JudgeHealthMetr
 use crate::judge_backup::types::{ReviewContext, PreviousReview};
 use crate::verdict_aggregation::{VerdictAggregator, AggregationResult};
 use crate::decision_making::{DecisionEngine, FinalDecision, DecisionContext, OrganizationalConstraints, ResourceConstraints, HistoricalDecision, EmergencyFlags, ConsensusStrategy, RiskThresholds, ImpactLevel};
+#[cfg(feature = "memory")]
 use agent_memory::TaskPriority;
+#[cfg(feature = "memory")]
+use agent_memory::{memory_types, MemoryType};
+
+// Fallback type definitions when memory feature is disabled
+#[cfg(not(feature = "memory"))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TaskPriority {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+#[cfg(not(feature = "memory"))]
+#[derive(Debug, Clone)]
+pub enum MemoryType {
+    Episodic,
+    Semantic,
+    Procedural,
+}
+
+#[cfg(not(feature = "memory"))]
+pub mod memory_types {
+    use super::*;
+    pub type AgentExperience = MemoryType;
+    pub type ExperienceContext = MemoryType;
+    pub type ExperienceOutcome = MemoryType;
+}
+
 use crate::error_handling::{AgencyError, CircuitBreaker, ErrorHandlingCircuitBreakerConfig, RecoveryOrchestrator, DegradationManager, DegradationPolicy, DegradationLevel, error_factory};
 // use crate::risk_scorer::ComputationalComplexity; // TEMPORARILY DISABLED
 
-use agent_memory::{memory_types, MemoryType};
-
 use tracing::{debug, info, instrument, warn};
+
+/// Judge performance metrics for performance-weighted selection
+#[derive(Debug, Clone)]
+struct JudgePerformanceMetrics {
+    /// Average response time in milliseconds
+    avg_response_time_ms: u64,
+    /// Success rate (0.0 to 1.0)
+    success_rate: f64,
+    /// Number of reviews completed
+    review_count: u64,
+    /// Last used timestamp for round-robin
+    last_used_at: Option<chrono::DateTime<chrono::Utc>>,
+}
 
 /// Configuration for the council
 #[derive(Debug, Clone)]
@@ -118,8 +159,64 @@ pub struct Council {
     /// Degradation manager for graceful degradation
     degradation_manager: Option<Arc<DegradationManager>>,
     /// Memory system for learning from past decisions
+    #[cfg(feature = "memory")]
     memory_system: Option<Arc<agent_memory::MemorySystem>>,
+    /// Round-robin index for judge selection (atomic for thread safety)
+    round_robin_index: std::sync::atomic::AtomicUsize,
+    /// Performance tracking for judges (judge_id -> performance metrics)
+    judge_performance: std::sync::Arc<tokio::sync::RwLock<std::collections::HashMap<String, JudgePerformanceMetrics>>>,
 }
+
+    /// Send learning signal to external council learning API
+    /// 
+    /// TODO: Implement council learning API client for adaptive learning
+    /// 
+    /// DEPENDENCY: Requires council learning API service/endpoint
+    /// 
+    /// Expected signature:
+    /// ```rust
+    /// pub async fn send_learning_signal(
+    ///     &self,
+    ///     signal: LearningSignal
+    /// ) -> CouncilResult<()>
+    /// ```
+    /// 
+    /// This method should:
+    /// 1. Serialize LearningSignal to API format
+    /// 2. Send HTTP/gRPC request to council learning API
+    /// 3. Handle response and errors
+    /// 4. Retry on transient failures (with exponential backoff)
+    /// 5. Integrate with circuit breaker for resilience
+    /// 
+    /// LearningSignal should include:
+    /// - task_id: String
+    /// - worker_id: String  
+    /// - performance_score: f64
+    /// - resource_usage: ResourceUsageMetrics (CPU, memory, disk, network)
+    /// - metadata: serde_json::Value (specialty, execution_time, success, etc.)
+    /// 
+    /// This method is needed by:
+    /// - agent-workers/src/coordinator_old.rs:2368 (council bridge integration)
+    /// - agent-workers/src/bridges.rs:219 (learning signal sending)
+    /// 
+    /// ACCEPTANCE CRITERIA:
+    /// - [ ] HTTP/gRPC client implementation
+    /// - [ ] Request serialization (LearningSignal -> API format)
+    /// - [ ] Error handling and retry logic
+    /// - [ ] Circuit breaker integration
+    /// - [ ] Unit tests with 80%+ coverage
+    /// - [ ] Integration test with mock council API
+    /// - [ ] Configuration for API endpoint URL
+    /// 
+    /// ESTIMATED EFFORT: 8 hours
+    /// PRIORITY: MEDIUM
+    /// BLOCKING: agent-workers learning signal integration
+    /// 
+    /// CONFIGURATION NEEDED:
+    /// - Council API endpoint URL (env var: COUNCIL_API_URL)
+    /// - API authentication token (env var: COUNCIL_API_TOKEN)
+    /// - Request timeout (default: 5s)
+    /// - Retry configuration (max_retries: 3, backoff: exponential)
 
 impl Council {
     /// Create a new council with available judges
@@ -129,16 +226,34 @@ impl Council {
         verdict_aggregator: Arc<VerdictAggregator>,
         decision_engine: Box<dyn DecisionEngine>,
     ) -> Self {
-        Self::new_with_memory(
-            config,
-            available_judges,
-            verdict_aggregator,
-            decision_engine,
-            None, // No memory system by default
-        )
+        #[cfg(feature = "memory")]
+        {
+            Self::new_with_memory(
+                config,
+                available_judges,
+                verdict_aggregator,
+                decision_engine,
+                None, // No memory system by default
+            )
+        }
+        #[cfg(not(feature = "memory"))]
+        {
+            Self {
+                config,
+                available_judges,
+                verdict_aggregator,
+                decision_engine,
+                circuit_breakers: std::collections::HashMap::new(),
+                recovery_orchestrator: None,
+                degradation_manager: None,
+                round_robin_index: std::sync::atomic::AtomicUsize::new(0),
+                judge_performance: std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
+            }
+        }
     }
 
     /// Create a new council with memory system integration
+    #[cfg(feature = "memory")]
     pub fn new_with_memory(
         config: CouncilConfig,
         available_judges: Vec<Arc<dyn Judge>>,
@@ -157,8 +272,17 @@ impl Council {
             circuit_breakers,
             recovery_orchestrator,
             degradation_manager,
+            #[cfg(feature = "memory")]
             memory_system,
+            round_robin_index: std::sync::atomic::AtomicUsize::new(0),
+            judge_performance: std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
         }
+    }
+
+    /// Inject the memory system after construction
+    #[cfg(feature = "memory")]
+    pub fn set_memory_system(&mut self, memory_system: Arc<agent_memory::MemorySystem>) {
+        self.memory_system = Some(memory_system);
     }
 
     /// Initialize error handling components based on configuration
@@ -377,8 +501,23 @@ impl Council {
                 self.select_by_specialization(&available_judges, context, self.config.max_judges_per_session)
             },
             JudgeSelectionStrategy::RoundRobin => {
-                // Simplified: just take first N available
-                available_judges.into_iter().take(self.config.max_judges_per_session).cloned().collect()
+                // Round-robin selection with state tracking
+                let available_count = available_judges.len();
+                if available_count == 0 {
+                    Vec::new()
+                } else {
+                    let start_index = self.round_robin_index.fetch_add(1, std::sync::atomic::Ordering::SeqCst) % available_count;
+                    let mut selected = Vec::new();
+                    let mut current_index = start_index;
+                    
+                    // Take up to max_judges_per_session judges starting from round-robin index
+                    for _ in 0..self.config.max_judges_per_session.min(available_count) {
+                        selected.push(available_judges[current_index].clone());
+                        current_index = (current_index + 1) % available_count;
+                    }
+                    
+                    selected
+                }
             },
             JudgeSelectionStrategy::Random => {
                 // Simplified: shuffle and take first N
@@ -389,8 +528,40 @@ impl Council {
                 judges.into_iter().take(self.config.max_judges_per_session).cloned().collect()
             },
             JudgeSelectionStrategy::PerformanceWeighted => {
-                // Simplified: sort by specialization score and take top N
-                self.select_by_specialization(&available_judges, context, self.config.max_judges_per_session)
+                // Performance-weighted selection based on historical metrics
+                let performance = self.judge_performance.read().await;
+                let mut judge_scores: Vec<(Arc<dyn Judge>, f64)> = available_judges.iter()
+                    .map(|judge| {
+                        let judge_id = judge.config().judge_id.clone();
+                        let base_score = judge.specialization_score(context);
+                        
+                        // Weight by performance metrics if available
+                        let performance_weight = if let Some(metrics) = performance.get(&judge_id) {
+                            // Combine success rate and response time into a performance score
+                            // Higher success rate = better, lower response time = better
+                            let response_time_score = if metrics.avg_response_time_ms > 0 {
+                                1.0 / (1.0 + (metrics.avg_response_time_ms as f64 / 1000.0))
+                            } else {
+                                0.5 // Default if no data
+                            };
+                            metrics.success_rate * 0.6 + response_time_score * 0.4
+                        } else {
+                            0.5 // Default performance weight if no metrics
+                        };
+                        
+                        // Combine specialization score (70%) with performance weight (30%)
+                        let combined_score = base_score * 0.7 + performance_weight * 0.3;
+                        ((*judge).clone(), combined_score)
+                    })
+                    .collect();
+                
+                // Sort by combined score (descending)
+                judge_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+                
+                judge_scores.into_iter()
+                    .take(self.config.max_judges_per_session)
+                    .map(|(judge, _)| judge)
+                    .collect()
             },
         };
 
@@ -496,11 +667,18 @@ impl Council {
             for handle in handles {
                 match handle.await {
                     Ok(Ok(contribution)) => {
-                        contributions.push(contribution);
+                        contributions.push(contribution.clone());
+                        // Update performance metrics (timing tracked in handle)
+                        // Note: Actual timing is tracked in the spawned task, we track completion here
+                        let judge_id = contribution.judge_id.clone();
+                        // Estimate response time from contribution if available
+                        let response_time_ms = contribution.processing_time_ms;
+                        self.update_judge_performance(&judge_id, response_time_ms, true).await;
                     },
                     Ok(Err(agency_error)) => {
                         tracing::warn!("Judge review failed with error handling: {}", agency_error);
-
+                        // Performance update skipped for failures without judge_id
+                        
                         // Check if we should degrade this component
                         if let Some(degradation_manager) = &self.degradation_manager {
                             if let Some(degradation_level) = degradation_manager
@@ -521,25 +699,36 @@ impl Council {
         } else {
             // Sequential execution with error handling
             for judge in &session.selected_judges {
+                let start_time = std::time::Instant::now();
+                let judge_id = judge.config().judge_id.clone();
                 let result = timeout(
                     Duration::from_secs(self.config.judge_timeout_seconds),
                     Self::conduct_single_judge_review_with_error_handling(
                         judge.clone(),
                         context,
                         self.circuit_breakers.clone(),
-                        self.recovery_orchestrator.clone()
+                        self.recovery_orchestrator.clone(),
                     )
                 ).await;
 
                 match result {
                     Ok(Ok(contribution)) => {
                         contributions.push(contribution);
+                        // Update performance metrics
+                        let response_time_ms = start_time.elapsed().as_millis() as u64;
+                        self.update_judge_performance(&judge_id, response_time_ms, true).await;
                     },
                     Ok(Err(agency_error)) => {
                         tracing::warn!("Judge review failed: {}", agency_error);
+                        // Update performance metrics (failure)
+                        let response_time_ms = start_time.elapsed().as_millis() as u64;
+                        self.update_judge_performance(&judge_id, response_time_ms, false).await;
                     },
                     Err(_) => {
                         tracing::warn!("Judge review timed out");
+                        // Update performance metrics (timeout)
+                        let response_time_ms = start_time.elapsed().as_millis() as u64;
+                        self.update_judge_performance(&judge_id, response_time_ms, false).await;
                     },
                 }
             }
@@ -893,10 +1082,15 @@ impl Council {
 
     /// Check if memory system is available
     pub fn has_memory_support(&self) -> bool {
-        self.memory_system.is_some()
+        #[cfg(feature = "memory")] {
+            self.memory_system.is_some()
+        } #[cfg(not(feature = "memory"))] {
+            false
+        }
     }
 
     /// Retrieve relevant historical decisions from memory for decision context
+    #[cfg(feature = "memory")]
     async fn retrieve_historical_decisions(
         &self,
         working_spec: &crate::council_types::WorkingSpec,
@@ -930,7 +1124,19 @@ impl Council {
         }
     }
 
+    /// Retrieve relevant historical decisions from memory for decision context (fallback when memory disabled)
+    #[cfg(not(feature = "memory"))]
+    async fn retrieve_historical_decisions(
+        &self,
+        _working_spec: &crate::council_types::WorkingSpec,
+        _risk_tier: &crate::council_types::RiskTier,
+    ) -> Vec<crate::decision_making::HistoricalDecision> {
+        // No historical decisions available without memory system
+        vec![]
+    }
+
     /// Convert a contextual memory to a historical decision
+    #[cfg(feature = "memory")]
     fn convert_contextual_memory_to_historical_decision(
         &self,
         contextual_memory: &memory_types::ContextualMemory,
@@ -975,6 +1181,7 @@ impl Council {
     }
 
     /// Store a council decision outcome as memory for future learning
+    #[cfg(feature = "memory")]
     async fn store_decision_memory(
         &self,
         decision_id: String,
@@ -1038,6 +1245,50 @@ impl Council {
                 warn!("Failed to store council decision in memory: {}", e);
             }
         }
+    }
+
+    /// Store a council decision outcome as memory for future learning (fallback when memory disabled)
+    #[cfg(not(feature = "memory"))]
+    async fn store_decision_memory(
+        &self,
+        _decision_id: String,
+        _working_spec: &agent_agency_contracts::working_spec::WorkingSpec,
+        _final_decision: &crate::decision_making::FinalDecision,
+        _risk_tier: &agent_agency_contracts::task_request::RiskTier,
+    ) {
+        // No memory storage without memory feature
+    }
+
+    /// Update judge performance metrics after a review
+    async fn update_judge_performance(
+        &self,
+        judge_id: &str,
+        response_time_ms: u64,
+        success: bool,
+    ) {
+        let mut performance = self.judge_performance.write().await;
+        let metrics = performance.entry(judge_id.to_string())
+            .or_insert_with(|| JudgePerformanceMetrics {
+                avg_response_time_ms: 0,
+                success_rate: 0.0,
+                review_count: 0,
+                last_used_at: None,
+            });
+
+        // Update metrics using exponential moving average
+        metrics.review_count += 1;
+        
+        // Update average response time (exponential moving average with alpha=0.3)
+        let alpha = 0.3;
+        metrics.avg_response_time_ms = ((alpha * response_time_ms as f64) + 
+            ((1.0 - alpha) * metrics.avg_response_time_ms as f64)) as u64;
+        
+        // Update success rate (exponential moving average)
+        let success_value = if success { 1.0 } else { 0.0 };
+        metrics.success_rate = (alpha * success_value) + ((1.0 - alpha) * metrics.success_rate);
+        
+        // Update last used timestamp
+        metrics.last_used_at = Some(chrono::Utc::now());
     }
 
     /// Start a new council session for reviewing a task
@@ -1138,15 +1389,75 @@ use agent_agency_contracts::Environment;
 
 impl CouncilSession {
     /// Review a task and return consensus result
+    /// 
+    /// Note: This method requires the session to have been processed through Council.run_review_process()
+    /// or Council.review_working_spec() to populate final_decision. If the session hasn't been reviewed yet,
+    /// use Council.review_working_spec() instead.
     pub async fn review_task(&self, task: &crate::OrchestratedTask) -> CouncilResult<crate::autonomous_executor::ConsensusResult> {
+        // If session already has a final decision, convert it to ConsensusResult
+        if let Some(ref decision) = self.final_decision {
+            match decision {
+                FinalDecision::Proceed { confidence, rationale } => {
+                    return Ok(crate::autonomous_executor::ConsensusResult {
+                        approved: true,
+                        confidence: *confidence,
+                        reason: rationale.clone().unwrap_or_else(|| "Task approved by council".to_string()),
+                    });
+                },
+                FinalDecision::Refine { rationale, .. } => {
+                    return Ok(crate::autonomous_executor::ConsensusResult {
+                        approved: false,
+                        confidence: 0.5,
+                        reason: rationale.clone().unwrap_or_else(|| "Task requires refinement".to_string()),
+                    });
+                },
+                FinalDecision::Reject { rationale, .. } => {
+                    return Ok(crate::autonomous_executor::ConsensusResult {
+                        approved: false,
+                        confidence: 0.2,
+                        reason: rationale.clone().unwrap_or_else(|| "Task rejected by council".to_string()),
+                    });
+                },
+                FinalDecision::Escalate { rationale, .. } => {
+                    return Ok(crate::autonomous_executor::ConsensusResult {
+                        approved: false,
+                        confidence: 0.3,
+                        reason: rationale.clone().unwrap_or_else(|| "Task escalated for human review".to_string()),
+                    });
+                },
+            }
+        }
 
-        // For now, return a basic approval result
-        // TODO: Implement full judge review process
-        Ok(crate::autonomous_executor::ConsensusResult {
-            approved: true,
-            confidence: 0.8,
-            reason: "Task approved by council review".to_string(),
-        })
+        // If session hasn't been reviewed yet, return error indicating need for Council review
+        // PLACEHOLDER: Full review process requires Council instance
+        // Dependency: Council.review_working_spec() or Council.run_review_process()
+        // To perform full review:
+        //   1. Convert OrchestratedTask to WorkingSpec
+        //   2. Create ReviewContext
+        //   3. Call Council.review_working_spec() which will:
+        //      - Select judges
+        //      - Conduct reviews
+        //      - Aggregate verdicts
+        //      - Make final decision
+        //   4. Use the returned CouncilSession's final_decision
+        
+        warn!("CouncilSession.review_task() called on session without final_decision. Use Council.review_working_spec() to perform full review.");
+        
+        // Fallback: return basic approval if session status indicates completion
+        if matches!(self.status, SessionStatus::Completed) {
+            Ok(crate::autonomous_executor::ConsensusResult {
+                approved: true,
+                confidence: 0.8,
+                reason: format!("Session {} completed without explicit decision", self.session_id),
+            })
+        } else {
+            Err(CouncilError::InvalidInput {
+                message: format!(
+                    "Session {} has not been reviewed. Use Council.review_working_spec() to perform full review.",
+                    self.session_id
+                ),
+            })
+        }
     }
 }
 

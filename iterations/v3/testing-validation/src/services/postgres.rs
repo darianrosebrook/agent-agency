@@ -4,11 +4,19 @@
 //! NO mocks - actual database connections, queries, and transactions.
 
 use std::process::{Command, Stdio};
+use std::sync::Arc;
 use tokio_postgres::{Client, NoTls};
 use tracing::{info, warn};
 use std::time::Duration;
+use bb8::{Pool, PooledConnection};
+use bb8_postgres::PostgresConnectionManager;
+use refinery::embed_migrations;
+use refinery::config::Config;
 
-/// PostgreSQL service for real database operations
+// Embed migrations from the migrations directory
+embed_migrations!("migrations");
+
+/// PostgreSQL service for real database operations with connection pooling and migrations
 pub struct PostgresService {
     host: String,
     port: u16,
@@ -16,7 +24,8 @@ pub struct PostgresService {
     username: String,
     password: String,
     process_handle: Option<std::process::Child>,
-    client: Option<Client>,
+    pool: Option<Pool<PostgresConnectionManager<NoTls>>>,
+    migrations_applied: bool,
 }
 
 impl PostgresService {
@@ -29,17 +38,18 @@ impl PostgresService {
             username: "test_user".to_string(),
             password: "test_password".to_string(),
             process_handle: None,
-            client: None,
+            pool: None,
+            migrations_applied: false,
         })
     }
 
-    /// Start local PostgreSQL service
+    /// Start local PostgreSQL service with connection pooling
     pub async fn start(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("Starting PostgreSQL service...");
 
-        // Check if PostgreSQL is already running
-        if self.health_check().await {
-            info!("PostgreSQL service already running");
+        // Check if PostgreSQL is already running and pool exists
+        if self.pool.is_some() && self.health_check().await {
+            info!("PostgreSQL service already running with connection pool");
             return Ok(());
         }
 
@@ -47,24 +57,31 @@ impl PostgresService {
         // In a real CI environment, you might need to start it via docker-compose
         warn!("PostgreSQL service not running. In CI, start with: docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=test postgres:13");
 
-        // For now, just check if we can connect to an existing instance
+        // Wait for PostgreSQL to be available
         for _ in 0..10 {
             if self.health_check().await {
-                info!("Connected to PostgreSQL service");
-                return Ok(());
+                break;
             }
             tokio::time::sleep(Duration::from_millis(1000)).await;
         }
 
-        Err("PostgreSQL service not available".into())
+        // Initialize connection pool
+        self.initialize_pool().await?;
+
+        // Apply migrations
+        self.apply_migrations().await?;
+
+        info!("PostgreSQL service started with connection pooling and migrations");
+        Ok(())
     }
 
-    /// Stop PostgreSQL service
+    /// Stop PostgreSQL service and close connection pool
     pub async fn stop(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("Stopping PostgreSQL service...");
 
-        // Disconnect client
-        self.client = None;
+        // Close connection pool
+        self.pool = None;
+        self.migrations_applied = false;
 
         if let Some(mut handle) = self.process_handle.take() {
             match handle.kill() {
@@ -83,7 +100,7 @@ impl PostgresService {
 
     /// Check if PostgreSQL service is healthy
     pub async fn health_check(&self) -> bool {
-        match self.connect().await {
+        match self.get_connection().await {
             Ok(_) => {
                 info!("PostgreSQL health check passed");
                 true
@@ -95,18 +112,71 @@ impl PostgresService {
         }
     }
 
-    /// Get database connection
-    pub async fn connect(&self) -> Result<Client, Box<dyn std::error::Error + Send + Sync>> {
-        if let Some(ref client) = self.client {
-            // Test the connection
-            match client.query("SELECT 1", &[]).await {
-                Ok(_) => return Ok(client.clone()),
-                Err(_) => {
-                    self.client = None;
-                }
-            }
+    /// Initialize connection pool
+    async fn initialize_pool(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        info!("Initializing PostgreSQL connection pool...");
+
+        let connection_string = format!(
+            "host={} port={} dbname={} user={} password={}",
+            self.host, self.port, self.database, self.username, self.password
+        );
+
+        let manager = PostgresConnectionManager::new_from_stringlike(&connection_string, NoTls)
+            .map_err(|e| format!("Failed to create connection manager: {}", e))?;
+
+        let pool = Pool::builder()
+            .max_size(10) // Maximum connections in pool
+            .min_idle(Some(1)) // Minimum idle connections
+            .build(manager)
+            .await
+            .map_err(|e| format!("Failed to create connection pool: {}", e))?;
+
+        // Test the pool by getting a connection
+        let _connection = pool.get().await
+            .map_err(|e| format!("Failed to get connection from pool: {}", e))?;
+
+        self.pool = Some(pool);
+        info!("PostgreSQL connection pool initialized");
+        Ok(())
+    }
+
+    /// Apply database migrations
+    async fn apply_migrations(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        if self.migrations_applied {
+            info!("Migrations already applied");
+            return Ok(());
         }
 
+        info!("Applying database migrations...");
+
+        let connection_string = format!(
+            "host={} port={} dbname={} user={} password={}",
+            self.host, self.port, self.database, self.username, self.password
+        );
+
+        let mut config = Config::from_str(&connection_string);
+        let mut runner = embedded::migrations::runner();
+        let report = runner.run_async(&mut config).await
+            .map_err(|e| format!("Failed to run migrations: {}", e))?;
+
+        info!("Applied {} migration(s)", report.applied_migrations().len());
+        self.migrations_applied = true;
+        Ok(())
+    }
+
+    /// Get a connection from the pool
+    pub async fn get_connection(&self) -> Result<PooledConnection<'_, PostgresConnectionManager<NoTls>>, Box<dyn std::error::Error + Send + Sync>> {
+        match self.pool {
+            Some(ref pool) => {
+                pool.get().await.map_err(|e| format!("Failed to get connection from pool: {}", e).into())
+            }
+            None => Err("Connection pool not initialized".into())
+        }
+    }
+
+    /// Get database connection (legacy method for backward compatibility)
+    pub async fn connect(&self) -> Result<Arc<Client>, Box<dyn std::error::Error + Send + Sync>> {
+        // For backward compatibility, create a new connection
         let connection_string = format!(
             "host={} port={} dbname={} user={} password={}",
             self.host, self.port, self.database, self.username, self.password
@@ -124,85 +194,111 @@ impl PostgresService {
         // Test the connection
         client.query("SELECT 1", &[]).await?;
 
-        let client_clone = client.clone();
-        // Note: In real implementation, we'd store this properly, but for simplicity:
-        // self.client = Some(client);
-
-        Ok(client_clone)
+        let client_arc = Arc::new(client);
+        Ok(client_arc)
     }
 
-    /// Execute a query and return results
+    /// Execute a query and return results (using connection pool)
     pub async fn execute_query(
         &self,
         query: &str,
         params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
     ) -> Result<Vec<tokio_postgres::Row>, Box<dyn std::error::Error + Send + Sync>> {
-        let client = self.connect().await?;
-        let rows = client.query(query, params).await?;
+        let conn = self.get_connection().await?;
+        let rows = conn.query(query, params).await?;
         Ok(rows)
     }
 
-    /// Execute a query that doesn't return results
+    /// Execute a query that doesn't return results (using connection pool)
     pub async fn execute(
         &self,
         query: &str,
         params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
     ) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
-        let client = self.connect().await?;
-        let result = client.execute(query, params).await?;
+        let conn = self.get_connection().await?;
+        let result = conn.execute(query, params).await?;
         Ok(result)
     }
 
-    /// Create test tables and data
+    /// Execute a query with pooled connection (alternative method)
+    pub async fn execute_pooled<F, T>(
+        &self,
+        f: F,
+    ) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnOnce(&Client) -> futures::future::BoxFuture<'_, Result<T, tokio_postgres::Error>> + Send,
+    {
+        let conn = self.get_connection().await?;
+        f(&*conn).await.map_err(|e| format!("Query execution failed: {}", e).into())
+    }
+
+    /// Execute multiple queries in a transaction
+    pub async fn execute_transaction<F, T>(
+        &self,
+        f: F,
+    ) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnOnce(&Client) -> futures::future::BoxFuture<'_, Result<T, tokio_postgres::Error>> + Send,
+    {
+        let conn = self.get_connection().await?;
+        let transaction = conn.transaction().await?;
+        let result = f(&transaction).await?;
+        transaction.commit().await?;
+        Ok(result)
+    }
+
+    /// Create test tables and data (using migrations)
     pub async fn setup_test_schema(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        info!("Setting up test schema...");
+        info!("Setting up test schema via migrations...");
 
-        let client = self.connect().await?;
+        // Migrations are now handled automatically in start()
+        // This method is kept for backward compatibility and additional setup
+        if !self.migrations_applied {
+            return Err("Migrations not applied. Call start() first.".into());
+        }
 
-        // Create test tables
-        client.execute(
-            "CREATE TABLE IF NOT EXISTS test_research (
-                id SERIAL PRIMARY KEY,
-                topic TEXT NOT NULL,
-                content TEXT,
-                citations JSONB,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )",
-            &[],
-        ).await?;
-
-        client.execute(
-            "CREATE TABLE IF NOT EXISTS test_code_changes (
-                id SERIAL PRIMARY KEY,
-                file_path TEXT NOT NULL,
-                old_content TEXT,
-                new_content TEXT,
-                change_type TEXT,
-                applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )",
-            &[],
-        ).await?;
-
-        info!("Test schema created successfully");
+        // Additional setup can be done here if needed
+        info!("Test schema setup completed (migrations applied)");
         Ok(())
     }
 
-    /// Clean up test data
+    /// Clean up test data (drop tables created by migrations)
     pub async fn cleanup_test_data(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("Cleaning up test data...");
 
-        let client = self.connect().await?;
-
-        client.execute("DROP TABLE IF EXISTS test_research", &[]).await?;
-        client.execute("DROP TABLE IF EXISTS test_code_changes", &[]).await?;
+        self.execute_transaction(|client| {
+            Box::pin(async move {
+                client.execute("DROP TABLE IF EXISTS test_research CASCADE", &[]).await?;
+                client.execute("DROP TABLE IF EXISTS test_code_changes CASCADE", &[]).await?;
+                client.execute("DROP TABLE IF EXISTS test_agent_runs CASCADE", &[]).await?;
+                Ok(())
+            })
+        }).await?;
 
         info!("Test data cleaned up");
         Ok(())
+    }
+
+    /// Get connection pool statistics
+    pub fn pool_stats(&self) -> Option<bb8::State> {
+        self.pool.as_ref().map(|pool| pool.state())
+    }
+
+    /// Check if migrations have been applied
+    pub fn migrations_applied(&self) -> bool {
+        self.migrations_applied
+    }
+
+    /// Manually apply migrations (useful for testing)
+    pub async fn apply_migrations_manual(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.apply_migrations().await
     }
 }
 
 impl Drop for PostgresService {
     fn drop(&mut self) {
+        // Note: Connection pool is automatically closed when dropped
+        // Process handle cleanup
         if let Some(mut handle) = self.process_handle.take() {
             let _ = handle.kill();
         }

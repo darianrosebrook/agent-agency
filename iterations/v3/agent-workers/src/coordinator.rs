@@ -16,7 +16,8 @@ use crate::learning::{
     OptimalConfig, ConfigurationRecommendations, OptimizationEvent, TaskPattern
 };
 use crate::worker_types::{WorkerSpecialty, TaskDefinition, TaskStatus, ExecutionOutcome, LearningMode, Priority, WorkerBreakdown, QualityRequirements, Progress, ValidationContext};
-use agent_agency_contracts::task_executor::{TaskExecutor, TaskSpec, TaskRequirements, TaskContext, TaskScope, ExecutionStatus, ExecutionArtifacts};
+use agent_agency_contracts::task_executor::{TaskExecutor, TaskSpec, TaskRequirements, TaskContext, TaskScope, ExecutionStatus};
+use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -321,10 +322,16 @@ impl ParallelCoordinator {
     ) -> ParallelResult<WorkerResult> {
         // Select optimal worker for the subtask
         let task_pattern = TaskPattern {
-            domain: parent_task.scope.domains.first().cloned().unwrap_or_default(),
-            complexity: subtask.complexity,
-            required_capabilities: subtask.required_capabilities,
-            estimated_duration_ms: subtask.estimated_duration_ms,
+            id: uuid::Uuid::new_v4(),
+            pattern_type: crate::learning::types::PatternType::TaskComplexity,
+            characteristics: std::collections::HashMap::from([
+                ("domain".to_string(), serde_json::json!(parent_task.scope.domains.first().cloned().unwrap_or_default())),
+                ("complexity".to_string(), serde_json::json!(subtask.complexity)),
+                ("required_capabilities".to_string(), serde_json::json!(subtask.required_capabilities)),
+                ("estimated_duration_ms".to_string(), serde_json::json!(subtask.estimated_duration_ms)),
+            ]),
+            frequency: 1,
+            last_seen: chrono::Utc::now(),
         };
 
         let worker_id = self.adaptive_selector.select_worker(&task_pattern).await

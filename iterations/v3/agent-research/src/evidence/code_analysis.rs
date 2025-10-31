@@ -1,7 +1,7 @@
 //! Code analysis evidence collection
 
 use super::types::*;
-use super::analysis::CodeAnalysisEngine;
+use super::evidence_analysis::CodeAnalysisEngine;
 use crate::extraction_types::{AtomicClaim, Evidence, EvidenceType, EvidenceSource, ProcessingContext};
 use crate::evidence::evidence_types::EvidenceCollectorConfig;
 use anyhow::Result;

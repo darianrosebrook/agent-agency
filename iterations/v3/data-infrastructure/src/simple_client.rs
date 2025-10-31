@@ -226,6 +226,40 @@ impl DatabaseClient {
         Ok(())
     }
 
+    /// Create a provenance entry
+    pub async fn create_provenance_entry(
+        &self,
+        task_id: Uuid,
+        action: String,
+        actor: String,
+        change_summary: String,
+        resource_id: Option<Uuid>,
+        resource_type: Option<String>,
+        metadata: serde_json::Value,
+    ) -> Result<crate::models::ProvenanceEntry> {
+        let id = Uuid::new_v4();
+        let timestamp = chrono::Utc::now();
+        let created_at = chrono::Utc::now();
+
+        self.execute(
+            "INSERT INTO provenance_entries (id, task_id, action, actor, resource_id, resource_type, change_summary, timestamp, created_at, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+            &[&id, &task_id, &action, &actor, &resource_id, &resource_type, &change_summary, &timestamp, &created_at, &metadata]
+        ).await?;
+
+        Ok(crate::models::ProvenanceEntry {
+            id,
+            task_id,
+            action,
+            actor,
+            resource_id,
+            resource_type,
+            change_summary,
+            timestamp,
+            created_at,
+            metadata,
+        })
+    }
+
     /// Get task provenance
     pub async fn get_task_provenance(&self, task_id: &Uuid) -> Result<Vec<crate::models::ProvenanceEntry>> {
         let rows = self.query(
@@ -638,5 +672,71 @@ impl DatabaseClient {
         }
 
         Ok(tasks)
+    }
+}
+
+/// Adapter for DatabaseClient to be used with agent-research DatabaseClientTrait
+///
+/// This adapter wraps DatabaseClient and provides the methods needed for
+/// agent-research/src/self_prompting_agent/agent_caws_integration.rs::DatabaseClientTrait.
+///
+/// Usage in agent-research:
+/// ```rust
+/// use data_infrastructure::simple_client::ProvenanceClientAdapter;
+/// use agent_research::self_prompting_agent::agent_caws_integration::DatabaseClientTrait;
+///
+/// let client = DatabaseClient::new(config).await?;
+/// let adapter = ProvenanceClientAdapter::new(client);
+/// // Agent-research can then implement DatabaseClientTrait for ProvenanceClientAdapter
+/// ```
+#[derive(Clone, Debug)]
+pub struct ProvenanceClientAdapter {
+    client: Arc<DatabaseClient>,
+}
+
+impl ProvenanceClientAdapter {
+    /// Create a new provenance client adapter
+    pub fn new(client: DatabaseClient) -> Self {
+        Self {
+            client: Arc::new(client),
+        }
+    }
+
+    /// Create a new provenance client adapter from Arc
+    pub fn from_arc(client: Arc<DatabaseClient>) -> Self {
+        Self { client }
+    }
+
+    /// Get a reference to the underlying database client
+    pub fn client(&self) -> &DatabaseClient {
+        &self.client
+    }
+
+    /// Create a provenance entry (for use by agent-research trait implementation)
+    ///
+    /// This method matches the signature expected by DatabaseClientTrait,
+    /// converting anyhow::Result to Box<dyn Error + Send + Sync>.
+    pub async fn create_provenance_entry(
+        &self,
+        task_id: Uuid,
+        action: String,
+        actor: String,
+        change_summary: String,
+        resource_id: Option<Uuid>,
+        resource_type: Option<String>,
+        metadata: serde_json::Value,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.client
+            .create_provenance_entry(
+                task_id,
+                action,
+                actor,
+                change_summary,
+                resource_id,
+                resource_type,
+                metadata,
+            )
+            .await
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
     }
 }

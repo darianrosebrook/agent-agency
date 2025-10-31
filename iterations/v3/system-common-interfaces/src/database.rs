@@ -184,3 +184,26 @@ pub struct DatabaseMetrics {
     pub error_count: u64,
     pub last_error: Option<String>,
 }
+
+/// Audit trail entry creation input
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateAuditEntry {
+    pub entity_type: String,
+    pub entity_id: Uuid,
+    pub action: String,
+    pub details: serde_json::Value,
+    pub user_id: Option<String>,
+    pub ip_address: Option<String>,
+    pub timestamp: Option<DateTime<Utc>>,
+}
+
+/// Database audit operations interface for audit trail persistence
+/// 
+/// This trait provides audit-specific database operations without requiring
+/// the full DatabaseOperations trait, allowing crates to use audit persistence
+/// without creating circular dependencies.
+#[async_trait]
+pub trait DatabaseAuditOperations: Send + Sync {
+    /// Create an audit trail entry
+    async fn create_audit_entry(&self, entry: CreateAuditEntry) -> Result<()>;
+}

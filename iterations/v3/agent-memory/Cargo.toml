@@ -56,6 +56,9 @@ sha2 = "0.10"
 # Configuration
 config = { workspace = true }
 
+# Interfaces
+system-common-interfaces = { path = "../system-common-interfaces" }
+
 # Integration with existing services
 # data-infrastructure = { path = "../data-infrastructure", optional = true }  # Removed to break circular dependency - now using direct sqlx
 # agent-data-processing = { path = "../agent-data-processing", optional = true, features = ["embeddings"] }  # Removed to break circular dependency - not actually used

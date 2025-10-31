@@ -4,6 +4,7 @@
 
 use crate::mcp_types::*;
 use crate::tools::DocQualityValidator;
+use crate::tools::file_editing_tools::FileEditingToolExecutor;
 // Memory system disabled due to cyclic dependencies
 // #[cfg(feature = "memory")]
 // use agent_memory::MemorySystem;
@@ -11,10 +12,55 @@ use anyhow::Result;
 use dashmap::DashMap;
 use std::process::Stdio;
 use std::sync::Arc;
+use std::path::PathBuf;
 use tokio::process::Command;
 use tokio::sync::RwLock;
 use tracing::{info, warn};
 use uuid::Uuid;
+
+// File operations service - using runtime injection pattern to avoid circular dependencies
+// Real implementations should be injected via ToolRegistry::with_file_ops()
+use system_common_interfaces::{
+    FileOperationsService, FileResult, FileOpsError, Changeset, AllowList, Budgets,
+    Workspace, WorkspaceStatus,
+};
+
+/// Placeholder file operations service that requires real implementation injection
+/// 
+/// This placeholder returns errors for all operations, encouraging users to inject
+/// a real implementation via `ToolRegistry::with_file_ops()`.
+#[derive(Debug)]
+struct PlaceholderFileOperationsService;
+
+#[async_trait::async_trait]
+impl FileOperationsService for PlaceholderFileOperationsService {
+    async fn validate_changeset(
+        &self,
+        _changeset: &Changeset,
+        _allowlist: &AllowList,
+        _budgets: &Budgets,
+    ) -> FileResult<()> {
+        Err(FileOpsError::Validation(
+            "Placeholder service: Inject a real FileOperationsService via ToolRegistry::with_file_ops()".to_string()
+        ))
+    }
+
+    async fn create_workspace(
+        &self,
+        _task_id: &str,
+        _repo_path: &std::path::Path,
+    ) -> FileResult<Box<dyn Workspace>> {
+        Err(FileOpsError::WorkspaceNotFound(
+            "Placeholder service: Inject a real FileOperationsService via ToolRegistry::with_file_ops()".to_string()
+        ))
+    }
+
+    async fn get_workspace_status(&self, _task_id: &str) -> FileResult<WorkspaceStatus> {
+        Err(FileOpsError::WorkspaceNotFound(
+            "Placeholder service: Inject a real FileOperationsService via ToolRegistry::with_file_ops()".to_string()
+        ))
+    }
+}
 
 /// Tool registry for managing MCP tools
 #[derive(Debug)]
@@ -24,12 +70,33 @@ pub struct ToolRegistry {
     execution_history: Arc<RwLock<Vec<ToolExecutionResult>>>,
     statistics: Arc<RwLock<ToolRegistryStats>>,
     doc_quality_validator: Arc<DocQualityValidator>,
+    file_ops: Arc<dyn FileOperationsService>,
+    file_editing_executor: Arc<FileEditingToolExecutor>,
     // memory_system: Option<Arc<MemorySystem>>, // Disabled due to cyclic dependencies
 }
 
 impl ToolRegistry {
-    /// Create a new tool registry
+    /// Create a new tool registry with a placeholder file operations service
+    /// 
+    /// **Note**: The placeholder service will return errors for all operations.
+    /// To use real file operations, create the registry via `with_file_ops()` and
+    /// inject a real `FileOperationsService` implementation (e.g., from `data-infrastructure`).
+    /// 
+    /// Example:
+    /// ```rust,ignore
+    /// use data_infrastructure::create_file_operations_service;
+    /// let file_ops = create_file_operations_service(std::env::current_dir().unwrap());
+    /// let registry = ToolRegistry::with_file_ops(file_ops);
+    /// ```
     pub fn new() -> Self {
+        // Create a minimal placeholder that requires injection
+        // This avoids circular dependencies by requiring runtime injection
+        Self::with_file_ops(Arc::new(PlaceholderFileOperationsService))
+    }
+
+    /// Create a new tool registry with custom file operations
+    pub fn with_file_ops(file_ops: Arc<dyn FileOperationsService>) -> Self {
+        let file_editing_executor = Arc::new(FileEditingToolExecutor::new(file_ops.clone()));
         Self {
             registered_tools: Arc::new(DashMap::new()),
             execution_queue: Arc::new(RwLock::new(Vec::new())),
@@ -45,6 +112,8 @@ impl ToolRegistry {
                 last_updated: chrono::Utc::now(),
             })),
             doc_quality_validator: Arc::new(DocQualityValidator::new()),
+            file_ops,
+            file_editing_executor,
             // memory_system: None, // Disabled due to cyclic dependencies
         }
     }
@@ -84,6 +153,14 @@ impl ToolRegistry {
         // Register the documentation quality validator tool
         let doc_quality_tool = self.doc_quality_validator.get_tool_definition();
         self.register_tool(doc_quality_tool).await?;
+
+        // Register file editing tools
+        use crate::tools::create_file_editing_tools;
+        let file_tools = create_file_editing_tools(self.file_ops.clone());
+        for tool in file_tools {
+            self.register_tool(tool).await?;
+        }
+        info!("Registered file editing tools");
 
         // Memory tools disabled due to cyclic dependencies
         // let memory_tools = create_memory_tools();
@@ -288,9 +365,9 @@ impl ToolRegistry {
             self.execute_command_tool(tool, request).await
         } else if tool.capabilities.contains(&ToolCapability::NetworkAccess) {
             self.execute_network_tool(tool, request).await
-        } else if tool
-            .capabilities
-            .contains(&ToolCapability::FileSystemAccess)
+        } else if tool.capabilities.contains(&ToolCapability::FileRead)
+            || tool.capabilities.contains(&ToolCapability::FileWrite)
+            || tool.capabilities.contains(&ToolCapability::FileSystemAccess)
         {
             self.execute_filesystem_tool(tool, request).await
         } else {
@@ -446,39 +523,34 @@ impl ToolRegistry {
     ) -> Result<serde_json::Value> {
         info!("Executing filesystem tool: {}", tool.name);
 
-        // Check allowed paths from tool metadata
-        let allowed_paths: Vec<String> = tool
-            .metadata
-            .get("allowed_paths")
-            .and_then(|p| serde_json::from_value(p.clone()).ok())
-            .unwrap_or_default();
-
-        // Validate any path parameters against allowed paths
-        if let Some(path_param) = request.parameters.get("path") {
-            if let Some(path_str) = path_param.as_str() {
-                let is_allowed = allowed_paths.is_empty()
-                    || allowed_paths
-                        .iter()
-                        .any(|allowed| std::path::Path::new(path_str).starts_with(allowed));
-
-                if !is_allowed {
-                    return Err(anyhow::anyhow!("Path not in allowed list: {}", path_str));
-                }
-            }
+        // Route to appropriate file operation based on tool name
+        match tool.name.as_str() {
+            "file_read" => {
+                println!("DEBUG: Routing to execute_file_read");
+                self.file_editing_executor.execute_file_read(serde_json::to_value(&request.parameters).unwrap_or(serde_json::Value::Null)).await
+                    .map_err(|e| anyhow::anyhow!("File read error: {}", e))
+            },
+            "file_write" => {
+                println!("DEBUG: Routing to execute_file_write");
+                self.file_editing_executor.execute_file_write(serde_json::to_value(&request.parameters).unwrap_or(serde_json::Value::Null)).await
+                    .map_err(|e| anyhow::anyhow!("File write error: {}", e))
+            },
+            "file_edit" => {
+                println!("DEBUG: Routing to execute_file_edit");
+                self.file_editing_executor.execute_file_edit(serde_json::to_value(&request.parameters).unwrap_or(serde_json::Value::Null)).await
+                    .map_err(|e| anyhow::anyhow!("File edit error: {}", e))
+            },
+            "workspace_status" => {
+                println!("DEBUG: Routing to execute_workspace_status");
+                self.file_editing_executor.execute_workspace_status(serde_json::to_value(&request.parameters).unwrap_or(serde_json::Value::Null)).await
+                    .map_err(|e| anyhow::anyhow!("Workspace status error: {}", e))
+            },
+            _ => {
+                println!("DEBUG: Unknown filesystem tool: {}", tool.name);
+                Err(anyhow::anyhow!("Unknown filesystem tool: {}", tool.name))
+            },
         }
-
-        // Simulate filesystem operation
-        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
-
-        Ok(serde_json::json!({
-            "tool": tool.name,
-            "type": "filesystem",
-            "parameters": request.parameters,
-            "allowed_paths": allowed_paths,
-            "status": "completed"
-        }))
     }
-
     /// Execute a general tool in sandboxed environment
     async fn execute_sandboxed_tool(
         &self,

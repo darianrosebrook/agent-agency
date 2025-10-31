@@ -194,3 +194,179 @@ impl Default for VerificationConfig {
         }
     }
 }
+
+/// Entity in verification context
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Entity {
+    pub id: String,
+    pub name: String,
+    pub entity_type: EntityType,
+    pub confidence: f64,
+    pub context: Option<String>,
+}
+
+/// Coreference chain - sequence of coreferences
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoreferenceChain {
+    pub chain_id: String,
+    pub coreferences: Vec<Coreference>,
+    pub entity: String,
+    pub confidence: f64,
+}
+
+/// Coreference type classification
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum CoreferenceType {
+    Pronominal,
+    Nominal,
+    Demonstrative,
+    Possessive,
+    Other(String),
+}
+
+/// Entity disambiguation result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EntityDisambiguation {
+    pub entity: String,
+    pub candidates: Vec<EntityCandidate>,
+    pub selected_candidate: Option<EntityCandidate>,
+    pub confidence: f64,
+    pub method: DisambiguationMethod,
+}
+
+/// Entity candidate for disambiguation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EntityCandidate {
+    pub id: String,
+    pub name: String,
+    pub entity_type: EntityType,
+    pub confidence: f64,
+    pub context: Option<String>,
+}
+
+/// Disambiguation method used
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum DisambiguationMethod {
+    Contextual,
+    KnowledgeBase,
+    Embedding,
+    PatternMatching,
+    Hybrid,
+}
+
+/// Code output from analysis
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CodeOutput {
+    pub code: String,
+    pub language: String,
+    pub functions: Vec<String>,
+    pub classes: Vec<String>,
+    pub imports: Vec<String>,
+}
+
+/// Code specification
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CodeSpecification {
+    pub language: String,
+    pub api_signature: Option<String>,
+    pub return_type: Option<String>,
+    pub parameters: Vec<String>,
+}
+
+/// Documentation output
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentationOutput {
+    pub content: String,
+    pub format: String,
+    pub sections: Vec<String>,
+    pub examples: Vec<String>,
+}
+
+/// Documentation standards
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentationStandards {
+    pub format: String,
+    pub required_sections: Vec<String>,
+    pub style_guide: Option<String>,
+}
+
+/// Data analysis output
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DataAnalysisOutput {
+    pub analysis_type: String,
+    pub results: DataAnalysisResults,
+    pub confidence: f64,
+}
+
+/// Data analysis results container
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DataAnalysisResults {
+    pub statistical: Vec<StatisticalResult>,
+    pub patterns: Vec<PatternResult>,
+    pub correlations: Vec<CorrelationResult>,
+    pub insights: Vec<String>,
+}
+
+/// Data schema
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DataSchema {
+    pub fields: Vec<SchemaField>,
+    pub constraints: Vec<String>,
+}
+
+/// Schema field definition
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SchemaField {
+    pub name: String,
+    pub field_type: String,
+    pub required: bool,
+}
+
+/// Statistical result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StatisticalResult {
+    pub metric: String,
+    pub value: f64,
+    pub confidence: f64,
+    pub context: Option<String>,
+}
+
+/// Pattern result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatternResult {
+    pub pattern_type: String,
+    pub matches: Vec<String>,
+    pub confidence: f64,
+}
+
+/// Correlation result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CorrelationResult {
+    pub variable1: String,
+    pub variable2: String,
+    pub correlation: f64,
+    pub significance: f64,
+}
+
+/// Match type for keyword matching
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MatchType {
+    Exact,
+    Fuzzy,
+    Semantic,
+    Regex,
+}
+
+/// Entity type for verification
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum EntityType {
+    Person,
+    Organization,
+    Location,
+    Technology,
+    Concept,
+    Code,
+    Documentation,
+    Data,
+    Other(String),
+}

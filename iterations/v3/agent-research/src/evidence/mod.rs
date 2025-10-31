@@ -4,6 +4,7 @@
 //! with multiple verification methods and quality assessment.
 
 pub mod types;
+pub mod evidence_types;
 pub mod collector;
 pub mod code_analysis;
 pub mod test_execution;

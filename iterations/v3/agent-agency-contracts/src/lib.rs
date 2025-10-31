@@ -60,7 +60,7 @@ pub use schema::{
 pub use task_request::{
     validate_task_request_value, BudgetLimits, ChangeType, Environment, FileChange,
     RiskTier, ScopeRestrictions, TaskConstraints, TaskMetadata, TaskPriority,
-    TaskRequest, TaskContext,
+    TaskRequest, TaskContext as RequestTaskContext,
 };
 pub use task_response::{
     validate_task_response_value, TaskError, TaskProgress, TaskResponse, TaskStatus,
@@ -87,7 +87,7 @@ pub use execution_events::{
     ExecutionEvent, WorkingSpecScope,
 };
 pub use task_executor::{
-    TaskExecutor, TaskExecutionResult,
+    TaskExecutor, TaskExecutionResult, TaskSpec, TaskRequirements, TaskContext, TaskScope, ExecutionStatus,
 };
 pub use task_executor_provider::{
     TaskExecutorProvider, TaskExecutorFactory,

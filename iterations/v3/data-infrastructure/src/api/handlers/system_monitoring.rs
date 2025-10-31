@@ -12,20 +12,10 @@ use serde_json;
 use tracing::{info, error};
 use uuid::Uuid;
 
-use crate::api::server::ApiState;
+use crate::api::ApiState;
 
-/// Get task provenance (stub implementation)
-pub async fn get_task_provenance(Path(_task_id): Path<String>) -> Json<serde_json::Value> {
-    Json(serde_json::json!({
-        "task_id": _task_id,
-        "provenance": [],
-        "message": "Task provenance tracking not yet implemented",
-        "status": "success"
-    }))
-}
-
-/// Get task provenance (real implementation)
-pub async fn get_task_provenance_real(
+/// Get task provenance
+pub async fn get_task_provenance(
     State(state): State<ApiState>,
     Path(task_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
@@ -64,7 +54,7 @@ pub async fn get_task_provenance_real(
 
 /// Proxy handler for forwarding requests
 pub async fn proxy_handler(
-    State(state): State<ApiState>,
+    State(_state): State<ApiState>,
     Json(request_data): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     let target_url = request_data.get("url")
@@ -86,14 +76,82 @@ pub async fn proxy_handler(
     
     let body = request_data.get("body");
 
-    // Forward the request using the orchestrator client
-    // TODO: Implement proxy request functionality when orchestrator client is available
-    Ok(Json(serde_json::json!({
-        "status_code": 200,
-        "headers": serde_json::json!({}),
-        "body": serde_json::json!({"message": "Proxy request not yet implemented"}),
-        "status": "success"
-    })))
+    // Validate URL for security (prevent SSRF attacks)
+    let url = reqwest::Url::parse(target_url)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    // Only allow HTTP/HTTPS protocols
+    if url.scheme() != "http" && url.scheme() != "https" {
+        error!("Invalid URL scheme: {}", url.scheme());
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // Create HTTP client with timeout
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| {
+            error!("Failed to create HTTP client: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Build request based on method
+    let mut request_builder = match method.to_uppercase().as_str() {
+        "GET" => client.get(url),
+        "POST" => client.post(url),
+        "PUT" => client.put(url),
+        "PATCH" => client.patch(url),
+        "DELETE" => client.delete(url),
+        _ => {
+            error!("Unsupported HTTP method: {}", method);
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    };
+
+    // Add headers
+    for (key, value) in headers {
+        request_builder = request_builder.header(&key, value);
+    }
+
+    // Add body if present
+    if let Some(body_val) = body {
+        if let Some(body_str) = body_val.as_str() {
+            request_builder = request_builder.body(body_str.to_string());
+        } else {
+            request_builder = request_builder.json(body_val);
+        }
+    }
+
+    // Execute request
+    match request_builder.send().await {
+        Ok(response) => {
+            let status_code = response.status().as_u16();
+            
+            // Read response headers
+            let response_headers: serde_json::Value = response.headers()
+                .iter()
+                .filter_map(|(k, v)| {
+                    v.to_str().ok().map(|val| (k.to_string(), serde_json::Value::String(val.to_string())))
+                })
+                .collect();
+
+            // Read response body
+            let body_text = response.text().await.unwrap_or_default();
+            let body_json: serde_json::Value = serde_json::from_str(&body_text)
+                .unwrap_or_else(|_| serde_json::Value::String(body_text));
+
+            Ok(Json(serde_json::json!({
+                "status_code": status_code,
+                "headers": response_headers,
+                "body": body_json,
+                "status": "success"
+            })))
+        }
+        Err(e) => {
+            error!("Proxy request failed: {}", e);
+            Err(StatusCode::BAD_GATEWAY)
+        }
+    }
 }
 
 /// Get system metrics
@@ -155,7 +213,7 @@ pub async fn get_dashboard_data(
 
 /// Get diff summary
 pub async fn get_diff_summary(
-    State(state): State<ApiState>,
+    State(_state): State<ApiState>,
     Json(diff_data): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     let old_content = diff_data.get("old_content")
@@ -170,15 +228,25 @@ pub async fn get_diff_summary(
         .and_then(|v| v.as_str())
         .unwrap_or("");
 
-    // Generate diff summary using AI service
-    // TODO: Implement AI service when available
-    Ok(Json(serde_json::json!({
-        "summary": "Diff summary generation not yet implemented",
-        "changes": serde_json::json!([]),
-        "impact_assessment": "Not available",
-        "recommendations": serde_json::json!([]),
-        "confidence_score": 0.0,
-        "generated_at": chrono::Utc::now(),
-        "status": "success"
-    })))
+    // DEPENDENCY: AI service for diff summary generation not yet available
+    // When integrated, this should:
+    // 1. Send old_content, new_content, and context to AI service
+    // 2. Request structured analysis including:
+    //    - Summary of changes
+    //    - Categorized change list (additions, deletions, modifications)
+    //    - Impact assessment (breaking changes, performance, security)
+    //    - Recommendations for review or testing
+    //    - Confidence score for the analysis
+    // 3. Return structured response with all analysis components
+    //
+    // Real implementation requires:
+    // - AI service client (e.g., OpenAI, Anthropic, or local LLM service)
+    // - Prompt engineering for diff analysis
+    // - Structured output parsing
+    // - Error handling and fallback mechanisms
+    //
+    // For now, return error indicating dependency is not available
+    error!("Diff summary generation requested but AI service not available. Context: {}", context.chars().take(100).collect::<String>());
+    
+    Err(StatusCode::NOT_IMPLEMENTED)
 }

@@ -113,7 +113,7 @@ pub fn calculate_user_score(user_data: &HashMap<String, String>) -> Result<f64, 
             let name_length = name.len() as f64;
             score += name_length * 0.1;
 
-            if name_length > 10 {
+            if name_length > 10.0 {
                 if name.chars().all(|c| c.is_alphabetic() || c.is_whitespace()) {
                     score += 5.0;
 

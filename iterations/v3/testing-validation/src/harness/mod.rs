@@ -17,6 +17,9 @@ use tokio::sync::Mutex;
 use tracing::info;
 
 use crate::services::{OrchestratorService, OllamaService, PostgresService};
+use crate::test_helpers::create_test_autonomous_executor;
+use agent_orchestration::autonomous_executor::AutonomousExecutor;
+use std::sync::Arc;
 
 /// Manager for local services required by E2E tests
 pub struct LocalServiceManager {

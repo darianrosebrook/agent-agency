@@ -70,3 +70,38 @@ impl ValidationResult {
         }
     }
 }
+
+/// Validation status for overall validation results
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum ValidationStatus {
+    /// Validation passed
+    Valid,
+    /// Validation has warnings but is acceptable
+    Warnings,
+    /// Validation failed
+    Invalid,
+}
+
+/// Issue severity levels
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+pub enum IssueSeverity {
+    /// Informational issue
+    Info,
+    /// Warning issue
+    Warning,
+    /// Error issue
+    Error,
+}
+
+/// Validation issue found during validation
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ValidationIssue {
+    /// Severity of the issue
+    pub severity: IssueSeverity,
+    /// Category of the issue
+    pub category: String,
+    /// Description of the issue
+    pub description: String,
+    /// Optional suggestion for fixing the issue
+    pub suggestion: Option<String>,
+}

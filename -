@@ -1,0 +1,1062 @@
+{
+  "summary": {
+    "total_files": 1,
+    "non_ignored_files": 1,
+    "ignored_files": 0,
+    "language_counts": {
+      "rust": 1
+    },
+    "files_with_hidden_todos": 1,
+    "total_hidden_todos": 26,
+    "high_confidence_todos": 26,
+    "medium_confidence_todos": 0,
+    "low_confidence_todos": 0,
+    "code_stub_todos": 0,
+    "pattern_counts": {
+      "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))": 25,
+      "\\bfor\\s+now\\b(?!(_|\\.|anal|\\sanal|s))": 1,
+      "explicit_todos": 26
+    },
+    "min_confidence_threshold": 0.7
+  },
+  "files": {
+    "iterations/v3/agent-orchestration/src/planning/todo_template.rs": {
+      "language": "rust",
+      "hidden_todos": {
+        "1": {
+          "comment": "! TODO Template System - Dependency Tracking with Quality Gate Enforcement",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: Template System - Dependency Tracking with Quality Gate Enforcement\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "3": {
+          "comment": "! Templates for structured TODO tracking with dependency management.",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: tracking with dependency management.\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "15": {
+          "comment": "/ TODO template with dependency tracking",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: template with dependency tracking\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "52": {
+          "comment": "/ Individual TODO step in a template",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: step in a template\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "107": {
+          "comment": "/ Dependency between TODO steps",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: steps\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "142": {
+          "comment": "/ Active TODO instance",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: instance\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "151": {
+          "comment": "/ Plan ID this TODO instance is associated with.",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: instance is associated with.\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "152": {
+          "comment": "/ Links the TODO instance to a specific execution plan, allowing tracking",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: instance to a specific execution plan, allowing tracking\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "153": {
+          "comment": "/ of TODO progress within the context of a larger planning workflow.",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: progress within the context of a larger planning workflow.\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "156": {
+          "comment": "/ Milestone ID this TODO is associated with (optional).",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: is associated with (optional).\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "157": {
+          "comment": "/ If provided, associates this TODO instance with a specific milestone",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: instance with a specific milestone\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "187": {
+          "comment": "/ Step status in a TODO instance",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: instance\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "278": {
+          "comment": "/ TODO template system",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: template system\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "283": {
+          "comment": "/ Active TODO instances",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: instances\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "297": {
+          "comment": "/ Create new TODO template system",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: template system\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "306": {
+          "comment": "/ Register a TODO template",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: template\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "316": {
+          "comment": "/ Create TODO instance from template",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: instance from template\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "342": {
+          "comment": "/ Start working on a TODO step",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: step\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "370": {
+          "comment": "/ Complete a TODO step",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: step\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "402": {
+          "comment": "/ Fail a TODO step",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: step\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "659": {
+          "comment": "/ Get TODO instance by ID",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: instance by ID\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "666": {
+          "comment": "/ Get TODO instance by ID (mutable)",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: instance by ID (mutable)\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "673": {
+          "comment": "/ Get TODO instance by plan ID",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: instance by plan ID\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "681": {
+          "comment": "/ Get TODO instance by plan ID (mutable)",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: instance by plan ID (mutable)\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        },
+        "758": {
+          "comment": "For now, check that required gates are verified",
+          "matches": {
+            "explicit_todos": [
+              "\\bfor\\s+now\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.0
+        },
+        "771": {
+          "comment": "/ Progress information for TODO instance",
+          "matches": {
+            "explicit_todos": [
+              "\\bTODO\\b(?!(_|\\.|anal|\\sanal|s))"
+            ]
+          },
+          "confidence_score": 1.0,
+          "confidence_breakdown": [
+            [
+              "explicit",
+              1.0
+            ]
+          ],
+          "context_score": 0.3,
+          "engineering_suggestions": {
+            "needs_engineering_format": true,
+            "missing_elements": [
+              "completion_checklist",
+              "acceptance_criteria",
+              "dependencies",
+              "governance"
+            ],
+            "suggested_tier": 3,
+            "priority_level": "Medium",
+            "template_suggestion": "// TODO: instance\n//       <One-sentence context & why this exists>\n//\n// COMPLETION CHECKLIST:\n// [ ] Primary functionality implemented\n// [ ] API/data structures defined & stable\n// [ ] Error handling + validation aligned with error taxonomy\n// [ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)\n// [ ] Integration tests for external systems/contracts\n// [ ] Documentation: public API + system behavior\n// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)\n// [ ] Security posture reviewed (inputs, authz, sandboxing)\n// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing\n// [ ] Configurability and feature flags defined if relevant\n// [ ] Failure-mode cards documented (degradation paths)\n//\n// ACCEPTANCE CRITERIA:\n// - <User-facing measurable behavior>\n// - <Invariant or schema contract requirements>\n// - <Performance/statistical bounds>\n// - <Interoperation requirements or protocol contract>\n//\n// DEPENDENCIES:\n// - <System or feature this relies on> (Required/Optional)\n// - <Interop/contract references>\n// - File path(s)/module links to dependent code\n//\n// ESTIMATED EFFORT: <Number + confidence range>\n// PRIORITY: Medium\n// BLOCKING: {Yes/No} \u2013 If Yes: explicitly list what it blocks\n//\n// GOVERNANCE:\n// - CAWS Tier: 3 (impacts rigor, provenance, review policy)\n// - Change Budget: <LOC or file count> (if relevant)\n// - Reviewer Requirements: <Roles or domain expertise>",
+            "confidence": 0.6
+          }
+        }
+      },
+      "total_lines": 895,
+      "comment_lines": 157
+    }
+  },
+  "patterns": {
+    "explicit_todos": [
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 1,
+        "comment": "! TODO Template System - Dependency Tracking with Quality Gate Enforcement",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 3,
+        "comment": "! Templates for structured TODO tracking with dependency management.",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 15,
+        "comment": "/ TODO template with dependency tracking",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 52,
+        "comment": "/ Individual TODO step in a template",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 107,
+        "comment": "/ Dependency between TODO steps",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 142,
+        "comment": "/ Active TODO instance",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 151,
+        "comment": "/ Plan ID this TODO instance is associated with.",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 152,
+        "comment": "/ Links the TODO instance to a specific execution plan, allowing tracking",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 153,
+        "comment": "/ of TODO progress within the context of a larger planning workflow.",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 156,
+        "comment": "/ Milestone ID this TODO is associated with (optional).",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 157,
+        "comment": "/ If provided, associates this TODO instance with a specific milestone",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 187,
+        "comment": "/ Step status in a TODO instance",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 278,
+        "comment": "/ TODO template system",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 283,
+        "comment": "/ Active TODO instances",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 297,
+        "comment": "/ Create new TODO template system",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 306,
+        "comment": "/ Register a TODO template",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 316,
+        "comment": "/ Create TODO instance from template",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 342,
+        "comment": "/ Start working on a TODO step",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 370,
+        "comment": "/ Complete a TODO step",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 402,
+        "comment": "/ Fail a TODO step",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 659,
+        "comment": "/ Get TODO instance by ID",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 666,
+        "comment": "/ Get TODO instance by ID (mutable)",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 673,
+        "comment": "/ Get TODO instance by plan ID",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 681,
+        "comment": "/ Get TODO instance by plan ID (mutable)",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 758,
+        "comment": "For now, check that required gates are verified",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.0
+      },
+      {
+        "file": "iterations/v3/agent-orchestration/src/planning/todo_template.rs",
+        "language": "rust",
+        "line": 771,
+        "comment": "/ Progress information for TODO instance",
+        "patterns": [
+          "explicit_todos"
+        ],
+        "confidence_score": 1.0,
+        "context_score": 0.3
+      }
+    ]
+  }
+}

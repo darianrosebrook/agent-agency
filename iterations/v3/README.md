@@ -11,7 +11,8 @@ Agent Agency V3 provides a modular Rust-based infrastructure for autonomous agen
 The system is organized into 17 focused crates with clear responsibilities:
 
 #### Core Agent Systems
-- **agent-orchestration**: Task coordination and council-based decision making
+- **agent-orchestration**: Task coordination, council governance, and autonomous file editing
+- **agent-constitutional-council**: Four-judge constitutional oversight with hybrid CAWS + LLM reasoning
 - **agent-workers**: Parallel task execution and MCP-based worker management
 - **agent-model-management**: Model lifecycle management, inference, and hot-swapping
 - **agent-data-processing**: Data ingestion, enrichment, indexing, and knowledge processing
@@ -42,10 +43,11 @@ The system is organized into 17 focused crates with clear responsibilities:
 The system implements a constitutional task execution pipeline with the following components:
 
 1. **Task Submission**: CLI and REST API interfaces for task creation
-2. **Council Governance**: Four-judge constitutional oversight framework
-3. **Worker Execution**: Parallel task processing with MCP-based worker management
-4. **Progress Monitoring**: Real-time status tracking and intervention capabilities
-5. **Provenance Tracking**: Git-based audit trails and change attribution
+2. **Council Governance**: Four-judge constitutional oversight (Constitutional, Technical, Quality, Integration) with hybrid CAWS + LLM reasoning
+3. **Autonomous File Editing**: Safe, Git-integrated file operations with rollback capabilities
+4. **Worker Execution**: Parallel task processing with MCP-based worker management
+5. **Progress Monitoring**: Real-time status tracking and intervention capabilities
+6. **Provenance Tracking**: Git-based audit trails and change attribution
 
 ### Execution Modes
 
@@ -57,7 +59,9 @@ The system implements a constitutional task execution pipeline with the followin
 
 The system enforces quality gates through automated validation:
 
-- **CAWS Compliance**: Runtime validation with waiver system
+- **Constitutional Council**: Four-judge oversight with hybrid CAWS invariants + LLM reasoning
+- **CAWS Compliance**: Runtime validation with waiver system and deterministic rule checking
+- **Autonomous File Safety**: Git-worktree isolation, changeset validation, and rollback capabilities
 - **Code Analysis**: Static analysis and quality checks
 - **Test Coverage**: Automated testing with coverage requirements
 - **Security Scanning**: Vulnerability detection and integrity verification
@@ -68,15 +72,17 @@ The V3 codebase is organized into focused crates with clear responsibilities:
 
 ```
 iterations/v3/
-├── agent-orchestration/             # Task coordination and governance
+├── agent-orchestration/             # Task coordination, council governance, and autonomous file editing
+├── agent-constitutional-council/    # Four-judge constitutional oversight framework
 ├── agent-workers/                   # Parallel execution and MCP workers
 ├── agent-model-management/          # Model lifecycle and inference
 ├── agent-data-processing/           # Data pipeline and knowledge processing
 ├── agent-memory/                    # Agent memory and embeddings
 ├── agent-research/                  # AI research and reflexive learning
-├── agent-mcp/                       # Model Context Protocol implementation
+├── agent-mcp/                       # Model Context Protocol implementation with file editing tools
 ├── data-infrastructure/             # Database, APIs, and persistence
 ├── system-observability/            # Monitoring and metrics
+├── system-common-interfaces/        # Shared traits for clean service boundaries
 ├── system-quality-security/         # Security and quality gates
 ├── system-resilience/               # Fault tolerance and recovery
 ├── system-resources/                # Resource management
@@ -180,8 +186,10 @@ The system enforces CAWS compliance and quality standards:
 - **[Production Deployment](./deploy/README.md)**: Deployment and operational guides
 
 ### Component Documentation
-- **agent-orchestration**: Task coordination and council governance
-- **agent-model-management**: Model lifecycle and inference management
+- **agent-orchestration**: Task coordination, council governance, and autonomous file editing
+- **agent-constitutional-council**: Four-judge constitutional oversight with hybrid CAWS + LLM reasoning
+- **agent-mcp**: Model Context Protocol implementation with file editing tools and tool registry
+- **system-common-interfaces**: Shared traits for dependency injection and service boundaries
 - **data-infrastructure**: Database persistence and API interfaces
 - **system-quality-security**: Security controls and quality gates
 - **system-observability**: Monitoring and metrics collection

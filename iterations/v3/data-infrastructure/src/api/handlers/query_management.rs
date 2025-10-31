@@ -11,7 +11,7 @@ use axum::{
 use serde_json;
 use tracing::{info, error};
 
-use crate::api::server::ApiState;
+use crate::api::ApiState;
 
 /// List saved queries
 pub async fn list_saved_queries() -> Json<serde_json::Value> {

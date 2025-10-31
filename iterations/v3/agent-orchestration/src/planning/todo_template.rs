@@ -148,10 +148,15 @@ pub struct TodoInstance {
     /// Template ID this instance is based on
     pub template_id: Uuid,
 
-    /// Plan ID this TODO is associated with
+    /// Plan ID this TODO instance is associated with.
+    /// Links the TODO instance to a specific execution plan, allowing tracking
+    /// of TODO progress within the context of a larger planning workflow.
     pub plan_id: Uuid,
 
-    /// Milestone ID this TODO is associated with (optional)
+    /// Milestone ID this TODO is associated with (optional).
+    /// If provided, associates this TODO instance with a specific milestone
+    /// within the execution plan, enabling milestone-level progress tracking
+    /// and dependency management across multiple TODOs in the same milestone.
     pub milestone_id: Option<String>,
 
     /// Current step being worked on
@@ -271,6 +276,7 @@ pub struct QualityVerification {
 }
 
 /// TODO template system
+#[derive(Debug)]
 pub struct TodoTemplateSystem {
     /// Available templates
     templates: HashMap<String, TodoTemplate>,
@@ -650,6 +656,71 @@ impl TodoTemplateSystem {
         instance.current_step = None;
         // Could add completion timestamp, final verification, etc.
     }
+
+    /// Get TODO instance by ID
+    pub fn get_instance(&self, instance_id: Uuid) -> Result<&TodoInstance> {
+        self.active_instances
+            .get(&instance_id)
+            .ok_or_else(|| anyhow!("TODO instance {} not found", instance_id))
+    }
+
+    /// Get TODO instance by ID (mutable)
+    pub fn get_instance_mut(&mut self, instance_id: Uuid) -> Result<&mut TodoInstance> {
+        self.active_instances
+            .get_mut(&instance_id)
+            .ok_or_else(|| anyhow!("TODO instance {} not found", instance_id))
+    }
+
+    /// Get TODO instance by plan ID
+    pub fn get_instance_by_plan_id(&self, plan_id: Uuid) -> Result<&TodoInstance> {
+        self.active_instances
+            .values()
+            .find(|instance| instance.plan_id == plan_id)
+            .ok_or_else(|| anyhow!("No TODO instance found for plan {}", plan_id))
+    }
+
+    /// Get TODO instance by plan ID (mutable)
+    pub fn get_instance_by_plan_id_mut(&mut self, plan_id: Uuid) -> Result<&mut TodoInstance> {
+        self.active_instances
+            .values_mut()
+            .find(|instance| instance.plan_id == plan_id)
+            .ok_or_else(|| anyhow!("No TODO instance found for plan {}", plan_id))
+    }
+
+    /// Check if step dependencies are satisfied for a milestone
+    pub fn can_progress_to_milestone_step(&self, instance: &TodoInstance, step_id: &str) -> Result<bool> {
+        // Check if step can be started (dependencies satisfied)
+        self.can_start_step(instance, step_id)?;
+
+        // Check quality gates
+        self.quality_enforcer.can_start_step(instance, step_id)
+    }
+
+    /// Get blocking reasons for a step
+    pub fn get_blocking_reasons(&self, instance: &TodoInstance, step_id: &str) -> Vec<String> {
+        let mut reasons = Vec::new();
+
+        // Check if step is explicitly blocked
+        if let Some(reason) = instance.blocked_steps.get(step_id) {
+            reasons.push(format!("Step blocked: {}", reason));
+        }
+
+        // Check dependencies
+        if let Ok(template) = self.get_template_for_instance(instance) {
+            for dep in &template.dependencies {
+                if dep.from_step == step_id && !dep.optional {
+                    if !instance.completed_steps.contains(&dep.to_step) {
+                        reasons.push(format!(
+                            "Dependency not satisfied: {} depends on {}",
+                            step_id, dep.to_step
+                        ));
+                    }
+                }
+            }
+        }
+
+        reasons
+    }
 }
 
 impl QualityGateEnforcer {
@@ -682,10 +753,21 @@ impl QualityGateEnforcer {
 
     /// Verify step completion quality gates
     pub async fn verify_step_completion(&self, instance: &TodoInstance, step_id: &str) -> Result<bool> {
-        // Run quality verification for the step
-        // This would integrate with actual quality checking systems
+        // Check quality verification results stored in the step status
+        if let Some(step_status) = instance.step_statuses.get(step_id) {
+            // Verify all quality results for this step
+            for quality_result in &step_status.quality_results {
+                if let Some(gate_name) = quality_result.gate.strip_prefix("gate_") {
+                    if self.enforced_gates.contains(gate_name) {
+                        if !quality_result.result {
+                            return Ok(false);
+                        }
+                    }
+                }
+            }
+        }
 
-        // For now, check that required gates are verified
+        // Check instance-level quality verifications
         for (gate_name, verification) in &instance.quality_verifications {
             if self.enforced_gates.contains(gate_name) && verification.required {
                 if !verification.completed || verification.result != Some(true) {
@@ -820,4 +902,6 @@ mod tests {
         assert!(enforcer.enforced_gates.contains("type_check"));
     }
 }
+
+
 

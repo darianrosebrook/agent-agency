@@ -71,7 +71,10 @@ console = "0.16"
 
 # Local workspace crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
-# data-infrastructure = { path = "../data-infrastructure", optional = true }  # Removed to break circular dependency - will add back with proper feature gating
+system-common-interfaces = { path = "../system-common-interfaces" }
+# data-infrastructure dependency removed to break circular dependency
+# Database operations should be injected at runtime via trait objects
+# data-infrastructure = { path = "../data-infrastructure", optional = true, default-features = false }
 # system-acceleration = { path = "../system-acceleration" }  # Temporarily disabled due to compilation errors
 agent-memory = { path = "../agent-memory", optional = true, features = ["database"] }
 system-resilience = { path = "../system-resilience" }
@@ -87,6 +90,9 @@ api-server = ["axum", "axum-extra", "tower-http", "utoipa", "utoipa-swagger-ui"]
 full = ["dep:rust-bert", "development-tools"]
 with_bert = ["dep:rust-bert"]
 development = ["development-tools"]
+memory = ["agent-memory"]  # Gate memory functionality behind feature flag
+# database feature removed - use runtime injection instead to avoid circular dependency
+# database = ["data-infrastructure"]  # Gate database operations behind feature flag
 
 [[bin]]
 name = "agent-orchestration-server"

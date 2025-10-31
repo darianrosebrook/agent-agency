@@ -4,9 +4,10 @@
 //! and worker/ into a unified MCP-based system.
 
 use crate::worker_types::*;
+use crate::parallel_types::WorkerId;
 use crate::mcp_integration::MCPIntegration;
 use crate::execution::ToolExecutor;
-use agent_mcp::{ToolRegistry, ToolExecutionRequest, types::{ExecutionStatus, ExecutionContext}};
+use agent_mcp::{ToolRegistry, ToolExecutionRequest, mcp_types::{ExecutionStatus, ExecutionContext, MCPTool}};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -56,14 +57,14 @@ impl MCPWorkerPool {
         Self {
             config: config.clone(),
             workers: Arc::new(RwLock::new(HashMap::new())),
-            mcp_integration: Arc::new(MCPIntegration::new(tool_registry)),
+            mcp_integration: Arc::new(MCPIntegration::new(tool_registry, "http://localhost:8080".to_string())),
             shared_memory_system: shared_memory,
             stats: Arc::new(RwLock::new(WorkerPoolStats {
                 total_workers: 0,
                 active_workers: 0,
                 idle_workers: 0,
                 unhealthy_workers: 0,
-                total_tasks_processed: 0,
+                total_tasks_completed: 0,
                 tasks_in_progress: 0,
                 average_queue_time_ms: 0.0,
                 average_execution_time_ms: 0.0,
@@ -90,7 +91,7 @@ impl MCPWorkerPool {
 
     /// Register a new worker with the pool (gives access to shared memory system)
     pub async fn register_worker(&self, specialty: WorkerSpecialty, capabilities: WorkerCapabilities) -> Result<WorkerHandle, Box<dyn std::error::Error + Send + Sync>> {
-        let worker_id = WorkerId::new_v4();
+        let worker_id = WorkerId::new();
 
         // Give worker access to shared memory system - all agents share the same memory
         let handle = WorkerHandle {
@@ -157,7 +158,7 @@ impl MCPWorkerPool {
                 },
             }),
             created_at: chrono::Utc::now(),
-            priority: agent_mcp::types::ExecutionPriority::Normal,
+            priority: agent_mcp::ExecutionPriority::Normal,
             requested_by: Some("worker_pool".to_string()),
         };
 
@@ -187,7 +188,7 @@ impl MCPWorkerPool {
 
         // Update statistics
         let mut stats = self.stats.write().await;
-        stats.total_tasks_processed += 1;
+        stats.total_tasks_completed += 1;
 
         Ok(task_result)
     }
@@ -201,23 +202,14 @@ impl MCPWorkerPool {
         mcp_result: &agent_mcp::ToolExecutionResult,
     ) {
         // Create task context for memory storage
-        let task_context = agent_memory::TaskContext {
+        let task_context = agent_memory::memory_types::TaskContext {
             task_id: task.id.to_string(),
+            agent_id: worker.id.0.to_string(),
             task_type: task.name.clone(),
-            description: task.description.clone(),
-            domain: vec!["worker_execution".to_string(), task.name.clone()],
-            entities: vec![worker.id.to_string(), task.required_tools.first().cloned().unwrap_or_default()],
-            temporal_context: Some(agent_memory::TemporalContext {
-                start_time: chrono::Utc::now() - chrono::Duration::milliseconds(task_result.execution_time_ms as i64),
-                deadline: None,
-                priority: agent_memory::TaskPriority::Medium,
-                recurrence_pattern: None,
-            }),
-            metadata: std::collections::HashMap::from([
-                ("worker_specialty".to_string(), serde_json::json!(worker.specialty)),
-                ("tool_used".to_string(), serde_json::json!(task_result.tool_used)),
-                ("execution_status".to_string(), serde_json::json!(task_result.status)),
-            ]),
+            keywords: vec!["worker_execution".to_string(), task.name.clone()],
+            entities: vec![worker.id.0.to_string(), task.required_tools.first().cloned().unwrap_or_default()],
+            timestamp: chrono::Utc::now() - chrono::Duration::milliseconds(task_result.execution_time_ms as i64),
+            description: format!("{} - {}", task.description, format!("Status: {:?}, Tool: {}", task_result.status, task_result.tool_used)),
         };
 
         // Determine success and performance score
@@ -233,50 +225,64 @@ impl MCPWorkerPool {
         };
 
         // Create experience outcome
-        let outcome = agent_memory::ExperienceOutcome {
+        let outcome = agent_memory::memory_types::ExperienceOutcome {
             success,
-            performance_score,
-            learned_capabilities: vec![format!("{}_execution", task.name)],
-            failure_reasons: if success { vec![] } else {
-                vec![task_result.error_message.clone().unwrap_or_else(|| "Unknown failure".to_string())]
+            quality_score: performance_score.unwrap_or(0.0) as f64,
+            error_message: if success { None } else {
+                Some(task_result.error_message.clone().unwrap_or_else(|| "Unknown failure".to_string()))
             },
-            success_factors: if success {
+            metadata: std::collections::HashMap::from([
+                ("execution_time_ms".to_string(), serde_json::json!(task_result.execution_time_ms)),
+                ("tool_used".to_string(), serde_json::json!(task_result.tool_used)),
+                ("worker_specialty".to_string(), serde_json::json!(worker.specialty)),
+            ]),
+            performance_score,
+            execution_time_ms: Some(task_result.execution_time_ms as u64),
+            learned_capabilities: if success {
                 vec![
                     format!("tool_{}_effective", task_result.tool_used),
                     format!("worker_{:?}_skilled", worker.specialty),
                 ]
-            } else { vec![] },
-            execution_time_ms: Some(task_result.execution_time_ms as i64),
-            tokens_used: None, // MCP tools don't track tokens directly
-            feedback: Some(agent_memory::AgentFeedback {
-                quality_score: performance_score,
-                relevance_score: Some(0.9),
-                accuracy_score: Some(if success { 0.95 } else { 0.3 }),
-                comments: vec![format!("Worker {} executed {}: {:?}", worker.id, task.name, task_result.status)],
-                evaluator_id: Some("worker_pool_memory_system".to_string()),
-            }),
+            } else {
+                vec![]
+            },
         };
 
         // Create and store the agent experience
-        let experience = agent_memory::AgentExperience {
+        let experience = agent_memory::memory_types::AgentExperience {
             id: uuid::Uuid::new_v4(),
-            agent_id: worker.id.to_string(),
+            agent_id: worker.id.0.to_string(),
             task_id: task.id.to_string(),
-            context: task_context,
-            input: serde_json::json!({
+            content: format!("Worker {} executed task {}: {}", worker.id.0, task.name, task.description),
+            input: serde_json::to_string(&serde_json::json!({
                 "task_description": task.description,
                 "tool_id": task.required_tools.first().cloned().unwrap_or_default(),
                 "parameters": task.parameters,
                 "required_tools": task.required_tools
-            }),
-            output: serde_json::json!({
+            })).unwrap_or_default(),
+            output: serde_json::to_string(&serde_json::json!({
                 "task_result": task_result,
                 "mcp_result": mcp_result
-            }),
+            })).unwrap_or_default(),
+            context: agent_memory::memory_types::ExperienceContext {
+                description: format!("Worker execution: {}", task.description),
+                domain: vec!["worker_execution".to_string(), task.name.clone()],
+                task_type: task.name.clone(),
+                temporal_context: Some(agent_memory::memory_types::TemporalContext {
+                    timestamp: chrono::Utc::now() - chrono::Duration::milliseconds(task_result.execution_time_ms as i64),
+                    duration: Some(chrono::Duration::milliseconds(task_result.execution_time_ms as i64)),
+                    sequence_number: None,
+                    priority: agent_memory::memory_types::TaskPriority::Normal,
+                }),
+            },
             outcome,
-            memory_type: agent_memory::MemoryType::Episodic,
+            memory_type: agent_memory::memory_types::MemoryType::Episodic,
             timestamp: chrono::Utc::now(),
-            metadata: std::collections::HashMap::new(),
+            metadata: std::collections::HashMap::from([
+                ("worker_specialty".to_string(), serde_json::json!(worker.specialty)),
+                ("tool_used".to_string(), serde_json::json!(task_result.tool_used)),
+                ("execution_status".to_string(), serde_json::json!(task_result.status)),
+            ]),
         };
 
         // Store in shared memory system
@@ -291,22 +297,14 @@ impl MCPWorkerPool {
         worker: &WorkerHandle,
         task: &TaskDefinition,
     ) -> Vec<agent_memory::ContextualMemory> {
-        let task_context = agent_memory::TaskContext {
+        let task_context = agent_memory::memory_types::TaskContext {
             task_id: task.id.to_string(),
+            agent_id: worker.id.0.to_string(),
             task_type: task.name.clone(),
-            description: format!("Similar to: {}", task.description),
-            domain: vec![task.name.clone()],
+            keywords: vec![task.name.clone(), "similar_execution".to_string()],
             entities: vec![task.required_tools.first().cloned().unwrap_or_default()],
-            temporal_context: Some(agent_memory::TemporalContext {
-                start_time: chrono::Utc::now(),
-                deadline: None,
-                priority: agent_memory::TaskPriority::Medium,
-                recurrence_pattern: None,
-            }),
-            metadata: std::collections::HashMap::from([
-                ("tool_id".to_string(), serde_json::json!(task.required_tools.first().cloned().unwrap_or_default())),
-                ("worker_specialty".to_string(), serde_json::json!(worker.specialty)),
-            ]),
+            timestamp: chrono::Utc::now(),
+            description: format!("Similar to: {}", task.description),
         };
 
         match worker.memory_access.retrieve_contextual_memories(&task_context, 5).await {
@@ -386,6 +384,12 @@ impl MCPWorkerPool {
         } else {
             WorkerHealth::Healthy
         }
+    }
+
+    /// List all registered workers
+    pub async fn list_workers(&self) -> Vec<WorkerHandle> {
+        let workers = self.workers.read().await;
+        workers.values().cloned().collect()
     }
 }
 

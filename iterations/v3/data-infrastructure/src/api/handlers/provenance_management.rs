@@ -12,7 +12,7 @@ use serde_json;
 use tracing::{info, error};
 use uuid::Uuid;
 
-use crate::api::server::ApiState;
+use crate::api::ApiState;
 
 /// List provenance records with pagination and filtering
 pub async fn list_provenance_records(

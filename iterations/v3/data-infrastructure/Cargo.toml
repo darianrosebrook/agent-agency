@@ -69,11 +69,12 @@ agent-agency-contracts = { path = "../agent-agency-contracts" }
 agent-orchestration = { path = "../agent-orchestration", optional = true }
 system-configuration = { path = "../system-configuration" }
 system-quality-security = { path = "../system-quality-security" }
-agent-mcp = { path = "../agent-mcp" }
+agent-mcp = { path = "../agent-mcp", optional = true }
+system-common-interfaces = { path = "../system-common-interfaces" }
 
 [features]
 default = []  # Disable orchestration by default to break circular dependency
-mcp = []
+mcp = ["agent-mcp"]
 orchestration = ["agent-orchestration"]
 
 [dev-dependencies]

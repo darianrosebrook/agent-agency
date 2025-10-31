@@ -12,7 +12,7 @@ use serde_json;
 use tracing::{info, error};
 use uuid::Uuid;
 
-use crate::api::server::ApiState;
+use crate::api::ApiState;
 
 /// Acknowledge an SLO alert
 pub async fn acknowledge_slo_alert(

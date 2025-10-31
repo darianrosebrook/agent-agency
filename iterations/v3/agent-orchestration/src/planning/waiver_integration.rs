@@ -26,6 +26,9 @@ pub struct WaiverIntegration {
 
     /// Emergency waiver configuration
     emergency_config: EmergencyWaiverConfig,
+    
+    /// Optional council monitor for emergency notifications
+    council_monitor: Option<Arc<crate::planning::council_monitor::CouncilMonitor>>,
 }
 
 /// Waiver validation configuration
@@ -102,6 +105,7 @@ impl WaiverIntegration {
             db_ops,
             WaiverValidationConfig::default(),
             EmergencyWaiverConfig::default(),
+            None,
         )
     }
 
@@ -110,11 +114,26 @@ impl WaiverIntegration {
         db_ops: Arc<dyn DatabaseOperations>,
         validation_config: WaiverValidationConfig,
         emergency_config: EmergencyWaiverConfig,
+        council_monitor: Option<Arc<crate::planning::council_monitor::CouncilMonitor>>,
     ) -> Self {
         Self {
             db_ops,
             validation_config,
             emergency_config,
+            council_monitor,
+        }
+    }
+    
+    /// Create with council monitor for emergency notifications
+    pub fn with_council_monitor(
+        db_ops: Arc<dyn DatabaseOperations>,
+        council_monitor: Arc<crate::planning::council_monitor::CouncilMonitor>,
+    ) -> Self {
+        Self {
+            db_ops,
+            validation_config: WaiverValidationConfig::default(),
+            emergency_config: EmergencyWaiverConfig::default(),
+            council_monitor: Some(council_monitor),
         }
     }
 
@@ -167,9 +186,8 @@ impl WaiverIntegration {
             return Err(anyhow!("Invalid emergency waiver reason: {}", reason));
         }
 
-        // Create waiver in database
-        let waiver = Waiver {
-            id: Uuid::new_v4(),
+        // Create waiver in database using CreateWaiver
+        let create_waiver = data_infrastructure::CreateWaiver {
             title: format!("Emergency Waiver: {}", plan_id),
             reason: reason.to_string(),
             description: format!("Emergency waiver for plan {}: {}", plan_id, justification),
@@ -178,31 +196,28 @@ impl WaiverIntegration {
             impact_level: "critical".to_string(),
             mitigation_plan: format!("Emergency waiver - monitor closely. Reason: {}", justification),
             expires_at: Utc::now() + Duration::hours(self.emergency_config.emergency_duration_hours as i64),
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-            status: "active".to_string(),
-            metadata: serde_json::json!({
+            metadata: Some(serde_json::json!({
                 "plan_id": plan_id,
                 "emergency": true,
                 "justification": justification
-            }),
+            })),
         };
 
         // Store waiver
-        let _stored_waiver = self.db_ops.create_waiver(self.convert_waiver_to_request(&waiver)?).await?;
+        let stored_waiver = self.db_ops.create_waiver(create_waiver).await?;
 
         // Create waiver reference
         let waiver_ref = WaiverReference {
-            waiver_id: waiver.id.to_string(),
-            reason: waiver.reason.clone(),
-            waived_gates: waiver.gates.clone(),
-            expires_at: waiver.expires_at,
-            approved_by: waiver.approved_by.clone(),
+            waiver_id: stored_waiver.id.to_string(),
+            reason: stored_waiver.reason.clone(),
+            waived_gates: stored_waiver.gates.clone(),
+            expires_at: stored_waiver.expires_at,
+            approved_by: stored_waiver.approved_by.clone(),
         };
 
         // Notify council if required
         if self.emergency_config.require_council_notification {
-            self.notify_council_of_emergency(&waiver).await?;
+            self.notify_council_of_emergency(&stored_waiver).await?;
         }
 
         Ok(waiver_ref)
@@ -311,12 +326,25 @@ impl WaiverIntegration {
             .map(|w| w.id)
             .collect();
 
-        // Mark as expired (we don't delete, just update status)
+        // Mark as expired using update_waiver method
         let mut updated_count = 0;
         for id in expired_ids {
-            // Note: In a real implementation, you'd have an update_waiver method
-            // For now, we'll just count them
-            updated_count += 1;
+            match self.db_ops.update_waiver(
+                id,
+                data_infrastructure::UpdateWaiver {
+                    title: None,
+                    description: None,
+                    mitigation_plan: None,
+                    expires_at: None,
+                    status: Some("expired".to_string()),
+                    metadata: None,
+                }
+            ).await {
+                Ok(_) => updated_count += 1,
+                Err(e) => {
+                    warn!("Failed to mark waiver {} as expired: {}", id, e);
+                }
+            }
         }
 
         Ok(updated_count)
@@ -403,24 +431,9 @@ impl WaiverIntegration {
         Ok(())
     }
 
-    /// Convert waiver to database request format
-    fn convert_waiver_to_request(&self, waiver: &Waiver) -> Result<data_infrastructure::CreateWaiver> {
-        Ok(data_infrastructure::CreateWaiver {
-            title: waiver.title.clone(),
-            reason: waiver.reason.clone(),
-            description: waiver.description.clone(),
-            gates: waiver.gates.clone(),
-            approved_by: waiver.approved_by.clone(),
-            impact_level: waiver.impact_level.clone(),
-            mitigation_plan: waiver.mitigation_plan.clone(),
-            expires_at: waiver.expires_at,
-        })
-    }
-
     /// Notify council of emergency waiver
     async fn notify_council_of_emergency(&self, waiver: &Waiver) -> Result<()> {
-        // In a real implementation, this would notify the constitutional council
-        // For now, just log the emergency
+        // Log the emergency waiver
         tracing::warn!(
             "Emergency waiver created: {} - {} (expires: {})",
             waiver.title,
@@ -428,8 +441,38 @@ impl WaiverIntegration {
             waiver.expires_at
         );
 
-        // TODO: Implement council notification
-        // This would integrate with the council notification system
+        // Notify council if monitor is available
+        if let Some(monitor) = &self.council_monitor {
+            // Extract plan ID from waiver metadata if available
+            let plan_id = waiver.metadata.get("plan_id")
+                .and_then(|v| v.as_str())
+                .and_then(|s| Uuid::parse_str(s).ok());
+            
+            if let Some(plan_id) = plan_id {
+                let reason = format!(
+                    "Emergency waiver created: {} - {}. Reason: {}. Expires: {}",
+                    waiver.title,
+                    waiver.reason,
+                    waiver.description,
+                    waiver.expires_at
+                );
+                
+                // Request council intervention for emergency waiver
+                match monitor.request_intervention(&plan_id.to_string(), &reason).await {
+                    Ok(_) => {
+                        tracing::info!("Council notified of emergency waiver for plan {}", plan_id);
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to notify council of emergency waiver: {}", e);
+                        // Don't fail the waiver creation, just log the error
+                    }
+                }
+            } else {
+                tracing::warn!("Emergency waiver has no plan_id in metadata, cannot notify council");
+            }
+        } else {
+            tracing::debug!("Council monitor not configured, skipping council notification");
+        }
 
         Ok(())
     }
@@ -488,6 +531,10 @@ mod tests {
         }
 
         async fn create_waiver(&self, _waiver: data_infrastructure::CreateWaiver) -> anyhow::Result<data_infrastructure::models::Waiver> {
+            Err(anyhow!("Not implemented"))
+        }
+
+        async fn update_waiver(&self, _id: Uuid, _update: data_infrastructure::UpdateWaiver) -> anyhow::Result<data_infrastructure::models::Waiver> {
             Err(anyhow!("Not implemented"))
         }
 
@@ -582,4 +629,6 @@ mod tests {
         assert!(waiver_ref.waived_gates.contains(&"quality_gates".to_string()));
     }
 }
+
+
 

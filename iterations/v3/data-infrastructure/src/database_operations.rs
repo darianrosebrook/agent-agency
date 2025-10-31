@@ -9,6 +9,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use uuid::Uuid;
 
 /// Database operations trait for consistent CRUD operations
@@ -54,6 +55,35 @@ pub trait DatabaseOperations {
     // Judge evaluation operations
     async fn create_judge_evaluation(&self, evaluation: CreateJudgeEvaluation) -> Result<JudgeEvaluation>;
     async fn get_judge_evaluations(&self, task_id: Uuid) -> Result<Vec<JudgeEvaluation>>;
+
+    // Planning operations
+    async fn create_planning_telemetry(&self, telemetry: CreatePlanningTelemetry) -> Result<PlanningTelemetry>;
+    async fn get_planning_telemetry(&self, plan_id: Uuid, metric_type: Option<String>) -> Result<Vec<PlanningTelemetry>>;
+    async fn create_milestone(&self, milestone: CreateMilestone) -> Result<Milestone>;
+    async fn get_milestone(&self, plan_id: Uuid, milestone_id: String) -> Result<Option<Milestone>>;
+    async fn get_milestones(&self, plan_id: Uuid) -> Result<Vec<Milestone>>;
+    async fn update_milestone(&self, plan_id: Uuid, milestone_id: String, update: UpdateMilestone) -> Result<Milestone>;
+    async fn delete_milestone(&self, plan_id: Uuid, milestone_id: String) -> Result<()>;
+    async fn create_planning_session(&self, session: CreatePlanningSession) -> Result<PlanningSession>;
+    async fn get_planning_session(&self, id: Uuid) -> Result<Option<PlanningSession>>;
+    async fn get_planning_sessions(&self, plan_id: Uuid) -> Result<Vec<PlanningSession>>;
+    async fn update_planning_session(&self, id: Uuid, update: UpdatePlanningSession) -> Result<PlanningSession>;
+    async fn create_evidence_artifact(&self, artifact: CreateEvidenceArtifact) -> Result<EvidenceArtifact>;
+    async fn get_evidence_artifacts(&self, plan_id: Uuid) -> Result<Vec<EvidenceArtifact>>;
+    async fn get_evidence_artifacts_for_milestone(&self, plan_id: Uuid, milestone_id: String) -> Result<Vec<EvidenceArtifact>>;
+    async fn update_evidence_artifact(&self, id: Uuid, update: UpdateEvidenceArtifact) -> Result<EvidenceArtifact>;
+    async fn create_planning_audit_event(&self, event: CreatePlanningAuditEvent) -> Result<PlanningAuditEvent>;
+    async fn get_planning_audit_events(&self, plan_id: Uuid) -> Result<Vec<PlanningAuditEvent>>;
+    async fn create_execution_plan(&self, plan: CreateExecutionPlan) -> Result<ExecutionPlan>;
+    async fn get_execution_plan(&self, id: Uuid) -> Result<Option<ExecutionPlan>>;
+    async fn get_execution_plans(&self) -> Result<Vec<ExecutionPlan>>;
+    async fn update_execution_plan(&self, id: Uuid, update: UpdateExecutionPlan) -> Result<ExecutionPlan>;
+    async fn delete_execution_plan(&self, id: Uuid) -> Result<()>;
+
+    // Waiver operations
+    async fn get_waivers(&self, status: Option<String>) -> Result<Vec<Waiver>>;
+    async fn create_waiver(&self, waiver: CreateWaiver) -> Result<Waiver>;
+    async fn update_waiver(&self, id: Uuid, update: UpdateWaiver) -> Result<Waiver>;
 }
 
 /// Input types for database operations
@@ -199,4 +229,253 @@ pub struct CreateJudgeEvaluation {
     pub evaluation_metadata: serde_json::Value,
     pub evaluation_time_ms: i32,
     pub evaluation_timestamp: DateTime<Utc>,
+}
+
+/// Planning telemetry input types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreatePlanningTelemetry {
+    pub plan_id: Uuid,
+    pub metric_type: String,
+    pub metric_value: serde_json::Value,
+    pub metadata: Option<serde_json::Value>,
+    pub collected_at: Option<DateTime<Utc>>,
+}
+
+/// Milestone input types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateMilestone {
+    pub id: String,
+    pub plan_id: Uuid,
+    pub objective: String,
+    pub scope: Option<serde_json::Value>,
+    pub interfaces: Option<serde_json::Value>,
+    pub tests: Option<serde_json::Value>,
+    pub evidence_gate: Option<serde_json::Value>,
+    pub rollback_plan: Option<String>,
+    pub dependencies: Option<serde_json::Value>,
+    pub state: Option<String>,
+    pub assigned_worker_id: Option<Uuid>,
+    pub estimated_effort: Option<f64>,
+    pub priority: Option<String>,
+    pub risk_tier: Option<i32>,
+    pub is_blocking: Option<bool>,
+    pub blocking_reason: Option<String>,
+    pub metrics: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateMilestone {
+    pub objective: Option<String>,
+    pub scope: Option<serde_json::Value>,
+    pub interfaces: Option<serde_json::Value>,
+    pub tests: Option<serde_json::Value>,
+    pub evidence_gate: Option<serde_json::Value>,
+    pub rollback_plan: Option<String>,
+    pub dependencies: Option<serde_json::Value>,
+    pub state: Option<String>,
+    pub assigned_worker_id: Option<Uuid>,
+    pub estimated_effort: Option<f64>,
+    pub priority: Option<String>,
+    pub risk_tier: Option<i32>,
+    pub is_blocking: Option<bool>,
+    pub blocking_reason: Option<String>,
+    pub metrics: Option<serde_json::Value>,
+    pub started_at: Option<DateTime<Utc>>,
+    pub completed_at: Option<DateTime<Utc>>,
+}
+
+/// Planning session input types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreatePlanningSession {
+    pub plan_id: Uuid,
+    pub orchestrator_id: String,
+    pub worker_pool_id: String,
+    pub council_session_id: Option<Uuid>,
+    pub audit_correlation_id: Uuid,
+    pub status: Option<String>,
+    pub execution_state: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdatePlanningSession {
+    pub status: Option<String>,
+    pub execution_state: Option<serde_json::Value>,
+    pub completed_at: Option<DateTime<Utc>>,
+}
+
+/// Evidence artifact input types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateEvidenceArtifact {
+    pub milestone_id: String,
+    pub plan_id: Uuid,
+    pub artifact_type: String,
+    pub artifact_data: serde_json::Value,
+    pub verified: Option<bool>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateEvidenceArtifact {
+    pub artifact_type: Option<String>,
+    pub artifact_data: Option<serde_json::Value>,
+    pub verified: Option<bool>,
+    pub verified_at: Option<DateTime<Utc>>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+/// Planning audit event input types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreatePlanningAuditEvent {
+    pub plan_id: Uuid,
+    pub milestone_id: Option<String>,
+    pub worker_id: Option<Uuid>,
+    pub event_type: String,
+    pub description: String,
+    pub metadata: Option<serde_json::Value>,
+}
+
+/// Execution plan input types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateExecutionPlan {
+    pub id: Uuid,
+    pub session_id: Uuid,
+    pub working_spec_id: String,
+    pub title: String,
+    pub overview: Option<String>,
+    pub state: Option<String>,
+    pub milestones: Option<serde_json::Value>,
+    pub dependency_graph: Option<serde_json::Value>,
+    pub change_budget: Option<serde_json::Value>,
+    pub quality_gates: Option<serde_json::Value>,
+    pub evidence_requirements: Option<serde_json::Value>,
+    pub active_waivers: Option<serde_json::Value>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateExecutionPlan {
+    pub title: Option<String>,
+    pub overview: Option<String>,
+    pub state: Option<String>,
+    pub milestones: Option<serde_json::Value>,
+    pub dependency_graph: Option<serde_json::Value>,
+    pub change_budget: Option<serde_json::Value>,
+    pub quality_gates: Option<serde_json::Value>,
+    pub evidence_requirements: Option<serde_json::Value>,
+    pub active_waivers: Option<serde_json::Value>,
+    pub metadata: Option<serde_json::Value>,
+    pub approved_at: Option<DateTime<Utc>>,
+    pub completed_at: Option<DateTime<Utc>>,
+}
+
+/// Waiver input types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateWaiver {
+    pub title: String,
+    pub reason: String,
+    pub description: String,
+    pub gates: Vec<String>,
+    pub approved_by: String,
+    pub impact_level: String,
+    pub mitigation_plan: String,
+    pub expires_at: DateTime<Utc>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateWaiver {
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub mitigation_plan: Option<String>,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub status: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+/// Factory function to create a database operations instance
+/// 
+/// This function creates a DatabaseClient and returns it as an Arc<dyn DatabaseOperations>
+/// for dependency injection. The client uses the provided database configuration.
+/// 
+/// # Example
+/// 
+/// ```rust,ignore
+/// use data_infrastructure::{create_database_operations, DatabaseConfig};
+/// 
+/// let config = DatabaseConfig {
+///     database_url: "postgresql://localhost/test".to_string(),
+///     ..Default::default()
+/// };
+/// 
+/// let db_ops = create_database_operations(config).await?;
+/// ```
+pub async fn create_database_operations(
+    config: crate::database_config::DatabaseConfig,
+) -> Result<Arc<dyn DatabaseOperations + Send + Sync>> {
+    use crate::client::orchestrator::DatabaseClient;
+    
+    let client = DatabaseClient::new(config).await?;
+    Ok(Arc::new(client))
+}
+
+/// Adapter to implement DatabaseAuditOperations for DatabaseOperations
+/// 
+/// This allows DatabaseOperations implementations to be used where DatabaseAuditOperations
+/// is required, breaking circular dependencies by using the interface from system-common-interfaces.
+pub struct DatabaseAuditOperationsAdapter {
+    db_ops: Arc<dyn DatabaseOperations + Send + Sync>,
+}
+
+impl DatabaseAuditOperationsAdapter {
+    /// Create a new adapter wrapping a DatabaseOperations implementation
+    pub fn new(db_ops: Arc<dyn DatabaseOperations + Send + Sync>) -> Self {
+        Self { db_ops }
+    }
+}
+
+#[async_trait]
+impl system_common_interfaces::DatabaseAuditOperations for DatabaseAuditOperationsAdapter {
+    async fn create_audit_entry(&self, entry: system_common_interfaces::CreateAuditEntry) -> system_common_interfaces::Result<()> {
+        // Convert from system-common-interfaces type to data-infrastructure type
+        let audit_entry = CreateAuditTrailEntry {
+            entity_type: entry.entity_type,
+            entity_id: entry.entity_id,
+            action: entry.action,
+            details: entry.details,
+            user_id: entry.user_id,
+            ip_address: entry.ip_address,
+            timestamp: entry.timestamp,
+        };
+        
+        // Call the underlying DatabaseOperations implementation
+        self.db_ops.create_audit_trail_entry(audit_entry).await
+            .map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())) as Box<dyn std::error::Error + Send + Sync>)?;
+        
+        Ok(())
+    }
+}
+
+/// Factory function to create a DatabaseAuditOperations adapter
+/// 
+/// This wraps a DatabaseOperations implementation in an adapter that implements
+/// DatabaseAuditOperations, allowing it to be injected into components that need
+/// only audit functionality without creating circular dependencies.
+/// 
+/// # Example
+/// 
+/// ```rust,ignore
+/// use data_infrastructure::{create_database_audit_operations, DatabaseConfig};
+/// 
+/// let config = DatabaseConfig {
+///     database_url: "postgresql://localhost/test".to_string(),
+///     ..Default::default()
+/// };
+/// 
+/// let db_audit_ops = create_database_audit_operations(config).await?;
+/// ```
+pub async fn create_database_audit_operations(
+    config: crate::database_config::DatabaseConfig,
+) -> Result<Arc<dyn system_common_interfaces::DatabaseAuditOperations + Send + Sync>> {
+    let db_ops = create_database_operations(config).await?;
+    Ok(Arc::new(DatabaseAuditOperationsAdapter::new(db_ops)))
 }

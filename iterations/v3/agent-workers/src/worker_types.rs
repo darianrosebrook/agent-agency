@@ -752,6 +752,12 @@ pub struct TaskContext {
     pub retry_count: u32,
     pub max_retries: u32,
     pub metadata: std::collections::HashMap<String, serde_json::Value>,
+    /// Tool ID for tool execution (optional)
+    #[serde(default)]
+    pub tool_id: Option<String>,
+    /// Parameters for tool execution (optional)
+    #[serde(default)]
+    pub parameters: std::collections::HashMap<String, serde_json::Value>,
 }
 
 
@@ -962,6 +968,15 @@ pub struct ValidationContext {
     pub validation_type: String,
     pub requirements: HashMap<String, serde_json::Value>,
     pub metadata: HashMap<String, serde_json::Value>,
+    // Parallel execution validation fields
+    #[serde(default)]
+    pub package_name: Option<String>,
+    #[serde(default)]
+    pub workspace_root: Option<std::path::PathBuf>,
+    #[serde(default)]
+    pub execution_time: Option<std::time::Duration>,
+    #[serde(default)]
+    pub results: Option<Vec<crate::parallel_types::WorkerResult>>,
 }
 
 /// Artifact types
@@ -1031,6 +1046,8 @@ pub struct TaskDefinition {
     pub name: String,
     pub description: String,
     pub required_tools: Vec<String>,
+    pub parameters: HashMap<String, serde_json::Value>,
+    pub timeout_seconds: Option<u32>,
     pub priority: TaskPriority,
     pub deadline: Option<DateTime<Utc>>,
     pub metadata: HashMap<String, serde_json::Value>,

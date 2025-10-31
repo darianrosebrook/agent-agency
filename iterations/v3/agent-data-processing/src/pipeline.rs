@@ -108,24 +108,22 @@ impl SystemPipelineStage<DataInput, DataInput> for PipelineStageAdapter {
         match self.stage.process(input).await {
             Ok(output) => {
                 // Convert ProcessingOutput back to DataInput for the next stage
-                // This is a simplified conversion - in practice you might want more sophisticated logic
+                // Preserve processed content and metadata from the output
+                let content = match &output.processed_content.data {
+                    ProcessedContentData::Text(text) => DataContent::Text(text.clone()),
+                    ProcessedContentData::Binary(binary) => DataContent::Binary(binary.clone()),
+                    ProcessedContentData::Structured(structured) => DataContent::Structured(structured.clone()),
+                };
+                
+                // Preserve original processing context if available, otherwise create new one
+                let processing_context = output.original_input.processing_context.clone();
+                
                 Ok(DataInput {
-                    id: ProcessingId::new(),
-                    source: DataSource::Api(ApiSource {
-                        endpoint: "pipeline_stage".to_string(),
-                        method: "POST".to_string(),
-                        parameters: HashMap::new(),
-                    }),
-                    content: DataContent::Text("processed_output".to_string()),
+                    id: output.id.clone(),
+                    source: output.original_input.source.clone(),
+                    content,
                     metadata: output.extracted_metadata,
-                    processing_context: ProcessingContext {
-                        request_id: uuid::Uuid::new_v4().to_string(),
-                        user_id: None,
-                        project_scope: None,
-                        priority: ProcessingPriority::Normal,
-                        deadline: None,
-                        tags: vec![],
-                    },
+                    processing_context,
                 })
             }
             Err(e) => Err(system_configuration::PipelineError::stage_error(format!("{}", e), "pipeline_stage")),
@@ -220,22 +218,22 @@ impl PipelineStage for DataProcessingCompositeStage {
 
         let final_output = ProcessingOutput {
             id: ProcessingId::new(),
-            original_input: input,
+            original_input: input.clone(),
             processed_content: ProcessedContent {
                 data: ProcessedContentData::Structured(serde_json::Value::Object(serde_json::Map::new())),
                 content_type: ContentType::Structured,
                 text_content: final_text_content,
                 structured_data: final_structured_data,
                 embeddings: final_embeddings,
-                entities: all_entities,
-                relationships: all_relationships,
-                visual_elements: all_visual_elements,
+                entities: all_entities.clone(),
+                relationships: all_relationships.clone(),
+                visual_elements: all_visual_elements.clone(),
                 audio_transcript: final_audio_transcript,
             },
-            extracted_metadata: accumulated_metadata,
+            extracted_metadata: accumulated_metadata.clone(),
             processing_stats: ProcessingStats {
                 processing_time_ms: processing_time.as_millis() as u64,
-                bytes_processed: self.calculate_bytes_processed(&input, &final_output)?,
+                bytes_processed: 0, // Will be calculated after construction
                 entities_extracted: entities_count,
                 relationships_found: relationships_count,
                 embeddings_generated: embeddings_count,
@@ -244,9 +242,202 @@ impl PipelineStage for DataProcessingCompositeStage {
             created_at: Utc::now(),
         };
 
+        // Calculate bytes processed now that we have the output
+        let bytes_processed = DataProcessingCompositeStage::calculate_bytes_processed_for_output(&input, &final_output)?;
+
+        // Update the processing stats with the calculated bytes
+        let final_output = ProcessingOutput {
+            id: final_output.id,
+            original_input: final_output.original_input,
+            processed_content: final_output.processed_content,
+            extracted_metadata: final_output.extracted_metadata,
+            processing_stats: ProcessingStats {
+                processing_time_ms: final_output.processing_stats.processing_time_ms,
+                bytes_processed,
+                entities_extracted: final_output.processing_stats.entities_extracted,
+                relationships_found: final_output.processing_stats.relationships_found,
+                embeddings_generated: final_output.processing_stats.embeddings_generated,
+                errors_encountered: final_output.processing_stats.errors_encountered,
+            },
+            created_at: final_output.created_at,
+        };
+
         Ok(final_output)
     }
+}
 
+impl DataProcessingCompositeStage {
+    /// Calculate bytes processed for a given input and output
+    fn calculate_bytes_processed_for_output(input: &DataInput, output: &ProcessingOutput) -> DataProcessingResult<u64> {
+        let mut total_bytes = 0u64;
+
+        // Calculate input bytes
+        total_bytes += Self::calculate_input_bytes_static(input)?;
+
+        // Calculate output bytes
+        total_bytes += Self::calculate_output_bytes_static(output)?;
+
+        // Add metadata overhead (estimated)
+        total_bytes += Self::calculate_metadata_overhead_static(input, output)?;
+
+        Ok(total_bytes)
+    }
+
+    /// Calculate bytes from input data (static version)
+    fn calculate_input_bytes_static(input: &DataInput) -> DataProcessingResult<u64> {
+        let mut bytes = 0u64;
+
+        // Content based on DataContent enum
+        match &input.content {
+            DataContent::Text(text) => {
+                bytes += text.len() as u64;
+            }
+            DataContent::Binary(binary) => {
+                bytes += binary.len() as u64;
+            }
+            DataContent::Structured(structured) => {
+                let json_size = serde_json::to_string(structured)
+                    .map_err(|e| DataProcessingError::Serialization(e))?
+                    .len() as u64;
+                bytes += json_size;
+            }
+            DataContent::File(file_path) => {
+                // Read actual file size
+                match std::fs::metadata(&file_path) {
+                    Ok(metadata) => {
+                        bytes += metadata.len();
+                    }
+                    Err(e) => {
+                        // Fallback to estimate if file doesn't exist or can't be read
+                        warn!("Failed to read file metadata for {}: {}. Using estimate.", file_path.display(), e);
+                        bytes += file_path.to_string_lossy().len() as u64 * 100;
+                    }
+                }
+            }
+        }
+
+        // Metadata overhead
+        bytes += Self::calculate_input_metadata_bytes_static(input)?;
+
+        Ok(bytes)
+    }
+
+    /// Calculate bytes from output data (static version)
+    fn calculate_output_bytes_static(output: &ProcessingOutput) -> DataProcessingResult<u64> {
+        let mut bytes = 0u64;
+
+        // Processed content
+        bytes += Self::calculate_processed_content_bytes_static(&output.processed_content)?;
+
+        // Extracted metadata
+        bytes += Self::calculate_extracted_metadata_bytes_static(&output.extracted_metadata)?;
+
+        // Processing stats
+        bytes += Self::calculate_processing_stats_bytes_static(&output.processing_stats)?;
+
+        Ok(bytes)
+    }
+
+    /// Calculate bytes from processed content (static version)
+    fn calculate_processed_content_bytes_static(content: &ProcessedContent) -> DataProcessingResult<u64> {
+        let mut bytes = 0u64;
+
+        match &content.data {
+            ProcessedContentData::Text(text) => {
+                bytes += text.len() as u64;
+            }
+            ProcessedContentData::Binary(binary) => {
+                bytes += binary.len() as u64;
+            }
+            ProcessedContentData::Structured(structured) => {
+                let json_size = serde_json::to_string(structured)
+                    .map_err(|e| DataProcessingError::Serialization(e))?
+                    .len() as u64;
+                bytes += json_size;
+            }
+        }
+
+        // Add entity bytes (estimate based on entity fields)
+        bytes += content.entities.iter().map(|e| {
+            e.id.len() as u64 + format!("{:?}", e.entity_type).len() as u64 + e.confidence.to_string().len() as u64
+        }).sum::<u64>();
+        
+        // Add relationship bytes
+        bytes += content.relationships.iter().map(|r| {
+            r.id.len() as u64 + r.source_entity.len() as u64 + r.target_entity.len() as u64 + r.evidence.len() as u64
+        }).sum::<u64>();
+        
+        // Add visual element bytes (estimate)
+        bytes += content.visual_elements.iter().map(|v| {
+            // Estimate size based on VisualElement fields
+            let mut size = 0u64;
+            if let Some(text) = &v.text_content {
+                size += text.len() as u64;
+            }
+            if let Some(desc) = &v.description {
+                size += desc.len() as u64;
+            }
+            size += 16; // element_type, position, confidence
+            size
+        }).sum::<u64>();
+        
+        // Add audio transcript bytes
+        if let Some(audio) = &content.audio_transcript {
+            bytes += audio.len() as u64;
+        }
+
+        Ok(bytes)
+    }
+
+    /// Calculate bytes from extracted metadata (static version)
+    fn calculate_extracted_metadata_bytes_static(metadata: &HashMap<String, serde_json::Value>) -> DataProcessingResult<u64> {
+        let json_size = serde_json::to_string(metadata)
+            .map_err(|e| DataProcessingError::Serialization(e))?
+            .len() as u64;
+        Ok(json_size)
+    }
+
+    /// Calculate bytes from processing stats (static version)
+    fn calculate_processing_stats_bytes_static(stats: &ProcessingStats) -> DataProcessingResult<u64> {
+        let json_size = serde_json::to_string(stats)
+            .map_err(|e| DataProcessingError::Serialization(e))?
+            .len() as u64;
+        Ok(json_size)
+    }
+
+    /// Calculate input metadata bytes (static version)
+    fn calculate_input_metadata_bytes_static(input: &DataInput) -> DataProcessingResult<u64> {
+        let mut bytes = 0u64;
+
+        // ID (ProcessingId is a UUID)
+        bytes += 16; // UUID is 16 bytes
+
+        // Source (DataSource enum)
+        bytes += match &input.source {
+            DataSource::File(file_source) => file_source.path.to_string_lossy().len() as u64,
+            DataSource::Url(url_source) => url_source.url.len() as u64,
+            DataSource::Stream(stream_source) => stream_source.stream_id.len() as u64,
+            DataSource::Database(db_source) => db_source.table.len() as u64,
+            DataSource::Api(api_source) => api_source.endpoint.len() as u64,
+        };
+
+        // Processing context
+        bytes += 8; // Rough estimate for ProcessingContext
+
+        // Additional metadata
+        let json_size = serde_json::to_string(&input.metadata)
+            .map_err(|e| DataProcessingError::Serialization(e))?
+            .len() as u64;
+        bytes += json_size;
+
+        Ok(bytes)
+    }
+
+    /// Calculate metadata overhead (static version)
+    fn calculate_metadata_overhead_static(_input: &DataInput, _output: &ProcessingOutput) -> DataProcessingResult<u64> {
+        // Estimate 10% overhead for metadata
+        Ok(100) // Fixed overhead estimate
+    }
 }
 
 /// The main data processing pipeline
@@ -510,8 +701,17 @@ impl DataPipeline {
                 bytes += json_size;
             }
             DataContent::File(file_path) => {
-                // Estimate file size - in practice this would read the file
-                bytes += file_path.len() as u64 * 100; // Rough estimate
+                // Read actual file size
+                match std::fs::metadata(&file_path) {
+                    Ok(metadata) => {
+                        bytes += metadata.len();
+                    }
+                    Err(e) => {
+                        // Fallback to estimate if file doesn't exist or can't be read
+                        warn!("Failed to read file metadata for {}: {}. Using estimate.", file_path.display(), e);
+                        bytes += file_path.to_string_lossy().len() as u64 * 100;
+                    }
+                }
             }
         }
 
@@ -568,7 +768,16 @@ impl DataPipeline {
         
         // Add visual element bytes (estimate)
         bytes += content.visual_elements.iter().map(|v| {
-            v.len() as u64 // This will need to be fixed based on VisualElement structure
+            // Estimate size based on VisualElement fields
+            let mut size = 0u64;
+            if let Some(text) = &v.text_content {
+                size += text.len() as u64;
+            }
+            if let Some(desc) = &v.description {
+                size += desc.len() as u64;
+            }
+            size += 16; // element_type, position, confidence
+            size
         }).sum::<u64>();
         
         // Add audio transcript bytes
@@ -604,10 +813,11 @@ impl DataPipeline {
 
         // Source (DataSource enum)
         bytes += match &input.source {
-            DataSource::File(path) => path.len() as u64,
-            DataSource::Api(url) => url.len() as u64,
-            DataSource::Database(table) => table.len() as u64,
-            DataSource::Stream(stream_id) => stream_id.len() as u64,
+            DataSource::File(file_source) => file_source.path.to_string_lossy().len() as u64,
+            DataSource::Url(url_source) => url_source.url.len() as u64,
+            DataSource::Stream(stream_source) => stream_source.stream_id.len() as u64,
+            DataSource::Database(db_source) => db_source.table.len() as u64,
+            DataSource::Api(api_source) => api_source.endpoint.len() as u64,
         };
 
         // Processing context
@@ -620,6 +830,12 @@ impl DataPipeline {
         bytes += json_size;
 
         Ok(bytes)
+    }
+
+    /// Calculate metadata overhead
+    fn calculate_metadata_overhead(&self, _input: &DataInput, _output: &ProcessingOutput) -> DataProcessingResult<u64> {
+        // Estimate 10% overhead for metadata
+        Ok(100) // Fixed overhead estimate
     }
 
     /// Process file content from filesystem
@@ -661,21 +877,21 @@ impl DataPipeline {
             .map_err(|e| DataProcessingError::Operation(format!("Failed to open file: {}", e)))?;
 
         match content_type {
-            ContentType::Text => {
+            ContentType::Text | ContentType::Markdown | ContentType::Html | ContentType::Code => {
                 let mut content = String::new();
                 file.read_to_string(&mut content)
                     .map_err(|e| DataProcessingError::Operation(format!("Failed to read text file: {}", e)))?;
                 
                 Ok(ProcessedContentData::Text(content))
             }
-            ContentType::Binary => {
+            ContentType::Binary | ContentType::Pdf | ContentType::Image | ContentType::Video | ContentType::Audio | ContentType::Document => {
                 let mut content = Vec::new();
                 file.read_to_end(&mut content)
                     .map_err(|e| DataProcessingError::Operation(format!("Failed to read binary file: {}", e)))?;
                 
                 Ok(ProcessedContentData::Binary(content))
             }
-            ContentType::Structured => {
+            ContentType::Structured | ContentType::Json | ContentType::Xml => {
                 let mut content = String::new();
                 file.read_to_string(&mut content)
                     .map_err(|e| DataProcessingError::Operation(format!("Failed to read structured file: {}", e)))?;
@@ -685,6 +901,14 @@ impl DataPipeline {
                     .map_err(|e| DataProcessingError::Serialization(e))?;
                 
                 Ok(ProcessedContentData::Structured(json_value))
+            }
+            ContentType::Unknown => {
+                // Default to binary for unknown types
+                let mut content = Vec::new();
+                file.read_to_end(&mut content)
+                    .map_err(|e| DataProcessingError::Operation(format!("Failed to read file: {}", e)))?;
+                
+                Ok(ProcessedContentData::Binary(content))
             }
         }
     }

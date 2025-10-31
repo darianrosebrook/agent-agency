@@ -18,12 +18,14 @@ chrono.workspace = true
 anyhow = "1.0"
 futures = "0.3"
 rand = "0.8"
+sha2 = "0.10"
 
-# Database integration
-data-infrastructure = { path = "../data-infrastructure", optional = true }
+# Database integration - removed to break circular dependency
+# data-infrastructure = { path = "../data-infrastructure", optional = true }
 
 # Local crates
 system-configuration = { path = "../system-configuration" }
+system-common-interfaces = { path = "../system-common-interfaces" }
 
 # System monitoring (from system-health-monitor)
 sysinfo = "0.30"

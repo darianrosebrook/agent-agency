@@ -722,3 +722,105 @@ pub struct AuditLog {
     pub change_summary: serde_json::Value,
     pub created_at: DateTime<Utc>,
 }
+
+/// Planning telemetry model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct PlanningTelemetry {
+    pub id: Uuid,
+    pub plan_id: Uuid,
+    pub metric_type: String,
+    pub metric_value: serde_json::Value,
+    pub collected_at: DateTime<Utc>,
+    pub metadata: serde_json::Value,
+}
+
+/// Execution plan model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct ExecutionPlan {
+    pub id: Uuid,
+    pub session_id: Uuid,
+    pub working_spec_id: String,
+    pub title: String,
+    pub overview: Option<String>,
+    pub state: String,
+    pub milestones: serde_json::Value,
+    pub dependency_graph: serde_json::Value,
+    pub change_budget: serde_json::Value,
+    pub quality_gates: serde_json::Value,
+    pub evidence_requirements: serde_json::Value,
+    pub active_waivers: serde_json::Value,
+    pub metadata: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub approved_at: Option<DateTime<Utc>>,
+    pub completed_at: Option<DateTime<Utc>>,
+}
+
+/// Milestone model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Milestone {
+    pub id: String,
+    pub plan_id: Uuid,
+    pub objective: String,
+    pub scope: serde_json::Value,
+    pub interfaces: serde_json::Value,
+    pub tests: serde_json::Value,
+    pub evidence_gate: serde_json::Value,
+    pub rollback_plan: Option<String>,
+    pub dependencies: serde_json::Value,
+    pub state: String,
+    pub assigned_worker_id: Option<Uuid>,
+    pub estimated_effort: Option<f64>,
+    pub priority: Option<String>,
+    pub risk_tier: Option<i32>,
+    pub is_blocking: Option<bool>,
+    pub blocking_reason: Option<String>,
+    pub metrics: Option<serde_json::Value>,
+    pub started_at: Option<DateTime<Utc>>,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Planning session model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct PlanningSession {
+    pub id: Uuid,
+    pub plan_id: Uuid,
+    pub orchestrator_id: String,
+    pub worker_pool_id: String,
+    pub council_session_id: Option<Uuid>,
+    pub audit_correlation_id: Uuid,
+    pub status: String,
+    pub execution_state: serde_json::Value,
+    pub started_at: DateTime<Utc>,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Evidence artifact model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct EvidenceArtifact {
+    pub id: Uuid,
+    pub milestone_id: String,
+    pub plan_id: Uuid,
+    pub artifact_type: String,
+    pub artifact_data: serde_json::Value,
+    pub verified: Option<bool>,
+    pub collected_at: DateTime<Utc>,
+    pub verified_at: Option<DateTime<Utc>>,
+    pub metadata: serde_json::Value,
+}
+
+/// Planning audit event model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct PlanningAuditEvent {
+    pub id: Uuid,
+    pub plan_id: Uuid,
+    pub milestone_id: Option<String>,
+    pub worker_id: Option<Uuid>,
+    pub event_type: String,
+    pub description: String,
+    pub metadata: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+}

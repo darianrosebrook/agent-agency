@@ -3,7 +3,6 @@
 //! Provides Redis-based caching with connection pooling, TTL support,
 //! and circuit breaker pattern for reliability.
 
-use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use async_trait::async_trait;
@@ -29,13 +28,9 @@ impl RedisCache {
         pool_size: usize,
         default_ttl: Duration,
     ) -> Result<Self, RedisCacheError> {
-        let addr = if let Some(pass) = password {
-            ConnectionAddr::Tcp(host.to_string(), port)
-        } else {
-            ConnectionAddr::Tcp(host.to_string(), port)
-        };
+        let addr = ConnectionAddr::Tcp(host.to_string(), port);
 
-        let mut conn_info = ConnectionInfo {
+        let conn_info = ConnectionInfo {
             addr,
             redis: redis::RedisConnectionInfo {
                 db: database as i64,

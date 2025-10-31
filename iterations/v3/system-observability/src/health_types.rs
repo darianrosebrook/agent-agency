@@ -499,8 +499,8 @@ pub struct DatabaseHealthMetrics {
     /// Database response time (milliseconds)
     pub response_time_ms: u64,
     /// Database diagnostics
-    #[cfg(feature = "agent-agency-database")]
-    pub diagnostics: Option<agent_agency_database::health::DatabaseDiagnostics>,
+    // Note: agent-agency-database feature removed - diagnostics field not available
+    // pub diagnostics: Option<agent_agency_database::health::DatabaseDiagnostics>,
     /// Last database health check timestamp
     pub last_check: chrono::DateTime<chrono::Utc>,
 }

@@ -3,7 +3,7 @@
 //! This module handles the generation of WorkingSpec objects from task requests,
 //! including goal extraction, acceptance criteria generation, and constraint creation.
 
-use crate::planning_errors::{PlanningError, PlanningResult};
+use crate::planning_agent::planning_errors::{PlanningError, PlanningResult};
 
 /// Generate a working specification from a task request
 pub async fn generate_working_spec(

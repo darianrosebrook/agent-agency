@@ -28,8 +28,14 @@ agent-orchestration = { path = "../agent-orchestration" }
 # Resilience patterns
 system-resilience = { path = "../system-resilience" }
 
+# System observability for metrics collection
+system-observability = { path = "../system-observability" }
+
 # Database client
 data-infrastructure = { path = "../data-infrastructure" }
+
+# Database dependencies (used by learning persistence)
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
 
 # Core memory system - every agent has memory
 agent-memory = { path = "../agent-memory" }
