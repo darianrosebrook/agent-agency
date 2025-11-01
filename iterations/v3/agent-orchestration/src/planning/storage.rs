@@ -13,12 +13,13 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use anyhow::{anyhow, Result};
-use data_infrastructure::{
+use crate::planning::{
     DatabaseOperations,
     models::{ExecutionPlan as DbExecutionPlan, PlanningSession as DbPlanningSession, Milestone as DbMilestone, PlanningAuditEvent, PlanningTelemetry},
 };
 
-use crate::planning::plan_types::{ExecutionPlan, PlanGenerationContext};
+use agent_agency_contracts::*;
+use crate::planning::plan_types::PlanGenerationContext;
 
 /// Planning storage with dual persistence strategy
 pub struct PlanningStorage {
@@ -152,15 +153,18 @@ impl PlanningStorage {
     pub async fn create_planning_session(&self, plan: &ExecutionPlan) -> Result<Uuid> {
         let session_id = Uuid::new_v4();
 
+        let mut metadata = HashMap::new();
+        metadata.insert("session_id".to_string(), serde_json::Value::String(session_id.to_string()));
+        metadata.insert("orchestrator_id".to_string(), serde_json::Value::String(plan.orchestration_meta.orchestrator_id.clone()));
+        metadata.insert("worker_pool_id".to_string(), serde_json::Value::String(plan.orchestration_meta.worker_pool_id.clone()));
+        metadata.insert("council_session_id".to_string(), serde_json::Value::String(plan.orchestration_meta.council_session_id.to_string()));
+        metadata.insert("audit_correlation_id".to_string(), serde_json::Value::String(plan.orchestration_meta.audit_correlation_id.to_string()));
+        metadata.insert("status".to_string(), serde_json::Value::String("active".to_string()));
+        metadata.insert("execution_state".to_string(), serde_json::to_value(&plan.execution_state).unwrap_or_default());
+
         let session = CreatePlanningSession {
-            id: session_id,
             plan_id: plan.contract_plan.id,
-            orchestrator_id: plan.orchestration_meta.orchestrator_id.clone(),
-            worker_pool_id: plan.orchestration_meta.worker_pool_id.clone(),
-            council_session_id: plan.orchestration_meta.council_session_id,
-            audit_correlation_id: plan.orchestration_meta.audit_correlation_id,
-            status: "active".to_string(),
-            execution_state: serde_json::to_value(&plan.execution_state).unwrap_or_default(),
+            metadata,
         };
 
         let db_session = self.db_ops.create_planning_session(session).await?;
@@ -218,9 +222,14 @@ impl PlanningStorage {
 
     /// Update planning session
     pub async fn update_planning_session(&self, session_id: Uuid, execution_state: serde_json::Value) -> Result<()> {
+        let mut metadata = HashMap::new();
+        metadata.insert("execution_state".to_string(), execution_state);
+        // completed_at will be set when session completes
+
         let update = UpdatePlanningSession {
-            execution_state,
-            completed_at: None, // Will be set when session completes
+            id: session_id,
+            status: None,
+            metadata: Some(metadata),
         };
 
         self.db_ops.update_planning_session(session_id, update).await?;
@@ -237,14 +246,16 @@ impl PlanningStorage {
 
     /// Log planning audit event
     pub async fn log_audit_event(&self, event: AuditEvent) -> Result<()> {
+        let mut metadata = event.metadata;
+        metadata.insert("id".to_string(), serde_json::Value::String(Uuid::new_v4().to_string()));
+        metadata.insert("milestone_id".to_string(), serde_json::Value::String(event.milestone_id.to_string()));
+        metadata.insert("worker_id".to_string(), serde_json::Value::String(event.worker_id.to_string()));
+
         let db_event = CreatePlanningAuditEvent {
-            id: Uuid::new_v4(),
             plan_id: event.plan_id,
-            milestone_id: event.milestone_id,
-            worker_id: event.worker_id,
             event_type: event.event_type,
             description: event.description,
-            metadata: event.metadata,
+            metadata,
         };
 
         self.db_ops.create_planning_audit_event(db_event).await?;
@@ -253,12 +264,35 @@ impl PlanningStorage {
 
     /// Store planning telemetry
     pub async fn store_telemetry(&self, plan_id: Uuid, metric_type: String, metric_value: serde_json::Value) -> Result<()> {
+        // Convert metric_value to f64 if it's a number, otherwise store in metadata
+        let (metric_value_f64, mut metadata) = match metric_value {
+            serde_json::Value::Number(n) => {
+                if let Some(f) = n.as_f64() {
+                    (f, HashMap::new())
+                } else {
+                    (0.0, {
+                        let mut m = HashMap::new();
+                        m.insert("raw_value".to_string(), metric_value);
+                        m
+                    })
+                }
+            }
+            _ => {
+                let mut m = HashMap::new();
+                m.insert("raw_value".to_string(), metric_value);
+                (0.0, m)
+            }
+        };
+
+        metadata.insert("id".to_string(), serde_json::Value::String(Uuid::new_v4().to_string()));
+        metadata.insert("plan_id".to_string(), serde_json::Value::String(plan_id.to_string()));
+        metadata.insert("metric_type".to_string(), serde_json::Value::String(metric_type));
+
         let telemetry = CreatePlanningTelemetry {
-            id: Uuid::new_v4(),
-            plan_id,
-            metric_type,
-            metric_value,
-            metadata: serde_json::Value::Object(serde_json::Map::new()),
+            session_id: plan_id, // Using plan_id as session_id for now
+            metric_name: "planning_metric".to_string(), // Default metric name
+            metric_value: metric_value_f64,
+            metadata,
         };
 
         self.db_ops.create_planning_telemetry(telemetry).await?;
@@ -295,9 +329,10 @@ impl PlanningStorage {
     pub async fn delete_execution_plan(&self, plan_id: Uuid) -> Result<()> {
         // Update plan state to cancelled
         let update = UpdateExecutionPlan {
-            state: Some("cancelled".to_string()),
-            completed_at: Some(Utc::now()),
-            ..Default::default()
+            id: plan_id,
+            status: Some("cancelled".to_string()),
+            title: None,
+            overview: None,
         };
 
         self.db_ops.update_execution_plan(plan_id, update).await?;
@@ -349,18 +384,8 @@ impl PlanningStorage {
     async fn store_plan_to_database(&self, plan: &ExecutionPlan) -> Result<()> {
         let create_plan = CreateExecutionPlan {
             id: plan.contract_plan.id,
-            session_id: plan.contract_plan.session_id,
-            working_spec_id: plan.contract_plan.working_spec_id.clone(),
             title: plan.contract_plan.title.clone(),
             overview: plan.contract_plan.overview.clone(),
-            state: plan.contract_plan.state.to_string(),
-            milestones: serde_json::to_value(&plan.contract_plan.milestones)?,
-            dependency_graph: serde_json::to_value(&plan.contract_plan.dependency_graph)?,
-            change_budget: serde_json::to_value(&plan.contract_plan.change_budget)?,
-            quality_gates: serde_json::to_value(&plan.contract_plan.quality_gates)?,
-            evidence_requirements: serde_json::to_value(&plan.contract_plan.evidence_requirements)?,
-            active_waivers: serde_json::to_value(&plan.contract_plan.active_waivers)?,
-            metadata: serde_json::to_value(&plan.contract_plan.metadata)?,
         };
 
         self.db_ops.create_execution_plan(create_plan).await?;
@@ -370,13 +395,10 @@ impl PlanningStorage {
     /// Update plan in database
     async fn update_plan_in_database(&self, plan: &ExecutionPlan) -> Result<()> {
         let update = UpdateExecutionPlan {
-            state: Some(plan.contract_plan.state.to_string()),
-            milestones: Some(serde_json::to_value(&plan.contract_plan.milestones)?),
-            dependency_graph: Some(serde_json::to_value(&plan.contract_plan.dependency_graph)?),
-            updated_at: Some(Utc::now()),
-            approved_at: plan.contract_plan.approved_at,
-            completed_at: plan.contract_plan.completed_at,
-            ..Default::default()
+            id: plan.contract_plan.id,
+            status: Some(plan.contract_plan.state.to_string()),
+            title: None,
+            overview: None,
         };
 
         self.db_ops.update_execution_plan(plan.contract_plan.id, update).await?;
@@ -387,11 +409,10 @@ impl PlanningStorage {
     fn merge_plan_data(&self, file_plan: ExecutionPlan, db_plan: DbExecutionPlan) -> Result<ExecutionPlan> {
         // Use file plan as base, but update with latest DB state
         let mut merged = file_plan;
+        // Note: WorkingSpec doesn't have lifecycle fields, only ExecutionPlan has state
+        // The lifecycle timestamps are managed at the ExecutionPlan level in the database
         merged.contract_plan.state = db_plan.state.parse()
             .unwrap_or(merged.contract_plan.state);
-        merged.contract_plan.updated_at = db_plan.updated_at;
-        merged.contract_plan.approved_at = db_plan.approved_at;
-        merged.contract_plan.completed_at = db_plan.completed_at;
 
         Ok(merged)
     }
@@ -437,7 +458,7 @@ impl FileStorage {
 }
 
 // Database operation types (should be imported from data-infrastructure)
-use data_infrastructure::{
+use crate::planning::{
     CreateExecutionPlan, UpdateExecutionPlan, CreatePlanningSession, UpdatePlanningSession,
     CreatePlanningAuditEvent, CreatePlanningTelemetry,
 };
@@ -465,8 +486,8 @@ mod tests {
 
     #[async_trait::async_trait]
     impl DatabaseOperations for MockDatabaseOps {
-        async fn create_execution_plan(&self, _plan: CreateExecutionPlan) -> Result<data_infrastructure::models::ExecutionPlan> {
-            Ok(data_infrastructure::models::ExecutionPlan {
+        async fn create_execution_plan(&self, _plan: CreateExecutionPlan) -> Result<crate::planning::models::ExecutionPlan> {
+            Ok(crate::planning::models::ExecutionPlan {
                 id: Uuid::new_v4(),
                 session_id: Uuid::new_v4(),
                 working_spec_id: "test".to_string(),
@@ -487,15 +508,15 @@ mod tests {
             })
         }
 
-        async fn get_execution_plan(&self, _id: Uuid) -> Result<Option<data_infrastructure::models::ExecutionPlan>> {
+        async fn get_execution_plan(&self, _id: Uuid) -> Result<Option<crate::planning::models::ExecutionPlan>> {
             Ok(None)
         }
 
-        async fn get_execution_plans(&self) -> Result<Vec<data_infrastructure::models::ExecutionPlan>> {
+        async fn get_execution_plans(&self) -> Result<Vec<crate::planning::models::ExecutionPlan>> {
             Ok(vec![])
         }
 
-        async fn update_execution_plan(&self, _id: Uuid, _update: UpdateExecutionPlan) -> Result<data_infrastructure::models::ExecutionPlan> {
+        async fn update_execution_plan(&self, _id: Uuid, _update: UpdateExecutionPlan) -> Result<crate::planning::models::ExecutionPlan> {
             Err(anyhow!("Not implemented"))
         }
 
@@ -503,8 +524,8 @@ mod tests {
             Ok(())
         }
 
-        async fn create_planning_session(&self, session: CreatePlanningSession) -> Result<data_infrastructure::models::PlanningSession> {
-            Ok(data_infrastructure::models::PlanningSession {
+        async fn create_planning_session(&self, session: CreatePlanningSession) -> Result<crate::planning::models::PlanningSession> {
+            Ok(crate::planning::models::PlanningSession {
                 id: session.id,
                 plan_id: session.plan_id,
                 orchestrator_id: session.orchestrator_id,
@@ -519,54 +540,54 @@ mod tests {
             })
         }
 
-        async fn get_planning_session(&self, _id: Uuid) -> Result<Option<data_infrastructure::models::PlanningSession>> {
+        async fn get_planning_session(&self, _id: Uuid) -> Result<Option<crate::planning::models::PlanningSession>> {
             Ok(None)
         }
 
-        async fn get_planning_sessions(&self, _plan_id: Uuid) -> Result<Vec<data_infrastructure::models::PlanningSession>> {
+        async fn get_planning_sessions(&self, _plan_id: Uuid) -> Result<Vec<crate::planning::models::PlanningSession>> {
             Ok(vec![])
         }
 
-        async fn update_planning_session(&self, _id: Uuid, _update: UpdatePlanningSession) -> Result<data_infrastructure::models::PlanningSession> {
+        async fn update_planning_session(&self, _id: Uuid, _update: UpdatePlanningSession) -> Result<crate::planning::models::PlanningSession> {
             Err(anyhow!("Not implemented"))
         }
 
-        async fn create_planning_audit_event(&self, _event: CreatePlanningAuditEvent) -> Result<data_infrastructure::models::PlanningAuditEvent> {
+        async fn create_planning_audit_event(&self, _event: CreatePlanningAuditEvent) -> Result<crate::planning::models::PlanningAuditEvent> {
             Err(anyhow!("Not implemented"))
         }
 
-        async fn get_planning_audit_events(&self, _plan_id: Uuid) -> Result<Vec<data_infrastructure::models::PlanningAuditEvent>> {
+        async fn get_planning_audit_events(&self, _plan_id: Uuid) -> Result<Vec<crate::planning::models::PlanningAuditEvent>> {
             Ok(vec![])
         }
 
-        async fn create_planning_telemetry(&self, _telemetry: CreatePlanningTelemetry) -> Result<data_infrastructure::models::PlanningTelemetry> {
+        async fn create_planning_telemetry(&self, _telemetry: CreatePlanningTelemetry) -> Result<crate::planning::models::PlanningTelemetry> {
             Err(anyhow!("Not implemented"))
         }
 
-        async fn get_planning_telemetry(&self, _plan_id: Uuid, _metric_type: Option<String>) -> Result<Vec<data_infrastructure::models::PlanningTelemetry>> {
+        async fn get_planning_telemetry(&self, _plan_id: Uuid, _metric_type: Option<String>) -> Result<Vec<crate::planning::models::PlanningTelemetry>> {
             Ok(vec![])
         }
 
         // Waiver operations
-        async fn get_waivers(&self, _status: Option<String>) -> Result<Vec<data_infrastructure::models::Waiver>> { Ok(vec![]) }
-        async fn create_waiver(&self, _waiver: data_infrastructure::CreateWaiver) -> Result<data_infrastructure::models::Waiver> { Err(anyhow!("Not implemented")) }
-        async fn update_waiver(&self, _id: Uuid, _update: data_infrastructure::UpdateWaiver) -> Result<data_infrastructure::models::Waiver> { Err(anyhow!("Not implemented")) }
-        async fn create_provenance_entry(&self, _entry: data_infrastructure::CreateProvenanceEntry) -> Result<data_infrastructure::models::ProvenanceEntry> { Err(anyhow!("Not implemented")) }
-        async fn get_provenance_entries(&self, _limit: Option<i64>) -> Result<Vec<data_infrastructure::models::ProvenanceEntry>> { Ok(vec![]) }
-        async fn create_judge(&self, _judge: data_infrastructure::CreateJudge) -> Result<data_infrastructure::models::Judge> { Err(anyhow!("Not implemented")) }
-        async fn get_judges(&self) -> Result<Vec<data_infrastructure::models::Judge>> { Ok(vec![]) }
-        async fn update_judge(&self, _id: Uuid, _update: data_infrastructure::UpdateJudge) -> Result<data_infrastructure::models::Judge> { Err(anyhow!("Not implemented")) }
-        async fn create_worker(&self, _worker: data_infrastructure::CreateWorker) -> Result<data_infrastructure::models::Worker> { Err(anyhow!("Not implemented")) }
-        async fn get_workers(&self) -> Result<Vec<data_infrastructure::models::Worker>> { Ok(vec![]) }
-        async fn update_worker(&self, _id: Uuid, _update: data_infrastructure::UpdateWorker) -> Result<data_infrastructure::models::Worker> { Err(anyhow!("Not implemented")) }
-        async fn create_task(&self, _task: data_infrastructure::CreateTask) -> Result<data_infrastructure::models::Task> { Err(anyhow!("Not implemented")) }
-        async fn get_tasks(&self, _status: Option<String>) -> Result<Vec<data_infrastructure::models::Task>> { Ok(vec![]) }
-        async fn update_task(&self, _id: Uuid, _update: data_infrastructure::UpdateTask) -> Result<data_infrastructure::models::Task> { Err(anyhow!("Not implemented")) }
-        async fn get_task(&self, _id: Uuid) -> Result<Option<data_infrastructure::models::Task>> { Ok(None) }
+        async fn get_waivers(&self, _status: Option<String>) -> Result<Vec<crate::planning::models::Waiver>> { Ok(vec![]) }
+        async fn create_waiver(&self, _waiver: crate::planning::CreateWaiver) -> Result<crate::planning::models::Waiver> { Err(anyhow!("Not implemented")) }
+        async fn update_waiver(&self, _id: Uuid, _update: crate::planning::UpdateWaiver) -> Result<crate::planning::models::Waiver> { Err(anyhow!("Not implemented")) }
+        async fn create_provenance_entry(&self, _entry: crate::planning::CreateProvenanceEntry) -> Result<crate::planning::models::ProvenanceEntry> { Err(anyhow!("Not implemented")) }
+        async fn get_provenance_entries(&self, _limit: Option<i64>) -> Result<Vec<crate::planning::models::ProvenanceEntry>> { Ok(vec![]) }
+        async fn create_judge(&self, _judge: crate::planning::CreateJudge) -> Result<crate::planning::models::Judge> { Err(anyhow!("Not implemented")) }
+        async fn get_judges(&self) -> Result<Vec<crate::planning::models::Judge>> { Ok(vec![]) }
+        async fn update_judge(&self, _id: Uuid, _update: crate::planning::UpdateJudge) -> Result<crate::planning::models::Judge> { Err(anyhow!("Not implemented")) }
+        async fn create_worker(&self, _worker: crate::planning::CreateWorker) -> Result<crate::planning::models::Worker> { Err(anyhow!("Not implemented")) }
+        async fn get_workers(&self) -> Result<Vec<crate::planning::models::Worker>> { Ok(vec![]) }
+        async fn update_worker(&self, _id: Uuid, _update: crate::planning::UpdateWorker) -> Result<crate::planning::models::Worker> { Err(anyhow!("Not implemented")) }
+        async fn create_task(&self, _task: crate::planning::CreateTask) -> Result<crate::planning::models::Task> { Err(anyhow!("Not implemented")) }
+        async fn get_tasks(&self, _status: Option<String>) -> Result<Vec<crate::planning::models::Task>> { Ok(vec![]) }
+        async fn update_task(&self, _id: Uuid, _update: crate::planning::UpdateTask) -> Result<crate::planning::models::Task> { Err(anyhow!("Not implemented")) }
+        async fn get_task(&self, _id: Uuid) -> Result<Option<crate::planning::models::Task>> { Ok(None) }
         async fn delete_task(&self, _id: Uuid) -> Result<()> { Ok(()) }
-        async fn create_milestone(&self, _milestone: data_infrastructure::CreateMilestone) -> Result<data_infrastructure::models::Milestone> { Err(anyhow!("Not implemented")) }
-        async fn get_milestones(&self, _plan_id: Uuid) -> Result<Vec<data_infrastructure::models::Milestone>> { Ok(vec![]) }
-        async fn update_milestone(&self, _plan_id: Uuid, _milestone_id: String, _update: data_infrastructure::UpdateMilestone) -> Result<data_infrastructure::models::Milestone> { Err(anyhow!("Not implemented")) }
+        async fn create_milestone(&self, _milestone: crate::planning::CreateMilestone) -> Result<crate::planning::models::Milestone> { Err(anyhow!("Not implemented")) }
+        async fn get_milestones(&self, _plan_id: Uuid) -> Result<Vec<crate::planning::models::Milestone>> { Ok(vec![]) }
+        async fn update_milestone(&self, _plan_id: Uuid, _milestone_id: String, _update: crate::planning::UpdateMilestone) -> Result<crate::planning::models::Milestone> { Err(anyhow!("Not implemented")) }
     }
 
     #[tokio::test]
@@ -600,7 +621,7 @@ mod tests {
     }
 
     fn create_test_execution_plan() -> ExecutionPlan {
-        use crate::planning::plan_types::{OrchestrationMetadata, ExecutionContext, ResourceInventory};
+        use crate::planning::plan_types::{OrchestrationMetadata, ResourceInventory};
 
         ExecutionPlan {
             contract_plan: agent_agency_contracts::planning_io::ExecutionPlan {
@@ -646,5 +667,44 @@ mod tests {
             },
             execution_state: None,
         }
+    }
+
+    /// Store execution result for a plan
+    pub async fn store_execution_result(&self, plan_id: Uuid, result: &agent_agency_contracts::planning::PlanExecutionResult) -> Result<()> {
+        // Store execution result as JSON file
+        let result_path = self.file_storage.plans_dir.join(format!("{}_result.json", plan_id));
+        let result_json = serde_json::to_string_pretty(result)?;
+        tokio::fs::write(&result_path, result_json).await?;
+
+        // Update plan status in database if needed
+        // TODO: Add database storage for execution results
+
+        Ok(())
+    }
+
+    /// Get execution result for a plan
+    pub async fn get_execution_result(&self, plan_id: Uuid) -> Result<Option<agent_agency_contracts::planning::PlanExecutionResult>> {
+        // Try to load execution result from file
+        let result_path = self.file_storage.plans_dir.join(format!("{}_result.json", plan_id));
+        if result_path.exists() {
+            let result_json = tokio::fs::read_to_string(&result_path).await?;
+            let result: agent_agency_contracts::planning::PlanExecutionResult = serde_json::from_str(&result_json)?;
+            Ok(Some(result))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Store a plan (alias for store_execution_plan for backward compatibility)
+    pub async fn store_plan(&self, plan: &ExecutionPlan) -> Result<()> {
+        self.store_execution_plan(plan).await
+    }
+
+    /// Get plan for a specific task
+    pub async fn get_plan_for_task(&self, task_id: Uuid) -> Result<Option<ExecutionPlan>> {
+        // For now, we don't have a direct mapping from task_id to plan_id
+        // This would require additional indexing or database queries
+        // Return None for now - this needs proper implementation
+        Ok(None)
     }
 }

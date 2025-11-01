@@ -204,13 +204,15 @@ impl PrivacyAnonymizationService {
         // Laplace mechanism: noise = Lap(0, sensitivity/epsilon)
         let scale = params.sensitivity / params.epsilon;
         let mut rng = rand::thread_rng();
-        use rand_distr::{Laplace, Distribution};
-        let noise_dist = Laplace::new(0.0, scale)
-            .map_err(|e| PrivacyAnonymizationError::ConfigurationError {
-                message: format!("Failed to create Laplace distribution: {}", e),
-            })?;
 
-        let noise_value = noise_dist.sample(&mut rng);
+        // Manual Laplace distribution sampling using inverse CDF method
+        // Laplace(μ, b) where μ=0, b=scale
+        let u: f64 = rng.gen(); // Uniform(0,1)
+        let noise_value = if u < 0.5 {
+            scale * (2.0 * u).ln()
+        } else {
+            -scale * (2.0 * (1.0 - u)).ln()
+        };
         Ok(value + noise_value)
     }
 
@@ -264,7 +266,7 @@ impl PrivacyAnonymizationService {
             serde_json::Value::Array(arr) => {
                 let mut anonymized_array = Vec::new();
                 for item in arr {
-                    if let Some(anon_item) = self.anonymize_field(field_name, item).await? {
+                    if let Some(anon_item) = Box::pin(self.anonymize_field(field_name, item)).await? {
                         anonymized_array.push(anon_item);
                     } else {
                         anonymized_array.push(item.clone());
@@ -275,7 +277,7 @@ impl PrivacyAnonymizationService {
             serde_json::Value::Object(map) => {
                 let mut anonymized_obj = serde_json::Map::new();
                 for (k, v) in map {
-                    if let Some(anon_v) = self.anonymize_field(k, v).await? {
+                    if let Some(anon_v) = Box::pin(self.anonymize_field(k, v)).await? {
                         anonymized_obj.insert(k.clone(), anon_v);
                     } else {
                         anonymized_obj.insert(k.clone(), v.clone());
@@ -467,6 +469,4 @@ pub enum PrivacyAnonymizationError {
     AnonymizationFailed { message: String },
 }
 
-// Import rand_distr::Laplace for differential privacy
-use rand_distr::Laplace;
 

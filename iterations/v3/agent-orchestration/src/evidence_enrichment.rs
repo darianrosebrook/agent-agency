@@ -5,7 +5,7 @@
 //!
 //! @author @darianrosebrook
 
-use crate::types::{TaskDescriptor, WorkingSpec};
+use agent_agency_contracts::{TaskDescriptor, WorkingSpec};
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use tracing::{debug, info, warn};

@@ -7,7 +7,9 @@ use tokio::sync::RwLock;
 use async_trait::async_trait;
 
 use crate::self_prompting_agent::prompting_types::{Task, SelfPromptingAgentError};
+#[cfg(feature = "workers")]
 use agent_workers::decomposition::{DecompositionEngine, TaskAnalysis, SubTask};
+#[cfg(feature = "workers")]
 use agent_workers::parallel_types::{ComplexTask, TaskId, TaskScope, Priority, QualityRequirements};
 use chrono::Utc;
 use system_observability::orchestrator::{SystemHealthMonitor, AgentHealthMetrics};
@@ -252,11 +254,13 @@ pub struct IntegrationStatus {
 }
 
 /// Multi-agent coordinator for complex tasks
+#[cfg(feature = "workers")]
 pub struct MultiAgentCoordinator {
     agents: Vec<Arc<dyn AutonomousAgent>>,
     decomposition_engine: DecompositionEngine,
 }
 
+#[cfg(feature = "workers")]
 impl MultiAgentCoordinator {
     pub fn new() -> Self {
         Self { 
@@ -266,6 +270,7 @@ impl MultiAgentCoordinator {
     }
 
     /// Coordinate task execution across multiple agents
+    #[cfg(feature = "workers")]
     pub async fn coordinate_task(&self, task: Task) -> Result<CoordinatedResult, SelfPromptingAgentError> {
         use std::time::Instant;
         let start_time = Instant::now();
@@ -343,6 +348,7 @@ impl MultiAgentCoordinator {
     }
     
     /// Convert Task to ComplexTask for decomposition engine
+    #[cfg(feature = "workers")]
     fn task_to_complex_task(&self, task: &Task) -> Result<ComplexTask, SelfPromptingAgentError> {
         // Extract domains from task type and target files
         let domains = vec![format!("{:?}", task.task_type)];
@@ -459,6 +465,7 @@ impl MultiAgentCoordinator {
     }
     
     /// Infer task type from subtask description
+    #[cfg(feature = "workers")]
     fn infer_task_type_from_subtask(&self, subtask: &SubTask) -> crate::self_prompting_agent::prompting_types::TaskType {
         let desc_lower = subtask.description.to_lowercase();
         
@@ -480,6 +487,7 @@ impl MultiAgentCoordinator {
     }
     
     /// Convert SubTask back to Task for agent execution
+    #[cfg(feature = "workers")]
     fn subtask_to_task(&self, subtask: &SubTask, original_task: &Task) -> Result<Task, SelfPromptingAgentError> {
         Ok(Task {
             id: subtask.id.0,

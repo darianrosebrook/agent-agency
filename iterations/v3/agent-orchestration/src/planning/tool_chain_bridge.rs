@@ -9,28 +9,33 @@ use std::collections::HashMap;
 use anyhow::{anyhow, Result};
 use uuid::Uuid;
 use agent_agency_contracts::{
-    planning_io::{ExecutionPlan as ContractExecutionPlan, Milestone as ContractMilestone, PlanState, MilestoneState, DependencyGraph},
+    planning_io::{ExecutionPlan as ContractExecutionPlan, Milestone as ContractMilestone, PlanState, MilestoneState, DependencyGraph, EvidenceGate},
     WorkingSpec,
+};
+use crate::planning::tool_chain_types::{
+    ExternalToolChainPlanner, ExternalPlanningContext, ExternalPlanningConstraints,
+    ExternalToolChain, ExternalToolNode, ExternalTaskComplexity, ExternalRiskLevel,
+    ExternalSchemaRegistry, ExternalToolRegistry,
 };
 
 /// Bridge to tool chain planner
 pub struct ToolChainBridge {
-    /// Reference to the actual tool chain planner from system-federated-ml
-    tool_chain_planner: std::sync::Arc<system_federated_ml::tool_chain_planner::ToolChainPlanner>,
+    /// Reference to the tool chain planner (external or local)
+    tool_chain_planner: std::sync::Arc<ExternalToolChainPlanner>,
 
     /// Schema registry for tool I/O validation
-    schema_registry: std::sync::Arc<system_federated_ml::tool_chain_planner::SchemaRegistry>,
+    schema_registry: std::sync::Arc<ExternalSchemaRegistry>,
 
     /// Tool registry for accessing available tools
-    tool_registry: std::sync::Arc<system_federated_ml::tool_registry::ToolRegistry>,
+    tool_registry: std::sync::Arc<ExternalToolRegistry>,
 }
 
 impl ToolChainBridge {
-    /// Create new tool chain bridge with real dependencies
+    /// Create new tool chain bridge with dependencies
     pub fn new(
-        tool_chain_planner: std::sync::Arc<system_federated_ml::tool_chain_planner::ToolChainPlanner>,
-        schema_registry: std::sync::Arc<system_federated_ml::tool_chain_planner::SchemaRegistry>,
-        tool_registry: std::sync::Arc<system_federated_ml::tool_registry::ToolRegistry>,
+        tool_chain_planner: std::sync::Arc<ExternalToolChainPlanner>,
+        schema_registry: std::sync::Arc<ExternalSchemaRegistry>,
+        tool_registry: std::sync::Arc<ExternalToolRegistry>,
     ) -> Self {
         Self {
             tool_chain_planner,
@@ -55,7 +60,7 @@ impl ToolChainBridge {
     }
 
     /// Convert working spec to tool chain planning context
-    fn convert_working_spec_to_planning_context(&self, working_spec: &WorkingSpec) -> Result<system_federated_ml::tool_chain_planner::PlanningContext> {
+    fn convert_working_spec_to_planning_context(&self, working_spec: &WorkingSpec) -> Result<ExternalPlanningContext> {
         // Extract task description from working spec
         let task_description = self.extract_task_description(working_spec);
 
@@ -69,24 +74,24 @@ impl ToolChainBridge {
         // Determine risk tolerance
         let risk_tolerance = self.determine_risk_tolerance(working_spec);
 
-        Ok(system_federated_ml::tool_chain_planner::PlanningContext {
+        Ok(ExternalPlanningContext {
             task_description,
             task_type,
             complexity,
             required_capabilities,
-            time_budget_ms: working_spec.constraints.max_time_ms,
-            cost_budget_cents: working_spec.constraints.max_cost_cents,
+            time_budget_ms: working_spec.constraints.max_duration_minutes.map(|mins| (mins as u64) * 60 * 1000), // Convert minutes to ms
+            cost_budget_cents: Some(1000), // Default cost budget - no cost field in WorkingSpecConstraints
             risk_tolerance,
         })
     }
 
     /// Create planning constraints from working spec
-    fn create_planning_constraints(&self, working_spec: &WorkingSpec) -> Result<system_federated_ml::tool_chain_planner::PlanningConstraints> {
-        Ok(system_federated_ml::tool_chain_planner::PlanningConstraints {
-            max_chain_length: 5, // Default reasonable limit
-            max_parallelism: 3,  // Allow some parallelism
-            max_cost_cents: working_spec.constraints.max_cost_cents.unwrap_or(100),
-            max_time_ms: working_spec.constraints.max_time_ms,
+    fn create_planning_constraints(&self, working_spec: &WorkingSpec) -> Result<ExternalPlanningConstraints> {
+        Ok(ExternalPlanningConstraints {
+            max_chain_length: Some(5), // Default reasonable limit
+            max_parallelism: Some(3),  // Allow some parallelism
+            max_cost_cents: Some(1000), // Default cost budget
+            max_time_ms: working_spec.constraints.max_duration_minutes.map(|mins| (mins as u64) * 60 * 1000), // Convert minutes to ms
             require_fallbacks: working_spec.risk_tier > 1, // Require fallbacks for high-risk work
         })
     }
@@ -94,7 +99,7 @@ impl ToolChainBridge {
     /// Convert tool chain to execution plan
     async fn convert_tool_chain_to_execution_plan(
         &self,
-        tool_chain: system_federated_ml::tool_chain_planner::ToolChain,
+        tool_chain: ExternalToolChain,
         working_spec: WorkingSpec,
     ) -> Result<ContractExecutionPlan> {
         use agent_agency_contracts::planning_io::{DependencyNode, DependencyEdge, DependencyNodeType, DependencyEdgeType};
@@ -190,11 +195,11 @@ impl ToolChainBridge {
     /// Create milestone from tool node
     fn create_milestone_from_tool_node(
         &self,
-        node: &system_federated_ml::tool_chain_planner::ToolNode,
+        node: &ExternalToolNode,
         milestone_id: &str,
         working_spec: &WorkingSpec,
     ) -> Result<ContractMilestone> {
-        use agent_agency_contracts::planning_io::{Milestone, MilestoneScope, EvidenceGate, MilestonePriority};
+        use agent_agency_contracts::planning_io::{Milestone, MilestoneScope, MilestonePriority};
 
         Ok(Milestone {
             id: milestone_id.to_string(),
@@ -209,7 +214,7 @@ impl ToolChainBridge {
             },
             interfaces: vec![], // Would be populated based on tool inputs/outputs
             tests: vec![], // Tool execution has its own validation
-            evidence_gate: self.create_tool_evidence_gate(working_spec.risk_tier),
+            evidence_gate: self.create_tool_evidence_gate(working_spec.risk_tier as u8),
             rollback_plan: "Tool execution cannot be rolled back".to_string(),
             dependencies: vec![], // Set by dependency graph
             state: agent_agency_contracts::planning_io::MilestoneState::Pending,
@@ -284,19 +289,24 @@ impl ToolChainBridge {
                 slas: vec![],
             },
             documentation_requirements: DocumentationRequirements {
+                api_docs_required: false,
+                code_docs_required: true,
+                architecture_docs_required: false,
+                required_formats: vec![],
                 required_types: vec!["tool_execution".to_string()],
                 min_coverage: 0.5,
-                required_formats: vec![],
                 quality_checks: vec![],
             },
             requires_manual_review: working_spec.risk_tier == 1,
             requires_council_approval: working_spec.risk_tier == 1,
+            min_coverage: Some(0.8), // 80% coverage required for tools
+            min_mutation_score_percent: Some(0.0), // No mutation testing for tools
         }
     }
 
     /// Create evidence requirements
     fn create_evidence_requirements(&self, working_spec: &WorkingSpec) -> Vec<agent_agency_contracts::planning_io::EvidenceRequirement> {
-        working_spec.acceptance.iter().enumerate().map(|(i, _)| {
+        working_spec.acceptance_criteria.iter().enumerate().map(|(i, _)| {
             agent_agency_contracts::planning_io::EvidenceRequirement {
                 milestone_id: format!("TC-M{}", i),
                 evidence_type: "tool_execution".to_string(),
@@ -314,26 +324,26 @@ impl ToolChainBridge {
 
     fn determine_task_type(&self, working_spec: &WorkingSpec) -> String {
         // Determine task type based on acceptance criteria
-        if working_spec.acceptance.iter().any(|c| c.given.contains("compile") || c.then.contains("compile")) {
+        if working_spec.acceptance_criteria.iter().any(|c| c.given.contains("compile") || c.then.contains("compile")) {
             "compilation".to_string()
-        } else if working_spec.acceptance.iter().any(|c| c.given.contains("test") || c.then.contains("test")) {
+        } else if working_spec.acceptance_criteria.iter().any(|c| c.given.contains("test") || c.then.contains("test")) {
             "testing".to_string()
-        } else if working_spec.acceptance.iter().any(|c| c.given.contains("deploy") || c.then.contains("deploy")) {
+        } else if working_spec.acceptance_criteria.iter().any(|c| c.given.contains("deploy") || c.then.contains("deploy")) {
             "deployment".to_string()
         } else {
             "general".to_string()
         }
     }
 
-    fn determine_task_complexity(&self, working_spec: &WorkingSpec) -> system_federated_ml::tool_chain_planner::TaskComplexity {
-        if working_spec.acceptance.len() > 5 || working_spec.file_changes.len() > 10 {
-            system_federated_ml::tool_chain_planner::TaskComplexity::VeryComplex
-        } else if working_spec.acceptance.len() > 3 || working_spec.file_changes.len() > 5 {
-            system_federated_ml::tool_chain_planner::TaskComplexity::Complex
-        } else if working_spec.acceptance.len() > 1 {
-            system_federated_ml::tool_chain_planner::TaskComplexity::Moderate
+    fn determine_task_complexity(&self, working_spec: &WorkingSpec) -> ExternalTaskComplexity {
+        if working_spec.acceptance_criteria.len() > 5 || working_spec.file_changes.len() > 10 {
+            ExternalTaskComplexity::VeryComplex
+        } else if working_spec.acceptance_criteria.len() > 3 || working_spec.file_changes.len() > 5 {
+            ExternalTaskComplexity::Complex
+        } else if working_spec.acceptance_criteria.len() > 1 {
+            ExternalTaskComplexity::Moderate
         } else {
-            system_federated_ml::tool_chain_planner::TaskComplexity::Simple
+            ExternalTaskComplexity::Simple
         }
     }
 
@@ -351,12 +361,12 @@ impl ToolChainBridge {
         capabilities
     }
 
-    fn determine_risk_tolerance(&self, working_spec: &WorkingSpec) -> system_federated_ml::tool_chain_planner::RiskLevel {
+    fn determine_risk_tolerance(&self, working_spec: &WorkingSpec) -> ExternalRiskLevel {
         match working_spec.risk_tier {
-            1 => system_federated_ml::tool_chain_planner::RiskLevel::Conservative,
-            2 => system_federated_ml::tool_chain_planner::RiskLevel::Balanced,
-            3 => system_federated_ml::tool_chain_planner::RiskLevel::Aggressive,
-            _ => system_federated_ml::tool_chain_planner::RiskLevel::Balanced,
+            1 => ExternalRiskLevel::Conservative,
+            2 => ExternalRiskLevel::Balanced,
+            3 => ExternalRiskLevel::Aggressive,
+            _ => ExternalRiskLevel::Balanced,
         }
     }
 

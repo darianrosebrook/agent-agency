@@ -20,6 +20,7 @@ thiserror.workspace = true
 uuid.workspace = true
 chrono.workspace = true
 anyhow.workspace = true
+schemars.workspace = true
 futures = "0.3"
 futures-util = "0.3"
 
@@ -69,19 +70,25 @@ nom = "7.1"
 indicatif = "0.16"
 console = "0.16"
 
+# Graph algorithms and utilities
+petgraph = "0.6"
+seahash = "4.1"
+
 # Local workspace crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 system-common-interfaces = { path = "../system-common-interfaces" }
-# data-infrastructure dependency removed to break circular dependency
-# Database operations should be injected at runtime via trait objects
-# data-infrastructure = { path = "../data-infrastructure", optional = true, default-features = false }
+# data-infrastructure = { path = "../data-infrastructure", optional = true, default-features = false }  # Circular dependency - using local type definitions instead
 # system-acceleration = { path = "../system-acceleration" }  # Temporarily disabled due to compilation errors
 agent-memory = { path = "../agent-memory", optional = true, features = ["database"] }
 system-resilience = { path = "../system-resilience" }
-# agent-data-processing = { path = "../agent-data-processing", optional = true }  # Removed to break circular dependency - use local ContentType instead  
+agent-research = { path = "../agent-research", optional = true }
+# agent-constitutional-council = { path = "../agent-constitutional-council", optional = true }  # Circular dependency - using local type definitions instead
+# system-federated-ml = { path = "../system-federated-ml", optional = true }  # Circular dependency - using local type definitions instead
+# agent-workers = { path = "../agent-workers", optional = true }  # Circular dependency - using local type definitions instead
+agent-data-processing = { path = "../agent-data-processing", optional = true }  
 development-tools = { path = "../development-tools", optional = true }
 
-# Observability dependency  
+# Observability dependency
 system-observability = { path = "../system-observability" }
 
 [features]
@@ -91,8 +98,7 @@ full = ["dep:rust-bert", "development-tools"]
 with_bert = ["dep:rust-bert"]
 development = ["development-tools"]
 memory = ["agent-memory"]  # Gate memory functionality behind feature flag
-# database feature removed - use runtime injection instead to avoid circular dependency
-# database = ["data-infrastructure"]  # Gate database operations behind feature flag
+research = ["agent-research"]  # Gate research functionality behind feature flag
 
 [[bin]]
 name = "agent-orchestration-server"

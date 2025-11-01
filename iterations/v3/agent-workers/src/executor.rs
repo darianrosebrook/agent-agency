@@ -6,7 +6,8 @@ use crate::worker_types::{TaskContext as WorkerTaskContext, UuidGenerator, TaskP
 use crate::parallel_types::{WorkerId, TaskResult};
 use crate::worker_errors::WorkerExecutionResult;
 use agent_agency_contracts::{IssueSeverity, task_executor::{TaskExecutor as TaskExecutorTrait, TaskExecutionResult, TaskSpec as ContractTaskSpec, TaskContext as CouncilTaskContext, TaskSpec}, task_request::RiskTier, AcceptanceCriterion};
-use agent_orchestration::error_handling::{CircuitBreaker, ErrorHandlingCircuitBreakerConfig, ErrorHandlingRetryConfig as RetryConfig};
+use system_resilience::resilience_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
+use system_resilience::retry::{RetryConfig, RetryPolicy};
 use anyhow::{Context, Result};
 use chrono::{Utc, DateTime};
 use serde::{Deserialize, Serialize};
@@ -1256,13 +1257,13 @@ impl TaskExecutorTrait for TaskExecutor {
         // Execute with circuit breaker if enabled
         let circuit_breaker = if circuit_breaker_enabled {
             Some(Arc::new(CircuitBreaker::new(
-                "task-execution".to_string(),
-                ErrorHandlingCircuitBreakerConfig {
+                CircuitBreakerConfig {
+                    name: Some("task-execution".to_string()),
                     failure_threshold: 5,
                     success_threshold: 3,
-                    recovery_timeout: std::time::Duration::from_secs(60),
-                    monitoring_window: std::time::Duration::from_secs(300),
-                    request_timeout: std::time::Duration::from_secs(30),
+                    timeout_ms: Some(30000), // 30 seconds
+                    failure_window_ms: Some(300000), // 5 minutes
+                    reset_timeout_ms: 60000, // 1 minute
                 },
             )))
         } else {

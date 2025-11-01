@@ -13,14 +13,15 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 use agent_agency_contracts::task_executor::{TaskExecutionResult, TaskExecutor};
-use agent_agency_contracts::{
-    WorkingSpec, WorkingSpecConstraints, BudgetLimits, ScopeRestrictions, TestPlan, RollbackPlan, 
+use agent_agency_contracts::working_spec::{
+    WorkingSpec, WorkingSpecConstraints, BudgetLimits, ScopeRestrictions, TestPlan, RollbackPlan,
     WorkingSpecContext, NonFunctionalRequirements, PerformanceRequirements, ScalabilityRequirements,
-    WorkingSpecMetadata, UnitTestSpec, IntegrationTestSpec, E2eScenario, RollbackStrategy, DataImpact
+    WorkingSpecMetadata, UnitTestSpec, IntegrationTestSpec, E2eScenario, RollbackStrategy, DataImpact,
+    AcceptanceCriterion
 };
 use agent_agency_contracts::task_request::{TaskRequest, TaskContext, TaskConstraints, TaskMetadata, RiskTier, BudgetLimits as RequestBudgetLimits, ScopeRestrictions as RequestScopeRestrictions, Environment, TaskPriority as RequestTaskPriority};
-use crate::types::{TaskDescriptor, TaskScope, ChangeBudget, BlastRadius, ExecutionStatus as TypesExecutionStatus, AcceptanceCriterion};
-use crate::types::ExecutionStatus;
+use agent_agency_contracts::types::prelude::*;
+use agent_agency_contracts::ExecutionStatus;
 use agent_agency_contracts::task_executor_provider::TaskExecutorProvider;
 
 // Import the correct traits from system crates
@@ -46,71 +47,13 @@ pub struct ConsensusResult {
 }
 pub type FinalVerdict = FinalVerdictContract;
 use agent_agency_contracts::execution_events::ExecutionEvent;
-use agent_agency_contracts::task_request::{TaskRequest, TaskPriority};
 // CacheBackend and MetricsBackend are already imported from system crates (lines 26-27)
-// MemorySystem is exported from agent_memory crate
+// MemorySystem port from contracts (feature-gated)
 #[cfg(feature = "memory")]
-use agent_memory::MemorySystem;
+use agent_agency_contracts::MemorySystem;
+// Memory types are now imported via contracts
 #[cfg(feature = "memory")]
-use agent_memory::memory_types::{AgentExperience, MemoryType, ExperienceContext, ExperienceOutcome};
-
-// Fallback types when memory feature is disabled
-#[cfg(not(feature = "memory"))]
-#[derive(Debug, Clone)]
-pub enum MemoryType {
-    Episodic,
-    Semantic,
-    Procedural,
-}
-
-#[cfg(not(feature = "memory"))]
-pub mod memory_types {
-    use super::*;
-    use chrono::Utc;
-    use std::collections::HashMap;
-
-    #[derive(Debug, Clone)]
-    pub struct AgentExperience {
-        pub id: uuid::Uuid,
-        pub agent_id: String,
-        pub task_id: String,
-        pub content: String,
-        pub context: ExperienceContext,
-        pub input: String,
-        pub output: String,
-        pub outcome: ExperienceOutcome,
-        pub memory_type: MemoryType,
-        pub timestamp: chrono::DateTime<Utc>,
-        pub metadata: HashMap<String, serde_json::Value>,
-    }
-
-    #[derive(Debug, Clone)]
-    pub struct ExperienceContext {
-        pub description: String,
-        pub domain: Vec<String>,
-        pub task_type: String,
-        pub temporal_context: Option<TemporalContext>,
-    }
-
-    #[derive(Debug, Clone)]
-    pub struct ExperienceOutcome {
-        pub success: bool,
-        pub performance_score: Option<f32>,
-        pub quality_score: f64,
-        pub error_message: Option<String>,
-        pub execution_time_ms: Option<u64>,
-        pub learned_capabilities: Vec<String>,
-        pub metadata: HashMap<String, serde_json::Value>,
-    }
-
-    #[derive(Debug, Clone)]
-    pub struct TemporalContext {
-        pub timestamp: chrono::DateTime<Utc>,
-        pub duration: Option<std::time::Duration>,
-        pub sequence_number: Option<u64>,
-        pub priority: crate::TaskPriority,
-    }
-}
+pub use agent_agency_contracts::types::memory::*;
 
 // Placeholder types for missing modules
 // Remove the duplicate TaskDescriptor type alias
@@ -127,6 +70,33 @@ pub trait CawsRuntimeValidator: Send + Sync + std::fmt::Debug {
 
 pub trait VerdictWriter: Send + Sync + std::fmt::Debug {
     fn write_verdict(&self, verdict: &agent_agency_contracts::final_verdict::FinalVerdictContract) -> Result<(), String>;
+}
+
+/// Internal execution status with detailed phases
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TypesExecutionStatus {
+    /// Task is queued but not yet started
+    Pending,
+    /// Task is currently starting up
+    Starting,
+    /// Task is in planning phase
+    Planning,
+    /// Task is in consensus phase
+    Consensus,
+    /// Task is actively executing
+    Execution,
+    /// Task is running (generic status)
+    Running,
+    /// Task is waiting for approval
+    AwaitingApproval,
+    /// Task is paused
+    Paused,
+    /// Task completed successfully
+    Completed,
+    /// Task failed
+    Failed,
+    /// Task was cancelled
+    Cancelled,
 }
 
 #[derive(Debug)]
@@ -200,24 +170,14 @@ impl From<ExecutionProgress> for ProgressTrackerExecutionProgress {
     }
 }
 
-/// Execution mode for tasks
-#[derive(Debug, Clone, PartialEq)]
-pub enum ExecutionMode {
-    Strict,
-    Auto,
-    DryRun,
-}
+// ExecutionMode is now imported from agent_agency_contracts::types::prelude
+// (removed duplicate definition)
 
-/// Risk tier levels
-#[derive(Debug, Clone, PartialEq)]
-pub enum RiskTier {
-    Low,
-    Medium,
-    High,
-}
+// Use RiskTier from agent_agency_contracts
 
-// Real task spec conversion implementation
-pub fn to_task_spec(task_descriptor: &TaskDescriptor) -> WorkingSpec {
+/// Real task spec conversion implementation
+/// Returns contracts WorkingSpec directly (no local types)
+pub fn to_task_spec(task_descriptor: &TaskDescriptor) -> agent_agency_contracts::WorkingSpec {
     use tracing::{info, warn};
     
     info!("Converting task descriptor to working spec: {}", task_descriptor.task_id);
@@ -226,22 +186,23 @@ pub fn to_task_spec(task_descriptor: &TaskDescriptor) -> WorkingSpec {
     let risk_tier = calculate_risk_tier(task_descriptor);
     
     // Estimate complexity based on scope size
-    let estimated_files = task_descriptor.scope_in.in_scope.len();
+    let estimated_files = task_descriptor.scope_in.allowed_paths.len();
     let estimated_loc = estimated_files * 100; // Rough estimate
     
     // Estimate change budget based on scope
     let change_budget = estimate_change_budget(task_descriptor);
     
-    // Create scope from task descriptor
-    let scope = create_scope_from_task(task_descriptor);
+    // Create scope from task descriptor (returns ScopeRestrictions from contracts)
+    let scope_restrictions = create_scope_from_task(task_descriptor);
     
-    // Generate acceptance criteria
+    // Generate acceptance criteria (now returns contracts types directly)
     let acceptance_criteria = generate_acceptance_criteria(task_descriptor);
     
     // Create invariants based on task type
     let invariants = generate_invariants(task_descriptor);
     
-    WorkingSpec {
+    // Create contracts WorkingSpec directly
+    agent_agency_contracts::WorkingSpec {
         version: "1.0".to_string(),
         id: format!("TASK-{}", task_descriptor.task_id),
         title: task_descriptor.description.clone(),
@@ -303,16 +264,7 @@ pub fn to_task_spec(task_descriptor: &TaskDescriptor) -> WorkingSpec {
             version: Some(1),
             tags: vec!["automated".to_string()],
         }),
-        acceptance_criteria: generate_acceptance_criteria(task_descriptor)
-            .into_iter()
-            .map(|c| agent_agency_contracts::AcceptanceCriterion {
-                id: c.id,
-                given: c.given,
-                when: c.when,
-                then: c.then,
-                priority: None,
-            })
-            .collect(),
+        acceptance_criteria,
         constraints: agent_agency_contracts::working_spec::WorkingSpecConstraints {
             max_duration_minutes: Some(60),
             max_iterations: Some(5),
@@ -321,10 +273,13 @@ pub fn to_task_spec(task_descriptor: &TaskDescriptor) -> WorkingSpec {
                 max_loc: Some(estimated_loc.min(5000) as u32),
             }),
             scope_restrictions: Some(agent_agency_contracts::working_spec::ScopeRestrictions {
-                allowed_paths: task_descriptor.scope_in.in_scope.clone(),
-                blocked_paths: task_descriptor.scope_out.as_ref().map(|s| s.out_scope.clone()).unwrap_or_default(),
+                allowed_paths: task_descriptor.scope_in.allowed_paths.clone(),
+                blocked_paths: task_descriptor.scope_out.as_ref().map(|s| s.blocked_paths.clone()).unwrap_or_default(),
             }),
         },
+        change_budget,
+        created_at: chrono::Utc::now(),
+        updated_at: chrono::Utc::now(),
     }
 }
 
@@ -333,10 +288,10 @@ fn convert_task_context(task_descriptor: &TaskDescriptor) -> HashMap<String, ser
     let mut context = HashMap::new();
     
     // Add scope information
-    context.insert("scope_in".to_string(), serde_json::to_value(&task_descriptor.scope_in.in_scope).unwrap_or(serde_json::Value::Null));
+    context.insert("scope_in".to_string(), serde_json::to_value(&task_descriptor.scope_in.allowed_paths).unwrap_or(serde_json::Value::Null));
     
     if let Some(scope_out) = &task_descriptor.scope_out {
-        context.insert("scope_out".to_string(), serde_json::to_value(&scope_out.out_scope).unwrap_or(serde_json::Value::Null));
+        context.insert("scope_out".to_string(), serde_json::to_value(&scope_out.blocked_paths).unwrap_or(serde_json::Value::Null));
     }
     
     // Add change budget information
@@ -371,10 +326,10 @@ fn convert_task_constraints(task_descriptor: &TaskDescriptor) -> HashMap<String,
     constraints.insert("data_migration".to_string(), serde_json::Value::Bool(blast_radius.data_migration));
     
     // Add scope constraints
-    constraints.insert("scope_in_count".to_string(), serde_json::Value::Number(serde_json::Number::from(task_descriptor.scope_in.in_scope.len())));
+    constraints.insert("scope_in_count".to_string(), serde_json::Value::Number(serde_json::Number::from(task_descriptor.scope_in.allowed_paths.len())));
     
     if let Some(scope_out) = &task_descriptor.scope_out {
-        constraints.insert("scope_out_count".to_string(), serde_json::Value::Number(serde_json::Number::from(scope_out.out_scope.len())));
+        constraints.insert("scope_out_count".to_string(), serde_json::Value::Number(serde_json::Number::from(scope_out.blocked_paths.len())));
     }
     
     constraints
@@ -391,10 +346,10 @@ fn convert_task_metadata(task_descriptor: &TaskDescriptor) -> HashMap<String, se
     metadata.insert("priority".to_string(), serde_json::Value::String(format!("{:?}", task_descriptor.priority)));
     
     // Add scope metadata
-    metadata.insert("scope_in_files".to_string(), serde_json::to_value(&task_descriptor.scope_in.in_scope).unwrap_or(serde_json::Value::Null));
+    metadata.insert("scope_in_files".to_string(), serde_json::to_value(&task_descriptor.scope_in.allowed_paths).unwrap_or(serde_json::Value::Null));
     
     if let Some(scope_out) = &task_descriptor.scope_out {
-        metadata.insert("scope_out_files".to_string(), serde_json::to_value(&scope_out.out_scope).unwrap_or(serde_json::Value::Null));
+        metadata.insert("scope_out_files".to_string(), serde_json::to_value(&scope_out.blocked_paths).unwrap_or(serde_json::Value::Null));
     }
     
     // Add change budget metadata
@@ -415,7 +370,7 @@ fn convert_task_metadata(task_descriptor: &TaskDescriptor) -> HashMap<String, se
 
 /// Calculate risk tier based on task complexity
 fn calculate_risk_tier(task_descriptor: &TaskDescriptor) -> RiskTier {
-    let scope_size = task_descriptor.scope_in.in_scope.len();
+    let scope_size = task_descriptor.scope_in.allowed_paths.len();
     let description_length = task_descriptor.description.len();
     
     // Calculate complexity score
@@ -447,72 +402,83 @@ fn calculate_risk_tier(task_descriptor: &TaskDescriptor) -> RiskTier {
     }
     
     match complexity_score {
-        0..=2 => RiskTier::Low,
-        3..=5 => RiskTier::Medium,
-        _ => RiskTier::High,
+        0..=2 => RiskTier::Tier3,
+        3..=5 => RiskTier::Tier2,
+        _ => RiskTier::Tier1,
     }
 }
 
 /// Estimate change budget based on task scope
-fn estimate_change_budget(task_descriptor: &TaskDescriptor) -> ChangeBudget {
-    let scope_size = task_descriptor.scope_in.in_scope.len();
+/// Estimate change budget from task descriptor
+/// Returns contracts ChangeBudget directly
+fn estimate_change_budget(task_descriptor: &TaskDescriptor) -> agent_agency_contracts::planning_io::ChangeBudget {
+    let scope_size = task_descriptor.scope_in.allowed_paths.len();
     let description_length = task_descriptor.description.len();
     
     // Estimate files based on scope
     let estimated_files = scope_size.max(1) * 2;
     let estimated_loc = description_length * 10; // Rough estimate: 10 LOC per character
     
-    ChangeBudget {
-        max_files: estimated_files.min(50) as u32,
-        max_loc: estimated_loc.min(5000) as u32,
+    agent_agency_contracts::planning_io::ChangeBudget {
+        max_files: estimated_files.min(50),
+        max_loc: estimated_loc.min(5000),
+        max_migrations: 0,
+        allow_breaking_changes: false,
+        allow_new_dependencies: false,
+        enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
     }
 }
 
 /// Create scope from task descriptor
 fn create_scope_from_task(task_descriptor: &TaskDescriptor) -> agent_agency_contracts::ScopeRestrictions {
     agent_agency_contracts::ScopeRestrictions {
-        allowed_paths: task_descriptor.scope_in.in_scope.clone(),
-        blocked_paths: task_descriptor.scope_out.as_ref().map(|s| s.out_scope.clone()).unwrap_or_default(),
+        allowed_paths: task_descriptor.scope_in.allowed_paths.clone(),
+        blocked_paths: task_descriptor.scope_out.as_ref().map(|s| s.blocked_paths.clone()).unwrap_or_default(),
     }
 }
 
 /// Generate acceptance criteria based on task type
-fn generate_acceptance_criteria(task_descriptor: &TaskDescriptor) -> Vec<AcceptanceCriterion> {
+/// Returns contracts types directly (no conversion needed)
+fn generate_acceptance_criteria(task_descriptor: &TaskDescriptor) -> Vec<agent_agency_contracts::AcceptanceCriterion> {
     let mut criteria = Vec::new();
     
     // Base acceptance criteria
-    criteria.push(AcceptanceCriterion {
+    criteria.push(agent_agency_contracts::AcceptanceCriterion {
         id: "A1".to_string(),
         given: "Task is executed".to_string(),
         when: "All requirements are met".to_string(),
         then: "Task completes successfully".to_string(),
+        priority: None,
     });
     
     // Task-specific criteria
     if task_descriptor.description.to_lowercase().contains("test") {
-        criteria.push(AcceptanceCriterion {
+        criteria.push(agent_agency_contracts::AcceptanceCriterion {
             id: "A2".to_string(),
             given: "Tests are written".to_string(),
             when: "Tests are executed".to_string(),
             then: "All tests pass".to_string(),
+            priority: None,
         });
     }
     
     if task_descriptor.description.to_lowercase().contains("refactor") {
-        criteria.push(AcceptanceCriterion {
+        criteria.push(agent_agency_contracts::AcceptanceCriterion {
             id: "A3".to_string(),
             given: "Code is refactored".to_string(),
             when: "Refactoring is complete".to_string(),
             then: "Code quality improves".to_string(),
+            priority: None,
         });
     }
     
     if task_descriptor.description.to_lowercase().contains("documentation") {
-        criteria.push(AcceptanceCriterion {
+        criteria.push(agent_agency_contracts::AcceptanceCriterion {
             id: "A4".to_string(),
             given: "Documentation is created".to_string(),
             when: "Documentation is reviewed".to_string(),
             then: "Documentation is accurate and complete".to_string(),
+            priority: None,
         });
     }
     
@@ -952,6 +918,22 @@ impl AutonomousExecutor {
                     dependencies: std::collections::HashMap::new(),
                     environment: agent_agency_contracts::task_request::Environment::Development,
                 },
+                change_budget: agent_agency_contracts::planning_io::ChangeBudget {
+                    max_files: 100,
+                    max_loc: 2000,
+                    max_migrations: 5,
+                    allow_breaking_changes: false,
+                    allow_new_dependencies: true,
+                    enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+                },
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+                coverage_targets: None,
+                file_changes: vec![],
+                milestones: vec![],
+                quality_gates: None,
+                scope: vec![],
+                overview: String::new(),
                 non_functional_requirements: None,
                 validation_results: None,
                 metadata: None,
@@ -1080,16 +1062,11 @@ impl AutonomousExecutor {
         
         // Convert ChangeBudget and BlastRadius to TaskConstraints
         let constraints = Some(TaskConstraints {
-            risk_tier: match task_descriptor.risk_tier {
-                Some(crate::council_types::RiskTier::Tier1) => RiskTier::Tier1,
-                Some(crate::council_types::RiskTier::Tier2) => RiskTier::Tier2,
-                Some(crate::council_types::RiskTier::Tier3) => RiskTier::Tier3,
-                None => match task_descriptor.priority {
-                    crate::types::TaskPriority::Critical | crate::types::TaskPriority::High => RiskTier::Tier1,
-                    crate::types::TaskPriority::Medium | crate::types::TaskPriority::Normal => RiskTier::Tier2,
-                    crate::types::TaskPriority::Low => RiskTier::Tier3,
-                },
-            },
+            risk_tier: task_descriptor.risk_tier.unwrap_or_else(|| match task_descriptor.priority {
+                    agent_agency_contracts::types::planning::TaskPriority::Critical | agent_agency_contracts::types::planning::TaskPriority::High => RiskTier::Tier1,
+                    agent_agency_contracts::types::planning::TaskPriority::Medium | agent_agency_contracts::types::planning::TaskPriority::Normal => RiskTier::Tier2,
+                    agent_agency_contracts::types::planning::TaskPriority::Low => RiskTier::Tier3,
+            }),
             max_duration_minutes: None, // Could be configured per task type
             max_iterations: None, // Could be configured per task type
             budget_limits: Some(RequestBudgetLimits {
@@ -1097,9 +1074,9 @@ impl AutonomousExecutor {
                 max_loc: Some(task_descriptor.change_budget.max_loc as u32),
             }),
             scope_restrictions: Some(RequestScopeRestrictions {
-                allowed_paths: task_descriptor.scope_in.in_scope.clone(),
+                allowed_paths: task_descriptor.scope_in.allowed_paths.clone(),
                 blocked_paths: task_descriptor.scope_out.as_ref()
-                    .map(|s| s.out_scope.clone())
+                    .map(|s| s.blocked_paths.clone())
                     .unwrap_or_default(),
             }),
         });
@@ -1108,21 +1085,21 @@ impl AutonomousExecutor {
         let metadata = Some(TaskMetadata {
             requester: None, // Could be populated from execution context
             priority: match task_descriptor.priority {
-                crate::types::TaskPriority::Low => Some(RequestTaskPriority::Low),
-                crate::types::TaskPriority::Medium | crate::types::TaskPriority::Normal => Some(RequestTaskPriority::Normal),
-                crate::types::TaskPriority::High => Some(RequestTaskPriority::High),
-                crate::types::TaskPriority::Critical => Some(RequestTaskPriority::Urgent),
+                agent_agency_contracts::types::planning::TaskPriority::Low => Some(RequestTaskPriority::Low),
+                agent_agency_contracts::types::planning::TaskPriority::Medium | agent_agency_contracts::types::planning::TaskPriority::Normal => Some(RequestTaskPriority::Normal),
+                agent_agency_contracts::types::planning::TaskPriority::High => Some(RequestTaskPriority::High),
+                agent_agency_contracts::types::planning::TaskPriority::Critical => Some(RequestTaskPriority::Urgent),
+                agent_agency_contracts::types::planning::TaskPriority::Urgent => Some(RequestTaskPriority::Urgent),
             },
             tags: vec![
-                task_descriptor.task_type.clone(),
+                "autonomous".to_string(), // Default task type for contracts compatibility
                 format!("risk-tier-{}", task_descriptor.risk_tier.map(|t| t as u8).unwrap_or(2)),
             ],
         });
         
         Ok(TaskRequest {
             version: "1.0".to_string(),
-            id: Uuid::parse_str(&task_descriptor.task_id)
-                .unwrap_or_else(|_| Uuid::new_v4()),
+            id: task_descriptor.task_id,
             description: task_descriptor.description.clone(),
             context,
             constraints,
@@ -1282,27 +1259,30 @@ impl AutonomousExecutor {
         // Otherwise, fall back to basic working spec generation
         if let Some(ref planning_integration) = self.planning_integration {
             // Convert TaskRequest to TaskDescriptor for planning integration
-            let task_descriptor = TaskDescriptor {
-                task_id: task_request.id.to_string(),
+            let task_descriptor = agent_agency_contracts::types::planning::TaskDescriptor {
+                task_id: task_request.id,
                 description: task_request.description.clone(),
-                scope_in: TaskScope {
-                    in_scope: vec![],
-                    out_scope: vec![],
-                },
-                scope_out: None,
-                change_budget: ChangeBudget {
+                change_budget: agent_agency_contracts::planning_io::ChangeBudget {
                     max_files: 25,
                     max_loc: 1000,
+                    max_migrations: 5,
+                    allow_breaking_changes: false,
+                    allow_new_dependencies: false,
+                    enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Flexible,
                 },
-                blast_radius: BlastRadius {
+                priority: agent_agency_contracts::types::planning::TaskPriority::Normal,
+                execution_mode: agent_agency_contracts::types::planning::ExecutionMode::Auto,
+                risk_tier: Some(agent_agency_contracts::task_request::RiskTier::Tier2),
+                blast_radius: agent_agency_contracts::types::planning::BlastRadius {
                     modules: vec![],
                     data_migration: false,
                     external_deps: vec![],
                 },
-                priority: TaskPriority::Normal,
-                execution_mode: ExecutionMode::Auto,
-                task_type: "autonomous_task".to_string(),
-                risk_tier: None,
+                scope_in: agent_agency_contracts::task_request::ScopeRestrictions {
+                    allowed_paths: vec![],
+                    blocked_paths: vec![],
+                },
+                scope_out: None,
                 acceptance: None,
             };
 
@@ -1353,6 +1333,22 @@ impl AutonomousExecutor {
                             dependencies: std::collections::HashMap::new(),
                             environment: agent_agency_contracts::task_request::Environment::Development,
                         },
+                        change_budget: agent_agency_contracts::planning_io::ChangeBudget {
+                            max_files: 50,
+                            max_loc: 1000,
+                            max_migrations: 3,
+                            allow_breaking_changes: false,
+                            allow_new_dependencies: false,
+                            enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Warning,
+                        },
+                        created_at: Utc::now(),
+                        updated_at: Utc::now(),
+                        coverage_targets: None,
+                        file_changes: vec![],
+                        milestones: vec![],
+                        quality_gates: None,
+                        scope: vec![],
+                        overview: String::new(),
                         non_functional_requirements: None,
                         validation_results: None,
                         metadata: None,
@@ -1406,6 +1402,22 @@ impl AutonomousExecutor {
                 dependencies: std::collections::HashMap::new(),
                 environment: agent_agency_contracts::task_request::Environment::Development,
             },
+            change_budget: agent_agency_contracts::planning_io::ChangeBudget {
+                max_files: 25,
+                max_loc: 1000,
+                max_migrations: 2,
+                allow_breaking_changes: false,
+                allow_new_dependencies: false,
+                enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Warning,
+            },
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            coverage_targets: None,
+            file_changes: vec![],
+            milestones: vec![],
+            quality_gates: None,
+            scope: vec![],
+            overview: String::new(),
             non_functional_requirements: None,
             validation_results: None,
             metadata: None,
@@ -1436,7 +1448,7 @@ impl AutonomousExecutor {
                 reasoning: "Task execution consensus".to_string(),
                 context: DecisionContext {
                     context_id: Uuid::new_v4(),
-                    task_id: task_descriptor.task_id.clone(),
+                    task_id: task_descriptor.task_id.to_string(),
                     description: format!("Consensus for task: {}", task_descriptor.task_id),
                     priority: PriorityLevel::Normal,
                     risk_level: 0.5,
@@ -1498,72 +1510,29 @@ impl AutonomousExecutor {
         };
 
         // Use the adapter to orchestrate the task
+        // The adapter expects contracts::WorkingSpec directly - no conversion needed
         let adapter = crate::adapter::LegacyOrchestratorAdapter::new(crate::types::OrchestratorConfig::default()).await?;
-        // Convert TaskRequest to TaskDescriptor
-        let task_descriptor = TaskDescriptor {
-            task_id: task_descriptor.task_id.clone(),
-            description: task_descriptor.description.clone(),
-            scope_in: task_descriptor.scope_in.clone(),
-            scope_out: task_descriptor.scope_out.clone(),
-            change_budget: task_descriptor.change_budget.clone(),
-            blast_radius: task_descriptor.blast_radius.clone(),
-            priority: task_descriptor.priority.clone(),
-            execution_mode: task_descriptor.execution_mode.clone(),
-            task_type: task_descriptor.task_type.clone(),
-            risk_tier: task_descriptor.risk_tier.clone(),
-            acceptance: task_descriptor.acceptance.clone(),
-        };
 
-        // Convert agent_agency_contracts::WorkingSpec to local WorkingSpec
-        let estimated_files = task_descriptor.scope_in.in_scope.len();
-        let estimated_loc = task_descriptor.scope_in.in_scope.len() * 100; // Rough estimate
-        
-        let local_spec = crate::types::WorkingSpec {
-            id: working_spec.id.clone(),
-            title: working_spec.title.clone(),
-            risk_tier: working_spec.risk_tier as u8,
-            mode: "feature".to_string(), // Default mode
-            change_budget: crate::types::ChangeBudget {
-                max_files: estimated_files.min(25) as u32,
-                max_loc: estimated_loc.min(5000) as u32,
-            },
-            blast_radius: crate::types::BlastRadius {
-                modules: vec!["core".to_string()],
-                data_migration: false,
-                external_deps: vec!["core".to_string()],
-            },
-            scope: crate::types::TaskScope {
-                in_scope: task_descriptor.scope_in.in_scope.clone(),
-                out_scope: task_descriptor.scope_out.as_ref().map(|s| s.out_scope.clone()).unwrap_or_default(),
-            },
-            acceptance_criteria: working_spec.acceptance_criteria.iter().map(|criterion| {
-                crate::types::AcceptanceCriterion {
-                    id: criterion.id.clone(),
-                    given: criterion.given.clone(),
-                    when: criterion.when.clone(),
-                    then: criterion.then.clone(),
-                }
-            }).collect(),
-        };
-
+        // Pass contracts WorkingSpec directly to adapter (it expects contracts types)
         let verdict = adapter.orchestrate_task(
-            &local_spec,
-            &task_descriptor,
+            working_spec,
+            task_descriptor,
             &diff_stats,
             false, // tests_added
             true,  // deterministic
         ).await?;
 
         // Convert TaskExecutionResult to FinalVerdict
+        // verdict is TaskExecutionResult from contracts, which uses contracts::ExecutionStatus
         let final_verdict = agent_agency_contracts::final_verdict::FinalVerdictContract {
-            decision: if verdict.artifacts.status == TypesExecutionStatus::Completed {
+            decision: if verdict.artifacts.status == agent_agency_contracts::ExecutionStatus::Completed {
                 agent_agency_contracts::final_verdict::FinalDecision::Accept
             } else {
                 agent_agency_contracts::final_verdict::FinalDecision::Reject
             },
             votes: vec![],
-            dissent: if verdict.artifacts.status != TypesExecutionStatus::Completed {
-                verdict.artifacts.error.unwrap_or_else(|| "Execution failed".to_string())
+            dissent: if verdict.artifacts.status != agent_agency_contracts::ExecutionStatus::Completed {
+                verdict.artifacts.error.clone().unwrap_or_else(|| "Execution failed".to_string())
             } else {
                 String::new()
             },
@@ -1571,8 +1540,8 @@ impl AutonomousExecutor {
             constitutional_refs: vec![],
             verification_summary: agent_agency_contracts::final_verdict::VerificationSummary {
                 claims_total: 1,
-                claims_verified: if verdict.artifacts.status == TypesExecutionStatus::Completed { 1 } else { 0 },
-                coverage_pct: if verdict.artifacts.status == TypesExecutionStatus::Completed { 100.0 } else { 0.0 },
+                claims_verified: if verdict.artifacts.status == agent_agency_contracts::ExecutionStatus::Completed { 1 } else { 0 },
+                coverage_pct: if verdict.artifacts.status == agent_agency_contracts::ExecutionStatus::Completed { 100.0 } else { 0.0 },
             },
         };
 
@@ -2046,14 +2015,18 @@ mod tests {
             change_budget: ChangeBudget {
                 max_files: 5,
                 max_loc: 100,
+                max_migrations: 0,
+                allow_breaking_changes: false,
+                allow_new_dependencies: false,
+                enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
             },
             blast_radius: BlastRadius {
                 modules: vec![],
                 data_migration: false,
                 external_deps: vec![],
             },
-            priority: crate::types::TaskPriority::Normal,
-            execution_mode: crate::types::ExecutionMode::Auto,
+            priority: agent_agency_contracts::types::planning::TaskPriority::Normal,
+            execution_mode: agent_agency_contracts::types::planning::ExecutionMode::Auto,
             task_type: crate::types::TaskType::Feature,
             risk_tier: 2,
             acceptance: vec![AcceptanceCriterion {

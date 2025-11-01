@@ -6,20 +6,27 @@
 //! @author @darianrosebrook
 
 use std::collections::{HashMap, HashSet};
+use std::fmt::Debug;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use agent_agency_contracts::{
     planning_io::{
         ExecutionPlan as ContractExecutionPlan, PlanState as ContractPlanState,
         Milestone as ContractMilestone, MilestoneState as ContractMilestoneState,
         DependencyGraph as ContractDependencyGraph,
     },
-    planning::{PlanningCapabilities, ValidationResult},
+    planning::{
+        PlanningCapabilities, ValidationResult,
+        DetailedQualityMetrics, CoverageMetrics, TestQualityMetrics,
+        CodeQualityMetrics, DocumentationQualityMetrics,
+        QualityMetrics, PerformanceMetrics, HardwareResourceRequirements, NetworkRequirements, HumanResourceRequirements,
+    },
 };
 
 /// Extended execution plan with orchestration state
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionPlan {
     /// Base contract plan
     pub contract_plan: ContractExecutionPlan,
@@ -35,7 +42,7 @@ pub struct ExecutionPlan {
 }
 
 /// Orchestration-specific metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct OrchestrationMetadata {
     /// Orchestrator instance that created this plan
     pub orchestrator_id: String,
@@ -57,7 +64,7 @@ pub struct OrchestrationMetadata {
 }
 
 /// Current execution context
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionContext {
     /// Session start time
     pub session_start: DateTime<Utc>,
@@ -79,7 +86,7 @@ pub struct ExecutionContext {
 }
 
 /// Active execution state
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ActiveExecutionState {
     /// Currently executing milestones
     pub executing_milestones: HashSet<String>,
@@ -104,7 +111,7 @@ pub struct ActiveExecutionState {
 }
 
 /// Worker assignment for milestone
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerAssignment {
     /// Worker ID assigned
     pub worker_id: Uuid,
@@ -161,7 +168,7 @@ pub enum AssignmentPriority {
 }
 
 /// Resource allocation for assignment
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResourceAllocation {
     /// CPU cores allocated
     pub cpu_cores: usize,
@@ -180,7 +187,7 @@ pub struct ResourceAllocation {
 }
 
 /// Parallel execution batch
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParallelBatch {
     /// Batch index
     pub batch_index: usize,
@@ -220,40 +227,12 @@ pub enum BatchStatus {
     Cancelled,
 }
 
-/// Resource requirements for batch
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResourceRequirements {
-    /// Total CPU cores needed
-    pub total_cpu_cores: usize,
-
-    /// Peak memory needed (MB)
-    pub peak_memory_mb: usize,
-
-    /// Total disk space needed (MB)
-    pub total_disk_mb: usize,
-
-    /// Network requirements
-    pub network_requirements: NetworkRequirements,
-
-    /// Estimated execution time (milliseconds)
-    pub estimated_duration_ms: u64,
-}
-
-/// Network requirements
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NetworkRequirements {
-    /// Peak bandwidth needed (Mbps)
-    pub peak_bandwidth_mbps: f64,
-
-    /// External services required
-    pub external_services: Vec<String>,
-
-    /// Network security requirements
-    pub security_requirements: Vec<String>,
-}
+// ResourceRequirements and NetworkRequirements are now imported from agent_agency_contracts
+// Type alias for backward compatibility
+pub type ResourceRequirements = agent_agency_contracts::HardwareResourceRequirements;
 
 /// Resource inventory available
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResourceInventory {
     /// Available CPU cores
     pub available_cpu_cores: usize,
@@ -271,8 +250,20 @@ pub struct ResourceInventory {
     pub available_workers: HashMap<String, usize>,
 }
 
+impl Default for ResourceInventory {
+    fn default() -> Self {
+        Self {
+            available_cpu_cores: 8,
+            available_memory_mb: 16384, // 16GB
+            available_disk_mb: 102400, // 100GB
+            available_network_mbps: 1000.0, // 1Gbps
+            available_workers: HashMap::new(),
+        }
+    }
+}
+
 /// Execution progress tracking
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionProgress {
     /// Overall completion percentage (0.0-1.0)
     pub overall_completion: f64,
@@ -297,7 +288,7 @@ pub struct ExecutionProgress {
 }
 
 /// Evidence collection state
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceCollectionState {
     /// Evidence collected so far
     pub collected_evidence: HashMap<String, EvidenceStatus>,
@@ -313,7 +304,7 @@ pub struct EvidenceCollectionState {
 }
 
 /// Evidence collection status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceStatus {
     /// Evidence type
     pub evidence_type: String,
@@ -354,7 +345,7 @@ pub enum EvidenceCollectionStatus {
 }
 
 /// Evidence collection failure
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceFailure {
     /// Milestone ID
     pub milestone_id: String,
@@ -376,7 +367,7 @@ pub struct EvidenceFailure {
 }
 
 /// Evidence bundle collected for a milestone
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceBundle {
     /// Milestone ID this evidence is for
     pub milestone_id: String,
@@ -391,7 +382,7 @@ pub struct EvidenceBundle {
     pub artifacts: Vec<EvidenceArtifact>,
 
     /// Quality score of evidence
-    pub quality_score: f64,
+    pub quality_score: Option<f64>,
 
     /// Whether evidence meets quality gates
     pub meets_quality_gates: bool,
@@ -401,7 +392,7 @@ pub struct EvidenceBundle {
 }
 
 /// Individual evidence artifact
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceArtifact {
     /// Artifact ID
     pub id: Uuid,
@@ -423,7 +414,7 @@ pub struct EvidenceArtifact {
 }
 
 /// Evidence content types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum EvidenceContent {
     /// File path to evidence
     FilePath(String),
@@ -438,8 +429,18 @@ pub enum EvidenceContent {
     Binary(String),
 }
 
+/// Planning strategy options
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PlanGenerationStrategy {
+    /// Use AI-assisted planning with human oversight
+    AIAssisted,
+    /// Use fully automated planning
+    Automated,
+    /// Use human-guided planning
+    HumanGuided,
+}
+
 /// Plan generation context
-#[derive(Debug, Clone)]
 pub struct PlanGenerationContext {
     /// Working spec to plan for
     pub working_spec: Box<dyn WorkingSpecProvider>,
@@ -455,6 +456,15 @@ pub struct PlanGenerationContext {
 
     /// Historical planning data
     pub historical_data: Option<HistoricalPlanningData>,
+
+    /// Planning constraints (alias for constraints - added for compatibility)
+    pub planning_constraints: PlanningConstraints,
+
+    /// Execution mode for this planning operation
+    pub execution_mode: agent_agency_contracts::types::planning::ExecutionMode,
+
+    /// Planning strategy to use
+    pub planning_strategy: PlanGenerationStrategy,
 }
 
 /// Working spec provider trait
@@ -472,7 +482,7 @@ pub trait TaskDescriptorProvider: Send + Sync {
 }
 
 /// Planning constraints
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PlanningConstraints {
     /// Maximum planning time (milliseconds)
     pub max_planning_time_ms: u64,
@@ -507,7 +517,7 @@ pub enum RiskTolerance {
 }
 
 /// Cost limits
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CostLimits {
     /// Maximum cost in cents
     pub max_cost_cents: u32,
@@ -533,7 +543,7 @@ pub enum CostOptimizationPriority {
 }
 
 /// Quality requirements
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityRequirements {
     /// Minimum coverage required
     pub min_coverage: f64,
@@ -552,7 +562,7 @@ pub struct QualityRequirements {
 }
 
 /// Parallel execution preferences
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParallelPreferences {
     /// Preferred maximum parallelism
     pub max_parallelism: usize,
@@ -584,7 +594,7 @@ pub enum LoadBalancingStrategy {
 }
 
 /// Historical planning data
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct HistoricalPlanningData {
     /// Previous similar plans
     pub similar_plans: Vec<HistoricalPlan>,
@@ -600,7 +610,7 @@ pub struct HistoricalPlanningData {
 }
 
 /// Historical plan data
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct HistoricalPlan {
     /// Plan ID
     pub plan_id: Uuid,
@@ -622,7 +632,7 @@ pub struct HistoricalPlan {
 }
 
 /// Failure pattern analysis
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FailurePattern {
     /// Pattern description
     pub description: String,
@@ -786,3 +796,341 @@ mod tests {
         assert!(evidence_state.collection_failures[0].recoverable);
     }
 }
+
+/// Request for plan generation
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct PlanGenerationRequest {
+    /// Working spec to generate plan for
+    pub working_spec: agent_agency_contracts::WorkingSpec,
+
+    /// Planning context and constraints
+    pub planning_context: PlanningContext,
+
+    /// Optional planning session to continue
+    pub existing_session: Option<PlanningSession>,
+}
+
+/// Planning context with orchestration details
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct PlanningContext {
+    /// Available workers and their capabilities
+    pub worker_capabilities: HashMap<String, WorkerCapabilities>,
+
+    /// Current system resource availability
+    pub system_resources: SystemResources,
+
+    /// Planning constraints and preferences
+    pub planning_constraints: ExecutionPlanningConstraints,
+}
+
+/// Worker capabilities for planning
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct WorkerCapabilities {
+    /// Worker specialization
+    pub specialization: Vec<String>,
+
+    /// Maximum concurrent tasks
+    pub max_concurrent_tasks: usize,
+
+    /// Supported task types
+    pub supported_task_types: Vec<String>,
+
+    /// Performance characteristics
+    pub performance_profile: PerformanceProfile,
+}
+
+/// System resource availability
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct SystemResources {
+    /// Total available CPU cores
+    pub total_cpu_cores: usize,
+
+    /// Total available memory in MB
+    pub total_memory_mb: usize,
+
+    /// Total available disk space in MB
+    pub total_disk_mb: usize,
+
+    /// Network bandwidth in Mbps
+    pub network_bandwidth_mbps: f64,
+}
+
+/// Execution planning constraints
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ExecutionPlanningConstraints {
+    /// Maximum plan execution time in minutes
+    pub max_execution_minutes: Option<u32>,
+
+    /// Maximum parallel execution limit
+    pub max_parallel_execution: Option<usize>,
+
+    /// Required quality gates
+    pub required_quality_gates: Vec<String>,
+
+    /// Resource allocation preferences
+    pub resource_preferences: ResourcePreferences,
+}
+
+impl Default for ExecutionPlanningConstraints {
+    fn default() -> Self {
+        Self {
+            max_execution_minutes: Some(60),
+            max_parallel_execution: Some(3),
+            required_quality_gates: vec![],
+            resource_preferences: ResourcePreferences::default(),
+        }
+    }
+}
+
+/// Resource allocation preferences
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ResourcePreferences {
+    /// Prefer CPU-intensive tasks
+    pub prefer_cpu_intensive: bool,
+
+    /// Prefer memory-intensive tasks
+    pub prefer_memory_intensive: bool,
+
+    /// Allow network-heavy tasks
+    pub allow_network_heavy: bool,
+
+    /// Require fast storage access
+    pub require_fast_storage: bool,
+}
+
+impl Default for ResourcePreferences {
+    fn default() -> Self {
+        Self {
+            prefer_cpu_intensive: false,
+            prefer_memory_intensive: false,
+            allow_network_heavy: true,
+            require_fast_storage: false,
+        }
+    }
+}
+
+/// Performance profile for workers
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct PerformanceProfile {
+    /// Average task completion time in seconds
+    pub avg_completion_seconds: f64,
+
+    /// Success rate (0.0 to 1.0)
+    pub success_rate: f64,
+
+    /// Resource efficiency score (0.0 to 1.0)
+    pub resource_efficiency: f64,
+
+    /// Specialization match score (0.0 to 1.0)
+    pub specialization_score: f64,
+}
+
+/// Planning session state
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct PlanningSession {
+    /// Session unique identifier
+    pub session_id: Uuid,
+
+    /// Working spec being planned
+    pub working_spec: agent_agency_contracts::WorkingSpec,
+
+    /// Planning start time
+    pub started_at: DateTime<Utc>,
+
+    /// Current planning phase
+    pub current_phase: PlanningPhase,
+
+    /// Planning progress (0.0 to 1.0)
+    pub progress: f64,
+
+    /// Generated execution plan (when complete)
+    pub execution_plan: Option<ExecutionPlan>,
+
+    /// Planning metrics and telemetry
+    pub metrics: PlanningMetrics,
+}
+
+/// Planning phase enumeration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PlanningPhase {
+    /// Initial analysis phase
+    Analysis,
+    /// Milestone decomposition
+    Decomposition,
+    /// Dependency analysis
+    DependencyAnalysis,
+    /// Resource allocation
+    ResourceAllocation,
+    /// Quality gate validation
+    Validation,
+    /// Final optimization
+    Optimization,
+    /// Plan generation complete
+    Complete,
+}
+
+/// Planning metrics for monitoring and optimization
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct PlanningMetrics {
+    /// Total planning time in milliseconds
+    pub total_time_ms: u64,
+
+    /// Time spent in each phase
+    pub phase_times_ms: HashMap<String, u64>,
+
+    /// Number of milestones generated
+    pub milestones_generated: usize,
+
+    /// Number of dependencies identified
+    pub dependencies_identified: usize,
+
+    /// Resource allocation efficiency (0.0 to 1.0)
+    pub resource_efficiency: f64,
+
+    /// Planning quality score (0.0 to 1.0)
+    pub quality_score: f64,
+}
+
+/// Todo integration for task management
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct TodoIntegration {
+    /// Integration identifier
+    pub integration_id: Uuid,
+
+    /// Todo system type
+    pub system_type: TodoSystemType,
+
+    /// Connection configuration
+    pub connection_config: TodoConnectionConfig,
+
+    /// Synchronization settings
+    pub sync_settings: TodoSyncSettings,
+
+    /// Current sync state
+    pub sync_state: TodoSyncState,
+}
+
+/// Todo system types
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TodoSystemType {
+    /// GitHub Issues
+    GitHub,
+    /// Jira
+    Jira,
+    /// Linear
+    Linear,
+    /// Trello
+    Trello,
+    /// Asana
+    Asana,
+    /// Custom system
+    Custom,
+}
+
+/// Todo connection configuration
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct TodoConnectionConfig {
+    /// API endpoint URL
+    pub endpoint_url: String,
+
+    /// Authentication token/API key
+    pub auth_token: String,
+
+    /// Project/repository identifier
+    pub project_id: String,
+
+    /// Additional configuration
+    pub additional_config: HashMap<String, String>,
+}
+
+/// Todo synchronization settings
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct TodoSyncSettings {
+    /// Sync direction
+    pub sync_direction: SyncDirection,
+
+    /// Auto-sync enabled
+    pub auto_sync: bool,
+
+    /// Sync interval in minutes
+    pub sync_interval_minutes: u32,
+
+    /// Field mappings
+    pub field_mappings: HashMap<String, String>,
+
+    /// Status mappings
+    pub status_mappings: HashMap<String, String>,
+}
+
+/// Sync direction
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SyncDirection {
+    /// Bidirectional sync
+    Bidirectional,
+    /// Only push to todo system
+    PushOnly,
+    /// Only pull from todo system
+    PullOnly,
+}
+
+/// Todo synchronization state
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct TodoSyncState {
+    /// Last successful sync time
+    pub last_sync_at: Option<DateTime<Utc>>,
+
+    /// Sync status
+    pub status: SyncStatus,
+
+    /// Items synchronized
+    pub synced_items: usize,
+
+    /// Failed sync attempts
+    pub failed_sync_attempts: usize,
+
+    /// Last error message
+    pub last_error: Option<String>,
+}
+
+/// Synchronization status
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SyncStatus {
+    /// Never synchronized
+    NeverSynced,
+    /// Currently synchronizing
+    Syncing,
+    /// Last sync successful
+    Synced,
+    /// Last sync failed
+    Failed,
+    /// Sync disabled
+    Disabled,
+}
+
+/// Resource utilization metrics
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ResourceUtilization {
+    /// CPU utilization percentage (0.0 to 100.0)
+    pub cpu_percent: f64,
+
+    /// Memory utilization in MB
+    pub memory_mb: f64,
+
+    /// Disk utilization in MB
+    pub disk_mb: f64,
+
+    /// Network utilization in Mbps
+    pub network_mbps: f64,
+
+    /// GPU utilization if available
+    pub gpu_percent: Option<f64>,
+
+    /// Timestamp of measurement
+    pub measured_at: DateTime<Utc>,
+
+    /// Associated milestone or task
+    pub associated_with: Option<String>,
+}
+
+// Quality metrics types are now imported from agent_agency_contracts
+// PerformanceMetrics is also imported from agent_agency_contracts

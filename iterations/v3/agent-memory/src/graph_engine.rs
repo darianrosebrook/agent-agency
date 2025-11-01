@@ -46,6 +46,28 @@ pub enum EntityType {
     Other,
 }
 
+impl TryFrom<i32> for EntityType {
+    type Error = String;
+
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(EntityType::Agent),
+            1 => Ok(EntityType::Task),
+            2 => Ok(EntityType::Capability),
+            3 => Ok(EntityType::Domain),
+            4 => Ok(EntityType::Tool),
+            5 => Ok(EntityType::Outcome),
+            6 => Ok(EntityType::Concept),
+            7 => Ok(EntityType::Person),
+            8 => Ok(EntityType::Organization),
+            9 => Ok(EntityType::Location),
+            10 => Ok(EntityType::Technology),
+            11 => Ok(EntityType::Other),
+            _ => Err(format!("Invalid EntityType value: {}", value)),
+        }
+    }
+}
+
 /// Relationship between entities
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Relationship {
@@ -103,6 +125,32 @@ impl RelationshipType {
             13 => RelationshipType::Prevents,
             14 => RelationshipType::SimilarTo,
             _ => RelationshipType::Other,
+        }
+    }
+}
+
+impl TryFrom<i32> for RelationshipType {
+    type Error = String;
+
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(RelationshipType::Performs),
+            1 => Ok(RelationshipType::Requires),
+            2 => Ok(RelationshipType::Enables),
+            3 => Ok(RelationshipType::Conflicts),
+            4 => Ok(RelationshipType::Improves),
+            5 => Ok(RelationshipType::LearnsFrom),
+            6 => Ok(RelationshipType::CollaboratesWith),
+            7 => Ok(RelationshipType::Manages),
+            8 => Ok(RelationshipType::Creates),
+            9 => Ok(RelationshipType::Uses),
+            10 => Ok(RelationshipType::Contains),
+            11 => Ok(RelationshipType::RelatedTo),
+            12 => Ok(RelationshipType::Causes),
+            13 => Ok(RelationshipType::Prevents),
+            14 => Ok(RelationshipType::SimilarTo),
+            15 => Ok(RelationshipType::Other),
+            _ => Err(format!("Invalid RelationshipType value: {}", value)),
         }
     }
 }
@@ -805,11 +853,53 @@ impl KnowledgeGraphEngine {
             .fetch_one(&*self.db_pool)
             .await?;
 
+        // Get entity type distribution
+        let entity_types_rows = sqlx::query(
+            r#"
+            SELECT entity_type, COUNT(*) as count
+            FROM knowledge_graph_entities
+            GROUP BY entity_type
+            ORDER BY count DESC
+            "#
+        )
+        .fetch_all(&*self.db_pool)
+        .await?;
+
+        let mut entity_types = HashMap::new();
+        for row in entity_types_rows {
+            let entity_type_i32: i32 = row.try_get("entity_type")?;
+            let entity_type = EntityType::try_from(entity_type_i32)
+                .map_err(|e| sqlx::Error::Decode(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, e))))?;
+            let count: i64 = row.try_get("count")?;
+            entity_types.insert(entity_type, count as usize);
+        }
+
+        // Get relationship type distribution
+        let relationship_types_rows = sqlx::query(
+            r#"
+            SELECT relationship_type, COUNT(*) as count
+            FROM knowledge_graph_relationships
+            GROUP BY relationship_type
+            ORDER BY count DESC
+            "#
+        )
+        .fetch_all(&*self.db_pool)
+        .await?;
+
+        let mut relationship_types = HashMap::new();
+        for row in relationship_types_rows {
+            let relationship_type_i32: i32 = row.try_get("relationship_type")?;
+            let relationship_type = RelationshipType::try_from(relationship_type_i32)
+                .map_err(|e| sqlx::Error::Decode(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, e))))?;
+            let count: i64 = row.try_get("count")?;
+            relationship_types.insert(relationship_type, count as usize);
+        }
+
         Ok(GraphStats {
             entity_count: entity_count,
             relationship_count: relationship_count,
-            entity_types: HashMap::new(), // TODO: implement distribution
-            relationship_types: HashMap::new(), // TODO: implement distribution
+            entity_types,
+            relationship_types,
         })
     }
 }

@@ -9,6 +9,7 @@ use tokio::sync::{RwLock, mpsc};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 
 /// Progress tracking trait for task execution
 #[async_trait::async_trait]
@@ -36,7 +37,7 @@ pub trait ProgressTracker: Send + Sync {
 }
 
 /// Execution progress information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionProgress {
     /// Task ID
     pub task_id: Uuid,
@@ -84,7 +85,7 @@ pub enum ExecutionStatus {
 }
 
 /// Progress message
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProgressMessage {
     /// Message timestamp
     pub timestamp: DateTime<Utc>,
@@ -97,7 +98,7 @@ pub struct ProgressMessage {
 }
 
 /// Message level
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum MessageLevel {
     /// Debug information
     Debug,
@@ -110,7 +111,7 @@ pub enum MessageLevel {
 }
 
 /// Progress metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProgressMetrics {
     /// CPU usage percentage
     pub cpu_usage: f64,
@@ -129,7 +130,7 @@ pub struct ProgressMetrics {
 }
 
 /// Progress error
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProgressError {
     /// Error code
     pub code: String,
@@ -142,7 +143,7 @@ pub struct ProgressError {
 }
 
 /// Execution event for monitoring
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionEvent {
     /// Event ID
     pub event_id: Uuid,
@@ -157,7 +158,7 @@ pub struct ExecutionEvent {
 }
 
 /// Event type
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum EventType {
     /// Task started
     TaskStarted,

@@ -10,11 +10,17 @@ use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use uuid::Uuid;
 use chrono::Utc;
-use agent_agency_contracts::planning_io::ExecutionPlan;
-use data_infrastructure::DatabaseOperations;
+use serde::{Serialize, Deserialize};
+use agent_agency_contracts::{
+    planning_io::ExecutionPlan,
+    types::prelude::*,
+    *,
+};
+use crate::planning::DatabaseOperations;
 
 // Use real Council and related types
-use crate::council::{Council, CouncilError};
+use crate::council::Council;
+use crate::council_errors::CouncilError;
 use crate::council_errors::CouncilResult;
 use crate::judge_backup::types::ReviewContext as JudgeReviewContext;
 use crate::decision_making::FinalDecision;
@@ -37,7 +43,7 @@ fn convert_review_priority(priority: ReviewPriority) -> u8 {
 }
 
 /// Council review result for plan assessment
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CouncilReviewResult {
     /// Plan ID that was reviewed
     pub plan_id: Uuid,
@@ -405,7 +411,7 @@ impl CouncilPlanReview {
         let review_duration = Utc::now().signed_duration_since(review_start).num_milliseconds() as u64;
 
         let result = CouncilReviewResult {
-            plan_id: plan.contract_plan.id,
+            plan_id: Uuid::parse_str(&plan.contract_plan.id).unwrap_or_else(|_| Uuid::new_v4()),
             approved,
             risk_tier,
             scope_validation,
@@ -676,8 +682,8 @@ impl CouncilPlanReview {
     fn determine_review_priority(&self, plan: &ExecutionPlan) -> ReviewPriority {
         // High priority for plans with high risk or many milestones
         if plan.contract_plan.milestones.len() > 5 ||
-           plan.contract_plan.quality_gates.requires_manual_review ||
-           plan.contract_plan.quality_gates.requires_council_approval {
+           plan.contract_plan.quality_gates.as_ref().map(|qg| qg.requires_manual_review).unwrap_or(false) ||
+           plan.contract_plan.quality_gates.as_ref().map(|qg| qg.requires_council_approval).unwrap_or(false) {
             ReviewPriority::High
         } else {
             ReviewPriority::Normal
@@ -704,24 +710,24 @@ impl CouncilPlanReview {
     /// Store review results for audit and analysis
     async fn store_review_result(&self, result: &CouncilReviewResult) -> Result<()> {
         // Create audit trail entry for the review with full result serialized
-        let audit_entry = data_infrastructure::CreateAuditTrailEntry {
-            entity_type: "plan_review".to_string(),
-            entity_id: result.plan_id,
-            action: "plan_reviewed".to_string(),
-            details: serde_json::to_value(result)
-                .unwrap_or_else(|_| serde_json::json!({
-                    "approved": result.approved,
-                    "constitutional_score": result.ethical_assessment.constitutional_score,
-                    "violations": result.violations,
-                    "recommendations": result.recommendations,
-                    "risk_tier": result.risk_tier,
-                    "scope_valid": result.scope_validation.is_valid,
-                    "ethical_score": result.ethical_assessment.constitutional_score,
-                    "reviewed_at": result.reviewed_at.to_rfc3339(),
-                })),
-            user_id: None,
-            ip_address: None,
-            timestamp: Some(result.reviewed_at),
+        let mut metadata = std::collections::HashMap::new();
+        metadata.insert("entity_type".to_string(), serde_json::Value::String("plan_review".to_string()));
+        metadata.insert("entity_id".to_string(), serde_json::Value::String(result.plan_id.to_string()));
+        metadata.insert("action".to_string(), serde_json::Value::String("plan_reviewed".to_string()));
+
+        // Add the full result details to metadata
+        let result_value = serde_json::to_value(result)?;
+        if let serde_json::Value::Object(result_map) = result_value {
+            for (key, value) in result_map {
+                metadata.insert(key, value);
+            }
+        }
+
+        let audit_entry = crate::planning::CreateAuditTrailEntry {
+            event_type: "plan_review".to_string(),
+            description: format!("Plan review completed: approved={}, score={:.2}",
+                result.approved, result.ethical_assessment.constitutional_score),
+            metadata,
         };
 
         self.db_ops.create_audit_trail_entry(audit_entry).await?;
@@ -950,7 +956,7 @@ impl EthicalAssessor {
         }
 
         // Check for fairness and transparency
-        if !plan.contract_plan.quality_gates.requires_manual_review && plan.contract_plan.milestones.len() > 3 {
+        if !plan.contract_plan.quality_gates.as_ref().map(|qg| qg.requires_manual_review).unwrap_or(false) && plan.contract_plan.milestones.len() > 3 {
             concerns.push(EthicalConcern {
                 category: EthicalCategory::Transparency,
                 description: "Complex plan without manual review may lack transparency".to_string(),
@@ -1049,17 +1055,17 @@ impl QualityRequirementsAssessor {
         // Require council approval for plans with high impact
         plan.contract_plan.change_budget.allow_breaking_changes ||
         plan.contract_plan.milestones.len() > 8 ||
-        plan.contract_plan.quality_gates.requires_manual_review
+        plan.contract_plan.quality_gates.as_ref().map(|qg| qg.requires_manual_review).unwrap_or(false)
     }
 
     fn determine_evidence_requirements(&self, plan: &ExecutionPlan) -> Vec<String> {
         let mut requirements = vec!["execution_result".to_string()];
 
-        if plan.contract_plan.quality_gates.min_coverage > 0.0 {
+        if plan.contract_plan.quality_gates.as_ref().and_then(|qg| qg.coverage_requirements.get("line")).unwrap_or(&0.0) > &0.0 {
             requirements.push("test_coverage_report".to_string());
         }
 
-        if plan.contract_plan.quality_gates.security_scan_required {
+        if plan.contract_plan.quality_gates.as_ref().map(|qg| qg.security_requirements.scan_required).unwrap_or(false) {
             requirements.push("security_scan_report".to_string());
         }
 
@@ -1083,20 +1089,30 @@ impl Default for ReviewConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use async_trait::async_trait;
+    use uuid::Uuid;
     use agent_agency_contracts::planning_io::{MilestoneScope, MilestoneState, MilestonePriority};
 
     // Mock council coordinator for testing
     struct MockCouncilCoordinator;
 
     #[async_trait::async_trait]
-    impl agent_constitutional_council::CouncilCoordinator<agent_agency_contracts::Engine> {
-        async fn evaluate(&self, _ctx: &ReviewContext) -> CouncilResult<FinalDecision> {
-            Ok(FinalDecision {
-                label: agent_agency_contracts::VerdictLabel::Pass,
-                score: 0.9,
-                rationale: "Mock approval for testing".to_string(),
-                violations: vec![],
-                evidence_refs: vec![],
+    impl agent_agency_contracts::CouncilCoordinator for MockCouncilCoordinator {
+        async fn start_session(&self, _task: &agent_agency_contracts::TaskDescriptor) -> agent_agency_contracts::CouncilResult<agent_agency_contracts::SessionId> {
+            Ok(agent_agency_contracts::SessionId(uuid::Uuid::new_v4()))
+        }
+
+        async fn review_task(&self, _session_id: &agent_agency_contracts::SessionId, _task: &agent_agency_contracts::TaskDescriptor) -> agent_agency_contracts::CouncilResult<agent_agency_contracts::CouncilVerdict> {
+            Ok(agent_agency_contracts::CouncilVerdict::Approved)
+        }
+
+        async fn get_session_status(&self, _session_id: &agent_agency_contracts::SessionId) -> agent_agency_contracts::CouncilResult<agent_agency_contracts::SessionStatus> {
+            Ok(agent_agency_contracts::SessionStatus {
+                session_id: *_session_id,
+                status: agent_agency_contracts::SessionStatusType::Completed,
+                progress: 1.0,
+                pending_requirements: vec![],
+                estimated_completion: Some(chrono::Utc::now()),
             })
         }
     }
@@ -1105,62 +1121,62 @@ mod tests {
     struct MockDbOps;
 
     #[async_trait::async_trait]
-    impl data_infrastructure::DatabaseOperations for MockDbOps {
-        async fn create_execution_plan(&self, _plan: data_infrastructure::CreateExecutionPlan) -> Result<data_infrastructure::models::ExecutionPlan> { Err(anyhow!("Not implemented")) }
-        async fn get_execution_plan(&self, _id: Uuid) -> Result<Option<data_infrastructure::models::ExecutionPlan>> { Ok(None) }
-        async fn get_execution_plans(&self) -> Result<Vec<data_infrastructure::models::ExecutionPlan>> { Ok(vec![]) }
-        async fn update_execution_plan(&self, _id: Uuid, _update: data_infrastructure::UpdateExecutionPlan) -> Result<data_infrastructure::models::ExecutionPlan> { Err(anyhow!("Not implemented")) }
+    impl crate::planning::DatabaseOperations for MockDbOps {
+        async fn create_execution_plan(&self, _plan: crate::planning::CreateExecutionPlan) -> Result<crate::planning::models::ExecutionPlan> { Err(anyhow!("Not implemented")) }
+        async fn get_execution_plan(&self, _id: Uuid) -> Result<Option<crate::planning::models::ExecutionPlan>> { Ok(None) }
+        async fn get_execution_plans(&self) -> Result<Vec<crate::planning::models::ExecutionPlan>> { Ok(vec![]) }
+        async fn update_execution_plan(&self, _id: Uuid, _update: crate::planning::UpdateExecutionPlan) -> Result<crate::planning::models::ExecutionPlan> { Err(anyhow!("Not implemented")) }
         async fn delete_execution_plan(&self, _id: Uuid) -> Result<()> { Ok(()) }
-        async fn create_judge(&self, _judge: data_infrastructure::CreateJudge) -> Result<data_infrastructure::models::Judge> { Err(anyhow!("Not implemented")) }
-        async fn get_judge(&self, _id: Uuid) -> Result<Option<data_infrastructure::models::Judge>> { Ok(None) }
-        async fn get_judges(&self) -> Result<Vec<data_infrastructure::models::Judge>> { Ok(vec![]) }
-        async fn update_judge(&self, _id: Uuid, _update: data_infrastructure::UpdateJudge) -> Result<data_infrastructure::models::Judge> { Err(anyhow!("Not implemented")) }
+        async fn create_judge(&self, _judge: crate::planning::CreateJudge) -> Result<crate::planning::models::Judge> { Err(anyhow!("Not implemented")) }
+        async fn get_judge(&self, _id: Uuid) -> Result<Option<crate::planning::models::Judge>> { Ok(None) }
+        async fn get_judges(&self) -> Result<Vec<crate::planning::models::Judge>> { Ok(vec![]) }
+        async fn update_judge(&self, _id: Uuid, _update: crate::planning::UpdateJudge) -> Result<crate::planning::models::Judge> { Err(anyhow!("Not implemented")) }
         async fn delete_judge(&self, _id: Uuid) -> Result<()> { Ok(()) }
-        async fn create_worker(&self, _worker: data_infrastructure::CreateWorker) -> Result<data_infrastructure::models::Worker> { Err(anyhow!("Not implemented")) }
-        async fn get_worker(&self, _id: Uuid) -> Result<Option<data_infrastructure::models::Worker>> { Ok(None) }
-        async fn get_workers(&self) -> Result<Vec<data_infrastructure::models::Worker>> { Ok(vec![]) }
-        async fn update_worker(&self, _id: Uuid, _update: data_infrastructure::UpdateWorker) -> Result<data_infrastructure::models::Worker> { Err(anyhow!("Not implemented")) }
+        async fn create_worker(&self, _worker: crate::planning::CreateWorker) -> Result<crate::planning::models::Worker> { Err(anyhow!("Not implemented")) }
+        async fn get_worker(&self, _id: Uuid) -> Result<Option<crate::planning::models::Worker>> { Ok(None) }
+        async fn get_workers(&self) -> Result<Vec<crate::planning::models::Worker>> { Ok(vec![]) }
+        async fn update_worker(&self, _id: Uuid, _update: crate::planning::UpdateWorker) -> Result<crate::planning::models::Worker> { Err(anyhow!("Not implemented")) }
         async fn delete_worker(&self, _id: Uuid) -> Result<()> { Ok(()) }
-        async fn create_task(&self, _task: data_infrastructure::CreateTask) -> Result<data_infrastructure::models::Task> { Err(anyhow!("Not implemented")) }
-        async fn get_task(&self, _id: Uuid) -> Result<Option<data_infrastructure::models::Task>> { Ok(None) }
-        async fn get_tasks(&self, _status: Option<String>) -> Result<Vec<data_infrastructure::models::Task>> { Ok(vec![]) }
-        async fn update_task(&self, _id: Uuid, _update: data_infrastructure::UpdateTaskExecution) -> Result<data_infrastructure::models::TaskExecution> { Err(anyhow!("Not implemented")) }
+        async fn create_task(&self, _task: crate::planning::CreateTask) -> Result<crate::planning::models::Task> { Err(anyhow!("Not implemented")) }
+        async fn get_task(&self, _id: Uuid) -> Result<Option<crate::planning::models::Task>> { Ok(None) }
+        async fn get_tasks(&self, _status: Option<String>) -> Result<Vec<crate::planning::models::Task>> { Ok(vec![]) }
+        async fn update_task(&self, _id: Uuid, _update: crate::planning::UpdateTaskExecution) -> Result<crate::planning::models::TaskExecution> { Err(anyhow!("Not implemented")) }
         async fn delete_task(&self, _id: Uuid) -> Result<()> { Ok(()) }
-        async fn create_task_execution(&self, _execution: data_infrastructure::CreateTaskExecution) -> Result<data_infrastructure::models::TaskExecution> { Err(anyhow!("Not implemented")) }
-        async fn get_task_execution(&self, _id: Uuid) -> Result<Option<data_infrastructure::models::TaskExecution>> { Ok(None) }
-        async fn get_task_executions(&self, _task_id: Uuid) -> Result<Vec<data_infrastructure::models::TaskExecution>> { Ok(vec![]) }
-        async fn update_task_execution(&self, _id: Uuid, _update: data_infrastructure::UpdateTaskExecution) -> Result<data_infrastructure::models::TaskExecution> { Err(anyhow!("Not implemented")) }
-        async fn create_audit_trail_entry(&self, _entry: data_infrastructure::CreateAuditTrailEntry) -> Result<data_infrastructure::models::AuditTrailEntry> { Err(anyhow!("Not implemented")) }
-        async fn get_audit_trail_entries(&self, _task_id: Uuid) -> Result<Vec<data_infrastructure::models::AuditTrailEntry>> { Ok(vec![]) }
-        async fn get_audit_trail_entry(&self, _id: Uuid) -> Result<Option<data_infrastructure::models::AuditTrailEntry>> { Ok(None) }
-        async fn create_council_verdict(&self, _verdict: data_infrastructure::CreateCouncilVerdict) -> Result<data_infrastructure::models::CouncilVerdict> { Err(anyhow!("Not implemented")) }
-        async fn get_council_verdict(&self, _id: Uuid) -> Result<Option<data_infrastructure::models::CouncilVerdict>> { Ok(None) }
-        async fn get_council_verdicts(&self, _task_id: Uuid) -> Result<Vec<data_infrastructure::models::CouncilVerdict>> { Ok(vec![]) }
-        async fn create_judge_evaluation(&self, _evaluation: data_infrastructure::CreateJudgeEvaluation) -> Result<data_infrastructure::models::JudgeEvaluation> { Err(anyhow!("Not implemented")) }
-        async fn get_judge_evaluations(&self, _task_id: Uuid) -> Result<Vec<data_infrastructure::models::JudgeEvaluation>> { Ok(vec![]) }
+        async fn create_task_execution(&self, _execution: crate::planning::CreateTaskExecution) -> Result<crate::planning::models::TaskExecution> { Err(anyhow!("Not implemented")) }
+        async fn get_task_execution(&self, _id: Uuid) -> Result<Option<crate::planning::models::TaskExecution>> { Ok(None) }
+        async fn get_task_executions(&self, _task_id: Uuid) -> Result<Vec<crate::planning::models::TaskExecution>> { Ok(vec![]) }
+        async fn update_task_execution(&self, _id: Uuid, _update: crate::planning::UpdateTaskExecution) -> Result<crate::planning::models::TaskExecution> { Err(anyhow!("Not implemented")) }
+        async fn create_audit_trail_entry(&self, _entry: crate::planning::CreateAuditTrailEntry) -> Result<crate::planning::models::AuditTrailEntry> { Err(anyhow!("Not implemented")) }
+        async fn get_audit_trail_entries(&self, _task_id: Uuid) -> Result<Vec<crate::planning::models::AuditTrailEntry>> { Ok(vec![]) }
+        async fn get_audit_trail_entry(&self, _id: Uuid) -> Result<Option<crate::planning::models::AuditTrailEntry>> { Ok(None) }
+        async fn create_council_verdict(&self, _verdict: crate::planning::CreateCouncilVerdict) -> Result<crate::planning::models::CouncilVerdict> { Err(anyhow!("Not implemented")) }
+        async fn get_council_verdict(&self, _id: Uuid) -> Result<Option<crate::planning::models::CouncilVerdict>> { Ok(None) }
+        async fn get_council_verdicts(&self, _task_id: Uuid) -> Result<Vec<crate::planning::models::CouncilVerdict>> { Ok(vec![]) }
+        async fn create_judge_evaluation(&self, _evaluation: crate::planning::CreateJudgeEvaluation) -> Result<crate::planning::models::JudgeEvaluation> { Err(anyhow!("Not implemented")) }
+        async fn get_judge_evaluations(&self, _task_id: Uuid) -> Result<Vec<crate::planning::models::JudgeEvaluation>> { Ok(vec![]) }
         // Planning methods (stubs)
-        async fn create_milestone(&self, _milestone: data_infrastructure::CreateMilestone) -> Result<data_infrastructure::models::Milestone> { Err(anyhow!("Not implemented")) }
-        async fn get_milestone(&self, _plan_id: Uuid, _milestone_id: String) -> Result<Option<data_infrastructure::models::Milestone>> { Ok(None) }
-        async fn get_milestones(&self, _plan_id: Uuid) -> Result<Vec<data_infrastructure::models::Milestone>> { Ok(vec![]) }
-        async fn update_milestone(&self, _plan_id: Uuid, _milestone_id: String, _update: data_infrastructure::UpdateMilestone) -> Result<data_infrastructure::models::Milestone> { Err(anyhow!("Not implemented")) }
+        async fn create_milestone(&self, _milestone: crate::planning::CreateMilestone) -> Result<crate::planning::models::Milestone> { Err(anyhow!("Not implemented")) }
+        async fn get_milestone(&self, _plan_id: Uuid, _milestone_id: String) -> Result<Option<crate::planning::models::Milestone>> { Ok(None) }
+        async fn get_milestones(&self, _plan_id: Uuid) -> Result<Vec<crate::planning::models::Milestone>> { Ok(vec![]) }
+        async fn update_milestone(&self, _plan_id: Uuid, _milestone_id: String, _update: crate::planning::UpdateMilestone) -> Result<crate::planning::models::Milestone> { Err(anyhow!("Not implemented")) }
         async fn delete_milestone(&self, _plan_id: Uuid, _milestone_id: String) -> Result<()> { Ok(()) }
-        async fn create_planning_session(&self, _session: data_infrastructure::CreatePlanningSession) -> Result<data_infrastructure::models::PlanningSession> { Err(anyhow!("Not implemented")) }
-        async fn get_planning_session(&self, _id: Uuid) -> Result<Option<data_infrastructure::models::PlanningSession>> { Ok(None) }
-        async fn get_planning_sessions(&self, _plan_id: Uuid) -> Result<Vec<data_infrastructure::models::PlanningSession>> { Ok(vec![]) }
-        async fn update_planning_session(&self, _id: Uuid, _update: data_infrastructure::UpdatePlanningSession) -> Result<data_infrastructure::models::PlanningSession> { Err(anyhow!("Not implemented")) }
-        async fn create_evidence_artifact(&self, _artifact: data_infrastructure::CreateEvidenceArtifact) -> Result<data_infrastructure::models::EvidenceArtifact> { Err(anyhow!("Not implemented")) }
-        async fn get_evidence_artifacts(&self, _plan_id: Uuid) -> Result<Vec<data_infrastructure::models::EvidenceArtifact>> { Ok(vec![]) }
-        async fn get_evidence_artifacts_for_milestone(&self, _plan_id: Uuid, _milestone_id: String) -> Result<Vec<data_infrastructure::models::EvidenceArtifact>> { Ok(vec![]) }
-        async fn update_evidence_artifact(&self, _id: Uuid, _update: data_infrastructure::UpdateEvidenceArtifact) -> Result<data_infrastructure::models::EvidenceArtifact> { Err(anyhow!("Not implemented")) }
-        async fn create_planning_audit_event(&self, _event: data_infrastructure::CreatePlanningAuditEvent) -> Result<data_infrastructure::models::PlanningAuditEvent> { Err(anyhow!("Not implemented")) }
-        async fn get_planning_audit_events(&self, _plan_id: Uuid) -> Result<Vec<data_infrastructure::models::PlanningAuditEvent>> { Ok(vec![]) }
-        async fn create_planning_telemetry(&self, _telemetry: data_infrastructure::CreatePlanningTelemetry) -> Result<data_infrastructure::models::PlanningTelemetry> { Err(anyhow!("Not implemented")) }
-        async fn get_planning_telemetry(&self, _plan_id: Uuid, _metric_type: Option<String>) -> Result<Vec<data_infrastructure::models::PlanningTelemetry>> { Ok(vec![]) }
+        async fn create_planning_session(&self, _session: crate::planning::CreatePlanningSession) -> Result<crate::planning::models::PlanningSession> { Err(anyhow!("Not implemented")) }
+        async fn get_planning_session(&self, _id: Uuid) -> Result<Option<crate::planning::models::PlanningSession>> { Ok(None) }
+        async fn get_planning_sessions(&self, _plan_id: Uuid) -> Result<Vec<crate::planning::models::PlanningSession>> { Ok(vec![]) }
+        async fn update_planning_session(&self, _id: Uuid, _update: crate::planning::UpdatePlanningSession) -> Result<crate::planning::models::PlanningSession> { Err(anyhow!("Not implemented")) }
+        async fn create_evidence_artifact(&self, _artifact: crate::planning::CreateEvidenceArtifact) -> Result<crate::planning::models::EvidenceArtifact> { Err(anyhow!("Not implemented")) }
+        async fn get_evidence_artifacts(&self, _plan_id: Uuid) -> Result<Vec<crate::planning::models::EvidenceArtifact>> { Ok(vec![]) }
+        async fn get_evidence_artifacts_for_milestone(&self, _plan_id: Uuid, _milestone_id: String) -> Result<Vec<crate::planning::models::EvidenceArtifact>> { Ok(vec![]) }
+        async fn update_evidence_artifact(&self, _id: Uuid, _update: crate::planning::UpdateEvidenceArtifact) -> Result<crate::planning::models::EvidenceArtifact> { Err(anyhow!("Not implemented")) }
+        async fn create_planning_audit_event(&self, _event: crate::planning::CreatePlanningAuditEvent) -> Result<crate::planning::models::PlanningAuditEvent> { Err(anyhow!("Not implemented")) }
+        async fn get_planning_audit_events(&self, _plan_id: Uuid) -> Result<Vec<crate::planning::models::PlanningAuditEvent>> { Ok(vec![]) }
+        async fn create_planning_telemetry(&self, _telemetry: crate::planning::CreatePlanningTelemetry) -> Result<crate::planning::models::PlanningTelemetry> { Err(anyhow!("Not implemented")) }
+        async fn get_planning_telemetry(&self, _plan_id: Uuid, _metric_type: Option<String>) -> Result<Vec<crate::planning::models::PlanningTelemetry>> { Ok(vec![]) }
         
         // Waiver operations
-        async fn get_waivers(&self, _status: Option<String>) -> Result<Vec<data_infrastructure::models::Waiver>> { Ok(vec![]) }
-        async fn create_waiver(&self, _waiver: data_infrastructure::CreateWaiver) -> Result<data_infrastructure::models::Waiver> { Err(anyhow!("Not implemented")) }
-        async fn update_waiver(&self, _id: Uuid, _update: data_infrastructure::UpdateWaiver) -> Result<data_infrastructure::models::Waiver> { Err(anyhow!("Not implemented")) }
+        async fn get_waivers(&self, _status: Option<String>) -> Result<Vec<crate::planning::models::Waiver>> { Ok(vec![]) }
+        async fn create_waiver(&self, _waiver: crate::planning::CreateWaiver) -> Result<crate::planning::models::Waiver> { Err(anyhow!("Not implemented")) }
+        async fn update_waiver(&self, _id: Uuid, _update: crate::planning::UpdateWaiver) -> Result<crate::planning::models::Waiver> { Err(anyhow!("Not implemented")) }
     }
 
     #[test]

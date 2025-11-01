@@ -4,6 +4,7 @@
 //! refinement directives, risk assessments, and specific improvement actions.
 
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use uuid::Uuid;
 
 /// Council-directed refinement decision with targeted improvement focus
@@ -335,14 +336,34 @@ pub struct JudgeContribution {
 }
 
 /// Type of judge specialization
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum JudgeType {
+    /// Ethical compliance & CAWS validation
+    Constitutional,
+
+    /// Code quality & security standards
+    Technical,
+
+    /// Requirements satisfaction verification
     Quality,
+
+    /// System coherence & compatibility
+    Integration,
+
+    /// Security-focused evaluation
     Security,
+
+    /// Performance optimization assessment
     Performance,
+
+    /// User experience and usability
     Usability,
+
+    /// Regulatory and standards compliance
     Compliance,
+
+    /// System architecture and design
     Architecture,
 }
 

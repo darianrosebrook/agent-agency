@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::memory_types::{WorkspaceEntry, WorkspaceAccess, WorkspaceAccessConfig};
 use crate::{MemoryError, MemoryResult};
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 
 /// Workspace registry for managing workspace access controls
 #[derive(Debug)]
@@ -243,15 +243,102 @@ impl WorkspaceRegistry {
 
     /// Load workspaces from database
     async fn load_workspaces(&self) -> MemoryResult<()> {
-        // TODO: Implement database loading
-        // For now, start with empty registry
+        let rows = sqlx::query(
+            r#"
+            SELECT workspace_id, name, description, created_at, last_accessed, owner_agent_id
+            FROM workspace_registry
+            ORDER BY last_accessed DESC
+            "#
+        )
+        .fetch_all(&*self.db_pool)
+        .await
+        .map_err(MemoryError::Database)?;
+
+        let mut workspaces = self.workspaces.write().await;
+        for row in rows {
+            let workspace_id: String = row.try_get("workspace_id")
+                .map_err(MemoryError::Database)?;
+            let name: String = row.try_get("name")
+                .map_err(MemoryError::Database)?;
+            let created_at: DateTime<Utc> = row.try_get("created_at")
+                .map_err(MemoryError::Database)?;
+            let last_accessed: Option<DateTime<Utc>> = row.try_get("last_accessed").ok();
+            let path: String = row.try_get("path")
+                .map_err(MemoryError::Database)?;
+            let access: String = row.try_get("access")
+                .map_err(MemoryError::Database)?;
+            let access_count: i64 = row.try_get("access_count")
+                .map_err(MemoryError::Database)?;
+            let discovered_at: DateTime<Utc> = row.try_get("discovered_at")
+                .map_err(MemoryError::Database)?;
+            let is_default: bool = row.try_get("is_default")
+                .map_err(MemoryError::Database)?;
+
+            let entry = WorkspaceEntry {
+                id: workspace_id.clone(),
+                name,
+                path: PathBuf::from(path),
+                access: match access.as_str() {
+                    "enabled" => crate::memory_types::WorkspaceAccess::Enabled,
+                    "disabled" => crate::memory_types::WorkspaceAccess::Disabled,
+                    "readonly" => crate::memory_types::WorkspaceAccess::ReadOnly,
+                    "blocked" => crate::memory_types::WorkspaceAccess::Blocked,
+                    _ => crate::memory_types::WorkspaceAccess::Enabled, // default
+                },
+                created_at,
+                last_accessed: last_accessed.unwrap_or(created_at), // Use created_at if no last_accessed
+                access_count: access_count as u64,
+                discovered_at,
+                is_default,
+            };
+
+            workspaces.insert(workspace_id, entry);
+        }
+
+        tracing::info!("Loaded {} workspaces from database", workspaces.len());
         Ok(())
     }
 
     /// Persist workspace to database
     async fn persist_workspace(&self, workspace_id: &str) -> MemoryResult<()> {
-        // TODO: Implement database persistence
-        // For now, just keep in memory
+        let workspaces = self.workspaces.read().await;
+
+        if let Some(entry) = workspaces.get(workspace_id) {
+            sqlx::query(
+                r#"
+                INSERT INTO workspace_registry (
+                    workspace_id, name, path, access, created_at, last_accessed, access_count, discovered_at, is_default
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                ON CONFLICT (workspace_id) DO UPDATE SET
+                    name = EXCLUDED.name,
+                    path = EXCLUDED.path,
+                    access = EXCLUDED.access,
+                    last_accessed = EXCLUDED.last_accessed,
+                    access_count = EXCLUDED.access_count,
+                    is_default = EXCLUDED.is_default
+                "#
+            )
+            .bind(&entry.id)
+            .bind(&entry.name)
+            .bind(entry.path.to_string_lossy().as_ref())
+            .bind(match entry.access {
+                crate::memory_types::WorkspaceAccess::Enabled => "enabled",
+                crate::memory_types::WorkspaceAccess::Disabled => "disabled",
+                crate::memory_types::WorkspaceAccess::ReadOnly => "readonly",
+                crate::memory_types::WorkspaceAccess::Blocked => "blocked",
+            })
+            .bind(entry.created_at)
+            .bind(entry.last_accessed)
+            .bind(entry.access_count as i64)
+            .bind(entry.discovered_at)
+            .bind(entry.is_default)
+            .execute(&*self.db_pool)
+            .await
+            .map_err(MemoryError::Database)?;
+
+            tracing::debug!("Persisted workspace {} to database", workspace_id);
+        }
+
         Ok(())
     }
 

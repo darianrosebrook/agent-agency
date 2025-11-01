@@ -765,6 +765,7 @@ impl EntityEnricher {
         match self.perform_entity_extraction(text).await {
             Ok(result) => {
                 self.circuit_breaker.lock().unwrap().record_success();
+                let entities_len = result.entities.len();
                 Ok(ProcessingOutput {
                     id: ProcessingId::new(),
                     original_input: DataInput {
@@ -784,22 +785,51 @@ impl EntityEnricher {
                             tags: vec![],
                         },
                     },
-                    processed_content: ProcessedContent {
-                        data: ProcessedContentData::Structured(serde_json::to_value(&result).unwrap_or_default()),
-                        content_type: ContentType::Structured,
-                        text_content: Some(text.to_string()),
-                        structured_data: Some(serde_json::to_value(&result).unwrap_or_default()),
-                        embeddings: None,
-                        entities: vec![], // TODO: Convert ExtractedEntity to Entity
-                        relationships: vec![],
-                        visual_elements: vec![],
-                        audio_transcript: None,
+                    processed_content: {
+                        let entities = result.entities.clone().into_iter().map(|extracted| {
+                            use crate::data_processing_types::{Entity, EntityType, TextPosition};
+
+                            Entity {
+                                id: Uuid::new_v4().to_string(),
+                                name: extracted.text.clone(),
+                                entity_type: match extracted.entity_type.as_str() {
+                                    "PERSON" => EntityType::Person,
+                                    "ORGANIZATION" | "ORG" => EntityType::Organization,
+                                    "LOCATION" | "GPE" => EntityType::Location,
+                                    "DATE" => EntityType::Date,
+                                    "TIME" => EntityType::Time,
+                                    "MONEY" => EntityType::Money,
+                                    "PERCENT" => EntityType::Percentage,
+                                    "PRODUCT" => EntityType::Product,
+                                    "EVENT" => EntityType::Event,
+                                    _ => EntityType::Other(extracted.entity_type.clone()),
+                                },
+                                confidence: extracted.confidence as f64,
+                                positions: vec![TextPosition {
+                                    start: extracted.start_offset,
+                                    end: extracted.end_offset,
+                                    page: None,
+                                }],
+                                metadata: extracted.metadata,
+                            }
+                        }).collect();
+                        ProcessedContent {
+                            data: ProcessedContentData::Structured(serde_json::to_value(&result).unwrap_or_default()),
+                            content_type: ContentType::Structured,
+                            text_content: Some(text.to_string()),
+                            structured_data: Some(serde_json::to_value(&result).unwrap_or_default()),
+                            embeddings: None,
+                            entities,
+                            relationships: vec![],
+                            visual_elements: vec![],
+                            audio_transcript: None,
+                        }
                     },
                     extracted_metadata: HashMap::new(),
                     processing_stats: ProcessingStats {
                         processing_time_ms: 0,
                         bytes_processed: text.len() as u64,
-                        entities_extracted: result.entities.len(),
+                        entities_extracted: entities_len,
                         relationships_found: 0,
                         embeddings_generated: 0,
                         errors_encountered: vec![],

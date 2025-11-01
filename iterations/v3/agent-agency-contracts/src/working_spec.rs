@@ -4,10 +4,12 @@
 //! task execution with detailed constraints, acceptance criteria, and rollback plans.
 
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use crate::task_request::Environment;
+use crate::planning_io::{Milestone, ChangeBudget};
 
 /// CAWS-validated working specification for task execution
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct WorkingSpec {
     /// Contract version for compatibility
@@ -32,6 +34,7 @@ pub struct WorkingSpec {
     pub constraints: WorkingSpecConstraints,
 
     /// Acceptance criteria in Given-When-Then format
+    #[serde(alias = "acceptance")]
     pub acceptance_criteria: Vec<AcceptanceCriterion>,
 
     /// Comprehensive test plan
@@ -51,9 +54,44 @@ pub struct WorkingSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub validation_results: Option<ValidationResults>,
 
+    /// Quality gates that must be satisfied
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub quality_gates: Option<crate::planning_io::QualityGates>,
+
+    /// Scope boundaries for the working spec
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub scope: Vec<ScopeRestrictions>,
+
     /// Metadata and versioning information
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<WorkingSpecMetadata>,
+
+    /// Execution milestones defining the implementation plan
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub milestones: Vec<Milestone>,
+
+    /// Change budget defining resource limits
+    pub change_budget: ChangeBudget,
+
+    /// File changes that will be made
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub file_changes: Vec<FileChange>,
+
+    /// Test coverage targets
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub coverage_targets: Option<CoverageTargets>,
+
+    /// High-level overview of the working spec
+    #[serde(skip_serializing_if = "String::is_empty", default)]
+    pub overview: String,
+
+    /// When the working spec was created
+    #[schemars(with = "String")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+
+    /// When the working spec was last updated
+    #[schemars(with = "String")]
+    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl WorkingSpec {
@@ -85,7 +123,7 @@ impl WorkingSpec {
 }
 
 /// Execution constraints and safety limits
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct WorkingSpecConstraints {
     /// Maximum allowed execution time
@@ -106,7 +144,7 @@ pub struct WorkingSpecConstraints {
 }
 
 /// Change budget constraints
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct BudgetLimits {
     /// Maximum files that can be modified
@@ -119,7 +157,7 @@ pub struct BudgetLimits {
 }
 
 /// Path-based access restrictions
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct ScopeRestrictions {
     /// Allowed file/directory paths (regex patterns)
@@ -132,7 +170,7 @@ pub struct ScopeRestrictions {
 }
 
 /// Acceptance criterion in Given-When-Then format
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct AcceptanceCriterion {
     /// Criterion identifier (e.g., A1, A2)
@@ -152,8 +190,29 @@ pub struct AcceptanceCriterion {
     pub priority: Option<MoSCoWPriority>,
 }
 
-/// MoSCoW priority levels
+/// Criterion priority (alias for MoSCoW priority)
+pub type CriterionPriority = MoSCoWPriority;
+
+/// Task urgency levels
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TaskUrgency {
+    Low,
+    Normal,
+    High,
+    Critical,
+}
+
+/// Restriction types for scope management
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RestrictionType {
+    Allow,
+    Deny,
+}
+
+/// MoSCoW priority levels
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum MoSCoWPriority {
     Must,
@@ -164,7 +223,7 @@ pub enum MoSCoWPriority {
 }
 
 /// Comprehensive test plan
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct TestPlan {
     /// Unit test specifications
@@ -185,7 +244,7 @@ pub struct TestPlan {
 }
 
 /// Unit test specification
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct UnitTestSpec {
     /// Test description
@@ -201,7 +260,7 @@ pub struct UnitTestSpec {
 }
 
 /// Integration test specification
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct IntegrationTestSpec {
     /// Test description
@@ -217,7 +276,7 @@ pub struct IntegrationTestSpec {
 }
 
 /// End-to-end test scenario
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct E2eScenario {
     /// Scenario description
@@ -232,7 +291,7 @@ pub struct E2eScenario {
 }
 
 /// Test coverage targets
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct CoverageTargets {
     /// Target line coverage (0.0-1.0)
@@ -249,7 +308,7 @@ pub struct CoverageTargets {
 }
 
 /// Rollback and recovery procedures
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct RollbackPlan {
     /// Rollback strategy to use
@@ -275,8 +334,21 @@ pub struct RollbackPlan {
     pub rollback_window_minutes: Option<u32>,
 }
 
+impl Default for RollbackPlan {
+    fn default() -> Self {
+        Self {
+            strategy: RollbackStrategy::GitRevert,
+            automated_steps: vec!["git revert".to_string()],
+            manual_steps: vec![],
+            data_impact: DataImpact::None,
+            downtime_required: Some(false),
+            rollback_window_minutes: Some(30),
+        }
+    }
+}
+
 /// Rollback strategy options
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum RollbackStrategy {
     /// Git revert to previous commit
@@ -293,7 +365,7 @@ pub enum RollbackStrategy {
 }
 
 /// Impact on persistent data
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum DataImpact {
     /// No persistent data impact
@@ -307,7 +379,7 @@ pub enum DataImpact {
 }
 
 /// Workspace context and dependencies
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct WorkingSpecContext {
     /// Root directory path for the workspace
@@ -327,7 +399,7 @@ pub struct WorkingSpecContext {
 }
 
 /// File change information
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct FileChange {
     /// File path
@@ -337,11 +409,12 @@ pub struct FileChange {
     pub change_type: ChangeType,
 
     /// When the change occurred
+    #[schemars(with = "String")]
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
 /// Type of file change
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ChangeType {
     Added,
@@ -350,7 +423,7 @@ pub enum ChangeType {
 }
 
 /// Non-functional requirements
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct NonFunctionalRequirements {
     /// Performance requirements
@@ -371,7 +444,7 @@ pub struct NonFunctionalRequirements {
 }
 
 /// Performance requirements
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct PerformanceRequirements {
     /// Response time requirement in milliseconds
@@ -392,7 +465,7 @@ pub struct PerformanceRequirements {
 }
 
 /// Scalability requirements
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct ScalabilityRequirements {
     /// Concurrent users to support
@@ -405,7 +478,7 @@ pub struct ScalabilityRequirements {
 }
 
 /// CAWS validation results
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct ValidationResults {
     /// Whether the spec is CAWS compliant
@@ -423,14 +496,16 @@ pub struct ValidationResults {
     pub quality_score: f64,
 
     /// When validation was performed
+    #[schemars(with = "String")]
     pub validated_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Metadata and versioning information
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct WorkingSpecMetadata {
     /// When the spec was created
+    #[schemars(with = "String")]
     pub created_at: chrono::DateTime<chrono::Utc>,
 
     /// Who created this spec
@@ -439,6 +514,7 @@ pub struct WorkingSpecMetadata {
 
     /// Last modification timestamp
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Option<String>")]
     pub last_modified: Option<chrono::DateTime<chrono::Utc>>,
 
     /// Version number

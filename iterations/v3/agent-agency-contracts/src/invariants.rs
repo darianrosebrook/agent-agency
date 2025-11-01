@@ -32,6 +32,9 @@ pub enum CAWSInvariant {
 
     /// No breaking API changes without version strategy
     APIBackwardCompat,
+
+    /// Must follow CAWS development standards
+    CAWSCompliance,
 }
 
 /// Result of running invariant checks
@@ -113,8 +116,10 @@ pub fn run_caws_invariants(spec: &WorkingSpec) -> InvariantResults {
     checks.push(check_no_placeholders(spec));
     checks.push(check_structured_logging(spec));
     checks.push(check_no_hardcoded_secrets(spec));
+    checks.push(check_error_handling(spec));
     checks.push(check_semver_compliance(spec));
     checks.push(check_api_backward_compat(spec));
+    checks.push(check_caws_compliance(spec));
 
     InvariantResults { checks }
 }
@@ -247,6 +252,37 @@ fn check_semver_compliance(spec: &WorkingSpec) -> InvariantCheck {
     }
 }
 
+/// Check: Error handling required
+fn check_error_handling(spec: &WorkingSpec) -> InvariantCheck {
+    let desc_lower = spec.description.to_lowercase();
+
+    let violations = if (desc_lower.contains("network") ||
+                        desc_lower.contains("file") ||
+                        desc_lower.contains("database") ||
+                        desc_lower.contains("api call") ||
+                        desc_lower.contains("external service")) &&
+                       !desc_lower.contains("error handling") &&
+                       !desc_lower.contains("try/catch") &&
+                       !desc_lower.contains("result") &&
+                       !desc_lower.contains("option") &&
+                       !desc_lower.contains("?") {
+        vec![ViolationLocation {
+            rule_id: "CAWS-ERR-001".to_string(),
+            description: "Fallible operations without error handling mentioned".to_string(),
+            context: "Working specification description".to_string(),
+            severity: Severity::Medium,
+        }]
+    } else {
+        vec![]
+    };
+
+    InvariantCheck {
+        invariant: CAWSInvariant::RequireErrorHandling,
+        passed: violations.is_empty(),
+        violations,
+    }
+}
+
 /// Check: API backward compatibility
 fn check_api_backward_compat(spec: &WorkingSpec) -> InvariantCheck {
     let desc_lower = spec.description.to_lowercase();
@@ -281,25 +317,123 @@ fn check_api_backward_compat(spec: &WorkingSpec) -> InvariantCheck {
     }
 }
 
+/// Check: CAWS development standards compliance
+fn check_caws_compliance(spec: &WorkingSpec) -> InvariantCheck {
+    let desc_lower = spec.description.to_lowercase();
+
+    // Check for CAWS-specific development practices
+    let caws_indicators = [
+        "test-driven",
+        "invariant",
+        "working spec",
+        "acceptance criteria",
+        "risk tier",
+        "deterministic",
+        "structured logging",
+        "error handling",
+    ];
+
+    let caws_score = caws_indicators.iter()
+        .filter(|indicator| desc_lower.contains(*indicator))
+        .count();
+
+    let violations = if caws_score >= 4 {
+        vec![]
+    } else {
+        vec![ViolationLocation {
+            rule_id: "CAWS-STD-001".to_string(),
+            description: format!("Low CAWS standards compliance ({} of {} indicators)", caws_score, caws_indicators.len()),
+            context: "Working specification description".to_string(),
+            severity: Severity::Low,
+        }]
+    };
+
+    InvariantCheck {
+        invariant: CAWSInvariant::CAWSCompliance,
+        passed: violations.is_empty(),
+        violations,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::working_spec::{WorkingSpec, WorkingSpecMetadata};
+    use crate::working_spec::{
+        WorkingSpec, WorkingSpecMetadata, WorkingSpecConstraints, AcceptanceCriterion,
+        TestPlan, RollbackPlan, RollbackStrategy, DataImpact, WorkingSpecContext,
+        ScopeRestrictions,
+    };
+    use crate::planning_io::{ChangeBudget, EnforcementMode};
+    use crate::task_request::Environment;
 
     fn create_test_spec(description: &str) -> WorkingSpec {
         WorkingSpec {
-            id: uuid::Uuid::new_v4(),
+            id: uuid::Uuid::new_v4().to_string(),
+            version: "1.0".to_string(),
             title: "Test Spec".to_string(),
             description: description.to_string(),
-            acceptance_criteria: vec![],
-            constraints: Default::default(),
-            metadata: WorkingSpecMetadata {
-                created_at: chrono::Utc::now(),
-                updated_at: chrono::Utc::now(),
-                author: "test".to_string(),
-                version: "1.0.0".to_string(),
-                risk_tier: crate::task_request::RiskTier::Low,
+            goals: vec!["Test goal".to_string()],
+            risk_tier: 2,
+            constraints: WorkingSpecConstraints {
+                max_duration_minutes: None,
+                max_iterations: None,
+                budget_limits: None,
+                scope_restrictions: None,
             },
+            milestones: vec![],
+            acceptance_criteria: vec![AcceptanceCriterion {
+                id: "A1".to_string(),
+                given: "User is logged in".to_string(),
+                when: "User clicks button".to_string(),
+                then: "Action is performed".to_string(),
+                priority: None,
+            }],
+            test_plan: TestPlan {
+                unit_tests: vec![],
+                integration_tests: vec![],
+                e2e_scenarios: vec![],
+                coverage_targets: None,
+            },
+            rollback_plan: RollbackPlan {
+                strategy: RollbackStrategy::GitRevert,
+                automated_steps: vec![],
+                manual_steps: vec![],
+                data_impact: DataImpact::None,
+                downtime_required: Some(false),
+                rollback_window_minutes: Some(5),
+            },
+            context: WorkingSpecContext {
+                workspace_root: ".".to_string(),
+                git_branch: "main".to_string(),
+                recent_changes: vec![],
+                dependencies: std::collections::HashMap::new(),
+                environment: Environment::Development,
+            },
+            non_functional_requirements: None,
+            validation_results: None,
+            quality_gates: None,
+            scope: vec![ScopeRestrictions {
+                allowed_paths: vec!["src/".to_string()],
+                blocked_paths: vec!["node_modules/".to_string()],
+            }],
+            change_budget: ChangeBudget {
+                max_files: 10,
+                max_loc: 1000,
+                max_migrations: 3,
+                allow_breaking_changes: false,
+                allow_new_dependencies: false,
+                enforcement_mode: EnforcementMode::Strict,
+            },
+            file_changes: vec![],
+            coverage_targets: None,
+            overview: String::new(),
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            metadata: Some(WorkingSpecMetadata {
+                created_by: "test".to_string(),
+                last_modified: chrono::Utc::now(),
+                tags: vec![],
+            }),
         }
     }
 

@@ -10,9 +10,52 @@ use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use uuid::Uuid;
 use chrono::Utc;
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
+use async_trait::async_trait;
 use agent_agency_contracts::planning_io::{Milestone, EvidenceGate};
-use agent_research::evidence::collector::EvidenceCollector as ResearchEvidenceCollector;
-use agent_research::extraction_types::{Evidence as ResearchEvidence, EvidenceType as ResearchEvidenceType};
+// Local type definitions to avoid circular dependency with agent-research
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ResearchEvidence {
+    pub id: Uuid,
+    pub content: String,
+    pub evidence_type: ResearchEvidenceType,
+    pub confidence: f64,
+    pub source: String,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ResearchEvidenceType {
+    CodeReview,
+    TestExecution,
+    PerformanceMetrics,
+    SecurityScan,
+    Documentation,
+}
+
+#[async_trait::async_trait]
+pub trait ResearchEvidenceCollector: Send + Sync {
+    async fn collect_evidence(&self, context: &ProcessingContext) -> anyhow::Result<Vec<ResearchEvidence>>;
+}
+
+/// No-op research evidence collector for when research feature is disabled
+pub struct NoOpResearchEvidenceCollector;
+
+#[async_trait::async_trait]
+impl ResearchEvidenceCollector for NoOpResearchEvidenceCollector {
+    async fn collect_evidence(&self, _context: &ProcessingContext) -> anyhow::Result<Vec<ResearchEvidence>> {
+        Ok(vec![])
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ProcessingContext {
+    pub task_id: Uuid,
+    pub milestone_id: String,
+    pub evidence_types: Vec<ResearchEvidenceType>,
+    pub priority: String,
+}
 
 use crate::planning::plan_types::{EvidenceBundle, EvidenceArtifact};
 
@@ -214,20 +257,29 @@ impl EvidenceCollector {
     }
 
     /// Create collection context for research collector
-    fn create_collection_context(&self, milestone: &Milestone) -> Result<agent_research::extraction_types::ProcessingContext> {
+    fn create_collection_context(&self, milestone: &Milestone) -> Result<ProcessingContext> {
+        #[cfg(feature = "research")]
         use agent_research::extraction_types::{ProcessingContext, ClaimType};
 
-        Ok(ProcessingContext {
-            source_id: milestone.id.clone(),
-            claim_type: ClaimType::Implementation, // Planning milestones are implementation claims
-            context: serde_json::json!({
-                "milestone_id": milestone.id,
-                "objective": milestone.objective,
-                "scope": milestone.scope,
-                "risk_tier": milestone.risk_tier,
-            }),
-            metadata: HashMap::new(),
-        })
+        #[cfg(feature = "research")]
+        {
+            Ok(ProcessingContext {
+                source_id: milestone.id.clone(),
+                claim_type: ClaimType::Implementation, // Planning milestones are implementation claims
+                context: serde_json::json!({
+                    "milestone_id": milestone.id,
+                    "objective": milestone.objective,
+                    "scope": milestone.scope,
+                    "risk_tier": milestone.risk_tier,
+                }),
+                metadata: HashMap::new(),
+            })
+        }
+
+        #[cfg(not(feature = "research"))]
+        {
+            Err(anyhow::anyhow!("Research feature not enabled - cannot create collection context"))
+        }
     }
 
     /// Convert research evidence to planning evidence bundle
@@ -246,9 +298,9 @@ impl EvidenceCollector {
 
         Ok(EvidenceBundle {
             milestone_id: milestone.id.clone(),
+            plan_id: milestone.plan_id, // TODO: Get from milestone
             artifacts,
             collected_at: collection_start,
-            validated: false,
             quality_score: None,
         })
     }
@@ -285,13 +337,16 @@ impl EvidenceCollector {
             metadata.insert("evidence_data".to_string(), evidence_data.clone());
         }
 
+        // Put the data and verified info in metadata since EvidenceArtifact doesn't have these fields
+        metadata.insert("data".to_string(), research_ev.data.unwrap_or(serde_json::Value::Null));
+        metadata.insert("verified".to_string(), serde_json::Value::Bool(research_ev.verified));
+
         Ok(EvidenceArtifact {
+            id: Uuid::new_v4(),
             artifact_type,
-            data: research_ev.data.unwrap_or(serde_json::Value::Null),
-            verified: research_ev.verified,
+            content: crate::planning::plan_types::EvidenceContent::Structured(metadata.clone()),
+            quality_score,
             collected_at,
-            quality_score: Some(quality_score),
-            metadata,
         })
     }
 
@@ -449,13 +504,13 @@ mod tests {
     struct MockResearchCollector;
 
     #[async_trait::async_trait]
-    impl agent_research::evidence::collector::EvidenceCollector for MockResearchCollector {
-        async fn collect_evidence(&self, _context: &agent_research::extraction_types::ProcessingContext) -> anyhow::Result<Vec<agent_research::extraction_types::Evidence>> {
+    impl ResearchEvidenceCollector for MockResearchCollector {
+        async fn collect_evidence(&self, _context: &ProcessingContext) -> anyhow::Result<Vec<ResearchEvidence>> {
             Ok(vec![
-                agent_research::extraction_types::Evidence {
+                ResearchEvidence {
                     id: Uuid::new_v4(),
                     claim_id: "test-claim".to_string(),
-                    evidence_type: agent_research::extraction_types::EvidenceType::TestExecution,
+                    evidence_type: ResearchEvidenceType::TestExecution,
                     source: "test".to_string(),
                     confidence_score: 0.9,
                     data: Some(serde_json::json!({
@@ -501,19 +556,20 @@ mod tests {
 
         let evidence = EvidenceBundle {
             milestone_id: "test".to_string(),
+            plan_id: Uuid::new_v4(),
             artifacts: vec![EvidenceArtifact {
+                id: Uuid::new_v4(),
                 artifact_type: "test_results".to_string(),
-                data: serde_json::Value::Null,
-                verified: true,
-                collected_at: Utc::now(),
-                quality_score: Some(0.9),
-                metadata: HashMap::from([
+                content: crate::planning::plan_types::EvidenceContent::Structured(HashMap::from([
+                    ("data".to_string(), serde_json::Value::Null),
+                    ("verified".to_string(), serde_json::Value::Bool(true)),
                     ("line_coverage".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(0.85).unwrap())),
                     ("branch_coverage".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(0.80).unwrap())),
-                ]),
+                ])),
+                quality_score: 0.9,
+                collected_at: Utc::now(),
             }],
             collected_at: Utc::now(),
-            validated: true,
             quality_score: Some(0.9),
         };
 

@@ -13,6 +13,7 @@ use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 // Note: TaskDescriptor is defined in the orchestrator crate, not contracts
 use crate::ExecutionPlan;
+use crate::types::planning::PlanningStrategy;
 use crate::PlanState;
 
 /// Core planning engine trait
@@ -65,30 +66,6 @@ pub struct PlanningCapabilities {
     pub max_plan_complexity: usize,
 }
 
-/// Planning strategies available to engines
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum PlanningStrategy {
-    /// Top-down decomposition from high-level requirements
-    TopDown,
-
-    /// Bottom-up composition from existing tool chains
-    BottomUp,
-
-    /// Dependency-driven analysis identifying critical paths
-    DependencyDriven,
-
-    /// Risk-based prioritization of high-risk milestones
-    RiskBased,
-
-    /// Hybrid approach combining multiple strategies
-    Hybrid,
-
-    /// AI-assisted planning with human oversight
-    AIAssisted,
-
-    /// Template-based planning from proven patterns
-    TemplateBased,
-}
 
 /// Planning operation errors
 #[derive(Debug, thiserror::Error)]
@@ -257,7 +234,7 @@ pub struct ExecutionEvidence {
 }
 
 /// Individual evidence artifact
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceArtifact {
     /// Artifact type
     pub artifact_type: ArtifactType,
@@ -269,6 +246,7 @@ pub struct EvidenceArtifact {
     pub verified: bool,
 
     /// Validation timestamp
+    #[schemars(with = "String")]
     pub validated_at: DateTime<Utc>,
 
     /// Validation metadata
@@ -304,7 +282,7 @@ pub enum ArtifactType {
 }
 
 /// Quality validation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityValidationResult {
     /// Quality gate that was validated
     pub gate_type: String,
@@ -319,11 +297,12 @@ pub struct QualityValidationResult {
     pub details: HashMap<String, serde_json::Value>,
 
     /// Validation timestamp
+    #[schemars(with = "String")]
     pub validated_at: DateTime<Utc>,
 }
 
 /// Council review result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CouncilReviewResult {
     /// Council session ID
     pub session_id: String,
@@ -338,6 +317,7 @@ pub struct CouncilReviewResult {
     pub feedback: Vec<String>,
 
     /// Review timestamp
+    #[schemars(with = "String")]
     pub reviewed_at: DateTime<Utc>,
 }
 
@@ -410,6 +390,159 @@ pub struct QualityMetrics {
     pub code_quality_score: f64,
 }
 
+/// Detailed quality metrics for plan evaluation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DetailedQualityMetrics {
+    /// Overall quality score (0.0 to 1.0)
+    pub overall_score: f64,
+
+    /// Coverage metrics
+    pub coverage: CoverageMetrics,
+
+    /// Test quality metrics
+    pub test_quality: TestQualityMetrics,
+
+    /// Code quality metrics
+    pub code_quality: CodeQualityMetrics,
+
+    /// Documentation quality metrics
+    pub documentation_quality: DocumentationQualityMetrics,
+
+    /// Measured at timestamp
+    pub measured_at: chrono::DateTime<chrono::Utc>,
+}
+
+/// Coverage metrics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageMetrics {
+    /// Line coverage percentage (0.0 to 100.0)
+    pub line_coverage_percent: f64,
+
+    /// Branch coverage percentage (0.0 to 100.0)
+    pub branch_coverage_percent: f64,
+
+    /// Function coverage percentage (0.0 to 100.0)
+    pub function_coverage_percent: f64,
+
+    /// Mutation score (0.0 to 1.0)
+    pub mutation_score: f64,
+}
+
+/// Test quality metrics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestQualityMetrics {
+    /// Test to code ratio
+    pub test_to_code_ratio: f64,
+
+    /// Average test execution time in ms
+    pub avg_test_execution_ms: f64,
+
+    /// Test flakiness rate (0.0 to 1.0)
+    pub flakiness_rate: f64,
+
+    /// Integration test coverage (0.0 to 1.0)
+    pub integration_coverage: f64,
+}
+
+/// Code quality metrics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CodeQualityMetrics {
+    /// Cyclomatic complexity average
+    pub avg_cyclomatic_complexity: f64,
+
+    /// Maintainability index
+    pub maintainability_index: f64,
+
+    /// Technical debt ratio
+    pub technical_debt_ratio: f64,
+
+    /// Code duplication percentage
+    pub duplication_percent: f64,
+}
+
+/// Documentation quality metrics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentationQualityMetrics {
+    /// Documentation coverage percentage
+    pub documentation_coverage_percent: f64,
+
+    /// API documentation completeness
+    pub api_docs_completeness: f64,
+
+    /// Code comment quality score
+    pub comment_quality_score: f64,
+
+    /// README completeness score
+    pub readme_completeness: f64,
+}
+
+/// Hardware resource requirements for plan execution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HardwareResourceRequirements {
+    /// Total CPU cores needed
+    pub total_cpu_cores: usize,
+
+    /// Peak memory needed (MB)
+    pub peak_memory_mb: usize,
+
+    /// Total disk space needed (MB)
+    pub total_disk_mb: usize,
+
+    /// Network requirements
+    pub network_requirements: NetworkRequirements,
+
+    /// Estimated execution time (milliseconds)
+    pub estimated_duration_ms: u64,
+}
+
+impl Default for HardwareResourceRequirements {
+    fn default() -> Self {
+        Self {
+            total_cpu_cores: 1,
+            peak_memory_mb: 1024,
+            total_disk_mb: 1024,
+            network_requirements: NetworkRequirements::default(),
+            estimated_duration_ms: 60000, // 1 minute
+        }
+    }
+}
+
+/// Network requirements
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NetworkRequirements {
+    /// Peak bandwidth needed (Mbps)
+    pub peak_bandwidth_mbps: f64,
+
+    /// External services required
+    pub external_services: Vec<String>,
+
+    /// Network security requirements
+    pub security_requirements: Vec<String>,
+}
+
+impl Default for NetworkRequirements {
+    fn default() -> Self {
+        Self {
+            peak_bandwidth_mbps: 10.0,
+            external_services: vec![],
+            security_requirements: vec![],
+        }
+    }
+}
+
+/// Human resource requirements for task execution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HumanResourceRequirements {
+    /// Number of engineers needed
+    pub engineer_count: usize,
+
+    /// Specialized skills required
+    pub specialized_skills: Vec<String>,
+
+    /// Infrastructure needs
+    pub infrastructure_needs: Vec<String>,
+}
+
 /// Performance metrics from execution
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceMetrics {
@@ -430,12 +563,13 @@ pub struct PerformanceMetrics {
 }
 
 /// Execution timeline event
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionEvent {
     /// Event type
     pub event_type: ExecutionEventType,
 
     /// Event timestamp
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 
     /// Milestone ID (if applicable)

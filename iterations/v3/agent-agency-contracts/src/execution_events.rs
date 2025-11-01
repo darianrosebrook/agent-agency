@@ -62,29 +62,5 @@ pub enum ExecutionEvent {
     },
 }
 
-/// Working spec for CAWS compliance
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkingSpec {
-    /// Unique spec identifier
-    pub id: String,
-    /// Human-readable title
-    pub title: String,
-    /// Detailed description
-    pub description: String,
-    /// Risk tier for quality gates
-    pub risk_tier: u8,
-    /// Scope boundaries
-    pub scope: Option<WorkingSpecScope>,
-    /// Acceptance criteria
-    pub acceptance_criteria: Vec<String>,
-}
-
-/// Working spec scope boundaries
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkingSpecScope {
-    /// Included paths/patterns
-    pub included: Vec<String>,
-    /// Excluded paths/patterns
-    pub excluded: Vec<String>,
-}
+// WorkingSpec and WorkingSpecScope definitions moved to working_spec.rs for consolidation
 

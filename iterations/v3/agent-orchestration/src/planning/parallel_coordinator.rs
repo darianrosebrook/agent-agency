@@ -14,7 +14,8 @@ use anyhow::{anyhow, Result};
 use uuid::Uuid;
 use chrono::Utc;
 
-use crate::planning::plan_types::{ExecutionPlan, ParallelBatch, BatchStatus};
+use agent_agency_contracts::*;
+use crate::planning::plan_types::{ParallelBatch, BatchStatus};
 use crate::planning::plan_executor::PlanExecutor;
 use crate::planning::scope_guard::ScopeGuard;
 use crate::planning::council_monitor::CouncilMonitor;
@@ -551,21 +552,15 @@ impl ParallelCoordinator {
 
     /// Calculate parallel efficiency
     fn calculate_parallel_efficiency(&self, plan: &ExecutionPlan, total_time: u64) -> f64 {
-        // Simple efficiency calculation based on expected parallelism
-        if let Some(context) = &plan.execution_context {
-            let total_milestones = plan.contract_plan.milestones.len() as f64;
-            let expected_parallelism = context.available_resources.available_workers.len() as f64;
+        // Simple efficiency calculation based on milestone count
+        let total_milestones = plan.contract_plan.milestones.len() as f64;
 
-            if expected_parallelism > 1.0 && total_milestones > 1.0 {
-                // Efficiency = 1 / (1 + (overhead_factor))
-                // Where overhead_factor is based on coordination time
-                let overhead_factor = (total_time as f64 / 1000.0) / total_milestones; // Rough coordination overhead
-                (1.0 / (1.0 + overhead_factor / 10.0)).min(1.0) // Cap at 1.0
-            } else {
-                1.0 // No parallelism possible
-            }
+        if total_milestones > 1.0 {
+            // Efficiency decreases with more milestones due to coordination overhead
+            let overhead_factor = total_milestones / 10.0; // Rough coordination overhead
+            (1.0 / (1.0 + overhead_factor)).min(1.0) // Cap at 1.0
         } else {
-            1.0
+            1.0 // Single milestone = perfect efficiency
         }
     }
 }
@@ -726,9 +721,12 @@ mod tests {
                         slas: vec![],
                     },
                     documentation_requirements: agent_agency_contracts::planning_io::DocumentationRequirements {
+                        api_docs_required: false,
+                        code_docs_required: false,
+                        architecture_docs_required: false,
+                        required_formats: vec![],
                         required_types: vec![],
                         min_coverage: 0.0,
-                        required_formats: vec![],
                         quality_checks: vec![],
                     },
                     requires_manual_review: false,

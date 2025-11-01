@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
+use agent_agency_contracts::types::prelude::*;
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 use chrono::Utc;
@@ -15,14 +16,7 @@ use chrono::Utc;
 // Import OrchestrationError from lib.rs
 use crate::OrchestrationError;
 
-// Import real types from agent_data_processing
-use agent_data_processing::{
-    ingestion::{IngestionStage, UnifiedIngestor, FileWatcher},
-    enrichment::{EnrichmentStage, UnifiedEnrichmentStage, EnrichmentCircuitBreakerConfig},
-    indexing::{IndexingStage, UnifiedIndexer, JobScheduler},
-    Block, EnrichedBlock, BlockData, EnrichedContent, ExtractedEntity, VisualElement, VisualElementType, ExtractedTopic,
-    DataInput, DataSource, ContentType, ProcessingOutput, ProcessingId, ProcessedContent, DataContent, ProcessingContext, ProcessingPriority,
-};
+// Local type definitions used instead of agent_data_processing
 use crate::audit_trail::{
     AuditTrailManager, AuditConfig, AuditLogLevel, AuditOutputFormat,
     AuditEvent, AuditCategory, AuditSeverity, AuditResult, AuditPerformance,
@@ -54,30 +48,213 @@ pub struct OperationContext {
     pub correlation_id: Option<String>,
 }
 
-// Import real types from agent_data_processing
-use agent_data_processing::{
-    ingestion::{IngestionStage, UnifiedIngestor, FileWatcher},
-    enrichment::{EnrichmentStage, UnifiedEnrichmentStage, EnrichmentCircuitBreakerConfig},
-    indexing::{IndexingStage, UnifiedIndexer, JobScheduler},
-    Block, EnrichedBlock, BlockData, EnrichedContent, ExtractedEntity, VisualElement, VisualElementType, ExtractedTopic,
-    DataInput, DataSource, ContentType, ProcessingOutput, ProcessingId, ProcessedContent, DataContent, ProcessingContext, ProcessingPriority, FileSource,
-};
+// Local type definitions to avoid circular dependency with agent-data-processing
+// These mirror types from agent-data-processing crate
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ProcessingId(pub Uuid);
+
+impl ProcessingId {
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ContentType {
+    Text,
+    Image,
+    Video,
+    Audio,
+    Document,
+    Code,
+    Unknown,
+}
+
+#[derive(Debug, Clone)]
+pub struct FileSource {
+    pub path: PathBuf,
+    pub content_type: ContentType,
+}
+
+#[derive(Debug, Clone)]
+pub enum DataSource {
+    File(FileSource),
+    Url(String),
+    Stream(Vec<u8>),
+}
+
+#[derive(Debug, Clone)]
+pub struct DataInput {
+    pub id: ProcessingId,
+    pub source: DataSource,
+    pub content_type: ContentType,
+}
+
+#[derive(Debug, Clone)]
+pub struct ProcessingContext {
+    pub priority: ProcessingPriority,
+    pub timeout: Option<Duration>,
+}
+
+#[derive(Debug, Clone)]
+pub struct DataContent {
+    pub content_type: ContentType,
+    pub data: Vec<u8>,
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+#[derive(Debug, Clone)]
+pub enum ProcessedContentData {
+    Text(String),
+    Binary(Vec<u8>),
+    Structured(serde_json::Value),
+}
+
+#[derive(Debug, Clone)]
+pub struct ProcessedContent {
+    pub id: ProcessingId,
+    pub data: DataContent,
+    pub relationships: Vec<ExtractedEntity>,
+    pub visual_elements: Vec<VisualElement>,
+    pub audio_transcript: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ProcessingOutput {
+    pub processed_content: Vec<ProcessedContent>,
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ExtractedEntity {
+    pub entity_type: String,
+    pub text: String,
+    pub confidence: f64,
+    pub start_offset: usize,
+    pub end_offset: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct VisualElement {
+    pub element_type: VisualElementType,
+    pub bounding_box: Option<(f32, f32, f32, f32)>,
+    pub confidence: f64,
+    pub text: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub enum VisualElementType {
+    Text,
+    Image,
+    Chart,
+    Table,
+    Diagram,
+}
+
+#[derive(Debug, Clone)]
+pub struct ExtractedTopic {
+    pub topic: String,
+    pub confidence: f64,
+    pub keywords: Vec<String>,
+}
+
+// Placeholder types for data processing stages (would be implemented by agent-data-processing)
+#[derive(Debug, Clone)]
+pub struct IngestionStage;
+#[derive(Debug, Clone)]
+pub struct EnrichmentStage;
+#[derive(Debug, Clone)]
+pub struct IndexingStage;
+
+#[derive(Debug, Clone, Default)]
+pub struct UnifiedIngestor;
+#[derive(Debug, Clone, Default)]
+pub struct UnifiedEnrichmentStage;
+#[derive(Debug, Clone, Default)]
+pub struct UnifiedIndexer;
+
+#[derive(Debug, Clone, Default)]
+pub struct FileWatcher;
+#[derive(Debug, Clone, Default)]
+pub struct JobScheduler;
+#[derive(Debug, Clone, Default)]
+pub struct EnrichmentCircuitBreakerConfig;
+
+// Local type definitions to avoid circular dependency with agent-workers
+// These mirror types from agent-workers crate
+#[derive(Debug, Clone)]
+pub struct MCPWorkerPool;
+
+impl MCPWorkerPool {
+    pub async fn new(_config: WorkerPoolConfig) -> Result<Self, String> {
+        // Placeholder implementation
+        Ok(MCPWorkerPool)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct WorkerPoolConfig;
+
+impl Default for WorkerPoolConfig {
+    fn default() -> Self {
+        WorkerPoolConfig
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct WorkerHandle;
+
+#[derive(Debug, Clone)]
+pub enum WorkerSpecialty {
+    General,
+    CodeAnalysis,
+    Documentation,
+    Testing,
+}
+
+#[derive(Debug, Clone)]
+pub struct WorkerCapabilities;
+
+impl Default for WorkerCapabilities {
+    fn default() -> Self {
+        WorkerCapabilities
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum WorkerHealth {
+    Healthy,
+    Degraded,
+    Unhealthy,
+    Offline,
+}
+
+#[derive(Debug, Clone)]
+pub struct Block {
+    pub id: String,
+    pub content: String,
+    pub block_type: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct EnrichedBlock {
+    pub block: Block,
+    pub entities: Vec<ExtractedEntity>,
+    pub topics: Vec<ExtractedTopic>,
+}
+
+#[derive(Debug, Clone)]
+pub struct BlockData {
+    pub blocks: Vec<Block>,
+}
+
+#[derive(Debug, Clone)]
+pub struct EnrichedContent {
+    pub content: String,
+    pub entities: Vec<ExtractedEntity>,
+    pub topics: Vec<ExtractedTopic>,
+}
 use crate::coreml::{CoreMLManager, CoreMLModelType, InferenceResult};
-use crate::audit_trail::{
-    AuditTrailManager, AuditConfig, AuditLogLevel, AuditOutputFormat,
-    AuditEvent, AuditCategory, AuditSeverity, AuditResult, AuditPerformance,
-};
-use crate::error_handling::{CircuitBreaker, CircuitBreakerState, CircuitBreakerStats};
-use system_common_interfaces::DatabaseAuditOperations;
-use tracing::{debug, info, warn};
-
-// Use available crates instead
-// ConsensusCoordinator is not available in contracts, use placeholder
-pub type ConsensusCoordinator = String;
-
-// Placeholder types for missing modules
-pub type KnowledgeSeeker = String;
-pub type OrchestratorConfig = String;
 use std::path::{Path, PathBuf};
 use serde_json;
 
@@ -137,7 +314,7 @@ pub struct ProcessingResult {
 }
 
 /// Processing status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ProcessingStatus {
     /// Processing completed successfully
     Completed,
@@ -412,9 +589,9 @@ impl MultimodalOrchestrator {
         let content_type = detect_content_type_from_path(file_path);
         
         // Create proper DataInput with real types
-        use agent_data_processing::{FileSource, ProcessingId as ProcId};
+        // Using local type definitions
         let data_input = DataInput {
-            id: ProcId::new(),
+            id: ProcessingId::new(),
             source: DataSource::File(FileSource {
                 path: file_path.to_path_buf(),
                 content_type: content_type.clone(),
@@ -708,31 +885,34 @@ impl MultimodalOrchestrator {
         let result = if let Some(ref planning_integration) = self.planning_integration {
             // Use real planning integration if available
             // Convert task_description to TaskDescriptor for planning system
-            let task_descriptor = crate::types::TaskDescriptor {
-                task_id: Uuid::new_v4().to_string(),
+            let task_descriptor = agent_agency_contracts::TaskDescriptor {
+                task_id: Uuid::new_v4(),
                 description: task_description.to_string(),
-                scope_in: crate::types::TaskScope {
-                    in_scope: vec![],
-                    out_scope: vec![],
+                scope_in: agent_agency_contracts::ScopeRestrictions {
+                    allowed_paths: vec![],
+                    blocked_paths: vec![],
                 },
-                scope_out: crate::types::TaskScope {
-                    in_scope: vec![],
-                    out_scope: vec![],
-                },
-                change_budget: crate::types::ChangeBudget {
+                scope_out: Some(agent_agency_contracts::ScopeRestrictions {
+                    allowed_paths: vec![],
+                    blocked_paths: vec![],
+                }),
+                change_budget: agent_agency_contracts::ChangeBudget {
                     max_files: 25,
                     max_loc: 1000,
+                    max_migrations: 0,
+                    allow_breaking_changes: false,
+                    allow_new_dependencies: false,
+                    enforcement_mode: agent_agency_contracts::planning_io::EnforcementMode::Strict,
                 },
-                blast_radius: crate::types::BlastRadius {
+                blast_radius: agent_agency_contracts::BlastRadius {
                     modules: vec![],
                     data_migration: false,
                     external_deps: vec![],
                 },
-                priority: crate::types::TaskPriority::Normal,
-                execution_mode: crate::types::ExecutionMode::Auto,
-                task_type: crate::types::TaskType::Feature,
-                risk_tier: 2,
-                acceptance: vec![],
+                priority: agent_agency_contracts::TaskPriority::Medium,
+                execution_mode: agent_agency_contracts::ExecutionMode::Auto,
+                risk_tier: Some(agent_agency_contracts::RiskTier::Tier2),
+                acceptance: Some("Multimodal orchestration task".to_string()),
             };
 
             // Execute planning task with real planning system
@@ -875,8 +1055,7 @@ fn detect_content_type_from_path(path: &Path) -> ContentType {
 
 /// Convert ingestion output to blocks
 fn convert_ingestion_output_to_blocks(output: ProcessingOutput) -> Result<Vec<Block>> {
-    use agent_data_processing::ProcessingId as ProcId;
-    use agent_data_processing::ProcessedContentData;
+    // Using local type definitions
     use std::collections::HashMap;
     
     // Create blocks from ProcessedContent
@@ -939,7 +1118,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_file_type_detection() {
-        use agent_data_processing::ContentType;
         
         let video_path = PathBuf::from("test.mp4");
         assert_eq!(detect_content_type_from_path(&video_path), ContentType::Video);

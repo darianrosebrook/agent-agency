@@ -51,7 +51,7 @@ cargo run --bin cli -- execute-task \
 # Execute with specific model
 cargo run --bin cli -- execute-task \
   --task "Implement caching layer" \
-  --model "ollama:llama3.1:8b" \
+  --model "coreml:mistral-7b" \
   --execution-mode auto
 ```
 
@@ -375,7 +375,7 @@ cargo run --bin api-tester -- \
 # Development environment
 export AGENT_AGENCY_ENV=development
 export AGENT_AGENCY_LOG_LEVEL=debug
-export AGENT_AGENCY_MODEL=ollama:llama3.1:8b
+export AGENT_AGENCY_MODEL=coreml:mistral-7b
 
 # Production environment
 export AGENT_AGENCY_ENV=production
@@ -407,7 +407,7 @@ caws:
       max_loc: 10000
       
   models:
-    default: "ollama:llama3.1:8b"
+    default: "coreml:mistral-7b"
     fallback: "openai:gpt-4"
     local_optimization: true
 ```

@@ -13,28 +13,10 @@ use crate::judge_backup::{Judge, JudgeContribution, JudgeConfig, JudgeHealthMetr
 use crate::judge_backup::types::{ReviewContext, PreviousReview};
 use crate::verdict_aggregation::{VerdictAggregator, AggregationResult};
 use crate::decision_making::{DecisionEngine, FinalDecision, DecisionContext, OrganizationalConstraints, ResourceConstraints, HistoricalDecision, EmergencyFlags, ConsensusStrategy, RiskThresholds, ImpactLevel};
-#[cfg(feature = "memory")]
-use agent_memory::TaskPriority;
-#[cfg(feature = "memory")]
-use agent_memory::{memory_types, MemoryType};
+use agent_agency_contracts::{TaskPriority, MemoryType, types::planning::TaskDescriptor};
 
-// Fallback type definitions when memory feature is disabled
-#[cfg(not(feature = "memory"))]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TaskPriority {
-    Low,
-    Medium,
-    High,
-    Critical,
-}
-
-#[cfg(not(feature = "memory"))]
-#[derive(Debug, Clone)]
-pub enum MemoryType {
-    Episodic,
-    Semantic,
-    Procedural,
-}
+#[cfg(feature = "memory")]
+use agent_agency_contracts::types::memory::*;
 
 #[cfg(not(feature = "memory"))]
 pub mod memory_types {
@@ -122,7 +104,7 @@ pub enum JudgeSelectionStrategy {
 #[derive(Debug)]
 pub struct CouncilSession {
     pub session_id: String,
-    working_spec: agent_agency_contracts::working_spec::WorkingSpec,
+    working_spec: agent_agency_contracts::WorkingSpec,
     selected_judges: Vec<Arc<dyn Judge>>,
     contributions: Vec<JudgeContribution>,
     aggregation_result: Option<AggregationResult>,
@@ -387,7 +369,7 @@ impl Council {
     /// Conduct a complete council review session
     pub async fn conduct_review(
         &self,
-        working_spec: agent_agency_contracts::working_spec::WorkingSpec,
+        working_spec: agent_agency_contracts::WorkingSpec,
         review_context: ReviewContext,
     ) -> CouncilResult<CouncilSession> {
         let session_id = format!("council-{}", Uuid::new_v4().simple());
@@ -989,15 +971,31 @@ impl Council {
                                 dependencies: std::collections::HashMap::new(),
                                 environment: agent_agency_contracts::task_request::Environment::Development,
                             },
+                            change_budget: agent_agency_contracts::planning_io::ChangeBudget {
+                                max_files: 50,
+                                max_loc: 1000,
+                                max_migrations: 5,
+                                allow_breaking_changes: false,
+                                allow_new_dependencies: false,
+                                enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Warning,
+                            },
+                            created_at: chrono::Utc::now(),
+                            updated_at: chrono::Utc::now(),
+                            coverage_targets: None,
+                            file_changes: vec![],
+                            milestones: vec![],
+                            quality_gates: None,
+                            scope: vec![],
+                            overview: String::new(),
                             non_functional_requirements: None,
                             validation_results: None,
                             metadata: None,
                         };
                         let risk_tier = match working_spec.risk_tier {
-                            1 => crate::council_types::RiskTier::Tier1,
-                            2 => crate::council_types::RiskTier::Tier2,
-                            3 => crate::council_types::RiskTier::Tier3,
-                            _ => crate::council_types::RiskTier::Tier3,
+                            1 => agent_agency_contracts::types::prelude::RiskTier::Tier1,
+                            2 => agent_agency_contracts::types::prelude::RiskTier::Tier2,
+                            3 => agent_agency_contracts::types::prelude::RiskTier::Tier3,
+                            _ => agent_agency_contracts::types::prelude::RiskTier::Tier3,
                         };
                         self.retrieve_historical_decisions(&working_spec, &risk_tier).await
                     })
@@ -1093,8 +1091,8 @@ impl Council {
     #[cfg(feature = "memory")]
     async fn retrieve_historical_decisions(
         &self,
-        working_spec: &crate::council_types::WorkingSpec,
-        risk_tier: &crate::council_types::RiskTier,
+        working_spec: &agent_agency_contracts::WorkingSpec,
+        risk_tier: &agent_agency_contracts::types::prelude::RiskTier,
     ) -> Vec<crate::decision_making::HistoricalDecision> {
         if let Some(ref memory_system) = self.memory_system {
             // Create context for memory retrieval
@@ -1128,8 +1126,8 @@ impl Council {
     #[cfg(not(feature = "memory"))]
     async fn retrieve_historical_decisions(
         &self,
-        _working_spec: &crate::council_types::WorkingSpec,
-        _risk_tier: &crate::council_types::RiskTier,
+        _working_spec: &agent_agency_contracts::WorkingSpec,
+        _risk_tier: &agent_agency_contracts::types::prelude::RiskTier,
     ) -> Vec<crate::decision_making::HistoricalDecision> {
         // No historical decisions available without memory system
         vec![]
@@ -1198,7 +1196,7 @@ impl Council {
                     timestamp: chrono::Utc::now(),
                     duration: None,
                     sequence_number: None,
-                    priority: TaskPriority::Normal,
+                    priority: TaskPriority::Medium, // Normal mapped to Medium
                 }),
             };
 
@@ -1292,7 +1290,7 @@ impl Council {
     }
 
     /// Start a new council session for reviewing a task
-    pub async fn start_session(&self, task_descriptor: &crate::types::TaskDescriptor) -> CouncilResult<CouncilSession> {
+    pub async fn start_session(&self, task_descriptor: &TaskDescriptor) -> CouncilResult<CouncilSession> {
         use uuid::Uuid;
         use chrono::Utc;
 
@@ -1316,9 +1314,10 @@ impl Council {
             session_id: session.session_id.clone(),
             working_spec: serde_json::to_string(&session.working_spec).unwrap_or_default(),
             risk_tier: match task_descriptor.priority {
-                crate::types::TaskPriority::Critical | crate::types::TaskPriority::High => 1,
-                crate::types::TaskPriority::Medium | crate::types::TaskPriority::Normal => 2,
-                crate::types::TaskPriority::Low => 3,
+                agent_agency_contracts::types::planning::TaskPriority::Critical | agent_agency_contracts::types::planning::TaskPriority::High => 1,
+                agent_agency_contracts::types::planning::TaskPriority::Medium | agent_agency_contracts::types::planning::TaskPriority::Normal => 2,
+                agent_agency_contracts::types::planning::TaskPriority::Low => 3,
+                agent_agency_contracts::types::planning::TaskPriority::Urgent => 1,
             },
             previous_reviews: Vec::new(),
             constraints: std::collections::HashMap::new(),
@@ -1332,13 +1331,13 @@ impl Council {
 
 
     /// Convert task descriptor to working spec format
-    fn convert_task_to_working_spec(&self, task_descriptor: &crate::types::TaskDescriptor) -> CouncilResult<agent_agency_contracts::working_spec::WorkingSpec> {
-        use agent_agency_contracts::working_spec::*;
-use agent_agency_contracts::Environment;
+    fn convert_task_to_working_spec(&self, task_descriptor: &TaskDescriptor) -> CouncilResult<agent_agency_contracts::WorkingSpec> {
+        use agent_agency_contracts::{WorkingSpec, WorkingSpecConstraints, WorkingSpecContext, WorkingSpecMetadata, TestPlan, RollbackPlan};
+        use agent_agency_contracts::task_request::Environment;
 
         // Create a basic working spec from task descriptor
         let working_spec = WorkingSpec {
-            id: task_descriptor.task_id.clone(),
+            id: task_descriptor.task_id.to_string(),
             title: format!("Task: {}", task_descriptor.task_id),
             description: task_descriptor.description.clone(),
             version: "1.0.0".to_string(),
@@ -1351,19 +1350,18 @@ use agent_agency_contracts::Environment;
                 coverage_targets: None,
             },
             rollback_plan: RollbackPlan {
-                strategy: RollbackStrategy::GitRevert,
+                strategy: agent_agency_contracts::RollbackStrategy::GitRevert,
                 automated_steps: vec!["git revert".to_string()],
                 manual_steps: vec![],
-                data_impact: DataImpact::None,
+                data_impact: agent_agency_contracts::DataImpact::None,
                 downtime_required: Some(false),
                 rollback_window_minutes: Some(30),
             },
             risk_tier: match task_descriptor.priority {
-                crate::types::TaskPriority::Critical => 1,
-                crate::types::TaskPriority::High => 1,
-                crate::types::TaskPriority::Medium => 2,
-                crate::types::TaskPriority::Normal => 2,
-                crate::types::TaskPriority::Low => 3,
+                agent_agency_contracts::types::planning::TaskPriority::Critical | agent_agency_contracts::types::planning::TaskPriority::Urgent => 1,
+                agent_agency_contracts::types::planning::TaskPriority::High => 1,
+                agent_agency_contracts::types::planning::TaskPriority::Medium | agent_agency_contracts::types::planning::TaskPriority::Normal => 2,
+                agent_agency_contracts::types::planning::TaskPriority::Low => 3,
             },
             constraints: WorkingSpecConstraints {
                 max_duration_minutes: None,
@@ -1378,6 +1376,22 @@ use agent_agency_contracts::Environment;
                 dependencies: std::collections::HashMap::new(),
                 environment: Environment::Development,
             },
+            change_budget: agent_agency_contracts::planning_io::ChangeBudget {
+                max_files: 100,
+                max_loc: 2000,
+                max_migrations: 10,
+                allow_breaking_changes: false,
+                allow_new_dependencies: true,
+                enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+            },
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            coverage_targets: None,
+            file_changes: vec![],
+            milestones: vec![],
+            quality_gates: None,
+            scope: vec![],
+            overview: String::new(),
             metadata: None,
             non_functional_requirements: None,
             validation_results: None,
@@ -1397,7 +1411,7 @@ impl CouncilSession {
         // If session already has a final decision, convert it to ConsensusResult
         if let Some(ref decision) = self.final_decision {
             match decision {
-                FinalDecision::Proceed { confidence, rationale } => {
+                FinalDecision::Proceed { confidence, rationale, .. } => {
                     return Ok(crate::autonomous_executor::ConsensusResult {
                         approved: true,
                         confidence: *confidence,
@@ -1501,46 +1515,10 @@ pub fn create_default_council() -> CouncilResult<Council> {
 }
 
 /// Convert local WorkingSpec to contract WorkingSpec
-fn convert_local_to_contract_spec(local_spec: &crate::council_types::WorkingSpec) -> agent_agency_contracts::working_spec::WorkingSpec {
-    agent_agency_contracts::working_spec::WorkingSpec {
-        version: "1.0".to_string(),
-        id: local_spec.id.clone(),
-        title: local_spec.title.clone(),
-        description: local_spec.title.clone(), // Use title as description
-        goals: local_spec.acceptance_criteria.iter().map(|ac| ac.then.clone()).collect(),
-        risk_tier: local_spec.risk_tier,
-        constraints: agent_agency_contracts::working_spec::WorkingSpecConstraints {
-            budget_limits: None,
-            max_duration_minutes: None,
-            max_iterations: None,
-            scope_restrictions: None,
-        },
-        test_plan: agent_agency_contracts::working_spec::TestPlan {
-            unit_tests: vec![],
-            integration_tests: vec![],
-            coverage_targets: None,
-            e2e_scenarios: vec![],
-        },
-        rollback_plan: agent_agency_contracts::working_spec::RollbackPlan {
-            automated_steps: vec![],
-            manual_steps: vec!["Revert code changes".to_string()],
-            data_impact: agent_agency_contracts::working_spec::DataImpact::None,
-            downtime_required: Some(false),
-            rollback_window_minutes: Some(60),
-            strategy: agent_agency_contracts::working_spec::RollbackStrategy::ManualRevert,
-        },
-        acceptance_criteria: vec![], // Skip complex conversion for now
-        metadata: None,
-        non_functional_requirements: None,
-        validation_results: None,
-        context: agent_agency_contracts::working_spec::WorkingSpecContext {
-            dependencies: std::collections::HashMap::new(),
-            environment: agent_agency_contracts::task_request::Environment::Development,
-            git_branch: "main".to_string(),
-            recent_changes: vec![],
-            workspace_root: "/tmp".to_string(),
-        },
-    }
+/// Note: council_types::WorkingSpec is a re-export of contracts::WorkingSpec, so this is just a clone
+fn convert_local_to_contract_spec(local_spec: &crate::council_types::WorkingSpec) -> agent_agency_contracts::WorkingSpec {
+    // council_types::WorkingSpec is already contracts::WorkingSpec (it's a re-export from council_types.rs)
+    local_spec.clone()
 }
 
 /// Convert local RiskTier to contract RiskTier

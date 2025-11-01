@@ -16,7 +16,7 @@ use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
 /// Unified error type for the entire Agent Agency system
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AgencyError {
     /// Unique error ID for tracking
     pub error_id: Uuid,
@@ -203,7 +203,7 @@ pub enum ErrorSeverity {
 }
 
 /// Recovery strategies for error handling
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RecoveryStrategy {
     /// Strategy type
     pub strategy_type: RecoveryStrategyType,
@@ -609,7 +609,7 @@ pub struct DegradationManager {
 }
 
 /// Current degradation state
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DegradationState {
     /// Whether the system is in degraded mode
     pub degraded: bool,
@@ -635,7 +635,7 @@ pub struct DegradationPolicy {
 }
 
 /// Degradation level with specific strategies
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DegradationLevel {
     /// Level name (e.g., "reduced_accuracy", "limited_functionality")
     pub name: String,
@@ -1014,7 +1014,7 @@ impl RecoveryOrchestrator {
 }
 
 /// System health status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SystemHealth {
     pub overall_health: HealthStatus,
     pub circuit_breaker_states: HashMap<String, CircuitBreakerState>,

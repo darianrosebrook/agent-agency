@@ -1,11 +1,12 @@
 use std::sync::Arc;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use uuid::Uuid;
 use async_trait::async_trait;
 
 /// Configuration for consensus coordination
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ConsensusConfig {
     pub timeout_ms: u64,
     pub min_confidence: f64,
@@ -34,7 +35,7 @@ pub trait ConsensusCoordinator: Send + Sync {
 }
 
 /// Consensus result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ConsensusResult {
     pub approved: bool,
     pub agreement_percentage: f64,
@@ -95,7 +96,7 @@ impl ConsensusCoordinator for RealTimeConsensusCoordinator {
 }
 
 /// Decision context for consensus coordination
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DecisionContext {
     pub context_id: Uuid,
     pub task_id: String,
@@ -106,7 +107,7 @@ pub struct DecisionContext {
 }
 
 /// Consensus decision result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ConsensusDecision {
     pub decision_id: Uuid,
     pub decision_type: DecisionType,
@@ -120,7 +121,7 @@ pub struct ConsensusDecision {
 }
 
 /// Types of decisions that can be made
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum DecisionType {
     Approve,
     Reject,
@@ -130,7 +131,7 @@ pub enum DecisionType {
 }
 
 /// Priority levels for decisions
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum PriorityLevel {
     Low,
     Medium,

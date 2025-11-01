@@ -65,8 +65,8 @@ impl ScopeGuard {
     pub fn new() -> Self {
         Self::with_config(
             PathBuf::from("/tmp/scope-locks"),
-            Duration::from_secs(300), // 5 minutes max wait
-            Duration::from_secs(60),  // 1 minute cleanup
+            Duration::from_std(std::time::Duration::from_secs(300)).expect("Duration should be valid"), // 5 minutes max wait
+            Duration::from_std(std::time::Duration::from_secs(60)).expect("Duration should be valid"),  // 1 minute cleanup
         )
     }
 
@@ -104,7 +104,8 @@ impl ScopeGuard {
             let locks = self.active_locks.read().await;
 
             for file_path in &scope.files {
-                if let Some(existing_lock) = locks.get(file_path) {
+                let path_buf = PathBuf::from(file_path);
+                if let Some(existing_lock) = locks.get(&path_buf) {
                     // Check for conflicts
                     let conflict = match (scope.will_modify, existing_lock.mode) {
                         (true, LockMode::Write) => true, // Write-write conflict
@@ -167,7 +168,7 @@ impl ScopeGuard {
                     lock_file_path: lock_file_path.clone(),
                 };
 
-                locks.insert(file_path.clone(), file_lock);
+                locks.insert(PathBuf::from(file_path.clone()), file_lock);
                 acquired_locks.push(file_path.clone());
             }
         }
@@ -337,8 +338,8 @@ impl ScopeGuard {
 
     /// Wait for a specific lock to be released
     async fn wait_for_lock_release(&self, file_path: &Path) -> Result<()> {
-        let check_interval = Duration::from_millis(100);
-        let mut waited = Duration::from_millis(0);
+        let check_interval = Duration::from_std(std::time::Duration::from_millis(100)).expect("Duration should be valid");
+        let mut waited = Duration::from_std(std::time::Duration::from_millis(0)).expect("Duration should be valid");
 
         loop {
             {
@@ -360,7 +361,7 @@ impl ScopeGuard {
     /// Clean up expired locks
     async fn cleanup_expired_locks(&self) {
         let now = Utc::now();
-        let max_age = Duration::from_secs(3600); // 1 hour max lock age
+        let max_age = Duration::from_std(std::time::Duration::from_secs(3600)).expect("Duration should be valid"); // 1 hour max lock age
 
         let mut locks = self.active_locks.write().await;
         let expired_paths: Vec<PathBuf> = locks.iter()

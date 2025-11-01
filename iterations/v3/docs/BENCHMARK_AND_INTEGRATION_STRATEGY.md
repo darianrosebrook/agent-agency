@@ -14,7 +14,7 @@ This document outlines comprehensive benchmarking and integration testing strate
 
 ### Documented vs Implemented Components
 
-Based on review of `agents.md`, `theory.md`, and `end-to-end-autonomous-flow-architecture.md`:
+Based on review of `agents.md`, `theory.md`, and current architecture documentation:
 
 #### ✅ Fully Aligned Components
 
@@ -222,7 +222,7 @@ async fn benchmark_data_persistence() {
 
 ### 1. End-to-End Autonomous Flow Tests
 
-**Based on end-to-end-autonomous-flow-architecture.md requirements**
+**Based on current CoreML-first architecture requirements**
 
 #### Test Suite: Self-Governing Agent Workflow
 
@@ -578,4 +578,4 @@ mod load_tests {
 5. **Document performance baselines** for comparison
 6. **Implement performance regression detection**
 
-This strategy ensures we validate the end-to-end autonomous flows while maintaining the high performance and quality standards documented in the architecture.
+This strategy ensures we validate the end-to-end autonomous flows while maintaining the high performance and quality standards of the CoreML-first architecture.

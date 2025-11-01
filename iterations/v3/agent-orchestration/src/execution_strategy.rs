@@ -6,6 +6,7 @@
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
@@ -41,7 +42,7 @@ pub enum ExecutionStrategy {
 }
 
 /// Execution strategy configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StrategyConfig {
     /// Default strategy to use
     pub default_strategy: ExecutionStrategy,
@@ -57,7 +58,7 @@ pub struct StrategyConfig {
 }
 
 /// Strategy-specific parameters
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StrategyParams {
     /// Maximum concurrent tasks for parallel execution
     pub max_concurrent: Option<usize>,
@@ -70,7 +71,7 @@ pub struct StrategyParams {
 }
 
 /// Execution strategy result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StrategyResult {
     /// Strategy used
     pub strategy: ExecutionStrategy,
@@ -89,7 +90,7 @@ pub struct StrategyResult {
 }
 
 /// Task execution result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskExecutionResult {
     /// Task ID
     pub task_id: String,
@@ -142,7 +143,7 @@ pub trait ExecutionStrategyService: Send + Sync + std::fmt::Debug {
 }
 
 /// Task characteristics for strategy selection
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskCharacteristics {
     /// Number of tasks
     pub task_count: usize,
@@ -161,7 +162,7 @@ pub struct TaskCharacteristics {
 }
 
 /// Time constraints for task execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TimeConstraints {
     /// Maximum total execution time (ms)
     pub max_total_time_ms: Option<u64>,
@@ -428,4 +429,5 @@ impl Default for StrategyConfig {
         }
     }
 }
+
 

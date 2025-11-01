@@ -11,7 +11,7 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 /// Result of task execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskExecutionResult {
     /// Unique execution identifier
     pub execution_id: Uuid,
@@ -26,8 +26,10 @@ pub struct TaskExecutionResult {
     /// Execution metadata
     pub metadata: HashMap<String, serde_json::Value>,
     /// Execution start time
+    #[schemars(with = "String")]
     pub started_at: DateTime<Utc>,
     /// Execution completion time
+    #[schemars(with = "String")]
     pub completed_at: DateTime<Utc>,
     /// Execution duration in milliseconds
     pub duration_ms: u64,
@@ -36,7 +38,7 @@ pub struct TaskExecutionResult {
 }
 
 /// Task execution specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskSpec {
     /// Unique task identifier
     pub id: Uuid,
@@ -56,14 +58,8 @@ pub struct TaskSpec {
     pub timeout_seconds: Option<u64>,
 }
 
-/// Task priority levels
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub enum TaskPriority {
-    Low = 1,
-    Medium = 2,
-    High = 3,
-    Critical = 4,
-}
+// Use the unified TaskPriority from types/planning.rs
+pub use crate::types::planning::TaskPriority;
 
 /// Task Executor trait
 /// Provides the interface for executing tasks without depending on concrete implementations
@@ -139,10 +135,11 @@ pub struct TaskRequirements {
 }
 
 /// Task context for execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskContext {
     pub task_id: Uuid,
     pub worker_id: Uuid,
+    #[schemars(with = "String")]
     pub start_time: DateTime<Utc>,
     pub timeout_ms: u64,
     pub retry_count: u32,

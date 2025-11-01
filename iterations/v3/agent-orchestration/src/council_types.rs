@@ -15,6 +15,7 @@ pub use agent_agency_contracts::final_verdict::FinalVerdictContract;
 pub enum TaskPriority {
     Low,
     Normal,
+    Medium,
     High,
     Critical,
 }
@@ -46,9 +47,6 @@ pub struct ChangeBudget {
     pub max_loc: u32,
 }
 
-/// Blast radius for task impact
-#[derive(Debug, Clone)]
-pub struct BlastRadius {
-    pub modules: Vec<String>,
-    pub data_migration: bool,
-}
+// BlastRadius is now imported from agent_agency_contracts::types::planning
+// (removed duplicate definition)
+pub use agent_agency_contracts::types::planning::BlastRadius;

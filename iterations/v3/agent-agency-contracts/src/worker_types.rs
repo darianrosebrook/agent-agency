@@ -82,13 +82,14 @@ pub enum WorkerHealthStatus {
 }
 
 /// Worker health metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerHealthMetrics {
     pub response_time_ms: u64,
     pub cpu_usage_percent: f32,
     pub memory_usage_percent: f32,
     pub active_tasks: u32,
     pub queue_depth: u32,
+    #[schemars(with = "String")]
     pub last_seen: DateTime<Utc>,
     pub consecutive_failures: u32,
 }
@@ -106,10 +107,11 @@ pub struct WorkerPoolStats {
 }
 
 /// Worker assignment with reasoning
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerAssignment {
     pub worker_id: Uuid,
     pub priority: TaskPriority,
+    #[schemars(with = "String")]
     pub estimated_completion_time: DateTime<Utc>,
     pub confidence_score: f32,
 }
@@ -178,11 +180,5 @@ pub enum WorkerEventType {
     Decommission,
 }
 
-/// Task priority levels
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub enum TaskPriority {
-    Low = 1,
-    Medium = 2,
-    High = 3,
-    Critical = 4,
-}
+// Use the unified TaskPriority from types/planning.rs
+pub use crate::types::planning::TaskPriority;

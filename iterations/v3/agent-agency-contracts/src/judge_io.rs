@@ -9,6 +9,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json;
 use schemars::JsonSchema;
+use crate::JudgeType;
 
 /// Judge prompt with structured rubric and evidence
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -99,22 +100,6 @@ pub enum Severity {
     Critical,
 }
 
-/// Judge type specialization
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
-pub enum JudgeType {
-    /// Ethical compliance & CAWS validation
-    Constitutional,
-
-    /// Code quality & security standards
-    Technical,
-
-    /// Requirements satisfaction verification
-    Quality,
-
-    /// System coherence & compatibility
-    Integration,
-}
-
 /// Rubric item for judge evaluation
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RubricItem {
@@ -189,7 +174,7 @@ mod tests {
                 spec_text: "Implement user authentication".to_string(),
                 acceptance_criteria: vec!["Secure password storage".to_string()],
                 risk_tier: "medium".to_string(),
-                context: std::collections::HashMap::new(),
+                context: serde_json::Value::Object(serde_json::Map::new()),
             },
             output_schema: "{}".to_string(),
         };

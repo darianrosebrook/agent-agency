@@ -5,10 +5,14 @@
 //!
 //! @author @darianrosebrook
 
-use crate::types::*;
-use crate::evidence_enrichment::{EvidenceEnrichmentCoordinator, EnrichmentConfig, EnrichedEvidence, MultimodalContext, ContextType, SemanticAnalysis, SentimentScore, SentimentLabel, NamedEntity, EntityType, EnrichmentStats};
-use crate::frontier::*;
-use crate::adapter::*;
+use agent_agency_contracts::{
+    TaskDescriptor, TaskPriority, WorkingSpec, BlastRadius, ChangeBudget,
+    types::planning::ExecutionMode, AcceptanceCriterion, types::prelude::RiskTier,
+};
+use crate::types::{TaskScope, DiffStats, OrchestratorConfig};
+use crate::adapter::{LegacyOrchestratorAdapter, ValidationResult};
+use crate::evidence_enrichment::{EvidenceEnrichmentCoordinator, EnrichmentConfig};
+use crate::frontier::{Frontier, FrontierConfig};
 use anyhow::Result;
 
 /// Example of using the restored orchestration functionality
@@ -30,6 +34,10 @@ pub async fn example_orchestration_workflow() -> Result<()> {
         change_budget: ChangeBudget {
             max_files: 25,
             max_loc: 1000,
+            max_migrations: 0,
+            allow_breaking_changes: false,
+            allow_new_dependencies: false,
+            enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
         },
         blast_radius: BlastRadius {
             modules: vec!["auth".to_string(), "api".to_string()],
@@ -37,9 +45,9 @@ pub async fn example_orchestration_workflow() -> Result<()> {
             external_deps: vec!["database".to_string()],
         },
         priority: TaskPriority::High,
-        execution_mode: crate::ExecutionMode::Auto,
+        execution_mode: agent_agency_contracts::types::planning::ExecutionMode::Auto,
         task_type: "feature".to_string(),
-        risk_tier: Some(crate::council_types::RiskTier::Tier2),
+        risk_tier: Some(RiskTier::Tier2),
         acceptance: Some("User can login and access protected routes".to_string()),
     };
 
@@ -178,6 +186,10 @@ pub fn example_task_creation() -> Result<()> {
         change_budget: ChangeBudget {
             max_files: 5,
             max_loc: 200,
+            max_migrations: 0,
+            allow_breaking_changes: false,
+            allow_new_dependencies: false,
+            enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
         },
         blast_radius: BlastRadius {
             modules: vec!["security".to_string()],
@@ -185,9 +197,9 @@ pub fn example_task_creation() -> Result<()> {
             external_deps: vec![],
         },
         priority: TaskPriority::Critical,
-        execution_mode: crate::ExecutionMode::Strict,
+        execution_mode: agent_agency_contracts::types::planning::ExecutionMode::Strict,
         task_type: "security".to_string(),
-        risk_tier: Some(crate::council_types::RiskTier::Tier1),
+        risk_tier: Some(RiskTier::Tier1),
         acceptance: Some("Security vulnerability is patched and tested".to_string()),
     };
 
@@ -206,6 +218,10 @@ pub fn example_task_creation() -> Result<()> {
         change_budget: ChangeBudget {
             max_files: 20,
             max_loc: 800,
+            max_migrations: 0,
+            allow_breaking_changes: false,
+            allow_new_dependencies: false,
+            enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
         },
         blast_radius: BlastRadius {
             modules: vec!["profile".to_string(), "api".to_string()],
@@ -213,9 +229,9 @@ pub fn example_task_creation() -> Result<()> {
             external_deps: vec!["database".to_string()],
         },
         priority: TaskPriority::Normal,
-        execution_mode: crate::ExecutionMode::Auto,
+        execution_mode: agent_agency_contracts::types::planning::ExecutionMode::Auto,
         task_type: "feature".to_string(),
-        risk_tier: Some(crate::council_types::RiskTier::Tier2),
+        risk_tier: Some(RiskTier::Tier2),
         acceptance: Some("User can view and edit their profile".to_string()),
     };
 
@@ -231,6 +247,10 @@ pub fn example_task_creation() -> Result<()> {
         change_budget: ChangeBudget {
             max_files: 10,
             max_loc: 300,
+            max_migrations: 0,
+            allow_breaking_changes: false,
+            allow_new_dependencies: false,
+            enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
         },
         blast_radius: BlastRadius {
             modules: vec!["docs".to_string()],
@@ -238,9 +258,9 @@ pub fn example_task_creation() -> Result<()> {
             external_deps: vec![],
         },
         priority: TaskPriority::Low,
-        execution_mode: crate::ExecutionMode::Auto,
+        execution_mode: agent_agency_contracts::types::planning::ExecutionMode::Auto,
         task_type: "maintenance".to_string(),
-        risk_tier: Some(crate::council_types::RiskTier::Tier3),
+        risk_tier: Some(RiskTier::Tier3),
         acceptance: Some("Documentation is updated and accurate".to_string()),
     };
 

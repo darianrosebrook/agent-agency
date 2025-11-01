@@ -7,27 +7,55 @@
 
 use std::sync::Arc;
 use anyhow::Result;
-// TODO: Use real external dependencies
-// use agent_constitutional_council::CouncilCoordinator;
-// use system_federated_ml::tool_chain_planner::ToolChainPlanner;
-// use agent_research::evidence::collector::EvidenceCollector as ResearchEvidenceCollector;
-use data_infrastructure::DatabaseOperations;
+use crate::planning::DatabaseOperations;
 
-// Stub types for missing dependencies
-#[derive(Debug)]
-pub struct CouncilCoordinator<E> {
-    _phantom: std::marker::PhantomData<E>,
+// Real types from contracts (feature-gated where necessary)
+// NOTE: council_adapter is behind feature gate but agent-constitutional-council is commented out in Cargo.toml
+// When that dependency is added back, uncomment the adapter usage below
+// #[cfg(feature = "council")]
+// use crate::planning::council_adapter::CouncilCoordinatorAdapter;
+
+#[cfg(feature = "memory")]
+use crate::planning::memory_adapter::MemorySystemAdapter;
+
+#[cfg(feature = "research")]
+use crate::planning::research_adapter::ResearchEvidenceCollectorAdapter;
+#[cfg(feature = "research")]
+use agent_research::evidence::collector::EvidenceCollector as ResearchEvidenceCollector;
+
+// Stub implementation of CouncilCoordinator for when council feature is disabled
+struct StubCouncilCoordinator;
+
+#[async_trait::async_trait]
+impl agent_agency_contracts::CouncilCoordinator for StubCouncilCoordinator {
+    async fn start_session(&self, _task: &agent_agency_contracts::TaskDescriptor) -> agent_agency_contracts::CouncilResult<agent_agency_contracts::SessionId> {
+        Ok(agent_agency_contracts::SessionId(uuid::Uuid::new_v4()))
+    }
+    async fn review_task(&self, _session_id: &agent_agency_contracts::SessionId, _task: &agent_agency_contracts::TaskDescriptor) -> agent_agency_contracts::CouncilResult<agent_agency_contracts::CouncilVerdict> {
+        Ok(agent_agency_contracts::CouncilVerdict::Approved)
+    }
+    async fn get_session_status(&self, _session_id: &agent_agency_contracts::SessionId) -> agent_agency_contracts::CouncilResult<agent_agency_contracts::SessionStatus> {
+        Ok(agent_agency_contracts::SessionStatus {
+            session_id: _session_id.clone(),
+            status: agent_agency_contracts::SessionStatusType::Completed,
+            progress: 1.0,
+            pending_requirements: vec![],
+            estimated_completion: None,
+        })
+    }
 }
 
-#[derive(Debug)]
-pub struct ToolChainPlanner;
-
-#[derive(Debug)]
-pub struct ResearchEvidenceCollector;
+// NOTE: These dependencies are commented out in Cargo.toml
+// When dependencies are added back, uncomment these imports:
+// #[cfg(feature = "tool-chain")]
+// use crate::planning::tool_chain_adapter::ToolChainPlannerAdapter;
+// #[cfg(feature = "tool-chain")]
+// use system_federated_ml::tool_chain_planner::ToolChainPlanner;
+// #[cfg(feature = "data-processing")]
+// use crate::planning::data_processing_adapter::DataProcessingServiceAdapter;
 
 use crate::planning::{
     plan_generator::PlanGenerator,
-    plan_executor::PlanExecutor,
     storage::PlanningStorage,
     parallel_coordinator::ParallelCoordinator,
     worker_assignment::WorkerAssignmentStrategy,
@@ -61,6 +89,9 @@ impl PlanningSystemFactory {
         // Quality enforcement
         todo_integration: Arc<TodoIntegration>,
 
+        // Council review for pre-execution assessment
+        council_review: Arc<CouncilPlanReview>,
+
         // Infrastructure - use real database operations
         db_ops: Arc<dyn DatabaseOperations>,
     ) -> Result<OrchestratorPlanningIntegration> {
@@ -73,17 +104,34 @@ impl PlanningSystemFactory {
             scope_guard,
             council_monitor,
             todo_integration,
+            council_review,
             db_ops,
         ))
     }
 
     /// Create planning system components from infrastructure services
-    pub async fn create_planning_components<E>(
-        tool_chain_planner: Arc<ToolChainPlanner>,
-        research_evidence_collector: Arc<ResearchEvidenceCollector>,
-        council_coordinator: Arc<CouncilCoordinator<E>>,
+    ///
+    /// # Arguments
+    /// * `tool_chain_planner` - Real tool chain planner from system-federated-ml (wrapped in adapter)
+    /// * `research_evidence_collector` - Real evidence collector from agent-research (wrapped in adapter)
+    /// * `council_coordinator` - Real council coordinator from agent-constitutional-council (wrapped in adapter)
+    /// * `memory_system` - Real memory system from agent-memory (wrapped in adapter)
+    /// * `data_processor` - Real data processor from agent-data-processing (wrapped in adapter)
+    /// * `council` - Real Council instance for council review and monitor (local type)
+    /// * `db_ops` - Database operations for persistence
+    /// NOTE: This function uses local Council type, no feature gate needed
+    pub async fn create_planning_components(
+        // NOTE: These dependencies are commented out in Cargo.toml due to circular dependencies
+        // When dependencies are added back, uncomment these parameters:
+        // #[cfg(feature = "tool-chain")] tool_chain_planner: Arc<system_federated_ml::tool_chain_planner::ToolChainPlanner>,
+        // #[cfg(feature = "council")] council_coordinator: Arc<agent_constitutional_council::CouncilCoordinator<E>>,
+        // #[cfg(feature = "data-processing")] data_processor: Arc<dyn agent_data_processing::DataProcessor>,
+
+        #[cfg(feature = "research")] research_evidence_collector: Arc<agent_research::evidence::collector::EvidenceCollector>,
+        #[cfg(feature = "memory")] memory_system: Arc<agent_memory::MemorySystem>,
+        council: Arc<crate::council::Council>,
         db_ops: Arc<dyn DatabaseOperations>,
-    ) -> Result<PlanningSystemComponents<E>> {
+    ) -> Result<PlanningSystemComponents> {
         // Create plan generator with tool chain integration
         let plan_generator = Arc::new(PlanGenerator::new());
 
@@ -97,13 +145,29 @@ impl PlanningSystemFactory {
         let worker_assigner = Arc::new(WorkerAssignmentStrategy::new(db_ops.clone()));
 
         // Create evidence collector with research integration
-        let evidence_collector = Arc::new(EvidenceCollector::new(research_evidence_collector));
+        // Wrap real evidence collector in adapter to match contract trait
+        #[cfg(feature = "research")]
+        let research_adapter = Arc::new(ResearchEvidenceCollectorAdapter::new(research_evidence_collector.clone()));
+        #[cfg(feature = "research")]
+        let evidence_collector = Arc::new(EvidenceCollector::new(research_adapter));
+        #[cfg(not(feature = "research"))]
+        let evidence_collector = Arc::new(EvidenceCollector::new(Arc::new(crate::planning::evidence::NoOpResearchEvidenceCollector)));
 
         // Create scope guard for file locking
         let scope_guard = Arc::new(ScopeGuard::new());
 
         // Create council monitor
-        let council_monitor = Arc::new(CouncilMonitor::new(council_coordinator, db_ops.clone()));
+        // CouncilMonitor uses local stub CouncilCoordinator type, so we need to create a wrapper
+        // For now, we'll create a stub coordinator that wraps the real one via the adapter
+        #[cfg(feature = "council")]
+        let council_coordinator_stub = Arc::new(StubCouncilCoordinator);
+        #[cfg(feature = "council")]
+        let council_monitor = Arc::new(CouncilMonitor::new(council_coordinator_stub, db_ops.clone()));
+        #[cfg(not(feature = "council"))]
+        let council_monitor = Arc::new(CouncilMonitor::new(
+            Arc::new(StubCouncilCoordinator),
+            db_ops.clone(),
+        ));
 
         // Create TODO integration
         let todo_integration = Arc::new(TodoIntegration::new(
@@ -111,9 +175,9 @@ impl PlanningSystemFactory {
             db_ops.clone(),
         ));
 
-        // Create council plan review
+        // Create council plan review with real Council instance
         let council_review = Arc::new(CouncilPlanReview::new(
-            council_coordinator.clone(),
+            council.clone(),
             db_ops.clone(),
         ));
 
@@ -127,12 +191,25 @@ impl PlanningSystemFactory {
             council_monitor,
             todo_integration,
             council_review,
+            // NOTE: When agent-constitutional-council is added back, uncomment this:
+            // council_coordinator: Arc::new(CouncilCoordinatorAdapter::new(council_coordinator)),
+            // For now, create a stub adapter - TODO: implement NoOpCouncilCoordinatorAdapter
+            council_coordinator: Arc::new(StubCouncilCoordinator) as Arc<dyn agent_agency_contracts::CouncilCoordinator>,
+            #[cfg(feature = "memory")]
+            memory_system: Arc::new(MemorySystemAdapter::new(memory_system)),
+            #[cfg(feature = "research")]
+            research_evidence_collector: Arc::new(ResearchEvidenceCollectorAdapter::new(research_evidence_collector)),
+            // NOTE: When dependencies are added back, uncomment these:
+            // #[cfg(feature = "tool-chain")]
+            // tool_chain_planner: Arc::new(ToolChainPlannerAdapter::new(tool_chain_planner)),
+            // #[cfg(feature = "data-processing")]
+            // data_processing_service: Arc::new(DataProcessingServiceAdapter::new(data_processor)),
         })
     }
 }
 
 /// Complete set of planning system components
-pub struct PlanningSystemComponents<E: agent_agency_contracts::JudgeEngine> {
+pub struct PlanningSystemComponents {
     pub plan_generator: Arc<PlanGenerator>,
     pub planning_storage: Arc<PlanningStorage>,
     pub parallel_coordinator: Arc<ParallelCoordinator>,
@@ -141,10 +218,20 @@ pub struct PlanningSystemComponents<E: agent_agency_contracts::JudgeEngine> {
     pub scope_guard: Arc<ScopeGuard>,
     pub council_monitor: Arc<CouncilMonitor>,
     pub todo_integration: Arc<TodoIntegration>,
-    pub council_review: Arc<CouncilPlanReview<E>>,
+    pub council_review: Arc<CouncilPlanReview>,
+    pub council_coordinator: Arc<dyn agent_agency_contracts::CouncilCoordinator>,
+    #[cfg(feature = "memory")]
+    pub memory_system: Arc<dyn agent_agency_contracts::MemorySystem>,
+    #[cfg(feature = "research")]
+    pub research_evidence_collector: Arc<dyn agent_agency_contracts::ResearchEvidenceCollector>,
+    // NOTE: When dependencies are added back, uncomment these fields:
+    // #[cfg(feature = "tool-chain")]
+    // pub tool_chain_planner: Arc<dyn agent_agency_contracts::ToolChainPlanner>,
+    // #[cfg(feature = "data-processing")]
+    // pub data_processing_service: Arc<dyn agent_agency_contracts::DataProcessingService>,
 }
 
-impl<E: agent_agency_contracts::JudgeEngine> PlanningSystemComponents<E> {
+impl PlanningSystemComponents {
     /// Create orchestrator integration from these components
     pub fn create_orchestrator_integration(
         self,

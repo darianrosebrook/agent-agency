@@ -10,10 +10,11 @@ use anyhow::{anyhow, Result};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use agent_agency_contracts::planning_io::{ExecutionPlan, Milestone};
 
 /// TODO template with dependency tracking
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TodoTemplate {
     /// Unique template identifier
     pub id: Uuid,
@@ -50,7 +51,7 @@ pub struct TodoTemplate {
 }
 
 /// Individual TODO step in a template
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TodoStep {
     /// Step identifier
     pub id: String,
@@ -105,7 +106,7 @@ pub enum TodoStepType {
 }
 
 /// Dependency between TODO steps
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TodoDependency {
     /// Dependent step ID
     pub from_step: String,
@@ -140,7 +141,7 @@ pub enum DependencyType {
 }
 
 /// Active TODO instance
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TodoInstance {
     /// Instance ID
     pub id: Uuid,
@@ -185,7 +186,7 @@ pub struct TodoInstance {
 }
 
 /// Step status in a TODO instance
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TodoStepStatus {
     /// Step ID
     pub step_id: String,
@@ -235,7 +236,7 @@ pub enum StepStatus {
 }
 
 /// Quality verification result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityResult {
     /// Gate that was verified
     pub gate: String,
@@ -254,7 +255,7 @@ pub struct QualityResult {
 }
 
 /// Quality verification status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityVerification {
     /// Gate name
     pub gate: String,
@@ -289,6 +290,7 @@ pub struct TodoTemplateSystem {
 }
 
 /// Quality gate enforcer
+#[derive(Debug)]
 pub struct QualityGateEnforcer {
     /// Enforced gates that cannot be bypassed
     enforced_gates: HashSet<String>,

@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use tracing::{debug, error, info, warn};
 
 // Import Core ML types from system-acceleration
@@ -47,7 +48,7 @@ pub enum CoreMLModelType {
 }
 
 /// Model metadata for loaded Core ML models
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ModelMetadata {
     /// Model type
     pub model_type: CoreMLModelType,
@@ -172,7 +173,7 @@ impl CoreMLManager {
 }
 
 /// Inference result from Core ML models
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct InferenceResult {
     /// Model that was used
     pub model_name: String,

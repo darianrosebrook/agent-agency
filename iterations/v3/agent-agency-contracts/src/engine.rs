@@ -13,7 +13,7 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::judge_io::{JudgePrompt, JudgeVerdict, JudgeType, RubricItem, WorkingSpecEvidence, VerdictLabel, Violation, Severity};
+use crate::judge_io::{JudgePrompt, JudgeVerdict, RubricItem, WorkingSpecEvidence, VerdictLabel, Violation};
 
 /// Core trait for judge inference engines
 /// Platform-agnostic interface for LLM inference backends
@@ -158,7 +158,7 @@ mod tests {
                     spec_text: "test".to_string(),
                     acceptance_criteria: vec![],
                     risk_tier: "low".to_string(),
-                    context: HashMap::new(),
+                    context: serde_json::Value::Object(serde_json::Map::new()),
                 },
                 output_schema: "{}".to_string(),
             },

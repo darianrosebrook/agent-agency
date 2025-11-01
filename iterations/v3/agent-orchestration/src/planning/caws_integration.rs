@@ -10,6 +10,8 @@ use anyhow::{anyhow, Result};
 use agent_agency_contracts::{
     WorkingSpec, AcceptanceCriterion,
     planning_io::{ExecutionPlan as ContractExecutionPlan, Milestone as ContractMilestone, PlanState, EvidenceGate},
+    types::prelude::*,
+    working_spec::*,
 };
 
 /// CAWS integration bridge
@@ -67,7 +69,7 @@ impl CawsPlanBridge {
     }
 
     /// Validate individual acceptance criterion
-    fn validate_acceptance_criterion(&self, criterion: &AcceptanceCriterion, index: usize) -> Result<()> {
+    fn validate_acceptance_criterion(&self, criterion: &agent_agency_contracts::AcceptanceCriterion, index: usize) -> Result<()> {
         if criterion.id.is_empty() {
             return Err(anyhow!("Acceptance criterion {} must have non-empty ID", index));
         }
@@ -199,7 +201,7 @@ impl CawsPlanBridge {
     }
 
     /// Convert acceptance criterion to milestone
-    fn criterion_to_milestone(&self, criterion: &AcceptanceCriterion, working_spec: &WorkingSpec) -> Result<ContractMilestone> {
+    fn criterion_to_milestone(&self, criterion: &agent_agency_contracts::AcceptanceCriterion, working_spec: &agent_agency_contracts::WorkingSpec) -> Result<ContractMilestone> {
         let objective = format!("{} → {} → {}", criterion.given, criterion.when, criterion.then);
 
         // Determine scope from file changes
@@ -229,7 +231,7 @@ impl CawsPlanBridge {
     }
 
     /// Determine milestone scope
-    fn determine_milestone_scope(&self, criterion: &AcceptanceCriterion, working_spec: &WorkingSpec) -> Result<agent_agency_contracts::planning_io::MilestoneScope> {
+    fn determine_milestone_scope(&self, criterion: &agent_agency_contracts::AcceptanceCriterion, working_spec: &agent_agency_contracts::WorkingSpec) -> Result<agent_agency_contracts::planning_io::MilestoneScope> {
         // Analyze criterion to determine affected files
         // Simplified - would use NLP to analyze the criterion text
         let files = working_spec.file_changes.iter()
@@ -248,7 +250,7 @@ impl CawsPlanBridge {
     }
 
     /// Check if file change is relevant to criterion
-    fn is_change_relevant_to_criterion(&self, change: &agent_agency_contracts::FileChange, criterion: &AcceptanceCriterion) -> bool {
+    fn is_change_relevant_to_criterion(&self, change: &agent_agency_contracts::FileChange, criterion: &agent_agency_contracts::AcceptanceCriterion) -> bool {
         // Simplified relevance check - would use semantic analysis
         let change_text = format!("{} {}", change.change_type, change.path);
         let criterion_text = format!("{} {} {}", criterion.given, criterion.when, criterion.then);
@@ -278,7 +280,7 @@ impl CawsPlanBridge {
     }
 
     /// Estimate milestone effort
-    fn estimate_milestone_effort(&self, criterion: &AcceptanceCriterion, working_spec: &WorkingSpec) -> f64 {
+    fn estimate_milestone_effort(&self, criterion: &agent_agency_contracts::AcceptanceCriterion, working_spec: &agent_agency_contracts::WorkingSpec) -> f64 {
         // Base effort on complexity of criterion
         let base_effort = (criterion.given.len() + criterion.when.len() + criterion.then.len()) as f64 / 100.0;
 
@@ -294,7 +296,7 @@ impl CawsPlanBridge {
     }
 
     /// Determine milestone priority
-    fn determine_milestone_priority(&self, criterion: &AcceptanceCriterion, working_spec: &WorkingSpec) -> agent_agency_contracts::planning_io::MilestonePriority {
+    fn determine_milestone_priority(&self, criterion: &agent_agency_contracts::AcceptanceCriterion, working_spec: &agent_agency_contracts::WorkingSpec) -> agent_agency_contracts::planning_io::MilestonePriority {
         if self.is_blocking_criterion(criterion) {
             agent_agency_contracts::planning_io::MilestonePriority::Critical
         } else if working_spec.risk_tier == 1 {
@@ -305,7 +307,7 @@ impl CawsPlanBridge {
     }
 
     /// Check if criterion is blocking
-    fn is_blocking_criterion(&self, criterion: &AcceptanceCriterion) -> bool {
+    fn is_blocking_criterion(&self, criterion: &agent_agency_contracts::AcceptanceCriterion) -> bool {
         // Infrastructure or security-related criteria are typically blocking
         let text = format!("{} {} {}", criterion.given, criterion.when, criterion.then).to_lowercase();
         text.contains("infrastructure") ||
@@ -315,7 +317,7 @@ impl CawsPlanBridge {
     }
 
     /// Get blocking reason
-    fn get_blocking_reason(&self, criterion: &AcceptanceCriterion) -> Option<String> {
+    fn get_blocking_reason(&self, criterion: &agent_agency_contracts::AcceptanceCriterion) -> Option<String> {
         if self.is_blocking_criterion(criterion) {
             Some("Required infrastructure or security milestone".to_string())
         } else {
@@ -614,43 +616,85 @@ mod tests {
         assert!(!gate2.security_scan_required);
     }
 
-    fn create_test_working_spec() -> WorkingSpec {
-        WorkingSpec {
+    fn create_test_working_spec() -> agent_agency_contracts::WorkingSpec {
+        use chrono::Utc;
+        use agent_agency_contracts::working_spec::*;
+        use agent_agency_contracts::planning_io::ChangeBudget;
+        use agent_agency_contracts::task_request::Environment;
+
+        agent_agency_contracts::WorkingSpec {
+            version: "1.0".to_string(),
             id: "test-spec".to_string(),
             title: "Test Working Spec".to_string(),
+            description: "Test working specification for validation".to_string(),
+            goals: vec!["Test goal".to_string()],
             risk_tier: 2,
-            acceptance: vec![AcceptanceCriterion {
+            constraints: WorkingSpecConstraints {
+                max_duration_minutes: None,
+                max_iterations: None,
+                budget_limits: Some(BudgetLimits {
+                    max_files: Some(10),
+                    max_loc: Some(1000),
+                }),
+                scope_restrictions: Some(ScopeRestrictions {
+                    allowed_paths: vec!["src/".to_string()],
+                    blocked_paths: vec!["node_modules/".to_string()],
+                }),
+            },
+            acceptance_criteria: vec![AcceptanceCriterion {
                 id: "A1".to_string(),
                 given: "User is logged out".to_string(),
                 when: "User submits valid credentials".to_string(),
                 then: "User is logged in".to_string(),
+                priority: None,
             }],
-            file_changes: vec![FileChange {
-                path: "src/auth.rs".to_string(),
-                change_type: ChangeType::Modify,
-            }],
-            scope: ScopeRestrictions {
-                in_paths: vec!["src/".to_string()],
-                out_paths: vec!["node_modules/".to_string()],
+            test_plan: TestPlan {
+                unit_tests: vec![],
+                integration_tests: vec![],
+                e2e_scenarios: vec![],
+                coverage_targets: None,
             },
-            constraints: WorkingSpecConstraints {
+            rollback_plan: RollbackPlan {
+                strategy: RollbackStrategy::GitRevert,
+                automated_steps: vec![],
+                manual_steps: vec![],
+                data_impact: DataImpact::None,
+                downtime_required: Some(false),
+                rollback_window_minutes: Some(5),
+            },
+            context: WorkingSpecContext {
+                workspace_root: ".".to_string(),
+                git_branch: "main".to_string(),
+                recent_changes: vec![agent_agency_contracts::working_spec::FileChange {
+                    file: "src/auth.rs".to_string(),
+                    change_type: agent_agency_contracts::working_spec::ChangeType::Modified,
+                    timestamp: Utc::now(),
+                }],
+                dependencies: std::collections::HashMap::new(),
+                environment: Environment::Development,
+            },
+            non_functional_requirements: None,
+            validation_results: None,
+            quality_gates: None,
+            scope: vec![ScopeRestrictions {
+                allowed_paths: vec!["src/".to_string()],
+                blocked_paths: vec!["node_modules/".to_string()],
+            }],
+            metadata: None,
+            milestones: vec![],
+            change_budget: ChangeBudget {
                 max_files: 10,
                 max_loc: 1000,
-                max_migrations: Some(3),
+                max_migrations: 3,
+                allow_breaking_changes: false,
+                allow_new_dependencies: false,
+                enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
             },
-            coverage_targets: CoverageTargets {
-                line_coverage: 0.85,
-                branch_coverage: 0.80,
-                function_coverage: 0.90,
-            },
-            non_functional_requirements: NonFunctionalRequirements {
-                security_requirements: vec![],
-                performance_requirements: vec![],
-                scalability_requirements: vec![],
-                usability_requirements: vec![],
-            },
-            context: Default::default(),
-            metadata: Default::default(),
+            file_changes: vec![],
+            coverage_targets: None,
+            overview: String::new(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
         }
     }
 }

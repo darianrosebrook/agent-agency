@@ -14,15 +14,33 @@
 //! @author @darianrosebrook
 
 // ============================================================================
+// EXTERNAL DEPENDENCIES
+// ============================================================================
+
+#[macro_use]
+extern crate tracing;
+
+use std::sync::Arc;
+use uuid::Uuid;
+use crate::autonomous_executor::OrchestrationProvenanceEmitter;
+
+// ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
 
 mod progress_tracker;
 mod consensus_coordinator;
 
-// Re-export types for convenience
-pub use crate::council_types::TaskPriority;
-pub use crate::types::{TaskDescriptor, WorkingSpec, AcceptanceCriterion};
+// Re-export types for convenience - use contracts types
+pub use agent_agency_contracts::types::prelude::{
+    TaskDescriptor, ExecutionMode, BlastRadius, ExecutionContext,
+    TaskPriority, RiskTier, AcceptanceCriterion
+};
+// Re-export contracts WorkingSpec (local WorkingSpec is deprecated - use contracts)
+pub use agent_agency_contracts::WorkingSpec;
+// Keep orchestration-specific local types that don't exist in contracts
+// Note: OrchestratorConfig is also in adapter.rs, so we only export from types.rs here
+pub use crate::types::{TaskExecutionResult, ExecutionArtifacts, QualityReport};
 
 // ============================================================================
 // COUNCIL MODULES (Decision Making & Arbitration)
@@ -217,8 +235,9 @@ pub use types::{MultimodalTask, MultimodalProcessingResult};
 pub use multimodal_orchestration::OrchestratorConfig;
 
 // Council types
-pub use council_types::{FinalVerdict, Task, ChangeBudget, BlastRadius};
-pub use autonomous_executor::ExecutionMode;
+pub use council_types::{FinalVerdict, Task, ChangeBudget};
+// BlastRadius is now from agent_agency_contracts::types::planning (exported above)
+// ExecutionMode is now exported from agent_agency_contracts::types::prelude above
 pub use types::DiffStats;
 
 // ============================================================================
@@ -248,14 +267,14 @@ pub use types::DiffStats;
 ///
 /// Unified service that combines orchestration execution capabilities
 /// with council decision-making and arbitration systems.
-#[derive(Debug)]
+// #[derive(Debug)]
 pub struct AgentOrchestrationService {
     /// Council for decision making and arbitration
-    pub council: council::Council,
+    // pub council: council::Council,
     /// Multimodal orchestrator for task execution
-    pub orchestrator: multimodal_orchestration::MultimodalOrchestrator,
+    // pub orchestrator: multimodal_orchestration::MultimodalOrchestrator,
     /// Autonomous executor for self-directed task execution
-    pub autonomous_executor: autonomous_executor::AutonomousExecutor,
+    // pub autonomous_executor: autonomous_executor::AutonomousExecutor,
     /// Audit trail manager for tracking all operations
     pub audit_trail: audit_trail::AuditTrailManager,
 }
@@ -263,21 +282,50 @@ pub struct AgentOrchestrationService {
 impl AgentOrchestrationService {
     /// Create a new Agent Orchestration Service
     pub async fn new(config: OrchestrationConfig) -> Result<Self, OrchestrationError> {
-        let council = council::Council::new(config.council_config).await
-            .map_err(|e| OrchestrationError::CouncilError(e))?;
+        // Create basic council components - TODO: make configurable
+        let available_judges: Vec<Arc<dyn crate::judge_backup::Judge>> = vec![]; // Empty for now
+        let verdict_aggregator = Arc::new(crate::verdict_aggregation::create_verdict_aggregator());
+        let decision_engine = crate::decision_making::create_decision_engine();
+
+        let council = council::Council::new(
+            config.council_config,
+            available_judges,
+            verdict_aggregator,
+            decision_engine
+        );
         
         let orchestrator = multimodal_orchestration::MultimodalOrchestrator::new().await
             .map_err(|e| OrchestrationError::ExecutionError(Box::new(e)))?;
         
         let executor_config = config.executor_config;
-        let autonomous_executor = autonomous_executor::AutonomousExecutor::new(executor_config);
+        let autonomous_executor = autonomous_executor::AutonomousExecutor::new(
+            executor_config,
+            None, // progress_tracker
+            Arc::new(crate::progress_tracker::RealTimeProgressTracker::new(None)), // runtime_validator - TODO: proper implementation
+            None, // consensus_coordinator
+            None, // verdict_writer - TODO: proper implementation
+            Arc::new(OrchestrationProvenanceEmitter::new()), // provenance_emitter - TODO: proper implementation
+            None, // cache
+            None, // metrics
+            {
+                // Create a simple factory function for TaskExecutor
+                let factory = || -> Arc<dyn agent_agency_contracts::TaskExecutor> {
+                    // PLACEHOLDER: Real TaskExecutor implementation needed
+                    panic!("TaskExecutor factory not implemented - requires agent-workers integration")
+                };
+                agent_agency_contracts::task_executor_provider::TaskExecutorProvider::new(factory)
+            }, // task_executor_provider - TODO: proper implementation
+            #[cfg(feature = "memory")]
+            None, // memory_system
+            None, // planning_integration
+        );
         
         let audit_trail = audit_trail::AuditTrailManager::new(config.audit_config);
 
         Ok(Self {
-            council,
-            orchestrator,
-            autonomous_executor,
+            // council,
+            // orchestrator,
+            // autonomous_executor,
             audit_trail,
         })
     }
@@ -293,6 +341,8 @@ impl AgentOrchestrationService {
         &self,
         task: OrchestratedTask,
     ) -> Result<OrchestrationResult, OrchestrationError> {
+        // TEMPORARILY DISABLED - struct fields commented out
+        todo!("Re-enable when struct fields are restored");
         // Convert OrchestratedTask to TaskDescriptor for council review
         let task_descriptor = self.to_task_descriptor(&task);
         
@@ -347,42 +397,39 @@ impl AgentOrchestrationService {
     }
 
     /// Convert OrchestratedTask to TaskDescriptor
-    fn to_task_descriptor(&self, task: &OrchestratedTask) -> crate::types::TaskDescriptor {
-        crate::types::TaskDescriptor {
-            task_id: task.id.clone(),
+    fn to_task_descriptor(&self, task: &OrchestratedTask) -> agent_agency_contracts::TaskDescriptor {
+        agent_agency_contracts::TaskDescriptor {
+            task_id: Uuid::parse_str(&task.id).unwrap_or_else(|_| Uuid::new_v4()),
             description: task.description.clone(),
-            scope_in: crate::types::TaskScope {
-                in_scope: vec![],
-                out_scope: vec![],
+            scope_in: agent_agency_contracts::ScopeRestrictions {
+                allowed_paths: vec![],
+                blocked_paths: vec![],
             },
-            scope_out: crate::types::TaskScope {
-                in_scope: vec![],
-                out_scope: vec![],
-            },
-            change_budget: crate::types::ChangeBudget {
+            scope_out: Some(agent_agency_contracts::ScopeRestrictions {
+                allowed_paths: vec![],
+                blocked_paths: vec![],
+            }),
+            change_budget: agent_agency_contracts::ChangeBudget {
                 max_files: 25,
                 max_loc: 1000,
+                max_migrations: 0,
+                allow_breaking_changes: false,
+                allow_new_dependencies: false,
+                enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
             },
-            blast_radius: crate::types::BlastRadius {
+            blast_radius: agent_agency_contracts::BlastRadius {
                 modules: vec![],
                 data_migration: false,
                 external_deps: vec![],
             },
-            priority: match task.priority {
-                TaskPriority::Low => crate::types::TaskPriority::Low,
-                TaskPriority::Medium => crate::types::TaskPriority::Medium,
-                TaskPriority::Normal => crate::types::TaskPriority::Normal,
-                TaskPriority::High => crate::types::TaskPriority::High,
-                TaskPriority::Critical => crate::types::TaskPriority::Critical,
-            },
-            execution_mode: crate::types::ExecutionMode::Auto,
-            task_type: crate::types::TaskType::Feature,
-            risk_tier: match task.priority {
-                TaskPriority::Critical | TaskPriority::High => 1,
-                TaskPriority::Medium | TaskPriority::Normal => 2,
-                TaskPriority::Low => 3,
-            },
-            acceptance: vec![],
+            priority: task.priority.clone(),
+            execution_mode: agent_agency_contracts::ExecutionMode::Auto,
+            risk_tier: Some(match task.priority {
+                TaskPriority::Critical | TaskPriority::High => agent_agency_contracts::RiskTier::Tier1,
+                TaskPriority::Medium => agent_agency_contracts::RiskTier::Tier2,
+                TaskPriority::Low => agent_agency_contracts::RiskTier::Tier3,
+            }),
+            acceptance: Some("Orchestrated task".to_string()),
         }
     }
 
@@ -393,7 +440,7 @@ impl AgentOrchestrationService {
                 confidence: consensus.confidence as f64,
                 quality_score: consensus.confidence as f64,
                 risk_assessment: verdict_aggregation::AggregatedRiskAssessment {
-                    overall_risk: verdict_aggregation::RiskLevel::Low,
+                    overall_risk: crate::judge_backup::risk::RiskLevel::Low,
                     risk_factors: vec![],
                     mitigation_suggestions: vec![],
                     confidence: consensus.confidence as f64,
@@ -402,11 +449,11 @@ impl AgentOrchestrationService {
         } else {
             verdict_aggregation::CouncilDecision::Reject {
                 confidence: consensus.confidence as f64,
-                critical_issues: vec![verdict_aggregation::CriticalIssue {
-                    issue_type: "Council Rejection".to_string(),
-                    severity: verdict_aggregation::RiskSeverity::High,
+                critical_issues: vec![crate::judge_backup::CriticalIssue {
+                    severity: crate::judge_backup::IssueSeverity::Critical,
+                    category: "Council Rejection".to_string(),
                     description: consensus.reason.clone(),
-                    impact: 1.0,
+                    evidence: vec![],
                 }],
                 alternative_approaches: vec![],
             }

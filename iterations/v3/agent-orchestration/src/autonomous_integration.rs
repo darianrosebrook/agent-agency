@@ -20,7 +20,7 @@ use tracing::{info, debug, warn, error, instrument};
 // use agent_research::create_learning_service;
 // use agent_model_management::create_model_orchestration_service;
 use crate::autonomous_file_editor::{AutonomousFileEditor, FileChange, ChangeType};
-use crate::types::{TaskDescriptor, TaskScope, ChangeBudget, BlastRadius};
+use agent_agency_contracts::{TaskDescriptor, TaskScope, ChangeBudget, BlastRadius};
 
 /// Comprehensive autonomous agent integration
 #[derive(Debug)]
@@ -191,13 +191,13 @@ impl AutonomousAgentIntegration {
 
     /// Analyze task complexity for optimization
     fn analyze_task_complexity(&self, task: &TaskDescriptor) -> f64 {
-        let mut complexity = 0.0;
+        let mut complexity: f64 = 0.0;
 
         // Factor in description length
         complexity += (task.description.len() as f64) / 1000.0;
 
         // Factor in scope size using number of in-scope paths
-        let scope_size = task.scope_in.in_scope.len();
+        let scope_size = task.scope_in.allowed_paths.len();
         complexity += (scope_size as f64).min(10.0) / 10.0;
 
         // Factor in change budget

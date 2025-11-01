@@ -6,7 +6,7 @@
 use async_trait::async_trait;
 use crate::council_errors::CouncilResult;
 use crate::verdict_aggregation::AggregationResult;
-use crate::types::TaskPriority;
+use agent_agency_contracts::TaskPriority;
 
 /// Decision engine that applies algorithms to reach final decisions
 #[async_trait]
@@ -649,7 +649,7 @@ impl AlgorithmicDecisionEngine {
         let priority = match context.risk_tier {
             agent_agency_contracts::task_request::RiskTier::Tier1 => TaskPriority::Critical,
             agent_agency_contracts::task_request::RiskTier::Tier2 => TaskPriority::High,
-            agent_agency_contracts::task_request::RiskTier::Tier3 => TaskPriority::Normal,
+            agent_agency_contracts::task_request::RiskTier::Tier3 => TaskPriority::Medium, // Normal mapped to Medium
         };
 
         let estimated_duration_hours = aggregation_result.aggregated_changes

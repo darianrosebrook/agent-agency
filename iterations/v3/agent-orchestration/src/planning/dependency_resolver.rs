@@ -245,8 +245,8 @@ impl AdvancedDependencyResolver {
     /// Find parallel execution opportunities
     pub fn parallel_groups(&self) -> Result<Vec<Vec<String>>> {
         let topo_order = self.topological_order()?;
-        let mut groups = Vec::new();
-        let mut current_group = Vec::new();
+        let mut groups: Vec<Vec<String>> = Vec::new();
+        let mut current_group: Vec<String> = Vec::new();
         let mut processed = HashSet::new();
 
         for milestone_id in topo_order {

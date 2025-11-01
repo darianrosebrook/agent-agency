@@ -11,27 +11,34 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 
+// Import canonical types from types module
+use crate::types::planning::{ExecutionMode, BlastRadius, TaskDescriptor, PlanningStrategy};
+use crate::types::execution::ExecutionContext;
+
 /// Execution plan with milestone breakdown
 /// The core data structure for executable plans
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionPlan {
     /// Unique plan identifier (persistent across sessions)
     /// Follows Cursor's UUID format for compatibility
+    #[schemars(with = "String")]
     pub id: Uuid,
 
     /// Session identifier (ephemeral per execution)
     /// Links execution context in Cursor-compatible format
+    #[schemars(with = "String")]
     pub session_id: Uuid,
 
     /// Reference to CAWS working spec that generated this plan
     pub working_spec_id: String,
 
+    /// The working spec that defines this execution plan
+    pub contract_plan: super::working_spec::WorkingSpec,
+
     /// Human-readable plan title
-    #[schemars(description = "Plan title for human identification")]
     pub title: String,
 
     /// High-level overview of plan objectives and scope
-    #[schemars(description = "Executive summary of plan goals")]
     pub overview: String,
 
     /// Current execution state of the plan
@@ -58,10 +65,18 @@ pub struct ExecutionPlan {
     /// Planning metadata and telemetry
     pub metadata: PlanMetadata,
 
+    /// Execution context information
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub execution_context: Option<ExecutionContext>,
+
     /// Timestamp tracking
+    #[schemars(with = "String")]
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
     pub updated_at: DateTime<Utc>,
+    #[schemars(with = "Option<String>")]
     pub approved_at: Option<DateTime<Utc>>,
+    #[schemars(with = "Option<String>")]
     pub completed_at: Option<DateTime<Utc>>,
 }
 
@@ -96,14 +111,13 @@ pub enum PlanState {
 
 /// Individual milestone within an execution plan
 /// Represents a discrete unit of work with dependencies and evidence gates
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct Milestone {
     /// Milestone identifier (e.g., "M0", "M1", "M2")
     /// Should be unique within the plan
     pub id: String,
 
     /// Human-readable objective statement
-    #[schemars(description = "Clear statement of what this milestone achieves")]
     pub objective: String,
 
     /// Execution scope defining files and boundaries
@@ -118,17 +132,23 @@ pub struct Milestone {
     /// Evidence gate defining completion criteria
     pub evidence_gate: EvidenceGate,
 
+    /// Quality gates that must pass
+    pub quality_gates: Vec<String>,
+
+    /// Dependencies on other milestones
+    pub dependencies: Vec<String>,
+
+    /// Estimated duration in minutes
+    pub estimated_duration: Option<u32>,
+
     /// Rollback plan if milestone execution fails
     pub rollback_plan: String,
-
-    /// Dependencies on other milestone IDs
-    /// Must form a DAG (no cycles)
-    pub dependencies: Vec<String>,
 
     /// Current execution state
     pub state: MilestoneState,
 
     /// Workers assigned to execute this milestone
+    #[schemars(with = "Vec<String>")]
     pub assigned_workers: Vec<Uuid>,
 
     /// Estimated effort in hours
@@ -195,13 +215,19 @@ pub enum MilestonePriority {
 
 /// Execution scope defining milestone boundaries
 /// Controls what files and operations are allowed
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct MilestoneScope {
     /// Files that can be read/modified by this milestone
     pub files: Vec<String>,
 
     /// Directories included in scope (globs supported)
     pub directories: Vec<String>,
+
+    /// Files and directories included
+    pub included_paths: Vec<String>,
+
+    /// Files and directories excluded
+    pub excluded_paths: Vec<String>,
 
     /// Whether this milestone will modify files (affects locking)
     pub will_modify: bool,
@@ -218,7 +244,7 @@ pub struct MilestoneScope {
 
 /// Interface contract specification
 /// Defines APIs or contracts that will be created/modified
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct InterfaceContract {
     /// Contract type (API, database schema, etc.)
     pub contract_type: String,
@@ -241,7 +267,7 @@ pub struct InterfaceContract {
 
 /// Test requirement specification
 /// Defines testing obligations for milestone completion
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct TestRequirement {
     /// Test type (unit, integration, e2e)
     pub test_type: TestType,
@@ -285,7 +311,7 @@ pub enum TestType {
 }
 
 /// Test performance requirements
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct TestPerformance {
     /// Maximum test execution time in milliseconds
     pub max_execution_time_ms: u64,
@@ -299,7 +325,7 @@ pub struct TestPerformance {
 
 /// Evidence gate for milestone completion
 /// Defines what evidence must be collected to consider milestone complete
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceGate {
     /// Minimum line coverage (0.0-1.0)
     pub min_coverage: f64,
@@ -324,7 +350,7 @@ pub struct EvidenceGate {
 }
 
 /// Performance budget constraints
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceBudget {
     /// Maximum P95 latency in milliseconds
     pub max_p95_ms: u64,
@@ -440,7 +466,7 @@ pub enum DependencyEdgeType {
 
 /// Change budget constraints
 /// Limits the scope of changes allowed in the plan
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct ChangeBudget {
     /// Maximum number of files that can be changed
     pub max_files: usize,
@@ -461,6 +487,9 @@ pub struct ChangeBudget {
     pub enforcement_mode: BudgetEnforcement,
 }
 
+/// Enforcement modes (alias for budget enforcement)
+pub type EnforcementMode = BudgetEnforcement;
+
 /// Budget enforcement modes
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum BudgetEnforcement {
@@ -476,7 +505,7 @@ pub enum BudgetEnforcement {
 
 /// Quality gates that must be satisfied
 /// Defines the quality standards for plan completion
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct QualityGates {
     /// Coverage requirements by test type
     pub coverage_requirements: HashMap<String, f64>,
@@ -498,10 +527,20 @@ pub struct QualityGates {
 
     /// Whether council approval is required
     pub requires_council_approval: bool,
+
+    /// Minimum coverage percentage (0.0-1.0) - convenience field
+    /// Computed from coverage_requirements if not set explicitly
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub min_coverage: Option<f64>,
+
+    /// Minimum mutation score percentage (0.0-1.0) - convenience field
+    /// Computed from mutation_requirements if not set explicitly
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub min_mutation_score_percent: Option<f64>,
 }
 
 /// Mutation testing requirements
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct MutationRequirements {
     /// Whether mutation testing is required
     pub required: bool,
@@ -514,7 +553,7 @@ pub struct MutationRequirements {
 }
 
 /// Security requirements
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct SecurityRequirements {
     /// Whether security scan is required
     pub scan_required: bool,
@@ -527,7 +566,7 @@ pub struct SecurityRequirements {
 }
 
 /// Performance requirements
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceRequirements {
     /// Maximum allowed performance regressions
     pub max_regressions: usize,
@@ -540,7 +579,7 @@ pub struct PerformanceRequirements {
 }
 
 /// Performance SLA specification
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceSLA {
     /// SLA name
     pub name: String,
@@ -556,7 +595,7 @@ pub struct PerformanceSLA {
 }
 
 /// Documentation requirements
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct DocumentationRequirements {
     /// Whether API documentation is required
     pub api_docs_required: bool,
@@ -569,6 +608,15 @@ pub struct DocumentationRequirements {
 
     /// Required documentation formats
     pub required_formats: Vec<String>,
+
+    /// Required documentation types
+    pub required_types: Vec<String>,
+
+    /// Documentation coverage minimum (0.0-1.0)
+    pub min_coverage: f64,
+
+    /// Documentation quality checks
+    pub quality_checks: Vec<String>,
 }
 
 /// Evidence requirement specification
@@ -603,6 +651,7 @@ pub struct WaiverReference {
     pub waived_gates: Vec<String>,
 
     /// Waiver expiration timestamp
+    #[schemars(with = "String")]
     pub expires_at: DateTime<Utc>,
 
     /// Waiver approval information
@@ -612,8 +661,42 @@ pub struct WaiverReference {
 /// Planning metadata and telemetry
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PlanMetadata {
+    /// When the plan was created
+    #[schemars(with = "String")]
+    pub created_at: DateTime<Utc>,
+
+    /// When the plan was last updated
+    #[schemars(with = "String")]
+    pub updated_at: DateTime<Utc>,
+
+    /// When the plan was approved
+    #[schemars(with = "Option<String>")]
+    pub approved_at: Option<DateTime<Utc>>,
+
+    /// When the plan was completed
+    #[schemars(with = "Option<String>")]
+    pub completed_at: Option<DateTime<Utc>>,
+
     /// Who created the plan
     pub created_by: PlanCreator,
+
+    /// Plan version number
+    pub version: String,
+
+    /// Source system that created the plan
+    pub source: String,
+
+    /// AI confidence score (0.0-1.0)
+    pub confidence_score: Option<f64>,
+
+    /// Time taken to generate the plan in milliseconds
+    pub generation_time_ms: Option<u64>,
+
+    /// AI model used to generate the plan
+    pub model_used: Option<String>,
+
+    /// Whether fallback logic was used
+    pub fallback_used: bool,
 
     /// Planning strategy used
     pub strategy: PlanningStrategy,
@@ -650,33 +733,9 @@ pub enum PlanCreator {
     Hybrid { ai_contribution: f64 },
 }
 
-/// Planning strategy used
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-pub enum PlanningStrategy {
-    /// Top-down decomposition from requirements
-    TopDown,
-
-    /// Bottom-up composition from tool chains
-    BottomUp,
-
-    /// Dependency-driven critical path analysis
-    DependencyDriven,
-
-    /// Risk-based milestone prioritization
-    RiskBased,
-
-    /// Hybrid strategy combining approaches
-    Hybrid,
-
-    /// AI-assisted planning with human oversight
-    AIAssisted,
-
-    /// Template-based planning from patterns
-    TemplateBased,
-}
 
 /// Milestone execution metrics
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct MilestoneMetrics {
     /// Actual execution time in milliseconds
     pub execution_time_ms: u64,
@@ -698,7 +757,7 @@ pub struct MilestoneMetrics {
 }
 
 /// Evidence collection result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceResult {
     /// Evidence type collected
     pub evidence_type: String,
@@ -710,6 +769,7 @@ pub struct EvidenceResult {
     pub quality_score: f64,
 
     /// Collection timestamp
+    #[schemars(with = "String")]
     pub collected_at: DateTime<Utc>,
 
     /// Evidence metadata
@@ -717,9 +777,10 @@ pub struct EvidenceResult {
 }
 
 /// Worker performance metrics
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerPerformance {
     /// Worker ID
+    #[schemars(with = "String")]
     pub worker_id: Uuid,
 
     /// Tasks completed by this worker
@@ -739,12 +800,13 @@ pub struct WorkerPerformance {
 }
 
 /// Execution event for milestone tracking
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionEvent {
     /// Event type
     pub event_type: String,
 
     /// Event timestamp
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 
     /// Event description
@@ -875,3 +937,4 @@ mod tests {
         assert!(!graph.has_cycles);
     }
 }
+

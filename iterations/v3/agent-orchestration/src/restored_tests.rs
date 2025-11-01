@@ -9,6 +9,7 @@
 mod tests {
     use super::*;
     use crate::types::*;
+    use agent_agency_contracts::types::prelude::RiskTier;
     use crate::evidence_enrichment::{EvidenceEnrichmentCoordinator, EnrichmentConfig, EnrichedEvidence, MultimodalContext, ContextType, SemanticAnalysis, SentimentScore, SentimentLabel, NamedEntity, EntityType, EnrichmentStats};
     use crate::frontier::*;
     use crate::adapter::*;
@@ -96,9 +97,9 @@ mod tests {
                 external_deps: vec![],
             },
             priority: TaskPriority::Normal,
-            execution_mode: crate::ExecutionMode::Auto,
+            execution_mode: agent_agency_contracts::types::planning::ExecutionMode::Auto,
             task_type: "test".to_string(),
-            risk_tier: Some(crate::council_types::RiskTier::Tier2),
+            risk_tier: Some(RiskTier::Tier2),
             acceptance: Some("Test passes".to_string()),
         };
 
@@ -177,9 +178,9 @@ mod tests {
                 change_budget: ChangeBudget { max_files: 10, max_loc: 100 },
                 blast_radius: BlastRadius { modules: vec![], data_migration: false, external_deps: vec![] },
                 priority: TaskPriority::Low,
-                execution_mode: crate::ExecutionMode::Auto,
+                execution_mode: agent_agency_contracts::types::planning::ExecutionMode::Auto,
                 task_type: "test".to_string(),
-                risk_tier: Some(crate::council_types::RiskTier::Tier3),
+                risk_tier: Some(RiskTier::Tier3),
                 acceptance: Some("Task completes".to_string()),
             },
             priority_score: 200,
@@ -198,9 +199,9 @@ mod tests {
                 change_budget: ChangeBudget { max_files: 10, max_loc: 100 },
                 blast_radius: BlastRadius { modules: vec![], data_migration: false, external_deps: vec![] },
                 priority: TaskPriority::High,
-                execution_mode: crate::ExecutionMode::Auto,
+                execution_mode: agent_agency_contracts::types::planning::ExecutionMode::Auto,
                 task_type: "test".to_string(),
-                risk_tier: Some(crate::council_types::RiskTier::Tier1),
+                risk_tier: Some(RiskTier::Tier1),
                 acceptance: Some("Task completes successfully".to_string()),
             },
             priority_score: 800,

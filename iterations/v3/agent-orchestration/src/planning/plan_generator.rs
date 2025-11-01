@@ -11,13 +11,14 @@ use chrono::Utc;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use agent_agency_contracts::{
+    *,
     planning::PlanningEngine,
     planning_io::{ExecutionPlan as ContractExecutionPlan, Milestone as ContractMilestone, PlanState, MilestoneState},
     WorkingSpec,
 };
 
 use crate::planning::{
-    plan_types::{ExecutionPlan, PlanGenerationContext, PlanningConstraints},
+    plan_types::{ExecutionPlan, ExecutionContext, PlanGenerationContext, PlanningConstraints},
     caws_integration::CawsPlanBridge,
     tool_chain_bridge::ToolChainBridge,
     legacy_plan_adapter::LegacyPlanAdapter,
@@ -114,8 +115,8 @@ impl PlanGenerator {
     fn is_tool_chain_compatible(&self, working_spec: &WorkingSpec) -> bool {
         // Check if working spec has compatible acceptance criteria
         // and can be decomposed into tool chains
-        working_spec.acceptance.len() > 0 &&
-        working_spec.acceptance.iter().all(|criterion|
+        working_spec.acceptance_criteria.len() > 0 &&
+        working_spec.acceptance_criteria.iter().all(|criterion|
             !criterion.given.is_empty() &&
             !criterion.when.is_empty() &&
             !criterion.then.is_empty()
@@ -223,13 +224,13 @@ impl PlanGenerator {
     fn analyze_task_complexity(&self, task_descriptor: &TaskDescriptor) -> Result<TaskComplexity> {
         let mut complexity = TaskComplexity::Simple;
         let description_len = task_descriptor.description.len();
-        let has_dependencies = task_descriptor.dependencies.len() > 0;
+        let has_dependencies = false; // TaskDescriptor doesn't have dependencies field
 
         if description_len > 500 || has_dependencies {
             complexity = TaskComplexity::Moderate;
         }
 
-        if description_len > 1000 || task_descriptor.dependencies.len() > 3 {
+        if description_len > 1000 {
             complexity = TaskComplexity::Complex;
         }
 
@@ -242,7 +243,7 @@ impl PlanGenerator {
         let mut blocking_items = HashSet::new();
 
         // Analyze acceptance criteria for dependencies
-        for criterion in &plan.acceptance {
+        for criterion in &plan.contract_plan.acceptance_criteria {
             let deps = self.extract_dependencies_from_criterion(criterion)?;
             for dep in deps {
                 dependencies.entry(dep.clone()).or_insert(vec![]).push(criterion.id.clone());
@@ -260,7 +261,7 @@ impl PlanGenerator {
     }
 
     /// Extract dependencies from acceptance criterion
-    fn extract_dependencies_from_criterion(&self, criterion: &AcceptanceCriterion) -> Result<Vec<String>> {
+    fn extract_dependencies_from_criterion(&self, criterion: &agent_agency_contracts::AcceptanceCriterion) -> Result<Vec<String>> {
         let mut deps = vec![];
 
         // Look for dependency keywords in the criterion text
@@ -315,7 +316,7 @@ impl PlanGenerator {
     /// Create milestone from acceptance criterion
     async fn create_milestone_from_criterion(
         &self,
-        criterion: &AcceptanceCriterion,
+        criterion: &agent_agency_contracts::AcceptanceCriterion,
         complexity: &TaskComplexity,
         dependencies: &DependencyAnalysis,
         context: &PlanGenerationContext,
@@ -327,7 +328,8 @@ impl PlanGenerator {
         let scope = self.determine_milestone_scope(&objective, context)?;
 
         // Generate evidence gate based on risk tier
-        let evidence_gate = self.generate_evidence_gate(plan.risk_tier, complexity)?;
+        let task_descriptor = context.task_descriptor.get_task_descriptor().await?;
+        let evidence_gate = self.generate_evidence_gate(task_descriptor.risk_tier, complexity)?;
 
         // Estimate effort based on complexity and dependencies
         let estimated_effort = self.estimate_milestone_effort(complexity, &scope, dependencies)?;
@@ -345,7 +347,7 @@ impl PlanGenerator {
             assigned_workers: vec![],
             estimated_effort,
             priority: self.determine_priority(complexity, dependencies),
-            risk_tier: plan.risk_tier,
+            risk_tier: task_descriptor.risk_tier,
             is_blocking: dependencies.is_blocking_criterion(&criterion.id),
             blocking_reason: dependencies.get_blocking_reason(&criterion.id),
             metrics: None,
@@ -514,25 +516,9 @@ impl PlanGenerator {
             },
             interfaces: vec![],
             tests: vec![],
-            evidence_gate: EvidenceGate {
-                min_coverage: 0.0,
-                min_branch_coverage: 0.0,
-                min_mutation_score: 0.0,
-                security_scan_required: false,
-                performance_budget: None,
-                required_artifacts: vec![],
-                custom_validations: vec![],
-            },
-            rollback_plan: "No rollback needed".to_string(),
+            quality_gates: vec!["infrastructure_ready".to_string()],
             dependencies: vec![],
-            state: MilestoneState::Pending,
-            assigned_workers: vec![],
-            estimated_effort: 1.0,
-            priority: MilestonePriority::High,
-            risk_tier: plan.risk_tier,
-            is_blocking: true,
-            blocking_reason: Some("Infrastructure required for all other milestones".to_string()),
-            metrics: None,
+            estimated_duration: None, // Contracts Milestone doesn't have this field
         })
     }
 
@@ -607,7 +593,7 @@ use agent_agency_contracts::planning_io::{
     MilestoneScope, EvidenceGate, DependencyGraph, DependencyNode, DependencyEdge,
     DependencyNodeType, DependencyEdgeType, MilestonePriority,
 };
-use crate::planning::plan_types::{OrchestrationMetadata, ExecutionContext, ResourceInventory};
+use crate::planning::plan_types::{OrchestrationMetadata, ResourceInventory};
 
 #[cfg(test)]
 mod tests {

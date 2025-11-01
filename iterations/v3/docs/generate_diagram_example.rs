@@ -7,7 +7,9 @@ use agent_agency_apple_silicon::ane::models::diffusion_model::{
     DiffusionModel, GenerationOptions, ImageMetadata
 };
 use agent_agency_apple_silicon::telemetry::TelemetryCollector;
+use system_quality_security::security_circuit_breaker::{SecurityCircuitBreaker, CircuitBreakerConfig};
 use std::path::Path;
+use std::sync::Arc;
 
 /// Example: Generate architecture diagram from specification
 pub async fn generate_architecture_diagram(spec: &ArchitectureSpec) -> Result<PathBuf, Box<dyn std::error::Error>> {
@@ -26,11 +28,18 @@ pub async fn generate_architecture_diagram(spec: &ArchitectureSpec) -> Result<Pa
         height: 768,
     };
 
-    // Create placeholder circuit breaker (would be properly implemented)
-    // For demo purposes, we'll use a mock circuit breaker
-    let circuit_breaker = MockCircuitBreaker;
+    // Create circuit breaker for resilient model loading
+    let circuit_breaker_config = CircuitBreakerConfig {
+        service_name: "coreml-diffusion".to_string(),
+        failure_threshold: 3,
+        success_threshold: 2,
+        timeout_duration: std::time::Duration::from_secs(30),
+        request_timeout: std::time::Duration::from_secs(60),
+        half_open_max_requests: 2,
+    };
+    let circuit_breaker = Arc::new(SecurityCircuitBreaker::new(circuit_breaker_config));
 
-    // Load CoreML-Anything model (placeholder - would load actual model)
+    // Load CoreML-Anything model using real circuit breaker for resilience
     let model = load_diffusion_model(&telemetry, circuit_breaker).await?;
 
     // Generate diagram
@@ -79,7 +88,7 @@ fn create_architecture_prompt(spec: &ArchitectureSpec) -> Result<String, Box<dyn
 /// Load diffusion model (placeholder implementation)
 async fn load_diffusion_model(
     telemetry: &TelemetryCollector,
-    circuit_breaker: MockCircuitBreaker,
+    circuit_breaker: Arc<SecurityCircuitBreaker>,
 ) -> Result<DiffusionModel, Box<dyn std::error::Error>> {
     // In real implementation, this would load the actual CoreML-Anything model
     // For now, return a mock/placeholder model
@@ -133,14 +142,6 @@ async fn save_diagram_image(
     Ok(output_path)
 }
 
-// Mock circuit breaker for demonstration
-struct MockCircuitBreaker;
-
-impl MockCircuitBreaker {
-    async fn acquire(&self) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
-    }
-}
 
 /// Architecture specification for diagram generation
 pub struct ArchitectureSpec {

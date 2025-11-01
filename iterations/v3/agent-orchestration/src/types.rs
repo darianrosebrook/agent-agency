@@ -6,10 +6,16 @@
 //! @author @darianrosebrook
 
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use std::collections::HashMap;
 
+// Import contracts types directly
+use agent_agency_contracts::WorkingSpec as ContractsWorkingSpec;
+use agent_agency_contracts::types::planning::{TaskPriority, BlastRadius};
+use agent_agency_contracts::planning_io::ChangeBudget as ContractsChangeBudget;
+
 /// Task scope definition for orchestration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskScope {
     /// Files and directories included in this task scope
     pub in_scope: Vec<String>,
@@ -17,25 +23,8 @@ pub struct TaskScope {
     pub out_scope: Vec<String>,
 }
 
-/// Change budget for orchestration constraints
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChangeBudget {
-    /// Maximum number of files that can be changed
-    pub max_files: u32,
-    /// Maximum lines of code that can be changed
-    pub max_loc: u32,
-}
-
-/// Blast radius for orchestration impact analysis
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BlastRadius {
-    /// Modules that will be affected by the orchestration
-    pub modules: Vec<String>,
-    /// Whether data migration is required
-    pub data_migration: bool,
-    /// External dependencies that will be affected
-    pub external_deps: Vec<String>,
-}
+// ChangeBudget and BlastRadius are now defined in agent-agency-contracts
+// Use agent_agency_contracts::prelude::* to access them
 
 /// Memory-informed orchestration decision
 #[derive(Debug, Clone)]
@@ -53,8 +42,8 @@ pub struct MemoryInformedDecision {
 /// Result of task execution orchestration
 #[derive(Debug, Clone)]
 pub struct TaskExecutionResult {
-    /// The final working specification after orchestration
-    pub working_spec: Option<String>, // Simplified for now - was agent_agency_contracts::working_spec::WorkingSpec
+    /// The final working specification after orchestration (uses contracts WorkingSpec)
+    pub working_spec: Option<ContractsWorkingSpec>,
     /// Execution artifacts produced during orchestration
     pub artifacts: ExecutionArtifacts,
     /// Quality report from orchestration
@@ -68,8 +57,8 @@ pub struct ExecutionArtifacts {
     pub execution_id: String,
     /// Worker ID that executed the task
     pub worker_id: String,
-    /// Execution status
-    pub status: ExecutionStatus,
+    /// Execution status (uses contracts ExecutionStatus)
+    pub status: agent_agency_contracts::ExecutionStatus,
     /// Output from execution
     pub output: Option<String>,
     /// Error message if execution failed
@@ -112,7 +101,7 @@ pub struct QualityReport {
 }
 
 /// Orchestrator configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct OrchestratorConfig {
     /// Maximum time allowed for orchestration (in seconds)
     pub max_orchestration_time_seconds: u64,
@@ -129,7 +118,7 @@ pub struct OrchestratorConfig {
 }
 
 /// Circuit breaker configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CircuitBreakerConfig {
     /// Failure threshold before opening circuit
     pub failure_threshold: u32,
@@ -140,7 +129,7 @@ pub struct CircuitBreakerConfig {
 }
 
 /// Retry configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RetryConfig {
     /// Maximum number of retry attempts
     pub max_attempts: u32,
@@ -189,45 +178,41 @@ impl Default for RetryConfig {
     }
 }
 
-/// Task descriptor for orchestration
-#[derive(Debug, Clone)]
-pub struct TaskDescriptor {
-    /// Unique task identifier
-    pub task_id: String,
-    /// Task description
-    pub description: String,
-    /// Task scope
-    pub scope_in: TaskScope,
-    /// Out of scope areas
-    pub scope_out: Option<TaskScope>,
-    /// Change budget constraints
-    pub change_budget: ChangeBudget,
-    /// Blast radius analysis
-    pub blast_radius: BlastRadius,
-    /// Task priority
-    pub priority: TaskPriority,
-    /// Execution mode
-    pub execution_mode: crate::ExecutionMode,
-    /// Task type/category
-    pub task_type: String,
-    /// Risk tier assessment
-    pub risk_tier: Option<crate::council_types::RiskTier>,
-    /// Acceptance criteria
-    pub acceptance: Option<String>,
-}
+// TaskDescriptor is now imported from agent_agency_contracts::types::planning::TaskDescriptor
+// (removed duplicate definition)
 
-/// Task priority levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TaskPriority {
-    Low,
-    Medium,
-    Normal,
-    High,
-    Critical,
+
+// ExecutionMode is now imported from agent_agency_contracts::types::planning
+// (removed duplicate definition)
+
+/// Task type classification
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TaskType {
+    Feature,
+    BugFix,
+    Refactor,
+    Documentation,
+    Maintenance,
 }
 
 /// Working specification for tasks
+/// 
+/// # Deprecation Notice
+/// This local type is being phased out in favor of `agent_agency_contracts::WorkingSpec`.
+/// Use the type adapters in `crate::planning::type_adapters` for conversion during migration.
+/// 
+/// # Migration
+/// ```rust
+/// // Old (deprecated):
+/// use crate::types::WorkingSpec;
+/// 
+/// // New (preferred):
+/// use agent_agency_contracts::WorkingSpec;
+/// // or
+/// use agent_agency_contracts::working_spec::WorkingSpec;
+/// ```
 #[derive(Debug, Clone)]
+#[deprecated(note = "Use agent_agency_contracts::WorkingSpec instead. See type_adapters for migration.")]
 pub struct WorkingSpec {
     /// Specification ID
     pub id: String,
@@ -237,8 +222,8 @@ pub struct WorkingSpec {
     pub risk_tier: u8,
     /// Mode (feature, refactor, fix, etc.)
     pub mode: String,
-    /// Change budget
-    pub change_budget: ChangeBudget,
+    /// Change budget (uses contracts ChangeBudget)
+    pub change_budget: ContractsChangeBudget,
     /// Blast radius
     pub blast_radius: BlastRadius,
     /// Scope definition
@@ -303,8 +288,8 @@ pub struct MultimodalTask {
 pub struct MultimodalProcessingResult {
     /// Task ID
     pub task_id: String,
-    /// Processing status
-    pub status: ExecutionStatus,
+    /// Processing status (uses contracts ExecutionStatus for standard statuses, local for orchestration-specific)
+    pub status: agent_agency_contracts::ExecutionStatus,
     /// Processed content
     pub processed_content: Option<Vec<u8>>,
     /// Extracted features

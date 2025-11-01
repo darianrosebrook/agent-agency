@@ -73,10 +73,19 @@ impl YOLOPerformanceMonitor {
 
     /// Record YOLO inference performance metrics
     pub fn record_inference(&mut self, metrics: YOLOPerformanceMetrics) -> Result<()> {
+        // Determine if inference was successful based on metrics
+        let success = metrics.total_inference_time_ms > 0.0
+            && metrics.total_inference_time_ms < 30000.0 // Less than 30 seconds
+            && metrics.memory_usage_mb >= 0.0
+            && metrics.preprocessing_time_ms >= 0.0
+            && metrics.postprocessing_time_ms >= 0.0
+            && !metrics.total_inference_time_ms.is_nan()
+            && !metrics.memory_usage_mb.is_nan();
+
         // Record in telemetry
         self.telemetry.record_inference(
             metrics.total_inference_time_ms as u64,
-            true // Assume success for now
+            success
         );
 
         // Store in history

@@ -49,6 +49,8 @@ pub struct GCRegistry {
     pub last_mark_phase: std::time::Instant,
     /// Timestamp of last sweep phase
     pub last_sweep_phase: std::time::Instant,
+    /// Total bytes tracked by GC (sum of all object sizes)
+    pub total_bytes: usize,
 }
 
 /// Memory block information for layout analysis
@@ -1332,12 +1334,20 @@ impl ResourceHandle {
         if self.closed {
             return None;
         }
-        // In a real implementation, this would return the actual object reference
-        // For now, return a placeholder
+        // Create a more realistic object reference based on handle type
+        let size = match self.handle_type.as_str() {
+            "file" => 256,      // File handle overhead
+            "socket" => 512,    // Socket handle overhead
+            "database" => 1024, // Database connection overhead
+            "memory" => 128,    // Memory mapping overhead
+            "thread" => 2048,   // Thread handle overhead
+            _ => 512,           // Default handle overhead
+        };
+
         Some(ObjectRef {
             ptr: self.id as usize,
-            type_id: std::any::TypeId::of::<()>(), // Placeholder
-            size: 1024, // Placeholder size
+            type_id: std::any::TypeId::of::<ResourceHandle>(),
+            size,
         })
     }
 }
@@ -1555,6 +1565,7 @@ impl GCRegistry {
             weak_references: HashMap::new(),
             last_mark_phase: std::time::Instant::now(),
             last_sweep_phase: std::time::Instant::now(),
+            total_bytes: 0,
         }
     }
 }
@@ -2618,26 +2629,42 @@ impl MemoryMonitor {
     fn update_memory_stats_after_deallocation(&self, size: usize) {
         // Update stats in gc_registry
         let mut gc_registry = self.gc_registry.write().unwrap();
-        // Note: GCRegistry doesn't have total_bytes field, so we'll skip this for now
-        // In a real implementation, we'd track memory usage properly
+        // Track memory usage in GC registry
+        gc_registry.total_bytes = gc_registry.total_bytes.saturating_sub(size);
     }
 
     /// Analyze memory fragmentation
     fn analyze_fragmentation(&self) -> FragmentationStats {
         // Calculate memory fragmentation statistics
         let stats = MemoryTrackingAllocator::memory_stats();
+        let gc_registry = self.gc_registry.read().unwrap();
 
-        // Simple fragmentation estimation (placeholder)
-        let fragmentation_ratio = if stats.allocated_bytes > 0 {
-            (stats.allocation_count as f64 / stats.allocated_bytes as f64).min(1.0)
+        // Calculate fragmentation based on allocation patterns and GC registry
+        // Fragmentation ratio = (allocation overhead + external fragmentation) / total heap
+        let allocation_overhead = (stats.allocation_count as f64 * 16.0) as f64; // Estimate 16 bytes per allocation
+        let external_fragmentation = if stats.allocated_bytes > 0 {
+            let gc_bytes = gc_registry.total_bytes as f64;
+            // External fragmentation is the difference between allocated bytes and GC-tracked bytes
+            (stats.allocated_bytes as f64 - gc_bytes).max(0.0)
         } else {
             0.0
         };
 
+        let total_heap = stats.allocated_bytes as f64 + allocation_overhead;
+        let fragmentation_ratio = if total_heap > 0.0 {
+            ((allocation_overhead + external_fragmentation) / total_heap).min(1.0)
+        } else {
+            0.0
+        };
+
+        // Estimate free bytes and largest free block
+        let total_free_bytes = (stats.allocated_bytes as usize).saturating_sub(gc_registry.total_bytes);
+        let largest_free_block = total_free_bytes / 4; // Conservative estimate
+
         FragmentationStats {
             fragmentation_ratio,
-            total_free_bytes: stats.allocated_bytes as usize,
-            largest_free_block: 0, // Not tracked
+            total_free_bytes,
+            largest_free_block,
         }
     }
 

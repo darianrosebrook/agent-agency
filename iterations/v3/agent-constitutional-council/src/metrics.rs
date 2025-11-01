@@ -79,7 +79,7 @@ impl CouncilMetrics {
 
         // Record judge metrics
         for (judge_type, verdict) in judge_verdicts {
-            self.judge_score_distributions.entry(*judge_type)
+            self.judge_score_distributions.entry(judge_type.clone())
                 .or_insert_with(Vec::new)
                 .push(verdict.score);
         }
@@ -148,7 +148,7 @@ impl CouncilMetrics {
         for (judge_type, scores) in &self.judge_score_distributions {
             if !scores.is_empty() {
                 let avg = scores.iter().sum::<f32>() / scores.len() as f32;
-                averages.insert(*judge_type, avg as f64);
+                averages.insert(judge_type.clone(), avg as f64);
             }
         }
 

@@ -135,7 +135,7 @@ impl Default for AuditOutputFormat {
 }
 
 /// Global audit statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct GlobalAuditStats {
     /// Total audit events recorded
     pub total_events: u64,
@@ -175,7 +175,7 @@ pub struct AuditPerformanceMetrics {
 }
 
 /// Base audit event structure
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AuditEvent {
     /// Unique event ID
     pub event_id: Uuid,
@@ -247,7 +247,7 @@ impl Default for AuditSeverity {
 }
 
 /// Audit operation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum AuditResult {
     Success {
         data: Option<serde_json::Value>,
@@ -267,7 +267,7 @@ pub enum AuditResult {
 }
 
 /// Performance metrics for audit events
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AuditPerformance {
     /// Duration of the operation
     pub duration: Duration,
@@ -718,15 +718,23 @@ impl AuditTrailManager {
             tags: vec!["orchestration".to_string(), "execution".to_string()],
         };
 
-        // Log the event to console for now (file auditor logs to console/files)
-        tracing::info!("Audit event recorded: {}", serde_json::to_string_pretty(&event).unwrap_or_else(|_| "Failed to serialize".to_string()));
+        // Log the audit event using structured logging with proper audit context
+        tracing::info!(
+            audit_event = ?event,
+            category = %event.category,
+            severity = %event.severity,
+            actor = %event.actor,
+            operation = %event.operation,
+            correlation_id = ?event.correlation_id,
+            "Audit event recorded"
+        );
 
         Ok(())
     }
 }
 
 /// Database row representation of audit event
-#[derive(sqlx::FromRow, serde::Serialize)]
+#[derive(Debug, sqlx::FromRow, serde::Serialize)]
 struct AuditEventRow {
     id: uuid::Uuid,
     timestamp: chrono::DateTime<chrono::Utc>,

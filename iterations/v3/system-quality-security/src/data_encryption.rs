@@ -6,7 +6,7 @@
 //! @author @darianrosebrook
 
 use async_trait::async_trait;
-use ring::aead::{Aad, BoundKey, Nonce, NonceSequence, UnboundKey, AES_256_GCM};
+use ring::aead::{Aad, LessSafeKey, Nonce, NonceSequence, UnboundKey, AES_256_GCM};
 use ring::rand::{SecureRandom, SystemRandom};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -287,7 +287,7 @@ impl DataEncryptionService {
             })?;
 
         // Create sealing key
-        let mut sealing_key = BoundKey::new(unbound_key, SimpleNonceSequence::new(nonce_bytes));
+        let mut sealing_key = LessSafeKey::new(unbound_key);
 
         // Encrypt the data
         let mut in_out = data.as_bytes().to_vec();
@@ -367,7 +367,7 @@ impl DataEncryptionService {
             })?;
 
         // Create opening key
-        let mut opening_key = BoundKey::new(unbound_key, SimpleNonceSequence::new(nonce_array));
+        let mut opening_key = LessSafeKey::new(unbound_key);
 
         // Decode encrypted data
         let mut encrypted_bytes = general_purpose::STANDARD.decode(&encrypted_data.encrypted)
@@ -395,12 +395,13 @@ impl DataEncryptionService {
     pub async fn rotate_key(&self, key_id: Uuid) -> Result<Uuid, EncryptionError> {
         let mut manager = self.key_manager.write().await;
         
-        let old_key = manager.keys.get(&key_id)
+        let (algorithm, rotation_days) = manager.keys.get(&key_id)
+            .map(|key| (key.algorithm, key.rotation_days))
             .ok_or_else(|| EncryptionError::KeyNotFound { key_id })?;
 
         // Generate new key with same algorithm
         drop(manager); // Release lock
-        let new_key_id = self.generate_key(old_key.algorithm, old_key.rotation_days).await?;
+        let new_key_id = self.generate_key(algorithm, rotation_days).await?;
 
         // Mark old key as inactive
         let mut manager = self.key_manager.write().await;

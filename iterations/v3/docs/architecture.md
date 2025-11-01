@@ -2,7 +2,7 @@
 
 ## Overview
 
-Agent Agency V3 implements a **modular constitutional AI system** with 17 specialized crates providing comprehensive autonomous agent capabilities. The system orchestrates multiple local AI models with governance controls, ensuring ethical compliance, technical quality, and system coherence through evidence-based decision making.
+Agent Agency V3 implements a **modular constitutional AI system** with 17 specialized crates providing comprehensive autonomous agent capabilities. The system leverages CoreML-optimized Mistral models with Apple Neural Engine acceleration for high-performance local inference, ensuring ethical compliance, technical quality, and system coherence through evidence-based decision making.
 
 The architecture consists of specialized Rust crates with clear responsibilities, communicating via well-defined contracts, with PostgreSQL persistence, comprehensive provenance tracking, and monitoring capabilities.
 

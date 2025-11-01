@@ -15,6 +15,7 @@ pub enum MemoryType {
     Working,   // Short-term working memory
 }
 
+
 /// Temporal context for memory operations
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TemporalContext {

@@ -315,13 +315,34 @@ impl MemoryManager {
         let oldest_memory: Option<DateTime<Utc>> = row.try_get("oldest_memory")?;
         let newest_memory: Option<DateTime<Utc>> = row.try_get("newest_memory")?;
 
+        // Get memory type distribution
+        let memory_type_rows = sqlx::query(
+            r#"
+            SELECT memory_type, COUNT(*) as count
+            FROM agent_experiences
+            GROUP BY memory_type
+            ORDER BY count DESC
+            "#
+        )
+        .fetch_all(&self.db_pool)
+        .await?;
+
+        let mut memory_types_distribution = HashMap::new();
+        for row in memory_type_rows {
+            let memory_type_i32: i32 = row.try_get("memory_type")?;
+            let memory_type = MemoryType::try_from(memory_type_i32)
+                .map_err(|_| sqlx::Error::Decode(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid memory type value"))))?;
+            let count: i64 = row.try_get("count")?;
+            memory_types_distribution.insert(memory_type, count as usize);
+        }
+
         Ok(MemoryStats {
             total_memories: total_memories as usize,
             unique_agents: unique_agents as usize,
             avg_age_seconds: avg_age_seconds.unwrap_or(0.0),
             oldest_memory,
             newest_memory,
-            memory_types_distribution: HashMap::new(), // TODO: implement
+            memory_types_distribution,
         })
     }
 }

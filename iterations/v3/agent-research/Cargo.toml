@@ -66,13 +66,13 @@ walkdir = "2.4"
 priority-queue = "1.3"
 
 # Local crates
-agent-orchestration = { path = "../agent-orchestration" }
-agent-workers = { path = "../agent-workers" }
+# agent-orchestration = { path = "../agent-orchestration", optional = true }  # Removed to break circular dependency - not actually used
+# # agent-workers = { path = "../agent-workers", optional = true }  # Removed to break circular dependency - only used in feature-gated code  # Commented out to break circular dependency - only used behind feature flag
 agent-memory = { path = "../agent-memory" }
 system-acceleration = { path = "../system-acceleration", optional = true }
 # embedding-service now consolidated into data-infrastructure
 data-infrastructure = { path = "../data-infrastructure" }
-agent-data-processing = { path = "../agent-data-processing" } 
+# # agent-data-processing = { path = "../agent-data-processing", optional = true }  # Removed to break circular dependency cycle  # Commented out to break circular dependency - not actually used 
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 system-configuration = { path = "../system-configuration" }
 system-observability = { path = "../system-observability" }
@@ -80,6 +80,9 @@ system-observability = { path = "../system-observability" }
 [features]
 default = []
 coreml = ["system-acceleration"]
+# # workers = ["agent-workers"]  # Removed feature since dependency removed  # Feature removed since dependency removed
+# orchestration = ["agent-orchestration"]  # Removed feature since dependency removed
+# data-processing = ["agent-data-processing"]  # Removed feature since dependency removed
 
 [dev-dependencies]
 tokio-test = "0.4"

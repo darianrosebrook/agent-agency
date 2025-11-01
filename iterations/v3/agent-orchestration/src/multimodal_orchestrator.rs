@@ -304,7 +304,7 @@ impl Default for OrchestratorConfig {
 }
 
 // Remove duplicate MultimodalTask struct - use the one from lib.rs
-// #[derive(Debug, Clone, Serialize, Deserialize)]
+// #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 // pub struct MultimodalTask {
 //     pub id: String,
 //     pub description: String,
@@ -326,7 +326,7 @@ impl Default for OrchestratorConfig {
 // }
 
 // Remove duplicate MultimodalProcessingResult struct - use the one from lib.rs
-// #[derive(Debug, Clone, Serialize, Deserialize)]
+// #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 // pub struct MultimodalProcessingResult {
 //     pub task_id: String,
 //     pub status: ProcessingStatus,
@@ -336,7 +336,7 @@ impl Default for OrchestratorConfig {
 // }
 
 /// Real performance statistics structure
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct OrchestratorPerformanceStats {
     pub total_tasks_processed: u64,
     pub successful_tasks: u64,
@@ -346,7 +346,7 @@ pub struct OrchestratorPerformanceStats {
 }
 
 /// Real error type for orchestrator
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum OrchestratorError {
     TaskExecutionFailed(String),
     PipelineStageFailed(String),

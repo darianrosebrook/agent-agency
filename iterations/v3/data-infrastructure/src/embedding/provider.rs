@@ -389,9 +389,17 @@ impl EmbeddingProvider for OnnxEmbeddingProvider {
     }
 
     async fn health_check(&self) -> Result<bool> {
-        // Stub implementation always returns healthy
+        // Check if tokenizer is available (basic health check for stub implementation)
         warn!("ONNX embedding provider health check using stub - actual ONNX integration disabled");
-        Ok(true)
+
+        // Perform a basic test tokenization to verify tokenizer functionality
+        match self.tokenizer.tokenize("health check test") {
+            Ok(_) => Ok(true),
+            Err(e) => {
+                warn!("ONNX provider health check failed: tokenizer error: {}", e);
+                Ok(false)
+            }
+        }
     }
 }
 
@@ -542,8 +550,15 @@ impl EmbeddingProvider for ClipEmbeddingProvider {
 
     async fn health_check(&self) -> Result<bool> {
         // Check if tokenizer is available and model can be accessed
-        // For now, always return true as this is a stub
         warn!("CLIP embedding provider health check using stub - actual CLIP model validation disabled");
-        Ok(true)
+
+        // Perform a basic test tokenization to verify tokenizer functionality
+        match self.tokenizer.tokenize("health check test") {
+            Ok(_) => Ok(true),
+            Err(e) => {
+                warn!("CLIP provider health check failed: tokenizer error: {}", e);
+                Ok(false)
+            }
+        }
     }
 }

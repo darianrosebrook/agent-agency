@@ -289,7 +289,7 @@ fn check_caws_compliance(spec: &WorkingSpec) -> InvariantCheck {
     };
 
     InvariantCheck {
-        invariant: CAWSInvariant::RequireStructuredLogging, // TODO: Add CAWSCompliance invariant to contracts
+        invariant: CAWSInvariant::CAWSCompliance,
         passed: violations.is_empty(),
         violations,
     }

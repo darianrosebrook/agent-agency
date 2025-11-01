@@ -1,39 +1,122 @@
 //! Test environment for E2E testing
 //!
-//! PLACEHOLDER: TestEnvironment and TestWorkspace implementations
-//! These are only used by scenarios that require full feature set.
+//! Provides functional implementations of TestEnvironment and TestWorkspace
+//! for testing scenarios. These implementations use real file system operations
+//! and can be extended with observability and advanced file operations as needed.
 
 use std::path::PathBuf;
+use std::collections::HashMap;
+use std::sync::Arc;
 use anyhow::Result;
+use tempfile::TempDir;
+use tokio::sync::RwLock;
 
-/// Test environment wrapper
+/// Metrics collected during testing
+#[derive(Debug, Clone)]
+pub struct TestMetrics {
+    pub iterations: f64,
+    pub model_calls: f64,
+    pub errors: f64,
+    pub duration_ms: f64,
+}
+
+/// Test environment wrapper for E2E testing
 #[derive(Debug)]
 pub struct TestEnvironment {
-    // PLACEHOLDER: Real implementation needed for full feature scenarios
+    temp_dir: TempDir,
+    metrics: Arc<RwLock<HashMap<String, f64>>>,
 }
 
 impl TestEnvironment {
     pub async fn new() -> Result<Self> {
-        Ok(Self {})
+        // Create temporary directory for testing
+        let temp_dir = tempfile::tempdir()?;
+        let metrics = Arc::new(RwLock::new(HashMap::new()));
+
+        Ok(Self { temp_dir, metrics })
     }
 
+    /// Create a test workspace
+    pub async fn create_workspace(&self, name: &str) -> Result<TestWorkspace> {
+        let workspace_path = self.temp_dir.path().join(name);
+
+        // Create directory if it doesn't exist
+        tokio::fs::create_dir_all(&workspace_path).await?;
+
+        // Initialize git repository
+        let workspace = TestWorkspace::new(workspace_path);
+        workspace.init_git().await?;
+
+        Ok(workspace)
+    }
+
+    /// Record a test metric
+    pub async fn record_metric(&self, name: &str, value: f64) -> Result<()> {
+        let mut metrics = self.metrics.write().await;
+        metrics.insert(name.to_string(), value);
+        Ok(())
+    }
+
+    /// Get collected metrics
+    pub async fn get_metrics(&self) -> Result<HashMap<String, f64>> {
+        let metrics = self.metrics.read().await;
+        Ok(metrics.clone())
+    }
+
+    /// Clean up the test environment
     pub async fn cleanup(&self) -> Result<()> {
+        // Cleanup is handled by TempDir drop
         Ok(())
     }
 }
 
-/// Test workspace wrapper
+/// Test workspace wrapper for file operations during testing
 #[derive(Debug)]
 pub struct TestWorkspace {
     path: PathBuf,
 }
 
 impl TestWorkspace {
+    fn new(path: PathBuf) -> Self {
+        Self { path }
+    }
+
     pub fn path(&self) -> &PathBuf {
         &self.path
     }
 
+    /// Initialize git repository in the workspace
     pub async fn init_git(&self) -> Result<()> {
+        use std::process::Command;
+
+        // Initialize git repo
+        Command::new("git")
+            .args(&["init"])
+            .current_dir(&self.path)
+            .output()?;
+
+        // Configure git user
+        Command::new("git")
+            .args(&["config", "user.name", "Test User"])
+            .current_dir(&self.path)
+            .output()?;
+
+        Command::new("git")
+            .args(&["config", "user.email", "test@example.com"])
+            .current_dir(&self.path)
+            .output()?;
+
+        // Initial commit
+        Command::new("git")
+            .args(&["add", "."])
+            .current_dir(&self.path)
+            .output()?;
+
+        Command::new("git")
+            .args(&["commit", "-m", "Initial commit"])
+            .current_dir(&self.path)
+            .output()?;
+
         Ok(())
     }
 }

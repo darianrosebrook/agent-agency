@@ -12,10 +12,11 @@ use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 use chrono::Utc;
 
-use crate::types::{TaskDescriptor, TaskPriority};
+use agent_agency_contracts::{TaskDescriptor, TaskPriority};
 use crate::frontier::{Frontier, FrontierConfig, FrontierStats, TaskEntry, TaskStatus, FrontierError};
 use crate::OrchestrationResult;
-use data_infrastructure::Row; // For SQLx Row trait
+use data_infrastructure::{Row, WaiverRequest}; // For SQLx Row trait and waiver types
+use data_infrastructure::file_operations::{ChangeSet, AllowList, Budgets, validate_changeset_with_waiver, apply_waiver};
 use crate::audit_trail::{
     AuditTrailManager, AuditConfig, AuditLogLevel, AuditOutputFormat,
     FileOperationsAuditor, TerminalAuditor, CouncilAuditor, AgentThinkingAuditor,
@@ -446,25 +447,7 @@ use data_infrastructure::api::WaiverRequest;
 use data_infrastructure::DatabaseClient;
 use crate::error_handling::{CircuitBreaker, CircuitBreakerStats, CircuitBreakerState};
 
-// Real types now available from restored modules
-// Placeholder types removed
-
-// Placeholder structs for missing functionality
-#[derive(Debug, Clone)]
-pub struct ChangeSet {
-    pub files: Vec<String>,
-}
-
-#[derive(Debug, Clone)]
-pub struct AllowList {
-    pub patterns: Vec<String>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Budgets {
-    pub max_files: usize,
-    pub max_loc: usize,
-}
+// Real types now imported from data_infrastructure::file_operations
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum RiskLevel {
@@ -752,22 +735,7 @@ pub enum RiskImpact {
     Critical,
 }
 
-// Placeholder functions
-pub fn validate_changeset_with_waiver(
-    _changeset: &ChangeSet,
-    _allowlist: &AllowList,
-    _budgets: &Budgets,
-) -> Result<(), String> {
-    Ok(())
-}
-
-pub fn apply_waiver(
-    _waiver_request: &mut WaiverRequest,
-    _approver: &str,
-    _justification: Option<String>,
-) -> Result<(), String> {
-    Ok(())
-}
+// Functions now imported from data_infrastructure::file_operations
 
 /// Context for tracking active operations
 #[derive(Debug, Clone)]
@@ -1706,7 +1674,7 @@ impl AuditedOrchestrator {
 }
 
 /// Comprehensive audit statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AuditStatistics {
     pub total_events: u64,
     pub events_by_category: HashMap<AuditCategory, u64>,

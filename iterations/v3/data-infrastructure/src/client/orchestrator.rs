@@ -1001,20 +1001,85 @@ impl DatabaseOperations for DatabaseClient {
         Ok(())
     }
 
-    async fn create_planning_session(&self, _session: CreatePlanningSession) -> Result<PlanningSession> {
-        Err(anyhow::anyhow!("Not implemented"))
+    async fn create_planning_session(&self, session: CreatePlanningSession) -> Result<PlanningSession> {
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        
+        sqlx::query_as::<_, PlanningSession>(
+            r#"
+            INSERT INTO planning_sessions (
+                id, plan_id, orchestrator_id, worker_pool_id, council_session_id,
+                audit_correlation_id, status, execution_state, started_at, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            RETURNING id, plan_id, orchestrator_id, worker_pool_id, council_session_id,
+                      audit_correlation_id, status, execution_state, started_at, completed_at, created_at
+            "#
+        )
+        .bind(id)
+        .bind(session.plan_id)
+        .bind(&session.orchestrator_id)
+        .bind(&session.worker_pool_id)
+        .bind(session.council_session_id)
+        .bind(session.audit_correlation_id)
+        .bind(session.status.as_deref().unwrap_or("active"))
+        .bind(session.execution_state.unwrap_or_else(|| serde_json::json!({})))
+        .bind(now)
+        .bind(now)
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to create planning session")
     }
 
-    async fn get_planning_session(&self, _id: Uuid) -> Result<Option<PlanningSession>> {
-        Ok(None)
+    async fn get_planning_session(&self, id: Uuid) -> Result<Option<PlanningSession>> {
+        sqlx::query_as::<_, PlanningSession>(
+            r#"
+            SELECT id, plan_id, orchestrator_id, worker_pool_id, council_session_id,
+                   audit_correlation_id, status, execution_state, started_at, completed_at, created_at
+            FROM planning_sessions
+            WHERE id = $1
+            "#
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to get planning session")
     }
 
-    async fn get_planning_sessions(&self, _plan_id: Uuid) -> Result<Vec<PlanningSession>> {
-        Ok(vec![])
+    async fn get_planning_sessions(&self, plan_id: Uuid) -> Result<Vec<PlanningSession>> {
+        sqlx::query_as::<_, PlanningSession>(
+            r#"
+            SELECT id, plan_id, orchestrator_id, worker_pool_id, council_session_id,
+                   audit_correlation_id, status, execution_state, started_at, completed_at, created_at
+            FROM planning_sessions
+            WHERE plan_id = $1
+            ORDER BY created_at DESC
+            "#
+        )
+        .bind(plan_id)
+        .fetch_all(&self.pool)
+        .await
+        .context("Failed to get planning sessions")
     }
 
-    async fn update_planning_session(&self, _id: Uuid, _update: UpdatePlanningSession) -> Result<PlanningSession> {
-        Err(anyhow::anyhow!("Not implemented"))
+    async fn update_planning_session(&self, id: Uuid, update: UpdatePlanningSession) -> Result<PlanningSession> {
+        sqlx::query_as::<_, PlanningSession>(
+            r#"
+            UPDATE planning_sessions
+            SET status = COALESCE($1, status),
+                execution_state = COALESCE($2, execution_state),
+                completed_at = COALESCE($3, completed_at)
+            WHERE id = $4
+            RETURNING id, plan_id, orchestrator_id, worker_pool_id, council_session_id,
+                      audit_correlation_id, status, execution_state, started_at, completed_at, created_at
+            "#
+        )
+        .bind(update.status)
+        .bind(update.execution_state)
+        .bind(update.completed_at)
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("Planning session not found: {}", id))
     }
 
     async fn create_evidence_artifact(&self, _artifact: CreateEvidenceArtifact) -> Result<EvidenceArtifact> {
@@ -1033,20 +1098,97 @@ impl DatabaseOperations for DatabaseClient {
         Err(anyhow::anyhow!("Not implemented"))
     }
 
-    async fn create_planning_audit_event(&self, _event: CreatePlanningAuditEvent) -> Result<PlanningAuditEvent> {
-        Err(anyhow::anyhow!("Not implemented"))
+    async fn create_planning_audit_event(&self, event: CreatePlanningAuditEvent) -> Result<PlanningAuditEvent> {
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        
+        sqlx::query_as::<_, PlanningAuditEvent>(
+            r#"
+            INSERT INTO planning_audit_events (
+                id, plan_id, milestone_id, worker_id, event_type, description, metadata, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING id, plan_id, milestone_id, worker_id, event_type, description, metadata, created_at
+            "#
+        )
+        .bind(id)
+        .bind(event.plan_id)
+        .bind(event.milestone_id)
+        .bind(event.worker_id)
+        .bind(&event.event_type)
+        .bind(&event.description)
+        .bind(event.metadata.unwrap_or_else(|| serde_json::json!({})))
+        .bind(now)
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to create planning audit event")
     }
 
-    async fn get_planning_audit_events(&self, _plan_id: Uuid) -> Result<Vec<PlanningAuditEvent>> {
-        Ok(vec![])
+    async fn get_planning_audit_events(&self, plan_id: Uuid) -> Result<Vec<PlanningAuditEvent>> {
+        sqlx::query_as::<_, PlanningAuditEvent>(
+            r#"
+            SELECT id, plan_id, milestone_id, worker_id, event_type, description, metadata, created_at
+            FROM planning_audit_events
+            WHERE plan_id = $1
+            ORDER BY created_at DESC
+            "#
+        )
+        .bind(plan_id)
+        .fetch_all(&self.pool)
+        .await
+        .context("Failed to get planning audit events")
     }
 
-    async fn create_execution_plan(&self, _plan: CreateExecutionPlan) -> Result<ExecutionPlan> {
-        Err(anyhow::anyhow!("Not implemented"))
+    async fn create_execution_plan(&self, plan: CreateExecutionPlan) -> Result<ExecutionPlan> {
+        let now = Utc::now();
+        
+        sqlx::query_as::<_, ExecutionPlan>(
+            r#"
+            INSERT INTO execution_plans (
+                id, session_id, working_spec_id, title, overview, state,
+                milestones, dependency_graph, change_budget, quality_gates,
+                evidence_requirements, active_waivers, metadata, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            RETURNING id, session_id, working_spec_id, title, overview, state,
+                      milestones, dependency_graph, change_budget, quality_gates,
+                      evidence_requirements, active_waivers, metadata, created_at, updated_at,
+                      approved_at, completed_at
+            "#
+        )
+        .bind(plan.id)
+        .bind(plan.session_id)
+        .bind(&plan.working_spec_id)
+        .bind(&plan.title)
+        .bind(plan.overview.as_deref())
+        .bind(plan.state.as_deref().unwrap_or("draft"))
+        .bind(plan.milestones.unwrap_or_else(|| serde_json::json!([])))
+        .bind(plan.dependency_graph.unwrap_or_else(|| serde_json::json!({})))
+        .bind(plan.change_budget.unwrap_or_else(|| serde_json::json!({})))
+        .bind(plan.quality_gates.unwrap_or_else(|| serde_json::json!({})))
+        .bind(plan.evidence_requirements.unwrap_or_else(|| serde_json::json!([])))
+        .bind(plan.active_waivers.unwrap_or_else(|| serde_json::json!([])))
+        .bind(plan.metadata.unwrap_or_else(|| serde_json::json!({})))
+        .bind(now)
+        .bind(now)
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to create execution plan")
     }
 
-    async fn get_execution_plan(&self, _id: Uuid) -> Result<Option<ExecutionPlan>> {
-        Ok(None)
+    async fn get_execution_plan(&self, id: Uuid) -> Result<Option<ExecutionPlan>> {
+        sqlx::query_as::<_, ExecutionPlan>(
+            r#"
+            SELECT id, session_id, working_spec_id, title, overview, state,
+                   milestones, dependency_graph, change_budget, quality_gates,
+                   evidence_requirements, active_waivers, metadata, created_at, updated_at,
+                   approved_at, completed_at
+            FROM execution_plans
+            WHERE id = $1
+            "#
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to get execution plan")
     }
 
     async fn get_execution_plans(&self) -> Result<Vec<ExecutionPlan>> {

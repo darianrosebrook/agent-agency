@@ -6,8 +6,17 @@
 
 pub mod contract_errors;
 pub mod execution_artifacts;
+pub mod engine;
+pub mod invariants;
+pub mod types;
 pub mod final_verdict;
+pub mod judge_io;
 pub mod judge_verdict;
+pub mod milestone_contract;
+pub mod errors;
+pub mod planning;
+pub mod planning_io;
+pub mod ports;
 pub mod quality_report;
 pub mod refinement_decision;
 pub mod router_decision;
@@ -22,6 +31,7 @@ pub mod task_executor;
 pub mod task_executor_provider;
 
 pub use contract_errors::{ContractError, ContractKind, ValidationIssue};
+pub use invariants::{CAWSInvariant, ViolationLocation, InvariantCheck, InvariantResults, Severity, run_caws_invariants};
 pub use execution_artifacts::{
     validate_execution_artifacts_value, AuditEvent, CodeChanges, CoverageResults, DiffArtifact,
     DiffHunk, E2eScenarioResult, E2eTestResults, ExecutionArtifacts, ExecutionEnvironment,
@@ -59,7 +69,7 @@ pub use schema::{
 };
 pub use task_request::{
     validate_task_request_value, BudgetLimits, ChangeType, Environment, FileChange,
-    RiskTier, ScopeRestrictions, TaskConstraints, TaskMetadata, TaskPriority,
+    RiskTier, ScopeRestrictions, TaskConstraints, TaskMetadata,
     TaskRequest, TaskContext as RequestTaskContext,
 };
 pub use task_response::{
@@ -84,7 +94,7 @@ pub use worker_types::{
     WorkerPoolEvent, WorkerEventType,
 };
 pub use execution_events::{
-    ExecutionEvent, WorkingSpecScope,
+    ExecutionEvent,
 };
 pub use task_executor::{
     TaskExecutor, TaskExecutionResult, TaskSpec, TaskRequirements, TaskContext, TaskScope, ExecutionStatus,
@@ -92,3 +102,22 @@ pub use task_executor::{
 pub use task_executor_provider::{
     TaskExecutorProvider, TaskExecutorFactory,
 };
+pub use engine::{
+    JudgeEngine, EngineRequest, EngineResponse, EngineError, EngineCaps, TokenUsage,
+};
+pub use judge_io::{
+    JudgePrompt, JudgeVerdict, RubricItem, WorkingSpecEvidence, VerdictLabel, Violation, Severity as JudgeSeverity,
+};
+pub use planning::{
+    DetailedQualityMetrics, CoverageMetrics, TestQualityMetrics, CodeQualityMetrics, DocumentationQualityMetrics,
+    QualityMetrics, PerformanceMetrics, HardwareResourceRequirements, NetworkRequirements, HumanResourceRequirements,
+};
+pub use planning_io::*;
+pub use ports::planning_engine::PlanningEngine;
+pub use ports::memory_system::MemorySystem;
+pub use ports::council_coordinator::CouncilCoordinator;
+pub use ports::research_evidence::ResearchEvidenceCollector;
+pub use ports::tool_chain::ToolChainPlanner;
+pub use ports::data_processing::DataProcessingService;
+pub use types::prelude::*;
+pub use errors::*;

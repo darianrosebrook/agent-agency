@@ -704,6 +704,17 @@ pub struct ArtifactMetadata {
     pub tags: Vec<String>,
 }
 
+impl Default for ArtifactMetadata {
+    fn default() -> Self {
+        Self {
+            compression_applied: None,
+            storage_location: None,
+            retention_policy: None,
+            tags: Vec::new(),
+        }
+    }
+}
+
 /// Validate an execution artifacts value against the JSON schema
 pub fn validate_execution_artifacts_value(value: &serde_json::Value) -> Result<(), crate::contract_errors::ContractError> {
     use crate::contract_errors::{ContractError, ContractKind};

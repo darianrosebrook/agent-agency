@@ -4,16 +4,18 @@
 //! with comprehensive constraints, context, and validation requirements.
 
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use uuid::Uuid;
 
 /// Task request for autonomous execution
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct TaskRequest {
     /// Contract version for compatibility
     pub version: String,
 
     /// Unique task identifier
+    #[schemars(with = "String")]
     pub id: Uuid,
 
     /// Natural language task description
@@ -33,7 +35,7 @@ pub struct TaskRequest {
 }
 
 /// Workspace context and dependencies
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct TaskContext {
     /// Root directory path for the workspace
@@ -53,7 +55,7 @@ pub struct TaskContext {
 }
 
 /// File change information
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct FileChange {
     /// File path
@@ -63,11 +65,12 @@ pub struct FileChange {
     pub change_type: ChangeType,
 
     /// When the change occurred
+    #[schemars(with = "String")]
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
 /// Type of file change
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ChangeType {
     Added,
@@ -76,7 +79,7 @@ pub enum ChangeType {
 }
 
 /// Target environment
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Environment {
     Development,
@@ -85,7 +88,7 @@ pub enum Environment {
 }
 
 /// Execution constraints and safety limits
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct TaskConstraints {
     /// Risk tier determining validation strictness
@@ -109,7 +112,7 @@ pub struct TaskConstraints {
 }
 
 /// Risk tier for task execution
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum RiskTier {
     /// Tier 1: Critical - highest scrutiny, manual approval required
@@ -123,7 +126,7 @@ pub enum RiskTier {
 }
 
 /// Change budget constraints
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct BudgetLimits {
     /// Maximum files that can be modified
@@ -136,7 +139,7 @@ pub struct BudgetLimits {
 }
 
 /// Path-based access restrictions
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct ScopeRestrictions {
     /// Allowed file/directory paths (regex patterns)
@@ -149,7 +152,7 @@ pub struct ScopeRestrictions {
 }
 
 /// Additional task metadata
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct TaskMetadata {
     /// Who requested this task
@@ -165,15 +168,8 @@ pub struct TaskMetadata {
     pub tags: Vec<String>,
 }
 
-/// Task priority levels
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum TaskPriority {
-    Low,
-    Normal,
-    High,
-    Urgent,
-}
+// Use the unified TaskPriority from types/planning.rs
+pub use crate::types::planning::TaskPriority;
 
 /// Validate a task request value against the JSON schema
 pub fn validate_task_request_value(value: &serde_json::Value) -> Result<(), crate::contract_errors::ContractError> {

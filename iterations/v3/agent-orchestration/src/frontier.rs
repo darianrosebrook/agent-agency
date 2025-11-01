@@ -5,7 +5,7 @@
 //!
 //! @author @darianrosebrook
 
-use crate::types::{TaskDescriptor, TaskPriority};
+use agent_agency_contracts::{types::planning::TaskDescriptor, TaskPriority};
 use anyhow::{Context, Result};
 use std::collections::{BinaryHeap, HashMap};
 use std::sync::{Arc, RwLock};
@@ -268,15 +268,16 @@ impl Frontier {
 
         // Base priority score
         match descriptor.priority {
-            TaskPriority::Critical => score += 1000,
-            TaskPriority::High => score += 800,
-            TaskPriority::Normal => score += 500,
-            TaskPriority::Medium => score += 300,
-            TaskPriority::Low => score += 200,
+            agent_agency_contracts::TaskPriority::Critical => score += 1000,
+            agent_agency_contracts::TaskPriority::High => score += 800,
+            agent_agency_contracts::TaskPriority::Urgent => score += 700,
+            agent_agency_contracts::TaskPriority::Medium => score += 500,
+            agent_agency_contracts::TaskPriority::Normal => score += 400,
+            agent_agency_contracts::TaskPriority::Low => score += 200,
         }
 
         // Boost score based on scope size (smaller scope = higher priority)
-        let scope_size = descriptor.scope_in.in_scope.len();
+        let scope_size = descriptor.scope_in.allowed_paths.len();
         if scope_size <= 5 {
             score += 200;
         } else if scope_size <= 20 {
