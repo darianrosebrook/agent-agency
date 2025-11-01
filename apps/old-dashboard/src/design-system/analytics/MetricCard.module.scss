@@ -1,0 +1,241 @@
+/**
+ * MetricCard Component Styles
+ * Professional metric display with enhanced typography
+ *
+ * @author @darianrosebrook
+ */
+
+.metricCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-primary-light);
+  }
+
+  /* Size Variants */
+  &.small {
+    padding: var(--spacing-4);
+    
+    .value {
+      font-size: 1.5rem;
+    }
+  }
+
+  &.medium {
+    padding: var(--spacing-5);
+    
+    .value {
+      font-size: 2.25rem;
+    }
+  }
+
+  &.large {
+    padding: var(--spacing-6);
+    
+    .value {
+      font-size: 3rem;
+    }
+  }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-4);
+}
+
+.titleSection {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  flex: 1;
+}
+
+.icon {
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+}
+
+.title {
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.valueSection {
+  margin-bottom: var(--spacing-3);
+}
+
+.value {
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  margin: var(--spacing-1) 0 0 0;
+  opacity: 0.8;
+}
+
+.changeSection {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-2);
+}
+
+.changeIndicator {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  font-size: 0.875rem;
+
+  &.increase {
+    background: var(--color-success-light);
+    color: var(--color-success);
+  }
+
+  &.decrease {
+    background: var(--color-error-light);
+    color: var(--color-error);
+  }
+
+  &.neutral {
+    background: var(--color-surface-secondary);
+    color: var(--color-text-secondary);
+  }
+}
+
+.trendSection {
+  position: absolute;
+  top: var(--spacing-4);
+  right: var(--spacing-4);
+}
+
+.trendIndicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-secondary);
+
+  &.up {
+    color: var(--color-success);
+    background: var(--color-success-light);
+  }
+
+  &.down {
+    color: var(--color-error);
+    background: var(--color-error-light);
+  }
+
+  &.stable {
+    color: var(--color-text-secondary);
+    background: var(--color-surface-secondary);
+  }
+}
+
+/* Status-based styling */
+.metricCard[data-status="good"] {
+  border-left: 4px solid var(--color-success);
+}
+
+.metricCard[data-status="warning"] {
+  border-left: 4px solid var(--color-warning);
+}
+
+.metricCard[data-status="critical"] {
+  border-left: 4px solid var(--color-error);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .metricCard {
+    padding: var(--spacing-4);
+  }
+
+  .value {
+    font-size: 1.75rem !important;
+  }
+
+  .trendSection {
+    top: var(--spacing-3);
+    right: var(--spacing-3);
+  }
+
+  .trendIndicator {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .metricCard {
+    padding: var(--spacing-3);
+  }
+
+  .value {
+    font-size: 1.5rem !important;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-2);
+  }
+
+  .changeSection {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-1);
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .metricCard {
+    border-width: 2px;
+  }
+
+  .value {
+    font-weight: 800;
+  }
+
+  .changeIndicator {
+    border: 1px solid currentColor;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .metricCard {
+    transition: none;
+  }
+
+  .metricCard:hover {
+    transform: none;
+  }
+}

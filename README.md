@@ -6,7 +6,7 @@
 
 All system status claims must be verified against our rigorous standards. AI coding agents frequently produce overly optimistic reports about system readiness when only stubs, placeholders, or mock implementations exist.
 
-**Required Reading**: [`iterations/v4/docs/internal/verification-requirements.md`](iterations/v4/docs/internal/verification-requirements.md)
+**Required Reading**: [`docs/architecture/coreml-first-decision.md`](docs/architecture/coreml-first-decision.md)
 
 This document provides guidelines to avoid unverified claims and maintain realistic progress assessment.
 
@@ -16,7 +16,7 @@ This document provides guidelines to avoid unverified claims and maintain realis
 
 ## Overview
 
-**Agent Agency V3** is an AI orchestration platform that implements constitutional governance for autonomous agent operations. The system orchestrates multiple local AI models (Ollama/Gemma + CoreML/FastViT) with hot-swapping capabilities, using a council of specialized AI judges to provide real-time oversight, ensuring ethical compliance, technical quality, and system coherence through evidence-based decision making.
+**Agent Agency V3** is an AI orchestration platform that implements constitutional governance for autonomous agent operations. The system leverages CoreML-optimized Mistral models with Apple Neural Engine acceleration for high-performance local inference, using a council of specialized AI judges to provide real-time oversight, ensuring ethical compliance, technical quality, and system coherence through evidence-based decision making.
 
 **Once functional duplication consolidation is complete**, the platform will expand to include advanced agent memory systems, multi-modal processing, expanded tool ecosystems, and enhanced user experiences. See [`docs/FEATURE_DEVELOPMENT_ROADMAP.md`](docs/FEATURE_DEVELOPMENT_ROADMAP.md) for detailed plans.
 
@@ -157,12 +157,12 @@ All tools leverage existing systems (claim extraction, council arbitration, prov
 
 The **V3 iteration** provides an AI orchestration platform with core features implemented:
 
-#### Multi-Model AI System Operational
-- **Ollama Integration**: Local Gemma 3N model for general-purpose AI tasks with circuit breaker patterns
+#### CoreML-First AI System Operational
+- **CoreML Mistral**: Primary model for all constitutional reasoning, judge deliberations, and orchestration tasks with ANE acceleration (2.8x speedup)
 - **CoreML Acceleration**: Apple Silicon optimized models including FastViT T8 F16 for vision processing with **thread-safe FFI integration**
 - **Model Hot-Swapping**: Zero-downtime model replacement with performance tracking and A/B testing
 - **Self-Prompting Loops**: Autonomous agent that iteratively improves outputs until quality thresholds met
-- **Model Registry**: Performance-weighted routing with task-specific model affinities (code tasks → Ollama, vision → CoreML)
+- **Model Registry**: Performance-weighted routing with task-specific model affinities (all critical paths → CoreML Mistral)
 - **Send/Sync Safety**: **NEW** - CoreML operations safely integrated with async Rust runtime through thread confinement and channel-based communication
 
 #### CoreML Safety Architecture **Implemented**
@@ -200,8 +200,8 @@ The **V3 iteration** provides an AI orchestration platform with core features im
 - **Deployment Ready**: Basic Docker setup, production deployment TODO
 
 #### Advanced Features Planned/Incomplete
-- **Multimodal Processing**: Framework exists, CoreML/FastViT vision processing operational, advanced enrichers TODO
-- **Apple Silicon Optimization**: CoreML integration operational, advanced thermal management TODO
+- **Multimodal Processing**: Framework exists, CoreML/FastViT vision processing framework exists but disabled due to dependency conflicts, advanced enrichers TODO
+- **Apple Silicon Optimization**: CoreML infrastructure exists but real inference disabled (returns mock responses), advanced thermal management TODO
 - **Distributed Processing**: Single-node only, distributed features TODO
 - **Advanced Analytics**: Basic metrics, comprehensive analytics TODO
 
@@ -240,7 +240,7 @@ This framework investigates approaches to multimodal AI systems and constitution
 The V3 system is designed for environments requiring quality assurance with local execution:
 
 - **Development Teams**: CAWS governance ensures code generation with audit trails
-- **Privacy-Sensitive Organizations**: Local Ollama/CoreML models prevent data leakage to cloud providers
+- **Privacy-Sensitive Organizations**: Local CoreML Mistral models prevent data leakage to cloud providers
 - **Apple Silicon Ecosystems**: Native CoreML/ANE acceleration provides exceptional performance on Mac hardware
 - **Quality-Critical Workflows**: Self-prompting loops with satisficing logic prevent over-optimization
 - **Cost-Conscious Development**: Eliminates per-API-call costs for high-volume AI-assisted tasks
@@ -248,7 +248,7 @@ The V3 system is designed for environments requiring quality assurance with loca
 ### System Limitations
 While powerful for its target use cases, V3 has specific constraints:
 
-- **Local Model Constraints**: Gemma 3N has smaller parameter count than GPT-4, affecting reasoning depth and training data recency
+- **Local Model Constraints**: CoreML Mistral provides strong reasoning capabilities with Apple Silicon optimization, though may have different training data recency than GPT-4
 - **Hardware Dependencies**: CoreML optimizations are Apple Silicon-specific, limiting platform portability
 - **Resource Requirements**: Requires powerful local machines (32GB+ RAM, M-series chips) that most developers lack
 - **Cold Start Times**: Model loading and initialization can take 30-60 seconds, unsuitable for interactive workflows

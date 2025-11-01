@@ -5,6 +5,7 @@
 //! orchestration can depend on without depending on the concrete implementation.
 
 use async_trait::async_trait;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -14,8 +15,10 @@ use chrono::{DateTime, Utc};
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskExecutionResult {
     /// Unique execution identifier
+    #[schemars(with = "String")]
     pub execution_id: Uuid,
     /// Task identifier
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     /// Whether execution was successful
     pub success: bool,
@@ -34,6 +37,7 @@ pub struct TaskExecutionResult {
     /// Execution duration in milliseconds
     pub duration_ms: u64,
     /// Worker that executed the task
+    #[schemars(with = "Option<String>")]
     pub worker_id: Option<Uuid>,
 }
 
@@ -41,6 +45,7 @@ pub struct TaskExecutionResult {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskSpec {
     /// Unique task identifier
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Task description/title
     pub title: String,
@@ -137,7 +142,9 @@ pub struct TaskRequirements {
 /// Task context for execution
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskContext {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
+    #[schemars(with = "String")]
     pub worker_id: Uuid,
     #[schemars(with = "String")]
     pub start_time: DateTime<Utc>,

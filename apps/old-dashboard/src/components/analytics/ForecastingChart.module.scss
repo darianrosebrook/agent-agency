@@ -1,0 +1,190 @@
+@import '@/styles/mixins.scss';
+
+.forecastingChart {
+  @include card-base;
+  width: 100%;
+  max-width: none;
+  padding: var(--spacing-lg);
+}
+
+// Dark mode disabled - Light theme only
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+// Dark mode disabled - Light theme only
+
+.timeRangeLabel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+// Dark mode disabled - Light theme only
+
+.dateInput {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--border-radius-sm);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  min-width: 120px;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 2px rgba(var(--color-primary-500-rgb), 0.1);
+  }
+
+  &:hover {
+    border-color: var(--color-border-hover);
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.quickRanges {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+// Dark mode disabled - Light theme only
+
+.chartMeta {
+  display: flex;
+  gap: var(--spacing-lg);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+
+  span {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+
+    &::before {
+      content: "•";
+      color: var(--color-text-tertiary);
+    }
+
+    &:first-child::before {
+      display: none;
+    }
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.chart {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-primary);
+}
+
+// Dark mode disabled - Light theme only
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+// Dark mode disabled - Light theme only
+
+.forecastDetails {
+  .detailSection {
+    @include card-base;
+    padding: var(--spacing-lg);
+    background-color: var(--color-bg-secondary);
+
+    h4 {
+      font-size: var(--font-size-base);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-primary);
+      margin: 0 0 var(--spacing-md) 0;
+    }
+  }
+
+// Dark mode disabled - Light theme only
+
+  .predictionItem {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+  }
+
+// Dark mode disabled - Light theme only
+
+  .predictionValue {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    font-family: var(--font-family-mono);
+  }
+}
+
+// Loading and error states
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-3xl);
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--color-border);
+    border-top: 3px solid var(--color-primary-500);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: var(--spacing-lg);
+  }
+
+  p {
+    font-size: var(--font-size-base);
+    color: var(--color-text-secondary);
+    margin: 0;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.noData {
+  text-align: center;
+  padding: var(--spacing-3xl);
+
+  .emptyIcon {
+    font-size: var(--font-size-4xl);
+    margin-bottom: var(--spacing-lg);
+  }
+
+  h3 {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    margin: 0 0 var(--spacing-md) 0;
+  }
+
+  p {
+    font-size: var(--font-size-base);
+    color: var(--color-text-secondary);
+    margin: 0;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

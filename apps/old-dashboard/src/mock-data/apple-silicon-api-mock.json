@@ -1,0 +1,225 @@
+{
+  "hardwareMetrics": {
+    "timestamp": "2024-01-15T10:30:00Z",
+    "aneUtilization": 78.5,
+    "gpuUtilization": 45.2,
+    "cpuUtilization": 32.1,
+    "memoryUsage": 6.8,
+    "memoryTotal": 16,
+    "temperature": 42.3,
+    "powerConsumption": 18.7,
+    "fanSpeed": 1800,
+    "throttling": false
+  },
+  "thermalMetrics": {
+    "timestamp": "2024-01-15T10:30:00Z",
+    "cpuTemperature": 45.2,
+    "gpuTemperature": 42.8,
+    "aneTemperature": 38.5,
+    "ambientTemperature": 28.3,
+    "fanSpeed": 1800,
+    "coolingMode": "active",
+    "thermalPressure": "nominal"
+  },
+  "models": [
+    {
+      "id": "model-001",
+      "name": "FastViT-T8",
+      "type": "ane",
+      "status": "running",
+      "utilization": 78.5,
+      "memoryUsage": 2.3,
+      "inferenceCount": 1247,
+      "averageLatency": 2.3,
+      "lastUsed": "2024-01-15T10:30:00Z"
+    },
+    {
+      "id": "model-002",
+      "name": "ResNet-50",
+      "type": "gpu",
+      "status": "running",
+      "utilization": 45.2,
+      "memoryUsage": 1.8,
+      "inferenceCount": 892,
+      "averageLatency": 8.7,
+      "lastUsed": "2024-01-15T10:28:00Z"
+    },
+    {
+      "id": "model-003",
+      "name": "BERT-Base",
+      "type": "cpu",
+      "status": "idle",
+      "utilization": 12.1,
+      "memoryUsage": 0.9,
+      "inferenceCount": 156,
+      "averageLatency": 15.2,
+      "lastUsed": "2024-01-15T10:15:00Z"
+    },
+    {
+      "id": "model-004",
+      "name": "GPT-2-Small",
+      "type": "ane",
+      "status": "loaded",
+      "utilization": 0,
+      "memoryUsage": 1.2,
+      "inferenceCount": 0,
+      "averageLatency": 0,
+      "lastUsed": "2024-01-15T09:45:00Z"
+    }
+  ],
+  "performanceMetrics": {
+    "inferenceThroughput": 2847,
+    "modelLoadTime": 0.23,
+    "memoryBandwidth": 45.6,
+    "computeEfficiency": 89.3,
+    "powerEfficiency": 78.2,
+    "thermalEfficiency": 92.1
+  },
+  "routingDecisions": [
+    {
+      "id": "routing-001",
+      "timestamp": "2024-01-15T10:30:00Z",
+      "modelId": "model-001",
+      "requestedHardware": "auto",
+      "assignedHardware": "ane",
+      "reason": "Optimal performance for neural network inference",
+      "performance": {
+        "expectedLatency": 2.1,
+        "powerConsumption": 12.3,
+        "confidence": 0.94
+      }
+    },
+    {
+      "id": "routing-002",
+      "timestamp": "2024-01-15T10:28:00Z",
+      "modelId": "model-002",
+      "requestedHardware": "gpu",
+      "assignedHardware": "gpu",
+      "reason": "GPU acceleration for computer vision tasks",
+      "performance": {
+        "expectedLatency": 8.5,
+        "powerConsumption": 18.7,
+        "confidence": 0.89
+      }
+    },
+    {
+      "id": "routing-003",
+      "timestamp": "2024-01-15T10:25:00Z",
+      "modelId": "model-003",
+      "requestedHardware": "cpu",
+      "assignedHardware": "cpu",
+      "reason": "CPU fallback for general processing",
+      "performance": {
+        "expectedLatency": 15.8,
+        "powerConsumption": 8.2,
+        "confidence": 0.76
+      }
+    }
+  ],
+  "routingStats": {
+    "totalRequests": 2847,
+    "routingEfficiency": 0.89,
+    "hardwareDistribution": {
+      "ane": 1247,
+      "gpu": 892,
+      "cpu": 708
+    },
+    "averageLatency": 6.2,
+    "loadBalanceScore": 8.7
+  },
+  "thermalPolicies": [
+    {
+      "id": "policy-001",
+      "name": "Balanced Performance",
+      "description": "Optimized for balanced performance and thermal management",
+      "maxTemperature": 85,
+      "fanCurve": "balanced",
+      "throttlingEnabled": true,
+      "active": true
+    },
+    {
+      "id": "policy-002",
+      "name": "Quiet Operation",
+      "description": "Prioritizes quiet operation with lower performance",
+      "maxTemperature": 75,
+      "fanCurve": "quiet",
+      "throttlingEnabled": true,
+      "active": false
+    },
+    {
+      "id": "policy-003",
+      "name": "Maximum Performance",
+      "description": "Maximum performance with aggressive cooling",
+      "maxTemperature": 90,
+      "fanCurve": "performance",
+      "throttlingEnabled": false,
+      "active": false
+    }
+  ],
+  "thermalEvents": [
+    {
+      "id": "event-001",
+      "timestamp": "2024-01-15T10:25:00Z",
+      "type": "temperature_spike",
+      "severity": "medium",
+      "temperature": 78.5,
+      "component": "cpu",
+      "description": "CPU temperature exceeded 75°C threshold",
+      "resolved": true
+    },
+    {
+      "id": "event-002",
+      "timestamp": "2024-01-15T10:20:00Z",
+      "type": "cooling_activated",
+      "severity": "low",
+      "temperature": 72.3,
+      "component": "system",
+      "description": "Active cooling system activated",
+      "resolved": true
+    }
+  ],
+  "hardwareHealth": {
+    "overallHealth": "optimal",
+    "components": {
+      "ane": {
+        "status": "optimal",
+        "utilization": 78.5,
+        "temperature": 38.5,
+        "issues": []
+      },
+      "gpu": {
+        "status": "optimal",
+        "utilization": 45.2,
+        "temperature": 42.8,
+        "issues": []
+      },
+      "cpu": {
+        "status": "optimal",
+        "utilization": 32.1,
+        "temperature": 45.2,
+        "issues": []
+      },
+      "memory": {
+        "status": "optimal",
+        "utilization": 42.5,
+        "issues": []
+      },
+      "thermal": {
+        "status": "optimal",
+        "issues": []
+      }
+    },
+    "recommendations": [
+      "System operating within optimal parameters",
+      "Consider enabling performance mode for higher throughput"
+    ]
+  },
+  "powerMetrics": {
+    "currentConsumption": 18.7,
+    "averageConsumption": 16.2,
+    "efficiency": 78.2,
+    "batteryLevel": null,
+    "charging": null,
+    "thermalImpact": 0.12
+  }
+}

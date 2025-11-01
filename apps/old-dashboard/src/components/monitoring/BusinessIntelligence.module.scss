@@ -1,0 +1,173 @@
+@import '@/styles/mixins.scss';
+
+.businessIntelligence {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+}
+
+// Dark mode disabled - Light theme only
+
+.timeRangeSelector {
+  display: flex;
+  gap: var(--spacing-xs);
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-xs);
+  border: 1px solid var(--color-border);
+}
+
+// Dark mode disabled - Light theme only
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+// Dark mode disabled - Light theme only
+
+.qualityMetrics,
+.costMetrics,
+.engagementMetrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--spacing-md);
+}
+
+// Dark mode disabled - Light theme only
+
+.indicatorsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+// Dark mode disabled - Light theme only
+
+.indicatorLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex: 1;
+}
+
+// Dark mode disabled - Light theme only
+
+.indicatorValue {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  text-align: right;
+}
+
+// Loading and error states
+.loading,
+.error,
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--spacing-3xl);
+  color: var(--color-text-secondary);
+}
+
+// Dark mode disabled - Light theme only
+
+.loading p,
+.error p {
+  font-size: var(--font-size-base);
+  margin-bottom: var(--spacing-xl);
+}
+
+// Dark mode disabled - Light theme only
+
+.emptyState {
+  .emptyIcon {
+    font-size: var(--font-size-4xl);
+    margin-bottom: var(--spacing-lg);
+    opacity: 0.6;
+  }
+
+  h3 {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-medium);
+    margin-bottom: var(--spacing-sm);
+    margin-top: 0;
+  }
+
+  p {
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-relaxed);
+    margin: 0 0 var(--spacing-xl) 0;
+    max-width: 400px;
+  }
+
+// Dark mode disabled - Light theme only
+}
+
+// Responsive design
+@include breakpoint(lg) {
+  .kpiGrid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+
+// Dark mode disabled - Light theme only
+
+  .indicatorsGrid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+}
+
+@include breakpoint(md) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+
+// Dark mode disabled - Light theme only
+
+  .kpiGrid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+// Dark mode disabled - Light theme only
+
+  .indicatorsGrid {
+    grid-template-columns: 1fr;
+  }
+
+// Dark mode disabled - Light theme only
+}
+
+@include breakpoint(sm) {
+  .kpiGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+// Dark mode disabled - Light theme only
+
+  .timeRangeSelector {
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+  }
+
+// Dark mode disabled - Light theme only
+
+  .indicatorsGrid {
+    gap: var(--spacing-md);
+  }
+
+// Dark mode disabled - Light theme only
+
+  .indicatorLabel {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-xs);
+  }
+
+// Dark mode disabled - Light theme only
+}

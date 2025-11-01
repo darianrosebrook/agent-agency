@@ -25,13 +25,15 @@ use crate::error_handling::{CircuitBreaker, CircuitBreakerState, CircuitBreakerS
 use system_common_interfaces::DatabaseAuditOperations;
 use tracing::{debug, info, warn};
 
-// Use available crates instead
-// ConsensusCoordinator is not available in contracts, use placeholder
-pub type ConsensusCoordinator = String;
+// Import actual types from local modules
+use crate::consensus_coordinator::ConsensusCoordinator;
+use crate::types::OrchestratorConfig;
 
-// Placeholder types for missing modules
-pub type KnowledgeSeeker = String;
-pub type OrchestratorConfig = String;
+// KnowledgeSeeker trait for research integration
+// PLACEHOLDER: Proper implementation needed when research integration is functional
+pub trait KnowledgeSeeker: Send + Sync {
+    fn seek(&self, query: &str) -> Result<String, String>;
+}
 
 /// Context for tracking active operations
 #[derive(Debug, Clone)]
@@ -274,8 +276,6 @@ pub struct MultimodalOrchestrator {
     circuit_breaker: CircuitBreaker,
     /// Core ML model manager for accelerated inference
     coreml_manager: Option<Arc<CoreMLManager>>,
-    /// Knowledge seeker for research integration
-    knowledge_seeker: Option<Arc<KnowledgeSeeker>>,
     /// Council coordinator for decision-making
     council_coordinator: Option<Arc<ConsensusCoordinator>>,
     /// Audit trail manager for recording processing events
@@ -342,7 +342,6 @@ impl std::fmt::Debug for MultimodalOrchestrator {
             .field("job_scheduler", &self.job_scheduler)
             .field("circuit_breaker", &self.circuit_breaker)
             .field("coreml_manager", &self.coreml_manager.is_some())
-            .field("knowledge_seeker", &self.knowledge_seeker.is_some())
             .field("council_coordinator", &self.council_coordinator.is_some())
             .field("audit_trail", &self.audit_trail.is_some())
             .field("circuit_breakers", &self.circuit_breakers.len())
@@ -397,7 +396,6 @@ impl MultimodalOrchestrator {
                 },
             ),
             coreml_manager,
-            knowledge_seeker: None,
             council_coordinator: None,
             audit_trail: None,
             circuit_breakers: HashMap::new(),
@@ -412,11 +410,6 @@ impl MultimodalOrchestrator {
         let mut orchestrator = Self::new().await?;
         orchestrator.db_audit_ops = Some(db_audit_ops);
         Ok(orchestrator)
-    }
-
-    /// Set knowledge seeker for research integration
-    pub fn set_knowledge_seeker(&mut self, knowledge_seeker: Arc<KnowledgeSeeker>) {
-        self.knowledge_seeker = Some(knowledge_seeker);
     }
 
     /// Set audit trail manager for event recording

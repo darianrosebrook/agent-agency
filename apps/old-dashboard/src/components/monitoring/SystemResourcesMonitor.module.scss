@@ -1,0 +1,162 @@
+@import "@/styles/mixins.scss";
+
+.container {
+  background: var(--card-background);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  height: fit-content;
+}
+
+// Dark mode disabled - Light theme only
+
+.timestamp {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+// Dark mode disabled - Light theme only
+
+.metric {
+  background: var(--background-secondary);
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid var(--border-color-light);
+}
+
+// Dark mode disabled - Light theme only
+
+.metricIcon {
+  font-size: 1.25rem;
+}
+
+// Dark mode disabled - Light theme only
+
+.metricValue {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+// Dark mode disabled - Light theme only
+
+.progressFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+// Dark mode disabled - Light theme only
+
+.taskStat {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+
+  span:first-child {
+    color: var(--text-secondary);
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.errorText {
+  color: var(--error-color);
+  font-weight: 500;
+}
+
+// Dark mode disabled - Light theme only
+
+.responseTimeBar {
+  height: 4px;
+  background: var(--background-tertiary);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+// Dark mode disabled - Light theme only
+
+.statusSummary {
+  border-top: 1px solid var(--border-color-light);
+  padding-top: 1rem;
+}
+
+// Dark mode disabled - Light theme only
+
+.statusLabel {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+// Dark mode disabled - Light theme only
+
+.statusBadge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+
+  &.statusHealthy {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+  }
+
+  &.statusWarning {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning-color);
+  }
+
+  &.statusError {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--error-color);
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border-color);
+  border-top: 3px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+// Dark mode disabled - Light theme only
+
+.noData {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+
+  p {
+    margin: 0;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+  .metric {
+    background: var(--background-secondary-dark);
+    border-color: var(--border-color-light-dark);
+  }
+
+// Dark mode disabled - Light theme only
+
+  .responseTimeBar {
+    background: var(--background-tertiary-dark);
+  }
+
+// Dark mode disabled - Light theme only
+}

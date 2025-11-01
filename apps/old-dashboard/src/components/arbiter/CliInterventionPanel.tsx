@@ -1,0 +1,340 @@
+import { useState, useEffect } from "react";
+import { useArbiterVerdict } from "@/hooks/useArbiter";
+import Card, { CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import { Input, Badge, Button } from "@/design-system/primitives";
+// TODO: Implement Select component or use native select
+// import {
+//   Select,
+//   SelectContent,
+//   SelectItem,
+//   SelectTrigger,
+//   SelectValue,
+// } from "../shared/Select";
+import {
+  Play,
+  Pause,
+  Square,
+  Settings,
+  MessageSquare,
+  AlertTriangle,
+  CheckCircle,
+} from "lucide-react";
+
+interface CliInterventionPanelProps {
+  taskId: string;
+  onIntervention?: (action: string, params?: any) => void;
+}
+
+type InterventionMode = "strict" | "auto" | "dry-run";
+type TaskStatus =
+  | "planning"
+  | "executing"
+  | "paused"
+  | "waiting_approval"
+  | "completed"
+  | "failed";
+
+export function CliInterventionPanel({
+  taskId,
+  onIntervention,
+}: CliInterventionPanelProps) {
+  const { verdict } = useArbiterVerdict(taskId);
+  const [interventionMode, setInterventionMode] =
+    useState<InterventionMode>("auto");
+  const [taskStatus, setTaskStatus] = useState<TaskStatus>("planning");
+  const [guidanceText, setGuidanceText] = useState("");
+  const [overrideVerdict, setOverrideVerdict] = useState("");
+  const [overrideReason, setOverrideReason] = useState("");
+  const [parameterName, setParameterName] = useState("");
+  const [parameterValue, setParameterValue] = useState("");
+
+  // Simulate real-time status updates
+  useEffect(() => {
+    const statusSequence: TaskStatus[] = [
+      "planning",
+      "executing",
+      "waiting_approval",
+      "executing",
+      "completed",
+    ];
+    let index = 0;
+
+    const interval = setInterval(() => {
+      const nextStatus = statusSequence[index % statusSequence.length];
+      if (nextStatus) {
+        setTaskStatus(nextStatus);
+      }
+      index++;
+    }, 10000); // Change status every 10 seconds for demo
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleIntervention = (action: string, params?: any) => {
+    console.log(`Intervention: ${action}`, params);
+    onIntervention?.(action, params);
+
+    // Reset form fields
+    setGuidanceText("");
+    setOverrideVerdict("");
+    setOverrideReason("");
+    setParameterName("");
+    setParameterValue("");
+  };
+
+  const getStatusColor = (status: TaskStatus) => {
+    switch (status) {
+      case "planning":
+        return "bg-blue-100 text-blue-800";
+      case "executing":
+        return "bg-green-100 text-green-800";
+      case "paused":
+        return "bg-yellow-100 text-yellow-800";
+      case "waiting_approval":
+        return "bg-orange-100 text-orange-800";
+      case "completed":
+        return "bg-purple-100 text-purple-800";
+      case "failed":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getStatusIcon = (status: TaskStatus) => {
+    switch (status) {
+      case "planning":
+        return "";
+      case "executing":
+        return "⚙️";
+      case "paused":
+        return "⏸️";
+      case "waiting_approval":
+        return "";
+      case "completed":
+        return "";
+      case "failed":
+        return "";
+      default:
+        return "";
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Settings className="w-5 h-5" />
+          CLI Intervention Controls
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Current Status */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">{getStatusIcon(taskStatus)}</span>
+            <div>
+              <div className="font-medium">Task Status</div>
+              <Badge className={getStatusColor(taskStatus)}>
+                {taskStatus.replace("_", " ").toUpperCase()}
+              </Badge>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-sm text-gray-600">Intervention Mode</div>
+            <select
+              value={interventionMode}
+              onChange={(e) => setInterventionMode(e.target.value as InterventionMode)}
+              className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="strict">Strict</option>
+              <option value="auto">Auto</option>
+              <option value="dry-run">Dry Run</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Execution Controls */}
+        <div className="space-y-4">
+          <h3 className="font-medium">Execution Controls</h3>
+          <div className="grid grid-cols-2 gap-2">
+            {taskStatus === "paused" && (
+              <Button
+                onClick={() => handleIntervention("resume")}
+                className="flex items-center gap-2"
+              >
+                <Play className="w-4 h-4" />
+                Resume
+              </Button>
+            )}
+            {taskStatus === "executing" && (
+              <Button
+                onClick={() => handleIntervention("pause")}
+                variant="secondary"
+                className="flex items-center gap-2"
+              >
+                <Pause className="w-4 h-4" />
+                Pause
+              </Button>
+            )}
+            <Button
+              onClick={() => handleIntervention("abort")}
+              variant="danger"
+              className="flex items-center gap-2"
+            >
+              <Square className="w-4 h-4" />
+              Abort
+            </Button>
+          </div>
+        </div>
+
+        {/* Arbiter Interventions */}
+        {verdict && (
+          <div className="space-y-4">
+            <h3 className="font-medium">Arbiter Interventions</h3>
+
+            {/* Verdict Override */}
+            {verdict.status === "rejected" ||
+              (verdict.status === "waiver_required" && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Override Arbiter Verdict
+                  </label>
+                  <div className="flex gap-2">
+                    <select
+                      value={overrideVerdict}
+                      onChange={(e) => setOverrideVerdict(e.target.value as "approve" | "reject")}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select verdict</option>
+                      <option value="approve">Approve</option>
+                      <option value="reject">Reject</option>
+                    </select>
+                    <Button
+                      onClick={() =>
+                        handleIntervention("override_verdict", {
+                          verdict: overrideVerdict,
+                          reason: overrideReason,
+                        })
+                      }
+                      disabled={!overrideVerdict || !overrideReason}
+                      size="sm"
+                    >
+                      Override
+                    </Button>
+                  </div>
+                  <textarea
+                    placeholder="Reason for override..."
+                    value={overrideReason}
+                    onChange={(e) => setOverrideReason(e.target.value)}
+                    className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              ))}
+
+            {/* Waiver Request */}
+            {verdict.status === "waiver_required" &&
+              !verdict.waiverRequired && (
+                <Button
+                  onClick={() =>
+                    handleIntervention("request_waiver", {
+                      reason: "Manual waiver request via CLI",
+                    })
+                  }
+                  variant="secondary"
+                  className="w-full"
+                >
+                  Request Waiver
+                </Button>
+              )}
+          </div>
+        )}
+
+        {/* Parameter Modification */}
+        <div className="space-y-4">
+          <h3 className="font-medium">Parameter Modification</h3>
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              placeholder="Parameter name"
+              value={parameterName}
+              onChange={(e) => setParameterName(e.target.value)}
+            />
+            <Input
+              placeholder="New value"
+              value={parameterValue}
+              onChange={(e) => setParameterValue(e.target.value)}
+            />
+          </div>
+          <Button
+            onClick={() =>
+              handleIntervention("modify_parameter", {
+                name: parameterName,
+                value: parameterValue,
+              })
+            }
+            disabled={!parameterName || !parameterValue}
+            variant="secondary"
+            className="w-full"
+          >
+            Modify Parameter
+          </Button>
+        </div>
+
+        {/* Guidance Injection */}
+        <div className="space-y-4">
+          <h3 className="font-medium flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            Guidance Injection
+          </h3>
+          <textarea
+            placeholder="Provide specific guidance for the agent..."
+            value={guidanceText}
+            onChange={(e) => setGuidanceText(e.target.value)}
+            rows={4}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <Button
+            onClick={() =>
+              handleIntervention("inject_guidance", { guidance: guidanceText })
+            }
+            disabled={!guidanceText.trim()}
+            className="w-full"
+          >
+            Inject Guidance
+          </Button>
+        </div>
+
+        {/* Mode-Specific Information */}
+        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 flex items-start gap-3">
+          <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
+          <div>
+            <strong>Current Mode:</strong> {interventionMode.toUpperCase()}
+            {interventionMode === "strict" &&
+              " - Manual approval required for all changes"}
+            {interventionMode === "auto" &&
+              " - Automatic execution with quality gates"}
+            {interventionMode === "dry-run" &&
+              " - No actual changes will be applied"}
+          </div>
+        </div>
+
+        {/* Intervention History */}
+        <div className="space-y-2">
+          <h3 className="font-medium">Recent Interventions</h3>
+          <div className="space-y-1 text-sm text-gray-600">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-3 h-3 text-green-500" />
+              <span>Task started with auto mode</span>
+              <span className="text-xs text-gray-400">2 min ago</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-3 h-3 text-green-500" />
+              <span>Arbiter verdict approved</span>
+              <span className="text-xs text-gray-400">1 min ago</span>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

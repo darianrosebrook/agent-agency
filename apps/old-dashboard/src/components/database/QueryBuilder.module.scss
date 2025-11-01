@@ -1,0 +1,296 @@
+@import '@/styles/mixins.scss';
+
+.queryBuilder {
+  @include card-base;
+  width: 100%;
+  max-width: none;
+  padding: var(--spacing-lg);
+}
+
+// Dark mode disabled - Light theme only
+
+.builderLayout {
+  display: flex;
+  gap: var(--spacing-xl);
+}
+
+// Dark mode disabled - Light theme only
+
+.queryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-md);
+
+  h3 {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    margin: 0;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.readOnlyToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+
+  input[type="checkbox"] {
+    margin: 0;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.queryTextarea {
+  width: 100%;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  resize: vertical;
+  min-height: 200px;
+  line-height: var(--line-height-relaxed);
+
+  &:focus {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+  }
+
+  &::placeholder {
+    color: var(--color-text-tertiary);
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.parametersList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+// Dark mode disabled - Light theme only
+
+.addParameterButton {
+  @include button-base;
+  @include button-secondary;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-sm);
+}
+
+// Dark mode disabled - Light theme only
+
+.saveButton {
+  @include button-base;
+  @include button-secondary;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-sm);
+}
+
+// Dark mode disabled - Light theme only
+
+.sidebar {
+  width: 300px;
+  flex-shrink: 0;
+}
+
+// Dark mode disabled - Light theme only
+
+.tableList {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+// Dark mode disabled - Light theme only
+
+.tableDetails {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+}
+
+// Dark mode disabled - Light theme only
+
+.quickSelectButton {
+  @include button-base;
+  @include button-secondary;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-xs);
+}
+
+// Dark mode disabled - Light theme only
+
+.columnList {
+  h4 {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    margin: 0 0 var(--spacing-sm) 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.pkBadge {
+  background-color: var(--color-primary-50);
+  color: var(--color-primary-700);
+  font-size: var(--font-size-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+// Dark mode disabled - Light theme only
+
+.savedQueriesList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+// Dark mode disabled - Light theme only
+
+.savedQueryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-xs);
+
+  .savedQueryName {
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-primary);
+  }
+
+// Dark mode disabled - Light theme only
+}
+
+// Dark mode disabled - Light theme only
+
+.templatesList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+// Dark mode disabled - Light theme only
+
+.errorBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background-color: var(--color-error-50);
+  border: 1px solid var(--color-error-200);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-lg);
+
+  .errorIcon {
+    font-size: var(--font-size-lg);
+    color: var(--color-error-600);
+  }
+
+  span {
+    font-size: var(--font-size-sm);
+    color: var(--color-error-800);
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.resultsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-lg);
+
+  h3 {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    margin: 0;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.resultsTable {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+}
+
+// Dark mode disabled - Light theme only
+
+.resultsNote {
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  padding: var(--spacing-md);
+  background-color: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  margin-top: var(--spacing-md);
+}
+
+// Dark mode disabled - Light theme only
+
+.modal {
+  background-color: var(--color-bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+// Dark mode disabled - Light theme only
+
+.modalContent {
+  padding: var(--spacing-lg);
+}
+
+// Dark mode disabled - Light theme only
+
+.modalInput {
+  @include button-base;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+  width: 100%;
+
+  &:focus {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.cancelButton {
+  @include button-base;
+  @include button-secondary;
+  padding: var(--spacing-sm) var(--spacing-lg);
+}
+
+// Dark mode disabled - Light theme only
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

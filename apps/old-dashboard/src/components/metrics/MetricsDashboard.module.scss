@@ -1,0 +1,96 @@
+@import '@/styles/mixins.scss';
+
+.metricsDashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2xl);
+  padding: var(--spacing-lg) 0;
+}
+
+// Dark mode disabled - Light theme only
+
+.kpiSection {
+  h2 {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    margin: 0 0 var(--spacing-lg) 0;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.section {
+  margin-bottom: var(--spacing-3xl);
+
+  &:last-child {
+    margin-bottom: var(--spacing-xl);
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.footerActions {
+  display: flex;
+  gap: var(--spacing-md);
+
+  @include breakpoint(sm) {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.lastUpdated {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+}
+
+// Responsive design
+@include breakpoint(lg) {
+  .kpiGrid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+
+// Dark mode disabled - Light theme only
+}
+
+@include breakpoint(md) {
+  .header {
+    h1 {
+      font-size: var(--font-size-2xl);
+    }
+
+// Dark mode disabled - Light theme only
+  }
+
+// Dark mode disabled - Light theme only
+
+  .section {
+    margin-bottom: var(--spacing-2xl);
+  }
+}
+
+@include breakpoint(sm) {
+  .kpiGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+// Dark mode disabled - Light theme only
+
+  .header {
+    margin-bottom: var(--spacing-lg);
+
+    h1 {
+      font-size: var(--font-size-xl);
+    }
+  }
+
+// Dark mode disabled - Light theme only
+
+  .footer {
+    padding: var(--spacing-md);
+  }
+}

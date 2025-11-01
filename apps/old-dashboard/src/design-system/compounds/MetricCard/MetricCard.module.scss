@@ -1,0 +1,206 @@
+/* MetricCard Component Styles - FlowPress Design System with Container Queries */
+
+.metricCard {
+  container-type: inline-size;
+  container-name: metric;
+  
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-6);
+  background-color: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-default);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--box-shadow-sm);
+  transition: all var(--transition-duration-fast) var(--transition-easing-out);
+  min-height: 120px;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--color-brand-accent);
+    opacity: 0;
+    transition: opacity var(--transition-duration-fast) var(--transition-easing-out);
+  }
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--box-shadow-md);
+    
+    &::before {
+      opacity: 1;
+    }
+  }
+}
+
+.metricHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-3);
+}
+
+.metricLabel {
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.metricIcon {
+  color: var(--color-brand-primary);
+  flex-shrink: 0;
+  transition: transform var(--transition-duration-fast) var(--transition-easing-out);
+  
+  .metricCard:hover & {
+    transform: scale(1.1);
+  }
+}
+
+.metricContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.metricValue {
+  font-size: 2rem;
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-display);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.metricDescription {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  line-height: 1.4;
+}
+
+.metricTrend {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  margin-top: var(--spacing-2);
+  font-size: 0.75rem;
+  font-weight: var(--font-weight-medium);
+  
+  &.positive {
+    color: var(--color-success-dark);
+  }
+  
+  &.negative {
+    color: var(--color-error-dark);
+  }
+  
+  &.neutral {
+    color: var(--color-text-muted);
+  }
+}
+
+/* Container Queries - Ultra Compact Metrics */
+@container metric (max-width: 180px) {
+  .metricCard {
+    padding: var(--spacing-4);
+    min-height: 100px;
+  }
+  
+  .metricHeader {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: var(--spacing-2);
+  }
+  
+  .metricLabel {
+    font-size: 0.625rem;
+  }
+  
+  .metricIcon {
+    font-size: 1.25rem;
+    margin-bottom: var(--spacing-1);
+  }
+  
+  .metricValue {
+    font-size: 1.25rem;
+    text-align: center;
+  }
+  
+  .metricDescription {
+    display: none; /* Hide description in tight spaces */
+  }
+  
+  .metricTrend {
+    justify-content: center;
+    margin-top: var(--spacing-1);
+  }
+}
+
+/* Container Queries - Compact Metrics */
+@container metric (min-width: 181px) and (max-width: 280px) {
+  .metricCard {
+    padding: var(--spacing-5);
+  }
+  
+  .metricLabel {
+    font-size: 0.6875rem;
+  }
+  
+  .metricValue {
+    font-size: 1.5rem;
+  }
+  
+  .metricDescription {
+    font-size: 0.6875rem;
+  }
+}
+
+/* Container Queries - Expanded Metrics */
+@container metric (min-width: 281px) {
+  .metricCard {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--spacing-6);
+  }
+  
+  .metricHeader {
+    flex-direction: row;
+    flex: 1;
+  }
+  
+  .metricIcon {
+    font-size: 2.5rem;
+    margin-right: var(--spacing-4);
+  }
+  
+  .metricContent {
+    flex: 1;
+  }
+}
+
+/* Responsive Fallback for older browsers */
+@media (max-width: 480px) {
+  @supports not (container-type: inline-size) {
+    .metricCard {
+      padding: var(--spacing-4);
+    }
+    
+    .metricValue {
+      font-size: 1.5rem;
+    }
+  }
+}
+
+

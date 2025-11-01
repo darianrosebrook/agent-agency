@@ -433,8 +433,8 @@ impl EnsembleCodeAssistant {
 - [Instinct Model Card](https://huggingface.co/continuedev/instinct)
 - [Ollama Documentation](https://ollama.ai/docs)
 - [CoreML Tools](https://coremltools.readme.io/)
-- [Agent Agency Architecture](../agent-agency.md)
-- [Multi-Model AI System](../MULTI_MODEL_AI_SYSTEM.md)
+- [Arbiter Stack Theory](../arbiter/theory.md)
+- [CoreML-First Architecture](../architecture/coreml-first-decision.md)
 
 ---
 

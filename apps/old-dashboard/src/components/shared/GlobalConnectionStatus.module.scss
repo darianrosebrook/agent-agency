@@ -1,0 +1,371 @@
+// Global Connection Status Styles
+// Comprehensive connection monitoring with expandable details
+
+.globalConnectionStatus {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+}
+
+// Status Summary
+.statusSummary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  min-width: 280px;
+
+  &:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  &.healthy {
+    border-color: #22c55e;
+    background: rgba(34, 197, 94, 0.02);
+  }
+
+  &.warning {
+    border-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.02);
+  }
+
+  &.error {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.02);
+  }
+
+  &.unknown {
+    border-color: #9ca3af;
+    background: rgba(156, 163, 175, 0.02);
+  }
+}
+
+.statusIcon {
+  flex-shrink: 0;
+
+  .healthy {
+    color: #22c55e;
+  }
+
+  .warning {
+    color: #f59e0b;
+  }
+
+  .error {
+    color: #ef4444;
+  }
+
+  .unknown {
+    color: #9ca3af;
+  }
+}
+
+.statusInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.statusText {
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 2px;
+  font-size: 14px;
+}
+
+.statusCounts {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+
+  .healthy {
+    color: #22c55e;
+  }
+
+  .warning {
+    color: #f59e0b;
+  }
+
+  .error {
+    color: #ef4444;
+  }
+}
+
+.expandIcon {
+  font-size: 12px;
+  color: #9ca3af;
+  transition: transform 0.2s ease;
+}
+
+// Detailed Status Panel
+.detailedPanel {
+  margin-top: 8px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+
+  h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #374151;
+  }
+}
+
+.lastUpdate {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.connectionsList {
+  max-height: 300px;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+
+    &:hover {
+      background: #a8a8a8;
+    }
+  }
+}
+
+.connectionItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: #f9fafb;
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &.healthy {
+    border-left: 3px solid #22c55e;
+  }
+
+  &.warning {
+    border-left: 3px solid #f59e0b;
+  }
+
+  &.error {
+    border-left: 3px solid #ef4444;
+  }
+
+  &.unknown {
+    border-left: 3px solid #9ca3af;
+  }
+}
+
+.connectionIcon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+}
+
+.connectionInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.connectionName {
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 2px;
+  font-size: 14px;
+}
+
+.connectionDetails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: #6b7280;
+
+  .detail {
+    color: #374151;
+  }
+
+  .latency {
+    color: #059669;
+  }
+
+  .lastActive {
+    &.error {
+      color: #dc2626;
+    }
+  }
+}
+
+.connectionStatus {
+  flex-shrink: 0;
+}
+
+.panelActions {
+  padding: 12px 20px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+  text-align: center;
+}
+
+.refreshButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: #2563eb;
+  }
+}
+
+// Compact Status Bar
+.connectionStatusBar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+
+  &.healthy {
+    background: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
+  }
+
+  &.warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: #d97706;
+  }
+
+  &.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+  }
+
+  &.unknown {
+    background: rgba(156, 163, 175, 0.1);
+    color: #6b7280;
+  }
+}
+
+.statusIndicator {
+  font-size: 10px;
+}
+
+.statusLabel {
+  font-size: 12px;
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .statusSummary {
+    min-width: auto;
+    padding: 10px 12px;
+  }
+
+  .statusText {
+    font-size: 13px;
+  }
+
+  .statusCounts {
+    font-size: 11px;
+  }
+
+  .detailedPanel {
+    margin-top: 4px;
+  }
+
+  .panelHeader {
+    padding: 12px 16px;
+  }
+
+  .connectionItem {
+    padding: 10px 16px;
+    gap: 10px;
+  }
+
+  .connectionIcon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .connectionDetails {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .connectionsList {
+    max-height: 200px;
+  }
+
+  .statusSummary {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .expandIcon {
+    align-self: center;
+  }
+}

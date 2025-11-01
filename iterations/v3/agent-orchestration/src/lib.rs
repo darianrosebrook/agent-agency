@@ -301,10 +301,10 @@ impl AgentOrchestrationService {
         let autonomous_executor = autonomous_executor::AutonomousExecutor::new(
             executor_config,
             None, // progress_tracker
-            Arc::new(crate::progress_tracker::RealTimeProgressTracker::new(None)), // runtime_validator - TODO: proper implementation
+            Arc::new(crate::autonomous_executor::MockCawsRuntimeValidator), // runtime_validator - PLACEHOLDER: proper implementation needed
             None, // consensus_coordinator
-            None, // verdict_writer - TODO: proper implementation
-            Arc::new(OrchestrationProvenanceEmitter::new()), // provenance_emitter - TODO: proper implementation
+            Arc::new(crate::autonomous_executor::MockVerdictWriter), // verdict_writer - PLACEHOLDER: proper implementation needed
+            Arc::new(OrchestrationProvenanceEmitter::new()), // provenance_emitter
             None, // cache
             None, // metrics
             {
@@ -314,7 +314,7 @@ impl AgentOrchestrationService {
                     panic!("TaskExecutor factory not implemented - requires agent-workers integration")
                 };
                 agent_agency_contracts::task_executor_provider::TaskExecutorProvider::new(factory)
-            }, // task_executor_provider - TODO: proper implementation
+            }, // task_executor_provider - PLACEHOLDER: proper implementation needed
             #[cfg(feature = "memory")]
             None, // memory_system
             None, // planning_integration

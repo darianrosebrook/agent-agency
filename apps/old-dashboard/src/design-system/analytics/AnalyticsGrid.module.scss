@@ -1,0 +1,179 @@
+/**
+ * AnalyticsGrid Component Styles
+ * Responsive grid layout for analytics components
+ *
+ * @author @darianrosebrook
+ */
+
+.analyticsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-4);
+}
+
+.title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.subtitle {
+  margin: 0;
+  opacity: 0.8;
+}
+
+.grid {
+  display: grid;
+  width: 100%;
+  gap: var(--spacing-4);
+}
+
+/* Column Layouts */
+.columns-1 {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.columns-2 {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.columns-3 {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.columns-4 {
+  .grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.columns-5 {
+  .grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+.columns-6 {
+  .grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+/* Gap Sizes */
+.gap-sm {
+  .grid {
+    gap: var(--spacing-3);
+  }
+}
+
+.gap-md {
+  .grid {
+    gap: var(--spacing-4);
+  }
+}
+
+.gap-lg {
+  .grid {
+    gap: var(--spacing-6);
+  }
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 1200px) {
+  .columns-6 {
+    .grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  
+  .columns-5 {
+    .grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+}
+
+@media (max-width: 1024px) {
+  .columns-6,
+  .columns-5,
+  .columns-4 {
+    .grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .columns-6,
+  .columns-5,
+  .columns-4,
+  .columns-3 {
+    .grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .columns-6,
+  .columns-5,
+  .columns-4,
+  .columns-3,
+  .columns-2 {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  .analyticsGrid {
+    gap: var(--spacing-4);
+  }
+  
+  .header {
+    margin-bottom: var(--spacing-3);
+  }
+}
+
+/* Auto-fit columns for dynamic content */
+.analyticsGrid.auto-fit {
+  .grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+  
+  @media (max-width: 768px) {
+    .grid {
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .analyticsGrid {
+    gap: var(--spacing-5);
+  }
+  
+  .grid {
+    gap: var(--spacing-5);
+  }
+}

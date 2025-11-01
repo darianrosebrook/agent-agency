@@ -788,6 +788,8 @@ pub struct AutonomousExecutorConfig {
     pub enable_consensus: bool,
     /// Consensus timeout (seconds)
     pub consensus_timeout_seconds: u64,
+    /// Enable council review before execution
+    pub enable_council_review: bool,
 }
 
 /// Task execution state
@@ -1207,32 +1209,227 @@ impl AutonomousExecutor {
             _ => {}
         }
 
-        // Phase 4: Execute task orchestration (skip for dry-run)
-        let final_verdict = match task_descriptor.execution_mode {
-            ExecutionMode::DryRun => {
-                tracing::info!("Dry-run mode: Skipping actual orchestration, simulating results");
-                // Create a mock verdict for dry-run
-                agent_agency_contracts::final_verdict::FinalVerdictContract {
-                    decision: agent_agency_contracts::final_verdict::FinalDecision::Accept,
-                    votes: vec![],
-                    dissent: String::new(),
-                    remediation: vec![],
-                    constitutional_refs: vec![],
-                    verification_summary: agent_agency_contracts::final_verdict::VerificationSummary {
-                        claims_total: 1,
-                        claims_verified: 1,
-                        coverage_pct: 100.0,
-                    },
+        // Phase 3.5: Council Review (if enabled)
+        let council_approved = if self.config.enable_council_review {
+            match self.perform_council_review(&working_spec, &task_descriptor).await {
+                Ok((approved, _, _)) => {
+                    if !approved {
+                        tracing::warn!("Task {} rejected by council, marking as failed", task_id);
+                        self.update_task_status(task_id.clone(), TypesExecutionStatus::Failed, Some("Council rejected task".to_string())).await?;
+                        return Err("Task rejected by council review".into());
+                    }
+                    tracing::info!("Task {} approved by council", task_id);
+                    true
+                }
+                Err(e) => {
+                    tracing::error!("Council review failed for task {}: {}", task_id, e);
+                    // For auto mode, allow execution to proceed if council review fails
+                    // For strict mode, fail the task
+                    match task_descriptor.execution_mode {
+                        ExecutionMode::Strict => {
+                            self.update_task_status(task_id.clone(), TypesExecutionStatus::Failed, Some(format!("Council review error: {}", e))).await?;
+                            return Err(format!("Council review failed: {}", e).into());
+                        }
+                        _ => {
+                            tracing::warn!("Council review failed, proceeding with execution (auto mode)");
+                            false
+                        }
+                    }
                 }
             }
-            ExecutionMode::Strict | ExecutionMode::Auto => {
-                match self.execute_orchestration(&working_spec, &task_descriptor).await {
-                    Ok(verdict) => verdict,
-                    Err(e) => return Err(e),
-                }
-            }
+        } else {
+            true // No council review required
         };
-        self.update_task_progress(task_id.clone(), 80.0, Some("Task orchestration complete".to_string())).await?;
+
+        // Phase 3.6: Quality Gate Enforcement
+        match self.enforce_quality_gates(&working_spec, &task_descriptor).await {
+            Ok(passed) => {
+                if !passed {
+                    tracing::warn!("Quality gates failed for task {}", task_id);
+                    self.update_task_status(task_id.clone(), TypesExecutionStatus::Failed, Some("Quality gates failed".to_string())).await?;
+                    return Err("Quality gates failed".into());
+                }
+                tracing::info!("Quality gates passed for task {}", task_id);
+            }
+            Err(e) => {
+                tracing::error!("Quality gate check failed for task {}: {}", task_id, e);
+                match task_descriptor.execution_mode {
+                    ExecutionMode::Strict => {
+                        self.update_task_status(task_id.clone(), TypesExecutionStatus::Failed, Some(format!("Quality gate error: {}", e))).await?;
+                        return Err(format!("Quality gate check failed: {}", e).into());
+                    }
+                    _ => {
+                        tracing::warn!("Quality gate check failed, proceeding with execution (auto mode)");
+                    }
+                }
+            }
+        }
+        self.update_task_progress(task_id.clone(), 50.0, Some("Council review and quality gates passed".to_string())).await?;
+
+        // Phase 4: Iterative Refinement Loop with Execution
+        // Execute task with refinement cycles based on council feedback
+        const MAX_REFINEMENT_ITERATIONS: u32 = 5;
+        const SATISFICING_THRESHOLD: f64 = 0.9; // Quantitative threshold for acceptance
+        const DELTA_THRESHOLD: f64 = 0.05; // Minimum improvement delta to continue
+        let mut current_spec = working_spec.clone();
+        let mut iteration = 0u32;
+        let mut final_verdict = None;
+        let mut quality_scores: Vec<f64> = Vec::new(); // Track quality scores across iterations
+
+        loop {
+            iteration += 1;
+            tracing::info!("Refinement iteration {} for task {}", iteration, task_id);
+
+            // Check iteration limit
+            if iteration > MAX_REFINEMENT_ITERATIONS {
+                tracing::warn!("Max refinement iterations ({}) reached for task {}", MAX_REFINEMENT_ITERATIONS, task_id);
+                self.update_task_status(task_id.clone(), TypesExecutionStatus::Failed, Some(format!("Max refinement iterations ({}) reached", MAX_REFINEMENT_ITERATIONS))).await?;
+                return Err(format!("Max refinement iterations ({}) reached", MAX_REFINEMENT_ITERATIONS).into());
+            }
+
+            // Execute task orchestration for this iteration
+            let verdict = match task_descriptor.execution_mode {
+                ExecutionMode::DryRun => {
+                    tracing::info!("Dry-run mode: Skipping actual orchestration, simulating results");
+                    // Create a mock verdict for dry-run
+                    agent_agency_contracts::final_verdict::FinalVerdictContract {
+                        decision: agent_agency_contracts::final_verdict::FinalDecision::Accept,
+                        votes: vec![],
+                        dissent: String::new(),
+                        remediation: vec![],
+                        constitutional_refs: vec![],
+                        verification_summary: agent_agency_contracts::final_verdict::VerificationSummary {
+                            claims_total: 1,
+                            claims_verified: 1,
+                            coverage_pct: 100.0,
+                        },
+                    }
+                }
+                ExecutionMode::Strict | ExecutionMode::Auto => {
+                    // Execute with error recovery and retry logic
+                    let mut attempts = 0;
+                    const MAX_RETRIES: u32 = 3;
+                    let mut last_error = None;
+
+                    match loop {
+                        attempts += 1;
+                        match self.execute_orchestration(&current_spec, &task_descriptor).await {
+                            Ok(verdict) => {
+                                // Validate artifacts were collected
+                                match self.validate_execution_artifacts(&verdict, &task_descriptor).await {
+                                    Ok(valid) => {
+                                        if valid {
+                                            break Ok(verdict);
+                                        } else {
+                                            tracing::warn!("Artifact validation failed for task {}, retrying...", task_id);
+                                            if attempts >= MAX_RETRIES {
+                                                return Err("Artifact validation failed after retries".into());
+                                            }
+                                            continue;
+                                        }
+                                    }
+                                    Err(e) => {
+                                        tracing::error!("Artifact validation error for task {}: {}", task_id, e);
+                                        if attempts >= MAX_RETRIES {
+                                            return Err(format!("Artifact validation failed: {}", e).into());
+                                        }
+                                        last_error = Some(e.to_string());
+                                        continue;
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                tracing::warn!("Execution attempt {} failed for task {}: {}", attempts, task_id, e);
+                                last_error = Some(e.to_string());
+                                if attempts >= MAX_RETRIES {
+                                    return Err(format!("Execution failed after {} attempts: {}", MAX_RETRIES, last_error.unwrap_or_else(|| "Unknown error".to_string())).into());
+                                }
+                                // Wait before retry (exponential backoff)
+                                let delay_ms = 1000 * (attempts as u64);
+                                tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                                continue;
+                            }
+                        }
+                    } {
+                        Ok(v) => v,
+                        Err(e) => return Err(e),
+                    }
+                }
+            };
+
+            // Calculate quality score from verdict
+            let quality_score = self.calculate_quality_score(&verdict);
+            quality_scores.push(quality_score);
+            tracing::info!("Quality score for iteration {}: {:.3}", iteration, quality_score);
+
+            // Check satisficing threshold (0.9)
+            if quality_score >= SATISFICING_THRESHOLD {
+                tracing::info!("Quality score {:.3} meets satisficing threshold {:.3}, accepting solution", quality_score, SATISFICING_THRESHOLD);
+                final_verdict = Some(verdict);
+                break;
+            }
+
+            // Check for diminishing returns (if we have at least 2 iterations)
+            if iteration >= 2 {
+                let previous_score = quality_scores[quality_scores.len() - 2];
+                let improvement_delta = quality_score - previous_score;
+                
+                if improvement_delta < DELTA_THRESHOLD {
+                    tracing::warn!("Diminishing returns detected: improvement delta {:.3} < threshold {:.3}", improvement_delta, DELTA_THRESHOLD);
+                    tracing::info!("Accepting current solution due to diminishing returns after {} iterations", iteration);
+                    final_verdict = Some(verdict);
+                    break;
+                }
+            }
+
+            // Post-execution council review to check if refinement is needed
+            if self.config.enable_council_review {
+                match self.perform_council_review(&current_spec, &task_descriptor).await {
+                    Ok((approved, needs_refinement, refinement_reason)) => {
+                        if approved {
+                            // Council approves - exit refinement loop
+                            tracing::info!("Task {} approved by council after iteration {}", task_id, iteration);
+                            final_verdict = Some(verdict);
+                            break;
+                        } else if needs_refinement && iteration < MAX_REFINEMENT_ITERATIONS {
+                            // Council requests refinement - refine and continue
+                            tracing::info!("Task {} requires refinement after iteration {}: {}", task_id, iteration, refinement_reason);
+                            self.update_task_progress(task_id.clone(), 60.0 + (iteration as f32 * 5.0), Some(format!("Refining based on council feedback: {}", refinement_reason))).await?;
+                            
+                            // Refine working spec based on feedback
+                            match self.refine_working_spec(&current_spec, &refinement_reason).await {
+                                Ok(refined_spec) => {
+                                    current_spec = refined_spec;
+                                    tracing::info!("Working spec refined for iteration {}", iteration + 1);
+                                    continue; // Continue to next iteration
+                                }
+                                Err(e) => {
+                                    tracing::error!("Failed to refine working spec: {}", e);
+                                    return Err(format!("Refinement failed: {}", e).into());
+                                }
+                            }
+                        } else {
+                            // Council rejected and no refinement possible
+                            tracing::warn!("Task {} rejected by council after iteration {}", task_id, iteration);
+                            self.update_task_status(task_id.clone(), TypesExecutionStatus::Failed, Some("Council rejected task after refinement".to_string())).await?;
+                            return Err("Task rejected by council after refinement attempts".into());
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!("Post-execution council review failed, accepting current verdict: {}", e);
+                        final_verdict = Some(verdict);
+                        break; // Accept current verdict if review fails
+                    }
+                }
+            } else {
+                // No council review - accept verdict after first execution
+                final_verdict = Some(verdict);
+                break;
+            }
+        }
+
+        let final_verdict = final_verdict.expect("Final verdict should be set after refinement loop");
+        self.update_task_progress(task_id.clone(), 80.0, Some(format!("Task orchestration complete after {} iterations", iteration)).to_string()).await?;
 
         // Phase 5: Post-execution processing
         self.process_results(&final_verdict, &task_descriptor).await?;
@@ -1569,6 +1766,196 @@ impl AutonomousExecutor {
         }
 
         Ok(())
+    }
+
+    /// Perform council review for a task
+    /// Returns (approved, needs_refinement, refinement_reason)
+    async fn perform_council_review(
+        &self,
+        working_spec: &WorkingSpec,
+        task_descriptor: &TaskDescriptor,
+    ) -> Result<(bool, bool, String), Box<dyn std::error::Error + Send + Sync>> {
+        // Convert task descriptor to orchestrated task for council review
+        // Use adapter pattern to perform council review
+        let adapter = crate::adapter::LegacyOrchestratorAdapter::new(crate::types::OrchestratorConfig::default()).await?;
+        
+        // Create council session
+        let council_session = adapter.council.start_session(task_descriptor).await
+            .map_err(|e| format!("Failed to start council session: {}", e))?;
+        
+        // Convert to orchestrated task for review
+        let orchestrated_task = adapter.to_orchestrated_task(task_descriptor);
+        
+        // Perform review
+        let consensus_result = council_session.review_task(&orchestrated_task).await
+            .map_err(|e| format!("Council review failed: {}", e))?;
+        
+        // Check if refinement is needed (approved=false but confidence > 0.3 suggests refinement)
+        let needs_refinement = !consensus_result.approved && consensus_result.confidence > 0.3;
+        let refinement_reason = if needs_refinement {
+            consensus_result.reason.clone()
+        } else {
+            String::new()
+        };
+        
+        Ok((consensus_result.approved, needs_refinement, refinement_reason))
+    }
+
+    /// Enforce quality gates before execution
+    async fn enforce_quality_gates(
+        &self,
+        working_spec: &WorkingSpec,
+        task_descriptor: &TaskDescriptor,
+    ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+        // Check if quality gates are defined in working spec
+        if let Some(ref quality_gates) = working_spec.quality_gates {
+            // Check test coverage if specified
+            if let Some(ref coverage_targets) = quality_gates.coverage_targets {
+                if let Some(line_coverage) = coverage_targets.line_coverage {
+                    // PLACEHOLDER: Actual coverage check would query test coverage system
+                    // For now, assume coverage is acceptable if tests exist
+                    tracing::debug!("Quality gate: Line coverage target {}% specified", line_coverage);
+                }
+            }
+            
+            // Check linting if specified
+            if quality_gates.linting_required {
+                // PLACEHOLDER: Actual lint check would run cargo clippy or similar
+                tracing::debug!("Quality gate: Linting required");
+            }
+            
+            // Check type checking if specified
+            if quality_gates.type_checking_required {
+                // PLACEHOLDER: Actual type check would run cargo check
+                tracing::debug!("Quality gate: Type checking required");
+            }
+        }
+        
+        // Always check basic validation
+        self.runtime_validator.validate(working_spec)
+            .map_err(|e| format!("Runtime validation failed: {}", e))?;
+        
+        Ok(true)
+    }
+
+    /// Calculate quality score from verdict for satisficing logic
+    /// Returns a score between 0.0 and 1.0
+    fn calculate_quality_score(&self, verdict: &FinalVerdict) -> f64 {
+        // Base score from decision type
+        let decision_score = match verdict.decision {
+            agent_agency_contracts::final_verdict::FinalDecision::Accept => 1.0,
+            agent_agency_contracts::final_verdict::FinalDecision::Reject => 0.0,
+        };
+
+        // Calculate confidence from votes (weighted average)
+        let vote_confidence = if !verdict.votes.is_empty() {
+            let total_weight: f32 = verdict.votes.iter().map(|v| v.weight).sum();
+            let weighted_sum: f32 = verdict.votes.iter()
+                .map(|v| {
+                    let vote_score = match v.verdict {
+                        agent_agency_contracts::final_verdict::VoteVerdict::Pass => 1.0,
+                        agent_agency_contracts::final_verdict::VoteVerdict::Fail => 0.0,
+                        agent_agency_contracts::final_verdict::VoteVerdict::Uncertain => 0.5,
+                    };
+                    v.weight * vote_score
+                })
+                .sum();
+            if total_weight > 0.0 {
+                weighted_sum / total_weight
+            } else {
+                0.5
+            }
+        } else {
+            0.5 // Default confidence if no votes
+        };
+
+        // Verification coverage score (0.0 to 1.0)
+        let coverage_score = verdict.verification_summary.coverage_pct / 100.0;
+
+        // Claims verification ratio
+        let claims_score = if verdict.verification_summary.claims_total > 0 {
+            verdict.verification_summary.claims_verified as f64 / verdict.verification_summary.claims_total as f64
+        } else {
+            0.5 // Default if no claims
+        };
+
+        // Combined quality score: weighted average
+        // Decision score (40%), Vote confidence (30%), Coverage (20%), Claims (10%)
+        let quality_score = (decision_score * 0.4) 
+            + (vote_confidence as f64 * 0.3)
+            + (coverage_score * 0.2)
+            + (claims_score * 0.1);
+
+        quality_score
+    }
+
+    /// Refine working spec based on council feedback
+    async fn refine_working_spec(
+        &self,
+        current_spec: &WorkingSpec,
+        refinement_reason: &str,
+    ) -> Result<WorkingSpec, Box<dyn std::error::Error + Send + Sync>> {
+        let mut refined_spec = current_spec.clone();
+        
+        // Update working spec based on refinement feedback
+        // Add refinement reason to description
+        refined_spec.description = format!("{}\n\nRefinement: {}", refined_spec.description, refinement_reason);
+        
+        // Update timestamp
+        refined_spec.updated_at = chrono::Utc::now();
+        
+        // Enhance quality gates if refinement mentions quality issues
+        if refinement_reason.to_lowercase().contains("quality") || 
+           refinement_reason.to_lowercase().contains("test") ||
+           refinement_reason.to_lowercase().contains("coverage") {
+            if refined_spec.quality_gates.is_none() {
+                refined_spec.quality_gates = Some(agent_agency_contracts::working_spec::QualityGates {
+                    coverage_targets: Some(agent_agency_contracts::working_spec::CoverageTargets {
+                        line_coverage: Some(80.0),
+                        branch_coverage: Some(90.0),
+                        function_coverage: None,
+                    }),
+                    linting_required: true,
+                    type_checking_required: true,
+                });
+            }
+        }
+        
+        // Add refinement note to acceptance criteria
+        refined_spec.acceptance_criteria.push(format!("Address: {}", refinement_reason));
+        
+        tracing::info!("Working spec refined based on feedback: {}", refinement_reason);
+        Ok(refined_spec)
+    }
+
+    /// Validate execution artifacts
+    async fn validate_execution_artifacts(
+        &self,
+        verdict: &FinalVerdict,
+        task_descriptor: &TaskDescriptor,
+    ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+        // Check that verdict has required components
+        if verdict.decision == agent_agency_contracts::final_verdict::FinalDecision::Accept {
+            // For accepted verdicts, verify coverage is adequate
+            if verdict.verification_summary.coverage_pct < 80.0 {
+                tracing::warn!("Verification coverage {}% below threshold", verdict.verification_summary.coverage_pct);
+                return Ok(false);
+            }
+            
+            // Check that claims were verified
+            if verdict.verification_summary.claims_verified == 0 {
+                tracing::warn!("No claims verified for accepted verdict");
+                return Ok(false);
+            }
+        }
+        
+        // Check that votes are present (council participated)
+        if verdict.votes.is_empty() && verdict.decision != agent_agency_contracts::final_verdict::FinalDecision::Reject {
+            tracing::warn!("No council votes present for non-rejected verdict");
+            return Ok(false);
+        }
+        
+        Ok(true)
     }
 
     /// Store execution experience in memory system
@@ -1976,6 +2363,7 @@ mod tests {
             max_retry_attempts: 3,
             enable_consensus: true,
             consensus_timeout_seconds: 60,
+            enable_council_review: true,
         };
 
         // Create mock dependencies

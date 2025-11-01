@@ -4,6 +4,7 @@
 //! These types are used across multiple crates (workers, orchestration, council)
 //! and are defined here to avoid circular dependencies.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -109,6 +110,7 @@ pub struct WorkerPoolStats {
 /// Worker assignment with reasoning
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerAssignment {
+    #[schemars(with = "String")]
     pub worker_id: Uuid,
     pub priority: TaskPriority,
     #[schemars(with = "String")]

@@ -127,7 +127,7 @@ This guide establishes comprehensive quality standards for all project documenta
 | **Implementation Tracking** | `docs/archive/implementation-tracking/` | `IMPLEMENTATION_STATUS.md`, `DEPLOYMENT_READINESS.md` |
 | **Project Assessments** | `docs/archive/implementation-tracking/` | `EXECUTIVE_BRIEFING.md`, `SECURITY_HARDENING_AUDIT.md` |
 | **Multi-Project Docs** | `docs/archive/multimodal-rag/` | `MULTIMODAL_RAG_*.md` |
-| **Core Documentation** | `docs/` | `agent-agency.md`, component READMEs |
+| **Core Documentation** | `docs/` | `arbiter/theory.md`, `architecture/coreml-first-decision.md`, component READMEs |
 | **Version History** | Root | `CHANGELOG.md` |
 
 ## Quality Checklist

@@ -184,6 +184,9 @@ impl SearchOperations {
                 timeout_ms: 30000,
             };
 
+        // PLACEHOLDER: Ollama embedding provider deprecated - needs CoreML embedding provider
+        // TODO: Implement CoreML-based embedding provider (see todo-1762001962177-gg7fpzx98)
+        #[allow(deprecated)]
         let provider = OllamaEmbeddingProvider::new(&config);
         
         // Generate embedding

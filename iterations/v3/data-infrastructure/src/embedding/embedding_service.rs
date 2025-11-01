@@ -224,7 +224,12 @@ pub struct EmbeddingServiceFactory;
 
 impl EmbeddingServiceFactory {
     /// Create Ollama-based embedding service
+    /// 
+    /// PLACEHOLDER: Deprecated - will be replaced with CoreML-based embeddings
+    /// TODO: Implement CoreML embedding provider (see todo-1762001962177-gg7fpzx98)
+    #[deprecated(note = "Ollama service deprecated - use CoreML embeddings instead")]
     pub fn create_ollama_service(config: EmbeddingConfig) -> Result<Box<dyn EmbeddingService>> {
+        #[allow(deprecated)]
         let provider = Arc::new(OllamaEmbeddingProvider::new(&config));
         let service = EmbeddingServiceImpl::new(provider, config);
         Ok(Box::new(service))

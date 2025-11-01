@@ -1,0 +1,243 @@
+@import '@/styles/mixins.scss';
+
+.agentGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+}
+
+// Dark mode disabled - Light theme only
+
+.summary {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+// Dark mode disabled - Light theme only
+
+.agentsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+// Dark mode disabled - Light theme only
+
+.agentHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+// Dark mode disabled - Light theme only
+
+.agentIcon {
+  font-size: var(--font-size-2xl);
+  flex-shrink: 0;
+}
+
+// Dark mode disabled - Light theme only
+
+.agentName {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--spacing-xs) 0;
+  word-break: break-word;
+}
+
+// Dark mode disabled - Light theme only
+
+.agentStatus {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-transform: capitalize;
+  flex-shrink: 0;
+
+  .statusDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: currentColor;
+  }
+
+  &.active {
+    background-color: var(--color-success-50);
+    color: var(--color-success-800);
+  }
+
+  &.idle {
+    background-color: var(--color-warning-50);
+    color: var(--color-warning-800);
+  }
+
+  &.error {
+    background-color: var(--color-error-50);
+    color: var(--color-error-800);
+  }
+
+  &.maintenance {
+    background-color: var(--color-gray-50);
+    color: var(--color-gray-700);
+  }
+
+  &.unknown {
+    background-color: var(--color-gray-50);
+    color: var(--color-gray-700);
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.metricsRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--spacing-md);
+}
+
+// Dark mode disabled - Light theme only
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  text-align: center;
+}
+
+// Dark mode disabled - Light theme only
+
+.statValue {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-mono);
+}
+
+// Dark mode disabled - Light theme only
+
+// Performance color classes
+.excellent {
+  border-left-color: var(--color-success);
+}
+
+// Dark mode disabled - Light theme only
+
+.fair {
+  border-left-color: var(--color-warning);
+}
+
+// Dark mode disabled - Light theme only
+
+// Loading and error states
+.loading,
+.error,
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--spacing-3xl);
+  color: var(--color-text-secondary);
+}
+
+// Dark mode disabled - Light theme only
+
+.loading p,
+.error p {
+  font-size: var(--font-size-base);
+  margin-bottom: var(--spacing-xl);
+}
+
+// Dark mode disabled - Light theme only
+
+.emptyState {
+  .emptyIcon {
+    font-size: var(--font-size-4xl);
+    margin-bottom: var(--spacing-lg);
+    opacity: 0.6;
+  }
+
+  h3 {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-medium);
+    margin-bottom: var(--spacing-sm);
+    margin-top: 0;
+  }
+
+  p {
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-relaxed);
+    margin: 0 0 var(--spacing-xl) 0;
+    max-width: 400px;
+  }
+
+// Dark mode disabled - Light theme only
+}
+
+// Responsive design
+@include breakpoint(lg) {
+  .metricsRow {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  }
+
+// Dark mode disabled - Light theme only
+}
+
+@include breakpoint(md) {
+  .agentHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+
+// Dark mode disabled - Light theme only
+
+  .metricsRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+// Dark mode disabled - Light theme only
+
+  .agentCard {
+    padding: var(--spacing-md);
+  }
+}
+
+@include breakpoint(sm) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+
+// Dark mode disabled - Light theme only
+
+  .agentCard {
+    padding: var(--spacing-sm);
+  }
+
+// Dark mode disabled - Light theme only
+
+  .metricsRow {
+    grid-template-columns: 1fr;
+  }
+
+// Dark mode disabled - Light theme only
+
+  .stat {
+    gap: var(--spacing-xs);
+  }
+
+// Dark mode disabled - Light theme only
+
+  .statValue {
+    font-size: var(--font-size-sm);
+  }
+}

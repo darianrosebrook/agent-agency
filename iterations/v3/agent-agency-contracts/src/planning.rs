@@ -7,6 +7,7 @@
 //! @author @darianrosebrook
 
 use async_trait::async_trait;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
@@ -254,7 +255,7 @@ pub struct EvidenceArtifact {
 }
 
 /// Types of evidence artifacts
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ArtifactType {
     /// Test execution results
     TestResults,
@@ -583,7 +584,7 @@ pub struct ExecutionEvent {
 }
 
 /// Types of execution events
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ExecutionEventType {
     /// Plan execution started
     PlanStarted,

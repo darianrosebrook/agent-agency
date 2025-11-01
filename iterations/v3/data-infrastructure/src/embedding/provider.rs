@@ -41,6 +41,10 @@ pub trait EmbeddingProvider: Send + Sync {
 }
 
 /// Ollama embedding provider using embeddinggemma
+/// 
+/// PLACEHOLDER: Deprecated - will be replaced with CoreML-based embeddings
+/// Use DummyEmbeddingProvider for testing or implement CoreML embedding provider
+#[deprecated(note = "Ollama provider deprecated - use CoreML embeddings instead")]
 pub struct OllamaEmbeddingProvider {
     client: reqwest::Client,
     base_url: String,

@@ -1,0 +1,152 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+// Dark mode disabled - Light theme only
+
+.iteration {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 120px;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 2px solid var(--border-color);
+  background: var(--bg-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  &.selected {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+  }
+
+  &.pending {
+    opacity: 0.6;
+    border-style: dashed;
+  }
+
+  &.running {
+    border-color: var(--status-running-bg);
+    background: rgba(var(--status-running-rgb), 0.05);
+  }
+
+  &.completed {
+    border-color: var(--status-completed-bg);
+    background: rgba(var(--status-completed-rgb), 0.05);
+  }
+
+  &.failed {
+    border-color: var(--status-failed-bg);
+    background: rgba(var(--status-failed-rgb), 0.05);
+  }
+
+  &.future {
+    opacity: 0.4;
+    background: var(--bg-secondary);
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.iterationNumber {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+// Dark mode disabled - Light theme only
+
+.iterationMetrics {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+// Dark mode disabled - Light theme only
+
+.iterationDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  font-size: 0.75rem;
+}
+
+// Dark mode disabled - Light theme only
+
+.label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+// Dark mode disabled - Light theme only
+
+.connector {
+  position: absolute;
+  top: 50%;
+  right: -1rem;
+  width: 1rem;
+  height: 2px;
+  background: var(--border-color);
+
+  &::after {
+    content: '';
+    position: absolute;
+    right: -4px;
+    top: -4px;
+    width: 8px;
+    height: 8px;
+    background: var(--border-color);
+    border-radius: 50%;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+// Dark mode disabled - Light theme only
+
+.metric .value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: monospace;
+}
+
+// Dark mode disabled - Light theme only
+
+// Responsive design
+@media (max-width: 768px) {
+  .timeline {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+// Dark mode disabled - Light theme only
+
+  .summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+  .latency,
+  .tokens {
+    background: var(--dark-bg-secondary);
+  }
+}

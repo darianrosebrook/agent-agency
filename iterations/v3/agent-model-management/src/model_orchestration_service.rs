@@ -15,7 +15,7 @@ use system_common_interfaces::{
 };
 use crate::types::*;
 use crate::inference::manager::InferenceManager;
-use crate::inference::backends::{OllamaBackend, ApiBackend};
+use crate::inference::backends::{ApiBackend};
 use tracing::{info, debug, warn};
 
 /// Model orchestration service implementing the shared interface
@@ -55,11 +55,9 @@ impl AgentModelOrchestrationService {
 
     /// Register default inference backends
     async fn register_default_backends(manager: &InferenceManager) -> Result<(), ModelManagementError> {
-        // Register Ollama backend for local models
-        let ollama_backend = Arc::new(OllamaBackend::new("http://localhost:11434".to_string()));
-        manager.register_backend(ollama_backend).await?;
-
-        // Register API backend for external models
+        // PLACEHOLDER: Ollama backend removed - CoreML-first architecture
+        // CoreML inference is handled through engine-coreml crate
+        // Register API backend for external models if needed
         let api_backend = Arc::new(ApiBackend::new());
         manager.register_backend(api_backend).await?;
 

@@ -1,0 +1,304 @@
+.container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+// Dark mode disabled - Light theme only
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.statusIndicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  transition: all var(--transition-fast);
+
+  &.ready {
+    background: linear-gradient(135deg, var(--color-blue-50, #eff6ff), var(--color-gray-50, #f9fafb));
+    border: 1px solid var(--color-blue-200, #bfdbfe);
+  }
+
+  &.recording {
+    background: linear-gradient(135deg, var(--color-red-50, #fef2f2), var(--color-red-25, #fef2f2));
+    border: 1px solid var(--color-red-200, #fecaca);
+    animation: recordingPulse 1.5s infinite;
+  }
+
+  &.processing {
+    background: linear-gradient(135deg, var(--color-yellow-50, #fffbeb), var(--color-orange-50, #fff7ed));
+    border: 1px solid var(--color-yellow-200, #fde68a);
+  }
+
+  &.speaking {
+    background: linear-gradient(135deg, var(--color-green-50, #f0fdf4), var(--color-emerald-50, #ecfdf5));
+    border: 1px solid var(--color-green-200, #bbf7d0);
+  }
+
+  &.user-turn {
+    background: linear-gradient(135deg, var(--color-purple-50, #faf5ff), var(--color-violet-50, #f5f3ff));
+    border: 1px solid var(--color-purple-200, #e9d5ff);
+  }
+
+// Dark mode disabled - Light theme only
+}
+
+@keyframes recordingPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.waveBar {
+  width: 4px;
+  background: currentColor;
+  border-radius: 2px;
+  transition: height var(--transition-fast);
+  opacity: 0.7;
+
+  &:nth-child(odd) {
+    opacity: 0.9;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.recordButton {
+  background: var(--color-gray-100, #f3f4f6);
+  border: 2px solid var(--color-gray-300, #d1d5db);
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover:not(:disabled) {
+    background: var(--color-gray-200, #e5e7eb);
+    border-color: var(--color-gray-400, #9ca3af);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.95);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.recording {
+    background: var(--color-red-500, #ef4444);
+    border-color: var(--color-red-600, #dc2626);
+    animation: recordingPulse 1.5s infinite;
+
+    &:hover:not(:disabled) {
+      background: var(--color-red-600, #dc2626);
+    }
+
+// Dark mode disabled - Light theme only
+  }
+
+// Dark mode disabled - Light theme only
+}
+
+// Dark mode disabled - Light theme only
+
+.interruptControls {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+// Dark mode disabled - Light theme only
+
+.modeIndicator {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-secondary, #6b7280);
+  margin-bottom: 0.5rem;
+
+  strong {
+    color: var(--text-primary, #1a1a1a);
+    text-transform: capitalize;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.errorDisplay {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--color-red-50, #fef2f2);
+  border: 1px solid var(--color-red-200, #fecaca);
+  border-radius: 6px;
+  margin-top: 0.5rem;
+
+  .errorIcon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+
+// Dark mode disabled - Light theme only
+
+  .retryButton {
+    background: var(--color-red-500, #ef4444);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all var(--transition-fast);
+
+    &:hover {
+      background: var(--color-red-600, #dc2626);
+    }
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+  .mainButton {
+    &.active {
+      background: var(--color-green-600, #059669);
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+
+      &:hover:not(:disabled) {
+        background: var(--color-green-700, #047857);
+      }
+    }
+
+    &.disabled {
+      background: var(--color-gray-600, #4b5563);
+    }
+  }
+
+// Dark mode disabled - Light theme only
+
+  .statusIndicator {
+    &.ready {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(31, 41, 55, 0.5));
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    &.recording {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    &.processing {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(255, 237, 213, 0.1));
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    &.speaking {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(209, 250, 229, 0.1));
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    &.user-turn {
+      background: linear-gradient(135deg, rgba(147, 51, 234, 0.1), rgba(245, 243, 255, 0.1));
+      border-color: rgba(147, 51, 234, 0.3);
+    }
+
+// Dark mode disabled - Light theme only
+  }
+
+// Dark mode disabled - Light theme only
+
+  .cancelButton {
+    background: var(--color-red-600, #dc2626);
+
+    &:hover {
+      background: var(--color-red-700, #b91c1c);
+    }
+  }
+
+// Dark mode disabled - Light theme only
+
+  .modeIndicator {
+    color: var(--text-secondary-dark, #9ca3af);
+
+    strong {
+      color: var(--text-primary-dark, #f9fafb);
+    }
+  }
+
+// Dark mode disabled - Light theme only
+
+  .errorDisplay {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+
+    .errorText {
+      color: var(--color-red-300, #fca5a5);
+    }
+  }
+
+// Dark mode disabled - Light theme only
+}
+
+// Mobile responsiveness
+@media (max-width: 768px) {
+  .mainButton {
+    width: 50px;
+    height: 50px;
+
+    .buttonText {
+      font-size: 0.65rem;
+    }
+  }
+
+// Dark mode disabled - Light theme only
+
+  .statusIndicator {
+    padding: 0.5rem;
+
+    .statusText {
+      font-size: 0.85rem;
+    }
+  }
+
+// Dark mode disabled - Light theme only
+
+  .recordingControls {
+    gap: 0.5rem;
+  }
+
+// Dark mode disabled - Light theme only
+
+  .cancelButton {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+  }
+
+// Dark mode disabled - Light theme only
+}
+
+

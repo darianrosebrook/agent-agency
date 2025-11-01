@@ -1,0 +1,184 @@
+Hidden TODO Analysis Report
+==========================
+
+Total files analyzed: 452
+Total issues found: 1941
+Errors: 1635
+Warnings: 306
+
+❌ ERRORS (1635):
+  testing-validation/src/test_helpers.rs:65 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// Note: This is a placeholder - in real tests, you'd use an actual provider'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  testing-validation/src/scenarios/scenario_2_research.rs:69 (90.0% confidence)
+    Potential hidden TODO/placeholder: 'enable_web_scraping: false, // Disable web scraping for local-only testing'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  testing-validation/src/scenarios/scenario_3_mutation.rs:203 (85.0% confidence)
+    Hidden incomplete implementation detected: '// Simulate mutation score - in a real implementation, this would run cargo-mutants'
+    💡 Replace with complete implementation or remove TODO marker
+
+  testing-validation/src/scenarios/scenario_4_file_editing.rs:52 (90.0% confidence)
+    Potential hidden TODO/placeholder: 'scenario: crate::Scenario::Scenario1Refactor, // Placeholder, will add new variant'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  testing-validation/src/scenarios/scenario_4_file_editing.rs:355 (90.0% confidence)
+    Potential hidden TODO/placeholder: 'scenario: crate::Scenario::Scenario1Refactor, // Placeholder'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  testing-validation/src/scenarios/scenario_4_file_editing.rs:448 (90.0% confidence)
+    Potential hidden TODO/placeholder: 'scenario: crate::Scenario::Scenario1Refactor, // Placeholder'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  testing-validation/src/scenarios/security_privacy.rs:723-724 (85.0% confidence)
+    Grouped incomplete implementation, hidden TODO/placeholder issues (2 lines):
+  Line 723: // Include metadata if available (in a real implementation, you'd include more fields)
+  Line 724: // For now, we'll use a simple approach
+    💡 Replace with complete implementation or remove TODO marker
+
+  testing-validation/src/harness/environment.rs:3 (90.0% confidence)
+    Potential hidden TODO/placeholder: '//! PLACEHOLDER: TestEnvironment and TestWorkspace implementations'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  testing-validation/src/harness/environment.rs:12 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// PLACEHOLDER: Real implementation needed for full feature scenarios'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resources/src/error_handling.rs:439 (85.0% confidence)
+    Hidden incomplete implementation detected: '// In a real implementation, this would integrate with:'
+    💡 Replace with complete implementation or remove TODO marker
+
+  system-resources/src/error_handling.rs:445 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// For now, we just log with structured information for monitoring systems to pick up'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resources/src/lib.rs:95-96 (90.0% confidence)
+    Grouped hidden TODO/placeholder issues (2 lines):
+  Line 95: // PLACEHOLDER: In a real implementation, this would track allocations by task_id
+  Line 96: // For now, search through pools to find allocation
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resources/src/lib.rs:98 (85.0% confidence)
+    Hidden incomplete implementation detected: 'message: format!("Task allocation lookup not yet implemented for task {}", task_id),'
+    💡 Replace with complete implementation or remove TODO marker
+
+  system-resources/src/lib.rs:203-204 (85.0% confidence)
+    Grouped incomplete implementation, hidden TODO/placeholder issues (2 lines):
+  Line 203: // In a real implementation, we'd check if pool contains allocation
+  Line 204: // For now, return first pool (would need allocation tracking)
+    💡 Replace with complete implementation or remove TODO marker
+
+  system-resources/src/monitoring.rs:66 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// Mock utilization calculation - would be based on actual pool metrics'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resources/src/monitoring.rs:83 (90.0% confidence)
+    Potential hidden TODO/placeholder: 'let total_capacity = 100; // Mock capacity'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resources/src/monitoring.rs:99 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// Mock resource accumulation'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resources/src/pools.rs:125 (85.0% confidence)
+    Hidden incomplete implementation detected: '// In a real implementation, this would reorder allocations to reduce fragmentation'
+    💡 Replace with complete implementation or remove TODO marker
+
+  system-resources/src/security.rs:138 (90.0% confidence)
+    Potential hidden TODO/placeholder: 'return Err(SecurityError::AuthenticationDisabled);'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resources/src/security.rs:146 (90.0% confidence)
+    Potential hidden TODO/placeholder: 'return Err(SecurityError::AccountDisabled);'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  ... and 1615 more
+⚠️  WARNINGS (306):
+  system-resilience/src/fsck.rs:10 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// TODO: Implement Fsck struct with proper fields and configuration with acceptance criteria:'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resilience/src/fsck.rs:32 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// TODO: Implement comprehensive filesystem integrity checking with acceptance criteria:'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resilience/src/fsck.rs:52 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// TODO: Implement SQLite index rebuilding from Merkle trees with acceptance criteria:'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resilience/src/workspace_state/storage.rs:992 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// TODO: Implement accurate storage size calculation with acceptance criteria:'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resilience/src/refs/mod.rs:5 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// pub mod manager;  // TODO: Implement manager module'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resilience/src/refs/mod.rs:7 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// pub use manager::*;  // TODO: Implement manager module'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resilience/src/memory/mod.rs:947 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// TODO: Platform-Specific CPU Metrics - Implement actual CPU monitoring'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resilience/src/memory/mod.rs:2706 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// self.force_gc().await; // TODO: Make this async when called from async context'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resilience/src/integration/self_prompting.rs:91-92 (90.0% confidence)
+    Grouped hidden TODO/placeholder issues (2 lines):
+  Line 91: // TODO: Add session tracking to concurrency manager
+  Line 92: // For now, we'll track sessions separately
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resilience/src/integration/self_prompting.rs:117 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// TODO: Remove session from concurrency manager'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resilience/src/integration/self_prompting.rs:251-252 (90.0% confidence)
+    Grouped hidden TODO/placeholder issues (2 lines):
+  Line 251: // TODO: Implement automatic merge logic
+  Line 252: // For now, return conflict for manual resolution
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resilience/src/integration/self_prompting.rs:284 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// TODO: Implement based on your file state tracking'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resilience/src/integration/self_prompting.rs:290 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// TODO: Implement commit creation from session state'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resilience/src/integration/self_prompting.rs:327-328 (90.0% confidence)
+    Grouped hidden TODO/placeholder issues (2 lines):
+  Line 327: conflicts_resolved: 0, // TODO: Track conflicts
+  Line 328: checkpoints_created: 0, // TODO: Track checkpoints
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resilience/src/integration/worker.rs:266 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// TODO: Implement tree traversal to create restore actions'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resilience/src/gc/collector.rs:203 (90.0% confidence)
+    Potential hidden TODO/placeholder: 'bytes_freed: 0, // TODO: Calculate actual bytes freed'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resilience/src/gc/collector.rs:476 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// TODO: Implement based on your object store'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resilience/src/gc/collector.rs:483 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// TODO: Implement packing logic'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resilience/src/gc/pack.rs:236 (90.0% confidence)
+    Potential hidden TODO/placeholder: 'compressed: false, // TODO: Implement compression'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resilience/src/cas/chunking.rs:127 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// TODO: Chunk Data Storage - Implement optional chunk data storage'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  ... and 286 more

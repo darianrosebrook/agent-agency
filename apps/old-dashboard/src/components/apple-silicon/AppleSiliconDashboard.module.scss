@@ -1,0 +1,356 @@
+/**
+ * Apple Silicon Dashboard Styles
+ * Professional hardware monitoring interface
+ *
+ * @author @darianrosebrook
+ */
+
+.appleSiliconDashboard {
+  padding: var(--spacing-6);
+  max-width: 1800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+
+  @media (max-width: 768px) {
+    padding: var(--spacing-4);
+    gap: var(--spacing-4);
+  }
+}
+
+/* Header Section */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+  padding-bottom: var(--spacing-4);
+  border-bottom: 1px solid var(--color-border);
+
+  @media (max-width: 1024px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-3);
+  }
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  flex: 1;
+}
+
+.deviceInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-2);
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-1);
+  }
+}
+
+.statusBadge {
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  &.healthy {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+  }
+
+  &.warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+  }
+
+  &.critical {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+  }
+}
+
+.headerRight {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  align-items: flex-end;
+
+  @media (max-width: 1024px) {
+    align-items: flex-start;
+    width: 100%;
+  }
+}
+
+.connectionStatus {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+
+  .connected {
+    color: var(--color-success);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
+  }
+
+  .disconnected {
+    color: var(--color-error);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
+  }
+}
+
+.tabNavigation {
+  display: flex;
+  gap: var(--spacing-1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-1);
+
+  @media (max-width: 640px) {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+.actions {
+  display: flex;
+  gap: var(--spacing-2);
+
+  @media (max-width: 480px) {
+    justify-content: center;
+  }
+}
+
+/* Overview Tab */
+.overview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+/* Quick Stats */
+.quickStats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-4);
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.statCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  box-shadow: var(--shadow-sm);
+
+  h4 {
+    margin: 0 0 var(--spacing-4) 0;
+    color: var(--color-text-primary);
+    font-weight: 600;
+  }
+
+  @media (max-width: 768px) {
+    padding: var(--spacing-4);
+  }
+}
+
+.healthIndicators {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.healthItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.healthLabel {
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+.healthValue {
+  font-weight: 600;
+  font-size: 0.875rem;
+
+  &.good {
+    color: var(--color-success);
+  }
+
+  &.warning {
+    color: var(--color-warning);
+  }
+
+  &.error {
+    color: var(--color-error);
+  }
+}
+
+.recommendationsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.recommendationItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2);
+  background: var(--color-background-secondary);
+  border-radius: var(--radius-sm);
+}
+
+.priorityBadge {
+  padding: 2px var(--spacing-2);
+  border-radius: var(--radius-sm);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  &.low {
+    background: rgba(107, 114, 128, 0.1);
+    color: #6b7280;
+  }
+
+  &.medium {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+  }
+
+  &.high {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+  }
+
+  &.critical {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    font-weight: 600;
+  }
+}
+
+/* Spinning animation */
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .appleSiliconDashboard {
+    padding: var(--spacing-5);
+  }
+}
+
+@media (max-width: 768px) {
+  .appleSiliconDashboard {
+    padding: var(--spacing-4);
+  }
+
+  .header {
+    padding-bottom: var(--spacing-3);
+  }
+
+  .quickStats {
+    gap: var(--spacing-3);
+  }
+
+  .statCard {
+    padding: var(--spacing-4);
+  }
+}
+
+@media (max-width: 480px) {
+  .appleSiliconDashboard {
+    padding: var(--spacing-3);
+  }
+
+  .header {
+    gap: var(--spacing-2);
+  }
+
+  .tabNavigation {
+    padding: var(--spacing-2);
+  }
+
+  .quickStats {
+    gap: var(--spacing-2);
+  }
+
+  .statCard {
+    padding: var(--spacing-3);
+  }
+
+  .healthIndicators {
+    gap: var(--spacing-2);
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .appleSiliconDashboard {
+    .header {
+      border-bottom-width: 2px;
+    }
+  }
+
+  .statCard,
+  .recommendationItem {
+    border-width: 2px;
+  }
+
+  .statusBadge {
+    border: 1px solid currentColor;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .spinning {
+    animation: none;
+  }
+}
+
+/* Dark mode optimizations */
+@media (prefers-color-scheme: dark) {
+  .tabNavigation {
+    background: var(--color-background-secondary);
+  }
+
+  .statCard {
+    background: var(--color-surface);
+  }
+
+  .recommendationItem {
+    background: var(--color-background);
+  }
+}

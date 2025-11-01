@@ -1,0 +1,348 @@
+{
+  "dashboardMetrics": {
+    "totalUsers": 1247,
+    "activeUsers": 892,
+    "pageViews": 15678,
+    "sessionDuration": 8.5,
+    "bounceRate": 0.23,
+    "conversionRate": 0.15,
+    "revenue": 45678.90,
+    "lastUpdated": "2024-01-15T10:30:00Z"
+  },
+  "userAnalytics": {
+    "newUsers": 156,
+    "returningUsers": 736,
+    "userGrowth": 0.12,
+    "retentionRate": 0.78,
+    "churnRate": 0.08,
+    "averageSessionDuration": 8.5,
+    "pagesPerSession": 4.2
+  },
+  "pageAnalytics": [
+    {
+      "page": "/dashboard",
+      "views": 4567,
+      "uniqueViews": 2345,
+      "averageTime": 12.3,
+      "bounceRate": 0.15,
+      "conversionRate": 0.08
+    },
+    {
+      "page": "/council",
+      "views": 2345,
+      "uniqueViews": 1234,
+      "averageTime": 8.7,
+      "bounceRate": 0.22,
+      "conversionRate": 0.12
+    },
+    {
+      "page": "/apple-silicon",
+      "views": 1890,
+      "uniqueViews": 987,
+      "averageTime": 15.2,
+      "bounceRate": 0.18,
+      "conversionRate": 0.06
+    },
+    {
+      "page": "/observability",
+      "views": 1234,
+      "uniqueViews": 678,
+      "averageTime": 6.8,
+      "bounceRate": 0.25,
+      "conversionRate": 0.04
+    },
+    {
+      "page": "/workspace",
+      "views": 987,
+      "uniqueViews": 543,
+      "averageTime": 9.4,
+      "bounceRate": 0.20,
+      "conversionRate": 0.07
+    }
+  ],
+  "featureUsage": [
+    {
+      "feature": "Council Oversight",
+      "usage": 0.78,
+      "users": 892,
+      "sessions": 2345,
+      "averageTime": 8.7,
+      "satisfaction": 0.89
+    },
+    {
+      "feature": "Apple Silicon Monitoring",
+      "usage": 0.65,
+      "users": 678,
+      "sessions": 1890,
+      "averageTime": 15.2,
+      "satisfaction": 0.92
+    },
+    {
+      "feature": "System Observability",
+      "usage": 0.54,
+      "users": 543,
+      "sessions": 1234,
+      "averageTime": 6.8,
+      "satisfaction": 0.85
+    },
+    {
+      "feature": "Workspace Management",
+      "usage": 0.43,
+      "users": 432,
+      "sessions": 987,
+      "averageTime": 9.4,
+      "satisfaction": 0.87
+    },
+    {
+      "feature": "Security Monitoring",
+      "usage": 0.32,
+      "users": 321,
+      "sessions": 654,
+      "averageTime": 5.6,
+      "satisfaction": 0.91
+    }
+  ],
+  "performanceMetrics": {
+    "averageLoadTime": 1.2,
+    "p95LoadTime": 2.8,
+    "p99LoadTime": 4.5,
+    "errorRate": 0.02,
+    "uptime": 99.8,
+    "throughput": 47.5,
+    "responseTime": 145,
+    "memoryUsage": 1.8,
+    "cpuUsage": 32.1
+  },
+  "userSegments": [
+    {
+      "segment": "Power Users",
+      "count": 234,
+      "percentage": 18.8,
+      "averageSessionDuration": 15.2,
+      "featureUsage": 0.89,
+      "satisfaction": 0.94
+    },
+    {
+      "segment": "Regular Users",
+      "count": 456,
+      "percentage": 36.6,
+      "averageSessionDuration": 8.7,
+      "featureUsage": 0.67,
+      "satisfaction": 0.87
+    },
+    {
+      "segment": "Casual Users",
+      "count": 389,
+      "percentage": 31.2,
+      "averageSessionDuration": 4.2,
+      "featureUsage": 0.34,
+      "satisfaction": 0.78
+    },
+    {
+      "segment": "New Users",
+      "count": 168,
+      "percentage": 13.4,
+      "averageSessionDuration": 3.1,
+      "featureUsage": 0.12,
+      "satisfaction": 0.72
+    }
+  ],
+  "geographicData": [
+    {
+      "country": "United States",
+      "users": 456,
+      "percentage": 36.6,
+      "sessions": 2345,
+      "averageSessionDuration": 8.7
+    },
+    {
+      "country": "United Kingdom",
+      "users": 234,
+      "percentage": 18.8,
+      "sessions": 1234,
+      "averageSessionDuration": 9.2
+    },
+    {
+      "country": "Canada",
+      "users": 189,
+      "percentage": 15.2,
+      "sessions": 987,
+      "averageSessionDuration": 7.8
+    },
+    {
+      "country": "Germany",
+      "users": 156,
+      "percentage": 12.5,
+      "sessions": 678,
+      "averageSessionDuration": 8.9
+    },
+    {
+      "country": "Australia",
+      "users": 123,
+      "percentage": 9.9,
+      "sessions": 543,
+      "averageSessionDuration": 8.1
+    }
+  ],
+  "deviceAnalytics": [
+    {
+      "device": "Desktop",
+      "users": 892,
+      "percentage": 71.5,
+      "sessions": 4567,
+      "averageSessionDuration": 9.2
+    },
+    {
+      "device": "Mobile",
+      "users": 234,
+      "percentage": 18.8,
+      "sessions": 1234,
+      "averageSessionDuration": 6.8
+    },
+    {
+      "device": "Tablet",
+      "users": 121,
+      "percentage": 9.7,
+      "sessions": 543,
+      "averageSessionDuration": 7.4
+    }
+  ],
+  "browserAnalytics": [
+    {
+      "browser": "Chrome",
+      "users": 678,
+      "percentage": 54.4,
+      "sessions": 3456,
+      "averageSessionDuration": 8.9
+    },
+    {
+      "browser": "Safari",
+      "users": 234,
+      "percentage": 18.8,
+      "sessions": 1234,
+      "averageSessionDuration": 8.2
+    },
+    {
+      "browser": "Firefox",
+      "users": 189,
+      "percentage": 15.2,
+      "sessions": 987,
+      "averageSessionDuration": 8.5
+    },
+    {
+      "browser": "Edge",
+      "users": 146,
+      "percentage": 11.6,
+      "sessions": 654,
+      "averageSessionDuration": 7.8
+    }
+  ],
+  "conversionFunnels": [
+    {
+      "name": "Dashboard Onboarding",
+      "steps": [
+        {
+          "step": "Landing Page",
+          "users": 1247,
+          "conversionRate": 1.0
+        },
+        {
+          "step": "Dashboard Access",
+          "users": 892,
+          "conversionRate": 0.72
+        },
+        {
+          "step": "Feature Exploration",
+          "users": 678,
+          "conversionRate": 0.54
+        },
+        {
+          "step": "First Action",
+          "users": 456,
+          "conversionRate": 0.37
+        },
+        {
+          "step": "Regular Usage",
+          "users": 234,
+          "conversionRate": 0.19
+        }
+      ]
+    }
+  ],
+  "revenueAnalytics": {
+    "totalRevenue": 45678.90,
+    "monthlyRecurringRevenue": 12345.67,
+    "averageRevenuePerUser": 36.67,
+    "revenueGrowth": 0.15,
+    "churnRevenue": 2345.67,
+    "newRevenue": 5678.90
+  },
+  "trends": [
+    {
+      "metric": "Daily Active Users",
+      "current": 892,
+      "previous": 756,
+      "change": 0.18,
+      "trend": "up"
+    },
+    {
+      "metric": "Session Duration",
+      "current": 8.5,
+      "previous": 7.8,
+      "change": 0.09,
+      "trend": "up"
+    },
+    {
+      "metric": "Bounce Rate",
+      "current": 0.23,
+      "previous": 0.28,
+      "change": -0.18,
+      "trend": "down"
+    },
+    {
+      "metric": "Conversion Rate",
+      "current": 0.15,
+      "previous": 0.12,
+      "change": 0.25,
+      "trend": "up"
+    }
+  ],
+  "insights": [
+    {
+      "id": "insight-001",
+      "type": "performance",
+      "title": "Page Load Time Optimization",
+      "description": "Dashboard page load times have improved 25% over the last week",
+      "impact": "positive",
+      "confidence": 0.89,
+      "recommendations": [
+        "Continue current optimization strategies",
+        "Monitor for regression"
+      ]
+    },
+    {
+      "id": "insight-002",
+      "type": "usage",
+      "title": "Feature Adoption Increase",
+      "description": "Apple Silicon monitoring feature adoption increased 35% this month",
+      "impact": "positive",
+      "confidence": 0.92,
+      "recommendations": [
+        "Promote similar features to increase adoption",
+        "Analyze what drove the increase"
+      ]
+    },
+    {
+      "id": "insight-003",
+      "type": "user_behavior",
+      "title": "User Engagement Drop",
+      "description": "User engagement decreased 12% in the last 3 days",
+      "impact": "negative",
+      "confidence": 0.76,
+      "recommendations": [
+        "Investigate potential issues",
+        "Send user feedback surveys"
+      ]
+    }
+  ]
+}

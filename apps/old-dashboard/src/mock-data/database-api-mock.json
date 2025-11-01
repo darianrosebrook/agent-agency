@@ -1,0 +1,199 @@
+{
+  "databaseInfo": {
+    "name": "agent_agency_v3",
+    "version": "15.2",
+    "type": "PostgreSQL",
+    "host": "localhost",
+    "port": 5432,
+    "status": "connected",
+    "uptime": 99.8,
+    "lastBackup": "2024-01-15T08:00:00Z",
+    "size": 2.4,
+    "connections": {
+      "active": 15,
+      "max": 100,
+      "idle": 5
+    }
+  },
+  "tables": [
+    {
+      "name": "council_verdicts",
+      "rows": 2847,
+      "size": 0.8,
+      "indexes": 3,
+      "lastAnalyzed": "2024-01-15T10:30:00Z",
+      "health": "good"
+    },
+    {
+      "name": "ai_judges",
+      "rows": 12,
+      "size": 0.1,
+      "indexes": 2,
+      "lastAnalyzed": "2024-01-15T10:30:00Z",
+      "health": "good"
+    },
+    {
+      "name": "ethical_assessments",
+      "rows": 1247,
+      "size": 0.5,
+      "indexes": 2,
+      "lastAnalyzed": "2024-01-15T10:30:00Z",
+      "health": "good"
+    },
+    {
+      "name": "hardware_metrics",
+      "rows": 15678,
+      "size": 1.2,
+      "indexes": 4,
+      "lastAnalyzed": "2024-01-15T10:30:00Z",
+      "health": "good"
+    },
+    {
+      "name": "model_performance",
+      "rows": 892,
+      "size": 0.3,
+      "indexes": 3,
+      "lastAnalyzed": "2024-01-15T10:30:00Z",
+      "health": "good"
+    },
+    {
+      "name": "security_events",
+      "rows": 456,
+      "size": 0.2,
+      "indexes": 2,
+      "lastAnalyzed": "2024-01-15T10:30:00Z",
+      "health": "good"
+    }
+  ],
+  "performance": {
+    "queriesPerSecond": 47.5,
+    "averageQueryTime": 12.3,
+    "slowQueries": 3,
+    "cacheHitRate": 0.89,
+    "indexUsage": 0.94,
+    "connectionUtilization": 0.15
+  },
+  "queries": [
+    {
+      "id": "query-001",
+      "sql": "SELECT * FROM council_verdicts WHERE status = 'pending'",
+      "executionTime": 8.5,
+      "rowsReturned": 12,
+      "timestamp": "2024-01-15T10:30:00Z",
+      "status": "completed"
+    },
+    {
+      "id": "query-002",
+      "sql": "SELECT COUNT(*) FROM hardware_metrics WHERE timestamp > NOW() - INTERVAL '1 hour'",
+      "executionTime": 15.2,
+      "rowsReturned": 1,
+      "timestamp": "2024-01-15T10:29:45Z",
+      "status": "completed"
+    },
+    {
+      "id": "query-003",
+      "sql": "SELECT * FROM ai_judges ORDER BY performance_score DESC",
+      "executionTime": 2.1,
+      "rowsReturned": 12,
+      "timestamp": "2024-01-15T10:29:30Z",
+      "status": "completed"
+    },
+    {
+      "id": "query-004",
+      "sql": "SELECT * FROM ethical_assessments WHERE bias_score > 0.7",
+      "executionTime": 45.8,
+      "rowsReturned": 23,
+      "timestamp": "2024-01-15T10:29:15Z",
+      "status": "slow"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_council_verdicts_status",
+      "table": "council_verdicts",
+      "type": "btree",
+      "size": 0.1,
+      "usage": 0.95,
+      "lastUsed": "2024-01-15T10:30:00Z"
+    },
+    {
+      "name": "idx_hardware_metrics_timestamp",
+      "table": "hardware_metrics",
+      "type": "btree",
+      "size": 0.3,
+      "usage": 0.89,
+      "lastUsed": "2024-01-15T10:29:45Z"
+    },
+    {
+      "name": "idx_ethical_assessments_bias_score",
+      "table": "ethical_assessments",
+      "type": "btree",
+      "size": 0.1,
+      "usage": 0.67,
+      "lastUsed": "2024-01-15T10:29:15Z"
+    }
+  ],
+  "backups": [
+    {
+      "id": "backup-001",
+      "timestamp": "2024-01-15T08:00:00Z",
+      "size": 2.4,
+      "type": "full",
+      "status": "completed",
+      "duration": 1800
+    },
+    {
+      "id": "backup-002",
+      "timestamp": "2024-01-14T08:00:00Z",
+      "size": 2.3,
+      "type": "full",
+      "status": "completed",
+      "duration": 1750
+    },
+    {
+      "id": "backup-003",
+      "timestamp": "2024-01-13T08:00:00Z",
+      "size": 2.2,
+      "type": "full",
+      "status": "completed",
+      "duration": 1720
+    }
+  ],
+  "health": {
+    "status": "healthy",
+    "uptime": 99.8,
+    "memoryUsage": 1.8,
+    "diskUsage": 2.4,
+    "connectionCount": 15,
+    "lastHealthCheck": "2024-01-15T10:30:00Z",
+    "issues": []
+  },
+  "replication": {
+    "enabled": true,
+    "lag": 0.5,
+    "status": "healthy",
+    "replicas": [
+      {
+        "name": "replica-001",
+        "host": "replica1.example.com",
+        "port": 5432,
+        "status": "active",
+        "lag": 0.3
+      },
+      {
+        "name": "replica-002",
+        "host": "replica2.example.com",
+        "port": 5432,
+        "status": "active",
+        "lag": 0.7
+      }
+    ]
+  },
+  "maintenance": {
+    "lastVacuum": "2024-01-15T08:00:00Z",
+    "lastAnalyze": "2024-01-15T10:30:00Z",
+    "nextMaintenance": "2024-01-16T08:00:00Z",
+    "autoVacuum": true,
+    "autoAnalyze": true
+  }
+}

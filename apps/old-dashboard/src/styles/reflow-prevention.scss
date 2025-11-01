@@ -1,0 +1,323 @@
+/**
+ * Layout Reflow Prevention Utilities
+ * CSS patterns to prevent cumulative layout shift (CLS)
+ * 
+ * @author @darianrosebrook
+ */
+
+/* Prevent layout shift during font loading */
+.prevent-font-shift {
+  font-display: swap;
+  size-adjust: 100%;
+  ascent-override: 100%;
+  descent-override: 20%;
+  line-gap-override: 0%;
+}
+
+/* Reserve space for dynamic content */
+.reserve-space {
+  min-height: var(--reserved-height, 200px);
+  contain: layout style;
+}
+
+/* Strict dimensions for skeletons */
+.skeleton-exact {
+  min-height: var(--skeleton-height);
+  height: var(--skeleton-height);
+  max-height: var(--skeleton-height);
+  contain: layout style paint;
+}
+
+/* Prevent grid items from shifting */
+.stable-grid {
+  display: grid;
+  grid-auto-rows: minmax(var(--min-row-height, 100px), auto);
+  contain: layout style;
+}
+
+/* Aspect ratio containers (no shift when media loads) */
+.aspect-ratio-16-9 {
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+}
+
+.aspect-ratio-4-3 {
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+}
+
+.aspect-ratio-1-1 {
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+}
+
+/* Optimized transitions (GPU-accelerated only) */
+.optimized-transition {
+  transition:
+    transform var(--transition-duration-base) var(--transition-easing-out),
+    opacity var(--transition-duration-base) var(--transition-easing-out);
+  will-change: transform; /* Hint browser to optimize */
+}
+
+.optimized-transition:not(:hover):not(:focus) {
+  will-change: auto; /* Clean up when not animating */
+}
+
+/* Prevent text overflow and reflow */
+.truncate-single {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.truncate-multi {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.truncate-2-lines {
+  @extend .truncate-multi;
+  -webkit-line-clamp: 2;
+}
+
+.truncate-3-lines {
+  @extend .truncate-multi;
+  -webkit-line-clamp: 3;
+}
+
+/* Smooth scrolling containers */
+.smooth-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain; /* Prevent parent scroll */
+  -webkit-overflow-scrolling: touch; /* iOS momentum */
+  scroll-behavior: smooth;
+}
+
+/* GPU-accelerated animations */
+.gpu-accelerated {
+  will-change: transform;
+  transform: translateZ(0); /* Force GPU layer */
+  backface-visibility: hidden;
+}
+
+/* Layout isolation */
+.layout-isolated {
+  contain: layout style;
+}
+
+.layout-isolated-strict {
+  contain: layout style paint;
+}
+
+/* Prevent layout thrashing during animations */
+.animating {
+  will-change: transform, opacity;
+  contain: layout style;
+}
+
+.animating-done {
+  will-change: auto;
+}
+
+/* Fixed dimension utilities */
+.h-exact {
+  min-height: var(--exact-height);
+  height: var(--exact-height);
+  max-height: var(--exact-height);
+}
+
+.w-exact {
+  min-width: var(--exact-width);
+  width: var(--exact-width);
+  max-width: var(--exact-width);
+}
+
+/* Prevent cumulative layout shift during load */
+.cls-safe {
+  contain: layout style;
+  min-height: var(--safe-height, auto);
+}
+
+.cls-safe-strict {
+  contain: layout style paint;
+  min-height: var(--safe-height);
+  height: var(--safe-height);
+  max-height: var(--safe-height);
+}
+
+/* Responsive image containers */
+.img-container {
+  position: relative;
+  overflow: hidden;
+  
+  img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+}
+
+.img-container-cover {
+  @extend .img-container;
+  
+  img {
+    object-fit: cover;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+/* Fluid spacing utilities */
+.fluid-padding {
+  padding: clamp(1rem, 3vw, 3rem);
+}
+
+.fluid-padding-sm {
+  padding: clamp(0.5rem, 2vw, 1.5rem);
+}
+
+.fluid-padding-lg {
+  padding: clamp(1.5rem, 4vw, 4rem);
+}
+
+.fluid-gap {
+  gap: clamp(1rem, 2vw, 2rem);
+}
+
+.fluid-gap-sm {
+  gap: clamp(0.5rem, 1vw, 1rem);
+}
+
+.fluid-gap-lg {
+  gap: clamp(1.5rem, 3vw, 3rem);
+}
+
+/* Prevent overflow at all costs */
+.no-overflow {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.no-overflow-x {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.no-overflow-y {
+  max-height: 100%;
+  overflow-y: hidden;
+}
+
+/* Safe flex containers */
+.flex-safe {
+  display: flex;
+  min-width: 0; /* Allows flex items to shrink below content size */
+  min-height: 0;
+}
+
+.flex-item-safe {
+  min-width: 0; /* Prevents overflow in flex containers */
+  flex-shrink: 1;
+}
+
+/* Safe grid containers */
+.grid-safe {
+  display: grid;
+  min-width: 0;
+}
+
+.grid-item-safe {
+  min-width: 0; /* Prevents overflow in grid */
+  overflow: hidden;
+}
+
+/* Mobile-safe touch targets */
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.touch-target-lg {
+  min-width: 48px;
+  min-height: 48px;
+}
+
+/* Prevent iOS rubber-band scroll */
+html, body {
+  overscroll-behavior-y: none;
+}
+
+.prevent-overscroll {
+  overscroll-behavior: contain;
+}
+
+/* Stable table layouts */
+.table-stable {
+  table-layout: fixed; /* Prevents width calculations */
+  width: 100%;
+}
+
+.table-stable th,
+.table-stable td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Loading state placeholders */
+.loading-placeholder {
+  background: linear-gradient(
+    90deg,
+    var(--color-background-secondary) 25%,
+    var(--color-background-muted) 50%,
+    var(--color-background-secondary) 75%
+  );
+  background-size: 200% 100%;
+  animation: loading-shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--border-radius-md);
+  contain: layout style paint;
+}
+
+@keyframes loading-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Critical CSS - inline these for fastest paint */
+.critical-above-fold {
+  contain: layout style;
+  will-change: contents;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .optimized-transition,
+  .animating,
+  .loading-placeholder {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .gpu-accelerated {
+    will-change: auto;
+    transform: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .truncate-single,
+  .truncate-multi {
+    text-overflow: clip; /* Ellipsis might be hard to see */
+  }
+}
+
+

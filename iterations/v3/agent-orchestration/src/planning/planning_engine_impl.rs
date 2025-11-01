@@ -41,9 +41,8 @@ impl PlanningEngine for PlanningEngineImpl {
         ctx: &ExecutionContext,
         task: &TaskDescriptor,
     ) -> agent_agency_contracts::errors::PlanningResult<ContractExecutionPlan> {
-        // Convert contract types to local types for PlanGenerator
-        let local_task = task.clone().from_contracts(task.clone());
-        let local_ctx = self.create_plan_generation_context(ctx, &local_task)
+        // TaskDescriptor is already a contract type, no conversion needed
+        let local_ctx = self.create_plan_generation_context(ctx, task)
             .map_err(|e| PlanningError::PlanGenerationFailed {
                 reason: format!("Context creation failed: {:?}", e)
             })?;

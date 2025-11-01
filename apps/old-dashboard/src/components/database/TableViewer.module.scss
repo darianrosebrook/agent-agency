@@ -1,0 +1,165 @@
+@import '@/styles/mixins.scss';
+
+.tableViewer {
+  @include card-base;
+  width: 100%;
+  max-width: none;
+}
+
+// Dark mode disabled - Light theme only
+
+.viewerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+// Dark mode disabled - Light theme only
+
+.exportButton {
+  @include button-base;
+  @include button-secondary;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  position: relative;
+}
+
+// Dark mode disabled - Light theme only
+
+.schemaOverview {
+  display: flex;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+// Dark mode disabled - Light theme only
+
+.stat {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+
+  &:not(:last-child)::after {
+    content: "•";
+    margin-left: var(--spacing-lg);
+    color: var(--color-text-tertiary);
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.columnList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+// Dark mode disabled - Light theme only
+
+.pkBadge {
+  background-color: var(--color-primary-50);
+  color: var(--color-primary-700);
+  font-size: var(--font-size-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+// Dark mode disabled - Light theme only
+
+.vectorBadge {
+  background-color: var(--color-accent-50);
+  color: var(--color-accent-700);
+  font-size: var(--font-size-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+// Dark mode disabled - Light theme only
+
+// Data types
+.nullValue {
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+// Dark mode disabled - Light theme only
+
+.arrayValue {
+  font-family: var(--font-family-mono);
+  color: var(--color-accent-700);
+  cursor: help;
+}
+
+// Dark mode disabled - Light theme only
+
+.truncatedValue {
+  cursor: help;
+
+  &:hover {
+    background-color: var(--color-bg-hover);
+  }
+}
+
+// No data state
+.noData {
+  text-align: center;
+  padding: var(--spacing-3xl);
+
+  .emptyIcon {
+    font-size: var(--font-size-4xl);
+    margin-bottom: var(--spacing-lg);
+  }
+
+  h3 {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    margin: 0 0 var(--spacing-md) 0;
+  }
+
+  p {
+    font-size: var(--font-size-base);
+    color: var(--color-text-secondary);
+    margin: 0 0 var(--spacing-lg) 0;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+// Loading and error states
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-3xl);
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--color-border);
+    border-top: 3px solid var(--color-primary-500);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: var(--spacing-lg);
+  }
+
+  p {
+    font-size: var(--font-size-base);
+    color: var(--color-text-secondary);
+    margin: 0;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

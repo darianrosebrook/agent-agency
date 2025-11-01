@@ -1,0 +1,184 @@
+// Collapsible Sidebar Styles
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-background-secondary);
+  border-right: 1px solid var(--color-border);
+  transition: width 0.3s ease;
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  overflow: hidden;
+
+  &.expanded {
+    width: 320px;
+  }
+
+  &.collapsed {
+    width: 60px;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.toggleButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: var(--color-background-secondary);
+  }
+
+  &:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.titleIcon {
+  font-size: 1.25rem;
+}
+
+// Dark mode disabled - Light theme only
+
+.sidebarNav {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem;
+  gap: 0.25rem;
+}
+
+// Dark mode disabled - Light theme only
+
+.navIcon {
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+}
+
+// Dark mode disabled - Light theme only
+
+.sidebarContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+// Dark mode disabled - Light theme only
+
+.tasksSection,
+.workflowsSection,
+.settingsSection {
+  h4 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.taskItem,
+.workflowItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--color-background-secondary);
+    transform: translateY(-1px);
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.taskInfo,
+.workflowInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+// Dark mode disabled - Light theme only
+
+.taskStatus {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+// Dark mode disabled - Light theme only
+
+.settingsSection {
+  .settingItem {
+    margin-bottom: 1rem;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.connectionStatus {
+  padding: 1rem;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-background);
+}
+
+// Dark mode disabled - Light theme only
+
+.statusIcon {
+  font-size: 1rem;
+}
+
+// Dark mode disabled - Light theme only
+
+// Responsive design
+@media (max-width: 768px) {
+  .sidebar {
+    &.expanded {
+      width: 100vw;
+    }
+
+    &.collapsed {
+      width: 60px;
+    }
+  }
+
+// Dark mode disabled - Light theme only
+
+  .taskItem,
+  .workflowItem {
+    padding: 0.5rem;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+
+
+

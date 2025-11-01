@@ -1,0 +1,120 @@
+@import '@/styles/mixins.scss';
+
+.metricTile {
+  @include card-base;
+  @include card-hover;
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-lg);
+  min-height: 120px;
+  transition: all var(--transition-fast);
+
+  &.success {
+    border-left: 4px solid var(--color-success);
+  }
+
+  &.warning {
+    border-left: 4px solid var(--color-warning);
+  }
+
+  &.error {
+    border-left: 4px solid var(--color-error);
+  }
+
+  &.neutral {
+    border-left: 4px solid var(--color-gray-400);
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin: 0;
+  flex: 1;
+}
+
+// Dark mode disabled - Light theme only
+
+.tileBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+// Dark mode disabled - Light theme only
+
+.change {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+}
+
+// Dark mode disabled - Light theme only
+
+.changeLabel {
+  color: var(--color-text-secondary);
+}
+
+// Dark mode disabled - Light theme only
+
+// Loading state
+.loading {
+  .loadingSkeleton {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+  }
+
+// Dark mode disabled - Light theme only
+
+  .skeletonValue {
+    height: 32px;
+    background: linear-gradient(90deg, var(--color-gray-200) 25%, var(--color-gray-100) 50%, var(--color-gray-200) 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: var(--radius-sm);
+  }
+
+// Dark mode disabled - Light theme only
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+// Responsive design
+@include breakpoint(md) {
+  .metricTile {
+    padding: var(--spacing-md);
+    min-height: 100px;
+  }
+
+// Dark mode disabled - Light theme only
+
+  .value {
+    font-size: var(--font-size-xl);
+  }
+}
+
+@include breakpoint(sm) {
+  .metricTile {
+    padding: var(--spacing-sm);
+    min-height: 80px;
+  }
+
+// Dark mode disabled - Light theme only
+
+  .value {
+    font-size: var(--font-size-lg);
+  }
+}

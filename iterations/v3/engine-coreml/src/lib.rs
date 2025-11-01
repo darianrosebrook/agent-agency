@@ -263,8 +263,8 @@ impl CoreMLEngine {
         // Use real Mistral inference if model is loaded
         if let Some(model) = &self.mistral_model {
             let mut model_clone = model.clone(); // Clone for mutation during inference
-            // return self.run_real_mistral_inference(&mut model_clone, prompt, max_tokens).await;
-            return Ok("Mock response - real inference disabled".to_string());
+            return self.run_real_mistral_inference(&mut model_clone, prompt, max_tokens).await;
+            // return Ok("Mock response - real inference disabled".to_string());
         }
 
         // Fallback to simulation

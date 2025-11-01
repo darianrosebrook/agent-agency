@@ -1,0 +1,50 @@
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resources/src/lib.rs:98 (85.0% confidence)
+    Hidden incomplete implementation detected: 'message: format!("Task allocation lookup not yet implemented for task {}", task_id),'
+    💡 Replace with complete implementation or remove TODO marker
+
+  system-resources/src/lib.rs:203-204 (85.0% confidence)
+    Grouped incomplete implementation, hidden TODO/placeholder issues (2 lines):
+  Line 203: // In a real implementation, we'd check if pool contains allocation
+  Line 204: // For now, return first pool (would need allocation tracking)
+    💡 Replace with complete implementation or remove TODO marker
+
+  system-resources/src/monitoring.rs:66 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// Mock utilization calculation - would be based on actual pool metrics'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resources/src/monitoring.rs:83 (90.0% confidence)
+    Potential hidden TODO/placeholder: 'let total_capacity = 100; // Mock capacity'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resources/src/monitoring.rs:99 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// Mock resource accumulation'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resources/src/pools.rs:125 (85.0% confidence)
+    Hidden incomplete implementation detected: '// In a real implementation, this would reorder allocations to reduce fragmentation'
+    💡 Replace with complete implementation or remove TODO marker
+
+  system-resources/src/security.rs:138 (90.0% confidence)
+    Potential hidden TODO/placeholder: 'return Err(SecurityError::AuthenticationDisabled);'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resources/src/security.rs:146 (90.0% confidence)
+    Potential hidden TODO/placeholder: 'return Err(SecurityError::AccountDisabled);'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  ... and 1615 more
+⚠️  WARNINGS (306):
+  system-resilience/src/fsck.rs:10 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// TODO: Implement Fsck struct with proper fields and configuration with acceptance criteria:'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resilience/src/fsck.rs:32 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// TODO: Implement comprehensive filesystem integrity checking with acceptance criteria:'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+
+  system-resilience/src/fsck.rs:52 (90.0% confidence)
+    Potential hidden TODO/placeholder: '// TODO: Implement SQLite index rebuilding from Merkle trees with acceptance criteria:'
+    💡 Review and either implement or formalize as engineering‑grade TODO
+

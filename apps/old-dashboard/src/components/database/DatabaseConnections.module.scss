@@ -1,0 +1,178 @@
+/**
+ * Database Connections Component Styles
+ * 
+ * @author @darianrosebrook
+ */
+
+.container {
+  padding: var(--spacing-6);
+  background: white;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-6);
+  
+  .headerIcon {
+    width: 1.5rem;
+    height: 1.5rem;
+    color: var(--color-brand-primary);
+  }
+  
+  .title {
+    margin: 0;
+    color: var(--color-text-primary);
+  }
+}
+
+.connectionsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.connectionCard {
+  padding: var(--spacing-5);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--border-radius-lg);
+  background: #fafafa;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.connectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-4);
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: var(--spacing-3);
+  }
+}
+
+.connectionInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.connectionName {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.statusIcon {
+  width: 1rem;
+  height: 1rem;
+  
+  &.connected {
+    color: #059669;
+  }
+  
+  &.warning {
+    color: #d97706;
+  }
+  
+  &.disconnected {
+    color: #dc2626;
+  }
+}
+
+.statusIndicator {
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--border-radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  
+  &.connected {
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+  }
+  
+  &.warning {
+    background: #fffbeb;
+    color: #d97706;
+    border: 1px solid #fed7aa;
+  }
+  
+  &.disconnected {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+  }
+}
+
+.connectionDetails {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  text-align: right;
+  
+  @media (max-width: 768px) {
+    text-align: left;
+  }
+}
+
+.connectionMetrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--spacing-4);
+  padding-top: var(--spacing-4);
+  border-top: 1px solid var(--color-border-default);
+}
+
+.metric {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  
+  .metricIcon {
+    width: 1rem;
+    height: 1rem;
+    color: var(--color-text-secondary);
+  }
+  
+  .metricContent {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-1);
+  }
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-8);
+  color: var(--color-text-secondary);
+  
+  .spinner {
+    width: 2rem;
+    height: 2rem;
+    border: 2px solid var(--color-border-default);
+    border-top: 2px solid var(--color-brand-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: var(--spacing-3);
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

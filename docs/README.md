@@ -17,7 +17,7 @@ docs/
 ├── DOCUMENTATION_ACCURACY_AUDIT.md     # Audit findings (2025-10-13)
 ├── DOCUMENTATION_AUDIT_SUMMARY.md      # Initial audit summary
 ├── SPEC_ALIGNMENT_AUDIT.md            # Spec alignment analysis
-├── agent-agency.md                     # Project overview
+├── arbiter/theory.md                   # Arbiter stack theory and architecture
 │
 ├── agents/                             # Agent-facing guides (CAWS framework)
 │   ├── examples.md                     # Usage examples
@@ -145,7 +145,7 @@ docs/
 **Core Components**:
 - `CONSTITUTIONAL_COUNCIL.md` - Governance framework design
 - `TASK_EXECUTION_LIFECYCLE.md` - Task execution architecture
-- `MULTI_MODEL_AI_SYSTEM.md` - Multi-model coordination patterns
+- `architecture/coreml-first-decision.md` - CoreML-first architecture decision
 - `coreml-safety-architecture.md` - Thread-safe CoreML integration
 
 ### Implementation Status

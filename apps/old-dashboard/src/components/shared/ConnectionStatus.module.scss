@@ -1,0 +1,25 @@
+@use "@/styles/mixins.scss" as *;
+
+.connectionStatus {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+// Dark mode disabled - Light theme only
+
+.icon {
+  font-size: 1rem;
+}
+
+// Dark mode disabled - Light theme only
+
+.lastConnected {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-left: 1.75rem;
+}
+
+// Dark mode disabled - Light theme only
+
+// Dark mode disabled - Light theme only
