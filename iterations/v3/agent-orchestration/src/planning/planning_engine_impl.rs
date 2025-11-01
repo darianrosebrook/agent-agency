@@ -325,13 +325,13 @@ impl RealWorkingSpecProvider {
                         required_artifacts: vec!["requirements_doc".to_string()],
                         custom_validations: vec![],
                     },
-                    metrics: MilestoneMetrics {
+                    metrics: Some(MilestoneMetrics {
                         execution_time_ms: 0,
                         resources_used: std::collections::HashMap::new(),
                         quality_metrics: std::collections::HashMap::new(),
                         evidence_results: vec![],
                         execution_events: vec![],
-                    },
+                    }),
                 },
             ],
             change_budget: self.task_descriptor.change_budget.clone(),

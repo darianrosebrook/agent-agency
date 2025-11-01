@@ -62,7 +62,7 @@ use crate::planning::plan_types::{EvidenceBundle, EvidenceArtifact};
 /// Evidence collector with real integration to agent-research
 pub struct EvidenceCollector {
     /// Research evidence collector
-    research_collector: Arc<ResearchEvidenceCollector>,
+    research_collector: Arc<dyn ResearchEvidenceCollector>,
 
     /// Evidence validation configuration
     validation_config: EvidenceValidationConfig,
@@ -144,7 +144,7 @@ impl Default for EvidenceStorageConfig {
 
 impl EvidenceCollector {
     /// Create new evidence collector with real research integration
-    pub fn new(research_collector: Arc<ResearchEvidenceCollector>) -> Self {
+    pub fn new(research_collector: Arc<dyn ResearchEvidenceCollector>) -> Self {
         Self::with_config(
             research_collector,
             EvidenceValidationConfig::default(),
@@ -154,7 +154,7 @@ impl EvidenceCollector {
 
     /// Create with custom configuration
     pub fn with_config(
-        research_collector: Arc<ResearchEvidenceCollector>,
+        research_collector: Arc<dyn ResearchEvidenceCollector>,
         validation_config: EvidenceValidationConfig,
         storage_config: EvidenceStorageConfig,
     ) -> Self {

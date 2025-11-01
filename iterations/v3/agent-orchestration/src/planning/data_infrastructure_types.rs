@@ -20,14 +20,14 @@ pub struct AuditTrailEntry {
 /// Database operations trait
 #[async_trait]
 pub trait DatabaseOperations: Send + Sync {
-    async fn create_execution_plan(&self, plan: CreateExecutionPlan) -> Result<models::ExecutionPlan>;
-    async fn get_execution_plan(&self, id: Uuid) -> Result<Option<models::ExecutionPlan>>;
-    async fn create_audit_trail_entry(&self, entry: AuditTrailEntry) -> Result<()>;
-    async fn create_planning_session(&self, session: CreatePlanningSession) -> Result<models::PlanningSession>;
-    async fn get_planning_session(&self, id: Uuid) -> Result<Option<models::PlanningSession>>;
-    async fn update_planning_session(&self, id: Uuid, session: UpdatePlanningSession) -> Result<()>;
-    async fn create_planning_telemetry(&self, telemetry: CreatePlanningTelemetry) -> Result<()>;
-    async fn create_planning_audit_event(&self, event: CreatePlanningAuditEvent) -> Result<()>;
+    async fn create_execution_plan(&self, plan: CreateExecutionPlan) -> Result<models::ExecutionPlan, anyhow::Error>;
+    async fn get_execution_plan(&self, id: Uuid) -> Result<Option<models::ExecutionPlan>, anyhow::Error>;
+    async fn create_audit_trail_entry(&self, entry: AuditTrailEntry) -> Result<(), anyhow::Error>;
+    async fn create_planning_session(&self, session: CreatePlanningSession) -> Result<models::PlanningSession, anyhow::Error>;
+    async fn get_planning_session(&self, id: Uuid) -> Result<Option<models::PlanningSession>, anyhow::Error>;
+    async fn update_planning_session(&self, id: Uuid, session: UpdatePlanningSession) -> Result<(), anyhow::Error>;
+    async fn create_planning_telemetry(&self, telemetry: CreatePlanningTelemetry) -> Result<(), anyhow::Error>;
+    async fn create_planning_audit_event(&self, event: CreatePlanningAuditEvent) -> Result<(), anyhow::Error>;
     // Add other methods as needed
 }
 

@@ -11,6 +11,7 @@ use tokio::sync::{mpsc, RwLock};
 use tokio::time;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use serde::{Serialize, Deserialize};
 
 use agent_agency_contracts::task_executor::{TaskExecutionResult, TaskExecutor};
 use agent_agency_contracts::working_spec::{
@@ -62,6 +63,16 @@ pub use agent_agency_contracts::types::memory::*;
 pub type ProgressTrackerType = Arc<dyn ProgressTracker>;
 /// Consensus coordinator type alias
 pub type ConsensusCoordinatorType = Arc<dyn ConsensusCoordinator>;
+
+/// Helper struct for folded context summaries (used in context offloading)
+#[cfg(feature = "memory")]
+#[derive(Debug, Clone)]
+struct FoldedContextSummary {
+    summary: String,
+    context_count: usize,
+    success_rate: f64,
+    avg_quality_score: f64,
+}
 
 // Trait definitions for missing modules
 pub trait CawsRuntimeValidator: Send + Sync + std::fmt::Debug {
@@ -793,18 +804,41 @@ pub struct AutonomousExecutorConfig {
 }
 
 /// Task execution state
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskExecutionState {
     pub task_id: Uuid,
     pub task_descriptor: TaskDescriptor,
     pub working_spec: WorkingSpec,
     pub start_time: DateTime<Utc>,
-    pub status: ExecutionStatus,
+    pub status: TypesExecutionStatus,
     pub retry_count: usize,
     pub consensus_result: Option<CouncilVerdict>,
     pub final_verdict: Option<FinalVerdict>,
     pub error_message: Option<String>,
     pub worker_id: Option<String>,
+    /// Current iteration number (0-indexed)
+    pub current_iteration: u32,
+    /// Quality scores from each iteration
+    pub quality_scores: Vec<f64>,
+    /// Iteration history with refinement changes
+    pub iteration_history: Vec<IterationRecord>,
+    /// Last saved timestamp
+    pub last_saved_at: Option<DateTime<Utc>>,
+    /// Session ID for multi-session context continuity
+    pub session_id: Option<Uuid>,
+}
+
+/// Record of a single iteration's execution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IterationRecord {
+    pub iteration: u32,
+    pub timestamp: DateTime<Utc>,
+    pub working_spec_snapshot: WorkingSpec,
+    pub quality_score: f64,
+    pub council_approved: bool,
+    pub refinement_reason: Option<String>,
+    pub council_feedback: Option<String>,
+    pub artifacts_produced: Vec<String>,
 }
 
 /// Autonomous executor that runs tasks end-to-end
@@ -872,7 +906,11 @@ impl AutonomousExecutor {
     }
 
     /// Submit a task for autonomous execution
-    pub async fn submit_task(&self, task_descriptor: TaskDescriptor) -> Result<Uuid, Box<dyn std::error::Error + Send + Sync>> {
+    /// 
+    /// # Arguments
+    /// * `task_descriptor` - The task to execute
+    /// * `session_id` - Optional session ID for multi-session context continuity
+    pub async fn submit_task(&self, task_descriptor: TaskDescriptor, session_id: Option<Uuid>) -> Result<Uuid, Box<dyn std::error::Error + Send + Sync>> {
         let task_id = Uuid::parse_str(&task_descriptor.task_id).unwrap_or_else(|_| Uuid::new_v4());
 
         // Create initial execution state
@@ -947,6 +985,11 @@ impl AutonomousExecutor {
             final_verdict: None,
             error_message: None,
             worker_id: None,
+            current_iteration: 0,
+            quality_scores: Vec::new(),
+            iteration_history: Vec::new(),
+            last_saved_at: None,
+            session_id,
         };
 
         // Store in active tasks
@@ -1116,6 +1159,56 @@ impl AutonomousExecutor {
 
         tracing::info!("Starting execution of task {} in mode {:?}", task_id, task_descriptor.execution_mode);
 
+        // Get session_id from execution state if available
+        let session_id = {
+            let active_tasks = self.active_tasks.read().await;
+            active_tasks.get(&task_id).and_then(|state| state.session_id)
+        };
+
+        // Retrieve session context from previous sessions if session_id is provided
+        #[cfg(feature = "memory")]
+        let session_context = if let Some(sid) = session_id {
+            if let Some(memory_system) = &self.memory_system {
+                self.retrieve_session_context(memory_system, sid).await
+                    .unwrap_or_else(|e| {
+                        tracing::warn!("Failed to retrieve session context for session {}: {}", sid, e);
+                        Vec::new()
+                    })
+            } else {
+                Vec::new()
+            }
+        } else {
+            Vec::new()
+        };
+
+        #[cfg(not(feature = "memory"))]
+        let session_context: Vec<String> = Vec::new();
+
+        // Retrieve relevant context from memory system for long-horizon tasks
+        #[cfg(feature = "memory")]
+        let contextual_info = if let Some(memory_system) = &self.memory_system {
+            self.retrieve_task_context(memory_system, &task_descriptor).await
+                .unwrap_or_else(|e| {
+                    tracing::warn!("Failed to retrieve context from memory: {}", e);
+                    Vec::new()
+                })
+        } else {
+            Vec::new()
+        };
+
+        #[cfg(not(feature = "memory"))]
+        let contextual_info: Vec<String> = Vec::new();
+
+        // Combine session context and task context
+        let mut all_context = session_context.clone();
+        all_context.extend(contextual_info);
+
+        // Enrich task descriptor with retrieved context if available
+        if !all_context.is_empty() {
+            tracing::info!("Retrieved {} contextual memories for task {} ({} from session, {} from task)", 
+                all_context.len(), task_id, session_context.len(), contextual_info.len());
+        }
+
         // Enforce execution mode behavior
         match task_descriptor.execution_mode {
             ExecutionMode::DryRun => {
@@ -1135,7 +1228,17 @@ impl AutonomousExecutor {
 
         // Phase 1: Validate and prepare task
         let task_request = self.convert_task_descriptor_to_request(&task_descriptor)?;
-        let working_spec = self.prepare_task(&task_request).await?;
+        let mut working_spec = self.prepare_task(&task_request).await?;
+        
+        // Enrich working spec with contextual information from memory
+        #[cfg(feature = "memory")]
+        if !all_context.is_empty() {
+            working_spec.description = format!("{}\n\nContext from previous executions:\n{}", 
+                working_spec.description, 
+                all_context.join("\n"));
+            tracing::info!("Enriched working spec with {} contextual memories", all_context.len());
+        }
+        
         self.update_task_progress(task_id.clone(), 10.0, Some("Task prepared".to_string())).await?;
 
         // Strict mode: Require approval before proceeding
@@ -1289,29 +1392,29 @@ impl AutonomousExecutor {
 
             // Execute task orchestration for this iteration
             let verdict = match task_descriptor.execution_mode {
-                ExecutionMode::DryRun => {
-                    tracing::info!("Dry-run mode: Skipping actual orchestration, simulating results");
-                    // Create a mock verdict for dry-run
-                    agent_agency_contracts::final_verdict::FinalVerdictContract {
-                        decision: agent_agency_contracts::final_verdict::FinalDecision::Accept,
-                        votes: vec![],
-                        dissent: String::new(),
-                        remediation: vec![],
-                        constitutional_refs: vec![],
-                        verification_summary: agent_agency_contracts::final_verdict::VerificationSummary {
-                            claims_total: 1,
-                            claims_verified: 1,
-                            coverage_pct: 100.0,
-                        },
-                    }
+            ExecutionMode::DryRun => {
+                tracing::info!("Dry-run mode: Skipping actual orchestration, simulating results");
+                // Create a mock verdict for dry-run
+                agent_agency_contracts::final_verdict::FinalVerdictContract {
+                    decision: agent_agency_contracts::final_verdict::FinalDecision::Accept,
+                    votes: vec![],
+                    dissent: String::new(),
+                    remediation: vec![],
+                    constitutional_refs: vec![],
+                    verification_summary: agent_agency_contracts::final_verdict::VerificationSummary {
+                        claims_total: 1,
+                        claims_verified: 1,
+                        coverage_pct: 100.0,
+                    },
                 }
-                ExecutionMode::Strict | ExecutionMode::Auto => {
+            }
+            ExecutionMode::Strict | ExecutionMode::Auto => {
                     // Execute with error recovery and retry logic
                     let mut attempts = 0;
                     const MAX_RETRIES: u32 = 3;
                     let mut last_error = None;
 
-                    match loop {
+                    loop {
                         attempts += 1;
                         match self.execute_orchestration(&current_spec, &task_descriptor).await {
                             Ok(verdict) => {
@@ -1350,9 +1453,6 @@ impl AutonomousExecutor {
                                 continue;
                             }
                         }
-                    } {
-                        Ok(v) => v,
-                        Err(e) => return Err(e),
                     }
                 }
             };
@@ -1361,6 +1461,66 @@ impl AutonomousExecutor {
             let quality_score = self.calculate_quality_score(&verdict);
             quality_scores.push(quality_score);
             tracing::info!("Quality score for iteration {}: {:.3}", iteration, quality_score);
+
+            // Track iteration progress metrics
+            let improvement_delta = if iteration >= 2 {
+                let previous_score = quality_scores[quality_scores.len() - 2];
+                quality_score - previous_score
+            } else {
+                0.0
+            };
+
+            // Track iteration metrics
+            if let Err(e) = self.track_iteration_progress(task_id, iteration, quality_score, improvement_delta).await {
+                tracing::warn!("Failed to track iteration progress: {}", e);
+            }
+
+            // Detect quality plateaus
+            if iteration >= 3 {
+                if let Err(e) = self.detect_and_report_plateaus(task_id, &quality_scores, iteration).await {
+                    tracing::warn!("Failed to detect plateaus: {}", e);
+                }
+            }
+
+            // Record iteration history
+            let iteration_record = IterationRecord {
+                iteration,
+                timestamp: Utc::now(),
+                working_spec_snapshot: current_spec.clone(),
+                quality_score,
+                council_approved: false, // Will be updated after council review
+                refinement_reason: None, // Will be updated if refinement needed
+                council_feedback: None,
+                artifacts_produced: vec![], // TODO: Extract from verdict
+            };
+
+            // Update execution state with iteration data
+            {
+                let mut active_tasks = self.active_tasks.write().await;
+                if let Some(state) = active_tasks.get_mut(&task_id) {
+                    state.current_iteration = iteration;
+                    state.quality_scores = quality_scores.clone();
+                    state.iteration_history.push(iteration_record.clone());
+                }
+            }
+
+            // Save execution state after each iteration
+            if let Err(e) = self.save_execution_state(task_id).await {
+                tracing::warn!("Failed to save execution state after iteration {}: {}", iteration, e);
+            }
+
+            // Store iteration context in memory system for long-horizon tasks
+            #[cfg(feature = "memory")]
+            if let Some(memory_system) = &self.memory_system {
+                if let Err(e) = self.store_iteration_context(memory_system, &task_descriptor, &current_spec, iteration, &quality_score).await {
+                    tracing::warn!("Failed to store iteration context: {}", e);
+                }
+                
+                // Check if context offloading is needed for long-running tasks
+                if let Err(e) = self.offload_context_if_needed(memory_system, &task_descriptor, iteration).await {
+                    tracing::warn!("Failed to offload context: {}", e);
+                }
+            }
 
             // Check satisficing threshold (0.9)
             if quality_score >= SATISFICING_THRESHOLD {
@@ -1386,6 +1546,18 @@ impl AutonomousExecutor {
             if self.config.enable_council_review {
                 match self.perform_council_review(&current_spec, &task_descriptor).await {
                     Ok((approved, needs_refinement, refinement_reason)) => {
+                        // Update iteration record with council feedback
+                        {
+                            let mut active_tasks = self.active_tasks.write().await;
+                            if let Some(state) = active_tasks.get_mut(&task_id) {
+                                if let Some(last_record) = state.iteration_history.last_mut() {
+                                    last_record.council_approved = approved;
+                                    last_record.refinement_reason = refinement_reason.clone();
+                                    last_record.council_feedback = Some(format!("Approved: {}, Needs refinement: {}", approved, needs_refinement));
+                                }
+                            }
+                        }
+
                         if approved {
                             // Council approves - exit refinement loop
                             tracing::info!("Task {} approved by council after iteration {}", task_id, iteration);
@@ -1413,8 +1585,8 @@ impl AutonomousExecutor {
                             tracing::warn!("Task {} rejected by council after iteration {}", task_id, iteration);
                             self.update_task_status(task_id.clone(), TypesExecutionStatus::Failed, Some("Council rejected task after refinement".to_string())).await?;
                             return Err("Task rejected by council after refinement attempts".into());
-                        }
-                    }
+                }
+            }
                     Err(e) => {
                         tracing::warn!("Post-execution council review failed, accepting current verdict: {}", e);
                         final_verdict = Some(verdict);
@@ -1434,6 +1606,16 @@ impl AutonomousExecutor {
         // Phase 5: Post-execution processing
         self.process_results(&final_verdict, &task_descriptor).await?;
         self.update_task_progress(task_id.clone(), 100.0, Some("Execution complete".to_string())).await?;
+
+        // Update session context if session_id is present
+        if let Some(sid) = session_id {
+            #[cfg(feature = "memory")]
+            if let Some(memory_system) = &self.memory_system {
+                if let Err(e) = self.update_session_context(memory_system, sid, &task_descriptor, &final_verdict, iteration).await {
+                    tracing::warn!("Failed to update session context: {}", e);
+                }
+            }
+        }
 
         // Update final status
         self.update_task_status(task_id, TypesExecutionStatus::Completed, None).await?;
@@ -1779,16 +1961,72 @@ impl AutonomousExecutor {
         // Use adapter pattern to perform council review
         let adapter = crate::adapter::LegacyOrchestratorAdapter::new(crate::types::OrchestratorConfig::default()).await?;
         
-        // Create council session
-        let council_session = adapter.council.start_session(task_descriptor).await
-            .map_err(|e| format!("Failed to start council session: {}", e))?;
+        // Convert WorkingSpec to ReviewContext for council review
+        let review_context = crate::judge_backup::types::ReviewContext {
+            session_id: format!("review_{}", task_descriptor.task_id),
+            working_spec: serde_json::to_string(working_spec)
+                .map_err(|e| format!("Failed to serialize working spec: {}", e))?,
+            risk_tier: working_spec.risk_tier as u8,
+            previous_reviews: Vec::new(),
+            constraints: std::collections::HashMap::new(),
+        };
         
-        // Convert to orchestrated task for review
-        let orchestrated_task = adapter.to_orchestrated_task(task_descriptor);
-        
-        // Perform review
-        let consensus_result = council_session.review_task(&orchestrated_task).await
+        // Perform full council review using conduct_review which ensures all judges participate
+        let session = adapter.council.conduct_review(working_spec.clone(), review_context).await
             .map_err(|e| format!("Council review failed: {}", e))?;
+        
+        // Extract decision from session
+        let consensus_result = match session.final_decision.as_ref() {
+            Some(decision) => {
+                match decision {
+                    crate::decision_making::FinalDecision::Proceed { confidence, rationale, .. } => {
+                        crate::autonomous_executor::ConsensusResult {
+                            approved: true,
+                            confidence: *confidence,
+                            reason: rationale.clone().unwrap_or_else(|| "Task approved by council".to_string()),
+                        }
+                    },
+                    crate::decision_making::FinalDecision::Refine { rationale, .. } => {
+                        crate::autonomous_executor::ConsensusResult {
+                            approved: false,
+                            confidence: 0.5,
+                            reason: rationale.clone().unwrap_or_else(|| "Task requires refinement".to_string()),
+                        }
+                    },
+                    crate::decision_making::FinalDecision::Reject { rationale, .. } => {
+                        crate::autonomous_executor::ConsensusResult {
+                            approved: false,
+                            confidence: 0.2,
+                            reason: rationale.clone().unwrap_or_else(|| "Task rejected by council".to_string()),
+                        }
+                    },
+                    crate::decision_making::FinalDecision::Escalate { rationale, .. } => {
+                        crate::autonomous_executor::ConsensusResult {
+                            approved: false,
+                            confidence: 0.3,
+                            reason: rationale.clone().unwrap_or_else(|| "Task escalated for human review".to_string()),
+                        }
+                    },
+                }
+            },
+            None => {
+                // Fallback if no decision (shouldn't happen after conduct_review)
+                tracing::warn!("Council review completed but no final decision present");
+                crate::autonomous_executor::ConsensusResult {
+                    approved: false,
+                    confidence: 0.5,
+                    reason: "Council review completed but decision unclear".to_string(),
+                }
+            }
+        };
+        
+        // Verify all 4 judges participated
+        let judge_count = session.selected_judges.len();
+        if judge_count < 4 {
+            tracing::warn!("Only {} judges participated in review (expected 4)", judge_count);
+        } else {
+            tracing::info!("All {} judges participated in council review", judge_count);
+        }
         
         // Check if refinement is needed (approved=false but confidence > 0.3 suggests refinement)
         let needs_refinement = !consensus_result.approved && consensus_result.confidence > 0.3;
@@ -1909,7 +2147,7 @@ impl AutonomousExecutor {
            refinement_reason.to_lowercase().contains("test") ||
            refinement_reason.to_lowercase().contains("coverage") {
             if refined_spec.quality_gates.is_none() {
-                refined_spec.quality_gates = Some(agent_agency_contracts::working_spec::QualityGates {
+                refined_spec.quality_gates = Some(agent_agency_contracts::planning_io::QualityGates {
                     coverage_targets: Some(agent_agency_contracts::working_spec::CoverageTargets {
                         line_coverage: Some(80.0),
                         branch_coverage: Some(90.0),
@@ -1956,6 +2194,691 @@ impl AutonomousExecutor {
         }
         
         Ok(true)
+    }
+
+    /// Retrieve relevant context from memory system for a task
+    /// Returns vector of contextual descriptions from similar past experiences
+    /// Uses semantic similarity filtering and temporal relevance weighting
+    #[cfg(feature = "memory")]
+    async fn retrieve_task_context(
+        &self,
+        memory_system: &Arc<MemorySystem>,
+        task_descriptor: &TaskDescriptor,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
+        use agent_agency_contracts::types::memory::{TemporalQuery, MemoryType, TaskPriority};
+
+        // Build temporal query for recent relevant experiences
+        let query = TemporalQuery {
+            start_time: Some(chrono::Utc::now() - chrono::Duration::days(30)), // Last 30 days
+            end_time: Some(chrono::Utc::now()),
+            priority_filter: Some(TaskPriority::High), // Focus on high-priority experiences
+            memory_type_filter: Some(MemoryType::Episodic), // Episodic memories for similar tasks
+            limit: Some(20), // Retrieve more initially for filtering
+        };
+
+        // Retrieve temporal contexts
+        let temporal_contexts = memory_system.retrieve_temporal_context(query).await
+            .map_err(|e| format!("Failed to retrieve temporal context: {}", e))?;
+
+        // Search for experiences matching task domain/keywords
+        let search_query = serde_json::json!({
+            "task_type": "autonomous_task",
+            "limit": 20
+        });
+
+        let experiences = memory_system.search_experiences(search_query).await
+            .map_err(|e| format!("Failed to search experiences: {}", e))?;
+
+        // Apply semantic similarity filtering and temporal relevance weighting
+        let filtered_experiences = self.filter_and_weight_contexts(
+            &experiences,
+            task_descriptor,
+            &temporal_contexts,
+        );
+
+        // Format contextual information
+        let mut contextual_info = Vec::new();
+        
+        for (experience, relevance_score) in filtered_experiences {
+            let context_desc = format!(
+                "- {} (quality: {:.2}, success: {}, relevance: {:.2})",
+                experience.description,
+                experience.outcome.quality_score,
+                experience.outcome.success,
+                relevance_score
+            );
+            contextual_info.push(context_desc);
+        }
+
+        tracing::debug!("Retrieved {} contextual experiences for task {} (filtered from {} candidates)", 
+            contextual_info.len(), task_descriptor.task_id, experiences.len());
+        Ok(contextual_info)
+    }
+
+    /// Retrieve session context from previous sessions
+    /// Returns vector of contextual descriptions from previous sessions
+    #[cfg(feature = "memory")]
+    async fn retrieve_session_context(
+        &self,
+        memory_system: &Arc<MemorySystem>,
+        session_id: Uuid,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
+        // Build query to search for experiences with this session_id
+        let query = serde_json::json!({
+            "session_id": session_id.to_string(),
+            "limit": 20, // Get last 20 experiences from this session
+        });
+
+        // Search for experiences from this session
+        let experiences = memory_system.search_experiences(query).await
+            .map_err(|e| format!("Failed to search session experiences: {}", e))?;
+
+        // Extract contextual descriptions, prioritizing recent and high-quality experiences
+        let mut contextual_info: Vec<String> = experiences
+            .into_iter()
+            .filter(|exp| {
+                // Filter for successful experiences with good quality scores
+                exp.outcome.success && exp.outcome.quality_score > 0.7
+            })
+            .map(|exp| {
+                format!(
+                    "Session experience {}: {} (quality: {:.2}, type: {:?})",
+                    exp.id,
+                    exp.description,
+                    exp.outcome.quality_score,
+                    exp.memory_type
+                )
+            })
+            .collect();
+
+        tracing::debug!("Retrieved {} contextual experiences for session {}", contextual_info.len(), session_id);
+        Ok(contextual_info)
+    }
+
+    /// Update session context with execution results
+    /// Stores execution experience linked to session for future context retrieval
+    #[cfg(feature = "memory")]
+    async fn update_session_context(
+        &self,
+        memory_system: &Arc<MemorySystem>,
+        session_id: Uuid,
+        task_descriptor: &TaskDescriptor,
+        final_verdict: &FinalVerdict,
+        iterations: u32,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        use agent_agency_contracts::types::memory::{Experience, MemoryType, TemporalContext, ExperienceOutcome, TaskPriority};
+
+        // Calculate quality score from verdict
+        let quality_score = self.calculate_quality_score(final_verdict);
+        let success = matches!(final_verdict.decision, agent_agency_contracts::final_verdict::FinalDecision::Accept);
+
+        // Create session experience
+        let experience = Experience {
+            id: Uuid::new_v4(),
+            description: format!("Task execution in session {}: {} ({} iterations)", 
+                session_id, task_descriptor.description, iterations),
+            memory_type: if success { MemoryType::Episodic } else { MemoryType::Procedural },
+            temporal_context: Some(TemporalContext {
+                timestamp: chrono::Utc::now(),
+                duration_ms: None,
+                sequence_number: Some(iterations),
+                priority: match task_descriptor.priority {
+                    agent_agency_contracts::types::planning::TaskPriority::Critical | 
+                    agent_agency_contracts::types::planning::TaskPriority::High => TaskPriority::High,
+                    agent_agency_contracts::types::planning::TaskPriority::Medium |
+                    agent_agency_contracts::types::planning::TaskPriority::Normal => TaskPriority::Normal,
+                    agent_agency_contracts::types::planning::TaskPriority::Low => TaskPriority::Low,
+                    agent_agency_contracts::types::planning::TaskPriority::Urgent => TaskPriority::High,
+                },
+            }),
+            outcome: ExperienceOutcome {
+                success,
+                quality_score,
+                error_message: if success { None } else { Some("Task execution failed".to_string()) },
+                metadata: {
+                    let mut meta = std::collections::HashMap::new();
+                    meta.insert("session_id".to_string(), serde_json::Value::String(session_id.to_string()));
+                    meta.insert("task_id".to_string(), serde_json::Value::String(task_descriptor.task_id.clone()));
+                    meta.insert("iterations".to_string(), serde_json::Value::Number(iterations.into()));
+                    meta.insert("verdict_decision".to_string(), serde_json::Value::String(format!("{:?}", final_verdict.decision)));
+                    meta
+                },
+                performance_score: Some(quality_score as f32),
+                execution_time_ms: None,
+                learned_capabilities: vec![],
+            },
+            domain: vec!["orchestration".to_string(), "autonomous_execution".to_string()],
+            task_type: "autonomous_task".to_string(),
+            metadata: {
+                let mut meta = std::collections::HashMap::new();
+                meta.insert("session_id".to_string(), serde_json::Value::String(session_id.to_string()));
+                meta.insert("conversation_history".to_string(), serde_json::Value::Bool(true));
+                meta
+            },
+        };
+
+        // Store experience in memory system
+        memory_system.store_experience(experience).await
+            .map_err(|e| format!("Failed to store session experience: {}", e))?;
+
+        tracing::info!("Updated session context for session {} with execution result", session_id);
+        Ok(())
+    }
+
+    /// Track iteration progress metrics
+    /// Records quality scores, improvement deltas, and other metrics per iteration
+    async fn track_iteration_progress(
+        &self,
+        task_id: Uuid,
+        iteration: u32,
+        quality_score: f64,
+        improvement_delta: f64,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // Get current execution state to update progress
+        let state = {
+            let active_tasks = self.active_tasks.read().await;
+            active_tasks.get(&task_id).cloned()
+        };
+
+        if let Some(state) = state {
+            // Calculate progress percentage based on iterations
+            const MAX_REFINEMENT_ITERATIONS: u32 = 5;
+            let progress_percentage = (iteration as f64 / MAX_REFINEMENT_ITERATIONS as f64 * 100.0).min(100.0);
+
+            // Update progress tracker with iteration metrics
+            let progress = crate::progress_tracker::ExecutionProgress {
+                task_id,
+                status: crate::progress_tracker::ExecutionStatus::Running,
+                percentage: progress_percentage,
+                current_phase: format!("Iteration {}", iteration),
+                total_phases: MAX_REFINEMENT_ITERATIONS as usize,
+                current_phase_index: iteration as usize,
+                started_at: state.start_time,
+                last_updated: Utc::now(),
+                estimated_completion: None,
+                messages: vec![crate::progress_tracker::ProgressMessage {
+                    timestamp: Utc::now(),
+                    level: crate::progress_tracker::MessageLevel::Info,
+                    content: format!("Iteration {} complete: quality score {:.3}, improvement delta {:.3}", 
+                        iteration, quality_score, improvement_delta),
+                    context: Some({
+                        let mut ctx = std::collections::HashMap::new();
+                        ctx.insert("iteration".to_string(), serde_json::Value::Number(iteration.into()));
+                        ctx.insert("quality_score".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(quality_score).unwrap()));
+                        ctx.insert("improvement_delta".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(improvement_delta).unwrap()));
+                        ctx
+                    }),
+                }],
+                error: None,
+                metrics: crate::progress_tracker::ProgressMetrics {
+                    cpu_usage: 0.0, // TODO: Get actual CPU usage
+                    memory_usage: 0, // TODO: Get actual memory usage
+                    network_io: 0,
+                    disk_io: 0,
+                    processing_rate: quality_score, // Use quality score as processing rate proxy
+                    error_count: 0,
+                    retry_count: state.retry_count as u64,
+                },
+            };
+
+            self.progress_tracker.update_progress(task_id, progress).await
+                .map_err(|e| format!("Failed to update progress: {}", e))?;
+
+            tracing::debug!("Tracked iteration {} progress: quality {:.3}, delta {:.3}", iteration, quality_score, improvement_delta);
+        }
+
+        Ok(())
+    }
+
+    /// Detect quality plateaus and generate reports
+    /// A plateau is detected when quality scores stagnate across multiple iterations
+    async fn detect_and_report_plateaus(
+        &self,
+        task_id: Uuid,
+        quality_scores: &[f64],
+        current_iteration: u32,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        const PLATEAU_WINDOW: usize = 3; // Check last 3 iterations
+        const PLATEAU_THRESHOLD: f64 = 0.02; // Maximum variance to consider a plateau
+        const MAX_REFINEMENT_ITERATIONS: u32 = 5;
+
+        if quality_scores.len() < PLATEAU_WINDOW {
+            return Ok(()); // Not enough data yet
+        }
+
+        // Get last N scores
+        let recent_scores: Vec<f64> = quality_scores.iter()
+            .rev()
+            .take(PLATEAU_WINDOW)
+            .copied()
+            .collect();
+
+        // Calculate variance in recent scores
+        let avg_score: f64 = recent_scores.iter().sum::<f64>() / recent_scores.len() as f64;
+        let variance: f64 = recent_scores.iter()
+            .map(|score| (score - avg_score).powi(2))
+            .sum::<f64>() / recent_scores.len() as f64;
+        let std_dev = variance.sqrt();
+
+        // Detect plateau: low variance indicates stagnation
+        if std_dev < PLATEAU_THRESHOLD {
+            tracing::warn!("Quality plateau detected for task {}: std_dev {:.4} < threshold {:.4} over last {} iterations", 
+                task_id, std_dev, PLATEAU_THRESHOLD, PLATEAU_WINDOW);
+            
+            // Generate progress report
+            self.generate_progress_report(task_id, quality_scores, current_iteration, Some(std_dev)).await?;
+        }
+
+        Ok(())
+    }
+
+    /// Generate progress report for long-running tasks
+    /// Includes metrics, quality trends, and plateau detection results
+    async fn generate_progress_report(
+        &self,
+        task_id: Uuid,
+        quality_scores: &[f64],
+        current_iteration: u32,
+        plateau_std_dev: Option<f64>,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        const MAX_REFINEMENT_ITERATIONS: u32 = 5;
+
+        let state = {
+            let active_tasks = self.active_tasks.read().await;
+            active_tasks.get(&task_id).cloned()
+        };
+
+        if let Some(state) = state {
+            // Calculate metrics
+            let avg_quality = if !quality_scores.is_empty() {
+                quality_scores.iter().sum::<f64>() / quality_scores.len() as f64
+            } else {
+                0.0
+            };
+
+            let max_quality = quality_scores.iter().copied().fold(0.0, f64::max);
+            let min_quality = quality_scores.iter().copied().fold(1.0, f64::min);
+
+            let improvement_rate = if quality_scores.len() >= 2 {
+                let first_score = quality_scores[0];
+                let last_score = quality_scores[quality_scores.len() - 1];
+                (last_score - first_score) / quality_scores.len() as f64
+            } else {
+                0.0
+            };
+
+            // Build progress report
+            let report = format!(
+                "Progress Report for Task {}:\n\
+                ==========================================\n\
+                Iterations: {}/{}\n\
+                Quality Scores:\n\
+                  - Average: {:.3}\n\
+                  - Maximum: {:.3}\n\
+                  - Minimum: {:.3}\n\
+                  - Improvement Rate: {:.4} per iteration\n\
+                Plateau Detection:\n\
+                  - Std Deviation: {:.4}\n\
+                  - Status: {}\n\
+                Iteration History: {} records\n\
+                Session ID: {}\n\
+                ==========================================",
+                task_id,
+                current_iteration,
+                MAX_REFINEMENT_ITERATIONS,
+                avg_quality,
+                max_quality,
+                min_quality,
+                improvement_rate,
+                plateau_std_dev.unwrap_or(0.0),
+                if plateau_std_dev.map(|d| d < 0.02).unwrap_or(false) { "Plateau Detected" } else { "No Plateau" },
+                state.iteration_history.len(),
+                state.session_id.map(|s| s.to_string()).unwrap_or_else(|| "None".to_string()),
+            );
+
+            tracing::info!("{}", report);
+
+            // Update progress tracker with report
+            self.update_task_progress(task_id, 
+                (current_iteration as f64 / MAX_REFINEMENT_ITERATIONS as f64 * 100.0).min(100.0),
+                Some(format!("Progress report generated: {} iterations, avg quality {:.3}", 
+                    current_iteration, avg_quality))).await?;
+        }
+
+        Ok(())
+    }
+
+    /// Filter and weight contexts using semantic similarity and temporal relevance
+    #[cfg(feature = "memory")]
+    fn filter_and_weight_contexts(
+        &self,
+        experiences: &[agent_agency_contracts::types::memory::Experience],
+        task_descriptor: &TaskDescriptor,
+        temporal_contexts: &[agent_agency_contracts::types::memory::TemporalContext],
+    ) -> Vec<(agent_agency_contracts::types::memory::Experience, f64)> {
+        use agent_agency_contracts::types::memory::Experience;
+        use std::collections::HashMap;
+
+        const MIN_RELEVANCE_THRESHOLD: f64 = 0.3;
+        const MAX_CONTEXTS: usize = 10;
+
+        // Build temporal relevance map by timestamp
+        let mut temporal_relevance: HashMap<chrono::DateTime<chrono::Utc>, f64> = HashMap::new();
+        let now = chrono::Utc::now();
+        
+        for tc in temporal_contexts {
+            let age_hours = (now - tc.timestamp).num_hours() as f64;
+            // Temporal relevance: more recent = higher score (decay over 30 days)
+            let relevance = (-age_hours / (30.0 * 24.0)).exp();
+            temporal_relevance.insert(tc.timestamp, relevance);
+        }
+
+        // Score and filter experiences
+        let mut scored_experiences: Vec<(Experience, f64)> = Vec::new();
+
+        for experience in experiences {
+            // Semantic similarity score (simplified: domain/task_type match)
+            let semantic_score = self.calculate_semantic_similarity(&experience, task_descriptor);
+
+            // Temporal relevance score
+            let temporal_score = experience.temporal_context.as_ref()
+                .and_then(|tc| temporal_relevance.get(&tc.timestamp))
+                .copied()
+                .unwrap_or(0.5); // Default if no temporal context
+
+            // Quality score (higher quality experiences are more relevant)
+            let quality_score = experience.outcome.quality_score;
+
+            // Combined relevance score: semantic (50%), temporal (30%), quality (20%)
+            let relevance_score = (semantic_score * 0.5) + (temporal_score * 0.3) + (quality_score * 0.2);
+
+            if relevance_score >= MIN_RELEVANCE_THRESHOLD {
+                scored_experiences.push((experience.clone(), relevance_score));
+            }
+        }
+
+        // Sort by relevance score (highest first) and limit
+        scored_experiences.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        scored_experiences.truncate(MAX_CONTEXTS);
+
+        scored_experiences
+    }
+
+    /// Calculate semantic similarity between experience and task descriptor
+    #[cfg(feature = "memory")]
+    fn calculate_semantic_similarity(
+        &self,
+        experience: &agent_agency_contracts::types::memory::Experience,
+        task_descriptor: &TaskDescriptor,
+    ) -> f64 {
+        // Domain match score (simplified - use experience domain if available)
+        let domain_score = if experience.domain.is_empty() {
+            0.5 // Default if no domain info
+        } else {
+            // Check if any domain matches common orchestration domains
+            let has_orchestration_domain = experience.domain.iter()
+                .any(|d| d.contains("orchestration") || d.contains("autonomous") || d.contains("execution"));
+            if has_orchestration_domain {
+                0.8 // High score for orchestration-related experiences
+            } else {
+                0.3 // Lower score for unrelated domains
+            }
+        };
+
+        // Task type match score
+        let task_type_score = if experience.task_type == "autonomous_task" {
+            1.0
+        } else if experience.task_type.contains("task") || experience.task_type.contains("execution") {
+            0.7 // Partial match
+        } else {
+            0.3 // Different task types
+        };
+
+        // Description similarity (simplified keyword matching)
+        let description_score = self.calculate_description_similarity(
+            &experience.description,
+            &task_descriptor.description,
+        );
+
+        // Combined semantic score: domain (40%), task_type (30%), description (30%)
+        (domain_score * 0.4) + (task_type_score * 0.3) + (description_score * 0.3)
+    }
+
+    /// Calculate description similarity using keyword overlap
+    #[cfg(feature = "memory")]
+    fn calculate_description_similarity(&self, desc1: &str, desc2: &str) -> f64 {
+        // Simple keyword-based similarity (in production, this would use embeddings)
+        let words1: std::collections::HashSet<&str> = desc1.to_lowercase()
+            .split_whitespace()
+            .filter(|w| w.len() > 3) // Filter short words
+            .collect();
+        
+        let words2: std::collections::HashSet<&str> = desc2.to_lowercase()
+            .split_whitespace()
+            .filter(|w| w.len() > 3)
+            .collect();
+
+        if words1.is_empty() || words2.is_empty() {
+            return 0.5; // Default if no meaningful words
+        }
+
+        let intersection = words1.intersection(&words2).count();
+        let union = words1.union(&words2).count();
+
+        if union > 0 {
+            intersection as f64 / union as f64
+        } else {
+            0.5
+        }
+    }
+
+    /// Offload context to persistent storage if needed for long-running tasks
+    /// Implements automatic folding when iteration count or context size exceeds thresholds
+    #[cfg(feature = "memory")]
+    async fn offload_context_if_needed(
+        &self,
+        memory_system: &Arc<MemorySystem>,
+        task_descriptor: &TaskDescriptor,
+        iteration: u32,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        const ITERATION_OFFLOAD_THRESHOLD: u32 = 3; // Offload after 3 iterations
+        const MAX_WORKING_CONTEXTS: usize = 10; // Maximum working contexts before offloading
+
+        // Check if offloading is needed based on iteration count
+        if iteration < ITERATION_OFFLOAD_THRESHOLD {
+            return Ok(()); // Not enough iterations yet
+        }
+
+        tracing::debug!("Checking context offloading for task {} at iteration {}", task_descriptor.task_id, iteration);
+
+        // Query for working memory contexts related to this task
+        let search_query = serde_json::json!({
+            "task_id": task_descriptor.task_id,
+            "memory_type": "Working",
+            "limit": MAX_WORKING_CONTEXTS * 2
+        });
+
+        let working_contexts = memory_system.search_experiences(search_query).await
+            .map_err(|e| format!("Failed to search working contexts: {}", e))?;
+
+        // Check if we need to fold/offload contexts
+        if working_contexts.len() <= MAX_WORKING_CONTEXTS {
+            return Ok(()); // Within limits, no offloading needed
+        }
+
+        tracing::info!("Offloading {} working contexts for task {} (exceeds limit of {})", 
+            working_contexts.len(), task_descriptor.task_id, MAX_WORKING_CONTEXTS);
+
+        // Group contexts by similarity for folding
+        let folded_contexts = self.fold_similar_contexts(&working_contexts);
+
+        // Store folded contexts as episodic memories
+        for folded in folded_contexts {
+            use agent_agency_contracts::types::memory::{Experience, MemoryType, TemporalContext, ExperienceOutcome, TaskPriority};
+
+            let experience = Experience {
+                id: Uuid::new_v4(),
+                description: folded.summary,
+                memory_type: MemoryType::Episodic, // Folded contexts become episodic
+                temporal_context: Some(TemporalContext {
+                    timestamp: chrono::Utc::now(),
+                    duration_ms: None,
+                    sequence_number: None,
+                    priority: TaskPriority::Normal,
+                }),
+                outcome: ExperienceOutcome {
+                    success: folded.success_rate >= 0.7,
+                    quality_score: folded.avg_quality_score,
+                    error_message: None,
+                    metadata: {
+                        let mut map = std::collections::HashMap::new();
+                        map.insert("folded_contexts_count".to_string(), serde_json::Value::Number(serde_json::Number::from(folded.context_count)));
+                        map.insert("original_task_id".to_string(), serde_json::Value::String(task_descriptor.task_id.clone()));
+                        map.insert("folded_at_iteration".to_string(), serde_json::Value::Number(serde_json::Number::from(iteration)));
+                        map
+                    },
+                    performance_score: Some(folded.avg_quality_score as f32),
+                    execution_time_ms: None,
+                    learned_capabilities: vec![],
+                },
+                domain: vec!["orchestration".to_string(), "autonomous_execution".to_string()],
+                task_type: "folded_autonomous_task".to_string(),
+                metadata: {
+                    let mut map = std::collections::HashMap::new();
+                    map.insert("is_folded".to_string(), serde_json::Value::Bool(true));
+                    map.insert("original_iterations".to_string(), serde_json::Value::Number(serde_json::Number::from(folded.context_count)));
+                    map
+                },
+            };
+
+            let _memory_id = memory_system.store_experience(experience).await
+                .map_err(|e| format!("Failed to store folded context: {}", e))?;
+        }
+
+        tracing::debug!("Successfully offloaded contexts for task {}", task_descriptor.task_id);
+        Ok(())
+    }
+
+    /// Fold similar contexts into summarized experiences
+    #[cfg(feature = "memory")]
+    fn fold_similar_contexts(
+        &self,
+        contexts: &[agent_agency_contracts::types::memory::Experience],
+    ) -> Vec<FoldedContextSummary> {
+        const MAX_CONTEXTS_PER_FOLD: usize = 3;
+        const SIMILARITY_THRESHOLD: f64 = 0.7;
+
+        let mut folded = Vec::new();
+        let mut processed = std::collections::HashSet::new();
+
+        for (i, context) in contexts.iter().enumerate() {
+            if processed.contains(&i) {
+                continue;
+            }
+
+            // Find similar contexts to fold together
+            let mut similar_contexts = vec![context.clone()];
+            processed.insert(i);
+
+            for (j, other_context) in contexts.iter().enumerate().skip(i + 1) {
+                if processed.contains(&j) {
+                    continue;
+                }
+
+                let similarity = self.calculate_description_similarity(
+                    &context.description,
+                    &other_context.description,
+                );
+
+                if similarity >= SIMILARITY_THRESHOLD && similar_contexts.len() < MAX_CONTEXTS_PER_FOLD {
+                    similar_contexts.push(other_context.clone());
+                    processed.insert(j);
+                }
+            }
+
+            // Create folded summary
+            let success_count = similar_contexts.iter()
+                .filter(|c| c.outcome.success)
+                .count();
+            let success_rate = success_count as f64 / similar_contexts.len() as f64;
+            let avg_quality = similar_contexts.iter()
+                .map(|c| c.outcome.quality_score)
+                .sum::<f64>() / similar_contexts.len() as f64;
+
+            // Generate summary from descriptions
+            let summary = if similar_contexts.len() == 1 {
+                similar_contexts[0].description.clone()
+            } else {
+                format!("Folded {} similar contexts: {}", 
+                    similar_contexts.len(),
+                    similar_contexts[0].description.chars().take(100).collect::<String>())
+            };
+
+            folded.push(FoldedContextSummary {
+                summary,
+                context_count: similar_contexts.len(),
+                success_rate,
+                avg_quality_score: avg_quality,
+            });
+        }
+
+        folded
+    }
+
+    /// Store iteration context in memory system for long-horizon task tracking
+    #[cfg(feature = "memory")]
+    async fn store_iteration_context(
+        &self,
+        memory_system: &Arc<MemorySystem>,
+        task_descriptor: &TaskDescriptor,
+        working_spec: &WorkingSpec,
+        iteration: u32,
+        quality_score: &f64,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        use agent_agency_contracts::types::memory::{Experience, MemoryType, TemporalContext, ExperienceOutcome, TaskPriority};
+
+        // Create iteration-level experience
+        let experience = Experience {
+            id: Uuid::new_v4(),
+            description: format!("Iteration {} of task: {}", iteration, task_descriptor.description),
+            memory_type: MemoryType::Working, // Working memory for in-progress iterations
+            temporal_context: Some(TemporalContext {
+                timestamp: chrono::Utc::now(),
+                duration_ms: None,
+                sequence_number: Some(iteration as u64),
+                priority: TaskPriority::High,
+            }),
+            outcome: ExperienceOutcome {
+                success: *quality_score >= 0.7, // Threshold for iteration success
+                quality_score: *quality_score,
+                error_message: None,
+                metadata: {
+                    let mut map = std::collections::HashMap::new();
+                    map.insert("iteration".to_string(), serde_json::Value::Number(serde_json::Number::from(iteration)));
+                    map.insert("task_id".to_string(), serde_json::Value::String(task_descriptor.task_id.clone()));
+                    map.insert("spec_description".to_string(), serde_json::Value::String(working_spec.description.clone()));
+                    map
+                },
+                performance_score: Some(*quality_score as f32),
+                execution_time_ms: None,
+                learned_capabilities: vec![],
+            },
+            domain: task_descriptor.domain.clone(),
+            task_type: format!("iteration_{}", task_descriptor.task_type),
+            metadata: {
+                let mut map = std::collections::HashMap::new();
+                map.insert("iteration_number".to_string(), serde_json::Value::Number(serde_json::Number::from(iteration)));
+                map.insert("working_spec_id".to_string(), serde_json::Value::String(working_spec.id.clone().to_string()));
+                map
+            },
+        };
+
+        // Store iteration context
+        let _memory_id = memory_system.store_experience(experience).await
+            .map_err(|e| format!("Failed to store iteration context: {}", e))?;
+
+        tracing::debug!("Stored iteration {} context for task {}", iteration, task_descriptor.task_id);
+        Ok(())
     }
 
     /// Store execution experience in memory system
@@ -2014,40 +2937,43 @@ impl AutonomousExecutor {
             confidence_score as f64 * 0.3
         };
 
-        // Create memory experience
-        let experience = AgentExperience {
+        // Create memory experience using contracts Experience type
+        use agent_agency_contracts::types::memory::{Experience, MemoryType, TemporalContext, ExperienceOutcome, TaskPriority};
+        
+        let experience = Experience {
             id: Uuid::new_v4(),
-            agent_id: "orchestrator".to_string(), // System-level agent for orchestration
-            task_id: task_descriptor.task_id.to_string(),
-            content: task_descriptor.description.clone(),
-            context: ExperienceContext {
                 description: format!("Task execution: {}", task_descriptor.description),
-                domain: vec!["orchestration".to_string()],
-                task_type: "orchestration".to_string(),
-                temporal_context: None,
-            },
-            input: task_descriptor.description.clone(),
-            output: format!("Task completed with verdict: {:?}", final_verdict.decision),
+            memory_type: if success { MemoryType::Episodic } else { MemoryType::Procedural },
+            temporal_context: Some(TemporalContext {
+                timestamp: chrono::Utc::now(),
+                duration_ms: Some(execution_time_ms as u64),
+                sequence_number: None,
+                priority: TaskPriority::High,
+            }),
             outcome: ExperienceOutcome {
                 success,
-                quality_score: performance_score, // Use calculated performance score instead of missing confidence_score
+                quality_score: performance_score,
                 error_message: if success { None } else { Some("Task execution failed".to_string()) },
-                metadata: serde_json::json!({
-                    "verdict": format!("{:?}", final_verdict.decision),
-                    "votes_count": final_verdict.votes.len(),
-                    "execution_time_ms": execution_time_ms
-                }).as_object().unwrap().iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
+                metadata: {
+                    let mut map = std::collections::HashMap::new();
+                    map.insert("verdict".to_string(), serde_json::Value::String(format!("{:?}", final_verdict.decision)));
+                    map.insert("votes_count".to_string(), serde_json::Value::Number(serde_json::Number::from(final_verdict.votes.len())));
+                    map.insert("execution_time_ms".to_string(), serde_json::Value::Number(serde_json::Number::from(execution_time_ms as u64)));
+                    map.insert("orchestrator_version".to_string(), serde_json::Value::String("v3".to_string()));
+                    map.insert("task_category".to_string(), serde_json::Value::String("orchestration".to_string()));
+                    map.insert("has_consensus".to_string(), serde_json::Value::Bool(!final_verdict.votes.is_empty()));
+                    map
+                },
                 performance_score: Some(performance_score as f32),
                 execution_time_ms: Some(execution_time_ms as u64),
                 learned_capabilities: vec![],
             },
-            memory_type: if success { MemoryType::Episodic } else { MemoryType::Procedural },
-            timestamp: chrono::Utc::now(),
+            domain: task_descriptor.domain.clone(),
+            task_type: task_descriptor.task_type.clone(),
             metadata: {
                 let mut map = std::collections::HashMap::new();
-                map.insert("orchestrator_version".to_string(), serde_json::Value::String("v3".to_string()));
-                map.insert("task_category".to_string(), serde_json::Value::String("orchestration".to_string()));
-                map.insert("has_consensus".to_string(), serde_json::Value::Bool(!final_verdict.votes.is_empty()));
+                map.insert("task_id".to_string(), serde_json::Value::String(task_descriptor.task_id.clone()));
+                map.insert("agent_id".to_string(), serde_json::Value::String("orchestrator".to_string()));
                 map
             },
         };
@@ -2296,6 +3222,98 @@ impl AutonomousExecutor {
         }
     }
 
+    /// Save execution state to persistent storage
+    /// 
+    /// Saves the current execution state to disk so it can be resumed after restart.
+    /// State is saved as JSON in a `.state/` directory.
+    async fn save_execution_state(&self, task_id: Uuid) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // Get current state
+        let state = {
+            let active_tasks = self.active_tasks.read().await;
+            active_tasks.get(&task_id).cloned()
+        };
+
+        if let Some(mut state) = state {
+            // Update last saved timestamp
+            state.last_saved_at = Some(Utc::now());
+
+            // Create state directory if it doesn't exist
+            let state_dir = std::path::Path::new(".state");
+            if !state_dir.exists() {
+                std::fs::create_dir_all(state_dir)?;
+            }
+
+            // Save state as JSON file
+            let state_file = state_dir.join(format!("task_{}.json", task_id));
+            let state_json = serde_json::to_string_pretty(&state)?;
+            tokio::fs::write(&state_file, state_json).await?;
+
+            tracing::debug!("Saved execution state for task {} to {}", task_id, state_file.display());
+
+            // Update in-memory state with last_saved_at
+            {
+                let mut active_tasks = self.active_tasks.write().await;
+                if let Some(existing_state) = active_tasks.get_mut(&task_id) {
+                    existing_state.last_saved_at = state.last_saved_at;
+                }
+            }
+        } else {
+            tracing::warn!("No execution state found for task {}", task_id);
+        }
+
+        Ok(())
+    }
+
+    /// Resume task execution from saved state
+    /// 
+    /// Loads execution state from disk and resumes execution from the last saved point.
+    pub async fn resume_task_from_state(&self, task_id: Uuid) -> Result<TaskExecutionState, Box<dyn std::error::Error + Send + Sync>> {
+        // Try to load from disk
+        let state_file = std::path::Path::new(".state").join(format!("task_{}.json", task_id));
+        
+        if !state_file.exists() {
+            return Err(format!("No saved state found for task {}", task_id).into());
+        }
+
+        let state_json = tokio::fs::read_to_string(&state_file).await?;
+        let state: TaskExecutionState = serde_json::from_str(&state_json)?;
+
+        tracing::info!("Resuming task {} from iteration {} ({} previous iterations)", 
+            task_id, state.current_iteration, state.iteration_history.len());
+
+        // Restore to active tasks
+        {
+            let mut active_tasks = self.active_tasks.write().await;
+            active_tasks.insert(task_id, state.clone());
+        }
+
+        Ok(state)
+    }
+
+    /// Get execution state for a task (from memory or disk)
+    pub async fn get_execution_state(&self, task_id: Uuid) -> Option<TaskExecutionState> {
+        // First try in-memory
+        {
+            let active_tasks = self.active_tasks.read().await;
+            if let Some(state) = active_tasks.get(&task_id) {
+                return Some(state.clone());
+            }
+        }
+
+        // If not in memory, try to load from disk
+        let state_file = std::path::Path::new(".state").join(format!("task_{}.json", task_id));
+        if state_file.exists() {
+            if let Ok(state_json) = tokio::fs::read_to_string(&state_file).await {
+                if let Ok(state) = serde_json::from_str::<TaskExecutionState>(&state_json) {
+                    tracing::debug!("Loaded execution state for task {} from disk", task_id);
+                    return Some(state);
+                }
+            }
+        }
+
+        None
+    }
+
     /// Cancel a running task
     pub async fn cancel_task(&self, task_id: Uuid) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         let mut active_tasks = self.active_tasks.write().await;
@@ -2339,6 +3357,7 @@ mod tests {
 
         // Mock implementations for testing
         #[derive(Debug)]
+        #[derive(Default)]
         struct MockCawsRuntimeValidator;
         impl CawsRuntimeValidator for MockCawsRuntimeValidator {
             fn validate(&self, _spec: &WorkingSpec) -> Result<(), String> {
@@ -2346,8 +3365,9 @@ mod tests {
             }
         }
 
-        #[derive(Debug)]
-        struct MockVerdictWriter;
+        #[derive(Debug, Clone)]
+        #[derive(Default)]
+        pub struct MockVerdictWriter;
         impl VerdictWriter for MockVerdictWriter {
             fn write_verdict(&self, _verdict: &agent_agency_contracts::final_verdict::FinalVerdictContract) -> Result<(), String> {
                 Ok(())

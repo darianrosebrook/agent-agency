@@ -31,6 +31,70 @@ use crate::error_handling::{AgencyError, CircuitBreaker, ErrorHandlingCircuitBre
 
 use tracing::{debug, info, instrument, warn};
 
+/// Worker solution proposal with evidence and rationale
+#[derive(Debug, Clone)]
+pub struct WorkerSolution {
+    pub worker_id: String,
+    pub solution_id: String,
+    pub working_spec: agent_agency_contracts::WorkingSpec,
+    pub evidence: SolutionEvidence,
+    pub rationale: String,
+}
+
+/// Evidence supporting a worker solution
+#[derive(Debug, Clone)]
+pub struct SolutionEvidence {
+    pub test_results: Vec<String>,
+    pub coverage_metrics: Option<f64>,
+    pub lint_results: Vec<String>,
+    pub performance_metrics: Option<f64>,
+    pub budget_adherence: BudgetAdherence,
+}
+
+/// Budget adherence verification
+#[derive(Debug, Clone)]
+pub struct BudgetAdherence {
+    pub files_changed: usize,
+    pub max_files_allowed: usize,
+    pub lines_changed: usize,
+    pub max_lines_allowed: usize,
+    pub within_budget: bool,
+}
+
+/// Worker defense plea for their solution
+#[derive(Debug, Clone)]
+pub struct WorkerPlea {
+    pub solution_id: String,
+    pub worker_id: String,
+    pub defense_argument: String,
+    pub evidence_summary: String,
+    pub strength_claims: Vec<String>,
+    pub weakness_acknowledgments: Vec<String>,
+}
+
+/// Result of a debate between competing solutions
+#[derive(Debug, Clone)]
+pub struct DebateResult {
+    pub winner_solution_id: String,
+    pub winner_worker_id: String,
+    pub winning_score: f64,
+    pub confidence: f64,
+    pub solution_scores: Vec<SolutionScore>,
+    pub judge_notes: String,
+}
+
+/// Score for a solution from debate evaluation
+#[derive(Debug, Clone)]
+pub struct SolutionScore {
+    pub solution_id: String,
+    pub worker_id: String,
+    pub total_score: f64,
+    pub evidence_completeness: f64,
+    pub budget_adherence: f64,
+    pub gate_integrity: f64,
+    pub provenance_clarity: f64,
+}
+
 /// Judge performance metrics for performance-weighted selection
 #[derive(Debug, Clone)]
 struct JudgePerformanceMetrics {
@@ -477,7 +541,10 @@ impl Council {
 
         let selected_judges = match self.config.judge_selection_strategy {
             JudgeSelectionStrategy::AllAvailable => {
-                available_judges.into_iter().take(self.config.max_judges_per_session).cloned().collect()
+                // For AllAvailable strategy, select ALL available judges (up to max_judges_per_session)
+                // This ensures all judges participate in reviews
+                let count = available_judges.len().min(self.config.max_judges_per_session);
+                available_judges.into_iter().take(count).cloned().collect()
             },
             JudgeSelectionStrategy::SpecializationBased => {
                 self.select_by_specialization(&available_judges, context, self.config.max_judges_per_session)
@@ -678,6 +745,26 @@ impl Council {
                     },
                 }
             }
+            
+            // Validate that all selected judges contributed
+            if contributions.len() < session.selected_judges.len() {
+                let missing_count = session.selected_judges.len() - contributions.len();
+                tracing::warn!("Only {} of {} judges contributed verdicts ({} missing)", 
+                    contributions.len(), session.selected_judges.len(), missing_count);
+                
+                // If we don't meet minimum quorum, return error
+                if contributions.len() < self.config.min_judges_required {
+                    return Err(CouncilError::QuorumFailure {
+                        available: contributions.len(),
+                        required: self.config.min_judges_required,
+                    });
+                }
+            } else {
+                tracing::info!("All {} judges contributed verdicts successfully", contributions.len());
+            }
+            
+            session.contributions = contributions;
+            Ok(())
         } else {
             // Sequential execution with error handling
             for judge in &session.selected_judges {
@@ -713,6 +800,23 @@ impl Council {
                         self.update_judge_performance(&judge_id, response_time_ms, false).await;
                     },
                 }
+            }
+            
+            // Validate that all selected judges contributed (sequential path)
+            if contributions.len() < session.selected_judges.len() {
+                let missing_count = session.selected_judges.len() - contributions.len();
+                tracing::warn!("Only {} of {} judges contributed verdicts ({} missing)", 
+                    contributions.len(), session.selected_judges.len(), missing_count);
+                
+                // If we don't meet minimum quorum, return error
+                if contributions.len() < self.config.min_judges_required {
+                    return Err(CouncilError::QuorumFailure {
+                        available: contributions.len(),
+                        required: self.config.min_judges_required,
+                    });
+                }
+            } else {
+                tracing::info!("All {} judges contributed verdicts successfully", contributions.len());
             }
         }
 
@@ -1411,32 +1515,32 @@ impl CouncilSession {
         // If session already has a final decision, convert it to ConsensusResult
         if let Some(ref decision) = self.final_decision {
             match decision {
-                FinalDecision::Proceed { confidence, rationale, .. } => {
+                FinalDecision::Proceed { confidence, .. } => {
                     return Ok(crate::autonomous_executor::ConsensusResult {
                         approved: true,
                         confidence: *confidence,
-                        reason: rationale.clone().unwrap_or_else(|| "Task approved by council".to_string()),
+                        reason: format!("Task approved by council with {:.1}% confidence", confidence * 100.0),
                     });
                 },
-                FinalDecision::Refine { rationale, .. } => {
+                FinalDecision::Refine { refinement_directive, .. } => {
                     return Ok(crate::autonomous_executor::ConsensusResult {
                         approved: false,
                         confidence: 0.5,
-                        reason: rationale.clone().unwrap_or_else(|| "Task requires refinement".to_string()),
+                        reason: format!("Task requires refinement: {} changes required", refinement_directive.required_changes.len()),
                     });
                 },
-                FinalDecision::Reject { rationale, .. } => {
+                FinalDecision::Reject { reason, .. } => {
                     return Ok(crate::autonomous_executor::ConsensusResult {
                         approved: false,
                         confidence: 0.2,
-                        reason: rationale.clone().unwrap_or_else(|| "Task rejected by council".to_string()),
+                        reason: reason.clone(),
                     });
                 },
-                FinalDecision::Escalate { rationale, .. } => {
+                FinalDecision::Escalate { reason, .. } => {
                     return Ok(crate::autonomous_executor::ConsensusResult {
                         approved: false,
                         confidence: 0.3,
-                        reason: rationale.clone().unwrap_or_else(|| "Task escalated for human review".to_string()),
+                        reason: reason.clone(),
                     });
                 },
             }
@@ -1528,5 +1632,380 @@ fn convert_local_to_contract_risk_tier(local_tier: u8) -> agent_agency_contracts
         2 => agent_agency_contracts::task_request::RiskTier::Tier2,
         3 => agent_agency_contracts::task_request::RiskTier::Tier3,
         _ => agent_agency_contracts::task_request::RiskTier::Tier3, // Default to lowest risk
+    }
+}
+
+impl Council {
+    /// Conduct a debate between competing solutions from multiple workers
+    /// 
+    /// This implements the CAWS Debate protocol where:
+    /// 1. Each worker defends its solution with evidence
+    /// 2. Judges evaluate arguments (not raw data)
+    /// 3. Highest-scoring solution wins
+    /// 
+    /// Scoring formula (from theory.md):
+    /// S = 0.4E + 0.3B + 0.2G + 0.1P
+    /// Where:
+    /// - E = Evidence Completeness (40%)
+    /// - B = Budget Adherence (30%)
+    /// - G = Gate Integrity (20%)
+    /// - P = Provenance Clarity (10%)
+    #[instrument(skip(self, solutions))]
+    pub async fn conduct_debate(
+        &self,
+        solutions: Vec<WorkerSolution>,
+        review_context: ReviewContext,
+    ) -> CouncilResult<DebateResult> {
+        if solutions.is_empty() {
+            return Err(CouncilError::InvalidInput {
+                message: "Cannot conduct debate with no solutions".to_string(),
+            });
+        }
+
+        if solutions.len() == 1 {
+            // Single solution - no debate needed, but still evaluate
+            let solution = &solutions[0];
+            let plea = self.generate_worker_plea(solution).await?;
+            let score = self.evaluate_solution_plea(&plea, solution).await?;
+            
+            return Ok(DebateResult {
+                winner_solution_id: solution.solution_id.clone(),
+                winner_worker_id: solution.worker_id.clone(),
+                winning_score: score.total_score,
+                confidence: 0.8, // High confidence for single solution
+                solution_scores: vec![score],
+                judge_notes: "Single solution evaluated".to_string(),
+            });
+        }
+
+        tracing::info!("Conducting debate between {} competing solutions", solutions.len());
+
+        // Phase 1: Each worker defends its solution
+        let mut pleas = Vec::new();
+        for solution in &solutions {
+            let plea = self.generate_worker_plea(solution).await?;
+            pleas.push(plea);
+        }
+
+        // Phase 2: Judges evaluate each plea
+        let mut solution_scores = Vec::new();
+        for (solution, plea) in solutions.iter().zip(pleas.iter()) {
+            let score = self.evaluate_solution_plea(plea, solution).await?;
+            solution_scores.push(score);
+        }
+
+        // Phase 3: Select highest-scoring solution
+        let winner = solution_scores.iter()
+            .max_by(|a, b| a.total_score.partial_cmp(&b.total_score).unwrap_or(std::cmp::Ordering::Equal))
+            .ok_or_else(|| CouncilError::InvalidInput {
+                message: "Failed to determine debate winner".to_string(),
+            })?;
+
+        // Calculate confidence based on score difference
+        let mut scores: Vec<f64> = solution_scores.iter().map(|s| s.total_score).collect();
+        scores.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
+        
+        let confidence = if scores.len() >= 2 {
+            // Confidence based on gap between winner and second place
+            let gap = scores[0] - scores[1];
+            (gap * 2.0).min(1.0).max(0.5) // Scale gap to 0.5-1.0 range
+        } else {
+            0.8
+        };
+
+        // Generate judge notes summarizing the debate
+        let judge_notes = self.generate_debate_notes(&solution_scores, winner).await?;
+
+        Ok(DebateResult {
+            winner_solution_id: winner.solution_id.clone(),
+            winner_worker_id: winner.worker_id.clone(),
+            winning_score: winner.total_score,
+            confidence,
+            solution_scores,
+            judge_notes,
+        })
+    }
+
+    /// Generate a worker's defense plea for their solution
+    async fn generate_worker_plea(&self, solution: &WorkerSolution) -> CouncilResult<WorkerPlea> {
+        // Extract strength claims from evidence
+        let mut strength_claims = Vec::new();
+        
+        // Evidence completeness claims
+        if !solution.evidence.test_results.is_empty() {
+            strength_claims.push(format!("{} test cases passed", solution.evidence.test_results.len()));
+        }
+        
+        if let Some(coverage) = solution.evidence.coverage_metrics {
+            if coverage >= 0.8 {
+                strength_claims.push(format!("High test coverage: {:.1}%", coverage * 100.0));
+            }
+        }
+
+        // Budget adherence claims
+        if solution.evidence.budget_adherence.within_budget {
+            strength_claims.push(format!(
+                "Within budget: {} files (max {}), {} lines (max {})",
+                solution.evidence.budget_adherence.files_changed,
+                solution.evidence.budget_adherence.max_files_allowed,
+                solution.evidence.budget_adherence.lines_changed,
+                solution.evidence.budget_adherence.max_lines_allowed,
+            ));
+        }
+
+        // Gate integrity claims
+        if solution.evidence.lint_results.iter().all(|r| r.contains("passed") || r.contains("ok")) {
+            strength_claims.push("All linting checks passed".to_string());
+        }
+
+        // Performance claims
+        if let Some(perf) = solution.evidence.performance_metrics {
+            strength_claims.push(format!("Performance metrics: {:.2}", perf));
+        }
+
+        // Acknowledge weaknesses
+        let mut weakness_acknowledgments = Vec::new();
+        if !solution.evidence.budget_adherence.within_budget {
+            weakness_acknowledgments.push("Budget exceeded".to_string());
+        }
+        if solution.evidence.coverage_metrics.map(|c| c < 0.8).unwrap_or(true) {
+            weakness_acknowledgments.push("Test coverage below threshold".to_string());
+        }
+        if solution.evidence.test_results.is_empty() {
+            weakness_acknowledgments.push("No test results provided".to_string());
+        }
+
+        // Build defense argument
+        let evidence_summary = format!(
+            "Tests: {}, Coverage: {:.1}%, Budget: {} files/{} lines, Lint: {} checks",
+            solution.evidence.test_results.len(),
+            solution.evidence.coverage_metrics.map(|c| c * 100.0).unwrap_or(0.0),
+            solution.evidence.budget_adherence.files_changed,
+            solution.evidence.budget_adherence.lines_changed,
+            solution.evidence.lint_results.len(),
+        );
+
+        let defense_argument = format!(
+            "Solution {} proposes: {}\n\nEvidence: {}\n\nRationale: {}",
+            solution.solution_id,
+            solution.working_spec.title,
+            evidence_summary,
+            solution.rationale,
+        );
+
+        Ok(WorkerPlea {
+            solution_id: solution.solution_id.clone(),
+            worker_id: solution.worker_id.clone(),
+            defense_argument,
+            evidence_summary,
+            strength_claims,
+            weakness_acknowledgments,
+        })
+    }
+
+    /// Evaluate a solution plea using CAWS scoring formula
+    /// S = 0.4E + 0.3B + 0.2G + 0.1P
+    async fn evaluate_solution_plea(
+        &self,
+        plea: &WorkerPlea,
+        solution: &WorkerSolution,
+    ) -> CouncilResult<SolutionScore> {
+        // E: Evidence Completeness (40%)
+        let evidence_completeness = self.calculate_evidence_completeness(&solution.evidence);
+
+        // B: Budget Adherence (30%)
+        let budget_adherence = self.calculate_budget_adherence(&solution.evidence.budget_adherence);
+
+        // G: Gate Integrity (20%)
+        let gate_integrity = self.calculate_gate_integrity(&solution.evidence);
+
+        // P: Provenance Clarity (10%)
+        let provenance_clarity = self.calculate_provenance_clarity(plea, solution);
+
+        // Calculate total score: S = 0.4E + 0.3B + 0.2G + 0.1P
+        let total_score = (evidence_completeness * 0.4)
+            + (budget_adherence * 0.3)
+            + (gate_integrity * 0.2)
+            + (provenance_clarity * 0.1);
+
+        Ok(SolutionScore {
+            solution_id: solution.solution_id.clone(),
+            worker_id: solution.worker_id.clone(),
+            total_score,
+            evidence_completeness,
+            budget_adherence,
+            gate_integrity,
+            provenance_clarity,
+        })
+    }
+
+    /// Calculate evidence completeness score (0.0 to 1.0)
+    fn calculate_evidence_completeness(&self, evidence: &SolutionEvidence) -> f64 {
+        let mut score = 0.0;
+        let mut factors = 0;
+
+        // Test results presence
+        if !evidence.test_results.is_empty() {
+            score += 0.3;
+            factors += 1;
+        }
+
+        // Coverage metrics presence
+        if evidence.coverage_metrics.is_some() {
+            score += 0.3;
+            factors += 1;
+        }
+
+        // Lint results presence
+        if !evidence.lint_results.is_empty() {
+            score += 0.2;
+            factors += 1;
+        }
+
+        // Performance metrics presence
+        if evidence.performance_metrics.is_some() {
+            score += 0.2;
+            factors += 1;
+        }
+
+        // Normalize by number of factors present
+        if factors > 0 {
+            score / factors as f64
+        } else {
+            0.0
+        }
+    }
+
+    /// Calculate budget adherence score (0.0 to 1.0)
+    fn calculate_budget_adherence(&self, budget: &BudgetAdherence) -> f64 {
+        if !budget.within_budget {
+            return 0.0;
+        }
+
+        // Calculate adherence percentage for both files and lines
+        let files_adherence = if budget.max_files_allowed > 0 {
+            (budget.max_files_allowed as f64 - budget.files_changed as f64) / budget.max_files_allowed as f64
+        } else {
+            1.0
+        };
+
+        let lines_adherence = if budget.max_lines_allowed > 0 {
+            (budget.max_lines_allowed as f64 - budget.lines_changed as f64) / budget.max_lines_allowed as f64
+        } else {
+            1.0
+        };
+
+        // Average adherence (higher is better - using more budget efficiently)
+        (files_adherence + lines_adherence) / 2.0
+    }
+
+    /// Calculate gate integrity score (0.0 to 1.0)
+    fn calculate_gate_integrity(&self, evidence: &SolutionEvidence) -> f64 {
+        let mut passed_gates = 0;
+        let mut total_gates = 0;
+
+        // Test results gate
+        total_gates += 1;
+        if !evidence.test_results.is_empty() && evidence.test_results.iter().all(|r| r.contains("passed") || r.contains("ok")) {
+            passed_gates += 1;
+        }
+
+        // Coverage gate
+        total_gates += 1;
+        if let Some(coverage) = evidence.coverage_metrics {
+            if coverage >= 0.8 {
+                passed_gates += 1;
+            }
+        }
+
+        // Lint gate
+        total_gates += 1;
+        if !evidence.lint_results.is_empty() && evidence.lint_results.iter().all(|r| r.contains("passed") || r.contains("ok")) {
+            passed_gates += 1;
+        }
+
+        if total_gates > 0 {
+            passed_gates as f64 / total_gates as f64
+        } else {
+            0.5 // Default if no gates present
+        }
+    }
+
+    /// Calculate provenance clarity score (0.0 to 1.0)
+    fn calculate_provenance_clarity(&self, plea: &WorkerPlea, solution: &WorkerSolution) -> f64 {
+        let mut score = 0.0;
+        let mut factors = 0;
+
+        // Rationale present and non-empty
+        if !solution.rationale.is_empty() {
+            score += 0.3;
+            factors += 1;
+        }
+
+        // Defense argument present
+        if !plea.defense_argument.is_empty() {
+            score += 0.3;
+            factors += 1;
+        }
+
+        // Evidence summary present
+        if !plea.evidence_summary.is_empty() {
+            score += 0.2;
+            factors += 1;
+        }
+
+        // Strength claims present
+        if !plea.strength_claims.is_empty() {
+            score += 0.1;
+            factors += 1;
+        }
+
+        // Weakness acknowledgments present (shows honesty)
+        if !plea.weakness_acknowledgments.is_empty() {
+            score += 0.1;
+            factors += 1;
+        }
+
+        // Normalize
+        if factors > 0 {
+            score / factors as f64
+        } else {
+            0.0
+        }
+    }
+
+    /// Generate judge notes summarizing the debate
+    async fn generate_debate_notes(
+        &self,
+        scores: &[SolutionScore],
+        winner: &SolutionScore,
+    ) -> CouncilResult<String> {
+        let mut notes = format!(
+            "Debate concluded with {} solutions evaluated.\n\nWinner: Solution {} (Worker {})\nScore: {:.3}\n\n",
+            scores.len(),
+            winner.solution_id,
+            winner.worker_id,
+            winner.total_score,
+        );
+
+        notes.push_str("Scoring breakdown:\n");
+        notes.push_str(&format!("  - Evidence Completeness: {:.3}\n", winner.evidence_completeness));
+        notes.push_str(&format!("  - Budget Adherence: {:.3}\n", winner.budget_adherence));
+        notes.push_str(&format!("  - Gate Integrity: {:.3}\n", winner.gate_integrity));
+        notes.push_str(&format!("  - Provenance Clarity: {:.3}\n", winner.provenance_clarity));
+
+        if scores.len() > 1 {
+            notes.push_str("\nAll solutions scored:\n");
+            for score in scores {
+                notes.push_str(&format!(
+                    "  - Solution {} (Worker {}): {:.3}\n",
+                    score.solution_id,
+                    score.worker_id,
+                    score.total_score,
+                ));
+            }
+        }
+
+        Ok(notes)
     }
 }

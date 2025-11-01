@@ -186,7 +186,9 @@ name = "agent-orchestration"
 version = "0.1.0"
 dependencies = [
  "agent-agency-contracts",
+ "agent-data-processing",
  "agent-memory",
+ "agent-research",
  "anyhow",
  "async-trait",
  "axum",
@@ -218,6 +220,7 @@ dependencies = [
  "regex",
  "reqwest 0.11.27",
  "rust-bert",
+ "schemars",
  "seahash",
  "serde",
  "serde_json",
@@ -251,10 +254,7 @@ name = "agent-research"
 version = "0.1.0"
 dependencies = [
  "agent-agency-contracts",
- "agent-data-processing",
  "agent-memory",
- "agent-orchestration",
- "agent-workers",
  "ammonia",
  "anyhow",
  "async-trait",
@@ -2413,7 +2413,6 @@ version = "0.1.0"
 dependencies = [
  "agent-agency-contracts",
  "agent-mcp",
- "agent-orchestration",
  "anyhow",
  "async-trait",
  "axum",

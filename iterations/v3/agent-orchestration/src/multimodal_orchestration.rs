@@ -9,6 +9,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use agent_agency_contracts::types::prelude::*;
+use agent_agency_contracts::types::data_processing::ProcessingPriority;
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 use chrono::Utc;
@@ -277,7 +278,7 @@ pub struct MultimodalOrchestrator {
     /// Core ML model manager for accelerated inference
     coreml_manager: Option<Arc<CoreMLManager>>,
     /// Council coordinator for decision-making
-    council_coordinator: Option<Arc<ConsensusCoordinator>>,
+    council_coordinator: Option<Arc<dyn ConsensusCoordinator>>,
     /// Audit trail manager for recording processing events
     audit_trail: Option<Arc<AuditTrailManager>>,
     /// Circuit breakers for external service protection
@@ -433,7 +434,7 @@ impl MultimodalOrchestrator {
     }
 
     /// Set council coordinator for decision-making
-    pub fn set_council_coordinator(&mut self, coordinator: Arc<ConsensusCoordinator>) {
+    pub fn set_council_coordinator(&mut self, coordinator: Arc<dyn ConsensusCoordinator>) {
         self.council_coordinator = Some(coordinator);
     }
 

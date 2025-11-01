@@ -80,9 +80,9 @@ impl LegacyOrchestratorAdapter {
     pub async fn new(config: OrchestratorConfig) -> Result<Self> {
         let council_config = CouncilConfig {
             session_timeout_seconds: 300, // 5 minutes
-            min_judges_required: 2, // Match our 3 judges
-            max_judges_per_session: 5,
-            judge_selection_strategy: crate::council::JudgeSelectionStrategy::AllAvailable,
+            min_judges_required: 3, // Require all available judges
+            max_judges_per_session: 10, // Allow up to 10 for future expansion
+            judge_selection_strategy: crate::council::JudgeSelectionStrategy::AllAvailable, // Select all available judges
             consensus_strategy: ConsensusStrategy::Majority,
             risk_thresholds: crate::decision_making::RiskThresholds::default(),
             enable_parallel_reviews: true,
@@ -132,7 +132,7 @@ impl LegacyOrchestratorAdapter {
         let verdict_aggregator = Arc::new(VerdictAggregator::new(AggregationConfig {
             consensus_threshold: 0.7,
             weight_by_specialization: true,
-            min_judges_required: 2, // Allow 2 judges for smaller council
+            min_judges_required: 3, // Require all available judges
             dissent_handling: DissentHandling::Strict,
             risk_aggregation: RiskAggregationStrategy::WeightedAverage,
         }));
@@ -542,14 +542,14 @@ impl LegacyOrchestratorAdapter {
     }
 
     /// Convert task priority
-    fn convert_priority(&self, priority: TaskPriority) -> crate::multimodal_orchestration::ProcessingPriority {
+    fn convert_priority(&self, priority: TaskPriority) -> agent_agency_contracts::types::data_processing::ProcessingPriority {
         match priority {
-            TaskPriority::Low => crate::multimodal_orchestration::ProcessingPriority::Low,
-            TaskPriority::Medium => crate::multimodal_orchestration::ProcessingPriority::Normal,
-            TaskPriority::Normal => crate::multimodal_orchestration::ProcessingPriority::Normal,
-            TaskPriority::High => crate::multimodal_orchestration::ProcessingPriority::High,
-            TaskPriority::Urgent => crate::multimodal_orchestration::ProcessingPriority::High,
-            TaskPriority::Critical => crate::multimodal_orchestration::ProcessingPriority::High,
+            TaskPriority::Low => agent_agency_contracts::types::data_processing::ProcessingPriority::Low,
+            TaskPriority::Medium => agent_agency_contracts::types::data_processing::ProcessingPriority::Normal,
+            TaskPriority::Normal => agent_agency_contracts::types::data_processing::ProcessingPriority::Normal,
+            TaskPriority::High => agent_agency_contracts::types::data_processing::ProcessingPriority::High,
+            TaskPriority::Urgent => agent_agency_contracts::types::data_processing::ProcessingPriority::High,
+            TaskPriority::Critical => agent_agency_contracts::types::data_processing::ProcessingPriority::High,
         }
     }
 

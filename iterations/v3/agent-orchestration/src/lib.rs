@@ -231,8 +231,7 @@ pub use frontier::{
 pub use multimodal_orchestrator::{
     KimiK2MultimodalOrchestrator, OrchestratorPerformanceStats, OrchestratorError,
 };
-pub use types::{MultimodalTask, MultimodalProcessingResult};
-pub use multimodal_orchestration::OrchestratorConfig;
+pub use types::{MultimodalTask, MultimodalProcessingResult, OrchestratorConfig};
 
 // Council types
 pub use council_types::{FinalVerdict, Task, ChangeBudget};
@@ -268,6 +267,7 @@ pub use types::DiffStats;
 /// Unified service that combines orchestration execution capabilities
 /// with council decision-making and arbitration systems.
 // #[derive(Debug)]
+#[derive(Debug)]
 pub struct AgentOrchestrationService {
     /// Council for decision making and arbitration
     // pub council: council::Council,
@@ -301,9 +301,11 @@ impl AgentOrchestrationService {
         let autonomous_executor = autonomous_executor::AutonomousExecutor::new(
             executor_config,
             None, // progress_tracker
-            Arc::new(crate::autonomous_executor::MockCawsRuntimeValidator), // runtime_validator - PLACEHOLDER: proper implementation needed
+            // PLACEHOLDER: runtime_validator - proper implementation needed
+            Arc::new(MockCawsRuntimeValidator::default()),
             None, // consensus_coordinator
-            Arc::new(crate::autonomous_executor::MockVerdictWriter), // verdict_writer - PLACEHOLDER: proper implementation needed
+            // PLACEHOLDER: verdict_writer - proper implementation needed
+            Arc::new(MockVerdictWriter::default()),
             Arc::new(OrchestrationProvenanceEmitter::new()), // provenance_emitter
             None, // cache
             None, // metrics
@@ -465,7 +467,7 @@ impl AgentOrchestrationService {
 #[derive(Debug, Clone)]
 pub struct OrchestrationConfig {
     pub council_config: council::CouncilConfig,
-    pub orchestrator_config: multimodal_orchestration::OrchestratorConfig,
+    pub orchestrator_config: crate::types::OrchestratorConfig,
     pub executor_config: autonomous_executor::AutonomousExecutorConfig,
     pub audit_config: audit_trail::AuditConfig,
 }

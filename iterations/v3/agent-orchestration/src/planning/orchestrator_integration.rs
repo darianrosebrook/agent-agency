@@ -116,10 +116,16 @@ impl OrchestratorPlanningIntegration {
         // 2. Review plan with constitutional council
         let review_result = self.council_review.review_plan(&execution_plan).await?;
         if !review_result.approved {
+            let reason = match review_result.council_decision {
+                agent_agency_contracts::CouncilDecision::Accept => "Unexpected: CouncilDecision is Accept but approved is false",
+                agent_agency_contracts::CouncilDecision::Refine => "Plan requires refinement before execution",
+                agent_agency_contracts::CouncilDecision::Reject => "Plan rejected by constitutional council",
+                agent_agency_contracts::CouncilDecision::Escalate => "Plan escalated for human review",
+            };
             return Err(anyhow!(
                 "Plan {} rejected by constitutional council: {}",
-                execution_plan.contract_plan.id,
-                review_result.council_decision.rationale
+                execution_plan.contract_plan.id.to_string(),
+                reason
             ));
         }
 
@@ -131,7 +137,7 @@ impl OrchestratorPlanningIntegration {
 
         // 4. Collect final evidence and verification
         let quality_verified = self.verify_execution_quality(&execution_plan, &execution_result).await?;
-        let evidence_count = execution_result.evidence_artifacts.len();
+        let evidence_count = execution_result.evidence.plan_evidence.len();
 
         // 5. Store final results
         self.store_execution_results(task_id, &execution_plan, &execution_result).await?;
@@ -217,7 +223,7 @@ impl OrchestratorPlanningIntegration {
         let plan_response = self.plan_generator.generate_plan(planning_request).await?;
 
         // Store the generated plan
-        self.planning_storage.store_plan(&plan_response.plan).await?;
+        self.planning_storage.store_plan(&plan_response).await?;
 
         Ok(plan_response.plan)
     }
@@ -265,16 +271,15 @@ impl OrchestratorPlanningIntegration {
         result: &agent_agency_contracts::planning::PlanExecutionResult,
     ) -> Result<bool> {
         // Check if all quality gates were satisfied
-        let quality_gates_satisfied = result.quality_verifications.iter()
-            .all(|v| v.gate_status == crate::planning::plan_executor::QualityGateStatus::Passed);
+        let quality_gates_satisfied = result.evidence.quality_validation.iter()
+            .all(|v| v.passed);
 
         // Check evidence completeness
-        let evidence_complete = !result.evidence_artifacts.is_empty() &&
-            result.evidence_artifacts.iter().all(|e| e.verified);
+        let evidence_complete = !result.evidence.plan_evidence.is_empty() &&
+            result.evidence.plan_evidence.iter().all(|e| e.verified);
 
         // Check milestone completion
-        let milestones_complete = result.milestone_results.iter()
-            .all(|m| m.status == crate::planning::plan_executor::MilestoneStatus::Completed);
+        let milestones_complete = result.milestones_completed == result.evidence.milestone_evidence.len();
 
         Ok(quality_gates_satisfied && evidence_complete && milestones_complete)
     }
@@ -315,7 +320,7 @@ impl OrchestratorPlanningIntegration {
     /// Get planning status for a task
     pub async fn get_task_planning_status(&self, task_id: Uuid) -> Result<Option<PlanningStatus>> {
         // Check if there's an execution plan for this task
-        if let Some(plan) = self.planning_storage.get_plan_for_task(task_id).await? {
+        if let Some(plan) = self.planning_storage.get_plan_by_id(task_id).await? {
             // Get execution result if available
             if let Some(result) = self.planning_storage.get_execution_result(plan.id).await? {
                 let status = PlanningStatus {
@@ -323,10 +328,10 @@ impl OrchestratorPlanningIntegration {
                     plan_id: plan.id,
                     state: plan.state,
                     progress: self.calculate_progress(&plan, &result),
-                    quality_verified: result.quality_verifications.iter()
-                        .all(|v| v.gate_status == crate::planning::plan_executor::QualityGateStatus::Passed),
-                    evidence_count: result.evidence_artifacts.len(),
-                    last_updated: result.completed_at,
+                    quality_verified: result.evidence.quality_validation.iter()
+                        .all(|v| v.passed),
+                    evidence_count: result.evidence.plan_evidence.len(),
+                    last_updated: chrono::Utc::now(),
                 };
                 Ok(Some(status))
             } else {
@@ -370,9 +375,7 @@ impl OrchestratorPlanningIntegration {
             return 100.0;
         }
 
-        let completed_milestones = result.milestone_results.iter()
-            .filter(|m| m.status == crate::planning::plan_executor::MilestoneStatus::Completed)
-            .count() as f64;
+        let completed_milestones = result.milestones_completed as f64;
 
         (completed_milestones / total_milestones) * 100.0
     }
