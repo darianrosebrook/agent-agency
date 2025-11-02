@@ -235,10 +235,9 @@ impl WaiverIntegration {
             waivers.push(waiver);
         }
 
-        // Add waivers to plan
-        for waiver_ref in &waivers {
-            plan.contract_plan.active_waivers.push(waiver_ref.clone());
-        }
+        // Waivers are stored in database, not directly on WorkingSpec
+        // The database stores waivers with plan_id in metadata (see get_active_waivers_for_plan)
+        // No need to push to plan.contract_plan.active_waivers (field doesn't exist)
 
         Ok(waivers)
     }
@@ -349,14 +348,8 @@ impl WaiverIntegration {
     async fn get_active_waivers_for_plan(&self, plan: &ExecutionPlan) -> Result<Vec<WaiverReference>> {
         let mut active_waivers = Vec::new();
 
-        // Check plan's active waivers
-        for waiver_ref in &plan.contract_plan.active_waivers {
-            if self.is_waiver_valid(waiver_ref).await? {
-                active_waivers.push(waiver_ref.clone());
-            }
-        }
-
-        // Also check database for any additional waivers related to this plan
+        // Check database for waivers related to this plan
+        // WorkingSpec doesn't have active_waivers field - waivers are stored in database
         let all_waivers = self.db_ops.get_waivers(Some("active".to_string())).await?;
         for waiver in all_waivers {
             if let Some(plan_id) = waiver.metadata.get("plan_id")
@@ -402,7 +395,7 @@ impl WaiverIntegration {
                 }
                 "max_time" => {
                     // Increase time limit
-                    constraints.max_time_ms = 3600000; // 1 hour emergency limit
+                    constraints.max_planning_time_ms = 3600000; // 1 hour emergency limit
                 }
                 "quality_gates" => {
                     // Relax quality requirements

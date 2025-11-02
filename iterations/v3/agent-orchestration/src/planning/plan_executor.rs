@@ -390,7 +390,7 @@ impl PlanExecutor {
         // Collect evidence for all milestones (simplified implementation)
         for milestone in &plan.contract_plan.milestones {
             if milestone.state == agent_agency_contracts::planning_io::MilestoneState::Completed {
-                if let Ok(evidence_bundle) = self.evidence_collector.collect_evidence(milestone).await {
+                if let Ok(evidence_bundle) = self.evidence_collector.collect_evidence(milestone, &plan.contract_plan.id).await {
                     // Convert plan_types::EvidenceArtifact to contracts::EvidenceArtifact
                     let contract_artifacts: Vec<agent_agency_contracts::planning::EvidenceArtifact> = evidence_bundle.artifacts
                         .into_iter()
@@ -551,7 +551,7 @@ impl PlanExecutor {
             if let Some(milestone) = plan.contract_plan.milestones.iter().find(|m| m.id == *milestone_id) {
                 if milestone.state == agent_agency_contracts::planning_io::MilestoneState::Completed {
                     // Collect evidence for completed milestone
-                    if let Ok(evidence) = self.evidence_collector.collect_evidence(milestone).await {
+                    if let Ok(evidence) = self.evidence_collector.collect_evidence(milestone, &plan.contract_plan.id).await {
                         all_evidence.milestone_evidence.insert(milestone_id.clone(), evidence);
                     }
                 }
@@ -639,7 +639,7 @@ impl PlanExecutor {
 
         // Collect evidence
         let evidence = if self.config.evidence_settings.collect_evidence {
-            match self.evidence_collector.collect_evidence(&milestone).await {
+            match self.evidence_collector.collect_evidence(&milestone, &plan.contract_plan.id).await {
                 Ok(evidence) => Some(evidence),
                 Err(e) => {
                     // Log evidence collection failure but don't fail milestone
@@ -688,7 +688,7 @@ impl PlanExecutor {
     }
 
     /// Execute milestone implementation using real worker system
-    async fn execute_milestone_impl(&self, milestone: &agent_agency_contracts::planning_io::Milestone) -> Result<()> {
+    pub async fn execute_milestone_impl(&self, milestone: &agent_agency_contracts::planning_io::Milestone) -> Result<()> {
         // Create worker context from milestone
         let worker_context = self.create_worker_context(milestone)?;
 

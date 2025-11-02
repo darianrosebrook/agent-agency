@@ -522,6 +522,19 @@ pub struct PlanningConstraints {
     pub parallel_preferences: ParallelPreferences,
 }
 
+impl Default for PlanningConstraints {
+    fn default() -> Self {
+        Self {
+            max_planning_time_ms: 300000, // 5 minutes
+            max_complexity: 100,
+            risk_tolerance: RiskTolerance::Balanced,
+            cost_limits: None,
+            quality_requirements: QualityRequirements::default(),
+            parallel_preferences: ParallelPreferences::default(),
+        }
+    }
+}
+
 /// Risk tolerance levels
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum RiskTolerance {
@@ -580,6 +593,18 @@ pub struct QualityRequirements {
     pub council_approval_required: bool,
 }
 
+impl Default for QualityRequirements {
+    fn default() -> Self {
+        Self {
+            min_coverage: 0.8, // 80% coverage
+            min_mutation_score: 0.5, // 50% mutation score
+            security_scan_required: true,
+            manual_review_required: false,
+            council_approval_required: false,
+        }
+    }
+}
+
 /// Parallel execution preferences
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParallelPreferences {
@@ -594,6 +619,17 @@ pub struct ParallelPreferences {
 
     /// Load balancing strategy
     pub load_balancing: LoadBalancingStrategy,
+}
+
+impl Default for ParallelPreferences {
+    fn default() -> Self {
+        Self {
+            max_parallelism: 4,
+            prefer_parallel: true,
+            allow_resource_contention: false,
+            load_balancing: LoadBalancingStrategy::Even,
+        }
+    }
 }
 
 /// Load balancing strategies
