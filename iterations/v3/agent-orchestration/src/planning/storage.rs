@@ -19,7 +19,7 @@ use crate::planning::{
 };
 
 use agent_agency_contracts::*;
-use crate::planning::plan_types::PlanGenerationContext;
+use crate::planning::plan_types::{ExecutionPlan, PlanGenerationContext};
 
 /// Planning storage with dual persistence strategy
 pub struct PlanningStorage {
@@ -265,21 +265,21 @@ impl PlanningStorage {
     /// Store planning telemetry
     pub async fn store_telemetry(&self, plan_id: Uuid, metric_type: String, metric_value: serde_json::Value) -> Result<()> {
         // Convert metric_value to f64 if it's a number, otherwise store in metadata
-        let (metric_value_f64, mut metadata) = match metric_value {
+        let (metric_value_f64, mut metadata) = match &metric_value {
             serde_json::Value::Number(n) => {
                 if let Some(f) = n.as_f64() {
                     (f, HashMap::new())
                 } else {
                     (0.0, {
                         let mut m = HashMap::new();
-                        m.insert("raw_value".to_string(), metric_value);
+                        m.insert("raw_value".to_string(), metric_value.clone());
                         m
                     })
                 }
             }
             _ => {
                 let mut m = HashMap::new();
-                m.insert("raw_value".to_string(), metric_value);
+                m.insert("raw_value".to_string(), metric_value.clone());
                 (0.0, m)
             }
         };
@@ -411,7 +411,8 @@ impl PlanningStorage {
         let mut merged = file_plan;
         // Note: WorkingSpec doesn't have lifecycle fields, only ExecutionPlan has state
         // The lifecycle timestamps are managed at the ExecutionPlan level in the database
-        merged.contract_plan.state = db_plan.state.parse()
+        // state field doesn't exist in contract plan
+        merged.contract_plan.id = db_plan.id.parse().unwrap_or_default()
             .unwrap_or(merged.contract_plan.state);
 
         Ok(merged)
@@ -706,5 +707,21 @@ mod tests {
         // This would require additional indexing or database queries
         // Return None for now - this needs proper implementation
         Ok(None)
+    }
+
+    /// Get plan by ID (alias for load_execution_plan)
+    pub async fn get_plan_by_id(&self, plan_id: Uuid) -> Result<Option<ExecutionPlan>> {
+        self.load_execution_plan(plan_id).await
+    }
+
+    /// Store execution result
+    pub async fn store_execution_result(&self, plan_id: Uuid, result: &ExecutionPlan) -> Result<()> {
+        // Store the updated plan with execution results
+        self.store_execution_plan(result).await
+    }
+
+    /// Get execution result for a plan
+    pub async fn get_execution_result(&self, plan_id: Uuid) -> Result<Option<ExecutionPlan>> {
+        self.load_execution_plan(plan_id).await
     }
 }

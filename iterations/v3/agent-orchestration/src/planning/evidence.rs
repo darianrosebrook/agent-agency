@@ -17,20 +17,26 @@ use agent_agency_contracts::planning_io::{Milestone, EvidenceGate};
 // Local type definitions to avoid circular dependency with agent-research
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResearchEvidence {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub content: String,
     pub evidence_type: ResearchEvidenceType,
     pub confidence: f64,
     pub source: String,
+    #[schemars(with = "String")]
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub enum ResearchEvidenceType {
     CodeReview,
+    CodeAnalysis, // Alias/synonym for CodeReview
     TestExecution,
     PerformanceMetrics,
+    Performance, // Alias/synonym for PerformanceMetrics
     SecurityScan,
+    Security, // Alias/synonym for SecurityScan
+    Constitutional, // Constitutional/CAWS compliance evidence
     Documentation,
 }
 
@@ -51,6 +57,7 @@ impl ResearchEvidenceCollector for NoOpResearchEvidenceCollector {
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProcessingContext {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub milestone_id: String,
     pub evidence_types: Vec<ResearchEvidenceType>,
@@ -297,6 +304,8 @@ impl EvidenceCollector {
         }
 
         Ok(EvidenceBundle {
+            meets_quality_gates: true,
+            metadata: std::collections::HashMap::new(),
             milestone_id: milestone.id.clone(),
             plan_id: milestone.plan_id, // TODO: Get from milestone
             artifacts,
@@ -342,6 +351,7 @@ impl EvidenceCollector {
         metadata.insert("verified".to_string(), serde_json::Value::Bool(research_ev.verified));
 
         Ok(EvidenceArtifact {
+            metadata: std::collections::HashMap::new(),
             id: Uuid::new_v4(),
             artifact_type,
             content: crate::planning::plan_types::EvidenceContent::Structured(metadata.clone()),

@@ -35,6 +35,31 @@ pub struct Judges {
     pub integration: IntegrationValidator,
 }
 
+impl Judges {
+    /// Create all four judges with a shared inference engine
+    ///
+    /// This is the recommended way to create judges. All judges share the same engine
+    /// instance, which enables prompt caching and consistent inference behavior.
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// use std::sync::Arc;
+    /// use engine_coreml::CoreMLEngine;
+    /// use agent_agency_contracts::EngineCaps;
+    ///
+    /// let engine = Arc::new(CoreMLEngine::new(model_path, EngineCaps::default()).await?);
+    /// let judges = Judges::new(engine);
+    /// ```
+    pub fn new(engine: Arc<dyn JudgeEngine>) -> Self {
+        Self {
+            constitutional: ConstitutionalJudge::new(engine.clone()),
+            technical: TechnicalAuditor::new(engine.clone()),
+            quality: QualityEvaluator::new(engine.clone()),
+            integration: IntegrationValidator::new(engine.clone()),
+        }
+    }
+}
+
 pub mod constitutional_judge;
 pub mod technical_auditor;
 pub mod quality_evaluator;

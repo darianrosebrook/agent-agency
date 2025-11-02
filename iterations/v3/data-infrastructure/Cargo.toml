@@ -64,6 +64,10 @@ safetensors = "0.4"
 hf-hub = "0.3"
 half = "2.4"
 
+# ONNX Runtime for embedding inference with ANE acceleration
+ort = { version = "2.0.0-rc.10", features = ["coreml"] }
+ndarray = "0.16"
+
 # Local crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 # agent-orchestration = { path = "../agent-orchestration", optional = true }  # Removed to break circular dependency

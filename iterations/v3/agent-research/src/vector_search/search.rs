@@ -14,8 +14,11 @@ use super::metrics::VectorSearchMetrics;
 use super::embedding::EmbeddingProcessor;
 use super::qdrant::QdrantClient;
 use super::text_processing::TextProcessor;
-use data_infrastructure::embedding::provider::OllamaEmbeddingProvider;
-use data_infrastructure::embedding::embedding_types::{EmbeddingConfig, EmbeddingProviderType};
+use data_infrastructure::embedding::embedding_service::EmbeddingServiceFactory;
+use data_infrastructure::embedding::embedding_types::EmbeddingConfig;
+use data_infrastructure::embedding::EmbeddingService;
+use std::sync::Arc;
+use tokio::sync::OnceCell;
 
 /// Search operations for vector search engine
 pub struct SearchOperations {
@@ -26,6 +29,8 @@ pub struct SearchOperations {
     text_processor: TextProcessor,
     similarity_threshold: f32,
     max_results: u32,
+    /// Shared embedding service (lazy-initialized)
+    embedding_service: Arc<OnceCell<Box<dyn EmbeddingService>>>,
 }
 
 impl SearchOperations {
@@ -45,7 +50,25 @@ impl SearchOperations {
             text_processor: TextProcessor::new(),
             similarity_threshold,
             max_results,
+            embedding_service: Arc::new(OnceCell::new()),
         }
+    }
+
+    /// Initialize embedding service (lazy initialization)
+    async fn get_embedding_service(&self) -> Result<&dyn EmbeddingService> {
+        self.embedding_service.get_or_try_init(|| async {
+            let config = EmbeddingConfig {
+                model_name: "embeddinggemma".to_string(),
+                dimension: 768,
+                batch_size: 32,
+                cache_size: 1000,
+                timeout_ms: 30000,
+            };
+            
+            Ok(EmbeddingServiceFactory::create_with_auto_detect(config, Some("embeddinggemma".to_string())).await)
+        })
+        .await
+        .map(|s| s.as_ref())
     }
 
     /// Perform semantic search
@@ -171,32 +194,22 @@ impl SearchOperations {
         self.embedding_processor.process_embedding(embedding)
     }
 
-    /// Generate embedding using external API
+    /// Generate embedding using CoreML (fallback to DummyEmbeddingProvider)
     async fn generate_embedding_from_api(&self, text: &str) -> Result<Vec<f32>> {
         debug!("Generating embedding for text (length: {})", text.len());
 
-            // Use Ollama embedding provider for real embeddings
-            let config = EmbeddingConfig {
-                provider: EmbeddingProviderType::Ollama,
-                model_name: "nomic-embed-text".to_string(), // Better performance and smaller size
-                dimension: 768,
-                ollama_url: "http://localhost:11434".to_string(),
-                timeout_ms: 30000,
-            };
-
-        // PLACEHOLDER: Ollama embedding provider deprecated - needs CoreML embedding provider
-        // TODO: Implement CoreML-based embedding provider (see todo-1762001962177-gg7fpzx98)
-        #[allow(deprecated)]
-        let provider = OllamaEmbeddingProvider::new(&config);
+        // Get embedding service (lazy initialization)
+        let service = self.get_embedding_service().await?;
         
         // Generate embedding
-        let embeddings = provider.generate_embeddings(&[text.to_string()]).await?;
+        let stored_embedding = service.generate_embedding(
+            text,
+            data_infrastructure::embedding::ContentType::Text,
+            "vector_search"
+        ).await?;
         
-        if let Some(embedding) = embeddings.first() {
-            Ok(embedding.values.clone())
-        } else {
-            Err(anyhow::anyhow!("No embedding generated"))
-        }
+        // Extract vector values from EmbeddingVector
+        Ok(stored_embedding.vector.values)
     }
 
     /// Clear all search caches

@@ -103,6 +103,9 @@ pub enum WorkerHealth {
     /// Worker has minor issues but can work
     Degraded,
 
+    /// Worker is unhealthy (has significant issues)
+    Unhealthy,
+
     /// Worker is unavailable
     Unavailable,
 }
@@ -252,6 +255,9 @@ pub enum CouncilOversightLevel {
     /// Notify council of major events
     Notify,
 
+    /// Standard council oversight (default level)
+    Standard,
+
     /// Require council approval for continuation
     Approve,
 
@@ -335,8 +341,8 @@ impl PlanExecutor {
         // Validate plan can be executed
         self.validate_plan_for_execution().await?;
 
-        // Initialize TODO tracking for plan
-        self.todo_integration.initialize_plan_todos(&self.plan).await?;
+        // Initialize TODO tracking for plan (pass contract plan since todo_integration expects contracts::ExecutionPlan)
+        self.todo_integration.initialize_plan_todos(&self.plan.contract_plan).await?;
 
         // Resolve execution dependencies
         let dependency_resolver = DependencyResolver::new(self.plan.contract_plan.dependency_graph.clone());
@@ -355,7 +361,8 @@ impl PlanExecutor {
                 total_milestones: self.plan.contract_plan.milestones.len(),
                 estimated_time_remaining_ms: None,
                 current_execution_rate: 0.0,
-                bottlenecks: vec![],
+                bottlenecks: Vec::new(),
+                parallel_efficiency: 0.0,
             },
             evidence_collection: EvidenceCollectionState {
                 collected_evidence: HashMap::new(),
@@ -383,8 +390,36 @@ impl PlanExecutor {
         // Collect evidence for all milestones (simplified implementation)
         for milestone in &plan.contract_plan.milestones {
             if milestone.state == agent_agency_contracts::planning_io::MilestoneState::Completed {
-                if let Ok(evidence) = self.evidence_collector.collect_evidence(milestone).await {
-                    all_evidence.milestone_evidence.insert(milestone.id.clone(), evidence);
+                if let Ok(evidence_bundle) = self.evidence_collector.collect_evidence(milestone).await {
+                    // Convert plan_types::EvidenceArtifact to contracts::EvidenceArtifact
+                    let contract_artifacts: Vec<agent_agency_contracts::planning::EvidenceArtifact> = evidence_bundle.artifacts
+                        .into_iter()
+                        .map(|artifact| agent_agency_contracts::planning::EvidenceArtifact {
+                            artifact_type: match artifact.artifact_type.as_str() {
+                                "code_analysis" => agent_agency_contracts::planning::ArtifactType::TestResults,
+                                "test_results" => agent_agency_contracts::planning::ArtifactType::TestResults,
+                                "coverage" => agent_agency_contracts::planning::ArtifactType::TestResults,
+                                "security_scan" => agent_agency_contracts::planning::ArtifactType::TestResults,
+                                _ => agent_agency_contracts::planning::ArtifactType::TestResults,
+                            },
+                            data: match artifact.content {
+                                crate::planning::plan_types::EvidenceContent::InlineJson(v) => v,
+                                crate::planning::plan_types::EvidenceContent::InlineText(s) => serde_json::json!(s),
+                                crate::planning::plan_types::EvidenceContent::FilePath(p) => serde_json::json!(p),
+                                crate::planning::plan_types::EvidenceContent::Structured(m) => serde_json::to_value(m).unwrap_or_default(),
+                                crate::planning::plan_types::EvidenceContent::Binary(b) => serde_json::json!(b),
+                            },
+                            verified: artifact.metadata.get("verified")
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false),
+                            validated_at: artifact.collected_at,
+                            metadata: artifact.metadata
+                                .into_iter()
+                                .map(|(k, v)| (k, v.as_str().unwrap_or("").to_string()))
+                                .collect(),
+                        })
+                        .collect();
+                    all_evidence.milestone_evidence.insert(milestone.id.clone(), contract_artifacts);
                 }
             }
         }
@@ -407,7 +442,16 @@ impl PlanExecutor {
                 0.0
             },
             parallel_time_saved_ms: self.calculate_parallel_time_saved(&plan).await,
-            resource_utilization: self.calculate_resource_utilization(&plan).await,
+            resource_utilization: {
+                let plan_resource = self.calculate_resource_utilization(&plan).await;
+                agent_agency_contracts::planning::ResourceUtilization {
+                    cpu_utilization: plan_resource.cpu_percent / 100.0, // Convert percentage to fraction
+                    memory_utilization: plan_resource.memory_mb, // Already in MB
+                    network_io_bytes: (plan_resource.network_mbps * 1_000_000.0 / 8.0) as u64, // Convert Mbps to bytes
+                    disk_io_bytes: (plan_resource.disk_mb * 1_024.0 * 1_024.0) as u64, // Convert MB to bytes
+                    worker_utilization: std::collections::HashMap::new(), // TODO: populate from actual worker stats
+                }
+            },
             quality_metrics: self.calculate_quality_metrics(&all_evidence),
             performance_metrics: self.calculate_performance_metrics(&plan, total_duration_ms),
         };
@@ -667,7 +711,7 @@ impl PlanExecutor {
             task_id: milestone.id.parse().unwrap_or(uuid::Uuid::new_v4()), // Use milestone ID as UUID if possible
             description: milestone.objective.clone(),
             required_capabilities: milestone.scope.allowed_operations.clone(),
-            priority: self.map_milestone_priority(milestone.priority),
+            priority: self.map_milestone_priority(milestone.priority.clone()),
             working_spec_id: self.plan.contract_plan.working_spec_id.clone(),
             metadata: std::collections::HashMap::from([
                 ("milestone_id".to_string(), serde_json::Value::String(milestone.id.clone())),
@@ -818,6 +862,8 @@ impl PlanExecutor {
     fn clone_executor(&self) -> Arc<Self> {
         // This is a simplified clone - in practice, would need proper cloning
         Arc::new(Self {
+            parallel_coordinator: None,
+            todo_integration: None,
             plan: self.plan.clone(),
             worker_pool: self.worker_pool.clone(),
             evidence_collector: self.evidence_collector.clone(),

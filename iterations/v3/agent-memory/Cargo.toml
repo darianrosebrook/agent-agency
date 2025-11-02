@@ -59,6 +59,9 @@ config = { workspace = true }
 # Interfaces
 system-common-interfaces = { path = "../system-common-interfaces" }
 
+# Contracts integration (feature-gated)
+agent-agency-contracts = { path = "../agent-agency-contracts", optional = true }
+
 # Integration with existing services
 # data-infrastructure = { path = "../data-infrastructure", optional = true }  # Removed to break circular dependency - now using direct sqlx
 # agent-data-processing = { path = "../agent-data-processing", optional = true, features = ["embeddings"] }  # Removed to break circular dependency - not actually used
@@ -76,3 +79,4 @@ temporal-analysis = []
 context-offloading = []
 provenance-tracking = []
 database = []  # Now uses direct sqlx, always available 
+contracts = ["agent-agency-contracts"]  # Enable contracts integration

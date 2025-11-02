@@ -10,6 +10,7 @@ members = [
     "agent-research",  # NEW: Unified advanced AI research platform (research + reflexive-learning + model-benchmarking + claim-extraction + planning-agent + self-prompting-agent)
     "agent-orchestration",  # NEW: Unified orchestration and council decision-making system
     "agent-memory",  # NEW: Agent memory system with knowledge graphs and embeddings
+    "agent-evaluation",  # NEW: Evaluation framework for iteration limits and quality detection
     "engine-coreml",  # CoreML inference engine implementation
     "system-acceleration",  # Core ML and ANE acceleration
     "system-resources",  # NEW: Unified resource management & production services (resource-manager + production)

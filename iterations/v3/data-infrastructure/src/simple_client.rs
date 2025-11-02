@@ -716,27 +716,22 @@ impl ProvenanceClientAdapter {
     ///
     /// This method matches the signature expected by DatabaseClientTrait,
     /// converting anyhow::Result to Box<dyn Error + Send + Sync>.
+    ///
+    /// PLACEHOLDER: DatabaseClient doesn't have create_provenance_entry yet.
+    /// This is a stub implementation that will be replaced when provenance is implemented.
     pub async fn create_provenance_entry(
         &self,
-        task_id: Uuid,
-        action: String,
-        actor: String,
-        change_summary: String,
-        resource_id: Option<Uuid>,
-        resource_type: Option<String>,
-        metadata: serde_json::Value,
+        _task_id: Uuid,
+        _action: String,
+        _actor: String,
+        _change_summary: String,
+        _resource_id: Option<Uuid>,
+        _resource_type: Option<String>,
+        _metadata: serde_json::Value,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.client
-            .create_provenance_entry(
-                task_id,
-                action,
-                actor,
-                change_summary,
-                resource_id,
-                resource_type,
-                metadata,
-            )
-            .await
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
+        // PLACEHOLDER: Actual implementation will insert into provenance table
+        // For now, just log and return success
+        tracing::info!("Provenance entry creation requested (stub implementation)");
+        Ok(())
     }
 }

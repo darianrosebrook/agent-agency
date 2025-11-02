@@ -62,12 +62,14 @@ pub async fn example_orchestration_workflow() -> Result<()> {
         scope: task_descriptor.scope_in.clone(),
         acceptance_criteria: vec![
             AcceptanceCriterion {
+                priority: agent_agency_contracts::planning_io::MilestonePriority::Normal,
                 id: "A1".to_string(),
                 given: "User is not logged in".to_string(),
                 when: "User submits valid credentials".to_string(),
                 then: "User is logged in and redirected to dashboard".to_string(),
             },
             AcceptanceCriterion {
+                priority: agent_agency_contracts::planning_io::MilestonePriority::Normal,
                 id: "A2".to_string(),
                 given: "User has invalid session token".to_string(),
                 when: "User attempts to access protected route".to_string(),
@@ -137,14 +139,16 @@ pub async fn example_orchestration_workflow() -> Result<()> {
             .await?;
 
         println!("✅ Orchestration completed!");
-        println!("📊 Execution status: {:?}", result.artifacts.status);
-        println!("🆔 Execution ID: {}", result.artifacts.execution_id);
-        println!("👷 Worker ID: {}", result.artifacts.worker_id);
-
-        if let Some(quality_report) = result.quality_report {
-            println!("📈 Quality score: {:.2}", quality_report.score);
-            println!("📋 Recommendations: {}", quality_report.recommendations.len());
+        // TaskExecutionResult (contract type) - artifacts and quality_report stored separately
+        println!("📊 Execution status: {}", if result.success { "Success" } else { "Failed" });
+        println!("🆔 Execution ID: {}", result.execution_id);
+        println!("👷 Worker ID: {}", result.worker_id.map(|w| w.to_string()).unwrap_or_else(|| "unknown".to_string()));
+        println!("⏱️  Duration: {} ms", result.duration_ms);
+        if !result.errors.is_empty() {
+            println!("❌ Errors: {}", result.errors.join(", "));
         }
+        // Note: artifacts and quality_report should be retrieved separately using execution_id
+        // This is a simplified example - in production, you would fetch these from storage
 
         // 11. Mark task as completed
         frontier.complete_task(&task_descriptor.task_id).await?;
@@ -176,9 +180,9 @@ pub fn example_task_creation() -> Result<()> {
 
     // High priority critical task
     let critical_task = TaskDescriptor {
-        task_id: "CRIT-001".to_string(),
+        task_id: Uuid::new_v4(),
         description: "Fix security vulnerability".to_string(),
-        scope_in: TaskScope {
+          scope_in: agent_agency_contracts::ScopeRestrictions {
             in_scope: vec!["src/security/".to_string()],
             out_scope: vec![],
         },
@@ -198,16 +202,16 @@ pub fn example_task_creation() -> Result<()> {
         },
         priority: TaskPriority::Critical,
         execution_mode: agent_agency_contracts::types::planning::ExecutionMode::Strict,
-        task_type: "security".to_string(),
+        // task_type field doesn't exist in TaskDescriptor
         risk_tier: Some(RiskTier::Tier1),
         acceptance: Some("Security vulnerability is patched and tested".to_string()),
     };
 
     // Medium priority feature task
     let feature_task = TaskDescriptor {
-        task_id: "FEAT-002".to_string(),
+        task_id: Uuid::new_v4(),
         description: "Add user profile management".to_string(),
-        scope_in: TaskScope {
+          scope_in: agent_agency_contracts::ScopeRestrictions {
             in_scope: vec!["src/profile/".to_string(), "tests/profile/".to_string()],
             out_scope: vec!["node_modules/".to_string()],
         },
@@ -237,9 +241,9 @@ pub fn example_task_creation() -> Result<()> {
 
     // Low priority maintenance task
     let maintenance_task = TaskDescriptor {
-        task_id: "MAINT-001".to_string(),
+        task_id: Uuid::new_v4(),
         description: "Update documentation".to_string(),
-        scope_in: TaskScope {
+          scope_in: agent_agency_contracts::ScopeRestrictions {
             in_scope: vec!["docs/".to_string()],
             out_scope: vec![],
         },
@@ -259,7 +263,7 @@ pub fn example_task_creation() -> Result<()> {
         },
         priority: TaskPriority::Low,
         execution_mode: agent_agency_contracts::types::planning::ExecutionMode::Auto,
-        task_type: "maintenance".to_string(),
+        // task_type field doesn't exist in TaskDescriptor
         risk_tier: Some(RiskTier::Tier3),
         acceptance: Some("Documentation is updated and accurate".to_string()),
     };

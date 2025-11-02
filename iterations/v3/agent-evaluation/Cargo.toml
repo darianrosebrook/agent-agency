@@ -1,0 +1,20 @@
+[package]
+name = "agent-evaluation"
+version = "0.1.0"
+edition = "2021"
+authors = ["Darian Rosebrook <darian@example.com>"]
+license = "MIT"
+
+[dependencies]
+tokio = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+agent-agency-contracts = { path = "../agent-agency-contracts" }
+
+[dev-dependencies]
+tokio-test = "0.4"
+

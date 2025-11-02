@@ -113,7 +113,7 @@ pub enum ContentType {
 }
 
 pub struct EmbeddingModel {
-    pub id: String,      // 'e5-small-v2', 'clip-vit-b32'
+    pub id: String,      // 'embeddinggemma', 'clip-vit-b32'
     pub modality: String, // 'text' | 'image' | 'audio'
     pub dim: usize,
     pub metric: String,  // 'cosine' | 'ip' | 'l2'
@@ -137,7 +137,7 @@ Stores and searches per-model embeddings:
 ```rust
 let mut indexer = MultimodalIndexer::new();
 let mut embeddings = HashMap::new();
-embeddings.insert("e5-small-v2".to_string(), vec![...1536 dims...]);
+embeddings.insert("embeddinggemma".to_string(), vec![...768 dims...]); // CoreML model
 embeddings.insert("clip-vit-b32".to_string(), vec![...512 dims...]);
 
 let indexed = indexer.index_block(
@@ -236,7 +236,7 @@ pub async fn collect_multimodal_evidence(
    - Extract speaker diarization
    - Detect entities: "PostgreSQL", "Vector DB"
 5. Indexer generates embeddings:
-   - Text: e5-small-v2 (1536-dim)
+   - Text: embeddinggemma (768-dim, CoreML) - Selected over e5-small-v2 for better quality
    - Visual: clip-vit-b32 (512-dim) for diagram
 6. Storage:
    - documents.id = UUID
@@ -255,7 +255,7 @@ pub async fn collect_multimodal_evidence(
 Query: "authentication flow" (project_scope: "project-x")
 
 Retriever search order:
-1. Text index (BM25 + e5-small-v2): project-x slides + global docs
+1. Text index (BM25 + embeddinggemma): project-x slides + global docs
 2. Visual index (CLIP): project-x diagrams first
 3. Graph index: diagram relationships
 4. Fuse via RRF
@@ -300,9 +300,11 @@ search_logs(id, query, created_at, results, features)
 DATABASE_URL=postgresql://user:pass@localhost/v3_rag
 
 # Embedding models
-EMBEDDING_MODEL_TEXT=e5-small-v2
+# Decision: Selected embeddinggemma over e5-small-v2 as CoreML embedding model
+# Reason: Better quality (768 dimensions), model already available and tested
+EMBEDDING_MODEL_TEXT=embeddinggemma
 EMBEDDING_MODEL_VISUAL=clip-vit-b32
-EMBEDDING_DIMS_TEXT=1536
+EMBEDDING_DIMS_TEXT=768
 EMBEDDING_DIMS_VISUAL=512
 
 # File watcher

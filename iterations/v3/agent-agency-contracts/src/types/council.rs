@@ -6,9 +6,10 @@
 //! @author @darianrosebrook
 
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 
 /// Council verdict enumeration
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum CouncilVerdict {
     /// Plan approved for execution
     Approved,
@@ -19,7 +20,7 @@ pub enum CouncilVerdict {
 }
 
 /// Final decision from the constitutional council
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FinalDecision {
     /// Decision identifier
     pub id: String,
@@ -32,11 +33,12 @@ pub struct FinalDecision {
     /// Council members who participated
     pub participants: Vec<String>,
     /// Timestamp of decision
+    #[schemars(with = "String")]
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
 /// Judge engine result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct JudgeResult {
     /// Judge identifier
     pub judge_id: String,
@@ -51,12 +53,12 @@ pub struct JudgeResult {
 }
 
 /// Session identifier for council review sessions
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(transparent)]
-pub struct SessionId(#[serde(with = "uuid::serde::simple")] pub uuid::Uuid);
+pub struct SessionId(#[schemars(with = "String")] #[serde(with = "uuid::serde::simple")] pub uuid::Uuid);
 
 /// Status of a council review session
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SessionStatus {
     /// Session identifier
     pub session_id: SessionId,
@@ -67,11 +69,12 @@ pub struct SessionStatus {
     /// Any pending requirements or issues
     pub pending_requirements: Vec<String>,
     /// Estimated completion time
+    #[schemars(with = "String")]
     pub estimated_completion: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 /// Session status types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum SessionStatusType {
     /// Session is initializing
     Initializing,

@@ -262,13 +262,14 @@ impl RestApi {
             .map_err(|e| ApiError::ExecutionError(format!("Task orchestration failed: {:?}", e)))?;
 
         // Update task state with results
+        // Note: ExecutionArtifacts contains task execution artifacts
+        // working_spec and quality_report should be stored/retrieved separately if needed
         {
             let mut active_tasks = active_tasks.write().await;
             if let Some(task) = active_tasks.get_mut(&task_id) {
                 task.status = TaskStatus::Completed;
-                task.working_spec = result.working_spec.clone();
+                // working_spec and quality_report stored separately - not in ExecutionArtifacts
                 task.artifacts = Some(result.clone());
-                task.quality_report = result.quality_report.clone();
                 task.completed_at = Some(Utc::now());
             }
         }

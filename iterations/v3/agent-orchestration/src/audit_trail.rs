@@ -46,6 +46,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
+use schemars::JsonSchema;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use crate::CouncilDecision;
@@ -142,8 +143,10 @@ pub struct GlobalAuditStats {
     /// Events by category
     pub events_by_category: HashMap<AuditCategory, u64>,
     /// Start time of audit collection
+    #[schemars(with = "String")]
     pub collection_start: DateTime<Utc>,
     /// Performance metrics
+    #[schemars(with = "String")]
     pub performance_metrics: AuditPerformanceMetrics,
     /// Error counts
     pub error_counts: HashMap<String, u64>,
@@ -178,16 +181,21 @@ pub struct AuditPerformanceMetrics {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AuditEvent {
     /// Unique event ID
+    #[schemars(with = "String")]
     pub event_id: Uuid,
     /// Event timestamp
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     /// Correlation ID for distributed tracing
     pub correlation_id: Option<String>,
     /// Parent event ID (for nested operations)
+    #[schemars(with = "String")]
     pub parent_event_id: Option<Uuid>,
     /// Event category
+    #[schemars(with = "String")]
     pub category: AuditCategory,
     /// Event severity
+    #[schemars(with = "String")]
     pub severity: AuditSeverity,
     /// User/Agent identifier
     pub actor: String,
@@ -691,29 +699,37 @@ impl AuditTrailManager {
     }
 
     /// Record execution result for audit trail
-    pub async fn record_execution(&self, result: &crate::types::TaskExecutionResult) -> Result<(), AuditError> {
+    /// Note: TaskExecutionResult (contract type) doesn't contain artifacts/working_spec/quality_report
+    /// These should be stored/retrieved separately if needed
+    pub async fn record_execution(&self, result: &agent_agency_contracts::task_executor::TaskExecutionResult) -> Result<(), AuditError> {
+        let execution_id_str = result.execution_id.to_string();
+        let worker_id_str = result.worker_id.map(|w| w.to_string()).unwrap_or_else(|| "unknown".to_string());
         let event = AuditEventRow {
             id: uuid::Uuid::new_v4(),
             timestamp: chrono::Utc::now(),
-            correlation_id: Some(result.artifacts.execution_id.clone()),
+            correlation_id: Some(execution_id_str.clone()),
             parent_event_id: None,
             category: serde_json::json!(AuditCategory::CouncilDecision),
             severity: serde_json::json!(AuditSeverity::Info),
             actor: "orchestrator".to_string(),
             operation: "task_execution".to_string(),
-            message: Some(format!("Task {} executed", result.artifacts.execution_id)),
-            operation_id: Some(result.artifacts.execution_id.clone()),
-            target: Some(result.artifacts.worker_id.clone()),
+            message: Some(format!("Task {} executed", result.execution_id)),
+            operation_id: Some(execution_id_str.clone()),
+            target: Some(worker_id_str.clone()),
             parameters: serde_json::json!({
-                "execution_id": result.artifacts.execution_id,
-                "worker_id": result.artifacts.worker_id,
-                "has_quality_report": result.quality_report.is_some(),
+                "execution_id": result.execution_id,
+                "task_id": result.task_id,
+                "worker_id": result.worker_id,
+                "success": result.success,
+                "error_count": result.errors.len(),
             }),
-            result: serde_json::json!("completed"),
+            result: serde_json::json!(if result.success { "completed" } else { "failed" }),
             performance: None, // No timing info available
             context: serde_json::json!({
-                "execution_id": result.artifacts.execution_id,
-                "worker": result.artifacts.worker_id,
+                "execution_id": result.execution_id,
+                "task_id": result.task_id,
+                "worker_id": result.worker_id,
+                "duration_ms": result.duration_ms,
             }),
             tags: vec!["orchestration".to_string(), "execution".to_string()],
         };

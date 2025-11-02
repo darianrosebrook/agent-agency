@@ -22,7 +22,7 @@ extern crate tracing;
 
 use std::sync::Arc;
 use uuid::Uuid;
-use crate::autonomous_executor::OrchestrationProvenanceEmitter;
+use crate::autonomous_executor::{OrchestrationProvenanceEmitter, MockCawsRuntimeValidator, MockVerdictWriter};
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -30,6 +30,7 @@ use crate::autonomous_executor::OrchestrationProvenanceEmitter;
 
 mod progress_tracker;
 mod consensus_coordinator;
+mod quality_gates;
 
 // Re-export types for convenience - use contracts types
 pub use agent_agency_contracts::types::prelude::{
@@ -38,9 +39,10 @@ pub use agent_agency_contracts::types::prelude::{
 };
 // Re-export contracts WorkingSpec (local WorkingSpec is deprecated - use contracts)
 pub use agent_agency_contracts::WorkingSpec;
-// Keep orchestration-specific local types that don't exist in contracts
-// Note: OrchestratorConfig is also in adapter.rs, so we only export from types.rs here
-pub use crate::types::{TaskExecutionResult, ExecutionArtifacts, QualityReport};
+// Import from contracts - TaskExecutionResult and QualityReport are now in contracts
+pub use agent_agency_contracts::task_executor::TaskExecutionResult;
+pub use agent_agency_contracts::quality_report::QualityReport;
+pub use agent_agency_contracts::ExecutionArtifacts;
 
 // ============================================================================
 // COUNCIL MODULES (Decision Making & Arbitration)
@@ -266,7 +268,6 @@ pub use types::DiffStats;
 ///
 /// Unified service that combines orchestration execution capabilities
 /// with council decision-making and arbitration systems.
-// #[derive(Debug)]
 #[derive(Debug)]
 pub struct AgentOrchestrationService {
     /// Council for decision making and arbitration
@@ -302,10 +303,10 @@ impl AgentOrchestrationService {
             executor_config,
             None, // progress_tracker
             // PLACEHOLDER: runtime_validator - proper implementation needed
-            Arc::new(MockCawsRuntimeValidator::default()),
+            Arc::new(MockCawsRuntimeValidator),
             None, // consensus_coordinator
             // PLACEHOLDER: verdict_writer - proper implementation needed
-            Arc::new(MockVerdictWriter::default()),
+            Arc::new(MockVerdictWriter {}),
             Arc::new(OrchestrationProvenanceEmitter::new()), // provenance_emitter
             None, // cache
             None, // metrics
@@ -369,21 +370,25 @@ impl AgentOrchestrationService {
         ).await
             .map_err(|e| OrchestrationError::ExecutionError(Box::new(e)))?;
 
-        // 3. Create TaskExecutionResult for audit trail
-        let task_execution_result = crate::types::TaskExecutionResult {
-            artifacts: crate::types::ExecutionArtifacts {
-                execution_id: task.id.clone(),
-                worker_id: "orchestrator".to_string(),
-                output_files: vec![],
-                diff_stats: crate::types::DiffStats::default(),
+        // 3. Create TaskExecutionResult for audit trail (contract type - artifacts stored separately)
+        use chrono::Utc;
+        use uuid::Uuid;
+        let execution_id = Uuid::new_v4();
+        let task_execution_result = TaskExecutionResult {
+            execution_id,
+            task_id: task.id.clone(),
+            success: execution_result.status == multimodal_orchestration::ProcessingStatus::Completed,
+            output: format!("Multimodal processing: {} blocks processed", execution_result.blocks_processed),
+            errors: if execution_result.status == multimodal_orchestration::ProcessingStatus::Completed { 
+                vec![] 
+            } else { 
+                vec!["Processing failed".to_string()] 
             },
-            status: match execution_result.status {
-                multimodal_orchestration::ProcessingStatus::Completed => crate::types::ExecutionStatus::Completed,
-                multimodal_orchestration::ProcessingStatus::Failed => crate::types::ExecutionStatus::Failed,
-                multimodal_orchestration::ProcessingStatus::InProgress => crate::types::ExecutionStatus::Running,
-                _ => crate::types::ExecutionStatus::Pending,
-            },
-            quality_report: None, // Would be populated from execution analysis
+            metadata: std::collections::HashMap::new(),
+            started_at: Utc::now(),
+            completed_at: Utc::now(),
+            duration_ms: 0,
+            worker_id: None,
         };
 
         // 4. Record audit trail
@@ -427,7 +432,7 @@ impl AgentOrchestrationService {
             priority: task.priority.clone(),
             execution_mode: agent_agency_contracts::ExecutionMode::Auto,
             risk_tier: Some(match task.priority {
-                TaskPriority::Critical | TaskPriority::High => agent_agency_contracts::RiskTier::Tier1,
+                TaskPriority::Critical | TaskPriority::High => agent_agency_contracts::task_request::RiskTier::Tier1,
                 TaskPriority::Medium => agent_agency_contracts::RiskTier::Tier2,
                 TaskPriority::Low => agent_agency_contracts::RiskTier::Tier3,
             }),

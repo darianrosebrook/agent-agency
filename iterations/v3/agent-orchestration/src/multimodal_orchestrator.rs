@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
+use schemars::JsonSchema;
 use uuid::Uuid;
 use chrono::Utc;
 use tracing::{info, debug, warn, error};

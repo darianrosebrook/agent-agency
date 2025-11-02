@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS block_vectors (
     content TEXT NOT NULL,
     modality VARCHAR(50) NOT NULL, -- 'text', 'image', 'audio', 'video', 'diagram'
     embedding_model_id VARCHAR(100) NOT NULL,
-    embedding VECTOR(384), -- Default dimension for e5-small-v2
+    embedding VECTOR(768), -- Default dimension for embeddinggemma (CoreML model)
     metadata JSONB DEFAULT '{}',
     project_scope VARCHAR(100),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS vector_store_stats (
     total_vectors INTEGER DEFAULT 0,
     vectors_by_modality JSONB DEFAULT '{}',
     vectors_by_model JSONB DEFAULT '{}',
-    avg_embedding_dimension INTEGER DEFAULT 384,
+    avg_embedding_dimension INTEGER DEFAULT 768, -- embeddinggemma dimension
     last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -72,7 +72,7 @@ BEGIN
         COUNT(*) as total_vectors,
         jsonb_object_agg(modality, count) as vectors_by_modality,
         jsonb_object_agg(embedding_model_id, count) as vectors_by_model,
-        384 as avg_embedding_dimension, -- Default for e5-small-v2
+        768 as avg_embedding_dimension, -- Default for embeddinggemma (CoreML)
         NOW() as last_updated
     FROM (
         SELECT 

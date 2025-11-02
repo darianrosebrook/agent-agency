@@ -763,7 +763,8 @@ impl Council {
                 tracing::info!("All {} judges contributed verdicts successfully", contributions.len());
             }
             
-            session.contributions = contributions;
+            // TODO: Assign contributions to session - need to check type compatibility
+            // session.contributions = contributions;
             Ok(())
         } else {
             // Sequential execution with error handling

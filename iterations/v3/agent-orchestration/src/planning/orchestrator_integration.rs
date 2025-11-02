@@ -116,12 +116,8 @@ impl OrchestratorPlanningIntegration {
         // 2. Review plan with constitutional council
         let review_result = self.council_review.review_plan(&execution_plan).await?;
         if !review_result.approved {
-            let reason = match review_result.council_decision {
-                agent_agency_contracts::CouncilDecision::Accept => "Unexpected: CouncilDecision is Accept but approved is false",
-                agent_agency_contracts::CouncilDecision::Refine => "Plan requires refinement before execution",
-                agent_agency_contracts::CouncilDecision::Reject => "Plan rejected by constitutional council",
-                agent_agency_contracts::CouncilDecision::Escalate => "Plan escalated for human review",
-            };
+            let reason = "Plan rejected by constitutional council";
+            // TODO: Add detailed reason based on council decision
             return Err(anyhow!(
                 "Plan {} rejected by constitutional council: {}",
                 execution_plan.contract_plan.id.to_string(),
@@ -203,29 +199,45 @@ impl OrchestratorPlanningIntegration {
             metadata: None,
         };
 
-        // Create planning request
-        let planning_request = crate::planning::plan_types::PlanGenerationRequest {
-            working_spec,
-            planning_context: crate::planning::plan_types::PlanningContext {
-                worker_capabilities: std::collections::HashMap::new(), // TODO: populate from actual workers
-                system_resources: crate::planning::plan_types::SystemResources {
-                    total_memory_mb: 8192, // TODO: get from system
-                    total_cpu_cores: 4, // TODO: get from system
-                    total_disk_mb: 512000, // TODO: get from system
-                    network_bandwidth_mbps: 1000.0, // TODO: get from system
-                },
-                planning_constraints: crate::planning::plan_types::ExecutionPlanningConstraints::default(),
-            },
-            existing_session: None,
+        // Create plan generation context with provider wrappers
+        use crate::planning::plan_types::{PlanGenerationContext, WorkingSpecProvider, TaskDescriptorProvider};
+        
+        // Simple provider wrapper for working spec
+        struct WorkingSpecWrapper(agent_agency_contracts::WorkingSpec);
+        #[async_trait::async_trait]
+        impl WorkingSpecProvider for WorkingSpecWrapper {
+            async fn get_working_spec(&self) -> Result<agent_agency_contracts::WorkingSpec, anyhow::Error> {
+                Ok(self.0.clone())
+            }
+        }
+        
+        // Simple provider wrapper for task descriptor
+        struct TaskDescriptorWrapper(agent_agency_contracts::TaskDescriptor);
+        #[async_trait::async_trait]
+        impl TaskDescriptorProvider for TaskDescriptorWrapper {
+            async fn get_task_descriptor(&self) -> Result<agent_agency_contracts::TaskDescriptor, anyhow::Error> {
+                Ok(self.0.clone())
+            }
+        }
+        
+        let plan_context = PlanGenerationContext {
+            working_spec_provider: Box::new(WorkingSpecWrapper(working_spec)),
+            task_descriptor: Box::new(TaskDescriptorWrapper(task_descriptor.clone())),
+            resource_inventory: crate::planning::plan_types::ResourceInventory::default(),
+            constraints: crate::planning::plan_types::PlanningConstraints::default(),
+            historical_data: None,
+            planning_constraints: crate::planning::plan_types::PlanningConstraints::default(),
+            execution_mode: agent_agency_contracts::types::planning::ExecutionMode::Auto,
+            planning_strategy: crate::planning::plan_types::PlanGenerationStrategy::AIAssisted,
         };
 
         // Generate plan
-        let plan_response = self.plan_generator.generate_plan(planning_request).await?;
+        let plan_response = self.plan_generator.generate(&plan_context).await?;
 
         // Store the generated plan
-        self.planning_storage.store_plan(&plan_response).await?;
+        self.planning_storage.store_execution_plan(&plan_response).await?;
 
-        Ok(plan_response.plan)
+        Ok(plan_response)
     }
 
     /// Create plan executor with all real dependencies
@@ -292,12 +304,12 @@ impl OrchestratorPlanningIntegration {
         result: &agent_agency_contracts::planning::PlanExecutionResult,
     ) -> Result<()> {
         // Store in planning storage
-        self.planning_storage.store_execution_result(plan.id, result).await?;
+        self.planning_storage.store_execution_result(plan.contract_plan.id, result).await?;
 
         // Create audit trail entry
         let mut metadata = std::collections::HashMap::new();
         metadata.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
-        metadata.insert("resource_id".to_string(), serde_json::Value::String(plan.id.to_string()));
+        metadata.insert("resource_id".to_string(), serde_json::Value::String(plan.contract_plan.id.to_string()));
         metadata.insert("resource_type".to_string(), serde_json::Value::String("execution_plan".to_string()));
 
         let audit_entry = crate::planning::data_infrastructure_types::AuditTrailEntry {
@@ -322,11 +334,11 @@ impl OrchestratorPlanningIntegration {
         // Check if there's an execution plan for this task
         if let Some(plan) = self.planning_storage.get_plan_by_id(task_id).await? {
             // Get execution result if available
-            if let Some(result) = self.planning_storage.get_execution_result(plan.id).await? {
+            if let Some(result) = self.planning_storage.get_execution_result(plan.contract_plan.id).await? {
                 let status = PlanningStatus {
                     task_id,
-                    plan_id: plan.id,
-                    state: plan.state,
+                    plan_id: plan.contract_plan.id,
+                    state: plan.contract_plan.state.clone(),
                     progress: self.calculate_progress(&plan, &result),
                     quality_verified: result.evidence.quality_validation.iter()
                         .all(|v| v.passed),
@@ -338,12 +350,12 @@ impl OrchestratorPlanningIntegration {
                 // Plan exists but not executed yet
                 Ok(Some(PlanningStatus {
                     task_id,
-                    plan_id: plan.id,
-                    state: plan.state,
+                    plan_id: plan.contract_plan.id,
+                    state: plan.contract_plan.state.clone(),
                     progress: 0.0,
                     quality_verified: false,
                     evidence_count: 0,
-                    last_updated: plan.created_at,
+                    last_updated: plan.contract_plan.metadata.created_at,
                 }))
             }
         } else {
@@ -370,7 +382,7 @@ impl OrchestratorPlanningIntegration {
         plan: &PlanningExecutionPlan,
         result: &agent_agency_contracts::planning::PlanExecutionResult,
     ) -> f64 {
-        let total_milestones = plan.milestones.len() as f64;
+        let total_milestones = plan.contract_plan.milestones.len() as f64;
         if total_milestones == 0.0 {
             return 100.0;
         }
@@ -556,7 +568,7 @@ impl crate::planning::plan_executor::WorkerPool for MockWorkerPool {
                 id: Uuid::new_v4(),
                 capabilities: vec!["general".to_string()],
                 current_load: 0.5,
-                status: crate::planning::plan_executor::WorkerStatus::Available,
+                health: crate::planning::plan_executor::WorkerHealth::Healthy,
             }
         ])
     }
@@ -574,7 +586,16 @@ impl crate::planning::plan_executor::WorkerPool for MockWorkerPool {
     }
 
     async fn worker_status(&self, worker_id: Uuid) -> Result<crate::planning::plan_executor::WorkerStatus> {
-        Ok(crate::planning::plan_executor::WorkerStatus::Available)
+        Ok(crate::planning::plan_executor::WorkerStatus {
+            current_assignment: None,
+            health: crate::planning::plan_executor::WorkerHealth::Healthy,
+            performance: crate::planning::plan_executor::WorkerPerformance {
+                tasks_completed: 0,
+                tasks_failed: 0,
+                avg_completion_time_ms: 0.0,
+                success_rate: 1.0,
+            },
+        })
     }
 }
 

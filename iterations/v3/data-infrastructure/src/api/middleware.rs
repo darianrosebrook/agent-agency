@@ -108,7 +108,9 @@ pub fn cors() -> axum::middleware::FromFnLayer<
     (),
     (),
 > {
-    axum::middleware::from_fn(cors_middleware)
+    axum::middleware::from_fn(|req, next| {
+        Box::pin(cors_middleware(req, next)) as std::pin::Pin<Box<dyn std::future::Future<Output = Response> + Send>>
+    })
 }
 
 /// CORS middleware function

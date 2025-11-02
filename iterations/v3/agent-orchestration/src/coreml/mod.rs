@@ -9,6 +9,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+
 use tracing::{debug, error, info, warn};
 
 // Import Core ML types from system-acceleration
@@ -35,7 +36,7 @@ extern "C" {
 }
 
 /// Core ML model types supported by the system
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub enum CoreMLModelType {
     /// Vision model (FastViT)
     Vision,
@@ -51,6 +52,7 @@ pub enum CoreMLModelType {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ModelMetadata {
     /// Model type
+    #[schemars(with = "String")]
     pub model_type: CoreMLModelType,
     /// Model name/identifier
     pub name: String,
@@ -178,6 +180,7 @@ pub struct InferenceResult {
     /// Model that was used
     pub model_name: String,
     /// Model type
+    #[schemars(with = "String")]
     pub model_type: CoreMLModelType,
     /// Input shapes used
     pub input_shapes: HashMap<String, Vec<usize>>,

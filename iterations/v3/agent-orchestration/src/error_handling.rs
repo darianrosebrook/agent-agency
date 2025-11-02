@@ -13,12 +13,14 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
+use schemars::JsonSchema;
 use uuid::Uuid;
 
 /// Unified error type for the entire Agent Agency system
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AgencyError {
     /// Unique error ID for tracking
+    #[schemars(with = "String")]
     pub error_id: Uuid,
     /// Error category for classification
     pub category: ErrorCategory,
@@ -31,6 +33,7 @@ pub struct AgencyError {
     /// Error severity level
     pub severity: ErrorSeverity,
     /// Timestamp when error occurred
+    #[schemars(with = "String")]
     pub timestamp: chrono::DateTime<chrono::Utc>,
     /// Component that generated the error
     pub component: String,
@@ -119,7 +122,7 @@ impl std::fmt::Display for AgencyError {
 impl std::error::Error for AgencyError {}
 
 /// Error categories for classification
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub enum ErrorCategory {
     /// Network and connectivity issues
     Network,
@@ -180,7 +183,7 @@ impl std::fmt::Display for ErrorCategory {
 }
 
 /// Error severity levels
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum ErrorSeverity {
     /// Debug level - informational only
     Debug,
@@ -220,7 +223,7 @@ pub struct RecoveryStrategy {
 }
 
 /// Types of recovery strategies
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum RecoveryStrategyType {
     /// Retry the operation
     Retry,
@@ -252,7 +255,7 @@ pub struct CircuitBreaker {
 }
 
 /// Circuit breaker states
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum CircuitBreakerState {
     /// Normal operation
     Closed,
@@ -1019,11 +1022,12 @@ pub struct SystemHealth {
     pub overall_health: HealthStatus,
     pub circuit_breaker_states: HashMap<String, CircuitBreakerState>,
     pub degradation_state: DegradationState,
+    #[schemars(with = "String")]
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
 /// Overall health status
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum HealthStatus {
     Healthy,
     Degraded,

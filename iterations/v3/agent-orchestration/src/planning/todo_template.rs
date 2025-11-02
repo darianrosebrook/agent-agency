@@ -17,6 +17,7 @@ use agent_agency_contracts::planning_io::{ExecutionPlan, Milestone};
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TodoTemplate {
     /// Unique template identifier
+    #[schemars(with = "String")]
     pub id: Uuid,
 
     /// Template name
@@ -44,9 +45,11 @@ pub struct TodoTemplate {
     pub quality_gates: Vec<String>,
 
     /// Created timestamp
+    #[schemars(with = "String")]
     pub created_at: DateTime<Utc>,
 
     /// Last updated timestamp
+    #[schemars(with = "String")]
     pub updated_at: DateTime<Utc>,
 }
 
@@ -63,6 +66,7 @@ pub struct TodoStep {
     pub description: String,
 
     /// Step priority
+    #[schemars(with = "String")]
     pub priority: TodoPriority,
 
     /// Estimated effort (hours)
@@ -78,6 +82,7 @@ pub struct TodoStep {
     pub acceptance_criteria: Vec<String>,
 
     /// Step type
+    #[schemars(with = "String")]
     pub step_type: TodoStepType,
 
     /// Step metadata
@@ -85,7 +90,7 @@ pub struct TodoStep {
 }
 
 /// Step priority levels
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum TodoPriority {
     Critical,
     High,
@@ -94,7 +99,7 @@ pub enum TodoPriority {
 }
 
 /// Step types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum TodoStepType {
     Analysis,
     Design,
@@ -115,6 +120,7 @@ pub struct TodoDependency {
     pub to_step: String,
 
     /// Dependency type
+    #[schemars(with = "String")]
     pub dependency_type: DependencyType,
 
     /// Dependency strength (0.0-1.0)
@@ -125,7 +131,7 @@ pub struct TodoDependency {
 }
 
 /// Dependency types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum DependencyType {
     /// Must complete before starting
     Hard,
@@ -144,14 +150,17 @@ pub enum DependencyType {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TodoInstance {
     /// Instance ID
+    #[schemars(with = "String")]
     pub id: Uuid,
 
     /// Template ID this instance is based on
+    #[schemars(with = "String")]
     pub template_id: Uuid,
 
     /// Plan ID this TODO instance is associated with.
     /// Links the TODO instance to a specific execution plan, allowing tracking
     /// of TODO progress within the context of a larger planning workflow.
+    #[schemars(with = "String")]
     pub plan_id: Uuid,
 
     /// Milestone ID this TODO is associated with (optional).
@@ -179,9 +188,11 @@ pub struct TodoInstance {
     pub metadata: HashMap<String, serde_json::Value>,
 
     /// Created timestamp
+    #[schemars(with = "String")]
     pub created_at: DateTime<Utc>,
 
     /// Last updated timestamp
+    #[schemars(with = "String")]
     pub updated_at: DateTime<Utc>,
 }
 
@@ -192,15 +203,18 @@ pub struct TodoStepStatus {
     pub step_id: String,
 
     /// Current status
+    #[schemars(with = "String")]
     pub status: StepStatus,
 
     /// Assigned worker ID
     pub assigned_worker: Option<String>,
 
     /// Started timestamp
+    #[schemars(with = "String")]
     pub started_at: Option<DateTime<Utc>>,
 
     /// Completed timestamp
+    #[schemars(with = "String")]
     pub completed_at: Option<DateTime<Utc>>,
 
     /// Progress percentage (0-100)
@@ -214,7 +228,7 @@ pub struct TodoStepStatus {
 }
 
 /// Step status types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum StepStatus {
     /// Not yet started
     Pending,
@@ -248,6 +262,7 @@ pub struct QualityResult {
     pub details: String,
 
     /// Verified timestamp
+    #[schemars(with = "String")]
     pub verified_at: DateTime<Utc>,
 
     /// Verified by
@@ -270,6 +285,7 @@ pub struct QualityVerification {
     pub result: Option<bool>,
 
     /// Last verified timestamp
+    #[schemars(with = "String")]
     pub last_verified: Option<DateTime<Utc>>,
 
     /// Verification attempts
@@ -324,7 +340,7 @@ impl TodoTemplateSystem {
         let instance = TodoInstance {
             id: Uuid::new_v4(),
             template_id: template.id,
-            plan_id: plan.contract_plan.id,
+            plan_id: plan.contract_plan.id.to_string(),
             milestone_id: milestone_id.clone(),
             current_step: None,
             completed_steps: HashSet::new(),
@@ -783,7 +799,7 @@ impl QualityGateEnforcer {
 }
 
 /// Progress information for TODO instance
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TodoProgress {
     pub total_steps: usize,
     pub completed_steps: usize,

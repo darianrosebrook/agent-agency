@@ -39,31 +39,12 @@ pub struct MemoryInformedDecision {
     pub confidence: f32,
 }
 
-/// Result of task execution orchestration
-#[derive(Debug, Clone)]
-pub struct TaskExecutionResult {
-    /// The final working specification after orchestration (uses contracts WorkingSpec)
-    pub working_spec: Option<ContractsWorkingSpec>,
-    /// Execution artifacts produced during orchestration
-    pub artifacts: ExecutionArtifacts,
-    /// Quality report from orchestration
-    pub quality_report: Option<QualityReport>,
-}
+// TaskExecutionResult is now in agent_agency_contracts::task_executor::TaskExecutionResult
+// Use agent_agency_contracts::task_executor::TaskExecutionResult instead
+// WorkingSpec, ExecutionArtifacts, and QualityReport should be stored/retrieved separately
 
-/// Execution artifacts produced during task orchestration
-#[derive(Debug, Clone)]
-pub struct ExecutionArtifacts {
-    /// Unique execution ID
-    pub execution_id: String,
-    /// Worker ID that executed the task
-    pub worker_id: String,
-    /// Execution status (uses contracts ExecutionStatus)
-    pub status: agent_agency_contracts::ExecutionStatus,
-    /// Output from execution
-    pub output: Option<String>,
-    /// Error message if execution failed
-    pub error: Option<String>,
-}
+// ExecutionArtifacts is now imported from agent_agency_contracts
+// Use agent_agency_contracts::ExecutionArtifacts
 
 /// Execution status for tasks
 #[derive(Debug, Clone, PartialEq)]

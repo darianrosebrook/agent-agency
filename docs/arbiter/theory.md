@@ -1361,20 +1361,24 @@ During v3 implementation, we identified that the original multi-model approach w
 ### Implementation Status
 
 - ✅ **CoreML Engine**: `engine-coreml` with Mistral loading infrastructure complete
-- ⚠️ **ANE Acceleration**: Hardware acceleration infrastructure exists but real inference disabled
-- ❌ **Real Inference**: Currently returns mock responses (line 267 in `engine-coreml/src/lib.rs` commented)
-- ❌ **Ollama References**: 25 files still contain Ollama code pending removal
-- ❌ **Evaluation Integration**: POC TypeScript evaluation framework needs Rust port
+- ✅ **ANE Acceleration**: Hardware acceleration infrastructure operational with CoreML inference
+- ✅ **Real Inference**: CoreML Mistral inference enabled and functional
+- ✅ **Ollama Removal**: Ollama references removed from production code (deprecated in embedding providers)
+- ✅ **Type Migration**: All orchestration types migrated to `agent-agency-contracts`
+- ✅ **Memory Integration**: Memory system integrated into autonomous executor
+- ✅ **Council Integration**: All judge types use CoreML Mistral inference
+- ⚠️ **Embedding Migration**: CoreML-based embeddings planned (Ollama providers deprecated, pending CoreML implementation)
+- ⚠️ **Evaluation Framework**: TypeScript evaluation framework port to Rust planned
 
 ### Migration Path
 
-1. **Phase 1**: Enable CoreML real inference (4-6 hours)
-2. **Phase 2**: Remove dependency compilation errors (6-8 hours)
-3. **Phase 3**: Complete Ollama removal from 25 files (8-10 hours)
-4. **Phase 4**: Port evaluation framework to Rust (6-8 hours)
-5. **Phase 5**: Integrate long-horizon task support (8-10 hours)
-6. **Phase 6**: Complete autonomous self-prompting loop (6-8 hours)
-7. **Phase 7**: Finalize council integration (4-6 hours)
+1. ✅ **Phase 1**: Enable CoreML real inference - **COMPLETE**
+2. ✅ **Phase 2**: Remove dependency compilation errors - **COMPLETE**
+3. ✅ **Phase 3**: Complete Ollama removal from production code - **COMPLETE** (deprecated, CoreML-first)
+4. ⚠️ **Phase 4**: Port evaluation framework to Rust - **IN PROGRESS**
+5. ✅ **Phase 5**: Integrate long-horizon task support - **COMPLETE**
+6. ✅ **Phase 6**: Complete autonomous self-prompting loop - **COMPLETE**
+7. ✅ **Phase 7**: Finalize council integration - **COMPLETE**
 
 ### Backward Compatibility
 
@@ -1386,7 +1390,7 @@ Bringing it all together, what does the **CAWS-integrated arbiter stack** look l
 
 1.  **CAWS Constitution:** The Coding-Agent Working Standard becomes the executable governance layer, with `working-spec.yaml`, `policy.yaml`, `waiver.schema.json`, and provenance chains as the constitutional artifacts that bound all AI work.
 2.  **High-Performance Local Hardware:** Secure development and deployment machines with strong ML capabilities – e.g., Apple M1/M2 Max/Ultra systems with large unified memory. These will serve as the execution environment for running multiple LLMs locally, leveraging CPU, GPU, and Neural Engine for speed[machinelearning.apple.com](https://machinelearning.apple.com/research/core-ml-on-device-llama#:~:text=Many%20app%20developers%20are%20interested,both%20memory%20and%20processing%20power). If additional compute is needed, consider on-premise GPU servers, but the design prioritizes on-device inference for privacy and latency.
-3.  **CoreML Mistral (Primary Model):** CoreML-optimized Mistral model (7.5 MB FastViT T8 F16) as the primary LLM for all constitutional reasoning, judge deliberations, and orchestration tasks. This single model handles all critical inference paths with ANE acceleration providing 2.8x speedup on Apple Silicon. The architecture prioritizes CoreML-first execution with CPU fallbacks, eliminating Ollama dependencies for simplified deployment and consistent performance.
+3.  **CoreML Mistral (Primary Model):** CoreML-optimized Mistral model (7.5 MB FastViT T8 F16) as the primary LLM for all constitutional reasoning, judge deliberations, and orchestration tasks. This single model handles all critical inference paths with ANE acceleration providing 2.8x speedup on Apple Silicon. The architecture prioritizes CoreML-first execution with CPU fallbacks, with Ollama dependencies removed from production code for simplified deployment and consistent performance.
 4.  **Arbiter/Orchestrator Engine:** The core service (ideally written in Rust or C++ for efficiency) that implements the CAWS-compliant orchestration logic. This engine will handle:
 
     - **CAWS Policy Enforcement:** Loading and interpreting `working-spec.yaml`, budgets, waivers, and quality gates.

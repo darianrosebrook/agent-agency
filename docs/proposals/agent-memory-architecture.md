@@ -1,5 +1,10 @@
 # Agent Memory System - Technical Architecture
 
+> **⚠️ ARCHITECTURE PROPOSAL**: This document describes proposed architecture for reference.  
+> **Current Implementation**: The system uses **CoreML-first architecture** for embeddings (Ollama providers deprecated).  
+> **Status**: This proposal document is maintained for historical reference and alternative architecture exploration.  
+> **See**: [`docs/architecture/coreml-first-decision.md`](../architecture/coreml-first-decision.md) for current implementation.
+
 ## Architecture Overview
 
 The Agent Memory System is built on a microservices architecture that extends the existing Agent Agency platform with sophisticated memory and learning capabilities. The system is designed to be scalable, maintainable, and extensible.
@@ -24,7 +29,9 @@ export class AgentMemoryManager {
 
   constructor(config: MemoryConfig) {
     this.knowledgeGraph = new KnowledgeGraphEngine(config.database);
-    this.embeddingService = new EmbeddingService(config.ollama);
+    // NOTE: Current implementation uses CoreML-based embeddings (planned)
+    // Ollama providers deprecated - see docs/architecture/coreml-first-decision.md
+    this.embeddingService = new EmbeddingService(config.coreml);
     this.temporalReasoning = new TemporalReasoningEngine(config.database);
     this.contextManager = new ContextManager(config.database);
     this.cache = new MemoryCache(config.redis);
@@ -188,17 +195,21 @@ export class KnowledgeGraphEngine {
 
 ```typescript
 /**
- * Vector embedding service using Ollama embedding models
+ * Vector embedding service using CoreML-based embeddings
+ * NOTE: This proposal shows Ollama for reference only
+ * Current implementation uses CoreML-first architecture - see docs/architecture/coreml-first-decision.md
  */
 export class EmbeddingService {
-  private ollamaClient: Ollama;
+  private coremlClient: CoreMLEmbeddingClient;
   private model: string;
   private dimension: number;
   private cache: Map<string, number[]>;
 
   constructor(config: EmbeddingConfig) {
-    this.ollamaClient = new Ollama({ host: config.host });
-    this.model = config.model || "embeddinggemma";
+    // NOTE: Current implementation uses CoreML-first architecture
+    // Ollama providers deprecated - see docs/architecture/coreml-first-decision.md
+    this.coremlClient = new CoreMLEmbeddingClient(config.coreml);
+    this.model = config.model || "mistral-embedding";
     this.dimension = config.dimension || 768;
     this.cache = new Map();
   }
@@ -214,9 +225,11 @@ export class EmbeddingService {
     }
 
     try {
-      const response = await this.ollamaClient.embeddings({
+      // NOTE: Current implementation uses CoreML embeddings
+      // This proposal shows Ollama API for reference only
+      const response = await this.coremlClient.generateEmbedding({
         model: this.model,
-        prompt: text,
+        text: text,
       });
 
       const embedding = response.embedding;
@@ -855,8 +868,9 @@ DATABASE_URL=postgresql://user:pass@localhost:5432/agent_agency
 REDIS_URL=redis://localhost:6379
 
 # Embedding Service
-OLLAMA_HOST=http://localhost:11434
-EMBEDDING_MODEL=embeddinggemma
+# NOTE: Current implementation uses CoreML-first architecture
+# Ollama providers deprecated - see docs/architecture/coreml-first-decision.md
+COREML_MODEL_PATH=./models/mistral-embedding.mlpackage
 EMBEDDING_DIMENSION=768
 
 # Memory System Configuration
@@ -886,7 +900,7 @@ interface MemorySystemConfig {
     defaultTTL: number;
   };
   embedding: {
-    ollamaHost: string;
+    coremlModelPath: string;  // NOTE: CoreML-first architecture
     model: string;
     dimension: number;
     batchSize: number;

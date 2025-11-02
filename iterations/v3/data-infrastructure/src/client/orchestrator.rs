@@ -9,8 +9,8 @@ use super::super::database_metrics::DatabaseMetrics;
 use super::super::health::{DatabaseHealthMonitor, DatabaseHealthStatus, DatabaseStats};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use chrono::Utc;
-use sqlx::PgPool;
+use chrono::{DateTime, Utc};
+use sqlx::{PgPool, Row};
 use serde_json;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -26,13 +26,14 @@ use super::super::database_operations::{
     CreateCouncilVerdict, CreateJudgeEvaluation, CreateAuditTrailEntry,
     CreatePlanningTelemetry, CreateMilestone, UpdateMilestone, CreatePlanningSession,
     UpdatePlanningSession, CreateEvidenceArtifact, UpdateEvidenceArtifact,
-    CreatePlanningAuditEvent, CreateExecutionPlan, UpdateExecutionPlan
+    CreatePlanningAuditEvent, CreateExecutionPlan, UpdateExecutionPlan,
+    CreateWaiver, UpdateWaiver
 };
 use super::super::database_audit::{DatabaseAuditLogger, DatabaseAuditEvent, AuditEventType};
 use super::super::models::{
     Judge, Worker, Task, TaskExecution, CouncilVerdict, JudgeEvaluation, AuditTrailEntry,
     PlanningTelemetry, Milestone, PlanningSession, EvidenceArtifact, PlanningAuditEvent,
-    ExecutionPlan
+    ExecutionPlan, Waiver
 };
 use crate::connection_manager::{ConnectionPoolManager, PooledDatabaseClient};
 use crate::database_config::DatabaseConfig;

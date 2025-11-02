@@ -60,7 +60,7 @@ impl LegacyPlanAdapter {
         Ok(LegacySubTask {
             id: milestone.id.clone(),
             description: milestone.objective.clone(),
-            priority: self.map_priority(milestone.priority),
+            priority: self.map_priority(milestone.priority.clone()),
             estimated_duration: milestone.estimated_effort as u64,
             required_resources: vec![], // Would map from milestone scope
         })

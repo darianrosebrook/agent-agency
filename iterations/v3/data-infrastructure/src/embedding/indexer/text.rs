@@ -5,9 +5,13 @@
 
 use crate::embedding::embedding_types::*;
 use crate::embedding::provider::EmbeddingProvider;
+use crate::embedding::embedding_service::EmbeddingServiceFactory;
+use crate::embedding::tokenization::SimpleTokenizer;
 use anyhow::Result;
 use std::collections::HashMap;
+use std::sync::Arc;
 use uuid::Uuid;
+use tokio::sync::OnceCell;
 
 /// Text document representation for indexing
 #[derive(Debug, Clone)]
@@ -30,7 +34,6 @@ pub struct HnswMetadata {
 }
 
 /// Text indexer with BM25 and dense embedding support
-#[derive(Debug)]
 pub struct TextIndexer {
     /// BM25 sparse index with term frequencies
     bm25_index: HashMap<String, Vec<TextDocument>>,
@@ -38,6 +41,19 @@ pub struct TextIndexer {
     dense_embeddings: HashMap<Uuid, EmbeddingVector>,
     /// Per-model HNSW metadata
     hnsw_metadata: HashMap<String, HnswMetadata>,
+    /// Shared embedding service (lazy-initialized)
+    embedding_service: Arc<tokio::sync::OnceCell<Box<dyn crate::embedding::EmbeddingService>>>,
+}
+
+impl std::fmt::Debug for TextIndexer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TextIndexer")
+            .field("bm25_index", &self.bm25_index)
+            .field("dense_embeddings", &self.dense_embeddings)
+            .field("hnsw_metadata", &self.hnsw_metadata)
+            .field("embedding_service", &"<lazy-initialized>")
+            .finish()
+    }
 }
 
 impl TextIndexer {
@@ -47,7 +63,27 @@ impl TextIndexer {
             bm25_index: HashMap::new(),
             dense_embeddings: HashMap::new(),
             hnsw_metadata: HashMap::new(),
+            embedding_service: Arc::new(tokio::sync::OnceCell::new()),
         }
+    }
+
+    /// Initialize embedding service (lazy initialization)
+    async fn get_embedding_service(&self) -> Result<&dyn crate::embedding::EmbeddingService> {
+        self.embedding_service.get_or_try_init(|| async {
+            let config = crate::embedding::EmbeddingConfig {
+                model_name: "embeddinggemma".to_string(),
+                dimension: 768,
+                batch_size: 32,
+                cache_size: 1000,
+                timeout_ms: 30000,
+            };
+            
+            let service = EmbeddingServiceFactory::create_with_auto_detect(config, Some("embeddinggemma".to_string())).await;
+            // EmbeddingService trait already has Send + Sync bounds
+            Ok(service)
+        })
+        .await
+        .map(|s| s.as_ref())
     }
 
     /// Index a text document
@@ -171,50 +207,29 @@ impl TextIndexer {
         score
     }
 
-    /// Real dense embedding generation using Ollama
-    fn generate_embedding(&self, content: &str) -> Result<EmbeddingVector> {
-        use tracing::{info, debug, error};
-        use std::sync::Arc;
-        use tokio::runtime::Handle;
+    /// Generate dense embedding using CoreML (fallback to DummyEmbeddingProvider)
+    async fn generate_embedding_async(&self, content: &str) -> Result<EmbeddingVector> {
+        use tracing::{info, debug};
         
         info!("Generating dense embedding for content (length: {})", content.len());
         
-        // Use Ollama embedding provider for real embeddings
-        let config = crate::embedding::EmbeddingConfig {
-            ollama_url: "http://localhost:11434".to_string(),
-            model_name: "nomic-embed-text".to_string(), // Better performance and smaller size
-            dimension: 768,
-            batch_size: 32,
-            cache_size: 1000,
-            timeout_ms: 30000,
-        };
+        // Get embedding service (lazy initialization)
+        let service = self.get_embedding_service().await?;
+        
+        // Generate embedding
+        let stored_embedding = service.generate_embedding(content, crate::embedding::ContentType::Text, "text_indexer").await?;
+        
+        debug!("Generated embedding with {} dimensions", stored_embedding.vector.values.len());
+        
+        // StoredEmbedding already contains EmbeddingVector, so we can use it directly
+        Ok(stored_embedding.vector)
+    }
 
-        // PLACEHOLDER: Ollama embedding provider deprecated - needs CoreML embedding provider
-        // TODO: Implement CoreML-based embedding provider (see todo-1762001962177-gg7fpzx98)
-        #[allow(deprecated)]
-        let provider = crate::embedding::OllamaEmbeddingProvider::new(&config);
-        
-        // Generate embedding using async runtime
-        let handle = Handle::current();
-        let embedding_result = handle.block_on(async {
-            provider.generate_embeddings(&[content.to_string()]).await
-        });
-        
-        match embedding_result {
-            Ok(embeddings) => {
-                if let Some(embedding) = embeddings.first() {
-                    debug!("Generated embedding with {} dimensions", embedding.values.len());
-                    Ok(embedding.clone())
-                } else {
-                    error!("No embedding generated from Ollama provider");
-                    Err(anyhow::anyhow!("No embedding generated"))
-                }
-            }
-            Err(e) => {
-                error!("Failed to generate embedding: {}", e);
-                Err(e)
-            }
-        }
+    /// Generate dense embedding using CoreML (synchronous wrapper)
+    fn generate_embedding(&self, content: &str) -> Result<EmbeddingVector> {
+        tokio::runtime::Handle::current().block_on(async {
+            self.generate_embedding_async(content).await
+        })
     }
 
     fn cosine_similarity(&self, a: &EmbeddingVector, b: &EmbeddingVector) -> f64 {

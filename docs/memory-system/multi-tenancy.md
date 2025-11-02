@@ -78,7 +78,7 @@ graph TB
     subgraph "External Systems"
         AO[Agent Orchestrator]
         MCP[MCP Integration]
-        AI[AI Models (Ollama)]
+        AI[AI Models (CoreML)]
         Projects[Project Instances]
     end
 

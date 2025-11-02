@@ -54,6 +54,7 @@ pub struct OrchestrationMetadata {
     pub council_session_id: Option<String>,
 
     /// Audit trail correlation ID
+    #[schemars(with = "String")]
     pub audit_correlation_id: Uuid,
 
     /// Planning engine used
@@ -67,6 +68,7 @@ pub struct OrchestrationMetadata {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionContext {
     /// Session start time
+    #[schemars(with = "String")]
     pub session_start: DateTime<Utc>,
 
     /// Current working directory
@@ -114,9 +116,11 @@ pub struct ActiveExecutionState {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerAssignment {
     /// Worker ID assigned
+    #[schemars(with = "String")]
     pub worker_id: Uuid,
 
     /// Assigned at timestamp
+    #[schemars(with = "String")]
     pub assigned_at: DateTime<Utc>,
 
     /// Assignment status
@@ -130,7 +134,7 @@ pub struct WorkerAssignment {
 }
 
 /// Assignment status
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum AssignmentStatus {
     /// Worker assigned but not yet started
     Assigned,
@@ -152,7 +156,7 @@ pub enum AssignmentStatus {
 }
 
 /// Assignment priority levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum AssignmentPriority {
     /// Low priority background work
     Low,
@@ -196,9 +200,11 @@ pub struct ParallelBatch {
     pub milestone_ids: Vec<String>,
 
     /// Batch start time
+    #[schemars(with = "Option<String>")]
     pub started_at: Option<DateTime<Utc>>,
 
     /// Batch completion time
+    #[schemars(with = "Option<String>")]
     pub completed_at: Option<DateTime<Utc>>,
 
     /// Batch status
@@ -209,7 +215,7 @@ pub struct ParallelBatch {
 }
 
 /// Batch execution status
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum BatchStatus {
     /// Batch queued for execution
     Queued,
@@ -219,6 +225,9 @@ pub enum BatchStatus {
 
     /// Batch completed successfully
     Completed,
+
+    /// Batch partially completed (some tasks succeeded, some failed)
+    PartiallyCompleted,
 
     /// Batch failed
     Failed,
@@ -313,9 +322,11 @@ pub struct EvidenceStatus {
     pub status: EvidenceCollectionStatus,
 
     /// Collection start time
+    #[schemars(with = "String")]
     pub started_at: DateTime<Utc>,
 
     /// Collection completion time
+    #[schemars(with = "Option<String>")]
     pub completed_at: Option<DateTime<Utc>>,
 
     /// Evidence size (bytes)
@@ -326,7 +337,7 @@ pub struct EvidenceStatus {
 }
 
 /// Evidence collection status
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum EvidenceCollectionStatus {
     /// Collection not started
     NotStarted,
@@ -357,6 +368,7 @@ pub struct EvidenceFailure {
     pub reason: String,
 
     /// Failure timestamp
+    #[schemars(with = "String")]
     pub failed_at: DateTime<Utc>,
 
     /// Retry count
@@ -373,9 +385,11 @@ pub struct EvidenceBundle {
     pub milestone_id: String,
 
     /// Plan ID this evidence belongs to
+    #[schemars(with = "String")]
     pub plan_id: Uuid,
 
     /// Collection timestamp
+    #[schemars(with = "String")]
     pub collected_at: DateTime<Utc>,
 
     /// Evidence artifacts
@@ -395,6 +409,7 @@ pub struct EvidenceBundle {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceArtifact {
     /// Artifact ID
+    #[schemars(with = "String")]
     pub id: Uuid,
 
     /// Artifact type (test_results, coverage, security_scan, etc.)
@@ -407,6 +422,7 @@ pub struct EvidenceArtifact {
     pub quality_score: f64,
 
     /// Collection timestamp
+    #[schemars(with = "String")]
     pub collected_at: DateTime<Utc>,
 
     /// Artifact metadata
@@ -424,6 +440,9 @@ pub enum EvidenceContent {
 
     /// Inline content as text
     InlineText(String),
+
+    /// Structured data (HashMap/JSON object)
+    Structured(std::collections::HashMap<String, serde_json::Value>),
 
     /// Binary data (base64 encoded)
     Binary(String),
@@ -443,7 +462,7 @@ pub enum PlanGenerationStrategy {
 /// Plan generation context
 pub struct PlanGenerationContext {
     /// Working spec to plan for
-    pub working_spec: Box<dyn WorkingSpecProvider>,
+    pub working_spec_provider: Box<dyn WorkingSpecProvider>,
 
     /// Task descriptor
     pub task_descriptor: Box<dyn TaskDescriptorProvider>,
@@ -504,7 +523,7 @@ pub struct PlanningConstraints {
 }
 
 /// Risk tolerance levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum RiskTolerance {
     /// Conservative - prefer proven approaches
     Conservative,
@@ -530,7 +549,7 @@ pub struct CostLimits {
 }
 
 /// Cost optimization priority
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum CostOptimizationPriority {
     /// Minimize cost
     MinimizeCost,
@@ -578,7 +597,7 @@ pub struct ParallelPreferences {
 }
 
 /// Load balancing strategies
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum LoadBalancingStrategy {
     /// Even distribution
     Even,
@@ -613,6 +632,7 @@ pub struct HistoricalPlanningData {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct HistoricalPlan {
     /// Plan ID
+    #[schemars(with = "String")]
     pub plan_id: Uuid,
 
     /// Plan complexity score
@@ -648,7 +668,7 @@ pub struct FailurePattern {
 }
 
 /// Failure severity levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum FailureSeverity {
     /// Low impact failures
     Low,
@@ -929,12 +949,14 @@ pub struct PerformanceProfile {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PlanningSession {
     /// Session unique identifier
+    #[schemars(with = "String")]
     pub session_id: Uuid,
 
     /// Working spec being planned
     pub working_spec: agent_agency_contracts::WorkingSpec,
 
     /// Planning start time
+    #[schemars(with = "String")]
     pub started_at: DateTime<Utc>,
 
     /// Current planning phase
@@ -951,7 +973,7 @@ pub struct PlanningSession {
 }
 
 /// Planning phase enumeration
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum PlanningPhase {
     /// Initial analysis phase
     Analysis,
@@ -995,6 +1017,7 @@ pub struct PlanningMetrics {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TodoIntegration {
     /// Integration identifier
+    #[schemars(with = "String")]
     pub integration_id: Uuid,
 
     /// Todo system type
@@ -1077,6 +1100,7 @@ pub enum SyncDirection {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TodoSyncState {
     /// Last successful sync time
+    #[schemars(with = "Option<String>")]
     pub last_sync_at: Option<DateTime<Utc>>,
 
     /// Sync status
@@ -1126,6 +1150,7 @@ pub struct ResourceUtilization {
     pub gpu_percent: Option<f64>,
 
     /// Timestamp of measurement
+    #[schemars(with = "String")]
     pub measured_at: DateTime<Utc>,
 
     /// Associated milestone or task

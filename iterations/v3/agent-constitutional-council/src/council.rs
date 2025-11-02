@@ -56,7 +56,23 @@ pub struct CouncilCoordinator<E: JudgeEngine> {
 }
 
 impl<E: JudgeEngine> CouncilCoordinator<E> {
-    /// Create new council coordinator
+    /// Create new council coordinator with inference engine and judges
+    ///
+    /// # Arguments
+    /// * `engine` - The inference engine to use for judge deliberations (typically CoreMLEngine)
+    /// * `judges` - The four constitutional judges (created via `Judges::new(engine)` for consistency)
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// use std::sync::Arc;
+    /// use engine_coreml::CoreMLEngine;
+    /// use agent_agency_contracts::EngineCaps;
+    /// use agent_constitutional_council::{CouncilCoordinator, Judges};
+    ///
+    /// let engine = Arc::new(CoreMLEngine::new(model_path, EngineCaps::default()).await?);
+    /// let judges = Judges::new(engine.clone());
+    /// let mut council = CouncilCoordinator::new(engine, judges);
+    /// ```
     pub fn new(engine: Arc<E>, judges: Judges) -> Self {
         Self {
             engine,

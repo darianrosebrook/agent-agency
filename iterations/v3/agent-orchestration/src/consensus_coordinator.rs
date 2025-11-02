@@ -98,6 +98,7 @@ impl ConsensusCoordinator for RealTimeConsensusCoordinator {
 /// Decision context for consensus coordination
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DecisionContext {
+    #[schemars(with = "String")]
     pub context_id: Uuid,
     pub task_id: String,
     pub description: String,
@@ -109,6 +110,7 @@ pub struct DecisionContext {
 /// Consensus decision result
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ConsensusDecision {
+    #[schemars(with = "String")]
     pub decision_id: Uuid,
     pub decision_type: DecisionType,
     pub confidence: f64,

@@ -47,16 +47,11 @@ async fn test_council_initialization() {
     // Create mock engine
     let engine = Arc::new(MockJudgeEngine);
 
-    // Create the four judges
-    let judges = Judges {
-        constitutional: ConstitutionalJudge::new(engine.clone()),
-        technical: TechnicalAuditor::new(engine.clone()),
-        quality: QualityEvaluator::new(engine.clone()),
-        integration: IntegrationValidator::new(engine.clone()),
-    };
+    // Create the four judges using the helper function
+    let judges = Judges::new(engine.clone());
 
     // Create council coordinator
-    let mut council = CouncilCoordinator::new(judges);
+    let mut council = CouncilCoordinator::new(engine, judges);
 
     // Test that council was created successfully
     // This is a basic smoke test - in real usage we'd call evaluate()

@@ -13,6 +13,7 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use sha2::{Digest, Sha256};
 use serde::{Deserialize, Serialize};
+use sqlx::Row;
 use crate::file_operations::{Workspace, ChangeSet, AllowList, Budgets, ChangeSetId, FileOpsError, Result, validate_changeset, Patch, Hunk};
 use crate::client::orchestrator::DatabaseClient;
 
@@ -24,8 +25,8 @@ pub struct TempMirrorWorkspace {
     workspace_path: PathBuf,
     /// Task ID for this workspace
     task_id: String,
-    /// Applied changesets for rollback tracking
-    applied_changesets: Vec<(ChangeSetId, ChangeSet)>,
+    /// Applied changesets for rollback tracking (wrapped in RwLock for interior mutability)
+    applied_changesets: RwLock<Vec<(ChangeSetId, ChangeSet)>>,
     /// Changeset application engine for advanced operations
     changeset_engine: Arc<ChangesetApplicationEngine>,
     /// Optional database client for persistent changeset storage
@@ -298,7 +299,7 @@ impl TempMirrorWorkspace {
             source_root,
             workspace_path,
             task_id: task_id.to_string(),
-            applied_changesets: Vec::new(),
+            applied_changesets: RwLock::new(Vec::new()),
             changeset_engine: Arc::new(ChangesetApplicationEngine::new()),
             db_client,
         })
@@ -382,7 +383,7 @@ impl TempMirrorWorkspace {
             Ok(())
         } else {
             // No database client, store in memory only
-            self.applied_changesets.push((changeset_id.clone(), changeset.clone()));
+            self.applied_changesets.write().await.push((changeset_id.clone(), changeset.clone()));
             Ok(())
         }
     }
@@ -414,7 +415,7 @@ impl TempMirrorWorkspace {
             }
         } else {
             // No database client, check in-memory storage
-            Ok(self.applied_changesets.iter()
+            Ok(self.applied_changesets.read().await.iter()
                 .find(|(id, _)| id == changeset_id)
                 .map(|(_, cs)| cs.clone()))
         }
@@ -1435,6 +1436,7 @@ impl Workspace for TempMirrorWorkspace {
                 let reverse_hunk = Hunk {
                     old_start: hunk.old_start + hunk.new_lines,
                     old_lines: hunk.new_lines,
+                    new_start: hunk.old_start,
                     new_lines: hunk.old_lines,
                     lines: {
                         // Invert the lines: swap + and -

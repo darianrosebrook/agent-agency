@@ -76,10 +76,11 @@ seahash = "4.1"
 
 # Local workspace crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
+agent-evaluation = { path = "../agent-evaluation" }
 system-common-interfaces = { path = "../system-common-interfaces" }
 # data-infrastructure = { path = "../data-infrastructure", optional = true, default-features = false }  # Circular dependency - using local type definitions instead
 # system-acceleration = { path = "../system-acceleration" }  # Temporarily disabled due to compilation errors
-agent-memory = { path = "../agent-memory", optional = true, features = ["database"] }
+agent-memory = { path = "../agent-memory", optional = true, features = ["database", "contracts"] }
 system-resilience = { path = "../system-resilience" }
 agent-research = { path = "../agent-research", optional = true }
 # agent-constitutional-council = { path = "../agent-constitutional-council", optional = true }  # Circular dependency - using local type definitions instead

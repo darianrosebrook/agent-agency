@@ -102,7 +102,7 @@ graph TB
 - **Elasticsearch**: Full-text search and complex queries
 
 #### Vector and AI Services
-- **Embedding Service**: `embeddinggemma` (768-dimensional vectors) via Ollama
+- **Embedding Service**: CoreML-based embeddings planned (768-dimensional vectors, Ollama providers deprecated)
 - **Vector Similarity**: Cosine similarity for semantic matching
 - **Multi-modal Processing**: Support for text, images, audio, and video content
 
@@ -120,7 +120,6 @@ graph TB
     "pg": "^8.16.3",
     "redis": "^4.6.0",
     "@elastic/elasticsearch": "^8.11.0",
-    "ollama": "^0.6.0",
     "graphql": "^16.11.0",
     "ws": "^8.18.3",
     "fastify": "^5.6.1"

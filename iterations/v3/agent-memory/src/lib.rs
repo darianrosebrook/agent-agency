@@ -32,6 +32,12 @@ pub mod temporal_reasoning;
 // pub mod prompting_types; // TODO: Create this module or import from agent-research
 pub mod workspace_registry;
 pub mod memory_service_adapter;
+#[cfg(feature = "contracts")]
+pub mod memory_system_adapter;
+
+// Re-export adapter when contracts feature is enabled
+#[cfg(feature = "contracts")]
+pub use memory_system_adapter::MemorySystemAdapter;
 
 // New feature modules for enhanced memory capabilities
 pub mod vector_search;

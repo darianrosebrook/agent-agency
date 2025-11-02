@@ -11,6 +11,7 @@ use anyhow::{anyhow, Result};
 use uuid::Uuid;
 use chrono::Utc;
 use serde::{Serialize, Deserialize};
+use schemars::JsonSchema;
 use agent_agency_contracts::*;
 // Council coordinator trait is now imported from contracts
 
@@ -174,7 +175,7 @@ impl CouncilMonitor {
             },
             priority: agent_agency_contracts::TaskPriority::High,
             execution_mode: agent_agency_contracts::ExecutionMode::Auto,
-            risk_tier: Some(agent_agency_contracts::RiskTier::Tier1),
+            risk_tier: Some(agent_agency_contracts::types::planning::RiskTier::Tier1),
             blast_radius: agent_agency_contracts::BlastRadius {
                 modules: vec!["monitoring".to_string()],
                 data_migration: false,
@@ -279,7 +280,7 @@ impl CouncilMonitor {
                 },
                 priority: agent_agency_contracts::TaskPriority::High,
                 execution_mode: agent_agency_contracts::ExecutionMode::Auto,
-                risk_tier: Some(agent_agency_contracts::RiskTier::Tier2),
+                risk_tier: Some(agent_agency_contracts::types::planning::RiskTier::Tier2),
                 blast_radius: agent_agency_contracts::BlastRadius {
                     modules: vec!["council".to_string()],
                     data_migration: false,
@@ -338,7 +339,7 @@ impl CouncilMonitor {
             },
             priority: agent_agency_contracts::TaskPriority::Low,
             execution_mode: agent_agency_contracts::ExecutionMode::Auto,
-            risk_tier: Some(agent_agency_contracts::RiskTier::Tier3),
+            risk_tier: Some(agent_agency_contracts::types::planning::RiskTier::Tier3),
             blast_radius: agent_agency_contracts::BlastRadius {
                 modules: vec![],
                 data_migration: false,
@@ -447,6 +448,7 @@ impl CouncilMonitor {
             .chain(plan.contract_plan.scope.iter().flat_map(|scope| scope.blocked_paths.iter()))
             .map(|path| agent_agency_contracts::FileChange {
                 file: path.clone(),
+                change_type: agent_agency_contracts::ChangeType::Modified,
                 timestamp: chrono::Utc::now(),
             })
             .collect::<Vec<_>>();
@@ -455,9 +457,8 @@ impl CouncilMonitor {
         let constraints = agent_agency_contracts::WorkingSpecConstraints {
             max_duration_minutes: plan.contract_plan.constraints.max_duration_minutes,
             max_iterations: plan.contract_plan.constraints.max_iterations,
-            max_parallel_tasks: plan.contract_plan.constraints.max_parallel_tasks,
-            required_tools: plan.contract_plan.constraints.required_tools.clone(),
-            environment_requirements: plan.contract_plan.constraints.environment_requirements.clone(),
+            budget_limits: None,
+            scope_restrictions: None,
         };
 
         // Extract coverage targets from quality gates
@@ -465,7 +466,7 @@ impl CouncilMonitor {
             agent_agency_contracts::CoverageTargets {
                 line_coverage: qg.coverage_requirements.get("line").copied(),
                 branch_coverage: qg.coverage_requirements.get("branch").copied(),
-                mutation_score: Some(qg.mutation_requirements.score_threshold),
+                mutation_score: Some(qg.mutation_requirements.min_score),
             }
         } else {
             agent_agency_contracts::CoverageTargets {
@@ -476,9 +477,11 @@ impl CouncilMonitor {
         };
 
         Ok(agent_agency_contracts::WorkingSpec {
+            version: "3.0.0".to_string(),
             id: plan.contract_plan.id.to_string(),
             title: plan.contract_plan.title.clone(),
             description: plan.contract_plan.overview.clone(),
+            goals: vec![],
             risk_tier: if let Some(qg) = &plan.contract_plan.quality_gates {
                 if qg.requires_council_approval {
                     3 // Critical
@@ -490,11 +493,39 @@ impl CouncilMonitor {
             } else {
                 1 // Normal
             },
-            scope: plan.contract_plan.scope.clone(),
-            acceptance_criteria,
-            file_changes,
             constraints,
-            coverage_targets,
+            acceptance_criteria,
+            test_plan: agent_agency_contracts::planning::TestPlan {
+                unit_tests: vec![],
+                integration_tests: vec![],
+                e2e_tests: vec![],
+                performance_tests: vec![],
+            },
+            rollback_plan: Default::default(),
+            context: agent_agency_contracts::working_spec::WorkingSpecContext {
+                domain: "orchestration".to_string(),
+                task_type: "task_execution".to_string(),
+                environment: std::collections::HashMap::new(),
+                constraints: vec![],
+            },
+            non_functional_requirements: None,
+            validation_results: None,
+            quality_gates: Some(vec!["linting".to_string(), "type_checking".to_string()]),
+            scope: plan.contract_plan.scope.clone(),
+            metadata: None,
+            milestones: vec![],
+            change_budget: agent_agency_contracts::ChangeBudget {
+                max_files: 25,
+                max_lines: 1000,
+                time_limit_hours: 24,
+            },
+            file_changes: file_changes.into_iter().map(|fc| agent_agency_contracts::FileChange {
+                file: fc.file,
+                change_type: fc.change_type,
+                timestamp: fc.timestamp,
+            }).collect(),
+            coverage_targets: Some(coverage_targets),
+            overview: plan.contract_plan.overview.clone(),
             created_at: plan.contract_plan.created_at,
             updated_at: plan.contract_plan.updated_at,
         })
@@ -506,15 +537,17 @@ impl CouncilMonitor {
 
         context.insert("plan_id".to_string(), serde_json::Value::String(plan.id.to_string()));
         context.insert("milestone_count".to_string(), serde_json::Value::Number(plan.contract_plan.milestones.len().into()));
-        context.insert("risk_tier".to_string(), serde_json::Value::Number(
-            plan.contract_plan.quality_gates.as_ref()
-                .map(|qg| qg.requires_manual_review as i64)
-                .unwrap_or(0)
-        ));
+            context.insert("risk_tier".to_string(), serde_json::Value::Number(
+                plan.contract_plan.quality_gates.as_ref()
+                    .map(|qg| qg.requires_manual_review as i64)
+                    .unwrap_or(0).into()
+            ));
 
         // Add execution context if available
         if let Some(exec_ctx) = &plan.execution_context {
-            context.insert("parallel_batches".to_string(), serde_json::Value::Number(exec_ctx.parallel_batches.len().into()));
+            context.insert("parallel_batches".to_string(), serde_json::Value::Number(
+                exec_ctx.parallel_batches.as_ref().map(|pb| pb.len()).unwrap_or(0) as i64
+            ));
         }
 
         context

@@ -143,19 +143,22 @@ pub struct SemanticContext {
 /// Configuration for embedding service
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmbeddingConfig {
-    pub ollama_url: String,
+    /// Model name (e.g., "coreml-embedding-placeholder", "dummy")
     pub model_name: String,
+    /// Embedding dimension
     pub dimension: usize,
+    /// Batch size for processing
     pub batch_size: usize,
+    /// Cache size for embeddings
     pub cache_size: usize,
+    /// Timeout in milliseconds
     pub timeout_ms: u64,
 }
 
 impl Default for EmbeddingConfig {
     fn default() -> Self {
         Self {
-            ollama_url: "http://localhost:11434".to_string(),
-            model_name: "nomic-embed-text".to_string(), // Better performance and smaller size
+            model_name: "coreml-embedding-placeholder".to_string(),
             dimension: 768,
             batch_size: 10,
             cache_size: 1000,
@@ -167,7 +170,7 @@ impl Default for EmbeddingConfig {
 /// Embedding model registry entry (config-driven)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmbeddingModel {
-    pub id: String,       // registry key (e.g., 'e5-small-v2', 'clip-vit-b32')
+    pub id: String,       // registry key (e.g., 'embeddinggemma', 'clip-vit-b32')
     pub modality: String, // 'text' | 'image' | 'audio'
     pub dim: usize,       // vector dimensions
     pub metric: String,   // 'cosine' | 'ip' | 'l2'

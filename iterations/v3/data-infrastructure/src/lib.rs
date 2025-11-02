@@ -3,6 +3,9 @@
 //! Consolidates database, interfaces, and api-server functionality into
 //! a comprehensive data layer with persistence, API services, and data contracts.
 
+use std::sync::Arc;
+use anyhow::Result;
+
 // Database modules (from consolidated database crate)
 pub mod audit;
 pub mod backup;
@@ -94,7 +97,6 @@ impl WorkerPoolHealth for SimpleWorkerPool {
 }
 
 /// System health monitor combining database and worker pool health
-#[derive(Debug)]
 pub struct SystemHealthMonitor {
     database_health: Arc<health::DatabaseHealthMonitor>,
     worker_pool: Arc<dyn WorkerPoolHealth>,

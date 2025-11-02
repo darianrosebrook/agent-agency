@@ -195,11 +195,12 @@ impl WorkerAssignmentStrategy {
 
     /// Create with custom configuration
     pub fn with_config(db_ops: std::sync::Arc<dyn DatabaseOperations>, config: AssignmentConfig) -> Self {
+        let load_balancing_config = config.load_balancing.clone(); // Clone before moving config
         Self {
             db_ops,
             config,
             performance_cache: std::sync::Arc::new(tokio::sync::RwLock::new(HashMap::new())),
-            load_balancer: LoadBalancingStrategy::new(config.load_balancing.clone()),
+            load_balancer: LoadBalancingStrategy::new(load_balancing_config),
         }
     }
 
@@ -336,7 +337,7 @@ impl WorkerAssignmentStrategy {
     /// Calculate capability match score between milestone and worker
     fn calculate_capability_score(&self, milestone: &Milestone, worker: &Worker) -> f64 {
         // Parse worker capabilities from JSON
-        let worker_capabilities: HashSet<String> = match serde_json::from_value(worker.capabilities.clone()) {
+        let worker_capabilities: HashSet<String> = match serde_json::from_value(worker.capabilities.clone().into()) {
             Ok(capabilities) => capabilities,
             Err(_) => return 0.0, // No capabilities = no match
         };

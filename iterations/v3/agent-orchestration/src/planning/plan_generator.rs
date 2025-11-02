@@ -73,7 +73,7 @@ impl PlanGenerator {
     /// Generate execution plan from context
     pub async fn generate(&self, context: &PlanGenerationContext) -> Result<ExecutionPlan> {
         // Get working spec and task descriptor
-        let working_spec = context.working_spec.get_working_spec().await?;
+        let working_spec = context.working_spec_provider.get_working_spec().await?;
         let task_descriptor = context.task_descriptor.get_task_descriptor().await?;
 
         // Choose generation strategy based on available bridges and context
@@ -211,7 +211,7 @@ impl PlanGenerator {
         let dependency_graph = self.build_dependency_graph(&milestones, &dependencies)?;
 
         // Optimize for parallel execution
-        let optimized_milestones = self.optimize_for_parallelism(milestones, &context.available_resources)?;
+        let optimized_milestones = self.optimize_for_parallelism(milestones, &context.resource_inventory)?;
 
         // Update plan with enhanced data
         contract_plan.milestones = optimized_milestones;
@@ -254,7 +254,7 @@ impl PlanGenerator {
         }
 
         Ok(DependencyAnalysis {
-            dependencies,
+            dependencies: dependencies.clone(), // Clone for use below
             blocking_items,
             dependency_graph: self.build_dependency_graph_from_analysis(&dependencies)?,
         })
@@ -294,8 +294,9 @@ impl PlanGenerator {
     ) -> Result<Vec<ContractMilestone>> {
         let mut milestones = vec![];
 
-        // Create milestones based on acceptance criteria
-        for criterion in &plan.acceptance {
+        // Create milestones based on acceptance criteria from working spec
+        let working_spec = context.working_spec_provider.get_working_spec().await?;
+        for criterion in &working_spec.acceptance_criteria {
             let milestone = self.create_milestone_from_criterion(
                 criterion,
                 complexity,
@@ -329,25 +330,33 @@ impl PlanGenerator {
 
         // Generate evidence gate based on risk tier
         let task_descriptor = context.task_descriptor.get_task_descriptor().await?;
-        let evidence_gate = self.generate_evidence_gate(task_descriptor.risk_tier, complexity)?;
+        let risk_tier_u8 = match task_descriptor.risk_tier {
+            Some(agent_agency_contracts::types::planning::RiskTier::Tier1) => 1,
+            Some(agent_agency_contracts::types::planning::RiskTier::Tier2) => 2,
+            Some(agent_agency_contracts::types::planning::RiskTier::Tier3) => 3,
+            None => 2, // Default to tier 2
+        };
+        let evidence_gate = self.generate_evidence_gate(risk_tier_u8, complexity)?;
 
         // Estimate effort based on complexity and dependencies
         let estimated_effort = self.estimate_milestone_effort(complexity, &scope, dependencies)?;
 
         Ok(ContractMilestone {
             id: milestone_id,
-            objective,
+            objective: objective.clone(), // Clone for use in rollback_plan
             scope,
             interfaces: vec![], // Would be populated based on analysis
             tests: vec![], // Would be populated based on requirements
             evidence_gate,
-            rollback_plan: self.generate_rollback_plan(&objective),
+            quality_gates: vec![], // Quality gates from evidence gate
             dependencies: dependencies.get_dependencies_for_criterion(&criterion.id),
+            estimated_duration: Some((estimated_effort * 60.0) as u32), // Convert hours to minutes
+            rollback_plan: self.generate_rollback_plan(&objective),
             state: MilestoneState::Pending,
             assigned_workers: vec![],
             estimated_effort,
             priority: self.determine_priority(complexity, dependencies),
-            risk_tier: task_descriptor.risk_tier,
+            risk_tier: risk_tier_u8,
             is_blocking: dependencies.is_blocking_criterion(&criterion.id),
             blocking_reason: dependencies.get_blocking_reason(&criterion.id),
             metrics: None,
@@ -359,6 +368,8 @@ impl PlanGenerator {
         // Analyze objective to determine affected files and operations
         // Simplified - real implementation would use NLP and project analysis
         Ok(MilestoneScope {
+            excluded_paths: vec![],
+            included_paths: vec![],
             files: vec![], // Would be populated by analysis
             directories: vec![],
             will_modify: objective.contains("create") || objective.contains("modify"),
@@ -503,12 +514,17 @@ impl PlanGenerator {
     }
 
     fn create_infrastructure_milestone(&self, plan: &ContractExecutionPlan) -> Result<ContractMilestone> {
+        use agent_agency_contracts::planning_io::{MilestoneState, MilestonePriority};
+        use uuid::Uuid;
+        
         Ok(ContractMilestone {
             id: "M0".to_string(),
             objective: "Set up infrastructure and dependencies".to_string(),
             scope: MilestoneScope {
                 files: vec![],
                 directories: vec![],
+                included_paths: vec![],
+                excluded_paths: vec![],
                 will_modify: false,
                 allowed_operations: vec!["read".to_string()],
                 parallelism: Some(1),
@@ -516,9 +532,27 @@ impl PlanGenerator {
             },
             interfaces: vec![],
             tests: vec![],
+            evidence_gate: agent_agency_contracts::planning_io::EvidenceGate {
+                min_coverage: 0.8,
+                min_branch_coverage: 0.75,
+                min_mutation_score: 0.5,
+                security_scan_required: false,
+                performance_budget: None,
+                required_artifacts: vec![],
+                custom_validations: vec![],
+            },
             quality_gates: vec!["infrastructure_ready".to_string()],
             dependencies: vec![],
-            estimated_duration: None, // Contracts Milestone doesn't have this field
+            estimated_duration: None,
+            rollback_plan: "Revert infrastructure changes".to_string(),
+            state: MilestoneState::Pending,
+            assigned_workers: vec![],
+            estimated_effort: 0.5,
+            priority: MilestonePriority::Normal,
+            risk_tier: 2,
+            is_blocking: false,
+            blocking_reason: None,
+            metrics: None,
         })
     }
 

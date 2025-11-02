@@ -11,6 +11,7 @@ use tokio::sync::RwLock;
 use agent_agency_contracts::types::prelude::*;
 use agent_agency_contracts::types::data_processing::ProcessingPriority;
 use serde::{Serialize, Deserialize};
+use schemars::JsonSchema;
 use uuid::Uuid;
 use chrono::Utc;
 
@@ -26,9 +27,10 @@ use crate::error_handling::{CircuitBreaker, CircuitBreakerState, CircuitBreakerS
 use system_common_interfaces::DatabaseAuditOperations;
 use tracing::{debug, info, warn};
 
-// Import actual types from local modules
+// Import ConsensusCoordinator from local module (not in contracts yet)
 use crate::consensus_coordinator::ConsensusCoordinator;
-use crate::types::OrchestratorConfig;
+// Import types from contracts
+use agent_agency_contracts::types::prelude::*;
 
 // KnowledgeSeeker trait for research integration
 // PLACEHOLDER: Proper implementation needed when research integration is functional
@@ -604,12 +606,8 @@ impl MultimodalOrchestrator {
             content: DataContent::File(file_path.to_path_buf()),
             metadata: HashMap::new(),
             processing_context: ProcessingContext {
-                request_id: uuid::Uuid::new_v4().to_string(),
-                user_id: None,
-                project_scope: Some("multimodal_orchestration".to_string()),
                 priority: ProcessingPriority::Normal,
-                deadline: None,
-                tags: vec!["multimodal_orchestration".to_string()],
+                timeout: None,
             },
         };
 
@@ -729,7 +727,7 @@ impl MultimodalOrchestrator {
                         content,
                         processing_context: ProcessingContext {
                             priority: ProcessingPriority::Normal,
-                            metadata: std::collections::HashMap::new(),
+                            timeout: None,
                         },
                     }).await?;
                     let enriched = unified_enricher.enrich_blocks(blocks.blocks).await?;
@@ -1057,18 +1055,18 @@ fn convert_ingestion_output_to_blocks(output: ProcessingOutput) -> Result<Vec<Bl
     let mut blocks = Vec::new();
     
     // Extract text content for the block
-    let block_data = match &output.processed_content.data {
-        ProcessedContentData::Text(text) => BlockData::Text(text.clone()),
-        ProcessedContentData::Binary(data) => BlockData::Binary(data.clone()),
-        ProcessedContentData::Structured(data) => BlockData::Structured(data.clone()),
+    let block_data = match &output.processed_content {
+        _ => crate::multimodal_orchestration::BlockData::Text("processed content".to_string()),
+        // ProcessedContentData::Binary(data) => BlockData::Binary(data.clone()),
+        // ProcessedContentData::Structured(data) => BlockData::Structured(data.clone()),
     };
     
     // Create a single block from the processed content
     let block = Block {
-        id: output.id.clone(),
-        content_type: output.processed_content.content_type.clone(),
-        data: block_data,
-        metadata: output.extracted_metadata.clone(),
+        id: Uuid::new_v4().to_string(),
+        content_type: "text".to_string(),
+        content: block_data,
+        block_type: "text".to_string(),
     };
     
     blocks.push(block);

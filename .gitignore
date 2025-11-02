@@ -289,3 +289,4 @@ test-image*.png
 **/docs/internal/**
  whisper.cpp/
 tmp/
+ venv venv-py39

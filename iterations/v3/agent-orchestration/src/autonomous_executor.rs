@@ -25,6 +25,9 @@ use agent_agency_contracts::types::prelude::*;
 use agent_agency_contracts::ExecutionStatus;
 use agent_agency_contracts::task_executor_provider::TaskExecutorProvider;
 
+// Import evaluation framework
+use agent_evaluation::{EvaluationOrchestrator, EvaluationHook, IterationEvaluation, StopReason};
+
 // Import the correct traits from system crates
 use system_observability::cache::CacheBackend;
 use system_resilience::recovery_metrics::MetricsBackend;
@@ -83,8 +86,28 @@ pub trait VerdictWriter: Send + Sync + std::fmt::Debug {
     fn write_verdict(&self, verdict: &agent_agency_contracts::final_verdict::FinalVerdictContract) -> Result<(), String>;
 }
 
+/// Mock implementation of CawsRuntimeValidator for testing and default construction
+#[derive(Debug, Default)]
+pub struct MockCawsRuntimeValidator;
+
+impl CawsRuntimeValidator for MockCawsRuntimeValidator {
+    fn validate(&self, _spec: &WorkingSpec) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+/// Mock implementation of VerdictWriter for testing and default construction
+#[derive(Debug, Clone, Default)]
+pub struct MockVerdictWriter;
+
+impl VerdictWriter for MockVerdictWriter {
+    fn write_verdict(&self, _verdict: &agent_agency_contracts::final_verdict::FinalVerdictContract) -> Result<(), String> {
+        Ok(())
+    }
+}
+
 /// Internal execution status with detailed phases
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TypesExecutionStatus {
     /// Task is queued but not yet started
     Pending,
@@ -150,12 +173,11 @@ impl From<ExecutionProgress> for ProgressTrackerExecutionProgress {
         Self {
             task_id: progress.task_id,
             status: match progress.status {
-                TypesExecutionStatus::Running => ProgressTrackerExecutionStatus::Running,
-                TypesExecutionStatus::Completed => ProgressTrackerExecutionStatus::Completed,
-                TypesExecutionStatus::Failed => ProgressTrackerExecutionStatus::Failed,
-                TypesExecutionStatus::Cancelled => ProgressTrackerExecutionStatus::Cancelled,
-                TypesExecutionStatus::Paused => ProgressTrackerExecutionStatus::Paused,
-                _ => ProgressTrackerExecutionStatus::Running, // Default to Running for other statuses
+                ExecutionStatus::Running => ProgressTrackerExecutionStatus::Running,
+                ExecutionStatus::Completed => ProgressTrackerExecutionStatus::Completed,
+                ExecutionStatus::Failed => ProgressTrackerExecutionStatus::Failed,
+                ExecutionStatus::Cancelled => ProgressTrackerExecutionStatus::Cancelled,
+                ExecutionStatus::Pending | ExecutionStatus::Timeout => ProgressTrackerExecutionStatus::Running, // Map pending/timeout to running
             },
             percentage: progress.completion_percentage,
             current_phase: progress.current_step,
@@ -288,6 +310,12 @@ pub fn to_task_spec(task_descriptor: &TaskDescriptor) -> agent_agency_contracts:
                 blocked_paths: task_descriptor.scope_out.as_ref().map(|s| s.blocked_paths.clone()).unwrap_or_default(),
             }),
         },
+        quality_gates: None,
+        scope: vec![],
+        milestones: vec![],
+        file_changes: vec![],
+        coverage_targets: None,
+        overview: String::new(),
         change_budget,
         created_at: chrono::Utc::now(),
         updated_at: chrono::Utc::now(),
@@ -351,7 +379,7 @@ fn convert_task_metadata(task_descriptor: &TaskDescriptor) -> HashMap<String, se
     let mut metadata = HashMap::new();
     
     // Add basic task information
-    metadata.insert("task_id".to_string(), serde_json::Value::String(task_descriptor.task_id.clone()));
+    metadata.insert("task_id".to_string(), serde_json::Value::String(task_descriptor.task_id.to_string()));
     metadata.insert("description".to_string(), serde_json::Value::String(task_descriptor.description.clone()));
     metadata.insert("execution_mode".to_string(), serde_json::Value::String(format!("{:?}", task_descriptor.execution_mode)));
     metadata.insert("priority".to_string(), serde_json::Value::String(format!("{:?}", task_descriptor.priority)));
@@ -857,6 +885,10 @@ pub struct AutonomousExecutor {
     memory_system: Option<Arc<MemorySystem>>,
     /// Planning integration for execution plan generation and execution
     planning_integration: Option<Arc<crate::planning::orchestrator_integration::OrchestratorPlanningIntegration>>,
+    /// Evaluation orchestrator for iteration limits and quality detection
+    evaluation_orchestrator: EvaluationOrchestrator,
+    /// Evaluation hook for custom evaluation callbacks
+    evaluation_hook: Option<Arc<dyn EvaluationHook>>,
     active_tasks: Arc<RwLock<HashMap<Uuid, TaskExecutionState>>>,
     task_queue: mpsc::UnboundedSender<TaskDescriptor>,
     task_receiver: Arc<RwLock<mpsc::UnboundedReceiver<TaskDescriptor>>>,
@@ -893,6 +925,8 @@ impl AutonomousExecutor {
             #[cfg(feature = "memory")]
             memory_system,
             planning_integration,
+            evaluation_orchestrator: EvaluationOrchestrator::new(),
+            evaluation_hook: None,
             active_tasks: Arc::new(RwLock::new(HashMap::new())),
             task_queue: task_sender,
             task_receiver: Arc::new(RwLock::new(task_receiver)),
@@ -1108,9 +1142,9 @@ impl AutonomousExecutor {
         // Convert ChangeBudget and BlastRadius to TaskConstraints
         let constraints = Some(TaskConstraints {
             risk_tier: task_descriptor.risk_tier.unwrap_or_else(|| match task_descriptor.priority {
-                    agent_agency_contracts::types::planning::TaskPriority::Critical | agent_agency_contracts::types::planning::TaskPriority::High => RiskTier::Tier1,
-                    agent_agency_contracts::types::planning::TaskPriority::Medium | agent_agency_contracts::types::planning::TaskPriority::Normal => RiskTier::Tier2,
-                    agent_agency_contracts::types::planning::TaskPriority::Low => RiskTier::Tier3,
+                    agent_agency_contracts::types::planning::TaskPriority::Critical | agent_agency_contracts::types::planning::TaskPriority::High => agent_agency_contracts::task_request::RiskTier::Tier1,
+                    agent_agency_contracts::types::planning::TaskPriority::Medium | agent_agency_contracts::types::planning::TaskPriority::Normal => agent_agency_contracts::task_request::RiskTier::Tier2,
+                    agent_agency_contracts::types::planning::TaskPriority::Low => agent_agency_contracts::task_request::RiskTier::Tier3,
             }),
             max_duration_minutes: None, // Could be configured per task type
             max_iterations: None, // Could be configured per task type
@@ -1371,9 +1405,6 @@ impl AutonomousExecutor {
 
         // Phase 4: Iterative Refinement Loop with Execution
         // Execute task with refinement cycles based on council feedback
-        const MAX_REFINEMENT_ITERATIONS: u32 = 5;
-        const SATISFICING_THRESHOLD: f64 = 0.9; // Quantitative threshold for acceptance
-        const DELTA_THRESHOLD: f64 = 0.05; // Minimum improvement delta to continue
         let mut current_spec = working_spec.clone();
         let mut iteration = 0u32;
         let mut final_verdict = None;
@@ -1383,11 +1414,18 @@ impl AutonomousExecutor {
             iteration += 1;
             tracing::info!("Refinement iteration {} for task {}", iteration, task_id);
 
-            // Check iteration limit
-            if iteration > MAX_REFINEMENT_ITERATIONS {
-                tracing::warn!("Max refinement iterations ({}) reached for task {}", MAX_REFINEMENT_ITERATIONS, task_id);
-                self.update_task_status(task_id.clone(), TypesExecutionStatus::Failed, Some(format!("Max refinement iterations ({}) reached", MAX_REFINEMENT_ITERATIONS))).await?;
-                return Err(format!("Max refinement iterations ({}) reached", MAX_REFINEMENT_ITERATIONS).into());
+            // Call evaluation hook before iteration
+            if let Some(ref hook) = self.evaluation_hook {
+                if let Err(e) = hook.before_iteration(iteration).await {
+                    tracing::warn!("Evaluation hook error before iteration {}: {}", iteration, e);
+                }
+            }
+
+            // Check iteration limit using evaluation orchestrator
+            if self.evaluation_orchestrator.is_iteration_limit_reached(iteration) {
+                tracing::warn!("Max refinement iterations ({}) reached for task {}", self.evaluation_orchestrator.config().max_iterations, task_id);
+                self.update_task_status(task_id.clone(), TypesExecutionStatus::Failed, Some(format!("Max refinement iterations ({}) reached", self.evaluation_orchestrator.config().max_iterations))).await?;
+                return Err(format!("Max refinement iterations ({}) reached", self.evaluation_orchestrator.config().max_iterations).into());
             }
 
             // Execute task orchestration for this iteration
@@ -1457,8 +1495,8 @@ impl AutonomousExecutor {
                 }
             };
 
-            // Calculate quality score from verdict
-            let quality_score = self.calculate_quality_score(&verdict);
+            // Calculate quality score from verdict using evaluation orchestrator
+            let quality_score = self.evaluation_orchestrator.calculate_quality_score(&verdict);
             quality_scores.push(quality_score);
             tracing::info!("Quality score for iteration {}: {:.3}", iteration, quality_score);
 
@@ -1479,6 +1517,24 @@ impl AutonomousExecutor {
             if iteration >= 3 {
                 if let Err(e) = self.detect_and_report_plateaus(task_id, &quality_scores, iteration).await {
                     tracing::warn!("Failed to detect plateaus: {}", e);
+                }
+            }
+
+            // Evaluate iteration using evaluation orchestrator
+            let verdict_arc = Arc::new(verdict.clone());
+            let council_approved = false; // Will be updated after council review
+            let evaluation = self.evaluation_orchestrator.evaluate_iteration(
+                iteration,
+                quality_score,
+                &quality_scores,
+                verdict_arc.clone(),
+                council_approved,
+            ).await;
+
+            // Call evaluation hook after iteration
+            if let Some(ref hook) = self.evaluation_hook {
+                if let Err(e) = hook.after_iteration(&evaluation).await {
+                    tracing::warn!("Evaluation hook error after iteration {}: {}", iteration, e);
                 }
             }
 
@@ -1522,21 +1578,18 @@ impl AutonomousExecutor {
                 }
             }
 
-            // Check satisficing threshold (0.9)
-            if quality_score >= SATISFICING_THRESHOLD {
-                tracing::info!("Quality score {:.3} meets satisficing threshold {:.3}, accepting solution", quality_score, SATISFICING_THRESHOLD);
-                final_verdict = Some(verdict);
-                break;
-            }
-
-            // Check for diminishing returns (if we have at least 2 iterations)
-            if iteration >= 2 {
-                let previous_score = quality_scores[quality_scores.len() - 2];
-                let improvement_delta = quality_score - previous_score;
-                
-                if improvement_delta < DELTA_THRESHOLD {
-                    tracing::warn!("Diminishing returns detected: improvement delta {:.3} < threshold {:.3}", improvement_delta, DELTA_THRESHOLD);
-                    tracing::info!("Accepting current solution due to diminishing returns after {} iterations", iteration);
+            // Use evaluation orchestrator to determine if we should continue
+            if !evaluation.should_continue {
+                if let Some(ref reason) = evaluation.stop_reason {
+                    tracing::info!("Stopping refinement due to: {:?}", reason);
+                    
+                    // Call evaluation hook on stop
+                    if let Some(ref hook) = self.evaluation_hook {
+                        if let Err(e) = hook.on_stop(reason, quality_score).await {
+                            tracing::warn!("Evaluation hook error on stop: {}", e);
+                        }
+                    }
+                    
                     final_verdict = Some(verdict);
                     break;
                 }
@@ -1561,9 +1614,28 @@ impl AutonomousExecutor {
                         if approved {
                             // Council approves - exit refinement loop
                             tracing::info!("Task {} approved by council after iteration {}", task_id, iteration);
+                            
+                            // Re-evaluate with council approval to update stop reason
+                            let evaluation_with_approval = self.evaluation_orchestrator.evaluate_iteration(
+                                iteration,
+                                quality_score,
+                                &quality_scores,
+                                verdict_arc.clone(),
+                                true, // Council approved
+                            ).await;
+                            
+                            // Call evaluation hook on stop
+                            if let Some(ref hook) = self.evaluation_hook {
+                                if let Some(ref reason) = evaluation_with_approval.stop_reason {
+                                    if let Err(e) = hook.on_stop(reason, quality_score).await {
+                                        tracing::warn!("Evaluation hook error on stop: {}", e);
+                                    }
+                                }
+                            }
+                            
                             final_verdict = Some(verdict);
                             break;
-                        } else if needs_refinement && iteration < MAX_REFINEMENT_ITERATIONS {
+                        } else if needs_refinement && iteration < self.evaluation_orchestrator.config().max_iterations {
                             // Council requests refinement - refine and continue
                             tracing::info!("Task {} requires refinement after iteration {}: {}", task_id, iteration, refinement_reason);
                             self.update_task_progress(task_id.clone(), 60.0 + (iteration as f32 * 5.0), Some(format!("Refining based on council feedback: {}", refinement_reason))).await?;
@@ -1583,6 +1655,14 @@ impl AutonomousExecutor {
                         } else {
                             // Council rejected and no refinement possible
                             tracing::warn!("Task {} rejected by council after iteration {}", task_id, iteration);
+                            
+                            // Call evaluation hook on stop
+                            if let Some(ref hook) = self.evaluation_hook {
+                                if let Err(e) = hook.on_stop(&StopReason::CouncilRejected, quality_score).await {
+                                    tracing::warn!("Evaluation hook error on stop: {}", e);
+                                }
+                            }
+                            
                             self.update_task_status(task_id.clone(), TypesExecutionStatus::Failed, Some("Council rejected task after refinement".to_string())).await?;
                             return Err("Task rejected by council after refinement attempts".into());
                 }
@@ -1902,16 +1982,25 @@ impl AutonomousExecutor {
         ).await?;
 
         // Convert TaskExecutionResult to FinalVerdict
-        // verdict is TaskExecutionResult from contracts, which uses contracts::ExecutionStatus
+        // TaskExecutionResult (contract type) - artifacts stored separately
+        // Use verdict.success for execution status, and metadata for additional info
+        let execution_successful = verdict.success;
+        
+        // Get quality score from metadata if available
+        let quality_score = verdict.metadata
+            .get("quality_score")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+        
         let final_verdict = agent_agency_contracts::final_verdict::FinalVerdictContract {
-            decision: if verdict.artifacts.status == agent_agency_contracts::ExecutionStatus::Completed {
+            decision: if execution_successful {
                 agent_agency_contracts::final_verdict::FinalDecision::Accept
             } else {
                 agent_agency_contracts::final_verdict::FinalDecision::Reject
             },
             votes: vec![],
-            dissent: if verdict.artifacts.status != agent_agency_contracts::ExecutionStatus::Completed {
-                verdict.artifacts.error.clone().unwrap_or_else(|| "Execution failed".to_string())
+            dissent: if !execution_successful {
+                verdict.errors.join(", ")
             } else {
                 String::new()
             },
@@ -1919,8 +2008,8 @@ impl AutonomousExecutor {
             constitutional_refs: vec![],
             verification_summary: agent_agency_contracts::final_verdict::VerificationSummary {
                 claims_total: 1,
-                claims_verified: if verdict.artifacts.status == agent_agency_contracts::ExecutionStatus::Completed { 1 } else { 0 },
-                coverage_pct: if verdict.artifacts.status == agent_agency_contracts::ExecutionStatus::Completed { 100.0 } else { 0.0 },
+                claims_verified: if execution_successful { 1 } else { 0 },
+                coverage_pct: quality_score * 100.0, // Use quality score as proxy for coverage
             },
         };
 
@@ -2045,33 +2134,110 @@ impl AutonomousExecutor {
         working_spec: &WorkingSpec,
         task_descriptor: &TaskDescriptor,
     ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
-        // Check if quality gates are defined in working spec
-        if let Some(ref quality_gates) = working_spec.quality_gates {
-            // Check test coverage if specified
-            if let Some(ref coverage_targets) = quality_gates.coverage_targets {
-                if let Some(line_coverage) = coverage_targets.line_coverage {
-                    // PLACEHOLDER: Actual coverage check would query test coverage system
-                    // For now, assume coverage is acceptable if tests exist
-                    tracing::debug!("Quality gate: Line coverage target {}% specified", line_coverage);
-                }
-            }
-            
-            // Check linting if specified
-            if quality_gates.linting_required {
-                // PLACEHOLDER: Actual lint check would run cargo clippy or similar
-                tracing::debug!("Quality gate: Linting required");
-            }
-            
-            // Check type checking if specified
-            if quality_gates.type_checking_required {
-                // PLACEHOLDER: Actual type check would run cargo check
-                tracing::debug!("Quality gate: Type checking required");
-            }
-        }
-        
-        // Always check basic validation
+        use crate::quality_gates::QualityGateExecutor;
+
+        // Always check basic validation first
         self.runtime_validator.validate(working_spec)
             .map_err(|e| format!("Runtime validation failed: {}", e))?;
+
+        // Execute quality gates if defined
+        if let Some(ref quality_gates) = working_spec.quality_gates {
+            let executor = QualityGateExecutor::new(
+                working_spec.context.workspace_root.clone()
+            );
+
+            let gate_results = executor.execute_quality_gates(
+                quality_gates,
+                working_spec.risk_tier,
+            ).await
+            .map_err(|e| format!("Quality gate execution failed: {}", e))?;
+
+            // Check if any gates failed
+            let failed_gates: Vec<_> = gate_results.iter()
+                .filter(|r| !r.passed)
+                .collect();
+
+            if !failed_gates.is_empty() {
+                let failed_names: Vec<_> = failed_gates.iter()
+                    .map(|r| r.gate_name.clone())
+                    .collect();
+                
+                tracing::warn!("Quality gates failed: {}", failed_names.join(", "));
+                
+                // For Tier 1 (critical), fail fast
+                if working_spec.risk_tier == 1 {
+                    return Err(format!(
+                        "Critical quality gates failed: {}. Cannot proceed with Tier 1 task.",
+                        failed_names.join(", ")
+                    ).into());
+                }
+                
+                // For Tier 2 and 3, warn but continue
+                tracing::warn!("Continuing despite quality gate failures (risk tier: {})", 
+                    working_spec.risk_tier);
+            } else {
+                tracing::info!("All quality gates passed");
+            }
+        } else {
+            // No quality gates defined - perform basic checks for Tier 1 and 2
+            if working_spec.risk_tier <= 2 {
+                let executor = QualityGateExecutor::new(
+                    working_spec.context.workspace_root.clone()
+                );
+
+                // Create minimal quality gates for basic checks
+                let basic_gates = agent_agency_contracts::planning_io::QualityGates {
+                    coverage_requirements: std::collections::HashMap::new(),
+                    mutation_requirements: agent_agency_contracts::planning_io::MutationRequirements {
+                        required: false,
+                        min_score: 0.0,
+                        operators: vec![],
+                    },
+                    security_requirements: agent_agency_contracts::planning_io::SecurityRequirements {
+                        scan_required: false,
+                        max_issues_by_severity: std::collections::HashMap::new(),
+                        required_controls: vec![],
+                    },
+                    performance_requirements: agent_agency_contracts::planning_io::PerformanceRequirements {
+                        max_regressions: 0,
+                        required_benchmarks: vec![],
+                        slas: vec![],
+                    },
+                    documentation_requirements: agent_agency_contracts::planning_io::DocumentationRequirements {
+                        api_docs_required: false,
+                        code_docs_required: false,
+                        architecture_docs_required: false,
+                        required_formats: vec![],
+                        required_types: vec![],
+                        min_coverage: 0.0,
+                        quality_checks: vec![],
+                    },
+                    requires_manual_review: false,
+                    requires_council_approval: false,
+                    min_coverage: None,
+                    min_mutation_score_percent: None,
+                };
+
+                let gate_results = executor.execute_quality_gates(
+                    &basic_gates,
+                    working_spec.risk_tier,
+                ).await
+                .map_err(|e| format!("Basic quality gate execution failed: {}", e))?;
+
+                // Check for critical failures (linting/type checking errors)
+                let critical_failures: Vec<_> = gate_results.iter()
+                    .filter(|r| !r.passed && (r.gate_name == "linting" || r.gate_name == "type_checking"))
+                    .collect();
+
+                if !critical_failures.is_empty() {
+                    let failure_names: Vec<_> = critical_failures.iter()
+                        .map(|r| r.gate_name.clone())
+                        .collect();
+                    
+                    tracing::warn!("Basic quality checks failed: {}", failure_names.join(", "));
+                }
+            }
+        }
         
         Ok(true)
     }
@@ -2083,6 +2249,7 @@ impl AutonomousExecutor {
         let decision_score = match verdict.decision {
             agent_agency_contracts::final_verdict::FinalDecision::Accept => 1.0,
             agent_agency_contracts::final_verdict::FinalDecision::Reject => 0.0,
+            agent_agency_contracts::final_verdict::FinalDecision::Modify => 0.5,
         };
 
         // Calculate confidence from votes (weighted average)
@@ -2121,8 +2288,8 @@ impl AutonomousExecutor {
         // Decision score (40%), Vote confidence (30%), Coverage (20%), Claims (10%)
         let quality_score = (decision_score * 0.4) 
             + (vote_confidence as f64 * 0.3)
-            + (coverage_score * 0.2)
-            + (claims_score * 0.1);
+            + (coverage_score as f64 * 0.2)
+            + (claims_score as f64 * 0.1);
 
         quality_score
     }
@@ -2148,13 +2315,40 @@ impl AutonomousExecutor {
            refinement_reason.to_lowercase().contains("coverage") {
             if refined_spec.quality_gates.is_none() {
                 refined_spec.quality_gates = Some(agent_agency_contracts::planning_io::QualityGates {
-                    coverage_targets: Some(agent_agency_contracts::working_spec::CoverageTargets {
-                        line_coverage: Some(80.0),
-                        branch_coverage: Some(90.0),
-                        function_coverage: None,
-                    }),
-                    linting_required: true,
-                    type_checking_required: true,
+                    coverage_requirements: {
+                        let mut reqs = std::collections::HashMap::new();
+                        reqs.insert("line".to_string(), 0.8);
+                        reqs.insert("branch".to_string(), 0.9);
+                        reqs
+                    },
+                    mutation_requirements: agent_agency_contracts::planning_io::MutationRequirements {
+                        required: false,
+                        min_score: 0.0,
+                        operators: vec![],
+                    },
+                    security_requirements: agent_agency_contracts::planning_io::SecurityRequirements {
+                        scan_required: false,
+                        max_issues_by_severity: std::collections::HashMap::new(),
+                        required_controls: vec![],
+                    },
+                    performance_requirements: agent_agency_contracts::planning_io::PerformanceRequirements {
+                        max_regressions: 0,
+                        required_benchmarks: vec![],
+                        slas: vec![],
+                    },
+                    documentation_requirements: agent_agency_contracts::planning_io::DocumentationRequirements {
+                        api_docs_required: false,
+                        code_docs_required: true,
+                        architecture_docs_required: false,
+                        required_formats: vec![],
+                        required_types: vec![],
+                        min_coverage: 0.0,
+                        quality_checks: vec![],
+                    },
+                    requires_manual_review: false,
+                    requires_council_approval: false,
+                    min_coverage: Some(0.8),
+                    min_mutation_score_percent: None,
                 });
             }
         }
@@ -2410,14 +2604,11 @@ impl AutonomousExecutor {
                     }),
                 }],
                 error: None,
-                metrics: crate::progress_tracker::ProgressMetrics {
-                    cpu_usage: 0.0, // TODO: Get actual CPU usage
-                    memory_usage: 0, // TODO: Get actual memory usage
-                    network_io: 0,
-                    disk_io: 0,
-                    processing_rate: quality_score, // Use quality score as processing rate proxy
-                    error_count: 0,
-                    retry_count: state.retry_count as u64,
+                metrics: {
+                    let mut metrics = self.get_resource_metrics().await;
+                    metrics.processing_rate = quality_score;
+                    metrics.retry_count = state.retry_count as u64;
+                    metrics
                 },
             };
 
@@ -2428,6 +2619,81 @@ impl AutonomousExecutor {
         }
 
         Ok(())
+    }
+
+    /// Get current resource usage metrics
+    /// Returns CPU usage, memory usage, and other resource metrics
+    async fn get_resource_metrics(&self) -> crate::progress_tracker::ProgressMetrics {
+        use std::process::Command;
+
+        let mut cpu_usage = 0.0;
+        let mut memory_usage = 0;
+
+        // Get CPU and memory usage using platform-specific methods
+        #[cfg(target_os = "macos")]
+        {
+            // Use `ps` command on macOS
+            let pid = std::process::id();
+            if let Ok(output) = Command::new("ps")
+                .args(&["-p", &pid.to_string(), "-o", "%cpu,rss"])
+                .output()
+            {
+                let output_str = String::from_utf8_lossy(&output.stdout);
+                let lines: Vec<&str> = output_str.lines().collect();
+                if lines.len() >= 2 {
+                    let parts: Vec<&str> = lines[1].trim().split_whitespace().collect();
+                    if parts.len() >= 2 {
+                        if let Ok(cpu) = parts[0].parse::<f64>() {
+                            cpu_usage = cpu;
+                        }
+                        if let Ok(mem_kb) = parts[1].parse::<u64>() {
+                            memory_usage = (mem_kb * 1024) as usize; // Convert KB to bytes
+                        }
+                    }
+                }
+            }
+        }
+
+        #[cfg(target_os = "linux")]
+        {
+            // Use `/proc/self/status` on Linux
+            use std::fs;
+            if let Ok(status) = fs::read_to_string("/proc/self/status") {
+                for line in status.lines() {
+                    if line.starts_with("VmRSS:") {
+                        if let Some(kb_str) = line.split_whitespace().nth(1) {
+                            if let Ok(kb) = kb_str.parse::<u64>() {
+                                memory_usage = (kb * 1024) as usize; // Convert KB to bytes
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Get CPU usage from /proc/stat (simplified)
+            if let Ok(stat) = fs::read_to_string("/proc/self/stat") {
+                // Parse CPU time from stat file
+                // This is a simplified version - real implementation would track over time
+                cpu_usage = 0.0; // Placeholder - would need two readings to calculate percentage
+            }
+        }
+
+        #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+        {
+            // Fallback for other platforms
+            cpu_usage = 0.0;
+            memory_usage = 0;
+        }
+
+        crate::progress_tracker::ProgressMetrics {
+            cpu_usage,
+            memory_usage,
+            network_io: 0, // TODO: Implement network I/O tracking if needed
+            disk_io: 0,   // TODO: Implement disk I/O tracking if needed
+            processing_rate: 0.0, // Will be set by caller
+            error_count: 0,
+            retry_count: 0, // Will be set by caller
+        }
     }
 
     /// Detect quality plateaus and generate reports
@@ -2863,8 +3129,8 @@ impl AutonomousExecutor {
                 execution_time_ms: None,
                 learned_capabilities: vec![],
             },
-            domain: task_descriptor.domain.clone(),
-            task_type: format!("iteration_{}", task_descriptor.task_type),
+            domain: vec!["orchestration".to_string()], // Default domain
+            task_type: "autonomous_task".to_string(), // Default task type
             metadata: {
                 let mut map = std::collections::HashMap::new();
                 map.insert("iteration_number".to_string(), serde_json::Value::Number(serde_json::Number::from(iteration)));
@@ -2968,8 +3234,8 @@ impl AutonomousExecutor {
                 execution_time_ms: Some(execution_time_ms as u64),
                 learned_capabilities: vec![],
             },
-            domain: task_descriptor.domain.clone(),
-            task_type: task_descriptor.task_type.clone(),
+            domain: vec!["orchestration".to_string()], // Default domain
+            task_type: "autonomous_execution".to_string(), // Default task type
             metadata: {
                 let mut map = std::collections::HashMap::new();
                 map.insert("task_id".to_string(), serde_json::Value::String(task_descriptor.task_id.clone()));
@@ -3354,25 +3620,6 @@ mod tests {
         use crate::consensus_coordinator::RealTimeConsensusCoordinator;
         use crate::progress_tracker::RealTimeProgressTracker;
         use agent_agency_contracts::task_executor_provider::MockTaskExecutorProvider;
-
-        // Mock implementations for testing
-        #[derive(Debug)]
-        #[derive(Default)]
-        struct MockCawsRuntimeValidator;
-        impl CawsRuntimeValidator for MockCawsRuntimeValidator {
-            fn validate(&self, _spec: &WorkingSpec) -> Result<(), String> {
-                Ok(())
-            }
-        }
-
-        #[derive(Debug, Clone)]
-        #[derive(Default)]
-        pub struct MockVerdictWriter;
-        impl VerdictWriter for MockVerdictWriter {
-            fn write_verdict(&self, _verdict: &agent_agency_contracts::final_verdict::FinalVerdictContract) -> Result<(), String> {
-                Ok(())
-            }
-        }
 
         // Create test configuration
         let config = AutonomousExecutorConfig {

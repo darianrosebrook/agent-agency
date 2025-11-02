@@ -185,7 +185,7 @@ impl ToContracts<ContractsWorkingSpec> for WorkingSpec {
             version: "1.0.0".to_string(),
             id: self.id.clone(),
             title: self.title.clone(),
-            description: format!("{} - {}", self.mode, self.title),
+            description: format!("Working specification for: {}", self.title),
             goals: vec![self.title.clone()],
             risk_tier: self.risk_tier as u32,
             constraints,

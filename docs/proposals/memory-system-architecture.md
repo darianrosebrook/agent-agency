@@ -1,5 +1,10 @@
 # Agent Memory System - Technical Architecture
 
+> **⚠️ ARCHITECTURE PROPOSAL**: This document describes proposed architecture for reference.  
+> **Current Implementation**: The system uses **CoreML-first architecture** for embeddings (Ollama providers deprecated).  
+> **Status**: This proposal document is maintained for historical reference and alternative architecture exploration.  
+> **See**: [`docs/architecture/coreml-first-decision.md`](../architecture/coreml-first-decision.md) for current implementation.
+
 ## Architecture Overview
 
 The Agent Memory System is built on a modular, scalable architecture that extends the existing Agent Agency platform with sophisticated memory and learning capabilities. The system integrates seamlessly with the orchestration layer while providing persistent, intelligent memory operations.
@@ -24,7 +29,9 @@ export class AgentMemoryManager {
 
   constructor(config: MemoryConfig) {
     this.knowledgeGraph = new KnowledgeGraphEngine(config.database);
-    this.embeddingService = new EmbeddingService(config.ollama);
+    // NOTE: Current implementation uses CoreML-based embeddings (planned)
+    // Ollama providers deprecated - see docs/architecture/coreml-first-decision.md
+    this.embeddingService = new EmbeddingService(config.coreml);
     this.temporalReasoning = new TemporalReasoningEngine(config.database);
     this.contextManager = new ContextManager(config.database);
     this.cache = new MemoryCache(config.redis);

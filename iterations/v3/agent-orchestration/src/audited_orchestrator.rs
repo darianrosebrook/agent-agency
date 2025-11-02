@@ -9,6 +9,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
+use schemars::JsonSchema;
 use uuid::Uuid;
 use chrono::Utc;
 

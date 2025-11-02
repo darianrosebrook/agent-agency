@@ -9,7 +9,7 @@
 ### Prerequisites
 
 - Rust 1.75+
-- Local AI model (Gemma, LM Studio, Ollama)
+- CoreML-first architecture (Mistral model) with fallback support for Gemma/LM Studio
 - Agent Agency V3 iteration built and running
 
 ### Installation
@@ -282,15 +282,16 @@ const result = await client.callTool('logic_validator', {
 });
 ```
 
-#### Ollama Integration
+#### CoreML Integration
 
 ```bash
 # Start MCP server
 cd iterations/v3
 cargo run --bin mcp-server &
 
-# Configure Ollama to use MCP tools
-# In your Ollama configuration or custom integration
+# CoreML Mistral is the primary inference engine
+# All critical paths use CoreML-first architecture
+# Fallback support for Gemma/LM Studio available
 ```
 
 ### Autonomous Agent Workflows

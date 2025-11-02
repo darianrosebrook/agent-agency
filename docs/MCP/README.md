@@ -23,8 +23,8 @@ The MCP tool ecosystem provides an external API layer in `iterations/v3/interfac
 ```mermaid
 graph TB
     subgraph 'External AI Models'
-        LAM[Local AI Models<br/>Gemma/LM Studio/Ollama]
-        ExtAI[External AI Systems]
+        LAM[CoreML Mistral<br/>Primary Inference]
+        ExtAI[External AI Systems<br/>Gemma/LM Studio Fallback]
     end
 
     subgraph 'MCP Server Layer'
@@ -339,9 +339,9 @@ npm run test:integration
 - **Error Rate**: < 0.1% for valid tool calls
 
 ### Compatibility Testing
-- **Gemma Models**: Full compatibility with local Gemma instances
-- **LM Studio**: Tested with various model configurations
-- **Ollama**: Integration verified with multiple model types
+- **CoreML Models**: Primary inference engine for all critical paths (Mistral)
+- **Gemma Models**: Compatibility with local Gemma instances (fallback)
+- **LM Studio**: Tested with various model configurations (fallback)
 - **Custom MCP Clients**: Standard protocol compliance
 
 ## Deployment & Integration
@@ -397,7 +397,7 @@ The MCP Tool Ecosystem provides external API access to Agent Agency capabilities
 ### Current Capabilities
 - **Tool Coverage**: Tools available in categories (Policy, Conflict Resolution, Evidence Collection, Governance, Quality Gate, Reasoning, Workflow)
 - **System Integration**: Tools built on top of existing systems (claim extraction, council arbitration, provenance service, quality gates, reflexive learning)
-- **External AI Support**: Integration available with Gemma, LM Studio, Ollama, and other MCP-compatible AI platforms
+- **External AI Support**: Integration available with CoreML-first architecture (Mistral), with fallback support for Gemma, LM Studio, and other MCP-compatible AI platforms
 - **Autonomous Operations**: Enables external AI models to access reasoning, verification, governance, and workflow capabilities
 
 ### Architecture Benefits

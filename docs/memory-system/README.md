@@ -71,7 +71,7 @@ graph TB
     end
     
     subgraph "External Dependencies"
-        AI[AI Model - Ollama]
+        AI[AI Model - CoreML]
         AO[Agent Orchestrator]
         MCP[MCP Integration]
     end
@@ -172,7 +172,7 @@ Handles vector embeddings for semantic similarity search and context-aware memor
 - **Embedding Management**: Manages embedding storage and indexing
 
 **Core Features:**
-- **Model Integration**: Uses Ollama with embedding models (embeddinggemma)
+- **Model Integration**: CoreML-based embeddings planned (Ollama providers deprecated, pending CoreML implementation)
 - **Multi-Modal Support**: Text embeddings with future support for other modalities
 - **Batch Processing**: Efficient batch embedding generation
 - **Caching**: Intelligent caching of frequently used embeddings

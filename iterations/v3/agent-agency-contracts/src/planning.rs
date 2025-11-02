@@ -106,7 +106,7 @@ pub enum PlanningError {
 }
 
 /// Validation result with detailed feedback
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationResult {
     /// Whether validation passed
     pub valid: bool,
@@ -125,7 +125,7 @@ pub struct ValidationResult {
 }
 
 /// Individual validation issue
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationIssue {
     /// Issue severity
     pub severity: ValidationSeverity,
@@ -144,7 +144,7 @@ pub struct ValidationIssue {
 }
 
 /// Validation severity levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ValidationSeverity {
     /// Critical issue preventing execution
     Critical,
@@ -163,7 +163,7 @@ pub enum ValidationSeverity {
 }
 
 /// Validation categories
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ValidationCategory {
     /// Dependency-related issues
     Dependency,

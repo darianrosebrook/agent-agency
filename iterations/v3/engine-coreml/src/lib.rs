@@ -261,15 +261,17 @@ impl CoreMLEngine {
     /// Run inference using real Mistral model or fallback to simulation
     async fn run_inference(&self, prompt: &JudgePrompt, max_tokens: usize) -> Result<String, EngineError> {
         // Use real Mistral inference if model is loaded
-        if let Some(model) = &self.mistral_model {
-            let mut model_clone = model.clone(); // Clone for mutation during inference
-            return self.run_real_mistral_inference(&mut model_clone, prompt, max_tokens).await;
-            // return Ok("Mock response - real inference disabled".to_string());
-        }
-
-        // Fallback to simulation
-        warn!("Using simulated inference (real model not loaded)");
-        self.run_simulated_inference(prompt, max_tokens).await
+        // PLACEHOLDER: MistralModel doesn't implement Clone, so we need to use interior mutability
+        // TODO: Wrap MistralModel in Arc<Mutex<...>> or similar for shared mutable access
+        // For now, fallback to simulation until model sharing is properly implemented
+        warn!("Real Mistral inference requires model sharing implementation - using simulation");
+        return self.run_simulated_inference(prompt, max_tokens).await;
+        
+        // TODO: Uncomment when MistralModel is wrapped in Arc<Mutex<...>>:
+        // if let Some(ref model) = self.mistral_model {
+        //     let mut model_guard = model.lock().await;
+        //     return self.run_real_mistral_inference(&mut model_guard, prompt, max_tokens).await;
+        // }
     }
 
     /// Run real Mistral inference through system-acceleration

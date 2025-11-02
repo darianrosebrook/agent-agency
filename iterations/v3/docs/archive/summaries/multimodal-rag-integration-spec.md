@@ -287,7 +287,9 @@ DATABASE_URL=postgresql://user:pass@localhost:5432/agent_agency_v3
 
 # Vector configuration
 VECTOR_STORE_BACKEND=pgvector
-EMBEDDING_MODEL=e5-small-v2
+# Decision: Selected embeddinggemma over e5-small-v2 as CoreML embedding model
+# Reason: Better quality (768 dimensions), model already available and tested
+EMBEDDING_MODEL=embeddinggemma
 
 # Enrichment configuration
 VISION_FRAMEWORK_ENABLED=true

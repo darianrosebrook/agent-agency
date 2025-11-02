@@ -11,6 +11,7 @@ use anyhow::{anyhow, Result};
 use uuid::Uuid;
 use chrono::Utc;
 use serde::{Serialize, Deserialize};
+use schemars::JsonSchema;
 use agent_agency_contracts::{
     planning_io::ExecutionPlan,
     types::prelude::*,
@@ -46,6 +47,7 @@ fn convert_review_priority(priority: ReviewPriority) -> u8 {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CouncilReviewResult {
     /// Plan ID that was reviewed
+    #[schemars(with = "String")]
     pub plan_id: Uuid,
 
     /// Overall approval status
@@ -55,18 +57,23 @@ pub struct CouncilReviewResult {
     pub risk_tier: u8,
 
     /// Scope validation results
+    #[schemars(skip)]
     pub scope_validation: ScopeValidationResult,
 
     /// Ethical assessment results
+    #[schemars(skip)]
     pub ethical_assessment: EthicalAssessmentResult,
 
     /// Quality gate requirements
+    #[schemars(skip)]
     pub quality_requirements: QualityRequirements,
 
     /// Council decision details
+    #[schemars(skip)]
     pub council_decision: CouncilDecision,
 
     /// Review timestamp
+    #[schemars(with = "String")]
     pub reviewed_at: chrono::DateTime<Utc>,
 
     /// Review duration (ms)
@@ -206,7 +213,7 @@ pub enum EthicalRiskLevel {
 }
 
 /// Quality requirements for plan execution
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct QualityRequirements {
     /// Minimum test coverage required
     pub min_test_coverage: f64,
@@ -228,7 +235,7 @@ pub struct QualityRequirements {
 }
 
 /// Council decision details
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct CouncilDecision {
     /// Final verdict
     pub verdict: CouncilVerdict,
@@ -243,6 +250,7 @@ pub struct CouncilDecision {
     pub judge_verdicts: Vec<JudgeVerdict>,
 
     /// Decision timestamp
+    #[schemars(with = "String")]
     pub decided_at: chrono::DateTime<Utc>,
 }
 
@@ -353,7 +361,7 @@ impl CouncilPlanReview {
     }
 
     /// Review execution plan before approval
-    pub async fn review_plan(&self, plan: &ExecutionPlan) -> Result<CouncilReviewResult> {
+    pub async fn review_plan(&self, plan: &crate::planning::plan_types::ExecutionPlan) -> Result<CouncilReviewResult> {
         let review_start = Utc::now();
 
         // 1. Validate scope and boundaries
@@ -626,10 +634,10 @@ impl CouncilPlanReview {
                     // Additional check: if council specified refinements in conditional approval,
                     // verify those have been addressed (would require storing refinement state)
                     // For now, assume refinements are tracked separately
-                    true
+                    return true;
                 }
                 CouncilVerdict::RequestMoreInfo => return false, // Cannot proceed without more info
-                CouncilVerdict::Approved => {} // Continue
+                CouncilVerdict::Approved => return true, // Continue
             }
         }
 
@@ -692,16 +700,59 @@ impl CouncilPlanReview {
 
     /// Convert execution plan to working spec for council review
     fn plan_to_working_spec(&self, plan: &ExecutionPlan) -> Result<agent_agency_contracts::WorkingSpec> {
+        use chrono::Utc;
         Ok(agent_agency_contracts::WorkingSpec {
+            version: "1.0".to_string(),
             id: plan.contract_plan.id.to_string(),
             title: plan.contract_plan.title.clone(),
             description: plan.contract_plan.overview.clone(),
+            goals: vec![format!("Execute plan: {}", plan.contract_plan.title)],
             risk_tier: 1, // Will be updated by review
-            scope: Default::default(), // Would convert from plan scope
+            constraints: agent_agency_contracts::working_spec::WorkingSpecConstraints {
+                max_duration_minutes: None,
+                max_iterations: None,
+                budget_limits: None,
+                scope_restrictions: None,
+            },
             acceptance_criteria: vec![], // Would extract from milestones
+            test_plan: agent_agency_contracts::working_spec::TestPlan {
+                unit_tests: vec![],
+                integration_tests: vec![],
+                e2e_scenarios: vec![],
+                coverage_targets: None,
+            },
+            rollback_plan: agent_agency_contracts::working_spec::RollbackPlan {
+                strategy: agent_agency_contracts::working_spec::RollbackStrategy::ManualRevert,
+                automated_steps: vec![],
+                manual_steps: vec![],
+                data_impact: agent_agency_contracts::working_spec::DataImpact::None,
+                downtime_required: Some(false),
+                rollback_window_minutes: Some(30),
+            },
+            context: agent_agency_contracts::working_spec::WorkingSpecContext {
+                workspace_root: ".".to_string(),
+                git_branch: "main".to_string(),
+                recent_changes: vec![],
+                dependencies: std::collections::HashMap::new(),
+                environment: agent_agency_contracts::task_request::Environment::Development,
+            },
+            non_functional_requirements: None,
+            validation_results: None,
+            quality_gates: None,
+            scope: vec![], // Would convert from plan scope
+            metadata: None,
+            milestones: vec![], // Would extract from plan
+            change_budget: agent_agency_contracts::planning_io::ChangeBudget {
+                max_files: 25,
+                max_loc: 1000,
+                max_migrations: 0,
+                allow_breaking_changes: false,
+                allow_new_dependencies: false,
+                enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Warning,
+            },
             file_changes: vec![], // Would extract from plan
-            constraints: Default::default(), // Would convert from plan constraints
-            coverage_targets: Default::default(), // Would extract from quality gates
+            coverage_targets: None, // Would extract from quality gates
+            overview: plan.contract_plan.overview.clone(),
             created_at: plan.contract_plan.created_at,
             updated_at: plan.contract_plan.updated_at,
         })

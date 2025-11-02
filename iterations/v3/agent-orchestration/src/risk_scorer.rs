@@ -7,6 +7,8 @@
 use crate::judge_backup::*;
 use crate::council_errors::{CouncilError, CouncilResult};
 use agent_agency_contracts::working_spec::WorkingSpec;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 // Missing enum definitions
 #[derive(Debug, Clone, PartialEq)]
@@ -23,9 +25,10 @@ pub enum InflectionType {
     ExternalChange,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RiskInflectionPoint {
     pub inflection_type: InflectionType,
+    #[schemars(with = "String")]
     pub timestamp: chrono::DateTime<chrono::Utc>,
     pub description: String,
     pub impact_score: f64,

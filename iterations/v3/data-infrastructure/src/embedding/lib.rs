@@ -4,7 +4,7 @@
 //! Embedding Service for V3 Council System
 //!
 //! Provides semantic context understanding through embedding generation and similarity search.
-//! Integrates with Ollama embeddinggemma for 768-dimensional vector generation.
+//! Uses CoreML-based embeddings (with DummyEmbeddingProvider fallback) for 768-dimensional vector generation.
 
 pub mod embedding_cache;
 pub mod context;

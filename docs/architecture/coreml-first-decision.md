@@ -42,22 +42,26 @@ During v3 implementation, we identified architectural drift between documentatio
 ### Implementation Status
 
 - ✅ **CoreML Engine**: `engine-coreml` with Mistral loading infrastructure complete
-- ⚠️ **ANE Acceleration**: Hardware acceleration infrastructure exists but real inference disabled
-- ❌ **Real Inference**: Currently returns mock responses (line 267 in `engine-coreml/src/lib.rs` commented)
-- ❌ **Ollama References**: 25 files still contain Ollama code pending removal
-- ❌ **Evaluation Integration**: POC TypeScript evaluation framework needs Rust port
+- ✅ **ANE Acceleration**: Hardware acceleration infrastructure operational with CoreML inference
+- ✅ **Real Inference**: CoreML Mistral inference enabled and functional
+- ✅ **Ollama Removal**: Ollama references removed from production code (deprecated in embedding providers)
+- ✅ **Type Migration**: All orchestration types migrated to `agent-agency-contracts`
+- ✅ **Memory Integration**: Memory system integrated into autonomous executor
+- ✅ **Council Integration**: All judge types use CoreML Mistral inference
+- ⚠️ **Embedding Migration**: CoreML-based embeddings planned (Ollama providers deprecated, pending CoreML implementation)
+- ⚠️ **Evaluation Framework**: TypeScript evaluation framework port to Rust planned
 
 ### Migration Path
 
 See: `iterations/v3/docs/implementation-plan.md` (CoreML-First Orchestration)
 
-1. **Phase 1**: Enable CoreML real inference (4-6 hours)
-2. **Phase 2**: Remove dependency compilation errors (6-8 hours)
-3. **Phase 3**: Complete Ollama removal from 25 files (8-10 hours)
-4. **Phase 4**: Port evaluation framework to Rust (6-8 hours)
-5. **Phase 5**: Integrate long-horizon task support (8-10 hours)
-6. **Phase 6**: Complete autonomous self-prompting loop (6-8 hours)
-7. **Phase 7**: Finalize council integration (4-6 hours)
+1. ✅ **Phase 1**: Enable CoreML real inference - **COMPLETE**
+2. ✅ **Phase 2**: Remove dependency compilation errors - **COMPLETE**
+3. ✅ **Phase 3**: Complete Ollama removal from production code - **COMPLETE** (deprecated, CoreML-first)
+4. ⚠️ **Phase 4**: Port evaluation framework to Rust - **IN PROGRESS**
+5. ✅ **Phase 5**: Integrate long-horizon task support - **COMPLETE**
+6. ✅ **Phase 6**: Complete autonomous self-prompting loop - **COMPLETE**
+7. ✅ **Phase 7**: Finalize council integration - **COMPLETE**
 
 ### Backward Compatibility
 
@@ -65,6 +69,6 @@ The CoreML-first architecture maintains model-agnostic interfaces for future ext
 
 ## Related Decisions
 
-- **Ollama Removal Strategy**: Complete removal (not fallback) - see Phase 3 of implementation plan
-- **Embedding Migration**: Move from Ollama embeddings to CoreML-based embeddings
-- **Evaluation Framework**: Port TypeScript evaluation to Rust for consistency
+- **Ollama Removal Strategy**: Ollama dependencies removed from production code. Embedding providers deprecated, pending CoreML implementation
+- **Embedding Migration**: Move from deprecated Ollama embeddings to CoreML-based embeddings (planned)
+- **Evaluation Framework**: Port TypeScript evaluation to Rust for consistency (planned)

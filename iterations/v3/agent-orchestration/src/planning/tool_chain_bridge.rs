@@ -73,25 +73,34 @@ impl ToolChainBridge {
 
         // Determine risk tolerance
         let risk_tolerance = self.determine_risk_tolerance(working_spec);
+        
+        // Create constraints
+        let constraints = self.create_planning_constraints(working_spec)?;
 
         Ok(ExternalPlanningContext {
+            working_spec_id: working_spec.id.clone(),
+            available_tools: vec![], // TODO: Populate with available tools
+            constraints,
+            risk_tolerance,
             task_description,
             task_type,
             complexity,
             required_capabilities,
-            time_budget_ms: working_spec.constraints.max_duration_minutes.map(|mins| (mins as u64) * 60 * 1000), // Convert minutes to ms
+            time_budget_ms: working_spec.constraints.max_duration_minutes.map(|mins| (mins as u64) * 60 * 1000),
             cost_budget_cents: Some(1000), // Default cost budget - no cost field in WorkingSpecConstraints
-            risk_tolerance,
         })
     }
 
     /// Create planning constraints from working spec
     fn create_planning_constraints(&self, working_spec: &WorkingSpec) -> Result<ExternalPlanningConstraints> {
         Ok(ExternalPlanningConstraints {
+            max_execution_time_secs: working_spec.constraints.max_duration_minutes.map(|mins| (mins as u64) * 60),
             max_chain_length: Some(5), // Default reasonable limit
+            required_capabilities: vec![],
+            prohibited_tools: vec![],
             max_parallelism: Some(3),  // Allow some parallelism
             max_cost_cents: Some(1000), // Default cost budget
-            max_time_ms: working_spec.constraints.max_duration_minutes.map(|mins| (mins as u64) * 60 * 1000), // Convert minutes to ms
+            max_time_ms: working_spec.constraints.max_duration_minutes.map(|mins| (mins as u64) * 60 * 1000),
             require_fallbacks: working_spec.risk_tier > 1, // Require fallbacks for high-risk work
         })
     }
@@ -172,6 +181,8 @@ impl ToolChainBridge {
         };
 
         Ok(ContractExecutionPlan {
+            contract_plan: None,
+            execution_context: None,
             id: uuid::Uuid::new_v4(),
             session_id: uuid::Uuid::new_v4(),
             working_spec_id: working_spec.id.clone(),
@@ -207,6 +218,8 @@ impl ToolChainBridge {
             scope: MilestoneScope {
                 files: vec![], // Tool-specific files would be determined by tool
                 directories: vec![],
+                included_paths: vec![],
+                excluded_paths: vec![],
                 will_modify: false, // Tools typically don't modify source files
                 allowed_operations: vec!["execute".to_string()],
                 parallelism: Some(1),
@@ -215,8 +228,10 @@ impl ToolChainBridge {
             interfaces: vec![], // Would be populated based on tool inputs/outputs
             tests: vec![], // Tool execution has its own validation
             evidence_gate: self.create_tool_evidence_gate(working_spec.risk_tier as u8),
-            rollback_plan: "Tool execution cannot be rolled back".to_string(),
+            quality_gates: vec![], // Quality gates from evidence gate
             dependencies: vec![], // Set by dependency graph
+            estimated_duration: Some((node.sla_ms / 60000) as u32), // Convert ms to minutes
+            rollback_plan: "Tool execution cannot be rolled back".to_string(),
             state: agent_agency_contracts::planning_io::MilestoneState::Pending,
             assigned_workers: vec![],
             estimated_effort: (node.sla_ms as f64) / (3600.0 * 1000.0), // Convert ms to hours
@@ -246,9 +261,9 @@ impl ToolChainBridge {
         use agent_agency_contracts::planning_io::{ChangeBudget, BudgetEnforcement};
 
         ChangeBudget {
-            max_files: working_spec.constraints.max_files,
-            max_loc: working_spec.constraints.max_loc,
-            max_migrations: working_spec.constraints.max_migrations.unwrap_or(5),
+            max_files: working_spec.constraints.budget_limits.as_ref().and_then(|b| b.max_files),
+            max_loc: working_spec.constraints.budget_limits.as_ref().and_then(|b| b.max_loc),
+            max_migrations: Some(5),
             allow_breaking_changes: working_spec.risk_tier > 1,
             allow_new_dependencies: working_spec.risk_tier > 1,
             enforcement_mode: if working_spec.risk_tier == 1 {

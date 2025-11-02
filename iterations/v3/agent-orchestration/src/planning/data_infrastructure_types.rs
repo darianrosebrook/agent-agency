@@ -10,9 +10,11 @@ use std::collections::HashMap;
 /// Audit trail entry
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AuditTrailEntry {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub event_type: String,
     pub description: String,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -34,6 +36,7 @@ pub trait DatabaseOperations: Send + Sync {
 /// Create execution plan request
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateExecutionPlan {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub title: String,
     pub overview: String,
@@ -43,6 +46,7 @@ pub struct CreateExecutionPlan {
 /// Update execution plan request
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UpdateExecutionPlan {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub title: Option<String>,
     pub overview: Option<String>,
@@ -57,7 +61,8 @@ pub mod models {
     /// Execution plan model
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct ExecutionPlan {
-        pub id: Uuid,
+        #[schemars(with = "String")]
+    pub id: Uuid,
         pub title: String,
         pub overview: String,
         // Add other fields as needed
@@ -66,10 +71,14 @@ pub mod models {
     /// Planning session model
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct PlanningSession {
-        pub id: Uuid,
+        #[schemars(with = "String")]
+    pub id: Uuid,
+        #[schemars(with = "String")]
         pub plan_id: Uuid,
         pub status: String,
+        #[schemars(with = "String")]
         pub created_at: DateTime<Utc>,
+        #[schemars(with = "String")]
         pub updated_at: DateTime<Utc>,
         pub metadata: HashMap<String, serde_json::Value>,
     }
@@ -77,22 +86,29 @@ pub mod models {
     /// Milestone model
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct Milestone {
-        pub id: Uuid,
+        #[schemars(with = "String")]
+    pub id: Uuid,
+        #[schemars(with = "String")]
         pub plan_id: Uuid,
         pub title: String,
         pub description: String,
         pub status: String,
+        #[schemars(with = "String")]
         pub created_at: DateTime<Utc>,
+        #[schemars(with = "String")]
         pub updated_at: DateTime<Utc>,
     }
 
     /// Planning audit event model
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct PlanningAuditEvent {
-        pub id: Uuid,
+        #[schemars(with = "String")]
+    pub id: Uuid,
+        #[schemars(with = "String")]
         pub session_id: Uuid,
         pub event_type: String,
         pub description: String,
+        #[schemars(with = "String")]
         pub timestamp: DateTime<Utc>,
         pub metadata: HashMap<String, serde_json::Value>,
     }
@@ -100,10 +116,13 @@ pub mod models {
     /// Planning telemetry model
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct PlanningTelemetry {
-        pub id: Uuid,
+        #[schemars(with = "String")]
+    pub id: Uuid,
+        #[schemars(with = "String")]
         pub session_id: Uuid,
         pub metric_name: String,
         pub metric_value: f64,
+        #[schemars(with = "String")]
         pub timestamp: DateTime<Utc>,
         pub metadata: HashMap<String, serde_json::Value>,
     }
@@ -111,10 +130,12 @@ pub mod models {
     /// Worker model
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct Worker {
-        pub id: Uuid,
+        #[schemars(with = "String")]
+    pub id: Uuid,
         pub worker_type: String,
         pub status: String,
         pub capabilities: Vec<String>,
+        #[schemars(with = "String")]
         pub last_seen: DateTime<Utc>,
         pub metadata: HashMap<String, serde_json::Value>,
     }
@@ -122,12 +143,16 @@ pub mod models {
     /// Waiver model
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct Waiver {
-        pub id: Uuid,
+        #[schemars(with = "String")]
+    pub id: Uuid,
+        #[schemars(with = "String")]
         pub plan_id: Uuid,
         pub waiver_type: String,
         pub reason: String,
         pub approved_by: String,
+        #[schemars(with = "String")]
         pub created_at: DateTime<Utc>,
+        #[schemars(with = "Option<String>")]
         pub expires_at: Option<DateTime<Utc>>,
     }
 }
@@ -143,6 +168,7 @@ pub struct CreateAuditTrailEntry {
 /// Create planning audit event
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreatePlanningAuditEvent {
+    #[schemars(with = "String")]
     pub plan_id: Uuid,
     pub event_type: String,
     pub description: String,
@@ -152,6 +178,7 @@ pub struct CreatePlanningAuditEvent {
 /// Create planning session
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreatePlanningSession {
+    #[schemars(with = "String")]
     pub plan_id: Uuid,
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -159,6 +186,7 @@ pub struct CreatePlanningSession {
 /// Update planning session
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UpdatePlanningSession {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub status: Option<String>,
     pub metadata: Option<HashMap<String, serde_json::Value>>,
@@ -167,6 +195,7 @@ pub struct UpdatePlanningSession {
 /// Create planning telemetry
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreatePlanningTelemetry {
+    #[schemars(with = "String")]
     pub session_id: Uuid,
     pub metric_name: String,
     pub metric_value: f64,
@@ -176,6 +205,7 @@ pub struct CreatePlanningTelemetry {
 /// Create waiver
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateWaiver {
+    #[schemars(with = "String")]
     pub plan_id: Uuid,
     pub reason: String,
     pub waived_gates: Vec<String>,
@@ -184,6 +214,7 @@ pub struct CreateWaiver {
 /// Update waiver
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UpdateWaiver {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub status: String,
     // Add other fields as needed

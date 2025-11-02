@@ -629,12 +629,12 @@ mod tests {
     async fn test_vector_store_stats_struct() {
         let stats = VectorStoreStats {
             total_vectors: 100,
-            model_counts: vec![("e5-small-v2".to_string(), 50), ("clip-vit-b32".to_string(), 50)],
+            model_counts: vec![("embeddinggemma".to_string(), 50), ("clip-vit-b32".to_string(), 50)],
             modality_counts: vec![("text".to_string(), 60), ("image".to_string(), 40)],
         };
 
         assert_eq!(stats.total_vectors, 100);
-        assert_eq!(stats.get_model_count("e5-small-v2"), 50);
+        assert_eq!(stats.get_model_count("embeddinggemma"), 50);
         assert_eq!(stats.get_modality_count("text"), 60);
     }
 
@@ -643,7 +643,7 @@ mod tests {
         let stats = VectorStoreStats {
             total_vectors: 200,
             model_counts: vec![
-                ("e5-small-v2".to_string(), 100),
+                ("embeddinggemma".to_string(), 100),
                 ("clip-vit-b32".to_string(), 50),
                 ("e5-multilingual-large".to_string(), 50),
             ],
@@ -654,7 +654,7 @@ mod tests {
             ],
         };
 
-        assert_eq!(stats.get_model_count("e5-small-v2"), 100);
+        assert_eq!(stats.get_model_count("embeddinggemma"), 100);
         assert_eq!(stats.get_model_count("nonexistent"), 0);
         assert_eq!(stats.get_modality_count("text"), 120);
         assert_eq!(stats.get_modality_count("audio"), 0);
@@ -688,7 +688,8 @@ mod tests {
     async fn test_vector_record_creation() {
         // Test creating BlockVectorRecord instances
         let block_id = Uuid::new_v4();
-        let model_id = "e5-small-v2";
+        let model_id = "embeddinggemma";
+        // embeddinggemma uses 768 dimensions (sample vector truncated for test)
         let vec = vec![0.1, 0.2, 0.3, 0.4, 0.5];
         let modality = "text";
 
@@ -746,7 +747,7 @@ mod tests {
     async fn test_vector_store_stats_calculation() {
         // Test that VectorStoreStats can be properly constructed from mock data
         let model_counts = vec![
-            ("e5-small-v2".to_string(), 150),
+            ("embeddinggemma".to_string(), 150),
             ("clip-vit-b32".to_string(), 75),
             ("e5-multilingual-large".to_string(), 25),
         ];
@@ -767,7 +768,7 @@ mod tests {
         assert_eq!(stats.total_vectors as i64, sum_model_counts);
 
         // Test individual count lookups
-        assert_eq!(stats.get_model_count("e5-small-v2"), 150);
+        assert_eq!(stats.get_model_count("embeddinggemma"), 150);
         assert_eq!(stats.get_model_count("nonexistent-model"), 0);
         assert_eq!(stats.get_modality_count("text"), 200);
         assert_eq!(stats.get_modality_count("video"), 0);
@@ -777,13 +778,13 @@ mod tests {
     async fn test_vector_similarity_search_parameters() {
         // Test parameter validation for similarity search
         let query_vector = vec![0.1, 0.2, 0.3];
-        let model_id = "e5-small-v2";
+        let model_id = "embeddinggemma";
         let k = 10;
         let project_scope = Some("test-project");
 
         // These parameters would be used in actual search calls
         assert_eq!(query_vector.len(), 3);
-        assert_eq!(model_id, "e5-small-v2");
+        assert_eq!(model_id, "embeddinggemma");
         assert_eq!(k, 10);
         assert_eq!(project_scope, Some("test-project"));
     }
@@ -802,8 +803,8 @@ mod tests {
         let block_id = Uuid::new_v4();
         let record = BlockVectorRecord {
             block_id,
-            model_id: "e5-small-v2".to_string(),
-            vector: vec![0.1, 0.2, 0.3, 0.4, 0.5],
+            model_id: "embeddinggemma".to_string(),
+            vector: vec![0.1, 0.2, 0.3, 0.4, 0.5], // Sample - embeddinggemma uses 768 dims
             modality: "text".to_string(),
             created_at: chrono::Utc::now(),
         };
@@ -812,8 +813,8 @@ mod tests {
         vector_store.store_vector(record).await.unwrap();
 
         // Search for similar vectors
-        let query_vec = vec![0.1, 0.2, 0.3, 0.4, 0.5];
-        let results = vector_store.search_similar(&query_vec, "e5-small-v2", 5, None).await.unwrap();
+        let query_vec = vec![0.1, 0.2, 0.3, 0.4, 0.5]; // Sample - embeddinggemma uses 768 dims
+        let results = vector_store.search_similar(&query_vec, "embeddinggemma", 5, None).await.unwrap();
 
         // Verify we get our stored vector back
         assert!(!results.is_empty());

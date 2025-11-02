@@ -204,7 +204,7 @@ impl ParallelCoordinator {
     }
 
     /// Execute a single batch in parallel
-    async fn execute_batch_parallel(
+    pub async fn execute_batch_parallel(
         &self,
         plan: &mut ExecutionPlan,
         batch_index: usize,

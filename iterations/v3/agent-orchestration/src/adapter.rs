@@ -13,12 +13,15 @@ use agent_agency_contracts::working_spec::{
     WorkingSpec, AcceptanceCriterion
 };
 use agent_agency_contracts::planning_io::ChangeBudget;
-use agent_agency_contracts::task_executor::{TaskExecutionResult as ContractsTaskExecutionResult, ExecutionStatus};
+use agent_agency_contracts::task_executor::ExecutionStatus;
 use agent_agency_contracts::ExecutionArtifacts;
 use agent_agency_contracts::types::planning::TaskScope;
 use crate::types::{
-    OrchestratorConfig, DiffStats, TaskExecutionResult, ExecutionArtifacts as LocalExecutionArtifacts
+    OrchestratorConfig, DiffStats
 };
+use uuid;
+// TaskExecutionResult is now in contracts
+use agent_agency_contracts::task_executor::TaskExecutionResult;
 use crate::judge_backup::backup_types::JudgeType;
 use crate::council::{Council, CouncilConfig};
 use crate::decision_making::{ConsensusStrategy, RiskThresholds};
@@ -66,6 +69,18 @@ impl LegacyOrchestratorAdapter {
         let memory_config = agent_memory::MemoryConfig::default();
         let memory_system = Arc::new(agent_memory::MemorySystem::init(memory_config).await?);
         Ok(memory_system)
+    }
+
+    /// Create a contracts-compatible MemorySystem adapter
+    /// 
+    /// This wraps the agent-memory MemorySystem with the contracts adapter
+    /// so it can be used by components expecting the contracts::MemorySystem trait.
+    #[cfg(feature = "memory")]
+    pub async fn create_contracts_memory_system() -> Result<Arc<dyn agent_agency_contracts::MemorySystem>> {
+        use agent_memory::MemorySystemAdapter;
+        
+        let memory_system = Self::init_memory_system().await?;
+        Ok(Arc::new(MemorySystemAdapter::new(memory_system)))
     }
 
     /// Get the memory system instance (if memory feature is enabled)
@@ -180,6 +195,8 @@ impl LegacyOrchestratorAdapter {
 
     /// Main orchestration function that coordinates the entire task execution process
     /// This adapts the old `orchestrate_task` function to work with the new architecture
+    /// Returns TaskExecutionResult (from contracts) - working_spec, artifacts, and quality_report
+    /// should be stored/retrieved separately
     pub async fn orchestrate_task(
         &self,
         spec: &WorkingSpec,
@@ -259,17 +276,17 @@ impl LegacyOrchestratorAdapter {
         debug!("Validating orchestration task: {}", desc.task_id);
 
         // Check change budget constraints
-        if diff.files_changed > desc.change_budget.max_files {
+        if diff.files_changed > desc.change_budget.max_files.unwrap_or(u32::MAX) {
             return Ok(ValidationResult::BudgetExceeded {
                 files_changed: diff.files_changed,
                 max_files: desc.change_budget.max_files,
             });
         }
 
-        if diff.lines_added + diff.lines_modified > desc.change_budget.max_loc {
+        if diff.lines_added + diff.lines_modified > desc.change_budget.max_loc.unwrap_or(u32::MAX) {
             return Ok(ValidationResult::BudgetExceeded {
                 files_changed: diff.files_changed,
-                max_files: desc.change_budget.max_files,
+                max_files: desc.change_budget.max_files.unwrap_or(25),
             });
         }
 
@@ -298,41 +315,56 @@ impl LegacyOrchestratorAdapter {
 
     /// Build short-circuit verdict for validation failures
     fn build_short_circuit_verdict(&self, validation: &ValidationResult) -> Option<TaskExecutionResult> {
+        use chrono::Utc;
+        use uuid::Uuid;
+        
         match validation {
             ValidationResult::Valid => None,
-            ValidationResult::BudgetExceeded { .. } => Some(TaskExecutionResult {
-                working_spec: None,
-                artifacts: ExecutionArtifacts {
-                    execution_id: "short-circuit".to_string(),
-                    worker_id: "validation".to_string(),
-                    status: ExecutionStatus::Failed,
-                    output: None,
-                    error: Some("Change budget exceeded".to_string()),
-                },
-                quality_report: None,
-            }),
-            ValidationResult::ScopeViolation => Some(TaskExecutionResult {
-                working_spec: None,
-                artifacts: LocalExecutionArtifacts {
-                    execution_id: "short-circuit".to_string(),
-                    worker_id: "validation".to_string(),
-                    status: ExecutionStatus::Failed,
-                    output: None,
-                    error: Some("Scope violation detected".to_string()),
-                },
-                quality_report: None,
-            }),
-            ValidationResult::InvalidRiskTier => Some(TaskExecutionResult {
-                working_spec: None,
-                artifacts: LocalExecutionArtifacts {
-                    execution_id: "short-circuit".to_string(),
-                    worker_id: "validation".to_string(),
-                    status: ExecutionStatus::Failed,
-                    output: None,
-                    error: Some("Invalid risk tier".to_string()),
-                },
-                quality_report: None,
-            }),
+            ValidationResult::BudgetExceeded { .. } => {
+                let execution_id = Uuid::new_v4();
+                Some(TaskExecutionResult {
+                    execution_id,
+                    task_id: execution_id, // Use execution_id as task_id for short-circuit
+                    success: false,
+                    output: String::new(),
+                    errors: vec!["Change budget exceeded".to_string()],
+                    metadata: std::collections::HashMap::new(),
+                    started_at: Utc::now(),
+                    completed_at: Utc::now(),
+                    duration_ms: 0,
+                    worker_id: None,
+                })
+            },
+            ValidationResult::ScopeViolation => {
+                let execution_id = Uuid::new_v4();
+                Some(TaskExecutionResult {
+                    execution_id,
+                    task_id: execution_id, // Use execution_id as task_id for short-circuit
+                    success: false,
+                    output: String::new(),
+                    errors: vec!["Scope violation".to_string()],
+                    metadata: std::collections::HashMap::new(),
+                    started_at: Utc::now(),
+                    completed_at: Utc::now(),
+                    duration_ms: 0,
+                    worker_id: None,
+                })
+            },
+            ValidationResult::InvalidRiskTier => {
+                let execution_id = Uuid::new_v4();
+                Some(TaskExecutionResult {
+                    execution_id,
+                    task_id: execution_id, // Use execution_id as task_id for short-circuit
+                    success: false,
+                    output: String::new(),
+                    errors: vec!["Invalid risk tier".to_string()],
+                    metadata: std::collections::HashMap::new(),
+                    started_at: Utc::now(),
+                    completed_at: Utc::now(),
+                    duration_ms: 0,
+                    worker_id: None,
+                })
+            },
         }
     }
 
@@ -367,7 +399,12 @@ impl LegacyOrchestratorAdapter {
             .collect();
         context.insert("acceptance_criteria".to_string(), serde_json::json!(acceptance_criteria_json));
         context.insert("risk_tier".to_string(), serde_json::json!(spec.risk_tier));
-        context.insert("mode".to_string(), serde_json::json!(spec.mode));
+        // Mode is not available in contracts WorkingSpec - derive from ID prefix if needed
+        let mode = if spec.id.starts_with("FEAT-") { "feature" }
+                   else if spec.id.starts_with("FIX-") { "fix" }
+                   else if spec.id.starts_with("REFACTOR-") { "refactor" }
+                   else { "task" };
+        context.insert("mode".to_string(), serde_json::json!(mode));
 
         // Execute using the multimodal orchestrator
         match self.orchestrator.execute_planning_with_audit(
@@ -439,95 +476,108 @@ impl LegacyOrchestratorAdapter {
     ) -> Result<ArtifactVerdict> {
         debug!("Reviewing artifacts for task: {}", desc.task_id);
 
-        // Base confidence on execution status
-        let mut confidence: f32 = match artifacts.status {
-            ExecutionStatus::Completed => 0.9,
-            ExecutionStatus::Failed => 0.1,
-            ExecutionStatus::InProgress | ExecutionStatus::Running | ExecutionStatus::Execution => 0.5,
-            ExecutionStatus::Pending | ExecutionStatus::AwaitingApproval | ExecutionStatus::Planning => 0.3,
-            ExecutionStatus::Skipped => 0.2,
-            ExecutionStatus::Cancelled => 0.1,
-            ExecutionStatus::Starting => 0.2,
-            ExecutionStatus::Paused => 0.4,
-            ExecutionStatus::Consensus => 0.5,
-        };
+        // Base confidence on test results and coverage (contracts ExecutionArtifacts structure)
+        let mut confidence: f32 = 0.5; // Default moderate confidence
 
-        // Adjust confidence based on error presence
-        if artifacts.error.is_some() {
-            confidence = (confidence * 0.5f32).max(0.1f32);
+        // Check test results
+        if artifacts.tests.unit_tests.total > 0 {
+            let unit_success_rate = if artifacts.tests.unit_tests.total > 0 {
+                artifacts.tests.unit_tests.passed as f32 / artifacts.tests.unit_tests.total as f32
+            } else {
+                0.0
+            };
+            confidence = (confidence + unit_success_rate * 0.8).min(0.9);
         }
 
-        // Check if output exists and is meaningful
-        if artifacts.status == ExecutionStatus::Completed {
-            if let Some(ref output) = artifacts.output {
-                // If output is meaningful (not empty), slightly increase confidence
-                if !output.trim().is_empty() && output.len() > 10 {
-                    confidence = (confidence * 1.1f32).min(0.95f32);
-                }
-            }
+        // Check coverage
+        if artifacts.coverage.line_coverage > 0.0 {
+            let coverage_bonus = artifacts.coverage.line_coverage as f32 * 0.1;
+            confidence = (confidence + coverage_bonus).min(0.95);
+        }
+
+        // Check for linting issues
+        if artifacts.linting.total_issues == 0 {
+            confidence = (confidence * 1.1).min(0.95); // Slight bonus for no linting issues
+        } else {
+            confidence = (confidence * 0.9).max(0.1); // Penalty for linting issues
         }
 
         // Check against acceptance criteria if available
-        let mut reasoning = format!("Artifact review for task {}: Status={:?}", desc.task_id, artifacts.status);
-        if let Some(ref error) = artifacts.error {
-            reasoning.push_str(&format!(", Error: {}", error));
-        }
-        if artifacts.status == ExecutionStatus::Completed {
-            if let Some(ref output) = artifacts.output {
-                reasoning.push_str(&format!(", Output length: {} chars", output.len()));
-            }
-        }
+        let mut reasoning = format!(
+            "Artifact review for task {}: Tests={}/{} passed, Coverage={:.1}%, Linting={}",
+            desc.task_id,
+            artifacts.tests.unit_tests.passed,
+            artifacts.tests.unit_tests.total,
+            artifacts.coverage.line_coverage * 100.0,
+            artifacts.linting.total_issues
+        );
+
+        // Determine approval based on quality metrics
+        let approved = artifacts.tests.unit_tests.failed == 0 &&
+                      artifacts.coverage.line_coverage >= 0.7 &&
+                      artifacts.linting.errors == 0;
 
         Ok(ArtifactVerdict {
-            approved: artifacts.status == ExecutionStatus::Completed && artifacts.error.is_none(),
+            approved,
             confidence,
             reasoning,
         })
     }
 
     /// Combine verdicts from council and artifact review
+    /// Returns TaskExecutionResult (contract type) - artifacts should be stored separately
     fn combine_verdicts(
         &self,
         council_result: crate::autonomous_executor::ConsensusResult,
         artifact_verdict: ArtifactVerdict,
         artifacts: Vec<ExecutionArtifacts>,
     ) -> TaskExecutionResult {
+        use chrono::Utc;
+        use uuid::Uuid;
+        
         let overall_approved = council_result.approved && artifact_verdict.approved;
         let overall_confidence = ((council_result.confidence + artifact_verdict.confidence as f64) / 2.0) as f32;
 
-        // Convert contracts ExecutionArtifacts to local ExecutionArtifacts for TaskExecutionResult
-        // Note: This is a simplified conversion - full conversion would map all fields
-        let local_artifacts = artifacts.into_iter().next().map(|contracts_artifacts| {
-            LocalExecutionArtifacts {
-                execution_id: contracts_artifacts.task_id.to_string(),
-                worker_id: "unknown".to_string(), // contracts doesn't have worker_id at this level
-                status: agent_agency_contracts::ExecutionStatus::Completed, // Simplified mapping
-                output: Some(format!("Execution artifacts for task {}", contracts_artifacts.task_id)),
-                error: None,
-            }
-        }).unwrap_or_else(|| LocalExecutionArtifacts {
-            execution_id: "no-artifacts".to_string(),
-            worker_id: "unknown".to_string(),
-            status: agent_agency_contracts::ExecutionStatus::Completed,
-            output: Some("No artifacts available".to_string()),
-            error: None,
+        // Use the first artifact or create a default one
+        let execution_artifacts = artifacts.into_iter().next().unwrap_or_else(|| {
+            let mut artifacts = ExecutionArtifacts::default();
+            artifacts.task_id = uuid::Uuid::nil(); // Will be set properly by caller
+            artifacts.working_spec_id = "combined-verdict".to_string();
+            artifacts
         });
 
+        // Create metadata with quality info (artifacts stored separately)
+        let mut metadata = std::collections::HashMap::new();
+        metadata.insert("quality_score".to_string(), serde_json::json!(overall_confidence));
+        metadata.insert("artifacts_task_id".to_string(), serde_json::json!(execution_artifacts.task_id.to_string()));
+        metadata.insert("artifacts_working_spec_id".to_string(), serde_json::json!(execution_artifacts.working_spec_id));
+        
+        // Get execution_id from artifacts provenance if available
+        let execution_id = execution_artifacts.provenance.execution_id;
+        let task_id = execution_artifacts.task_id;
+        
+        // Get worker_id from artifacts provenance (convert String to Uuid if available)
+        let worker_id = execution_artifacts.provenance.worker_id
+            .and_then(|w| Uuid::parse_str(&w).ok());
+        
         TaskExecutionResult {
-            working_spec: None, // Would need to extract from artifacts or spec
-            artifacts: local_artifacts,
-            quality_report: Some(crate::types::QualityReport {
-                score: overall_confidence,
-                metrics: std::collections::HashMap::new(),
-                recommendations: vec![],
-            }),
+            execution_id,
+            task_id,
+            success: overall_approved,
+            output: artifact_verdict.reasoning.clone(),
+            errors: if overall_approved { vec![] } else { vec![format!("Council approved: {}, Artifacts approved: {}", council_result.approved, artifact_verdict.approved)] },
+            metadata,
+            started_at: execution_artifacts.provenance.started_at,
+            completed_at: execution_artifacts.provenance.completed_at.unwrap_or_else(Utc::now),
+            duration_ms: execution_artifacts.provenance.duration_ms,
+            worker_id,
         }
     }
 
     /// Convert task descriptor to orchestrated task format
     fn to_orchestrated_task(&self, desc: &TaskDescriptor) -> crate::OrchestratedTask {
         crate::OrchestratedTask {
-            id: desc.task_id.clone(),
+            id: desc.task_id.to_string(),
             description: desc.description.clone(),
             requirements: vec![], // TaskDescriptor doesn't have requirements field yet
             priority: match desc.priority {

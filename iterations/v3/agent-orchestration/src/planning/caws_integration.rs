@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 use anyhow::{anyhow, Result};
 use agent_agency_contracts::{
-    WorkingSpec, AcceptanceCriterion,
+    working_spec::{WorkingSpec, FileChange as WorkingSpecFileChange, AcceptanceCriterion},
     planning_io::{ExecutionPlan as ContractExecutionPlan, Milestone as ContractMilestone, PlanState, EvidenceGate},
     types::prelude::*,
     working_spec::*,
@@ -50,12 +50,12 @@ impl CawsPlanBridge {
             return Err(anyhow!("Working spec must have non-empty title"));
         }
 
-        if working_spec.acceptance.is_empty() {
+        if working_spec.acceptance_criteria.is_empty() {
             return Err(anyhow!("Working spec must have at least one acceptance criterion"));
         }
 
         // Validate acceptance criteria
-        for (i, criterion) in working_spec.acceptance.iter().enumerate() {
+        for (i, criterion) in working_spec.acceptance_criteria.iter().enumerate() {
             self.validate_acceptance_criterion(criterion, i)?;
         }
 
@@ -99,18 +99,27 @@ impl CawsPlanBridge {
         let scope = &working_spec.scope;
 
         // Check for conflicting scope rules
-        for in_path in &scope.in_paths {
-            for out_path in &scope.out_paths {
-                if in_path.starts_with(out_path) || out_path.starts_with(in_path) {
-                    return Err(anyhow!("Conflicting scope rules: {} conflicts with {}", in_path, out_path));
+        for scope_restriction in scope {
+            for in_path in &scope_restriction.allowed_paths {
+                for out_path in &scope_restriction.blocked_paths {
+                    if in_path.starts_with(out_path) || out_path.starts_with(in_path) {
+                        return Err(anyhow!("Conflicting scope rules: {} conflicts with {}", in_path, out_path));
+                    }
                 }
             }
         }
 
         // Validate file change specifications
         for change in &working_spec.file_changes {
-            if !scope.in_paths.iter().any(|path| change.path.starts_with(path)) {
-                return Err(anyhow!("File change '{}' outside allowed scope", change.path));
+            let mut allowed = false;
+            for scope_restriction in scope {
+                if scope_restriction.allowed_paths.iter().any(|path| change.file.starts_with(path)) {
+                    allowed = true;
+                    break;
+                }
+            }
+            if !allowed {
+                return Err(anyhow!("File change '{}' outside allowed scope", change.file));
             }
         }
 
@@ -127,7 +136,12 @@ impl CawsPlanBridge {
         }
 
         // Check coverage requirements based on risk tier
-        let coverage_targets = &working_spec.coverage_targets;
+        let coverage_targets = working_spec.coverage_targets.as_ref().unwrap_or(&agent_agency_contracts::CoverageTargets {
+            line_coverage: None,
+            branch_coverage: None,
+            mutation_score: None,
+        });
+
         let min_line_coverage = match risk_tier {
             1 => 0.90,
             2 => 0.80,
@@ -135,18 +149,26 @@ impl CawsPlanBridge {
             _ => unreachable!(),
         };
 
-        if coverage_targets.line_coverage < min_line_coverage {
-            return Err(anyhow!(
-                "Risk tier {} requires minimum {:.0}% line coverage, spec has {:.0}%",
-                risk_tier,
-                min_line_coverage * 100.0,
-                coverage_targets.line_coverage * 100.0
-            ));
+        if let Some(ref line_coverage) = coverage_targets.line_coverage {
+            if *line_coverage < min_line_coverage {
+                return Err(anyhow!(
+                    "Risk tier {} requires minimum {:.0}% line coverage, spec has {:.0}%",
+                    risk_tier,
+                    min_line_coverage * 100.0,
+                    line_coverage * 100.0
+                ));
+            }
         }
 
         // Check if security testing is required for high-risk changes
-        if risk_tier == 1 && working_spec.non_functional_requirements.security_requirements.is_empty() {
-            return Err(anyhow!("Risk tier 1 requires security requirements"));
+        if risk_tier == 1 {
+            if let Some(ref nfr) = working_spec.non_functional_requirements {
+                if nfr.security.is_empty() {
+                    return Err(anyhow!("Risk tier 1 requires security requirements"));
+                }
+            } else {
+                return Err(anyhow!("Risk tier 1 requires security requirements"));
+            }
         }
 
         Ok(())
@@ -157,7 +179,7 @@ impl CawsPlanBridge {
         let mut milestones = vec![];
 
         // Convert acceptance criteria to milestones
-        for criterion in &working_spec.acceptance {
+        for criterion in &working_spec.acceptance_criteria {
             let milestone = self.criterion_to_milestone(criterion, &working_spec)?;
             milestones.push(milestone);
         }
@@ -183,6 +205,7 @@ impl CawsPlanBridge {
             id: uuid::Uuid::new_v4(),
             session_id: uuid::Uuid::new_v4(),
             working_spec_id: working_spec.id.clone(),
+            contract_plan: working_spec.clone(),
             title: working_spec.title.clone(),
             overview: format!("Execution plan for: {}", working_spec.title),
             state: PlanState::Draft,
@@ -192,7 +215,30 @@ impl CawsPlanBridge {
             quality_gates,
             evidence_requirements,
             active_waivers: vec![],
-            metadata: Default::default(),
+            metadata: agent_agency_contracts::planning_io::PlanMetadata {
+                created_at: chrono::Utc::now(),
+                updated_at: chrono::Utc::now(),
+                approved_at: None,
+                completed_at: None,
+                created_by: agent_agency_contracts::planning_io::PlanCreator::AI {
+                    model: "caws".to_string(),
+                    version: "1.0".to_string(),
+                },
+                version: "1.0".to_string(),
+                source: "caws".to_string(),
+                confidence_score: None,
+                generation_time_ms: None,
+                model_used: None,
+                fallback_used: false,
+                strategy: agent_agency_contracts::types::planning::PlanningStrategy::TopDown,
+                confidence: 0.8,
+                estimated_duration_ms: 0,
+                estimated_cost_cents: 0,
+                adaptive: false,
+                engine_version: "1.0".to_string(),
+                additional_metadata: HashMap::new(),
+            },
+            execution_context: None,
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
             approved_at: None,
@@ -208,7 +254,7 @@ impl CawsPlanBridge {
         let scope = self.determine_milestone_scope(criterion, working_spec)?;
 
         // Create evidence gate based on risk tier
-        let evidence_gate = self.create_evidence_gate(working_spec.risk_tier)?;
+        let evidence_gate = self.create_evidence_gate(working_spec.risk_tier as u8)?;
 
         Ok(ContractMilestone {
             id: criterion.id.clone(),
@@ -217,13 +263,15 @@ impl CawsPlanBridge {
             interfaces: vec![], // Would be populated from interface analysis
             tests: vec![], // Would be populated from test requirements
             evidence_gate,
-            rollback_plan: format!("Revert changes for acceptance criterion: {}", criterion.id),
+            quality_gates: vec![], // Quality gates from evidence gate
             dependencies: vec![], // Would be populated from dependency analysis
+            estimated_duration: Some((self.estimate_milestone_effort(criterion, working_spec) * 60.0) as u32), // Convert hours to minutes
+            rollback_plan: format!("Revert changes for acceptance criterion: {}", criterion.id),
             state: agent_agency_contracts::planning_io::MilestoneState::Pending,
             assigned_workers: vec![],
             estimated_effort: self.estimate_milestone_effort(criterion, working_spec),
             priority: self.determine_milestone_priority(criterion, working_spec),
-            risk_tier: working_spec.risk_tier,
+            risk_tier: working_spec.risk_tier as u8,
             is_blocking: self.is_blocking_criterion(criterion),
             blocking_reason: self.get_blocking_reason(criterion),
             metrics: None,
@@ -236,12 +284,14 @@ impl CawsPlanBridge {
         // Simplified - would use NLP to analyze the criterion text
         let files = working_spec.file_changes.iter()
             .filter(|change| self.is_change_relevant_to_criterion(change, criterion))
-            .map(|change| change.path.clone())
+            .map(|change| change.file.clone())
             .collect::<Vec<_>>();
 
         Ok(agent_agency_contracts::planning_io::MilestoneScope {
             files,
             directories: vec![],
+            included_paths: vec![],
+            excluded_paths: vec![],
             will_modify: true,
             allowed_operations: vec!["read".to_string(), "write".to_string()],
             parallelism: Some(1),
@@ -252,11 +302,11 @@ impl CawsPlanBridge {
     /// Check if file change is relevant to criterion
     fn is_change_relevant_to_criterion(&self, change: &agent_agency_contracts::FileChange, criterion: &agent_agency_contracts::AcceptanceCriterion) -> bool {
         // Simplified relevance check - would use semantic analysis
-        let change_text = format!("{} {}", change.change_type, change.path);
+        let change_text = format!("{} {}", change.change_type, change.file);
         let criterion_text = format!("{} {} {}", criterion.given, criterion.when, criterion.then);
 
         change_text.to_lowercase().contains(&criterion.id.to_lowercase()) ||
-        criterion_text.to_lowercase().contains(&change.path.to_lowercase())
+        criterion_text.to_lowercase().contains(&change.file.to_lowercase())
     }
 
     /// Create evidence gate for risk tier
@@ -333,11 +383,15 @@ impl CawsPlanBridge {
     /// Create infrastructure milestone
     fn create_infrastructure_milestone(&self, working_spec: &WorkingSpec) -> ContractMilestone {
         ContractMilestone {
+            estimated_duration: None,
+            quality_gates: None,
             id: "M0-INFRA".to_string(),
             objective: "Set up infrastructure and prerequisites".to_string(),
             scope: agent_agency_contracts::planning_io::MilestoneScope {
                 files: vec![],
                 directories: vec![],
+                included_paths: vec![],
+                excluded_paths: vec![],
                 will_modify: false,
                 allowed_operations: vec!["read".to_string()],
                 parallelism: Some(1),
@@ -360,7 +414,7 @@ impl CawsPlanBridge {
             assigned_workers: vec![],
             estimated_effort: 2.0,
             priority: agent_agency_contracts::planning_io::MilestonePriority::High,
-            risk_tier: working_spec.risk_tier,
+            risk_tier: working_spec.risk_tier as u8,
             is_blocking: true,
             blocking_reason: Some("Infrastructure required for all milestones".to_string()),
             metrics: None,
@@ -428,10 +482,15 @@ impl CawsPlanBridge {
     fn create_quality_gates(&self, working_spec: &WorkingSpec) -> agent_agency_contracts::planning_io::QualityGates {
         use agent_agency_contracts::planning_io::{QualityGates, MutationRequirements, SecurityRequirements, PerformanceRequirements, DocumentationRequirements};
 
-        let coverage_reqs = HashMap::from([
-            ("unit".to_string(), working_spec.coverage_targets.line_coverage),
-            ("integration".to_string(), working_spec.coverage_targets.branch_coverage),
-        ]);
+        let mut coverage_reqs = HashMap::new();
+        if let Some(ref ct) = working_spec.coverage_targets {
+            if let Some(ref lc) = ct.line_coverage {
+                coverage_reqs.insert("unit".to_string(), *lc);
+            }
+            if let Some(ref bc) = ct.branch_coverage {
+                coverage_reqs.insert("integration".to_string(), *bc);
+            }
+        }
 
         QualityGates {
             coverage_requirements: coverage_reqs,
@@ -446,8 +505,10 @@ impl CawsPlanBridge {
                     ("critical".to_string(), 0),
                     ("high".to_string(), if working_spec.risk_tier == 1 { 0 } else { 2 }),
                 ]),
-                required_controls: working_spec.non_functional_requirements.security_requirements.clone(),
-                audit_requirements: vec![],
+                required_controls: working_spec.non_functional_requirements.as_ref()
+                    .map(|nfr| nfr.security.clone())
+                    .unwrap_or_default(),
+                // audit_requirements field doesn't exist in SecurityRequirements
             },
             performance_requirements: PerformanceRequirements {
                 max_regressions: if working_spec.risk_tier == 1 { 0 } else { 1 },
@@ -455,19 +516,24 @@ impl CawsPlanBridge {
                 slas: vec![], // Would be populated from performance requirements
             },
             documentation_requirements: DocumentationRequirements {
+                api_docs_required: working_spec.risk_tier == 1,
+                architecture_docs_required: working_spec.risk_tier == 1,
+                code_docs_required: working_spec.risk_tier == 1,
                 required_types: vec!["api".to_string()],
-                min_coverage: 0.8,
                 required_formats: vec!["markdown".to_string()],
+                min_coverage: 0.8,
                 quality_checks: vec![],
             },
             requires_manual_review: working_spec.risk_tier == 1,
             requires_council_approval: working_spec.risk_tier == 1,
+            min_coverage: None,
+            min_mutation_score_percent: None,
         }
     }
 
     /// Create evidence requirements
     fn create_evidence_requirements(&self, working_spec: &WorkingSpec) -> Vec<agent_agency_contracts::planning_io::EvidenceRequirement> {
-        working_spec.acceptance.iter().enumerate().map(|(i, criterion)| {
+        working_spec.acceptance_criteria.iter().enumerate().map(|(i, criterion)| {
             agent_agency_contracts::planning_io::EvidenceRequirement {
                 milestone_id: criterion.id.clone(),
                 evidence_type: "test_results".to_string(),
@@ -483,9 +549,9 @@ impl CawsPlanBridge {
         use agent_agency_contracts::planning_io::{ChangeBudget, BudgetEnforcement};
 
         ChangeBudget {
-            max_files: working_spec.constraints.max_files,
-            max_loc: working_spec.constraints.max_loc,
-            max_migrations: working_spec.constraints.max_migrations.unwrap_or(5),
+            max_files: working_spec.constraints.budget_limits.as_ref().and_then(|b| b.max_files).unwrap_or(25),
+            max_loc: working_spec.constraints.budget_limits.as_ref().and_then(|b| b.max_loc).unwrap_or(1000),
+            max_migrations: 5,
             allow_breaking_changes: working_spec.risk_tier > 1,
             allow_new_dependencies: working_spec.risk_tier > 1,
             enforcement_mode: if working_spec.risk_tier == 1 {
@@ -582,7 +648,11 @@ mod tests {
 
         // Risk tier 1 with insufficient coverage
         spec.risk_tier = 1;
-        spec.coverage_targets.line_coverage = 0.8; // Below 0.9 required
+        spec.coverage_targets = Some(agent_agency_contracts::CoverageTargets {
+            line_coverage: Some(0.8), // Below 0.9 required
+            branch_coverage: None,
+            mutation_score: None,
+        });
         assert!(bridge.validate_risk_tier_constraints(&spec).is_err());
     }
 

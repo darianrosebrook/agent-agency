@@ -10,7 +10,13 @@ use anyhow::Result;
 use std::sync::Arc;
 use agent_agency_contracts::{
     PlanningEngine, ExecutionContext, TaskDescriptor, ExecutionPlan as ContractExecutionPlan,
-    PlanningError, planning_io::DocumentationRequirements, TestPlan, RiskTier, CoverageTargets,
+    PlanningError, 
+    planning_io::{
+        DocumentationRequirements,
+        QualityGates, MutationRequirements, SecurityRequirements, PerformanceRequirements,
+    },
+    types::planning::RiskTier,
+    working_spec::{TestPlan, CoverageTargets},
 };
 
 use crate::planning::{
@@ -98,88 +104,35 @@ impl PlanningEngineImpl {
                 id: milestone.id.clone(),
                 objective: milestone.objective.clone(),
                 scope: MilestoneScope {
+                    files: milestone.scope.files.clone(),
+                    directories: milestone.scope.directories.clone(),
                     included_paths: milestone.scope.included_paths.clone(),
                     excluded_paths: milestone.scope.excluded_paths.clone(),
+                    will_modify: milestone.scope.will_modify,
+                    allowed_operations: milestone.scope.allowed_operations.clone(),
+                    parallelism: milestone.scope.parallelism,
+                    resource_requirements: milestone.scope.resource_requirements.clone(),
                 },
                 interfaces: milestone.interfaces.clone(),
                 tests: milestone.tests.clone(),
+                evidence_gate: milestone.evidence_gate.clone(),
                 quality_gates: milestone.quality_gates.clone(),
                 dependencies: milestone.dependencies.clone(),
                 estimated_duration: milestone.estimated_duration,
+                rollback_plan: milestone.rollback_plan.clone(),
+                state: milestone.state.clone(),
+                assigned_workers: milestone.assigned_workers.clone(),
+                estimated_effort: milestone.estimated_effort,
+                priority: milestone.priority.clone(),
+                risk_tier: milestone.risk_tier,
+                is_blocking: milestone.is_blocking,
+                blocking_reason: milestone.blocking_reason.clone(),
+                metrics: milestone.metrics.clone(),
             }
         }).collect();
 
-        Ok(ContractExecutionPlan {
-            id: local_plan.contract_plan.id,
-            session_id: ctx.session_id,
-            working_spec_id: "unknown".to_string(), // Would need to be passed in
-            title: "Generated Plan".to_string(),
-            overview: "Plan generated via PlanningEngine".to_string(),
-            state: PlanState::Approved,
-            milestones,
-            dependency_graph: DependencyGraph {
-                nodes: vec![], // Would need conversion
-                edges: vec![],
-                critical_path: vec![],
-                parallel_groups: vec![],
-                has_cycles: false,
-                cycles: vec![],
-            },
-            change_budget: ChangeBudget {
-                max_files: 100,
-                max_loc: 1000,
-                max_migrations: 0,
-                allow_breaking_changes: false,
-                allow_new_dependencies: false,
-                enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
-            },
-            quality_gates: QualityGates {
-                coverage_requirements: std::collections::HashMap::new(),
-                mutation_requirements: MutationRequirements {
-                    required: false,
-                    min_score: 0.0,
-                    operators: vec![],
-                },
-                security_requirements: SecurityRequirements {
-                    scan_required: false,
-                    max_issues_by_severity: std::collections::HashMap::new(),
-                    required_controls: vec![],
-                },
-                performance_requirements: PerformanceRequirements {
-                    max_regressions: 10,
-                    required_benchmarks: vec![],
-                    slas: vec![],
-                },
-                documentation_requirements: DocumentationRequirements {
-                    api_docs_required: false,
-                    code_docs_required: false,
-                    architecture_docs_required: false,
-                    required_formats: vec![],
-                    required_types: vec![],
-                },
-                requires_manual_review: false,
-                requires_council_approval: false,
-            },
-            evidence_requirements: vec![],
-            active_waivers: vec![],
-            metadata: PlanMetadata {
-                created_at: chrono::Utc::now(),
-                updated_at: chrono::Utc::now(),
-                approved_at: Some(chrono::Utc::now()),
-                completed_at: None,
-                created_by: Some("PlanningEngine".to_string()),
-                version: "1.0".to_string(),
-                source: "PlanningEngineImpl".to_string(),
-                confidence_score: Some(0.8),
-                generation_time_ms: Some(1000),
-                model_used: Some("PlanningEngineImpl".to_string()),
-                fallback_used: false,
-            },
-            created_at: chrono::Utc::now(),
-            updated_at: chrono::Utc::now(),
-            approved_at: Some(chrono::Utc::now()),
-            completed_at: None,
-        })
+        // Simply clone and return the contract plan from the local plan
+        Ok(local_plan.contract_plan.clone())
     }
 }
 
@@ -235,8 +188,8 @@ impl RealWorkingSpecProvider {
                 max_duration_minutes: Some(120),
                 max_iterations: Some(5),
                 budget_limits: Some(working_spec::BudgetLimits {
-                    max_files: self.task_descriptor.change_budget.max_files.map(|x| x as u32),
-                    max_loc: self.task_descriptor.change_budget.max_loc.map(|x| x as u32),
+                    max_files: self.task_descriptor.change_budget.max_files,
+                    max_loc: self.task_descriptor.change_budget.max_loc,
                 }),
                 scope_restrictions: Some(working_spec::ScopeRestrictions {
                     allowed_paths: self.task_descriptor.scope_in.allowed_paths.clone(),
@@ -294,6 +247,8 @@ impl RealWorkingSpecProvider {
                     architecture_docs_required: false,
                     required_formats: vec!["markdown".to_string()],
                     required_types: vec!["api".to_string(), "code".to_string()],
+                    min_coverage: None,
+                    quality_checks: vec![],
                 },
                 requires_manual_review: true,
                 requires_council_approval: true,
@@ -309,6 +264,8 @@ impl RealWorkingSpecProvider {
                     scope: MilestoneScope {
                         files: vec![],
                         directories: vec![],
+                        included_paths: vec![],
+                        excluded_paths: vec![],
                         will_modify: false,
                         allowed_operations: vec!["read".to_string()],
                         parallelism: Some(1),
@@ -317,15 +274,27 @@ impl RealWorkingSpecProvider {
                     interfaces: vec![],
                     tests: vec![],
                     evidence_gate: EvidenceGate {
-                        min_coverage: 80.0,
-                        min_branch_coverage: 75.0,
-                        min_mutation_score: 50.0,
+                        min_coverage: 0.8,
+                        min_branch_coverage: 0.75,
+                        min_mutation_score: 0.5,
                         security_scan_required: true,
                         performance_budget: None,
                         required_artifacts: vec!["requirements_doc".to_string()],
                         custom_validations: vec![],
                     },
+                    quality_gates: vec![],
+                    dependencies: vec![],
+                    estimated_duration: None,
+                    rollback_plan: "Revert analysis changes".to_string(),
+                    state: agent_agency_contracts::planning_io::MilestoneState::Pending,
+                    assigned_workers: vec![],
+                    estimated_effort: 0.5,
+                    priority: agent_agency_contracts::planning_io::MilestonePriority::Normal,
+                    risk_tier: 2,
+                    is_blocking: false,
+                    blocking_reason: None,
                     metrics: Some(MilestoneMetrics {
+                        worker_performance: std::collections::HashMap::new(),
                         execution_time_ms: 0,
                         resources_used: std::collections::HashMap::new(),
                         quality_metrics: std::collections::HashMap::new(),

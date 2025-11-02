@@ -6,11 +6,12 @@
 //! @author @darianrosebrook
 
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use uuid::Uuid;
 
 /// Processing identifier for content processing operations
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct ProcessingId(pub Uuid);
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+pub struct ProcessingId(#[schemars(with = "String")] pub Uuid);
 
 impl std::fmt::Display for ProcessingId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -27,7 +28,7 @@ impl std::str::FromStr for ProcessingId {
 }
 
 /// Content type classification
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ContentType {
     /// Text content
     Text,
@@ -38,7 +39,7 @@ pub enum ContentType {
 }
 
 /// Processed content result (thin DTO)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProcessedContent {
     /// Processing identifier
     pub id: ProcessingId,

@@ -40,6 +40,7 @@ pub trait ProgressTracker: Send + Sync {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionProgress {
     /// Task ID
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     /// Current status
     pub status: ExecutionStatus,
@@ -52,10 +53,13 @@ pub struct ExecutionProgress {
     /// Current phase index
     pub current_phase_index: usize,
     /// Start time
+    #[schemars(with = "String")]
     pub started_at: DateTime<Utc>,
     /// Last updated time
+    #[schemars(with = "String")]
     pub last_updated: DateTime<Utc>,
     /// Estimated completion time
+    #[schemars(with = "Option<String>")]
     pub estimated_completion: Option<DateTime<Utc>>,
     /// Messages and logs
     pub messages: Vec<ProgressMessage>,
@@ -66,7 +70,7 @@ pub struct ExecutionProgress {
 }
 
 /// Execution status
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub enum ExecutionStatus {
     /// Task is pending
     Pending,
@@ -88,6 +92,7 @@ pub enum ExecutionStatus {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProgressMessage {
     /// Message timestamp
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     /// Message level
     pub level: MessageLevel,
@@ -137,6 +142,7 @@ pub struct ProgressError {
     /// Error message
     pub message: String,
     /// Error timestamp
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     /// Additional context
     pub context: Option<HashMap<String, serde_json::Value>>,
@@ -146,12 +152,15 @@ pub struct ProgressError {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionEvent {
     /// Event ID
+    #[schemars(with = "String")]
     pub event_id: Uuid,
     /// Task ID
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     /// Event type
     pub event_type: EventType,
     /// Event timestamp
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     /// Event data
     pub data: HashMap<String, serde_json::Value>,

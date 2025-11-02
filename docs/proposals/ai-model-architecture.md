@@ -1,5 +1,10 @@
 # Local AI Model - Technical Architecture
 
+> **⚠️ ARCHITECTURE PROPOSAL**: This document describes proposed architecture for reference.  
+> **Current Implementation**: The system uses **CoreML-first architecture** with Mistral as the primary inference engine.  
+> **Status**: This proposal document is maintained for historical reference and alternative architecture exploration.  
+> **See**: [`docs/architecture/coreml-first-decision.md`](../architecture/coreml-first-decision.md) for current implementation.
+
 ## Architecture Overview
 
 The Local AI Model component is built as a comprehensive AI execution framework that integrates local model hosting with evaluation, reasoning, and satisficing capabilities. The system provides a complete AI infrastructure while maintaining local control and performance.
@@ -22,7 +27,9 @@ export class ModelManager {
   private performanceMonitor: ModelPerformanceMonitor;
 
   constructor(config: ModelManagerConfig) {
-    this.ollamaClient = new OllamaClient(config.ollama);
+    // NOTE: Current implementation uses CoreML-first architecture
+    // See docs/architecture/coreml-first-decision.md for actual implementation
+    this.coremlClient = new CoreMLClient(config.coreml);
     this.modelRegistry = new ModelRegistry(config.registry);
     this.resourceManager = new ResourceManager(config.resources);
     this.performanceMonitor = new ModelPerformanceMonitor(config.monitoring);
@@ -38,8 +45,10 @@ export class ModelManager {
     // Allocate resources
     const resources = await this.resourceManager.allocateResources(modelSpec);
 
-    // Load model via Ollama
-    const modelInstance = await this.ollamaClient.loadModel({
+    // Load model via CoreML (current implementation)
+    // NOTE: This proposal document shows Ollama for reference only
+    // Actual implementation uses CoreML-first architecture
+    const modelInstance = await this.coremlClient.loadModel({
       name: modelSpec.name,
       size: modelSpec.size,
       quantization: modelSpec.quantization,
@@ -80,8 +89,9 @@ export class ModelManager {
     // Optimize input
     const optimizedInput = await this.optimizeInferenceInput(input, model);
 
-    // Execute inference
-    const rawResult = await this.ollamaClient.generate({
+    // Execute inference via CoreML (current implementation)
+    // NOTE: This proposal shows Ollama for reference only
+    const rawResult = await this.coremlClient.generate({
       model: model.instance.name,
       prompt: optimizedInput.prompt,
       context: optimizedInput.context,

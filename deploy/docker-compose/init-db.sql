@@ -1564,9 +1564,11 @@ CREATE TRIGGER trg_validate_document_uniqueness
   FOR EACH ROW EXECUTE FUNCTION validate_document_uniqueness();
 
 -- Bootstrap default embedding models (can be extended via config)
+-- Decision: Selected embeddinggemma over e5-small-v2 as CoreML embedding model
+-- Reason: Better quality (768 dimensions), model already available and tested
 INSERT INTO embedding_models (id, modality, dim, metric, active)
 VALUES 
-  ('e5-small-v2', 'text', 1536, 'cosine', TRUE),
+  ('embeddinggemma', 'text', 768, 'cosine', TRUE),
   ('clip-vit-b32', 'image', 512, 'cosine', TRUE)
 ON CONFLICT (id) DO NOTHING;
 -- @darianrosebrook
@@ -1578,11 +1580,12 @@ ON CONFLICT (id) DO NOTHING;
 -- Enable pgvector extension
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- Create HNSW index for e5-small-v2 embeddings (semantic text search)
+-- Create HNSW index for embeddinggemma embeddings (semantic text search)
+-- Decision: Selected embeddinggemma over e5-small-v2 as CoreML embedding model
 -- Cosine similarity for normalized vectors
-CREATE INDEX IF NOT EXISTS idx_block_vectors_e5_small_v2_hnsw
+CREATE INDEX IF NOT EXISTS idx_block_vectors_embeddinggemma_hnsw
   ON block_vectors USING hnsw (vec vector_cosine_ops)
-  WHERE model_id = 'e5-small-v2';
+  WHERE model_id = 'embeddinggemma';
 
 -- Create HNSW index for CLIP-ViT-B/32 embeddings (image/diagram search)
 -- Inner product similarity for normalized CLIP embeddings
@@ -1600,7 +1603,7 @@ CREATE INDEX IF NOT EXISTS idx_block_vectors_e5_multilingual_hnsw
 -- This catches any new models added to the registry
 CREATE INDEX IF NOT EXISTS idx_block_vectors_generic_hnsw
   ON block_vectors USING hnsw (vec vector_cosine_ops)
-  WHERE model_id NOT IN ('e5-small-v2', 'clip-vit-b32', 'e5-multilingual-large');
+  WHERE model_id NOT IN ('embeddinggemma', 'clip-vit-b32', 'e5-multilingual-large');
 
 -- Create composite index for queries by model_id + modality (for filtering)
 CREATE INDEX IF NOT EXISTS idx_block_vectors_model_modality
@@ -1619,8 +1622,8 @@ CREATE INDEX IF NOT EXISTS idx_search_logs_created_at
   ON search_logs (created_at DESC);
 
 -- Add HNSW index parameters via comment (documentation)
-COMMENT ON INDEX idx_block_vectors_e5_small_v2_hnsw IS 
-  'HNSW index for e5-small-v2 embeddings (768 dimensions, cosine similarity)';
+COMMENT ON INDEX idx_block_vectors_embeddinggemma_hnsw IS 
+  'HNSW index for embeddinggemma embeddings (768 dimensions, cosine similarity). Selected over e5-small-v2 as CoreML model.';
 
 COMMENT ON INDEX idx_block_vectors_clip_vit_b32_hnsw IS 
   'HNSW index for CLIP-ViT-B/32 embeddings (512 dimensions, inner product)';
@@ -1691,7 +1694,7 @@ BEGIN;
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS embedding_models (
-  id TEXT PRIMARY KEY,           -- e.g., 'e5-small-v2', 'kb-text-default'
+  id TEXT PRIMARY KEY,           -- e.g., 'embeddinggemma', 'kb-text-default'
   modality TEXT NOT NULL,        -- 'text'|'image'|'audio'
   dim INTEGER NOT NULL,
   metric TEXT NOT NULL DEFAULT 'cosine',
