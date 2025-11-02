@@ -435,12 +435,8 @@ impl CouncilMonitor {
 
     /// Convert execution plan to working spec for council review
     fn plan_to_working_spec(&self, plan: &ExecutionPlan) -> Result<agent_agency_contracts::WorkingSpec> {
-        // Extract acceptance criteria from milestones
-        let acceptance_criteria = plan.milestones.iter()
-            .filter_map(|milestone| milestone.acceptance_criteria.as_ref())
-            .flatten()
-            .cloned()
-            .collect::<Vec<_>>();
+        // Extract acceptance criteria from plan (milestones don't have acceptance_criteria)
+        let acceptance_criteria = plan.contract_plan.acceptance_criteria.clone();
 
         // Extract file changes from plan scope
         let file_changes = plan.contract_plan.scope.iter()
@@ -495,30 +491,27 @@ impl CouncilMonitor {
             },
             constraints,
             acceptance_criteria,
-            test_plan: agent_agency_contracts::planning::TestPlan {
+            test_plan: agent_agency_contracts::working_spec::TestPlan {
                 unit_tests: vec![],
                 integration_tests: vec![],
-                e2e_tests: vec![],
-                performance_tests: vec![],
+                e2e_scenarios: vec![],
+                coverage_targets: None,
             },
             rollback_plan: Default::default(),
             context: agent_agency_contracts::working_spec::WorkingSpecContext {
-                domain: "orchestration".to_string(),
-                task_type: "task_execution".to_string(),
-                environment: std::collections::HashMap::new(),
-                constraints: vec![],
+                workspace_root: ".".to_string(),
+                git_branch: "main".to_string(),
+                recent_changes: vec![],
+                dependencies: std::collections::HashMap::new(),
+                environment: agent_agency_contracts::task_request::Environment::Development,
             },
             non_functional_requirements: None,
             validation_results: None,
-            quality_gates: Some(vec!["linting".to_string(), "type_checking".to_string()]),
+            quality_gates: plan.contract_plan.quality_gates.clone(),
             scope: plan.contract_plan.scope.clone(),
             metadata: None,
             milestones: vec![],
-            change_budget: agent_agency_contracts::ChangeBudget {
-                max_files: 25,
-                max_lines: 1000,
-                time_limit_hours: 24,
-            },
+            change_budget: plan.contract_plan.change_budget.clone(),
             file_changes: file_changes.into_iter().map(|fc| agent_agency_contracts::FileChange {
                 file: fc.file,
                 change_type: fc.change_type,
@@ -544,10 +537,9 @@ impl CouncilMonitor {
             ));
 
         // Add execution context if available
-        if let Some(exec_ctx) = &plan.execution_context {
-            context.insert("parallel_batches".to_string(), serde_json::Value::Number(
-                exec_ctx.parallel_batches.as_ref().map(|pb| pb.len()).unwrap_or(0) as i64
-            ));
+        // Note: ExecutionContext doesn't have parallel_batches field
+        if plan.execution_context.is_some() {
+            context.insert("has_execution_context".to_string(), serde_json::Value::Bool(true));
         }
 
         context

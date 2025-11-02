@@ -183,8 +183,8 @@ pub fn example_task_creation() -> Result<()> {
         task_id: Uuid::new_v4(),
         description: "Fix security vulnerability".to_string(),
           scope_in: agent_agency_contracts::ScopeRestrictions {
-            in_scope: vec!["src/security/".to_string()],
-            out_scope: vec![],
+            allowed_paths: vec!["src/security/".to_string()],
+            blocked_paths: vec![],
         },
         scope_out: None,
         change_budget: ChangeBudget {
@@ -212,13 +212,10 @@ pub fn example_task_creation() -> Result<()> {
         task_id: Uuid::new_v4(),
         description: "Add user profile management".to_string(),
           scope_in: agent_agency_contracts::ScopeRestrictions {
-            in_scope: vec!["src/profile/".to_string(), "tests/profile/".to_string()],
-            out_scope: vec!["node_modules/".to_string()],
+            allowed_paths: vec!["src/profile/".to_string(), "tests/profile/".to_string()],
+            blocked_paths: vec!["node_modules/".to_string()],
         },
-        scope_out: Some(TaskScope {
-            in_scope: vec![],
-            out_scope: vec!["src/other/".to_string()],
-        }),
+        scope_out: None, // scope_out removed - use scope_in only
         change_budget: ChangeBudget {
             max_files: 20,
             max_loc: 800,
@@ -234,7 +231,7 @@ pub fn example_task_creation() -> Result<()> {
         },
         priority: TaskPriority::Normal,
         execution_mode: agent_agency_contracts::types::planning::ExecutionMode::Auto,
-        task_type: "feature".to_string(),
+        // task_type field doesn't exist in TaskDescriptor
         risk_tier: Some(RiskTier::Tier2),
         acceptance: Some("User can view and edit their profile".to_string()),
     };
@@ -244,8 +241,8 @@ pub fn example_task_creation() -> Result<()> {
         task_id: Uuid::new_v4(),
         description: "Update documentation".to_string(),
           scope_in: agent_agency_contracts::ScopeRestrictions {
-            in_scope: vec!["docs/".to_string()],
-            out_scope: vec![],
+            allowed_paths: vec!["docs/".to_string()],
+            blocked_paths: vec![],
         },
         scope_out: None,
         change_budget: ChangeBudget {
