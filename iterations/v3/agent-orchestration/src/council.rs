@@ -169,12 +169,12 @@ pub enum JudgeSelectionStrategy {
 pub struct CouncilSession {
     pub session_id: String,
     working_spec: agent_agency_contracts::WorkingSpec,
-    selected_judges: Vec<Arc<dyn Judge>>,
+    pub selected_judges: Vec<Arc<dyn Judge>>,
     contributions: Vec<JudgeContribution>,
     aggregation_result: Option<AggregationResult>,
     pub final_decision: Option<FinalDecision>,
     start_time: chrono::DateTime<chrono::Utc>,
-    end_time: Option<chrono::DateTime<chrono::Utc>>,
+    pub end_time: Option<chrono::DateTime<chrono::Utc>>,
     status: SessionStatus,
 }
 

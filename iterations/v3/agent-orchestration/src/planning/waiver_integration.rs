@@ -395,7 +395,7 @@ impl WaiverIntegration {
                 }
                 "max_time" => {
                     // Increase time limit
-                    constraints.max_time_ms = 3600000; // 1 hour emergency limit
+                    constraints.max_planning_time_ms = 3600000; // 1 hour emergency limit
                 }
                 "quality_gates" => {
                     // Relax quality requirements

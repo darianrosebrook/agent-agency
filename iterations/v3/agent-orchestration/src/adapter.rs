@@ -47,7 +47,7 @@ use tracing::{debug, info, warn};
 #[derive(Debug)]
 pub struct LegacyOrchestratorAdapter {
     /// Council for decision making
-    council: Arc<Council>,
+    pub council: Arc<Council>,
     /// Multimodal orchestrator for task execution
     orchestrator: Arc<MultimodalOrchestrator>,
     /// Audit trail manager
@@ -568,7 +568,7 @@ impl LegacyOrchestratorAdapter {
             errors: if overall_approved { vec![] } else { vec![format!("Council approved: {}, Artifacts approved: {}", council_result.approved, artifact_verdict.approved)] },
             metadata,
             started_at: execution_artifacts.provenance.started_at,
-            completed_at: execution_artifacts.provenance.completed_at.unwrap_or_else(Utc::now),
+            completed_at: execution_artifacts.provenance.completed_at.unwrap_or_else(|| Utc::now()),
             duration_ms: execution_artifacts.provenance.duration_ms,
             worker_id,
         }

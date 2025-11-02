@@ -304,9 +304,10 @@ impl PlanningStorage {
         if let Some(session) = self.get_planning_session(session_id).await? {
             // Load the plan
             if let Some(plan) = self.load_execution_plan(session.plan_id).await? {
-                // Restore execution state from session
+                // Restore execution state from session metadata
                 let execution_state: Option<crate::planning::plan_types::ActiveExecutionState> =
-                    serde_json::from_value(session.execution_state).ok();
+                    session.metadata.get("execution_state")
+                        .and_then(|v| serde_json::from_value(v.clone()).ok());
 
                 let mut recovered_plan = plan;
                 recovered_plan.execution_state = execution_state;
@@ -369,10 +370,12 @@ impl PlanningStorage {
     async fn update_cached_session(&self, plan: &ExecutionPlan) -> Result<()> {
         let mut cache = self.session_cache.write().await;
         if let Some(cached) = cache.get_mut(&plan.contract_plan.session_id) {
-            // Update execution state in cache
+            // Update execution state in cache metadata
             if let Some(execution_state) = &plan.execution_state {
-                cached.session.execution_state = serde_json::to_value(execution_state)
-                    .unwrap_or(cached.session.execution_state.clone());
+                cached.session.metadata.insert(
+                    "execution_state".to_string(),
+                    serde_json::to_value(execution_state).unwrap_or(serde_json::Value::Null)
+                );
                 cached.dirty = true;
             }
             cached.last_accessed = Utc::now();
@@ -714,14 +717,16 @@ mod tests {
         self.load_execution_plan(plan_id).await
     }
 
-    /// Store execution result
-    pub async fn store_execution_result(&self, plan_id: Uuid, result: &ExecutionPlan) -> Result<()> {
+    /// Store execution plan as execution result (alias for backward compatibility)
+    /// Note: Use store_execution_result(plan_id, &PlanExecutionResult) for contract type
+    pub async fn store_execution_result_plan(&self, plan_id: Uuid, result: &ExecutionPlan) -> Result<()> {
         // Store the updated plan with execution results
         self.store_execution_plan(result).await
     }
 
-    /// Get execution result for a plan
-    pub async fn get_execution_result(&self, plan_id: Uuid) -> Result<Option<ExecutionPlan>> {
+    /// Get execution plan as execution result (alias for backward compatibility)
+    /// Note: Use get_execution_result(plan_id) -> Option<PlanExecutionResult> for contract type
+    pub async fn get_execution_result_plan(&self, plan_id: Uuid) -> Result<Option<ExecutionPlan>> {
         self.load_execution_plan(plan_id).await
     }
 }

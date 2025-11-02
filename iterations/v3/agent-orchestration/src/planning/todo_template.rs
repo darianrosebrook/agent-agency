@@ -611,7 +611,7 @@ impl TodoTemplateSystem {
     }
 
     /// Get template for instance
-    fn get_template_for_instance(&self, instance: &TodoInstance) -> Result<&TodoTemplate> {
+    pub fn get_template_for_instance(&self, instance: &TodoInstance) -> Result<&TodoTemplate> {
         // Find template by ID
         for template in self.templates.values() {
             if template.id == instance.template_id {

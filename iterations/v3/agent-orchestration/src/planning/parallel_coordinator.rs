@@ -587,8 +587,8 @@ struct MilestoneExecutionResult {
 /// Batch execution result
 #[derive(Debug, Clone)]
 struct BatchExecutionResult {
-    successful: usize,
-    failed: usize,
+    pub successful: usize,
+    pub failed: usize,
     scope_conflicts: usize,
     council_interventions: usize,
     emergency_stop: bool,

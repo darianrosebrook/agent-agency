@@ -86,6 +86,9 @@ pub struct PlanSession {
     /// Plan ID being monitored
     plan_id: String,
 
+    /// The execution plan being monitored
+    plan: ExecutionPlan,
+
     /// Session start time
     started_at: chrono::DateTime<Utc>,
 
@@ -403,7 +406,8 @@ impl CouncilMonitor {
     /// Start monitoring session for a plan
     async fn start_monitoring_session(&self, plan: &ExecutionPlan) -> Result<()> {
         let session = PlanSession {
-            plan_id: plan.id.to_string(),
+            plan_id: plan.contract_plan.id.to_string(),
+            plan: plan.clone(),
             started_at: Utc::now(),
             last_check: Utc::now(),
             violations: vec![],

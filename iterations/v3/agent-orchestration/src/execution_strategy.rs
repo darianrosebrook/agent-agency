@@ -77,7 +77,7 @@ pub struct StrategyResult {
     pub strategy: ExecutionStrategy,
     
     /// Task execution results
-    pub results: Vec<TaskExecutionResult>,
+    pub results: Vec<StrategyTaskResult>,
     
     /// Total execution time (ms)
     pub total_time_ms: u64,
@@ -89,9 +89,9 @@ pub struct StrategyResult {
     pub effectiveness_score: f64,
 }
 
-/// Task execution result
+/// Strategy-specific task execution result (simplified for strategy evaluation)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct TaskExecutionResult {
+pub struct StrategyTaskResult {
     /// Task ID
     pub task_id: String,
     
@@ -260,7 +260,7 @@ impl ExecutionStrategyService for DefaultExecutionStrategyService {
                         let execution_time = std::time::Duration::from_millis(100);
                         tokio::time::sleep(execution_time).await;
 
-                        TaskExecutionResult {
+                        StrategyTaskResult {
                             task_id: task_id.clone(),
                             success: true,
                             execution_time_ms: execution_time.as_millis() as u64,
@@ -280,7 +280,7 @@ impl ExecutionStrategyService for DefaultExecutionStrategyService {
                     let execution_time = std::time::Duration::from_millis(100);
                     tokio::time::sleep(execution_time).await;
 
-                    results.push(TaskExecutionResult {
+                    results.push(StrategyTaskResult {
                         task_id: task_id.clone(),
                         success: true,
                         execution_time_ms: execution_time.as_millis() as u64,
@@ -299,7 +299,7 @@ impl ExecutionStrategyService for DefaultExecutionStrategyService {
                     let execution_time = std::time::Duration::from_millis(100);
                     tokio::time::sleep(execution_time).await;
 
-                    results.push(TaskExecutionResult {
+                    results.push(StrategyTaskResult {
                         task_id: task_id.clone(),
                         success: true,
                         execution_time_ms: execution_time.as_millis() as u64,
@@ -314,7 +314,7 @@ impl ExecutionStrategyService for DefaultExecutionStrategyService {
                     let execution_time = std::time::Duration::from_millis(100);
                     tokio::time::sleep(execution_time).await;
 
-                    results.push(TaskExecutionResult {
+                    results.push(StrategyTaskResult {
                         task_id: task_id.clone(),
                         success: true,
                         execution_time_ms: execution_time.as_millis() as u64,
