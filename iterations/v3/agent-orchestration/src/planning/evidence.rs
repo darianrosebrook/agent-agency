@@ -173,7 +173,7 @@ impl EvidenceCollector {
     }
 
     /// Collect evidence for milestone completion using real evidence collection
-    pub async fn collect_evidence(&self, milestone: &Milestone) -> Result<EvidenceBundle> {
+    pub async fn collect_evidence(&self, milestone: &Milestone, plan_id: &str) -> Result<EvidenceBundle> {
         let collection_start = Utc::now();
 
         // Convert milestone to research evidence collection context
@@ -186,6 +186,7 @@ impl EvidenceCollector {
         let evidence_bundle = self.convert_research_evidence_to_bundle(
             research_evidence,
             milestone,
+            plan_id,
             collection_start,
         ).await?;
 
@@ -294,6 +295,7 @@ impl EvidenceCollector {
         &self,
         research_evidence: Vec<ResearchEvidence>,
         milestone: &Milestone,
+        plan_id: &str,
         collection_start: chrono::DateTime<Utc>,
     ) -> Result<EvidenceBundle> {
         let mut artifacts = Vec::new();
@@ -307,7 +309,7 @@ impl EvidenceCollector {
             meets_quality_gates: true,
             metadata: std::collections::HashMap::new(),
             milestone_id: milestone.id.clone(),
-            plan_id: milestone.plan_id, // TODO: Get from milestone
+            plan_id: plan_id.to_string(),
             artifacts,
             collected_at: collection_start,
             quality_score: None,

@@ -231,16 +231,19 @@ impl ToContracts<ContractsWorkingSpec> for WorkingSpec {
 impl FromContracts<ContractsWorkingSpec> for WorkingSpec {
     fn from_contracts(contracts: ContractsWorkingSpec) -> Self {
         // Convert contracts WorkingSpec to local WorkingSpec
+        // Local WorkingSpec expects ContractsChangeBudget (agent_agency_contracts::planning_io::ChangeBudget)
+        use agent_agency_contracts::planning_io::ChangeBudget as ContractsChangeBudget;
         let change_budget = if let Some(budget_limits) = &contracts.constraints.budget_limits {
-            ChangeBudget {
+            ContractsChangeBudget {
                 max_files: budget_limits.max_files.unwrap_or(25),
                 max_loc: budget_limits.max_loc.unwrap_or(1000),
+                max_migrations: 0,
+                allow_breaking_changes: false,
+                allow_new_dependencies: false,
+                enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Warning,
             }
         } else {
-            ChangeBudget {
-                max_files: contracts.change_budget.max_files as u32,
-                max_loc: contracts.change_budget.max_loc as u32,
-            }
+            contracts.change_budget.clone()
         };
 
         let scope = if let Some(scope_restrictions) = &contracts.constraints.scope_restrictions {
