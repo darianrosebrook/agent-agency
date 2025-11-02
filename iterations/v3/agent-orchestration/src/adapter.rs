@@ -47,7 +47,7 @@ use tracing::{debug, info, warn};
 #[derive(Debug)]
 pub struct LegacyOrchestratorAdapter {
     /// Council for decision making
-    council: Arc<Council>,
+    pub council: Arc<Council>,
     /// Multimodal orchestrator for task execution
     orchestrator: Arc<MultimodalOrchestrator>,
     /// Audit trail manager
@@ -616,10 +616,33 @@ impl LegacyOrchestratorAdapter {
         }
     }
 
-    // TODO: Convert TaskDescriptor to ComplexTask for parallel execution
-    // PLACEHOLDER: Implementation requires agent-workers dependency
-    pub fn convert_to_complex_task(&self, _task: &agent_agency_contracts::TaskDescriptor) -> anyhow::Result<()> {
-        Err(anyhow::anyhow!("PLACEHOLDER: convert_to_complex_task not implemented - requires agent-workers dependency"))
+    /// Convert TaskDescriptor to ComplexTask for parallel execution
+    /// 
+    /// This method is a placeholder for future integration with agent-workers parallel execution.
+    /// The agent-workers dependency is currently commented out in Cargo.toml due to circular dependency issues.
+    /// 
+    /// When agent-workers is available, this should:
+    /// 1. Extract domains, scope, and quality requirements from TaskDescriptor
+    /// 2. Calculate complexity score based on task characteristics
+    /// 3. Map TaskPriority to agent-workers Priority enum
+    /// 4. Create ComplexTask with appropriate metadata
+    /// 
+    /// Returns: ComplexTask (currently unimplemented due to dependency constraints)
+    #[allow(unused_variables)]
+    pub fn convert_to_complex_task(&self, task: &agent_agency_contracts::TaskDescriptor) -> anyhow::Result<()> {
+        // This conversion requires agent-workers::ComplexTask which is not available
+        // due to circular dependency constraints. See Cargo.toml for details.
+        // 
+        // Future implementation path:
+        // 1. Resolve circular dependency between agent-orchestration and agent-workers
+        // 2. Add agent-workers as optional dependency with feature flag
+        // 3. Implement conversion logic mapping TaskDescriptor fields to ComplexTask
+        Err(anyhow::anyhow!(
+            "ComplexTask conversion not implemented: requires agent-workers dependency. \
+             Task ID: {}, Description: {}",
+            task.task_id,
+            task.description
+        ))
     }
 }
 
