@@ -714,14 +714,16 @@ mod tests {
         self.load_execution_plan(plan_id).await
     }
 
-    /// Store execution result
-    pub async fn store_execution_result(&self, plan_id: Uuid, result: &ExecutionPlan) -> Result<()> {
+    /// Store execution plan as execution result (alias for backward compatibility)
+    /// Note: Use store_execution_result(plan_id, &PlanExecutionResult) for contract type
+    pub async fn store_execution_result_plan(&self, plan_id: Uuid, result: &ExecutionPlan) -> Result<()> {
         // Store the updated plan with execution results
         self.store_execution_plan(result).await
     }
 
-    /// Get execution result for a plan
-    pub async fn get_execution_result(&self, plan_id: Uuid) -> Result<Option<ExecutionPlan>> {
+    /// Get execution plan as execution result (alias for backward compatibility)
+    /// Note: Use get_execution_result(plan_id) -> Option<PlanExecutionResult> for contract type
+    pub async fn get_execution_result_plan(&self, plan_id: Uuid) -> Result<Option<ExecutionPlan>> {
         self.load_execution_plan(plan_id).await
     }
 }
