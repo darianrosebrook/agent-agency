@@ -342,4 +342,3 @@ cargo build --package agent-orchestration 2>&1 | tail -20
 - Update this document as errors are fixed
 - Focus on contract type alignment - use `agent-agency-contracts` types directly where possible
 - Check `type_adapters.rs` for conversion utilities if needed during migration
-
