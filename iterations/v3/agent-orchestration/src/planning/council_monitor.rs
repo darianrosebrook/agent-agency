@@ -579,15 +579,18 @@ impl CouncilMonitor {
         if let Some(session) = sessions.get(plan_id) {
             let now = Utc::now();
 
-            // Check if this milestone has a deadline
-            for milestone in &session.plan.milestones {
+            // Check if this milestone has a deadline (calculated from estimated duration)
+            for milestone in &session.plan.contract_plan.milestones {
                 if milestone.id.to_string() == milestone_id {
-                    if let Some(deadline) = milestone.deadline {
+                    // Calculate deadline from session start + estimated duration
+                    if let Some(estimated_duration) = milestone.estimated_duration {
+                        let deadline = session.started_at + chrono::Duration::minutes(estimated_duration as i64);
+
                         if now > deadline {
                             violations.push(format!("Milestone {} exceeded deadline", milestone_id));
                         } else {
                             // Check if we're close to deadline (within 10% of time remaining)
-                            let total_duration = milestone.estimated_duration_minutes.unwrap_or(60) as i64;
+                            let total_duration = estimated_duration as i64;
                             let remaining_minutes = (deadline - now).num_minutes();
 
                             if remaining_minutes < (total_duration / 10) && remaining_minutes > 0 {
