@@ -403,3 +403,21 @@ impl From<crate::worker_errors::DecompositionError> for ParallelError {
         }
     }
 }
+
+impl From<crate::worker_errors::SynthesisError> for ParallelError {
+    fn from(error: crate::worker_errors::SynthesisError) -> Self {
+        ParallelError::Coordination {
+            message: format!("Synthesis error: {}", error),
+            source: Some(Box::new(error)),
+        }
+    }
+}
+
+impl From<Box<dyn std::error::Error + Send + Sync>> for ParallelError {
+    fn from(error: Box<dyn std::error::Error + Send + Sync>) -> Self {
+        ParallelError::Coordination {
+            message: format!("Operation failed: {}", error),
+            source: Some(error),
+        }
+    }
+}

@@ -356,7 +356,7 @@ impl LearningPersistence for DatabaseLearningPersistence {
             .bind(record.success)
             .bind(record.quality_score)
             .bind(record.error_message.as_deref())
-            .bind(&record.metadata)
+            .bind(serde_json::to_value(&record.metadata).ok())
             .bind(record.created_at)
             .execute(&self.pool)
             .await
@@ -535,7 +535,7 @@ struct WorkerProfileRow {
             .bind(pattern.success_rate)
             .bind(pattern.average_quality)
             .bind(pattern.frequency as i64)
-            .bind(&pattern.conditions)
+            .bind(serde_json::to_value(&pattern.conditions).ok())
             .bind(pattern.created_at)
             .execute(&self.pool)
             .await
@@ -621,7 +621,7 @@ struct SuccessPatternRow {
             .bind(serde_json::to_string(&pattern.pattern_type).unwrap_or_default())
             .bind(pattern.failure_rate)
             .bind(pattern.frequency as i64)
-            .bind(&pattern.conditions)
+            .bind(serde_json::to_value(&pattern.conditions).ok())
             .bind(&pattern.common_errors)
             .bind(pattern.created_at)
             .execute(&self.pool)
@@ -707,7 +707,7 @@ struct FailurePatternRow {
             .bind(config.id)
             .bind(serde_json::to_string(&config.config_type).unwrap_or_default())
             .bind(&config.parameters)
-            .bind(&config.performance_metrics)
+            .bind(serde_json::to_value(&config.performance_metrics).ok())
             .bind(&config.conditions)
             .bind(config.confidence)
             .bind(config.created_at)
@@ -806,7 +806,7 @@ struct OptimalConfigRow {
             .bind(event.config_id)
             .bind(&event.performance_delta)
             .bind(event.timestamp)
-            .bind(&event.metadata)
+            .bind(serde_json::to_value(&event.metadata).ok())
             .execute(&self.pool)
             .await
             .context("Failed to store optimization event")?;

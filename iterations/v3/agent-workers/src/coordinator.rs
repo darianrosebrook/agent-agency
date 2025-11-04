@@ -2,8 +2,8 @@
 
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
-use crate::parallel_types::{ComplexTask, SubTask, TaskId, SubTaskId, WorkerId, TaskResult, WorkerResult, ParallelResult};
-use crate::error::{ParallelError, CommunicationError, ValidationError, ProgressError};
+use crate::parallel_types::{ComplexTask, SubTask, TaskId, SubTaskId, WorkerId, TaskResult, WorkerResult, ParallelResult, ParallelError, Priority, WorkerBreakdown};
+use crate::error::{CommunicationError, ValidationError, ProgressError};
 use crate::decomposition::{DecompositionEngine};
 use crate::worker::{WorkerManager, DefaultWorkerPool};
 use crate::progress::{ProgressAggregator, ProgressSynthesizer};
@@ -17,7 +17,7 @@ use crate::learning::{
     ExecutionRecord, WorkerPerformanceProfile, SuccessPattern, FailurePattern, 
     OptimalConfig, ConfigurationRecommendations, OptimizationEvent, TaskPattern
 };
-use crate::worker_types::{WorkerSpecialty, TaskDefinition, TaskStatus, ExecutionOutcome, LearningMode, Priority, WorkerBreakdown, QualityRequirements, Progress, ValidationContext};
+use crate::worker_types::{WorkerSpecialty, TaskDefinition, TaskStatus, ExecutionOutcome, LearningMode, WorkerBreakdown, QualityRequirements, Progress, ValidationContext};
 use agent_agency_contracts::task_executor::{TaskExecutor, TaskSpec, ExecutionStatus};
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
 use std::collections::HashMap;
@@ -84,6 +84,11 @@ impl OrchestratorHandle for RealOrchestratorHandle {
             context,
             working_spec_id: None,
             timeout_seconds: Some(300), // 5 minutes
+            scope: Some(task.scope.clone()),
+            risk_tier: Some(task.priority as u32),
+            acceptance_criteria: None,
+            caws_spec: None,
+            requirements: None,
         };
         
         // Execute the task using the real TaskExecutor
@@ -91,7 +96,6 @@ impl OrchestratorHandle for RealOrchestratorHandle {
         let execution_result = self.task_executor.execute_task(task_spec, worker_id).await
             .map_err(|e| ParallelError::Coordination {
                 message: format!("Task execution failed: {}", e),
-                source: Some(Box::new(e))
             })?;
         
         let execution_time = start_time.elapsed();
@@ -249,11 +253,7 @@ impl ParallelCoordinator {
         }
 
         // Analyze task complexity
-        let complexity_analysis = self.decomposition_engine.analyze_complexity(&task).await
-            .map_err(|e| ParallelError::Decomposition {
-                message: format!("Failed to analyze task complexity: {}", e),
-                source: Some(Box::new(e)),
-            })?;
+        let complexity_analysis = self.decomposition_engine.analyze_complexity(&task).await?;
         
         if complexity_analysis.complexity_score < self.config.complexity_threshold as f64 {
             tracing::info!("Task complexity too low for parallel execution, using sequential");
@@ -261,11 +261,7 @@ impl ParallelCoordinator {
         }
 
         // Decompose task into subtasks
-        let subtasks = self.decomposition_engine.decompose_task(&task).await
-            .map_err(|e| ParallelError::Decomposition {
-                message: format!("Failed to decompose task: {}", e),
-                source: Some(Box::new(e)),
-            })?;
+        let subtasks = self.decomposition_engine.decompose_task(&task).await?;
         
         if subtasks.len() > self.config.max_subtasks_per_task {
             tracing::warn!("Too many subtasks ({}) for parallel execution, using sequential", subtasks.len());
@@ -276,11 +272,7 @@ impl ParallelCoordinator {
         let execution_stats = self.execute_subtasks_parallel(subtasks, &task).await?;
 
         // Synthesize results
-        let final_result = self.progress_synthesizer.synthesize_results(execution_stats)
-            .map_err(|e| ParallelError::Coordination {
-                message: format!("Failed to synthesize results: {}", e),
-                source: Some(Box::new(e)),
-            })?;
+        let final_result = self.progress_synthesizer.synthesize_results(execution_stats)?;
 
         tracing::info!("Parallel execution completed for task: {}", task.title);
         Ok(final_result)
@@ -331,11 +323,7 @@ impl ParallelCoordinator {
         let available_workers = self.worker_manager.list_available_workers().await;
         
         // Select optimal worker for the subtask
-        let worker_id = self.adaptive_selector.select_worker(&subtask, &available_workers).await
-            .map_err(|e| ParallelError::Coordination {
-                message: format!("Worker selection failed: {}", e),
-                source: Some(e)
-            })?
+        let worker_id = self.adaptive_selector.select_worker(&subtask, &available_workers).await?
             .ok_or_else(|| ParallelError::Coordination {
                 message: "No suitable worker available".to_string(),
                 source: None
@@ -373,7 +361,6 @@ impl ParallelCoordinator {
         } else {
             Err(ParallelError::Coordination {
                 message: "No orchestrator handle available for sequential execution".to_string(),
-                source: None,
             })
         }
     }

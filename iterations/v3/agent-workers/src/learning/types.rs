@@ -25,6 +25,37 @@ pub struct ExecutionRecord {
     pub created_at: DateTime<Utc>,
 }
 
+#[cfg(feature = "sqlx")]
+impl<'r> sqlx::FromRow<'r, sqlx::postgres::PgRow> for ExecutionRecord {
+    fn from_row(row: &'r sqlx::postgres::PgRow) -> Result<Self, sqlx::Error> {
+        use sqlx::Row;
+
+        let id: Uuid = row.try_get("id")?;
+        let task_id_uuid: Uuid = row.try_get("task_id")?;
+        let worker_id_uuid: Uuid = row.try_get("worker_id")?;
+        let execution_time_ms: i64 = row.try_get("execution_time_ms")?;
+        let success = row.try_get::<i16, _>("success")? != 0; // Convert from smallint
+        let quality_score: f64 = row.try_get("quality_score")?;
+        let error_message: Option<String> = row.try_get("error_message")?;
+        let metadata: serde_json::Value = row.try_get("metadata")?;
+        let metadata_map: HashMap<String, serde_json::Value> = serde_json::from_value(metadata)
+            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+        let created_at: DateTime<Utc> = row.try_get("created_at")?;
+
+        Ok(ExecutionRecord {
+            id,
+            task_id: TaskId(task_id_uuid),
+            worker_id: WorkerId(worker_id_uuid),
+            execution_time_ms: execution_time_ms as u64,
+            success,
+            quality_score,
+            error_message,
+            metadata: metadata_map,
+            created_at,
+        })
+    }
+}
+
 /// Worker performance profile
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerPerformanceProfile {
