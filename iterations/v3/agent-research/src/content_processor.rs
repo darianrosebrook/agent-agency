@@ -11,6 +11,8 @@ use tracing::info;
 
 /// Content processor for cleaning and extracting text
 
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ContentProcessor {
     config: ContentProcessingConfig,

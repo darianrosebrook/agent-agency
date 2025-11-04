@@ -1,6 +1,8 @@
 //! Ambiguity detection in text
 
 use regex::Regex;
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use anyhow::Result;
 use crate::disambiguation::types::*;

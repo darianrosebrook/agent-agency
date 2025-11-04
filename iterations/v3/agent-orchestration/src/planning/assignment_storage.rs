@@ -4,7 +4,7 @@
 //! Integrates with the worker assignment strategy to track assignments and performance.
 
 use anyhow::{Context, Result};
-use sqlx::{PgPool, postgres::PgPoolOptions};
+use sqlx::{PgPool, postgres::PgPoolOptions, Row};
 use std::sync::Arc;
 use tracing::{debug, warn};
 use uuid::Uuid;
@@ -67,44 +67,44 @@ impl AssignmentDatabaseStorage {
             None => (None, None, None, None, None),
         };
 
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO worker_assignments (
-                id, worker_id, milestone_id, plan_id, assigned_at, 
-                status, priority, cpu_cores, memory_mb, disk_mb, 
+                id, worker_id, milestone_id, plan_id, assigned_at,
+                status, priority, cpu_cores, memory_mb, disk_mb,
                 network_mbps, time_limit_ms
             )
             VALUES ($1, $2, $3, $4, $5, 'Assigned', $6, $7, $8, $9, $10, $11)
-            "#,
-            assignment_id,
-            worker_id,
-            milestone_id,
-            plan_id,
-            assigned_at,
-            priority,
-            cpu_cores,
-            memory_mb,
-            disk_mb,
-            network_mbps,
-            time_limit_ms
+            "#
         )
+        .bind(assignment_id)
+        .bind(worker_id)
+        .bind(milestone_id)
+        .bind(plan_id)
+        .bind(assigned_at)
+        .bind(priority)
+        .bind(cpu_cores)
+        .bind(memory_mb)
+        .bind(disk_mb)
+        .bind(network_mbps)
+        .bind(time_limit_ms)
         .execute(&*self.pool)
         .await
         .context("Failed to record assignment")?;
 
         // Create history entry
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO assignment_history (
                 assignment_id, worker_id, milestone_id, event_type,
                 new_status, event_description
             )
             VALUES ($1, $2, $3, 'assigned', 'Assigned', 'Assignment created')
-            "#,
-            assignment_id,
-            worker_id,
-            milestone_id
+            "#
         )
+        .bind(assignment_id)
+        .bind(worker_id)
+        .bind(milestone_id)
         .execute(&*self.pool)
         .await
         .context("Failed to create assignment history entry")?;
@@ -120,12 +120,10 @@ impl AssignmentDatabaseStorage {
         status: &str,
         description: Option<&str>,
     ) -> Result<()> {
-        sqlx::query!(
-            "SELECT update_assignment_status($1, $2, $3)",
-            assignment_id,
-            status,
-            description
-        )
+        sqlx::query("SELECT update_assignment_status($1, $2, $3)")
+            .bind(assignment_id)
+            .bind(status)
+            .bind(description)
         .execute(&*self.pool)
         .await
         .context("Failed to update assignment status")?;
@@ -147,23 +145,23 @@ impl AssignmentDatabaseStorage {
         let metric_id = Uuid::new_v4();
         let measurement_time = Utc::now();
 
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO worker_performance_metrics (
                 id, worker_id, measurement_time, tasks_completed,
                 tasks_failed, avg_execution_time_ms, success_rate, performance_score
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            "#,
-            metric_id,
-            worker_id,
-            measurement_time,
-            tasks_completed as i64,
-            tasks_failed as i64,
-            avg_execution_time_ms,
-            success_rate,
-            performance_score
+            "#
         )
+        .bind(metric_id)
+        .bind(worker_id)
+        .bind(measurement_time)
+        .bind(tasks_completed as i64)
+        .bind(tasks_failed as i64)
+        .bind(avg_execution_time_ms)
+        .bind(success_rate)
+        .bind(performance_score)
         .execute(&*self.pool)
         .await
         .context("Failed to store performance metrics")?;
@@ -174,58 +172,56 @@ impl AssignmentDatabaseStorage {
 
     /// Get latest performance metrics for a worker
     pub async fn get_latest_performance(&self, worker_id: Uuid) -> Result<Option<WorkerPerformance>> {
-        let row = sqlx::query!(
-            "SELECT * FROM get_latest_worker_performance($1)",
-            worker_id
-        )
+        let row = sqlx::query("SELECT * FROM get_latest_worker_performance($1)")
+            .bind(worker_id)
         .fetch_optional(&*self.pool)
         .await
         .context("Failed to get latest performance metrics")?;
 
         Ok(row.map(|r| WorkerPerformance {
-            tasks_completed: r.tasks_completed as u64,
-            tasks_failed: r.tasks_failed as u64,
-            avg_execution_time_ms: r.avg_execution_time_ms,
-            success_rate: r.success_rate,
-            performance_score: r.performance_score,
-            last_updated: r.measurement_time,
+            tasks_completed: r.try_get::<i64, _>("tasks_completed").unwrap_or(0) as u64,
+            tasks_failed: r.try_get::<i64, _>("tasks_failed").unwrap_or(0) as u64,
+            avg_execution_time_ms: r.try_get("avg_execution_time_ms").unwrap_or(0.0),
+            success_rate: r.try_get("success_rate").unwrap_or(0.0),
+            performance_score: r.try_get("performance_score").unwrap_or(0.0),
+            last_updated: r.try_get("measurement_time").unwrap_or(chrono::Utc::now()),
         }))
     }
 
     /// Get active assignments for a worker
     pub async fn get_active_assignments(&self, worker_id: Uuid) -> Result<Vec<AssignmentRecord>> {
-        let rows = sqlx::query!(
+        let rows = sqlx::query(
             r#"
             SELECT id, worker_id, milestone_id, plan_id, assigned_at, status,
                    priority, started_at, completed_at, cpu_cores, memory_mb, disk_mb
             FROM worker_assignments
             WHERE worker_id = $1 AND status IN ('Assigned', 'Active')
             ORDER BY assigned_at DESC
-            "#,
-            worker_id
+            "#
         )
+        .bind(worker_id)
         .fetch_all(&*self.pool)
         .await
         .context("Failed to get active assignments")?;
 
         Ok(rows.into_iter().map(|r| AssignmentRecord {
-            id: r.id,
-            worker_id: r.worker_id,
-            milestone_id: r.milestone_id,
-            plan_id: r.plan_id,
-            assigned_at: r.assigned_at,
-            status: r.status,
-            priority: r.priority,
-            started_at: r.started_at,
-            completed_at: r.completed_at,
+            id: r.try_get("id").unwrap_or(Uuid::new_v4()),
+            worker_id: r.try_get("worker_id").unwrap_or(Uuid::new_v4()),
+            milestone_id: r.try_get("milestone_id").unwrap_or_default(),
+            plan_id: r.try_get("plan_id").ok(),
+            assigned_at: r.try_get("assigned_at").unwrap_or(chrono::Utc::now()),
+            status: r.try_get("status").unwrap_or_else(|_| "Unknown".to_string()),
+            priority: r.try_get("priority").unwrap_or_else(|_| "Normal".to_string()),
+            started_at: r.try_get("started_at").ok(),
+            completed_at: r.try_get("completed_at").ok(),
         }).collect())
     }
 
     /// Get assignment statistics for a worker
     pub async fn get_worker_statistics(&self, worker_id: Uuid) -> Result<WorkerStatistics> {
-        let row = sqlx::query!(
+        let row = sqlx::query(
             r#"
-            SELECT 
+            SELECT
                 COUNT(*) FILTER (WHERE status IN ('Assigned', 'Active')) as active_count,
                 COUNT(*) FILTER (WHERE status = 'Completed') as completed_count,
                 COUNT(*) FILTER (WHERE status = 'Failed') as failed_count,
@@ -234,19 +230,19 @@ impl AssignmentDatabaseStorage {
             LEFT JOIN worker_performance_metrics wpm ON wa.worker_id = wpm.worker_id
             WHERE wa.worker_id = $1
             GROUP BY wa.worker_id
-            "#,
-            worker_id
+            "#
         )
+        .bind(worker_id)
         .fetch_optional(&*self.pool)
         .await
         .context("Failed to get worker statistics")?;
 
         match row {
             Some(r) => Ok(WorkerStatistics {
-                active_assignments: r.active_count.unwrap_or(0) as usize,
-                completed_assignments: r.completed_count.unwrap_or(0) as u64,
-                failed_assignments: r.failed_count.unwrap_or(0) as u64,
-                avg_performance_score: r.avg_performance_score.unwrap_or(0.0),
+                active_assignments: r.try_get::<Option<i64>, _>("active_count").unwrap_or(Some(0)).unwrap_or(0) as usize,
+                completed_assignments: r.try_get::<Option<i64>, _>("completed_count").unwrap_or(Some(0)).unwrap_or(0) as u64,
+                failed_assignments: r.try_get::<Option<i64>, _>("failed_count").unwrap_or(Some(0)).unwrap_or(0) as u64,
+                avg_performance_score: r.try_get::<Option<f64>, _>("avg_performance_score").unwrap_or(Some(0.0)).unwrap_or(0.0),
             }),
             None => Ok(WorkerStatistics {
                 active_assignments: 0,

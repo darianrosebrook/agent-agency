@@ -20,7 +20,6 @@ use crate::planning::tool_chain_types::{
 };
 
 /// Bridge to tool chain planner
-#[derive(Debug)]
 pub struct ToolChainBridge {
     /// Reference to the tool chain planner (external or local)
     tool_chain_planner: std::sync::Arc<ExternalToolChainPlanner>,
@@ -30,6 +29,16 @@ pub struct ToolChainBridge {
 
     /// Tool registry for accessing available tools
     tool_registry: std::sync::Arc<ExternalToolRegistry>,
+}
+
+impl std::fmt::Debug for ToolChainBridge {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ToolChainBridge")
+            .field("has_tool_chain_planner", &true)
+            .field("has_schema_registry", &true)
+            .field("has_tool_registry", &true)
+            .finish()
+    }
 }
 
 impl ToolChainBridge {

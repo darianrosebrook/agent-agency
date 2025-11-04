@@ -9,6 +9,7 @@ use std::collections::HashMap;
 
 /// Q-learning implementation with epsilon-greedy exploration
 
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QLearning {
     q_table: QTable,

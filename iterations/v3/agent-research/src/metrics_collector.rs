@@ -10,6 +10,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, info};
 use uuid::Uuid;
 
+use serde::{Deserialize, Serialize};
 pub struct MetricsCollector {
     /// Storage for benchmark results
     benchmark_results: Arc<RwLock<HashMap<Uuid, Vec<BenchmarkResult>>>>,

@@ -10,6 +10,8 @@ use std::path::Path;
 
 /// Code analysis engine for various code quality metrics
 
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct CodeAnalysisEngine ;
 

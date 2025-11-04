@@ -8,6 +8,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use crate::self_prompting_agent::prompting_types::SelfPromptingAgentError;
 
+use serde::{Deserialize, Serialize};
 /// Sandbox environment for isolated execution
 pub struct SandboxEnvironment {
     root_path: Option<PathBuf>,

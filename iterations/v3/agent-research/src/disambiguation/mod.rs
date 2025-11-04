@@ -20,6 +20,7 @@ pub mod detection;
 pub mod entities;
 pub mod context;
 pub mod stage;
+pub mod disambiguation_types;
 
 // Re-export public API
 pub use types::{

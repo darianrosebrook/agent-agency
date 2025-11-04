@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 /// Learning algorithm types
 
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum LearningAlgorithmm {
     ReinforcementLearning,

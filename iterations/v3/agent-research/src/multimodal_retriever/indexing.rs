@@ -8,6 +8,8 @@ use super::visual_search::VisualSearchEngine;
 
 /// Document indexer for managing content indexing
 
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct DocumentIndexer {
     text_engine: super::text_search::TextSearchEngine,

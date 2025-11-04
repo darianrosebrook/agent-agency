@@ -11,6 +11,7 @@ use crate::planning_agent::planning_errors::{PlanningError, PlanningResult};
 
 /// CAWS validation error
 
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
 pub enum CawsValidationError {
     #[error("CAWS validation service unavailable: {0}")]

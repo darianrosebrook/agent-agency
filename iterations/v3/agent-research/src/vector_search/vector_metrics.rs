@@ -7,6 +7,7 @@ use chrono::{DateTime, Utc};
 
 /// Performance metrics for vector search operations
 
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
 pub struct VectorSearchMetrics {
     pub total_searches: u64,

@@ -3,6 +3,10 @@
 
 //! Claim Extraction & Verification Pipeline
 
+// Global imports for derive macros
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
+
 // Import contract types
 use agent_agency_contracts as contracts;
 

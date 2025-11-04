@@ -7,6 +7,7 @@ use std::sync::Arc;
 use crate::self_prompting_agent::prompting_types::SelfPromptingAgentError;
 use crate::self_prompting_agent::learning_bridge::LearningBridge;
 
+use serde::{Deserialize, Serialize};
 /// Adaptive agent with policy hooks
 pub struct AdaptiveAgent {
     learning_bridge: Arc<LearningBridge>,

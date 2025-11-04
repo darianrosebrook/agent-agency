@@ -5,6 +5,8 @@ use data_infrastructure::DatabaseClient;
 
 /// Database manager for research operations
 
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct DatabaseManager {
     client: Arc<DatabaseClient>,

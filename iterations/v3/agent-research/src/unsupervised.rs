@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 /// K-means clustering implementation
 
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct KMeansClustering {
     /// Number of clusters (K)

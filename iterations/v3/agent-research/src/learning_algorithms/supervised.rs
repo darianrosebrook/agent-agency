@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 /// Simple linear regression implementation
 
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LinearRegressionModel {
     /// Learned weights (coefficients)

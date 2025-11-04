@@ -1,6 +1,8 @@
 use anyhow::Result;
 use async_trait::async_trait;
 
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 #[cfg(feature = "embeddings")]
 use agent_agency_embedding_service;
 

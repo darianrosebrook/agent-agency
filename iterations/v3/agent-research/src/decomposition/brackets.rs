@@ -1,6 +1,7 @@
 //! Contextual bracket extraction and application
 
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use crate::extraction_types::*;
 use anyhow::Result;
 use regex::Regex;

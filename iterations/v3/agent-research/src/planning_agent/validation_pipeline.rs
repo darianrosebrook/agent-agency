@@ -18,6 +18,7 @@ use agent_agency_contracts::ContractKind;
 
 /// Validation stage in the pipeline
 
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum ValidationStage {
     SchemaValidation,

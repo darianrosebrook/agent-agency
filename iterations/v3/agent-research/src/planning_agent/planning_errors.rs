@@ -3,6 +3,7 @@
 use schemars::JsonSchema;
 use std::fmt;
 
+use serde::{Deserialize, Serialize};
 /// Result type for planning operations
 pub type PlanningResult<T> = Result<T, PlanningError>;
 

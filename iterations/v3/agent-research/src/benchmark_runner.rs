@@ -13,6 +13,7 @@ use uuid::Uuid;
 
 /// Execution telemetry for comprehensive performance monitoring
 
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionTelemetry {
     execution_id: Uuid,

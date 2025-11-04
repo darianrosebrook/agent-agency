@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 /// Inverted index for efficient keyword search
 
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct InvertedIndex {
     index: HashMap<String, Vec<Posting>>,

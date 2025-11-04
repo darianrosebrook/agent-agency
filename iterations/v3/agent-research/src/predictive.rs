@@ -5,6 +5,7 @@ use std::collections::HashSet;
 use tracing::{debug, instrument};
 
 use crate::reflexive_types::{
+use serde::{Deserialize, Serialize};
     FailureCategory, LearningStrategy, LearningSystemError, PerformancePrediction,
     PredictiveLearningInsights, QualityIndicator, ResourcePrediction, ResourcePressureLevel,
     RiskLevel, StrategyAdjustmentFocus, StrategyAdjustmentSuggestion, StrategyOptimizationPlan,

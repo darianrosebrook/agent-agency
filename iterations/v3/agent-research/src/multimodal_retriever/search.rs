@@ -12,6 +12,7 @@ use super::query_processing::ProcessedQuery;
 
 /// Search coordinator managing multimodal search execution
 
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct SearchCoordinator {
     config: MultimodalRetrieverConfig,

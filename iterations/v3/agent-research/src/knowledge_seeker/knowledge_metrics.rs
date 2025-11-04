@@ -8,6 +8,8 @@ use crate::ResearchMetrics;
 
 /// Metrics collector for research operations
 
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct MetricsCollector {
     metrics: Arc<RwLock<ResearchMetrics>>,

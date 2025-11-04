@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 /// Quality indicators for assessment
 
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub enum QualityIndicator {
     Compliance,

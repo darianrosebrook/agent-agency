@@ -7,6 +7,7 @@ use schemars::JsonSchema;
 use crate::prompting_types::{Task as ResearchTask, TaskType};
 use std::collections::HashMap;
 
+use serde::{Deserialize, Serialize};
 /// Convert a simple string task ID to a Research Task
 ///
 /// This is a helper for benchmarks and testing that creates a minimal

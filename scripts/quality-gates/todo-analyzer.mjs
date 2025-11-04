@@ -206,7 +206,7 @@ class HiddenTodoAnalyzer {
     engineeringSuggestions = false
   ) {
     const allIssues = [];
-    const filesToAnalyze = scopedFiles || this.findFilesToAnalyze();
+    const filesToAnalyze = (scopedFiles && scopedFiles.length > 0) ? scopedFiles : this.findFilesToAnalyze();
 
     if (showProgress && filesToAnalyze.length > 0) {
       console.error(

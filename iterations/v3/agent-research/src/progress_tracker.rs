@@ -9,6 +9,7 @@ use uuid::Uuid;
 
 /// Learning milestone achieved during progress
 
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LearningMilestone {
     #[schemars(with = "String")]

@@ -14,10 +14,16 @@ use agent_agency_contracts::{
 };
 
 /// Adapter for legacy planning agent
-#[derive(Debug)]
 pub struct LegacyPlanAdapter {
     // Would hold reference to actual planning agent when integrated
     // planning_agent: Arc<agent_research::planning_agent::PlanningAgent>,
+}
+
+impl std::fmt::Debug for LegacyPlanAdapter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LegacyPlanAdapter")
+            .finish()
+    }
 }
 
 impl LegacyPlanAdapter {

@@ -14,6 +14,7 @@ use tokio::sync::RwLock;
 
 /// Learning orchestrator that coordinates algorithm selection and execution
 
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct LearningOrchestrator {
     /// Available learning algorithms

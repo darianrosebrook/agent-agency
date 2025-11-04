@@ -68,6 +68,7 @@ impl std::fmt::Debug for CouncilMonitor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CouncilMonitor")
             .field("config", &self.config)
+            .field("active_sessions_count", &self.active_sessions.try_read().map(|s| s.len()).unwrap_or(0))
             .finish()
     }
 }

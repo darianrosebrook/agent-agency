@@ -5,6 +5,8 @@ use crate::ResearchEvent;
 
 /// Event emitter for research events
 
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct EventEmitter {
     sender: mpsc::UnboundedSender<ResearchEvent>,

@@ -16,6 +16,8 @@ use tracing::{debug, info, warn};
 
 /// Main evidence collector that orchestrates evidence collection from multiple sources
 
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceCollector {
     config: EvidenceCollectorConfig,

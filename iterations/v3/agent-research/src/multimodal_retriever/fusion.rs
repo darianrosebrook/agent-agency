@@ -6,6 +6,8 @@ use super::core::MultimodalSearchResult;
 
 /// Fusion engine for combining results from different modalities
 
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct FusionEngine {
     config: super::core::MultimodalRetrieverConfig,

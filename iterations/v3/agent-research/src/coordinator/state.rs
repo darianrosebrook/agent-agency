@@ -9,6 +9,7 @@ use uuid::Uuid;
 
 /// Learning session state
 
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LearningSession {
     #[schemars(with = "String")]

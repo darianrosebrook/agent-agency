@@ -7,6 +7,7 @@ use std::collections::HashMap;
 
 /// Prompt frame with metadata
 
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PromptFrame {
     pub content: String,

@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 /// Failure categories for classification
 
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub enum FailureCategory {
     Timeout,

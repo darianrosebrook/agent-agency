@@ -8,6 +8,7 @@ use uuid::Uuid;
 
 /// Programming languages supported by the system
 
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum Language {
     Rust,

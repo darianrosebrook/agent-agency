@@ -9,6 +9,8 @@ use tracing::debug;
 
 /// Code analysis evidence collector
 
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct CodeAnalysisCollector {
     config: EvidenceCollectorConfig,

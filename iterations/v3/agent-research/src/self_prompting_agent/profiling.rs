@@ -5,6 +5,7 @@
 use schemars::JsonSchema;
 use std::time::Instant;
 
+use serde::{Deserialize, Serialize};
 /// Performance profiler
 pub struct PerformanceProfiler;
 

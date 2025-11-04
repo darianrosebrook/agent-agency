@@ -7,6 +7,8 @@ use anyhow::Result;
 
 /// Security collector
 
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct SecurityCollector {
     config: EvidenceCollectorConfig,

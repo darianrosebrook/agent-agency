@@ -16,10 +16,17 @@ use agent_agency_contracts::{
 };
 
 /// CAWS integration bridge
-#[derive(Debug)]
 pub struct CawsPlanBridge {
     /// Validation rules for working specs
     validation_rules: ValidationRules,
+}
+
+impl std::fmt::Debug for CawsPlanBridge {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CawsPlanBridge")
+            .field("validation_rules", &self.validation_rules)
+            .finish()
+    }
 }
 
 impl CawsPlanBridge {

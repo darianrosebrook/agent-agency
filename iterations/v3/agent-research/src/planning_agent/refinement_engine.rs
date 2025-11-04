@@ -11,6 +11,7 @@ use system_configuration::types::ValidationIssue;
 
 /// Refinement suggestion from the engine
 
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RefinementSuggestion {
     /// Actions that were applied

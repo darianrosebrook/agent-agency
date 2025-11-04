@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 /// Atomic claim extractor implementation
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ClaimExtractor {
     #[serde(skip)]
     subject_verb_patterns: Vec<Regex>,

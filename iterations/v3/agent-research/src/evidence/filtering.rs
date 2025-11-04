@@ -7,6 +7,8 @@ use std::collections::HashMap;
 
 /// Evidence filter and ranking engine
 
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceFilter {
     config: EvidenceCollectorConfig,

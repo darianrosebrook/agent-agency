@@ -47,13 +47,21 @@ impl std::fmt::Debug for PlanningStorage {
 }
 
 /// File storage for plan specifications
-#[derive(Debug)]
 pub struct FileStorage {
     /// Base directory for plan files
     plans_dir: PathBuf,
 
     /// Base directory for working specs
     specs_dir: PathBuf,
+}
+
+impl std::fmt::Debug for FileStorage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FileStorage")
+            .field("plans_dir", &self.plans_dir)
+            .field("specs_dir", &self.specs_dir)
+            .finish()
+    }
 }
 
 /// Cached session data for fast access

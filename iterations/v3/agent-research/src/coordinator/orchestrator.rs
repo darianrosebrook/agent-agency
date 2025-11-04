@@ -20,6 +20,7 @@ use uuid::Uuid;
 
 /// Main learning coordinator that orchestrates multi-turn learning
 
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct MultiTurnLearningCoordinator {
     /// Quality analysis heuristics

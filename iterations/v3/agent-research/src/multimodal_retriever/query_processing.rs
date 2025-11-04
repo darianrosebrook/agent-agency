@@ -7,6 +7,7 @@ use super::core::{MultimodalQuery, QueryType};
 
 /// Processed query with validated and normalized parameters
 
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProcessedQuery {
     pub text: Option<String>,

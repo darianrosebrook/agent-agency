@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 /// Resource utilization metrics
 
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResourceMetrics {
     pub cpu_seconds: f64,
