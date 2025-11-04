@@ -1543,7 +1543,8 @@ impl TaskExecutor {
         match self.db_client.query(query, &[&worker_id]).await {
             Ok(rows) => {
                 if let Some(row) = rows.first() {
-                    let capabilities_json: serde_json::Value = row.try_get::<serde_json::Value, _>(4)?;
+                    let capabilities_json: serde_json::Value = row.try_get::<serde_json::Value, _>(4)
+                        .context("Failed to get capabilities JSON")?;
                     let capabilities: Vec<String> = capabilities_json
                         .as_array()
                         .unwrap_or(&vec![])
@@ -1553,16 +1554,16 @@ impl TaskExecutor {
 
                     Ok(WorkerCapabilities {
                         worker_id,
-                        name: row.try_get::<String, _>(1)?,
-                        specialty: row.try_get::<String, _>(2)?,
+                        name: row.try_get::<String, _>(1).context("Failed to get worker name")?,
+                        specialty: row.try_get::<String, _>(2).context("Failed to get worker specialty")?,
                         capabilities,
-                        max_concurrent_tasks: row.try_get::<i32, _>(5)?,
-                        memory_limit_mb: row.try_get::<i32, _>(6)?,
-                        cpu_limit_cores: row.try_get::<i32, _>(7)?,
-                        is_active: row.try_get::<bool, _>(8)?,
-                        last_heartbeat: row.try_get::<DateTime<Utc>, _>(9)?,
-                        version: row.try_get::<String, _>(10)?,
-                        endpoint_url: row.try_get::<Option<String>, _>(11)?,
+                        max_concurrent_tasks: row.try_get::<i32, _>(5).context("Failed to get max concurrent tasks")?,
+                        memory_limit_mb: row.try_get::<i32, _>(6).context("Failed to get memory limit")?,
+                        cpu_limit_cores: row.try_get::<i32, _>(7).context("Failed to get CPU limit")?,
+                        is_active: row.try_get::<bool, _>(8).context("Failed to get active status")?,
+                        last_heartbeat: row.try_get::<DateTime<Utc>, _>(9).context("Failed to get last heartbeat")?,
+                        version: row.try_get::<String, _>(10).context("Failed to get version")?,
+                        endpoint_url: row.try_get::<Option<String>, _>(11).context("Failed to get endpoint URL")?,
                     })
                 } else {
                     Err(anyhow::anyhow!("Worker {} not found in registry", worker_id))
@@ -1747,7 +1748,12 @@ impl TaskExecutor {
 
                     // Check risk tier restrictions
                     let risk_tier_allowed = max_risk_tier.map_or(true, |max_tier| {
-                        task_spec.risk_tier as i32 <= max_tier
+                        let task_tier_value = match task_spec.risk_tier {
+                            RiskTier::Tier1 => 1,
+                            RiskTier::Tier2 => 2,
+                            RiskTier::Tier3 => 3,
+                        };
+                        task_tier_value <= max_tier
                     });
 
                     let is_authorized = domain_allowed && !domain_restricted && risk_tier_allowed;
@@ -1889,7 +1895,7 @@ impl TaskExecutor {
             })?;
 
         if response.status().is_success() {
-            let result: WorkerExecutionResult = response
+            let result: RawExecutionResult = response
                 .json()
                 .await
                 .map_err(|e| WorkerError::Communication {
