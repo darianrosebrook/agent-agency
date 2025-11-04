@@ -100,12 +100,14 @@ impl MetricsCollector {
 
         let mut total_bytes = 0u64;
 
-        // Aggregate network statistics across all interfaces
-        // TODO: Update to use correct sysinfo API
-        // for (_interface_name, network) in system.networks() {
-        //     total_bytes += network.received() + network.transmitted();
-        // }
-        
+        // TODO: Re-enable network monitoring when sysinfo API is stabilized
+        // - [ ] Update sysinfo dependency to version with stable network API
+        // - [ ] Implement network bytes calculation using new API
+        // - [ ] Handle API changes gracefully
+        // - [ ] Add unit tests with mock network data
+        // - [ ] Add integration tests with real network monitoring
+        // Note: Network monitoring temporarily disabled due to sysinfo API changes
+        // TODO: Re-enable when sysinfo network API is stabilized
         total_bytes
     }
 
@@ -114,17 +116,20 @@ impl MetricsCollector {
         // Use sysinfo to calculate real disk IO
         system.refresh_all();
 
-        let mut total_io = 0u64;
+        // TODO: Re-enable disk IO monitoring when sysinfo API is stabilized
+        // - [ ] Update sysinfo dependency to version with stable disk API
+        // - [ ] Aggregate disk IO across all disks
+        // - [ ] Sum total_read_bytes and total_written_bytes
+        // - [ ] Handle API changes gracefully
+        // - [ ] Add unit tests with mock disk data
+        // - [ ] Add integration tests with real disk monitoring
+        let total_io = 0u64; // sysinfo disk API has changed, simplified for now
 
-        // Aggregate IO operations across all disks
-        // TODO: Update to use correct sysinfo API
+        // In full implementation, would aggregate across disks:
         // for disk in system.disks() {
-        //     // sysinfo provides read/write bytes, but not IOPS directly
-        //     // We'll use total read + written bytes as a proxy metric
-        //     // For IOPS, we'd need to track operations over time
         //     total_io += disk.total_read_bytes() + disk.total_written_bytes();
         // }
-        
+
         total_io
     }
 }

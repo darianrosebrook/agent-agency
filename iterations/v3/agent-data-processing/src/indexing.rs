@@ -1390,8 +1390,18 @@ impl HnswIndexer {
         let results: Vec<VectorSearchResult> = similarities
             .into_iter()
             .map(|(_id, similarity)| VectorSearchResult {
+                // TODO: Map similarity results back to original block IDs
+                // - [ ] Store original ID mapping during indexing
+                // - [ ] Retrieve original block_id from similarity result
+                // - [ ] Handle ID mapping for different search backends
+                // - [ ] Add unit tests for ID mapping accuracy
                 block_id: Uuid::new_v4(), // In practice, this would map back to the original ID
                 similarity,
+                // TODO: Extract actual modality from indexed content
+                // - [ ] Store modality metadata during indexing
+                // - [ ] Retrieve modality from block metadata
+                // - [ ] Support multiple modalities (text, image, audio, video)
+                // - [ ] Add unit tests for modality extraction
                 modality: "vector".to_string(), // Placeholder
             })
             .collect();
@@ -1692,6 +1702,14 @@ impl UnifiedIndexer {
                 _ => continue, // Skip non-text blocks
             };
 
+            // TODO: Generate real embeddings instead of placeholder vector
+            // - [ ] Integrate with embedding service (agent-model-management or CoreML)
+            // - [ ] Generate embeddings for text content using appropriate model
+            // - [ ] Handle dimension consistency (match model output to index requirements)
+            // - [ ] Add caching for repeated content
+            // - [ ] Add batch processing for multiple blocks
+            // - [ ] Add unit tests with mock embedding service
+            // - [ ] Add integration tests with real embedding generation
             // Generate a simple vector (in practice this would come from embeddings)
             let vector = vec![0.1; 384]; // Placeholder vector with fixed dimension
 
@@ -1701,6 +1719,10 @@ impl UnifiedIndexer {
                 &text_content,
                 &vector,
                 &block.block.content_type.to_string(),
+                // TODO: Use actual model name from embedding service
+                // - [ ] Retrieve model name from embedding service configuration
+                // - [ ] Store model metadata with indexed content
+                // - [ ] Handle model versioning for compatibility
                 "placeholder_model",
             ).await?;
         }

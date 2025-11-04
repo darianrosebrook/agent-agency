@@ -6,6 +6,8 @@
 //! Consolidates security, quality gates, source integrity, and provenance tracking
 //! into a comprehensive security and quality assurance platform.
 
+pub mod audit;
+pub mod audit_storage;
 pub mod authentication;
 pub mod checks;
 pub mod command_execution;
@@ -49,6 +51,8 @@ pub mod storage_new;
 use schemars::JsonSchema;
 
 // Re-exports from security modules
+pub use audit::*;
+pub use audit_storage::*;
 pub use authentication::*;
 pub use checks::*;
 pub use command_execution::*;

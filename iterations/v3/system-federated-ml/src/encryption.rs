@@ -30,23 +30,48 @@ pub struct PlaceholderHomomorphicEncryption;
 #[async_trait::async_trait]
 impl HomomorphicEncryption for PlaceholderHomomorphicEncryption {
     async fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>> {
+        // TODO: Implement real homomorphic encryption
+        // - [ ] Integrate HE library (e.g., Paillier, CKKS, BGV)
+        // - [ ] Generate encryption keys
+        // - [ ] Encrypt data using chosen HE scheme
+        // - [ ] Handle encryption errors and edge cases
+        // - [ ] Add unit tests with real encryption
+        // - [ ] Add integration tests with encrypted computations
         // Placeholder: In practice, this would use a real HE scheme like Paillier or CKKS
         debug!("Encrypting {} bytes of data", data.len());
         Ok(data.to_vec()) // No-op for placeholder
     }
 
     async fn decrypt(&self, encrypted_data: &[u8]) -> Result<Vec<u8>> {
+        // TODO: Implement real homomorphic decryption
+        // - [ ] Use decryption key from HE scheme
+        // - [ ] Decrypt data using matching HE scheme
+        // - [ ] Handle decryption errors and invalid data
+        // - [ ] Add unit tests with real decryption
+        // - [ ] Add integration tests with encrypted data
         debug!("Decrypting {} bytes of data", encrypted_data.len());
         Ok(encrypted_data.to_vec()) // No-op for placeholder
     }
 
     async fn homomorphic_add(&self, a: &[u8], b: &[u8]) -> Result<Vec<u8>> {
+        // TODO: Implement real homomorphic addition
+        // - [ ] Perform addition on encrypted values without decryption
+        // - [ ] Use HE scheme's addition operation
+        // - [ ] Handle addition errors and overflow
+        // - [ ] Add unit tests with real homomorphic operations
+        // - [ ] Add integration tests with encrypted computations
         // Placeholder: Real implementation would add encrypted values
         debug!("Homomorphic addition of {} and {} bytes", a.len(), b.len());
         Ok(a.to_vec()) // No-op for placeholder
     }
 
     async fn homomorphic_multiply_scalar(&self, data: &[u8], scalar: f32) -> Result<Vec<u8>> {
+        // TODO: Implement real homomorphic scalar multiplication
+        // - [ ] Perform scalar multiplication on encrypted value
+        // - [ ] Use HE scheme's scalar multiplication operation
+        // - [ ] Handle multiplication errors and precision
+        // - [ ] Add unit tests with real homomorphic operations
+        // - [ ] Add integration tests with encrypted computations
         debug!("Homomorphic scalar multiplication by {}", scalar);
         Ok(data.to_vec()) // No-op for placeholder
     }

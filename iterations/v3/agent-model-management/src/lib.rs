@@ -104,7 +104,7 @@ impl ModelManager {
         let result = self.inference_manager.execute_inference(&routed_request).await?;
 
         // Record performance metrics
-        self.performance_monitor.record_inference(&model_handle.model_id, &result).await?;
+        self.performance_monitor.record_inference(&model_handle.model_id, &result, true).await?;
 
         Ok(result)
     }
@@ -149,6 +149,15 @@ impl ModelManager {
         if let Some(ref _validation) = tuning_params.validation_criteria {
             info!("Running validation test for parameter tuning");
             
+            // TODO: Implement real parameter tuning validation
+            // - [ ] Create test model instance with new parameters
+            // - [ ] Run test inference requests with validation dataset
+            // - [ ] Measure performance metrics (latency, throughput, accuracy)
+            // - [ ] Compare against validation criteria thresholds
+            // - [ ] Only apply tuning if all criteria are met
+            // - [ ] Add rollback capability if validation fails
+            // - [ ] Add unit tests with mock model instances
+            // - [ ] Add integration tests with real model validation
             // PLACEHOLDER: In a real implementation, this would:
             // 1. Create a test model instance with new parameters
             // 2. Run test inference requests

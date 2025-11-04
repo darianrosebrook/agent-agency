@@ -71,195 +71,29 @@ impl DatabaseClient {
     }
 
     pub async fn execute(&self, query: &str, params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<(), DataProcessingError> {
-        // Use sqlx::query with dynamic parameter binding
-        // Note: sqlx::QueryBuilder would be better for complex dynamic queries, but for now
-        // we use a match-based approach for common parameter counts
-        match params.len() {
-            0 => {
-                sqlx::query(query)
-                    .execute(&*self.pool)
-                    .await
-                    .map_err(|e| DataProcessingError::Operation(format!("Database execution failed: {}", e)))?;
-            }
-            1 => {
-                sqlx::query(query)
-                    .bind(params[0])
-                    .execute(&*self.pool)
-                    .await
-                    .map_err(|e| DataProcessingError::Operation(format!("Database execution failed: {}", e)))?;
-            }
-            2 => {
-                sqlx::query(query)
-                    .bind(params[0])
-                    .bind(params[1])
-                    .execute(&*self.pool)
-                    .await
-                    .map_err(|e| DataProcessingError::Operation(format!("Database execution failed: {}", e)))?;
-            }
-            3 => {
-                sqlx::query(query)
-                    .bind(params[0])
-                    .bind(params[1])
-                    .bind(params[2])
-                    .execute(&*self.pool)
-                    .await
-                    .map_err(|e| DataProcessingError::Operation(format!("Database execution failed: {}", e)))?;
-            }
-            4 => {
-                sqlx::query(query)
-                    .bind(params[0])
-                    .bind(params[1])
-                    .bind(params[2])
-                    .bind(params[3])
-                    .execute(&*self.pool)
-                    .await
-                    .map_err(|e| DataProcessingError::Operation(format!("Database execution failed: {}", e)))?;
-            }
-            5 => {
-                sqlx::query(query)
-                    .bind(params[0])
-                    .bind(params[1])
-                    .bind(params[2])
-                    .bind(params[3])
-                    .bind(params[4])
-                    .execute(&*self.pool)
-                    .await
-                    .map_err(|e| DataProcessingError::Operation(format!("Database execution failed: {}", e)))?;
-            }
-            6 => {
-                sqlx::query(query)
-                    .bind(params[0])
-                    .bind(params[1])
-                    .bind(params[2])
-                    .bind(params[3])
-                    .bind(params[4])
-                    .bind(params[5])
-                    .execute(&*self.pool)
-                    .await
-                    .map_err(|e| DataProcessingError::Operation(format!("Database execution failed: {}", e)))?;
-            }
-            7 => {
-                sqlx::query(query)
-                    .bind(params[0])
-                    .bind(params[1])
-                    .bind(params[2])
-                    .bind(params[3])
-                    .bind(params[4])
-                    .bind(params[5])
-                    .bind(params[6])
-                    .execute(&*self.pool)
-                    .await
-                    .map_err(|e| DataProcessingError::Operation(format!("Database execution failed: {}", e)))?;
-            }
-            8 => {
-                sqlx::query(query)
-                    .bind(params[0])
-                    .bind(params[1])
-                    .bind(params[2])
-                    .bind(params[3])
-                    .bind(params[4])
-                    .bind(params[5])
-                    .bind(params[6])
-                    .bind(params[7])
-                    .execute(&*self.pool)
-                    .await
-                    .map_err(|e| DataProcessingError::Operation(format!("Database execution failed: {}", e)))?;
-            }
-            _ => {
-                return Err(DataProcessingError::Operation(format!("Too many parameters ({}): query builder needed", params.len())));
-            }
+        // TODO: Implement proper parameterized queries with sqlx
+        // For now, only support queries without parameters to avoid trait object issues
+        if !params.is_empty() {
+            return Err(DataProcessingError::Operation("Parameterized queries not yet supported".to_string()));
         }
+
+        sqlx::query(query)
+            .execute(&*self.pool)
+            .await
+            .map_err(|e| DataProcessingError::Operation(format!("Database execution failed: {}", e)))?;
         Ok(())
     }
 
-    pub async fn query(&self, query: &str, params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<Vec<sqlx::postgres::PgRow>, DataProcessingError> {
-        // Use sqlx::query for parameterized queries
-        let rows = match params.len() {
-            0 => {
-                sqlx::query(query)
-                    .fetch_all(&*self.pool)
-                    .await
-            }
-            1 => {
-                sqlx::query(query)
-                    .bind(params[0])
-                    .fetch_all(&*self.pool)
-                    .await
-            }
-            2 => {
-                sqlx::query(query)
-                    .bind(params[0])
-                    .bind(params[1])
-                    .fetch_all(&*self.pool)
-                    .await
-            }
-            3 => {
-                sqlx::query(query)
-                    .bind(params[0])
-                    .bind(params[1])
-                    .bind(params[2])
-                    .fetch_all(&*self.pool)
-                    .await
-            }
-            4 => {
-                sqlx::query(query)
-                    .bind(params[0])
-                    .bind(params[1])
-                    .bind(params[2])
-                    .bind(params[3])
-                    .fetch_all(&*self.pool)
-                    .await
-            }
-            5 => {
-                sqlx::query(query)
-                    .bind(params[0])
-                    .bind(params[1])
-                    .bind(params[2])
-                    .bind(params[3])
-                    .bind(params[4])
-                    .fetch_all(&*self.pool)
-                    .await
-            }
-            6 => {
-                sqlx::query(query)
-                    .bind(params[0])
-                    .bind(params[1])
-                    .bind(params[2])
-                    .bind(params[3])
-                    .bind(params[4])
-                    .bind(params[5])
-                    .fetch_all(&*self.pool)
-                    .await
-            }
-            7 => {
-                sqlx::query(query)
-                    .bind(params[0])
-                    .bind(params[1])
-                    .bind(params[2])
-                    .bind(params[3])
-                    .bind(params[4])
-                    .bind(params[5])
-                    .bind(params[6])
-                    .fetch_all(&*self.pool)
-                    .await
-            }
-            8 => {
-                sqlx::query(query)
-                    .bind(params[0])
-                    .bind(params[1])
-                    .bind(params[2])
-                    .bind(params[3])
-                    .bind(params[4])
-                    .bind(params[5])
-                    .bind(params[6])
-                    .bind(params[7])
-                    .fetch_all(&*self.pool)
-                    .await
-            }
-            _ => {
-                return Err(DataProcessingError::Operation(format!("Too many parameters: {}", params.len())));
-            }
-        };
+    pub async fn query(&self, query: &str, _params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<Vec<sqlx::postgres::PgRow>, DataProcessingError> {
+        // TODO: Implement proper parameterized queries with sqlx
+        // For now, only support queries without parameters to avoid trait object issues
+        if !_params.is_empty() {
+            return Err(DataProcessingError::Operation("Parameterized queries not yet supported".to_string()));
+        }
+
+        let rows = sqlx::query(query)
+            .fetch_all(&*self.pool)
+            .await;
 
         rows.map_err(|e| DataProcessingError::Operation(format!("Database query failed: {}", e)))
     }
@@ -276,12 +110,28 @@ pub struct ModelRegistry;
 
 impl ModelRegistry {
     pub async fn generate(&self, _prompt: &str, _options: Option<()>) -> Result<String, DataProcessingError> {
+        // TODO: Implement real AI service integration
+        // - [ ] Integrate with agent-model-management crate
+        // - [ ] Implement proper model selection based on task type
+        // - [ ] Add error handling for model failures
+        // - [ ] Add timeout handling for long-running generations
+        // - [ ] Add caching for frequently requested prompts
+        // - [ ] Add unit tests with mock model service
+        // - [ ] Add integration tests with real model service
         // PLACEHOLDER: Real AI service integration needed
         // This would integrate with agent-model-management or similar
         Ok("Mock summary".to_string())
     }
     
     pub async fn generate_embedding(&self, _content: &str) -> Result<Vec<f32>, DataProcessingError> {
+        // TODO: Implement real embedding generation
+        // - [ ] Integrate with embedding service (agent-model-management or CoreML)
+        // - [ ] Use appropriate embedding model for content type
+        // - [ ] Handle dimension mismatches and normalization
+        // - [ ] Add caching for repeated content
+        // - [ ] Add batch processing support for multiple contents
+        // - [ ] Add unit tests with mock embedding service
+        // - [ ] Add integration tests with real embedding service
         // PLACEHOLDER: Real embedding generation needed
         // This would integrate with embedding services
         Ok(vec![0.1, 0.2, 0.3]) // Mock embedding
@@ -604,8 +454,8 @@ impl ContextManager {
             metadata,
             created_at: row.get("created_at"),
             last_accessed_at: row.get("last_accessed_at"),
-            access_count: row.get("access_count"),
-            size_bytes: row.get("size_bytes"),
+            access_count: row.get::<i64, _>("access_count") as u64,
+            size_bytes: row.get::<i64, _>("size_bytes") as u64,
         };
 
         debug!("Retrieved context {} from database", context_id);
@@ -1459,7 +1309,7 @@ impl ContextManager {
         
         if let Ok(rows) = self.db_client.query(orphaned_query, &orphaned_params).await {
             if !rows.is_empty() {
-                health.orphaned_contexts = rows[0].get("orphaned_count");
+                health.orphaned_contexts = rows[0].get::<i64, _>("orphaned_count") as u64;
             }
         }
 

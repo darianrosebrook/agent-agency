@@ -255,6 +255,15 @@ impl ExecutionStrategyService for DefaultExecutionStrategyService {
                 
                 let task_stream = stream::iter(task_ids.iter().cloned())
                     .map(|task_id| async move {
+                        // TODO: Implement real task execution
+                        // - [ ] Invoke task executor with proper task context
+                        // - [ ] Handle task execution errors and timeouts
+                        // - [ ] Track actual execution metrics (time, resource usage)
+                        // - [ ] Implement cancellation support
+                        // - [ ] Add progress reporting callbacks
+                        // - [ ] Integrate with telemetry system
+                        // - [ ] Add unit tests for execution paths
+                        // - [ ] Add integration tests with real task execution
                         // PLACEHOLDER: In real implementation, this would execute the actual task
                         // For now, simulate task execution
                         let execution_time = std::time::Duration::from_millis(100);
@@ -276,6 +285,15 @@ impl ExecutionStrategyService for DefaultExecutionStrategyService {
             ExecutionStrategy::Sequential { delay_ms } => {
                 // Execute tasks sequentially
                 for task_id in task_ids {
+                    // TODO: Implement real sequential task execution
+                    // - [ ] Invoke task executor with proper task context
+                    // - [ ] Handle task execution errors and timeouts
+                    // - [ ] Track actual execution metrics (time, resource usage)
+                    // - [ ] Implement cancellation support
+                    // - [ ] Add progress reporting callbacks
+                    // - [ ] Integrate with telemetry system
+                    // - [ ] Add unit tests for execution paths
+                    // - [ ] Add integration tests with real task execution
                     // PLACEHOLDER: In real implementation, this would execute the actual task
                     let execution_time = std::time::Duration::from_millis(100);
                     tokio::time::sleep(execution_time).await;
@@ -293,6 +311,14 @@ impl ExecutionStrategyService for DefaultExecutionStrategyService {
                 }
             }
             ExecutionStrategy::Conditional { condition: _ } => {
+                // TODO: Implement conditional task execution
+                // - [ ] Parse and evaluate condition expression
+                // - [ ] Execute tasks based on condition evaluation result
+                // - [ ] Handle conditional branching (if/else logic)
+                // - [ ] Support dynamic condition evaluation at runtime
+                // - [ ] Add error handling for invalid conditions
+                // - [ ] Add unit tests with various condition types
+                // - [ ] Add integration tests with real conditional execution
                 // PLACEHOLDER: Conditional execution would evaluate condition and execute accordingly
                 // For now, execute sequentially
                 for task_id in task_ids {
@@ -308,6 +334,14 @@ impl ExecutionStrategyService for DefaultExecutionStrategyService {
                 }
             }
             ExecutionStrategy::Custom { name: _, parameters: _ } => {
+                // TODO: Implement custom strategy execution
+                // - [ ] Parse custom strategy name and parameters
+                // - [ ] Load custom strategy implementation (plugin or configuration-based)
+                // - [ ] Execute tasks using custom strategy logic
+                // - [ ] Handle strategy registration and discovery
+                // - [ ] Add validation for custom strategy parameters
+                // - [ ] Add unit tests with various custom strategies
+                // - [ ] Add integration tests with real custom strategy execution
                 // PLACEHOLDER: Custom strategy execution
                 // For now, execute sequentially
                 for task_id in task_ids {

@@ -221,6 +221,14 @@ impl UnifiedIngestor {
     }
 
     pub async fn ingest(&self, _input: DataInput) -> Result<BlockData> {
+        // TODO: Implement real ingestion when agent-data-processing is integrated
+        // - [ ] Enable 'data-processing' feature flag
+        // - [ ] Integrate UnifiedIngestor from agent-data-processing
+        // - [ ] Handle all supported input types (file, database, API, stream)
+        // - [ ] Add error handling for ingestion failures
+        // - [ ] Add progress reporting for long-running ingestions
+        // - [ ] Add unit tests with mock ingestion service
+        // - [ ] Add integration tests with real data sources
         // PLACEHOLDER: Real ingestion implementation needed when agent-data-processing is integrated
         Err(anyhow::anyhow!("PLACEHOLDER: UnifiedIngestor.ingest not implemented - requires agent-data-processing integration. Enable 'data-processing' feature to use real implementation."))
     }
@@ -237,6 +245,14 @@ impl UnifiedEnrichmentStage {
     }
 
     pub async fn enrich_blocks(&self, _blocks: Vec<Block>) -> Result<Vec<EnrichedBlock>> {
+        // TODO: Implement real enrichment when agent-data-processing is integrated
+        // - [ ] Enable 'data-processing' feature flag
+        // - [ ] Integrate UnifiedEnrichmentStage from agent-data-processing
+        // - [ ] Implement entity extraction, relationship mapping, metadata enhancement
+        // - [ ] Add error handling for enrichment failures
+        // - [ ] Add batch processing optimization for multiple blocks
+        // - [ ] Add unit tests with mock enrichment service
+        // - [ ] Add integration tests with real enrichment pipeline
         // PLACEHOLDER: Real enrichment implementation needed when agent-data-processing is integrated
         Err(anyhow::anyhow!("PLACEHOLDER: UnifiedEnrichmentStage.enrich_blocks not implemented - requires agent-data-processing integration. Enable 'data-processing' feature to use real implementation."))
     }
@@ -253,6 +269,15 @@ impl UnifiedIndexer {
     }
 
     pub async fn index_blocks(&self, _blocks: Vec<Block>) -> Result<()> {
+        // TODO: Implement real indexing when agent-data-processing is integrated
+        // - [ ] Enable 'data-processing' feature flag
+        // - [ ] Integrate UnifiedIndexer from agent-data-processing
+        // - [ ] Implement vector indexing with proper embedding generation
+        // - [ ] Add metadata indexing for searchable fields
+        // - [ ] Add error handling for indexing failures
+        // - [ ] Add batch processing optimization
+        // - [ ] Add unit tests with mock indexing service
+        // - [ ] Add integration tests with real indexing pipeline
         // PLACEHOLDER: Real indexing implementation needed when agent-data-processing is integrated
         Err(anyhow::anyhow!("PLACEHOLDER: UnifiedIndexer.index_blocks not implemented - requires agent-data-processing integration. Enable 'data-processing' feature to use real implementation."))
     }
@@ -270,6 +295,16 @@ impl FileWatcher {
     }
 
     pub async fn watch(&self, _directory_path: &std::path::Path) -> Result<()> {
+        // TODO: Implement real file watching when agent-data-processing is integrated
+        // - [ ] Enable 'data-processing' feature flag
+        // - [ ] Integrate FileWatcher from agent-data-processing
+        // - [ ] Set up file system watchers using notify crate
+        // - [ ] Handle file creation, modification, and deletion events
+        // - [ ] Filter events by include/exclude patterns
+        // - [ ] Add debouncing for rapid file changes
+        // - [ ] Add error handling for permission issues
+        // - [ ] Add unit tests with mock file system events
+        // - [ ] Add integration tests with real file watching
         // PLACEHOLDER: Real file watching implementation needed when agent-data-processing is integrated
         Err(anyhow::anyhow!("PLACEHOLDER: FileWatcher.watch not implemented - requires agent-data-processing integration. Enable 'data-processing' feature to use real implementation."))
     }

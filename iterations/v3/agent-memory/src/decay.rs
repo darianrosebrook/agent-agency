@@ -267,6 +267,16 @@ impl MemoryDecayEngine {
 
     /// Apply custom decay formula (simplified implementation)
     async fn apply_custom_decay(&self, now: DateTime<Utc>, _formula: &str) -> MemoryResult<usize> {
+        // TODO: Implement custom decay formula parsing and evaluation
+        // - [ ] Choose formula parser approach (PostgreSQL EXECUTE or Rust parser library)
+        // - [ ] Implement formula syntax validation (whitelist allowed functions)
+        // - [ ] Prevent SQL injection and arbitrary code execution
+        // - [ ] Support mathematical expressions with memory variables (importance_score, decay_factor, age_days)
+        // - [ ] Support time-based functions (age_days, last_accessed)
+        // - [ ] Evaluate formulas with database values safely
+        // - [ ] Add error handling for invalid formulas
+        // - [ ] Add unit tests with various formula types
+        // - [ ] Add integration tests with real formula evaluation
         // PLACEHOLDER: Custom decay formula parsing and evaluation
         // Option 1: Use PostgreSQL's expression evaluation (requires careful validation to prevent SQL injection)
         //   - Use PostgreSQL's EXECUTE format() with validated formula

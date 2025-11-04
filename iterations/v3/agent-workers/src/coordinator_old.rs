@@ -23,6 +23,7 @@ use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
 use system_observability::MetricsCollector as SystemMetricsCollector;
 use std::collections::HashMap;
 use std::sync::Arc;
+use sqlx::Row;
 
 // Import refactored modules
 use crate::learning_system::{

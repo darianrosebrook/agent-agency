@@ -4,6 +4,7 @@ use std::sync::Arc;
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use anyhow::Result;
+use sqlx::Row;
 
 use crate::{WorkerId, TaskId};
 use crate::learning::types::*;

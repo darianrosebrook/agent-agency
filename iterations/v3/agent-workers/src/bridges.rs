@@ -39,11 +39,13 @@ impl OrchestrationQualityBridge {
         
         // Check test coverage if available
         let coverage = artifacts.coverage.line_coverage;
-        if coverage < requirements.min_coverage as f64 {
-            return Err(ParallelError::Validation {
-                message: format!("Test coverage {} below required {}", coverage, requirements.min_coverage as f64),
-                source: None,
-            });
+        if let Some(min_coverage) = requirements.min_coverage {
+            if coverage < min_coverage {
+                return Err(ParallelError::Validation {
+                    message: format!("Test coverage {} below required {}", coverage, min_coverage),
+                    source: None,
+                });
+            }
         }
         
         // Check linting results if available

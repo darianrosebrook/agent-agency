@@ -204,23 +204,33 @@ impl DecompositionEngine {
         for (idx, error_group) in error_groups.iter().enumerate() {
             let subtask = SubTask {
                 id: SubTaskId::new(),
+                parent_task_id: analysis.task_id.clone(),
                 parent_id: analysis.task_id.clone(),
                 title: format!("Fix {} errors", error_group.error_code),
-                description: format!("Resolve {} compilation errors in {} files", 
+                description: format!("Resolve {} compilation errors in {} files",
                     error_group.count, error_group.affected_files.len()),
+                complexity: error_group.count as f64 * 0.1,
+                dependencies: self.calculate_compilation_dependencies(idx, error_groups),
+                assigned_worker: None,
+                status: SubTaskStatus::Pending,
+                priority: self.calculate_compilation_priority(error_group),
+                estimated_duration: std::time::Duration::from_secs(
+                    (error_group.count * 30).min(1800) as u64
+                ),
                 scope: TaskScope {
+                    domains: vec!["compilation".to_string()],
+                    files_affected: error_group.affected_files.clone(),
                     files: error_group.affected_files.clone(),
                     directories: vec![],
                     patterns: vec![],
+                    max_files: None,
+                    max_loc: None,
                 },
                 specialty: WorkerSpecialty::CompilationErrors {
                     error_codes: vec![error_group.error_code.clone()],
                 },
-                dependencies: self.calculate_compilation_dependencies(idx, error_groups),
-                estimated_duration: std::time::Duration::from_secs(
-                    (error_group.count * 30).min(1800) as u64
-                ),
-                priority: self.calculate_compilation_priority(error_group),
+                estimated_effort: error_group.count as f64,
+                metadata: HashMap::new(),
             };
             subtasks.push(subtask);
         }
@@ -254,23 +264,33 @@ impl DecompositionEngine {
         for operation in operations {
             let subtask = SubTask {
                 id: SubTaskId::new(),
+                parent_task_id: analysis.task_id.clone(),
                 parent_id: analysis.task_id.clone(),
                 title: operation.operation_type.clone(),
-                description: format!("Perform {} refactoring on {} files", 
+                description: format!("Perform {} refactoring on {} files",
                     operation.operation_type, operation.affected_files.len()),
-                scope: TaskScope {
-                    files: operation.affected_files.clone(),
-                    directories: vec![],
-                    patterns: vec![],
-                },
-                specialty: WorkerSpecialty::Refactoring {
-                    strategies: vec![operation.operation_type.clone()],
-                },
+                complexity: operation.complexity,
                 dependencies: vec![],
+                assigned_worker: None,
+                status: SubTaskStatus::Pending,
+                priority: Priority::Medium,
                 estimated_duration: std::time::Duration::from_secs(
                     (operation.complexity * 300.0) as u64
                 ),
-                priority: Priority::Medium,
+                scope: TaskScope {
+                    domains: vec!["refactoring".to_string()],
+                    files_affected: operation.affected_files.clone(),
+                    files: operation.affected_files.clone(),
+                    directories: vec![],
+                    patterns: vec![],
+                    max_files: None,
+                    max_loc: None,
+                },
+                specialty: WorkerSpecialty::Refactoring {
+                    patterns: vec![operation.operation_type.clone()],
+                },
+                estimated_effort: operation.complexity,
+                metadata: HashMap::new(),
             };
             subtasks.push(subtask);
         }
@@ -286,6 +306,7 @@ impl DecompositionEngine {
             let subtask = SubTask {
                 id: SubTaskId::new(),
                 parent_task_id: analysis.task_id.clone(),
+                parent_id: analysis.task_id.clone(),
                 title: "Add missing test".to_string(),
                 description: format!("Add test coverage for: {}", test),
                 complexity: 0.7,
@@ -294,6 +315,19 @@ impl DecompositionEngine {
                 status: SubTaskStatus::Pending,
                 priority: Priority::Medium,
                 estimated_duration: std::time::Duration::from_secs(120),
+                scope: TaskScope {
+                    domains: vec!["testing".to_string()],
+                    files_affected: vec![test.clone()],
+                    files: vec![test.clone()],
+                    directories: vec![],
+                    patterns: vec![],
+                    max_files: None,
+                    max_loc: None,
+                },
+                specialty: WorkerSpecialty::Testing {
+                    frameworks: vec!["rust".to_string()],
+                },
+                estimated_effort: 0.7,
                 metadata: HashMap::new(),
             };
             subtasks.push(subtask);
@@ -310,6 +344,7 @@ impl DecompositionEngine {
             let subtask = SubTask {
                 id: SubTaskId::new(),
                 parent_task_id: analysis.task_id.clone(),
+                parent_id: analysis.task_id.clone(),
                 title: "Add documentation".to_string(),
                 description: format!("Add documentation for: {}", file),
                 complexity: 0.5,
@@ -318,6 +353,19 @@ impl DecompositionEngine {
                 status: SubTaskStatus::Pending,
                 priority: Priority::Low,
                 estimated_duration: std::time::Duration::from_secs(120),
+                scope: TaskScope {
+                    domains: vec!["documentation".to_string()],
+                    files_affected: vec![file.clone()],
+                    files: vec![file.clone()],
+                    directories: vec![],
+                    patterns: vec![],
+                    max_files: None,
+                    max_loc: None,
+                },
+                specialty: WorkerSpecialty::Documentation {
+                    formats: vec!["rustdoc".to_string()],
+                },
+                estimated_effort: 0.5,
                 metadata: HashMap::new(),
             };
             subtasks.push(subtask);
@@ -538,6 +586,14 @@ impl DecompositionEngine {
         _task: &ComplexTask,
         _analysis: &TaskAnalysis,
     ) -> Result<Vec<SubTask>, DecompositionError> {
+        // TODO: Implement parallel decomposition strategy
+        // - [ ] Identify independent subtasks that can run concurrently
+        // - [ ] Analyze task dependencies to determine parallelization opportunities
+        // - [ ] Create subtasks with proper dependency metadata
+        // - [ ] Handle resource constraints (CPU, memory, I/O)
+        // - [ ] Add unit tests with various task structures
+        // - [ ] Add integration tests with real task execution
+        // - [ ] Add performance benchmarks for parallelization effectiveness
         // PLACEHOLDER: Implement parallel decomposition strategy
         Err(DecompositionError::NotImplemented { message: "Parallel decomposition not yet implemented".to_string() })
     }
@@ -547,6 +603,14 @@ impl DecompositionEngine {
         _task: &ComplexTask,
         _analysis: &TaskAnalysis,
     ) -> Result<Vec<SubTask>, DecompositionError> {
+        // TODO: Implement sequential decomposition strategy
+        // - [ ] Identify task dependencies and execution order
+        // - [ ] Create subtasks with proper sequencing metadata
+        // - [ ] Handle data flow between sequential tasks
+        // - [ ] Optimize for minimal total execution time
+        // - [ ] Add unit tests with various task structures
+        // - [ ] Add integration tests with real task execution
+        // - [ ] Add performance benchmarks for sequential execution
         // PLACEHOLDER: Implement sequential decomposition strategy
         Err(DecompositionError::NotImplemented { message: "Sequential decomposition not yet implemented".to_string() })
     }
@@ -556,6 +620,14 @@ impl DecompositionEngine {
         _task: &ComplexTask,
         _analysis: &TaskAnalysis,
     ) -> Result<Vec<SubTask>, DecompositionError> {
+        // TODO: Implement hierarchical decomposition strategy
+        // - [ ] Create parent-child task relationships
+        // - [ ] Implement multi-level task decomposition
+        // - [ ] Handle task aggregation and result composition
+        // - [ ] Support nested task execution and coordination
+        // - [ ] Add unit tests with hierarchical task structures
+        // - [ ] Add integration tests with real hierarchical execution
+        // - [ ] Add performance benchmarks for hierarchical decomposition
         // PLACEHOLDER: Implement hierarchical decomposition strategy
         Err(DecompositionError::NotImplemented { message: "Hierarchical decomposition not yet implemented".to_string() })
     }
@@ -565,6 +637,14 @@ impl DecompositionEngine {
         _task: &ComplexTask,
         _analysis: &TaskAnalysis,
     ) -> Result<Vec<SubTask>, DecompositionError> {
+        // TODO: Implement adaptive decomposition strategy
+        // - [ ] Analyze task characteristics to select optimal strategy
+        // - [ ] Implement dynamic strategy selection based on task properties
+        // - [ ] Support hybrid strategies (parallel + sequential where appropriate)
+        // - [ ] Add machine learning or heuristic-based strategy selection
+        // - [ ] Add unit tests with various task types
+        // - [ ] Add integration tests with adaptive strategy execution
+        // - [ ] Add performance benchmarks comparing strategies
         // PLACEHOLDER: Implement adaptive decomposition strategy
         Err(DecompositionError::NotImplemented { message: "Adaptive decomposition not yet implemented".to_string() })
     }

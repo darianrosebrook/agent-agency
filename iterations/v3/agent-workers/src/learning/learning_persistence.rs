@@ -102,7 +102,7 @@ impl LearningPersistence for InMemoryLearningPersistence {
     
     async fn store_worker_profiles(&self, profiles: HashMap<WorkerId, WorkerPerformanceProfile>) -> Result<()> {
         let mut storage = self.worker_profiles.write().await;
-        for (worker_id, profile) in profiles {
+        for (worker_id, profile) in &profiles {
             storage.insert(worker_id, profile);
         }
         Ok(())
@@ -337,7 +337,7 @@ impl LearningPersistence for DatabaseLearningPersistence {
 
         debug!("Storing {} execution records to database", records.len());
 
-        for record in records {
+        for record in &records {
             sqlx::query(
                 r#"
                 INSERT INTO execution_records (id, task_id, worker_id, execution_time_ms, success, quality_score, error_message, metadata, created_at)
@@ -411,7 +411,7 @@ impl LearningPersistence for DatabaseLearningPersistence {
 
         debug!("Storing {} worker profiles to database", profiles.len());
 
-        for (worker_id, profile) in profiles {
+        for (worker_id, profile) in &profiles {
             // Serialize complex fields as JSON
             let metadata = serde_json::json!({
                 "specialty": serde_json::to_string(&profile.specialty).unwrap_or_default(),
@@ -504,6 +504,11 @@ struct WorkerProfileRow {
                 last_updated: row.last_updated,
                 performance_trend,
                 capability_scores,
+                task_count: row.task_count as u64,
+                success_rate: row.success_rate,
+                quality_score: row.quality_score,
+                specialization_score: row.specialization_score,
+                metadata: serde_json::from_value(row.metadata).unwrap_or_default(),
             };
 
             Ok(Some(profile))
@@ -519,7 +524,7 @@ struct WorkerProfileRow {
 
         debug!("Storing {} success patterns to database", patterns.len());
 
-        for pattern in patterns {
+        for pattern in &patterns {
             sqlx::query(
                 r#"
                 INSERT INTO success_patterns (id, pattern_type, success_rate, average_quality, frequency, conditions, created_at)
@@ -606,7 +611,7 @@ struct SuccessPatternRow {
 
         debug!("Storing {} failure patterns to database", patterns.len());
 
-        for pattern in patterns {
+        for pattern in &patterns {
             sqlx::query(
                 r#"
                 INSERT INTO failure_patterns (id, pattern_type, failure_rate, frequency, conditions, common_errors, created_at)
@@ -693,7 +698,7 @@ struct FailurePatternRow {
 
         debug!("Storing {} optimal configs to database", configs.len());
 
-        for config in configs {
+        for config in &configs {
             sqlx::query(
                 r#"
                 INSERT INTO optimal_configs (id, config_type, parameters, performance_metrics, conditions, confidence, created_at)
@@ -800,7 +805,7 @@ struct OptimalConfigRow {
 
         debug!("Storing {} optimization events to database", events.len());
 
-        for event in events {
+        for event in &events {
             sqlx::query(
                 r#"
                 INSERT INTO optimization_events (id, event_type, config_id, performance_delta, timestamp, metadata)

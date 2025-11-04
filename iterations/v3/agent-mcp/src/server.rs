@@ -1293,6 +1293,13 @@ impl MCPServer {
             tool_registry: Arc::new(tool_registry),
             tool_discovery: Arc::new(ToolDiscovery::new()),
             caws_integration: Arc::new(CawsIntegration::new()),
+            // TODO: Replace placeholder CAWS runtime validator with real implementation
+            // - [ ] Integrate real CAWS runtime validation logic
+            // - [ ] Validate working specs against CAWS rules
+            // - [ ] Check compliance with change budgets and scope boundaries
+            // - [ ] Add error handling for validation failures
+            // - [ ] Add unit tests with mock validators
+            // - [ ] Add integration tests with real CAWS validation
             caws_runtime_validator: Arc::new(McpCawsIntegration::default()), // Placeholder
             status: Arc::new(RwLock::new(MCPServerStatus::Starting)),
             connections: Arc::new(RwLock::new(Vec::new())),
@@ -1397,20 +1404,51 @@ impl MCPServer {
         for status_name in slo_statuses {
             match status_name.as_str() {
                 "api_availability" => {
+                    // TODO: Get actual API availability percentage
+                    // - [ ] Query SLO tracker for real API availability metrics
+                    // - [ ] Calculate from historical uptime data
+                    // - [ ] Handle missing data gracefully
+                    // - [ ] Add unit tests with mock SLO data
+                    // - [ ] Add integration tests with real SLO tracking
                     SLO_API_AVAILABILITY.set(0.95); // Stub compliance percentage
                 }
                 "task_completion" => {
+                    // TODO: Get actual task completion percentage
+                    // - [ ] Query SLO tracker for real task completion metrics
+                    // - [ ] Calculate from task execution history
+                    // - [ ] Handle missing data gracefully
+                    // - [ ] Add unit tests with mock task data
+                    // - [ ] Add integration tests with real task tracking
                     SLO_TASK_COMPLETION.set(0.90); // Stub compliance percentage
                 }
                 "council_decision_time" => {
+                    // TODO: Get actual council decision time
+                    // - [ ] Query SLO tracker for real council decision metrics
+                    // - [ ] Calculate average decision time from recent decisions
+                    // - [ ] Handle missing data gracefully
+                    // - [ ] Add unit tests with mock council data
+                    // - [ ] Add integration tests with real council tracking
                     SLO_COUNCIL_DECISION_TIME.set(2500.0); // Stub current value
                 }
                 "worker_execution_time" => {
+                    // TODO: Get actual worker execution time
+                    // - [ ] Query SLO tracker for real worker execution metrics
+                    // - [ ] Calculate average execution time from recent tasks
+                    // - [ ] Handle missing data gracefully
+                    // - [ ] Add unit tests with mock worker data
+                    // - [ ] Add integration tests with real worker tracking
                     SLO_WORKER_EXECUTION_TIME.set(5000.0); // Stub current value
                 }
                 _ => {}
             }
 
+            // TODO: Calculate actual SLO compliance status
+            // - [ ] Aggregate all SLO metrics into overall status
+            // - [ ] Compare against SLO objectives
+            // - [ ] Set gauge based on compliance percentage
+            // - [ ] Handle missing metrics gracefully
+            // - [ ] Add unit tests with mock SLO data
+            // - [ ] Add integration tests with real SLO tracking
             // Set SLO status gauge (stub implementation)
             SLO_STATUS.set(0.0); // Assume compliant for stub
         }

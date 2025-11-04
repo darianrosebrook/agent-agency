@@ -599,6 +599,14 @@ impl DatabaseOptimizationManager {
     {
         let start_time = Instant::now();
 
+        // TODO: Implement proper SQL parameter binding
+        // - [ ] Parse query string to identify parameters
+        // - [ ] Map parameters from _params to SQL parameter placeholders
+        // - [ ] Use sqlx::query! or sqlx::QueryBuilder for parameter binding
+        // - [ ] Handle different parameter types (string, int, float, etc.)
+        // - [ ] Add SQL injection protection through parameterized queries
+        // - [ ] Add unit tests with various parameter types
+        // - [ ] Add integration tests with real database queries
         // For now, execute without parameters - this needs proper parameter binding
         let result = sqlx::query(query).execute(&*self.client.pool()).await.map(|_| vec![]).map_err(anyhow::Error::from);
 
@@ -672,6 +680,14 @@ impl MonitoredQueryExecutor {
     {
         let start_time = Instant::now();
 
+        // TODO: Implement proper SQL parameter binding
+        // - [ ] Parse query string to identify parameters
+        // - [ ] Map parameters from _params to SQL parameter placeholders
+        // - [ ] Use sqlx::query! or sqlx::QueryBuilder for parameter binding
+        // - [ ] Handle different parameter types (string, int, float, etc.)
+        // - [ ] Add SQL injection protection through parameterized queries
+        // - [ ] Add unit tests with various parameter types
+        // - [ ] Add integration tests with real database queries
         // For now, execute without parameters - this needs proper parameter binding
         let result = sqlx::query(query).execute(&*self.client.pool()).await.map(|_| vec![]).map_err(anyhow::Error::from);
 

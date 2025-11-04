@@ -140,6 +140,12 @@ impl MemoryArchivalManager {
         Ok(StorageOptimizationResult {
             optimizations,
             total_archived,
+            // TODO: Calculate actual storage efficiency
+            // - [ ] Compare compressed vs uncompressed sizes
+            // - [ ] Calculate deduplication savings
+            // - [ ] Track storage tier utilization
+            // - [ ] Add unit tests for efficiency calculation
+            // - [ ] Add integration tests with real storage data
             storage_efficiency: 0.85, // Mock efficiency
         })
     }
@@ -189,12 +195,25 @@ impl MemoryArchivalManager {
 
     /// Compress memory data
     async fn compress_memory_data(&self, _memory: &crate::memory_types::Memory) -> crate::MemoryResult<Vec<u8>> {
+        // TODO: Implement real compression
+        // - [ ] Integrate compression library (e.g., zstd, lz4, gzip)
+        // - [ ] Choose compression algorithm based on config
+        // - [ ] Handle compression errors gracefully
+        // - [ ] Add compression level configuration
+        // - [ ] Add unit tests with various memory sizes
+        // - [ ] Add integration tests with real compression
         // Placeholder compression - in practice would use a compression library
         Ok(serde_json::to_vec(_memory)?)
     }
 
     /// Decompress memory data
     async fn decompress_memory_data(&self, data: &[u8]) -> crate::MemoryResult<crate::memory_types::Memory> {
+        // TODO: Implement real decompression
+        // - [ ] Integrate decompression library matching compression algorithm
+        // - [ ] Handle decompression errors gracefully
+        // - [ ] Validate decompressed data integrity
+        // - [ ] Add unit tests with compressed data
+        // - [ ] Add integration tests with real decompression
         // Placeholder decompression
         Ok(serde_json::from_slice(data)?)
     }

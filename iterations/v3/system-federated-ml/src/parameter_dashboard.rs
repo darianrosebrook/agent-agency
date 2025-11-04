@@ -432,12 +432,26 @@ impl ParameterDashboardManager {
 
     // Private helper methods
     async fn update_optimization_status(&self, dashboard: &mut ParameterDashboard) -> Result<()> {
+        // TODO: Query optimizer for current optimization status
+        // - [ ] Query LLMParameterOptimizer for current optimization state
+        // - [ ] Get active optimization runs and their progress
+        // - [ ] Update dashboard with optimization metrics
+        // - [ ] Handle optimizer errors gracefully
+        // - [ ] Add unit tests with mock optimizer
+        // - [ ] Add integration tests with real optimizer
         // Implementation would query the optimizer for current status
         // This is a placeholder for the actual implementation
         Ok(())
     }
 
     async fn update_performance_metrics(&self, dashboard: &mut ParameterDashboard) -> Result<()> {
+        // TODO: Calculate performance metrics from historical data
+        // - [ ] Query performance monitor for historical metrics
+        // - [ ] Calculate trends and improvements
+        // - [ ] Update dashboard with performance data
+        // - [ ] Handle missing data gracefully
+        // - [ ] Add unit tests with mock performance data
+        // - [ ] Add integration tests with real performance metrics
         // Implementation would calculate performance metrics from historical data
         // This is a placeholder for the actual implementation
         Ok(())

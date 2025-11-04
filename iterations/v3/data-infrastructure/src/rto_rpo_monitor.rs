@@ -253,6 +253,13 @@ impl RtoRpoMonitor {
                 });
             }
 
+            // TODO: Check actual RPO compliance
+            // - [ ] Query backup system for last backup timestamp
+            // - [ ] Calculate time since last backup
+            // - [ ] Compare against service RPO objectives
+            // - [ ] Handle missing backup data gracefully
+            // - [ ] Add unit tests with mock backup system
+            // - [ ] Add integration tests with real backup system
             // Check RPO compliance (simplified - would integrate with backup system)
             let rpo_compliant = true; // Placeholder - would check actual backup age
 
@@ -260,6 +267,11 @@ impl RtoRpoMonitor {
                 service_name: service_type_as_string(service_type).to_string(),
                 current_rto_seconds: avg_rto.unwrap_or(0),
                 current_rpo_seconds: service_objectives.rpo_seconds,
+                // TODO: Get actual last recovery time
+                // - [ ] Query recovery system for last recovery timestamp
+                // - [ ] Handle missing recovery data
+                // - [ ] Add unit tests with mock recovery system
+                // - [ ] Add integration tests with real recovery system
                 last_recovery_time: Some(Utc::now() - chrono::Duration::hours(1)), // Placeholder
                 compliance_percentage: if rto_compliant && rpo_compliant { 100.0 } else { 0.0 }, // Simplified
             });
@@ -492,6 +504,12 @@ fn generate_service_breakdown(service_status: &HashMap<String, ServiceCompliance
     service_status.iter().map(|(service_type, status)| {
         (service_type.clone(), ServiceComplianceSummary {
             service_type: service_type.clone(),
+            // TODO: Calculate actual uptime percentage
+            // - [ ] Query historical service status data
+            // - [ ] Calculate uptime from service availability records
+            // - [ ] Handle missing data gracefully
+            // - [ ] Add unit tests with mock service data
+            // - [ ] Add integration tests with real service data
             uptime_percentage: 99.9, // Placeholder - would calculate from actual data
             violations_count: 0, // Not available in current struct
             average_rto_seconds: Some(status.current_rto_seconds as f64),
@@ -622,6 +640,12 @@ impl ReliabilityMonitor for RtoRpoMonitor {
                 severity: v.severity,
                 description: v.description,
                 service_type: v.service_type,
+                // TODO: Map actual measured and objective values from violations
+                // - [ ] Extract measured value from violation data structure
+                // - [ ] Extract objective value from service objectives
+                // - [ ] Handle missing data gracefully
+                // - [ ] Add unit tests with mock violation data
+                // - [ ] Add integration tests with real violation data
                 measured_value: 0.0, // Placeholder - would need to map from internal violation
                 objective_value: 0.0, // Placeholder - would need to map from internal violation
                 resolved: v.resolved,

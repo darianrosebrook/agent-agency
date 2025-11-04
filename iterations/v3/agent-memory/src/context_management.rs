@@ -123,6 +123,14 @@ impl ContextManager for StubContextManager {
 impl MemoryContextManager {
     /// Create a new memory context manager
     pub async fn new(config: ContextConfig) -> MemoryResult<Self> {
+        // TODO: Replace stub context manager with real implementation
+        // - [ ] Integrate with agent-data-processing crate for real context management
+        // - [ ] Implement context retrieval and storage
+        // - [ ] Add context indexing and search capabilities
+        // - [ ] Handle context lifecycle (creation, updates, deletion)
+        // - [ ] Add caching for frequently accessed contexts
+        // - [ ] Add unit tests with mock context manager
+        // - [ ] Add integration tests with real context management
         // Use stub implementation until agent-data-processing is available
         let context_manager = StubContextManager {
             config: config.clone(),
@@ -204,6 +212,14 @@ impl MemoryContextManager {
         let _context_uuid = Uuid::parse_str(context_id)
             .map_err(|e| MemoryError::Other(format!("Invalid context ID: {}", e)))?;
 
+        // TODO: Implement real context retrieval
+        // - [ ] Query database for context by ID
+        // - [ ] Reconstruct folded context from stored data
+        // - [ ] Handle context decompression if stored compressed
+        // - [ ] Add caching for frequently accessed contexts
+        // - [ ] Add error handling for missing contexts
+        // - [ ] Add unit tests with mock context storage
+        // - [ ] Add integration tests with real context retrieval
         // Return a default task context for now
         let context = TaskContext::default();
         
@@ -239,6 +255,13 @@ impl MemoryContextManager {
         let _context_uuid = Uuid::parse_str(context_id)
             .map_err(|e| MemoryError::Other(format!("Invalid context ID: {}", e)))?;
 
+        // TODO: Calculate actual context age
+        // - [ ] Query database for context creation timestamp
+        // - [ ] Calculate age from creation time to now
+        // - [ ] Handle timezone conversions correctly
+        // - [ ] Add caching for frequently accessed ages
+        // - [ ] Add unit tests for age calculation
+        // - [ ] Add integration tests with real context ages
         // Return a default age for now
         Ok(Duration::hours(1))
     }
@@ -249,6 +272,13 @@ impl MemoryContextManager {
         let _context_uuid = Uuid::parse_str(context_id)
             .map_err(|e| MemoryError::Other(format!("Invalid context ID: {}", e)))?;
 
+        // TODO: Calculate actual access frequency
+        // - [ ] Query database for context access history
+        // - [ ] Calculate frequency based on access count and time window
+        // - [ ] Handle time-based decay for access frequency
+        // - [ ] Add caching for frequently accessed frequencies
+        // - [ ] Add unit tests for frequency calculation
+        // - [ ] Add integration tests with real access data
         // Return a default frequency for now
         Ok(0.5)
     }

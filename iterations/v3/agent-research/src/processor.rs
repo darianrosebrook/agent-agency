@@ -69,10 +69,24 @@ impl ClaimExtractionProcessor {
             .await
             .map_err(|e| ClaimExtractionError::DecompositionFailed(e.to_string()))?;
 
+        // TODO: Re-enable verification stage when verification module is available
+        // - [ ] Integrate verification module from agent-research
+        // - [ ] Run verification on atomic claims
+        // - [ ] Collect verification evidence
+        // - [ ] Calculate verification confidence scores
+        // - [ ] Add unit tests with mock verification module
+        // - [ ] Add integration tests with real verification
         // Stage 4: Verification (Temporarily disabled - awaiting verification module)
         debug!("Stage 4: Verification - Skipped (temporarily disabled)");
         let verification_result = Vec::new(); // Placeholder empty result
 
+        // TODO: Re-enable multi-modal verification when multi-modal verifier is available
+        // - [ ] Integrate multi-modal verification module
+        // - [ ] Run verification on claims with multiple modalities
+        // - [ ] Collect multi-modal evidence
+        // - [ ] Combine verification results from different modalities
+        // - [ ] Add unit tests with mock multi-modal verifier
+        // - [ ] Add integration tests with real multi-modal verification
         // Stage 5: Multi-Modal Verification (Temporarily disabled - awaiting multi-modal verifier)
         debug!("Stage 5: Multi-Modal Verification - Skipped (temporarily disabled)");
         let atomic_claims = decomposition_result.atomic_claims.clone();
@@ -90,6 +104,12 @@ impl ClaimExtractionProcessor {
             verification_confidence: 0.5,
             council_verification: crate::extraction_types::CouncilVerificationResult {
                 submitted_claims: vec![],
+                // TODO: Get actual council verdict from verification
+                // - [ ] Submit claims to council for verification
+                // - [ ] Retrieve council verdict and reasoning
+                // - [ ] Include council evidence in verification result
+                // - [ ] Add unit tests with mock council
+                // - [ ] Add integration tests with real council verification
                 council_verdict: "placeholder".to_string(),
                 additional_evidence: vec![],
                 verification_timestamp: chrono::Utc::now(),

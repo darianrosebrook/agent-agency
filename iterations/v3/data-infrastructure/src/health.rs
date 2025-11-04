@@ -81,6 +81,12 @@ impl DatabaseHealthMonitor {
         let now = Utc::now();
         *self.last_health_check.write().unwrap() = Some(now);
 
+        // TODO: Implement real database connectivity check
+        // - [ ] Execute actual database ping query
+        // - [ ] Handle connection timeout and errors
+        // - [ ] Add retry logic for transient failures
+        // - [ ] Add unit tests with mock database
+        // - [ ] Add integration tests with real database
         // Basic connectivity check (would be implemented with actual DB connection)
         let connectivity_ok = true; // Placeholder
 
@@ -92,6 +98,12 @@ impl DatabaseHealthMonitor {
 
         let status = DatabaseHealthStatus {
             connectivity_ok,
+            // TODO: Get actual connection pool metrics
+            // - [ ] Query connection pool for actual size
+            // - [ ] Get idle connections count from pool
+            // - [ ] Get circuit breaker state from actual circuit breaker
+            // - [ ] Add unit tests with mock pool
+            // - [ ] Add integration tests with real pool
             pool_size: 10, // Placeholder - would get from actual pool
             idle_connections: 5, // Placeholder
             circuit_breaker_state: CircuitState::Closed, // Placeholder

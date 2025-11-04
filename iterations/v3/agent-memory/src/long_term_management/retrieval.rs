@@ -106,6 +106,14 @@ impl LongTermRetrievalEngine {
         &self,
         _query: &LongTermRetrievalQuery,
     ) -> crate::MemoryResult<Vec<crate::memory_types::Memory>> {
+        // TODO: Implement archival storage retrieval
+        // - [ ] Query archival storage system (cold storage, S3, etc.)
+        // - [ ] Apply query filters (time range, relevance, importance)
+        // - [ ] Decompress archived memories if needed
+        // - [ ] Handle retrieval errors and timeouts
+        // - [ ] Add pagination for large result sets
+        // - [ ] Add unit tests with mock archival storage
+        // - [ ] Add integration tests with real archival retrieval
         // In practice, this would query the archival storage system
         // For now, return empty results
         Ok(Vec::new())
@@ -148,6 +156,14 @@ impl LongTermRetrievalEngine {
         _memory: &crate::memory_types::Memory,
         _query: &LongTermRetrievalQuery,
     ) -> crate::MemoryResult<f32> {
+        // TODO: Implement real long-term relevance calculation
+        // - [ ] Consider memory age and apply decay factors
+        // - [ ] Analyze historical access patterns
+        // - [ ] Calculate contextual relevance to query
+        // - [ ] Factor in importance trends over time
+        // - [ ] Combine multiple signals into composite score
+        // - [ ] Add unit tests with various memory and query types
+        // - [ ] Add integration tests with real relevance data
         // Placeholder implementation
         // In practice, this would consider:
         // - Memory age and decay
@@ -185,6 +201,14 @@ impl LongTermRetrievalEngine {
 
     /// Calculate final relevance score combining multiple factors
     fn calculate_final_relevance(&self, _memory: &crate::memory_types::Memory, _query: &LongTermRetrievalQuery) -> f32 {
+        // TODO: Implement real final relevance calculation
+        // - [ ] Combine recency score (weighted by time decay)
+        // - [ ] Factor in importance score from memory metadata
+        // - [ ] Calculate contextual relevance to query
+        // - [ ] Apply weighted combination of all factors
+        // - [ ] Normalize final score to [0.0, 1.0] range
+        // - [ ] Add unit tests with various memory and query combinations
+        // - [ ] Add integration tests with real relevance calculations
         // Placeholder: combine recency, importance, and contextual relevance
         0.75
     }

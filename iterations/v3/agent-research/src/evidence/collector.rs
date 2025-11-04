@@ -175,6 +175,14 @@ impl EvidenceCollector {
             VerificationMethod::Measurement |
             VerificationMethod::LogicalAnalysis |
             VerificationMethod::ProcessAnalysis => {
+                // TODO: Implement verification methods (Measurement, LogicalAnalysis, ProcessAnalysis)
+                // - [ ] Implement measurement-based verification (numeric validation, range checks)
+                // - [ ] Implement logical analysis verification (logical consistency checks)
+                // - [ ] Implement process analysis verification (workflow validation)
+                // - [ ] Collect appropriate evidence for each method
+                // - [ ] Calculate confidence scores for each verification method
+                // - [ ] Add unit tests for each verification method
+                // - [ ] Add integration tests with real verification
                 // Placeholder for other verification methods
                 Ok(vec![Evidence {
                     id: uuid::Uuid::new_v4(),
@@ -203,6 +211,13 @@ impl EvidenceCollector {
     pub async fn collect_caws_provenance_evidence(&self, claim: &AtomicClaim) -> Result<Vec<Evidence>> {
         debug!("Collecting CAWS provenance evidence for claim: {}", claim.id);
 
+        // TODO: Integrate with CAWS provenance tracking
+        // - [ ] Query CAWS provenance system for relevant evidence
+        // - [ ] Filter provenance entries by claim context
+        // - [ ] Convert provenance entries to evidence format
+        // - [ ] Calculate evidence relevance and confidence
+        // - [ ] Add unit tests with mock provenance system
+        // - [ ] Add integration tests with real CAWS provenance
         // This would integrate with CAWS provenance tracking
         // For now, return placeholder evidence
         Ok(vec![Evidence {

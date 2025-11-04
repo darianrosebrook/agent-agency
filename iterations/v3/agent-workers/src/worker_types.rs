@@ -1373,8 +1373,8 @@ impl Default for ToolId {
 impl Default for WorkerProgress {
     fn default() -> Self {
         Self {
-            worker_id: Uuid::new_v4(),
-            subtask_id: Uuid::new_v4(),
+            worker_id: WorkerId(Uuid::new_v4()),
+            subtask_id: SubTaskId(Uuid::new_v4()),
             progress_percentage: 0.0,
             status: WorkerProgressStatus::Pending,
             current_step: String::new(),

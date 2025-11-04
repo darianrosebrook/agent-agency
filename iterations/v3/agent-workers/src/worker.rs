@@ -77,6 +77,15 @@ impl WorkerManager {
         // Assign the worker to the subtask
         self.assign_worker(&worker_id).await?;
 
+        // TODO: Implement real worker execution logic
+        // - [ ] Invoke worker's execute_subtask method with proper parameters
+        // - [ ] Handle worker errors and timeouts gracefully
+        // - [ ] Track execution metrics (start time, duration, resource usage)
+        // - [ ] Implement cancellation support
+        // - [ ] Add progress reporting callbacks
+        // - [ ] Integrate with telemetry system for observability
+        // - [ ] Add unit tests for execution paths
+        // - [ ] Add integration tests with real workers
         // Execute the subtask using the worker's capabilities
         // PLACEHOLDER: Real execution logic would go here
         // For now, simulate execution

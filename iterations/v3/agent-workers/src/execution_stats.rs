@@ -267,7 +267,7 @@ impl TaskComplexityAnalysis {
             }
         }
         
-        self.complexity_score = score.min(1.0).max(0.0);
+        self.complexity_score = (score as f64).min(1.0).max(0.0);
         
         // Estimate execution time based on complexity
         self.estimated_execution_time_ms = (300000.0 * (0.5 + self.complexity_score * 1.5)) as u64;

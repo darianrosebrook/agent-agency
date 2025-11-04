@@ -885,6 +885,13 @@ impl ClipEmbeddingProvider {
 
     /// Generate embeddings using CLIP (stub implementation)
     async fn generate_embeddings_stub(&self, texts: &[String]) -> Result<Vec<EmbeddingVector>> {
+        // TODO: Replace stub CLIP embedding generation with real implementation
+        // - [ ] Load actual CLIP model (when dependencies are available)
+        // - [ ] Tokenize input texts using CLIP tokenizer
+        // - [ ] Run CLIP model forward pass to generate embeddings
+        // - [ ] Handle model loading and inference errors
+        // - [ ] Add unit tests with real CLIP model
+        // - [ ] Add integration tests with CLIP embedding generation
         // Placeholder implementation - generate deterministic embeddings
         let embeddings = texts
             .iter()

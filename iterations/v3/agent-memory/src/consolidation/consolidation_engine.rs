@@ -84,6 +84,14 @@ impl MemoryConsolidationEngine {
 
         // Step 3: Deduplication
         if config.enable_deduplication {
+            // TODO: Implement deduplication logic
+            // - [ ] Fetch actual memory objects from storage
+            // - [ ] Compare memory content for duplicates
+            // - [ ] Use semantic similarity for near-duplicate detection
+            // - [ ] Remove or merge duplicate memories
+            // - [ ] Track deduplication statistics
+            // - [ ] Add unit tests with duplicate memories
+            // - [ ] Add integration tests with real deduplication
             // This would require fetching actual memory objects
             // For now, just set a placeholder
             result.removed_duplicates = 0;
@@ -163,6 +171,14 @@ impl MemoryConsolidationEngine {
 
     /// Get consolidation health metrics
     pub async fn get_health_metrics(&self) -> MemoryResult<ConsolidationHealth> {
+        // TODO: Calculate real consolidation health metrics
+        // - [ ] Calculate clustering health based on actual cluster quality metrics
+        // - [ ] Calculate summarization health based on summary quality scores
+        // - [ ] Calculate deduplication health based on duplicate detection rates
+        // - [ ] Aggregate overall health from component metrics
+        // - [ ] Track historical health trends
+        // - [ ] Add unit tests for health calculation
+        // - [ ] Add integration tests with real consolidation data
         // Return mock health metrics
         Ok(ConsolidationHealth {
             clustering_health: 0.95,

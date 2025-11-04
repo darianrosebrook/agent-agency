@@ -7,9 +7,9 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
-use sqlx::{PgPool, postgres::PgPoolOptions};
+use sqlx::{PgPool, postgres::PgPoolOptions, Row};
 use std::sync::Arc;
-use tracing::{debug, info, warn, error};
+use tracing::{debug, info};
 use uuid::Uuid;
 
 /// WAL operation type
@@ -262,7 +262,7 @@ pub struct WalStatistics {
 }
 
 /// Internal row representation for WAL records
-#[derive(Debug)]
+#[derive(Debug, sqlx::FromRow)]
 struct WalRecordRow {
     id: Uuid,
     timestamp: DateTime<Utc>,
@@ -298,23 +298,6 @@ impl From<WalRecordRow> for WalRecord {
     }
 }
 
-impl sqlx::FromRow<'_, sqlx::postgres::PgRow> for WalRecordRow {
-    fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, sqlx::Error> {
-        Ok(WalRecordRow {
-            id: row.try_get("id")?,
-            timestamp: row.try_get("timestamp")?,
-            transaction_id: row.try_get("transaction_id")?,
-            sequence_number: row.try_get("sequence_number")?,
-            operation_type: row.try_get("operation_type")?,
-            schema_name: row.try_get("schema_name")?,
-            table_name: row.try_get("table_name")?,
-            record_id: row.try_get("record_id")?,
-            old_data: row.try_get("old_data")?,
-            new_data: row.try_get("new_data")?,
-            sql_statement: row.try_get("sql_statement")?,
-        })
-    }
-}
 
 #[derive(Debug)]
 struct WalStatisticsRow {

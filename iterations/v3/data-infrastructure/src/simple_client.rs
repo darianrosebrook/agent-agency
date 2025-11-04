@@ -719,6 +719,14 @@ impl ProvenanceClientAdapter {
     /// This method matches the signature expected by DatabaseClientTrait,
     /// converting anyhow::Result to Box<dyn Error + Send + Sync>.
     ///
+    /// TODO: Implement provenance entry creation
+    /// - [ ] Add create_provenance_entry method to DatabaseClient trait
+    /// - [ ] Create database migration for provenance table if missing
+    /// - [ ] Implement SQL insert with proper parameter binding
+    /// - [ ] Handle database errors and transaction rollback
+    /// - [ ] Add validation for required fields (task_id, action, actor)
+    /// - [ ] Add unit tests with mock database
+    /// - [ ] Add integration tests with real database
     /// PLACEHOLDER: DatabaseClient doesn't have create_provenance_entry yet.
     /// This is a stub implementation that will be replaced when provenance is implemented.
     pub async fn create_provenance_entry(

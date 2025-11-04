@@ -160,6 +160,11 @@ impl FileIngestor {
         };
 
         let stats = ProcessingStats {
+            // TODO: Replace placeholder processing time with actual measurement
+            // - [ ] Track start/end timestamps around file processing logic
+            // - [ ] Use performance monitoring hooks if available
+            // - [ ] Validate measured time against SLAs
+            // - [ ] Add unit tests for time measurement accuracy
             processing_time_ms: 100, // Placeholder
             bytes_processed: file_source.size_bytes,
             entities_extracted: 0,
@@ -295,6 +300,11 @@ impl UrlIngestor {
         };
 
         let stats = ProcessingStats {
+            // TODO: Replace placeholder processing time with actual measurement
+            // - [ ] Track start/end timestamps around bytes processing logic
+            // - [ ] Use performance monitoring hooks if available
+            // - [ ] Validate measured time against SLAs
+            // - [ ] Add unit tests for time measurement accuracy
             processing_time_ms: 200, // Placeholder
             bytes_processed: bytes.len() as u64,
             entities_extracted: 0,
@@ -360,6 +370,11 @@ impl StreamIngestor {
         };
 
         let stats = ProcessingStats {
+            // TODO: Replace placeholder processing time with actual measurement
+            // - [ ] Track start/end timestamps around stream processing logic
+            // - [ ] Use performance monitoring hooks if available
+            // - [ ] Validate measured time against SLAs
+            // - [ ] Add unit tests for time measurement accuracy
             processing_time_ms: 50, // Placeholder
             bytes_processed: 0, // Would track actual bytes read
             entities_extracted: 0,
@@ -400,6 +415,13 @@ impl DatabaseIngestor {
             _ => return Err(DataProcessingError::Validation("Expected database source".to_string())),
         };
 
+        // TODO: Implement real database query logic
+        // - [ ] Integrate sqlx or similar database library
+        // - [ ] Implement parameterized queries for security
+        // - [ ] Add connection pooling support
+        // - [ ] Handle database errors gracefully
+        // - [ ] Add unit tests with test database
+        // - [ ] Add integration tests for database ingestion
         // Query database based on source configuration
         // This is a placeholder - actual implementation would use sqlx or similar
         let content = DataContent::Structured(serde_json::json!({
@@ -431,6 +453,11 @@ impl DatabaseIngestor {
         };
 
         let stats = ProcessingStats {
+            // TODO: Replace placeholder processing time with actual measurement
+            // - [ ] Track start/end timestamps around database record processing
+            // - [ ] Use performance monitoring hooks if available
+            // - [ ] Validate measured time against SLAs
+            // - [ ] Add unit tests for time measurement accuracy
             processing_time_ms: 75, // Placeholder
             bytes_processed: 0, // Would track serialized size
             entities_extracted: 0,
@@ -531,6 +558,11 @@ impl ApiIngestor {
         };
 
         let stats = ProcessingStats {
+            // TODO: Replace placeholder processing time with actual measurement
+            // - [ ] Track start/end timestamps around text processing logic
+            // - [ ] Use performance monitoring hooks if available
+            // - [ ] Validate measured time against SLAs
+            // - [ ] Add unit tests for time measurement accuracy
             processing_time_ms: 150, // Placeholder
             bytes_processed: text.len() as u64,
             entities_extracted: 0,
@@ -901,6 +933,14 @@ impl IngestionStage for DiagramsIngestor {
     async fn ingest(&self, input: DataInput) -> IngestionResult {
         info!("Ingesting diagrams from: {:?}", input.source);
 
+        // TODO: Implement diagram analysis functionality
+        // - [ ] Integrate diagram parsing library (e.g., PlantUML, Mermaid parser)
+        // - [ ] Extract structural elements (nodes, edges, relationships)
+        // - [ ] Extract metadata (title, description, annotations)
+        // - [ ] Generate embeddings for diagram content
+        // - [ ] Handle various diagram formats (SVG, PNG with OCR, text-based)
+        // - [ ] Add unit tests with sample diagrams
+        // - [ ] Add integration tests for diagram ingestion pipeline
         // Placeholder implementation - would analyze diagrams for structure
         let processed_content = ProcessedContent {
             content_type: ContentType::Document,
@@ -980,6 +1020,15 @@ impl IngestionStage for VideoIngestor {
     async fn ingest(&self, input: DataInput) -> IngestionResult {
         info!("Ingesting video from: {:?}", input.source);
 
+        // TODO: Implement video ingestion functionality
+        // - [ ] Integrate video processing library (e.g., ffmpeg bindings)
+        // - [ ] Extract video metadata (duration, resolution, codec, frame rate)
+        // - [ ] Extract key frames at intervals
+        // - [ ] Generate frame embeddings for visual search
+        // - [ ] Extract audio track if available
+        // - [ ] Handle various video formats (MP4, AVI, MOV, etc.)
+        // - [ ] Add unit tests with sample video files
+        // - [ ] Add integration tests for video ingestion pipeline
         // Placeholder implementation - would extract video metadata and frames
         let processed_content = ProcessedContent {
             content_type: ContentType::Video,
@@ -1063,6 +1112,14 @@ impl IngestionStage for SlidesIngestor {
     async fn ingest(&self, input: DataInput) -> IngestionResult {
         info!("Ingesting slides from: {:?}", input.source);
 
+        // TODO: Implement slide presentation ingestion functionality
+        // - [ ] Integrate presentation parsing library (e.g., for PowerPoint, PDF slides)
+        // - [ ] Extract slide content (text, images, diagrams)
+        // - [ ] Extract slide structure and metadata (title, notes, transitions)
+        // - [ ] Generate embeddings for slide content
+        // - [ ] Handle various slide formats (PPTX, PDF, ODP)
+        // - [ ] Add unit tests with sample presentation files
+        // - [ ] Add integration tests for slide ingestion pipeline
         // Placeholder implementation - would extract slide content and structure
         let processed_content = ProcessedContent {
             content_type: ContentType::Document,
@@ -1139,6 +1196,15 @@ impl FileWatcher {
         info!("Starting file watcher for {} paths with {} patterns",
               self.watch_paths.len(), self.file_patterns.len());
 
+        // TODO: Implement file system watching functionality
+        // - [ ] Integrate file watching library (e.g., notify crate)
+        // - [ ] Set up watchers for configured paths
+        // - [ ] Handle file creation, modification, and deletion events
+        // - [ ] Filter events by file patterns
+        // - [ ] Implement debouncing for rapid file changes
+        // - [ ] Add error handling for permission issues
+        // - [ ] Add unit tests with mock file system events
+        // - [ ] Add integration tests for file watching pipeline
         // Placeholder implementation - would set up file system watching
         // In practice, this would use notify crate or similar
         Ok(())

@@ -130,6 +130,13 @@ impl PlaceholderModel {
 #[async_trait]
 impl EmbeddingModel for PlaceholderModel {
     async fn forward(&self, _tokens: &[u32]) -> Result<EmbeddingVector> {
+        // TODO: Replace placeholder model with real embedding model
+        // - [ ] Load actual embedding model (CoreML, ONNX, or SafeTensors)
+        // - [ ] Implement proper token-to-embedding forward pass
+        // - [ ] Handle model loading failures gracefully
+        // - [ ] Add fallback to placeholder only when necessary
+        // - [ ] Add unit tests with real models
+        // - [ ] Add integration tests with embedding generation
         // Generate a simple placeholder embedding
         // Used when SafeTensors loading fails
         let values: Vec<f32> = (0..self.dimension)

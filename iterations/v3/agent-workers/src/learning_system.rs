@@ -131,6 +131,14 @@ impl RealAdaptiveSelector {
 
     /// Calculate specialty match score
     fn calculate_specialty_match(&self, worker_specialty: &str, _task_pattern: &TaskPattern) -> f64 {
+        // TODO: Implement real specialty matching with task pattern analysis
+        // - [ ] Extract domain/task type from TaskPattern
+        // - [ ] Map worker specialties to task domains
+        // - [ ] Calculate semantic similarity between specialty and task
+        // - [ ] Consider historical performance data for specialty matching
+        // - [ ] Add ML-based matching if historical data available
+        // - [ ] Add unit tests with various specialty/task combinations
+        // - [ ] Add integration tests with real task patterns
         // Simple specialty matching - can be enhanced with ML
         // For now, return a default match score since domain is not in TaskPattern
         match worker_specialty {
@@ -809,7 +817,6 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
                     specialty: crate::parallel_types::WorkerSpecialty::General, // Default, should be updated
                     total_executions: 0, // Default
                     successful_executions: 0, // Default
-                    average_execution_time_ms: 0.0, // Default
                     average_quality_score: 0.0, // Default
                     performance_trend: crate::learning::types::PerformanceTrend::Unknown,
                     capability_scores: HashMap::new(), // Default
@@ -1037,6 +1044,10 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
                         performance_delta: serde_json::from_value(row.get("performance_delta"))?,
                         timestamp: row.get("timestamp"),
                         metadata: serde_json::from_value(row.get("metadata"))?,
+                        config_before: None, // TODO: parse from metadata if available
+                        config_after: None, // TODO: parse from metadata if available
+                        performance_improvement: None, // TODO: calculate from performance_delta
+                        optimization_type: None, // TODO: parse from event_type or metadata
                     });
                 }
                 Ok(events)

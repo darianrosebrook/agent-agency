@@ -142,7 +142,7 @@ impl WalReplayEngine {
                 .push(record);
         }
 
-        let total_transactions = records_by_transaction.len();
+        let _total_transactions = records_by_transaction.len();
         let mut applied_record_ids = Vec::new();
 
         // Replay transactions in order
@@ -299,8 +299,8 @@ impl WalReplayEngine {
             .map(|i| format!("${}", i))
             .collect();
 
-        let values: Vec<JsonValue> = columns.iter()
-            .map(|col| new_data[col].clone())
+        let _values: Vec<&JsonValue> = columns.iter()
+            .map(|col| &new_data[col])
             .collect();
 
         let query = format!(
@@ -337,8 +337,8 @@ impl WalReplayEngine {
             return Err(anyhow::anyhow!("Invalid new_data format for UPDATE"));
         };
 
-        let values: Vec<JsonValue> = if let Some(obj) = new_data.as_object() {
-            obj.values().cloned().collect()
+        let _values: Vec<&JsonValue> = if let Some(obj) = new_data.as_object() {
+            obj.values().collect()
         } else {
             return Err(anyhow::anyhow!("Invalid new_data format for UPDATE"));
         };
@@ -350,7 +350,7 @@ impl WalReplayEngine {
             // Use old_data to identify record (primary key fields)
             if let Some(obj) = old_data.as_object() {
                 let conditions: Vec<String> = obj.keys()
-                    .filter(|k| k == "id" || k.ends_with("_id"))
+                    .filter(|k| *k == "id" || k.ends_with("_id"))
                     .map(|k| format!("{} = '{}'", k, obj[k]))
                     .collect();
                 
@@ -395,7 +395,7 @@ impl WalReplayEngine {
         } else if let Some(ref old_data) = record.old_data {
             if let Some(obj) = old_data.as_object() {
                 let conditions: Vec<String> = obj.keys()
-                    .filter(|k| k == "id" || k.ends_with("_id"))
+                    .filter(|k| *k == "id" || k.ends_with("_id"))
                     .map(|k| format!("{} = '{}'", k, obj[k]))
                     .collect();
                 

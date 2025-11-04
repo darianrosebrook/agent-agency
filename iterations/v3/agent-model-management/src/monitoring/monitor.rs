@@ -27,7 +27,6 @@ impl PerformanceMonitor {
 
     /// Record inference performance with comprehensive monitoring
     pub async fn record_inference(&self, model_id: &str, output: &InferenceOutput, success: bool) -> Result<(), ModelManagementError> {
-        use std::collections::HashMap;
 
         // Get current time for timestamping
         let now = chrono::Utc::now();
@@ -62,6 +61,13 @@ impl PerformanceMonitor {
             .count() as f64;
         let error_rate = error_count / recent_count;
 
+        // TODO: Implement real CPU usage monitoring
+        // - [ ] Integrate sysinfo or similar library for actual CPU metrics
+        // - [ ] Measure CPU usage per process/thread
+        // - [ ] Track CPU usage over time windows
+        // - [ ] Handle multi-core systems correctly
+        // - [ ] Add unit tests with mock CPU data
+        // - [ ] Add integration tests with real CPU monitoring
         // Estimate CPU usage (simplified - would use sysinfo in full implementation)
         // For now, derive from latency and throughput patterns
         let cpu_usage = self.estimate_cpu_usage(&latencies, rps);

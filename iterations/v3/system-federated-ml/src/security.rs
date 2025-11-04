@@ -39,6 +39,13 @@ impl SecurityValidator {
     pub async fn verify_proof(&self, proof: &ZeroKnowledgeProof) -> Result<bool> {
         debug!("Verifying zero-knowledge proof of type: {}", proof.proof_type);
 
+        // TODO: Implement real zero-knowledge proof verification
+        // - [ ] Integrate ZKP library (e.g., zk-SNARKs, zk-STARKs, Bulletproofs)
+        // - [ ] Verify proof using cryptographic verification algorithm
+        // - [ ] Validate proof structure and public inputs
+        // - [ ] Handle verification errors and invalid proofs
+        // - [ ] Add unit tests with real ZKP verification
+        // - [ ] Add integration tests with proof generation/verification
         // In practice, this would verify the cryptographic proof
         // For now, return true (placeholder implementation)
         Ok(true)
@@ -46,6 +53,13 @@ impl SecurityValidator {
 
     /// Generate a zero-knowledge proof for a model update
     pub async fn generate_proof(&self, data: &[u8], secret_key: &[u8]) -> Result<ZeroKnowledgeProof> {
+        // TODO: Implement real zero-knowledge proof generation
+        // - [ ] Integrate ZKP library (e.g., zk-SNARKs, zk-STARKs, Bulletproofs)
+        // - [ ] Generate proof for model update computation
+        // - [ ] Include proper public inputs and verification key
+        // - [ ] Handle proof generation errors
+        // - [ ] Add unit tests with real ZKP generation
+        // - [ ] Add integration tests with proof generation/verification
         // In practice, this would generate a real ZKP
         // For now, return a placeholder proof
         Ok(ZeroKnowledgeProof {

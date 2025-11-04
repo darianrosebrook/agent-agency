@@ -167,6 +167,14 @@ impl DataProcessingService for DataProcessingServiceAdapter {
     }
 
     async fn file_operation(&self, operation: FileOperation) -> DataProcessingResult<FileOperationResult> {
+        // TODO: Implement real file operation handling
+        // - [ ] Convert FileOperation to internal data-processing types
+        // - [ ] Route to appropriate file operation service
+        // - [ ] Handle read, write, delete, and other file operations
+        // - [ ] Add error handling for file system errors
+        // - [ ] Add permission and security checks
+        // - [ ] Add unit tests with mock file system
+        // - [ ] Add integration tests with real file operations
         // Convert FileOperation to internal type and call file_operation
         // For now, return a placeholder implementation
         warn!("file_operation not fully implemented - returning success");
