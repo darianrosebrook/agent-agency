@@ -137,7 +137,12 @@ pub fn new_parallel_coordinator_with_config(config: ParallelCoordinatorConfig) -
 /// Create a task executor that implements the TaskExecutor trait
 pub fn create_task_executor() -> std::sync::Arc<dyn TaskExecutorTrait> {
     // Create default database client for task executor
-    let db_client = std::sync::Arc::new(data_infrastructure::client::DatabaseClient::new());
+    let db_config = data_infrastructure::DatabaseConfig::default();
+    let db_client = std::sync::Arc::new(tokio::task::block_in_place(|| {
+        tokio::runtime::Handle::current().block_on(async {
+            data_infrastructure::DatabaseClient::new(db_config).await.unwrap()
+        })
+    }));
     std::sync::Arc::new(executor::TaskExecutor::new(db_client))
 }
 

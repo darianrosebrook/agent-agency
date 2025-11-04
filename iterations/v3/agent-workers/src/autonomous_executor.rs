@@ -47,6 +47,14 @@ impl AutonomousExecutor {
     }
 
     pub async fn execute(&self, task: String) -> Result<ExecutionResult, WorkerError> {
+        // TODO: Integrate with arbitration system for real execution
+        // - [ ] Connect to arbitration system for task execution
+        // - [ ] Handle task execution lifecycle (start, progress, completion)
+        // - [ ] Track actual iterations and decision-making process
+        // - [ ] Return real execution results with proper status
+        // - [ ] Handle execution errors and timeouts
+        // - [ ] Add unit tests with mock arbitration system
+        // - [ ] Add integration tests with real arbitration execution
         // Placeholder implementation - would integrate with arbitration system
         Ok(ExecutionResult {
             task_id: task,

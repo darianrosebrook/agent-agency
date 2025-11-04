@@ -138,7 +138,7 @@ impl DecompositionEngine {
         info!("Selected decomposition strategy: {:?}", strategy);
         
         let mut all_subtasks = Vec::new();
-        let mut task_dependencies = std::collections::HashMap::new();
+        let mut _task_dependencies = std::collections::HashMap::<String, Vec<String>>::new();
 
         // Create subtasks based on pattern types with real strategy
         for (pattern_idx, pattern) in analysis.patterns.iter().enumerate() {
@@ -240,6 +240,13 @@ impl DecompositionEngine {
 
     /// Calculate dependencies for compilation tasks
     fn calculate_compilation_dependencies(&self, idx: usize, error_groups: &[ErrorGroup]) -> Vec<SubTaskId> {
+        // TODO: Implement proper dependency tracking for compilation tasks
+        // - [ ] Track actual SubTaskId for each error group
+        // - [ ] Build dependency graph from error group relationships
+        // - [ ] Return actual previous task IDs instead of placeholder
+        // - [ ] Handle circular dependencies
+        // - [ ] Add unit tests with various error group structures
+        // - [ ] Add integration tests with real compilation tasks
         // Simple dependency: fix simpler errors first
         if idx > 0 && error_groups[idx].count < error_groups[idx - 1].count {
             vec![SubTaskId::new()] // Placeholder - would use actual previous task ID
@@ -267,8 +274,8 @@ impl DecompositionEngine {
                 parent_task_id: analysis.task_id.clone(),
                 parent_id: analysis.task_id.clone(),
                 title: operation.operation_type.clone(),
-                description: format!("Perform {} refactoring on {} files",
-                    operation.operation_type, operation.affected_files.len()),
+                description: format!("Perform {} refactoring on file {}",
+                    operation.operation_type, operation.file_path),
                 complexity: operation.complexity,
                 dependencies: vec![],
                 assigned_worker: None,
@@ -279,8 +286,8 @@ impl DecompositionEngine {
                 ),
                 scope: TaskScope {
                     domains: vec!["refactoring".to_string()],
-                    files_affected: operation.affected_files.clone(),
-                    files: operation.affected_files.clone(),
+                    files_affected: vec![operation.file_path.clone()],
+                    files: vec![operation.file_path.clone()],
                     directories: vec![],
                     patterns: vec![],
                     max_files: None,
@@ -388,7 +395,7 @@ impl DecompositionEngine {
             DecompositionStrategyType::Parallel => {
                 // Group by specialty for parallel execution
                 subtasks.sort_by(|a, b| {
-                    std::mem::discriminant(&a.specialty).cmp(&std::mem::discriminant(&b.specialty))
+                    format!("{:?}", a.specialty).cmp(&format!("{:?}", b.specialty))
                 });
             }
             DecompositionStrategyType::Hierarchical => {
@@ -440,7 +447,7 @@ impl DecompositionEngine {
         // High priority tasks should be executed first
         subtasks.sort_by(|a, b| {
             b.priority.cmp(&a.priority)
-                .then(a.estimated_effort.cmp(&b.estimated_effort))
+                .then_with(|| a.estimated_effort.partial_cmp(&b.estimated_effort).unwrap_or(std::cmp::Ordering::Equal))
         });
         
         // Optimization strategy 2: Dependency-aware ordering

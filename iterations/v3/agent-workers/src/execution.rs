@@ -212,6 +212,14 @@ impl ToolExecutor {
             .and_then(|v| v.as_str())
             .unwrap_or("syntax");
 
+        // TODO: Implement real MCP code/output validation
+        // - [ ] Integrate with MCP validation service
+        // - [ ] Validate code syntax and structure
+        // - [ ] Check output format and content quality
+        // - [ ] Perform static analysis and linting
+        // - [ ] Generate detailed validation issues with line numbers
+        // - [ ] Add unit tests with various code samples
+        // - [ ] Add integration tests with real MCP validation
         // In a real MCP implementation, this would validate code/output
         // For now, simulate validation
         let is_valid = !content.contains("ERROR") && !content.contains("TODO");

@@ -113,6 +113,9 @@ impl PatternRecognizer {
                 file_path: format!("unknown_file.rs"), // Simplified - would need proper file detection
                 error_count: 1, // Simplified count
                 severity: ErrorSeverity::High, // Default severity
+                error_code: error_code.clone(),
+                count: 1,
+                affected_files: vec![format!("unknown_file.rs")],
             });
         }
 
@@ -281,14 +284,14 @@ impl ComplexityScorer {
                     parallelization_score += 0.8;
                     for error_group in error_groups {
                         let score = self.score_error_group(error_group);
-                        complexity_scores.push(score);
+                        complexity_scores.push(score as f64);
                     }
                 }
                 TaskPattern::RefactoringOperations { operations } => {
                     // Refactoring has moderate parallelization potential
                     parallelization_score += 0.6;
                     for operation in operations {
-                        complexity_scores.push(operation.complexity);
+                        complexity_scores.push(operation.complexity as f64);
                     }
                 }
                 TaskPattern::TestingGaps { .. } => {
@@ -308,13 +311,13 @@ impl ComplexityScorer {
         parallelization_score *= task.complexity_score;
 
         // Estimate durations based on complexity scores
-        let estimated_durations = complexity_scores.iter()
-            .map(|&score| self.estimate_duration(score))
+        let estimated_durations: Vec<std::time::Duration> = complexity_scores.iter()
+            .map(|&score| self.estimate_duration(score as f32))
             .collect();
 
         Ok(SubtaskScores {
             parallelization_score: parallelization_score.min(1.0),
-            complexity_scores,
+            complexity_scores: complexity_scores.into_iter().map(|s| s as f64).collect(),
             estimated_durations,
         })
     }

@@ -216,7 +216,7 @@ impl FailureTaxonomy {
             confidence += 0.1;
         }
 
-        confidence.min(1.0).max(0.0)
+        f64::min((confidence as f64), 1.0).max(0.0)
     }
 
     /// Update failure patterns based on analysis

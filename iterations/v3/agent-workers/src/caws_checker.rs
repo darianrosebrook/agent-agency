@@ -23,6 +23,14 @@ impl CawsChecker {
     }
 
     pub async fn check_compliance(&self, task: &str) -> Result<CawsCheckResult, WorkerError> {
+        // TODO: Implement real CAWS compliance checking
+        // - [ ] Integrate with CAWS runtime validator
+        // - [ ] Parse task specification and check against CAWS rules
+        // - [ ] Detect violations in change budgets, scope boundaries, and invariants
+        // - [ ] Generate detailed violation reports with recommendations
+        // - [ ] Calculate compliance scores
+        // - [ ] Add unit tests with mock CAWS validation
+        // - [ ] Add integration tests with real CAWS compliance checking
         // Placeholder implementation - would perform CAWS compliance checks
         Ok(CawsCheckResult {
             compliant: true,

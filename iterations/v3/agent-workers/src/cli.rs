@@ -144,6 +144,14 @@ async fn cancel_task(
 
     println!(" Worker {} cancelling task {}: {}", worker_id, request.task_id, request.reason);
 
+    // TODO: Implement real task cancellation
+    // - [ ] Signal task execution to stop gracefully
+    // - [ ] Send cancellation signal to running task
+    // - [ ] Wait for task to complete cancellation
+    // - [ ] Handle cancellation timeouts
+    // - [ ] Clean up resources after cancellation
+    // - [ ] Add unit tests with mock task cancellation
+    // - [ ] Add integration tests with real task cancellation
     // In a real implementation, this would signal the task execution to stop
     // For now, we simulate successful cancellation
     let cancelled = true;

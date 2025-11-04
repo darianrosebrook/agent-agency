@@ -103,7 +103,7 @@ impl LearningPersistence for InMemoryLearningPersistence {
     async fn store_worker_profiles(&self, profiles: HashMap<WorkerId, WorkerPerformanceProfile>) -> Result<()> {
         let mut storage = self.worker_profiles.write().await;
         for (worker_id, profile) in &profiles {
-            storage.insert(worker_id, profile);
+            storage.insert(worker_id.clone(), profile.clone());
         }
         Ok(())
     }
@@ -504,10 +504,10 @@ struct WorkerProfileRow {
                 last_updated: row.last_updated,
                 performance_trend,
                 capability_scores,
-                task_count: row.task_count as u64,
+                task_count: row.total_executions as u64,
                 success_rate: row.success_rate,
-                quality_score: row.quality_score,
-                specialization_score: row.specialization_score,
+                quality_score: row.success_rate, // Use success rate as quality score for now
+                specialization_score: 0.0, // TODO: Calculate specialization score
                 metadata: serde_json::from_value(row.metadata).unwrap_or_default(),
             };
 
@@ -579,7 +579,7 @@ struct SuccessPatternRow {
         .await
         .context("Failed to retrieve success patterns")?;
 
-        let patterns = rows.into_iter().filter_map(|row| {
+        let patterns: Vec<SuccessPattern> = rows.into_iter().filter_map(|row| {
             // Deserialize pattern_type from JSON string
             let pattern_type: PatternType = serde_json::from_str(&row.pattern_type).ok()?;
 
@@ -666,7 +666,7 @@ struct FailurePatternRow {
         .await
         .context("Failed to retrieve failure patterns")?;
 
-        let patterns = rows.into_iter().filter_map(|row| {
+        let patterns: Vec<FailurePattern> = rows.into_iter().filter_map(|row| {
             // Deserialize pattern_type from JSON string
             let pattern_type: PatternType = serde_json::from_str(&row.pattern_type).ok()?;
 
@@ -753,7 +753,7 @@ struct OptimalConfigRow {
         .await
         .context("Failed to retrieve optimal configs")?;
 
-        let configs = rows.into_iter().filter_map(|row| {
+        let configs: Vec<OptimalConfig> = rows.into_iter().filter_map(|row| {
             // Deserialize config_type from JSON string
             let config_type: ConfigType = serde_json::from_str(&row.config_type).ok()?;
 
@@ -855,7 +855,7 @@ struct OptimizationEventRow {
         .await
         .context("Failed to retrieve optimization events")?;
 
-        let events = rows.into_iter().filter_map(|row| {
+        let events: Vec<OptimizationEvent> = rows.into_iter().filter_map(|row| {
             // Deserialize event_type from JSON string
             let event_type: OptimizationEventType = serde_json::from_str(&row.event_type).ok()?;
 

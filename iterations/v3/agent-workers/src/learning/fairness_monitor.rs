@@ -9,7 +9,7 @@ use sqlx::Row;
 use crate::{WorkerId, TaskId};
 use crate::learning::types::*;
 use crate::worker_types::{ExecutionOutcome, LearningMode};
-use data_infrastructure::client::DatabaseClient;
+use data_infrastructure::ApiDatabaseClient as DatabaseClient;
 
 /// Monitors fairness in worker utilization and task distribution
 pub struct FairnessMonitor {
@@ -182,20 +182,23 @@ impl crate::learning::adaptive_selector::FairnessMonitor for RealFairnessMonitor
             ORDER BY task_count DESC
         "#;
 
-        match self.db_client.query(query, &[]).await {
+        match self.db_client.query(query).await {
             Ok(rows) => {
                 let mut worker_utilization = HashMap::new();
                 let mut task_distribution = HashMap::new();
                 let mut total_tasks = 0;
 
                 for row in rows {
-                    let worker_id: String = row.get("worker_id");
+                    let worker_id_str: String = row.get("worker_id");
                     let worker_name: String = row.get("worker_name");
                     let task_count: i64 = row.get("task_count");
                     let avg_duration: Option<f64> = row.get("avg_duration_seconds");
 
-                    worker_utilization.insert(worker_id.clone(), task_count as f64);
-                    task_distribution.insert(worker_name, task_count as f64);
+                    if let Ok(worker_uuid) = uuid::Uuid::parse_str(&worker_id_str) {
+                        let worker_id = WorkerId(worker_uuid);
+                        worker_utilization.insert(worker_id.clone(), task_count as f64);
+                        task_distribution.insert(worker_id, task_count as u64);
+                    }
                     total_tasks += task_count;
                 }
 

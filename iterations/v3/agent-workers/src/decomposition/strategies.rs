@@ -166,7 +166,7 @@ impl DecompositionStrategy for RefactoringStrategy {
                             max_files: None,
                             max_loc: None,
                         },
-                        specialty: WorkerSpecialty::Refactoring { strategies: vec!["code_cleanup".to_string(), "optimization".to_string()] },
+                        specialty: WorkerSpecialty::Refactoring { patterns: vec!["code_cleanup".to_string(), "optimization".to_string()] },
                         estimated_effort: (operation.complexity * 300.0),
                         metadata: HashMap::new(),
                     };
@@ -199,7 +199,7 @@ impl DecompositionStrategy for RefactoringStrategy {
                     max_files: None,
                     max_loc: None,
                 },
-                specialty: WorkerSpecialty::Refactoring,
+                specialty: WorkerSpecialty::Refactoring { patterns: vec![] },
                 estimated_effort: 300.0,
                 metadata: HashMap::new(),
             });
@@ -240,7 +240,7 @@ impl DecompositionStrategy for TestingStrategy {
             if let TaskPattern::TestingGaps { missing_tests } = pattern {
                 for (i, test_gap) in missing_tests.iter().enumerate() {
                     let subtask = SubTask {
-                        id: SubTaskId(format!("test-{}", i)),
+                        id: SubTaskId(uuid::Uuid::new_v4()),
                         parent_task_id: task.id.clone(),
                         parent_id: task.id.clone(),
                         title: format!("Add {}", test_gap),
@@ -366,10 +366,10 @@ impl DecompositionStrategy for DocumentationStrategy {
 
         // Look for documentation patterns
         for pattern in &analysis.patterns {
-            if let TaskPattern::DocumentationNeeds { missing_docs } = pattern {
-                for (i, doc_need) in missing_docs.iter().enumerate() {
+            if let TaskPattern::DocumentationNeeds { files_needing_docs } = pattern {
+                for (i, doc_need) in files_needing_docs.iter().enumerate() {
                     let subtask = SubTask {
-                        id: SubTaskId(format!("doc-{}", i)),
+                        id: SubTaskId(uuid::Uuid::new_v4()),
                         parent_task_id: task.id.clone(),
                         parent_id: task.id.clone(),
                         title: format!("Add {}", doc_need),

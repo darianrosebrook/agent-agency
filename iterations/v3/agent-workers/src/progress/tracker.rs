@@ -137,7 +137,7 @@ impl WorkerProgressTracker {
     pub fn get_subtask_progress(&self, subtask_id: &SubTaskId) -> Vec<WorkerProgress> {
         self.progress.read()
             .values()
-            .filter(|wp| wp.subtask_id == subtask_id.0)
+            .filter(|wp| wp.subtask_id == *subtask_id)
             .cloned()
             .collect()
     }

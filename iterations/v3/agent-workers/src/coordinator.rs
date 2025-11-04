@@ -86,7 +86,11 @@ impl OrchestratorHandle for RealOrchestratorHandle {
             context,
             working_spec_id: None,
             timeout_seconds: Some(300), // 5 minutes
-            scope: Some(task.scope.clone()),
+            scope: Some(agent_agency_contracts::task_executor::TaskScope {
+                domains: task.scope.domains.clone(),
+                files_affected: task.scope.files_affected.clone(),
+                max_loc: task.scope.max_loc.map(|v| v as u32),
+            }),
             risk_tier: Some(task.priority as u32),
             acceptance_criteria: None,
             caws_spec: None,
@@ -98,6 +102,7 @@ impl OrchestratorHandle for RealOrchestratorHandle {
         let execution_result = self.task_executor.execute_task(task_spec, worker_id).await
             .map_err(|e| ParallelError::Coordination {
                 message: format!("Task execution failed: {}", e),
+                source: Some(e),
             })?;
         
         let execution_time = start_time.elapsed();
@@ -122,7 +127,7 @@ impl OrchestratorHandle for RealOrchestratorHandle {
                 subtasks_completed: if execution_result.success { 1 } else { 0 },
                 execution_time,
                 quality_score: 0.8, // Default quality score
-                errors: execution_result.errors,
+                errors: execution_result.errors.clone(),
             }],
             quality_scores: std::collections::HashMap::new(),
             errors: execution_result.errors.clone(),
@@ -161,6 +166,8 @@ pub struct ParallelCoordinator {
     fairness_monitor: Arc<RealFairnessMonitor>,
     queue_health_monitor: Arc<crate::learning::queue_health_monitor::QueueHealthMonitor>,
     failure_taxonomy: Arc<crate::learning::failure_taxonomy::FailureTaxonomy>,
+    // Execution statistics
+    execution_stats: ParallelExecutionStats,
 }
 
 
@@ -193,14 +200,21 @@ impl ParallelCoordinator {
     pub fn new(config: ParallelCoordinatorConfig) -> Self {
         // Initialize core components
         let decomposition_engine = DecompositionEngine::new();
-        let worker_manager = WorkerManager::new(DefaultWorkerPool::new());
+        let worker_manager = WorkerManager::new();
         let progress_aggregator = ProgressAggregator::new();
         let progress_synthesizer = ProgressSynthesizer::new();
-        let validation_runner = ValidationRunner::new();
-        let communication_hub = CommunicationHub::new();
+        let validation_runner = ValidationRunner::new(10); // max_parallel_validations
+        let communication_hub = CommunicationHub::new(crate::communication::channels::ChannelConfig::default());
 
         // Initialize learning components with real implementations
-        let db_client = Arc::new(data_infrastructure::client::DatabaseClient::new());
+        // TODO: Create proper database config for DatabaseClient::new()
+        // For now, use a placeholder - this will need to be fixed when database integration is complete
+        let db_config = data_infrastructure::DatabaseConfig::default();
+        let db_client = Arc::new(tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(async {
+                data_infrastructure::ApiDatabaseClient::new(db_config).await.unwrap()
+            })
+        }));
         let pattern_analyzer = Arc::new(PatternAnalyzer::new(5, 0.7)); // min_pattern_frequency=5, confidence_threshold=0.7
         let fairness_monitor = Arc::new(RealFairnessMonitor::new(db_client.clone()));
         let adaptive_selector = Arc::new(AdaptiveWorkerSelector::new(
@@ -214,7 +228,18 @@ impl ParallelCoordinator {
         let learning_persistence = Arc::new(crate::learning::learning_persistence::InMemoryLearningPersistence::new());
 
         // Initialize other learning components
-        let metrics_collector = Arc::new(ParallelWorkerMetricsCollector::new());
+        let reward_weights = crate::learning::types::RewardWeights {
+            quality: 0.4,
+            latency: 0.3,
+            rework: 0.2,
+            cost: 0.1,
+        };
+        let baseline = crate::learning::types::Baseline {
+            p50_ms: 1000.0,
+            p50_quality: 0.8,
+            p50_tokens: 1500.0,
+        };
+        let metrics_collector = Arc::new(ParallelWorkerMetricsCollector::new(reward_weights, baseline));
         let council_bridge = Arc::new(CouncilLearningBridge::new());
 
         // Initialize bridges
@@ -241,6 +266,7 @@ impl ParallelCoordinator {
             fairness_monitor,
             queue_health_monitor,
             failure_taxonomy,
+            execution_stats: ParallelExecutionStats::default(),
         }
     }
 
@@ -306,6 +332,13 @@ impl ParallelCoordinator {
                 }
                 Err(e) => {
                     tracing::error!("Subtask execution failed: {}", e);
+                    // TODO: Create proper failed WorkerResult for failed subtasks
+                    // - [ ] Create WorkerResult with failure status
+                    // - [ ] Include error details and failure reason
+                    // - [ ] Track failure metrics for analysis
+                    // - [ ] Handle partial failures in parallel execution
+                    // - [ ] Add unit tests with various failure scenarios
+                    // - [ ] Add integration tests with real failure handling
                     // For failed subtasks, we could create a failed WorkerResult
                     // but for now we'll just log the error
                 }
@@ -327,7 +360,8 @@ impl ParallelCoordinator {
         // Select optimal worker for the subtask
         let worker_id = self.adaptive_selector.select_worker(&subtask, &available_workers).await?
             .ok_or_else(|| ParallelError::Coordination {
-                message: "No suitable worker available".to_string()
+                message: "No suitable worker available".to_string(),
+                source: None,
             })?;
 
         // Execute the subtask
@@ -362,6 +396,7 @@ impl ParallelCoordinator {
         } else {
             Err(ParallelError::Coordination {
                 message: "No orchestrator handle available for sequential execution".to_string(),
+                source: None,
             })
         }
     }
@@ -373,8 +408,7 @@ impl ParallelCoordinator {
 
     /// Get execution statistics
     pub fn get_execution_stats(&self) -> &ParallelExecutionStats {
-        // Return current stats - in real implementation, this would be stored
-        &ParallelExecutionStats::default()
+        &self.execution_stats
     }
 
     /// Update configuration

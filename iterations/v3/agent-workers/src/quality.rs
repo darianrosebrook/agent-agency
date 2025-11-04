@@ -96,6 +96,14 @@ impl QualityValidator {
 
     /// Validate CAWS compliance
     async fn validate_caws_compliance(&self, result: &ExecutionResult) -> Result<ValidationResult, QualityError> {
+        // TODO: Implement real CAWS compliance validation
+        // - [ ] Integrate with CAWS runtime validator
+        // - [ ] Validate execution result against CAWS rules
+        // - [ ] Check for violations in change budgets, scope, and invariants
+        // - [ ] Generate detailed violation reports
+        // - [ ] Calculate accurate compliance scores
+        // - [ ] Add unit tests with mock CAWS validation
+        // - [ ] Add integration tests with real CAWS compliance checking
         // In a real implementation, this would use the CAWS validator
         // For now, return a basic compliance check
         Ok(ValidationResult {

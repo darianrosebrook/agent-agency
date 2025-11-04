@@ -1,9 +1,9 @@
 //! Dependency analysis and graph construction for task decomposition
 
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use crate::parallel_types::*;
-use crate::worker_types::SubTaskId;
+use crate::worker_types::{SubTaskId, TaskId};
 use crate::error::*;
 use std::collections::{HashMap, HashSet};
 
@@ -78,14 +78,14 @@ impl DependencyAnalyzer {
 
         // Add dependencies: lib.rs/mod.rs must come first
         for (i, file) in rust_files.iter().enumerate() {
-            if self.is_library_root(file) {
+            if self.is_library_root(std::path::Path::new(file)) {
                 // Library root has no dependencies
                 continue;
             }
 
             // Non-root files depend on the library root
             for (j, other_file) in rust_files.iter().enumerate() {
-                if self.is_library_root(other_file) && i != j {
+                if self.is_library_root(std::path::Path::new(other_file)) && i != j {
                     dependencies.push(Dependency {
                         from: subtask_ids[i].clone(),
                         to: subtask_ids[j].clone(),
@@ -260,7 +260,7 @@ impl DependencyGraph {
 
     /// Add a dependency between subtasks
     pub fn add_dependency(&mut self, dependency: Dependency) {
-        self.edges.entry(dependency.from_subtask.clone())
+        self.edges.entry(dependency.from.clone())
             .or_default()
             .push(dependency);
     }
@@ -295,7 +295,7 @@ impl DependencyGraph {
 
         // Remove dependencies on the completed subtask
         for dependencies in self.edges.values_mut() {
-            dependencies.retain(|dep| &dep.to_subtask != completed_id);
+            dependencies.retain(|dep| &dep.to != completed_id);
         }
     }
 
@@ -337,7 +337,7 @@ impl DependencyGraph {
 
         // Visit all dependencies
         for dependency in self.get_dependencies(subtask_id) {
-            self.dfs(&dependency.to_subtask, visited, visiting, result)?;
+            self.dfs(&dependency.to, visited, visiting, result)?;
         }
 
         visiting.remove(subtask_id);
@@ -380,7 +380,7 @@ impl DependencyGraph {
         visiting.insert(subtask_id.clone());
 
         for dependency in self.get_dependencies(subtask_id) {
-            if self.has_cycle(&dependency.to_subtask, visited, visiting) {
+            if self.has_cycle(&dependency.to, visited, visiting) {
                 return true;
             }
         }

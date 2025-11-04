@@ -279,7 +279,7 @@ impl Default for ChannelRegistry {
 /// Statistics for channel health monitoring
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct ChannelStats {
+pub struct ChannelStats {
     pub total_channels: usize,
     pub healthy_channels: usize,
     pub pending_messages: usize,

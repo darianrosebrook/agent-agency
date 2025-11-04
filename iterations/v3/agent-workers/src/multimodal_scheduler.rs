@@ -69,6 +69,14 @@ impl MultimodalJobScheduler {
     }
 
     pub async fn schedule_job(&self, job: MultimodalJob) -> Result<String, WorkerError> {
+        // TODO: Implement real multimodal job scheduling
+        // - [ ] Integrate with job queue system
+        // - [ ] Schedule jobs based on priority and resource availability
+        // - [ ] Handle job dependencies and ordering
+        // - [ ] Return job ID and scheduling status
+        // - [ ] Handle scheduling errors and conflicts
+        // - [ ] Add unit tests with mock job queue
+        // - [ ] Add integration tests with real job scheduling
         // Placeholder implementation
         Ok(format!("Scheduled job: {}", job.id))
     }

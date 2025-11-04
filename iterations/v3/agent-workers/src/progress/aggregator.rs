@@ -27,8 +27,8 @@ impl ProgressAggregator {
     /// Update overall progress from worker progress updates
     pub fn update_from_worker_progress(&self, worker_progress: &WorkerProgress) -> ProgressResult<()> {
         let mut contributions = self.worker_contributions.write();
-        let worker_id = WorkerId(worker_progress.worker_id);
-        let subtask_id = SubTaskId(worker_progress.subtask_id);
+        let worker_id = worker_progress.worker_id.clone();
+        let subtask_id = worker_progress.subtask_id.clone();
         let contribution = contributions.entry(worker_id)
             .or_insert_with(|| WorkerContribution {
                 worker_id,

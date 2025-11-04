@@ -72,6 +72,7 @@ impl WorkerManager {
         let worker = self.get_worker(&worker_id).await
             .ok_or_else(|| ParallelError::Coordination {
                 message: format!("Worker {} not found", worker_id),
+                source: None,
             })?;
 
         // Assign the worker to the subtask

@@ -56,6 +56,13 @@ impl OrchestrationQualityBridge {
             });
         }
         
+        // TODO: Implement complexity requirement checking
+        // - [ ] Define complexity field structure in task schema
+        // - [ ] Implement complexity calculation algorithm
+        // - [ ] Add complexity validation against task requirements
+        // - [ ] Handle missing complexity data gracefully
+        // - [ ] Add unit tests with various complexity scenarios
+        // - [ ] Add integration tests with real task complexity
         // Check complexity requirements
         // Note: Complexity checking would require additional implementation
         // For now, we skip this check as the field structure needs clarification

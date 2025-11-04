@@ -1064,6 +1064,7 @@ pub struct ValidationRule {
     pub description: String,
     pub severity: ViolationSeverity,
     pub rule_type: ValidationRuleType,
+    pub file_patterns: Vec<String>,
     pub config: HashMap<String, serde_json::Value>,
 }
 
@@ -1459,6 +1460,10 @@ impl Default for TaskSpec {
             scope: TaskScope {
                 domains: vec![],
                 files_affected: vec![],
+                files: vec![],
+                directories: vec![],
+                patterns: vec![],
+                max_files: None,
                 max_loc: None,
             },
         }

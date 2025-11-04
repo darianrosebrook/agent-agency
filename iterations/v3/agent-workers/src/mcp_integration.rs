@@ -161,7 +161,7 @@ impl MCPIntegration {
 /// Errors from MCP integration
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
-enum MCPIntegrationError {
+pub enum MCPIntegrationError {
     #[error("Tool registration failed: {0}")]
     ToolRegistrationFailed(String),
 

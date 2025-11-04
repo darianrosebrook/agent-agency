@@ -288,7 +288,7 @@ pub enum ParallelError {
     Worker(String),
     
     #[error("Coordination error: {message}")]
-    Coordination { message: String },
+    Coordination { message: String, source: Option<Box<dyn std::error::Error + Send + Sync>> },
     
     #[error("Validation error: {message}")]
     Validation { message: String },

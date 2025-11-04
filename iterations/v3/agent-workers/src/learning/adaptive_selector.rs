@@ -159,6 +159,13 @@ impl AdaptiveWorkerSelector {
         subtask: &SubTask,
         available_workers: &[WorkerId],
     ) -> Result<Option<WorkerId>, Box<dyn std::error::Error + Send + Sync>> {
+        // TODO: Implement real load balancing selection
+        // - [ ] Query worker load metrics (CPU, memory, active tasks)
+        // - [ ] Calculate load scores for each available worker
+        // - [ ] Select worker with lowest load score
+        // - [ ] Handle workers with similar load scores
+        // - [ ] Add unit tests with mock worker load data
+        // - [ ] Add integration tests with real worker load balancing
         // For now, use fairness-based selection as a proxy for load balancing
         self.select_by_fairness(subtask, available_workers).await
     }

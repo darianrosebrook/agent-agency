@@ -55,12 +55,24 @@ struct DocumentationParams {
 /// Parameters for type system tasks
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct TypeSystemParams ;
+struct TypeSystemParams {
+    pub run_type_check: bool,
+    pub generate_types: bool,
+    pub validate_type_safety: bool,
+    pub optimize_types: bool,
+    pub generate_type_docs: bool,
+}
 
 /// Parameters for async patterns tasks
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct AsyncPatternsParams ;
+struct AsyncPatternsParams {
+    pub analyze_async_usage: bool,
+    pub optimize_async_patterns: bool,
+    pub detect_concurrency_issues: bool,
+    pub generate_async_benchmarks: bool,
+    pub validate_async_safety: bool,
+}
 
 /// Parameters for custom tasks
 
@@ -544,7 +556,13 @@ pub struct TypeSystemSpecialist;
 impl TypeSystemSpecialist {
     fn parse_type_system_task(&self, task: &str) -> Result<TypeSystemParams, WorkerError> {
         // Simple parsing for type system tasks
-        Ok(TypeSystemParams {})
+        Ok(TypeSystemParams {
+            run_type_check: true,
+            generate_types: true,
+            validate_type_safety: true,
+            optimize_types: false,
+            generate_type_docs: false,
+        })
     }
 
     async fn run_type_check(&self, params: &TypeSystemParams) -> Result<String, WorkerError> {
@@ -667,7 +685,13 @@ pub struct AsyncPatternsSpecialist;
 impl AsyncPatternsSpecialist {
     fn parse_async_patterns_task(&self, task: &str) -> Result<AsyncPatternsParams, WorkerError> {
         // Simple parsing for async patterns tasks
-        Ok(AsyncPatternsParams {})
+        Ok(AsyncPatternsParams {
+            analyze_async_usage: true,
+            optimize_async_patterns: true,
+            detect_concurrency_issues: true,
+            generate_async_benchmarks: false,
+            validate_async_safety: true,
+        })
     }
 
     async fn analyze_async_usage(&self, params: &AsyncPatternsParams) -> Result<String, WorkerError> {

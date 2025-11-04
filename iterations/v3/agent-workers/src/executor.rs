@@ -321,8 +321,9 @@ impl TaskExecutor {
             caws_spec: task_spec
                 .caws_spec
                 .as_ref()
-                .and_then(|spec| serde_json::from_value(spec.clone()).ok())
-                .map(|spec: CawsSpec| self.convert_caws_spec(&spec, Some(task_spec))),
+                .and_then(|spec| serde_json::from_value(serde_json::Value::Object(spec.clone().into_iter().collect())).ok())
+                .map(|spec: CawsSpec| self.convert_caws_spec(&spec, Some(task_spec)))
+                .and_then(|spec| serde_json::to_string(&spec).ok()),
         })
     }
 
@@ -451,7 +452,7 @@ impl TaskExecutor {
             min_caws_awareness: 0.8,
             max_execution_time_ms: task_spec.scope.as_ref().and_then(|s| s.max_loc.map(|loc| loc as u64 * 100)),
             preferred_worker_type: None,
-            context_length_estimate,
+            context_length_estimate: context_length_estimate as usize,
         }
     }
 
@@ -546,16 +547,18 @@ impl TaskExecutor {
         // Extract validation rules from quality gates
         for (i, gate) in council_spec.quality_gates.iter().enumerate() {
             rules.push(ValidationRule {
-                id: format!("validation-gate-{}", i),
+                id: Uuid::new_v4(),
                 name: format!("Quality Gate Validation {}", i),
                 description: format!("Validate quality gate: {}", gate.name),
                 rule_type: ValidationRuleType::Custom,
-                config: serde_json::json!({
-                    "gate_name": gate.name,
-                    "threshold": gate.threshold
-                }),
-                severity: SeverityLevel::Medium,
                 file_patterns: vec!["**/*".to_string()],
+                config: {
+                    let mut config = std::collections::HashMap::new();
+                    config.insert("gate_name".to_string(), serde_json::Value::String(gate.name.clone()));
+                    config.insert("threshold".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(gate.threshold as f64).unwrap()));
+                    config
+                },
+                severity: ViolationSeverity::Medium,
             });
         }
         
@@ -563,19 +566,21 @@ impl TaskExecutor {
         if let Some(criteria) = acceptance_criteria {
             for criterion in criteria {
                 rules.push(ValidationRule {
-                    id: format!("validation-acceptance-{}", criterion.id),
+                    id: Uuid::new_v4(),
                     name: format!("Acceptance Criterion {}", criterion.id),
-                    description: format!("Given: {}\nWhen: {}\nThen: {}", 
+                    description: format!("Given: {}\nWhen: {}\nThen: {}",
                         criterion.given, criterion.when, criterion.then),
                     rule_type: ValidationRuleType::Acceptance,
-                    config: serde_json::json!({
-                        "criterion_id": criterion.id,
-                        "given": criterion.given,
-                        "when": criterion.when,
-                        "then": criterion.then
-                    }),
-                    severity: SeverityLevel::High, // Acceptance criteria are high priority
                     file_patterns: vec!["**/*".to_string()],
+                    config: {
+                        let mut config = std::collections::HashMap::new();
+                        config.insert("criterion_id".to_string(), serde_json::Value::String(criterion.id.clone()));
+                        config.insert("given".to_string(), serde_json::Value::String(criterion.given.clone()));
+                        config.insert("when".to_string(), serde_json::Value::String(criterion.when.clone()));
+                        config.insert("then".to_string(), serde_json::Value::String(criterion.then.clone()));
+                        config
+                    },
+                    severity: ViolationSeverity::High, // Acceptance criteria are high priority
                 });
             }
         }
@@ -584,16 +589,18 @@ impl TaskExecutor {
         if let Some(invs) = invariants {
             for (i, invariant) in invs.iter().enumerate() {
                 rules.push(ValidationRule {
-                    id: format!("validation-invariant-{}", i),
+                    id: Uuid::new_v4(),
                     name: format!("System Invariant {}", i + 1),
                     description: invariant.clone(),
                     rule_type: ValidationRuleType::Invariant,
-                    config: serde_json::json!({
-                        "invariant_index": i,
-                        "invariant_text": invariant
-                    }),
-                    severity: SeverityLevel::Critical, // Invariants are critical
                     file_patterns: vec!["**/*".to_string()],
+                    config: {
+                        let mut config = std::collections::HashMap::new();
+                        config.insert("invariant_index".to_string(), serde_json::Value::Number(i.into()));
+                        config.insert("invariant_text".to_string(), serde_json::Value::String(invariant.clone()));
+                        config
+                    },
+                    severity: ViolationSeverity::Critical, // Invariants are critical
                 });
             }
         }
@@ -611,7 +618,7 @@ impl TaskExecutor {
         
         // Extract throughput from task requirements if available
         let throughput_rps = task_spec
-            .and_then(|ts| ts.requirements.max_execution_time_ms)
+            .and_then(|ts| ts.requirements.as_ref()?.max_execution_time_ms)
             .map(|timeout_ms| {
                 // Calculate throughput: if max execution time is 1000ms, we can do ~1 req/sec
                 // Higher timeout = lower throughput requirement
@@ -626,11 +633,12 @@ impl TaskExecutor {
         // Estimate memory usage based on task complexity
         // Simple tasks: ~50MB, Medium: ~100MB, Complex: ~200MB
         let memory_usage_mb = task_spec
-            .map(|ts| {
-                match ts.risk_tier {
-                    RiskTier::Tier1 => 200, // Critical tasks may need more memory
-                    RiskTier::Tier2 => 100, // Standard tasks
-                    RiskTier::Tier3 => 50,  // Low-risk tasks
+            .and_then(|ts| ts.risk_tier)
+            .map(|tier| {
+                match tier {
+                    1 => 200, // Critical tasks may need more memory
+                    2 => 100, // Standard tasks
+                    _ => 50,  // Low-risk tasks
                 }
             })
             .unwrap_or(100);
@@ -671,19 +679,27 @@ impl TaskExecutor {
             metadata: CawsMetadata {
                 created_at: chrono::Utc::now(),
                 created_by: "orchestrator".to_string(),
-                description: council_spec.description.clone(),
+                description: council_spec.metadata.description.clone(),
                 tags: vec!["converted".to_string()],
             },
             quality_gates,
             compliance: compliance_requirements,
             validation_rules: Self::convert_validation_rules(
                 council_spec,
+                // TODO: Extract acceptance_criteria and invariants from WorkingSpec
+                // - [ ] Load WorkingSpec if available
+                // - [ ] Extract acceptance_criteria from WorkingSpec
+                // - [ ] Extract invariants from WorkingSpec
+                // - [ ] Merge with waivers and rules for complete validation
+                // - [ ] Handle missing WorkingSpec gracefully
+                // - [ ] Add unit tests with various WorkingSpec structures
+                // - [ ] Add integration tests with real WorkingSpec extraction
                 // Note: acceptance_criteria and invariants would come from WorkingSpec if available
                 // For now, we extract from waivers and rules only
                 None, // acceptance_criteria: could be extracted from WorkingSpec if available
                 None, // invariants: could be extracted from WorkingSpec if available
             ),
-            benchmarks: Self::extract_performance_benchmarks(&compliance_requirements, task_spec),
+            benchmarks: Self::extract_performance_benchmarks(&ComplianceRequirements::default(), task_spec),
             security: SecurityRequirements::default(),
         }
     }
@@ -944,7 +960,7 @@ impl TaskExecutor {
             score -= 0.1;
         }
 
-        score.max(0.0).min(1.0)
+        (score as f32).max(0.0).min(1.0)
     }
 
     /// Calculate readability score based on code formatting and structure
@@ -979,7 +995,7 @@ impl TaskExecutor {
             score += 0.1;
         }
 
-        score.max(0.0).min(1.0)
+        (score as f32).max(0.0).min(1.0)
     }
 
     /// Estimate test coverage based on content analysis
@@ -1036,7 +1052,7 @@ impl TaskExecutor {
             impact_score -= 0.1; // Async task spawning
         }
 
-        Some(impact_score.max(0.0).min(1.0))
+        Some((impact_score as f32).max(0.0).min(1.0))
     }
 
     /// Check CAWS compliance for worker output
@@ -1260,6 +1276,11 @@ impl TaskExecutorTrait for TaskExecutor {
             context: task_spec.context,
             working_spec_id: task_spec.working_spec_id,
             timeout_seconds: task_spec.timeout_seconds,
+            scope: task_spec.scope,
+            risk_tier: task_spec.risk_tier,
+            acceptance_criteria: task_spec.acceptance_criteria,
+            caws_spec: task_spec.caws_spec,
+            requirements: task_spec.requirements,
         };
 
         // Execute the task
@@ -1303,6 +1324,11 @@ impl TaskExecutorTrait for TaskExecutor {
             context: task_spec.context,
             working_spec_id: task_spec.working_spec_id,
             timeout_seconds: task_spec.timeout_seconds,
+            scope: task_spec.scope,
+            risk_tier: task_spec.risk_tier,
+            acceptance_criteria: task_spec.acceptance_criteria,
+            caws_spec: task_spec.caws_spec,
+            requirements: task_spec.requirements,
         };
 
         // Execute with circuit breaker if enabled
@@ -1481,6 +1507,14 @@ impl TaskExecutor {
     /// Resolve worker endpoint from worker registry
     async fn resolve_worker_endpoint(&self, worker_id: Uuid) -> Result<String, anyhow::Error> {
         // In a real implementation, this would:
+        // TODO: Implement proper worker endpoint resolution
+        // - [ ] Integrate with worker registry service
+        // - [ ] Query registry for worker endpoint by worker ID
+        // - [ ] Check worker health and availability
+        // - [ ] Cache resolved endpoints for performance
+        // - [ ] Handle worker failover and load balancing
+        // - [ ] Add unit tests with mock worker registry
+        // - [ ] Add integration tests with real service discovery
         // 1. Query worker registry service for worker endpoint
         // 2. Check worker health and availability
         // 3. Cache resolved endpoints for performance
@@ -1903,7 +1937,7 @@ impl TaskExecutor {
         let mut capabilities = Vec::new();
         
         // Add capabilities based on task domains
-        for domain in &task_spec.scope.domains {
+        for domain in &task_spec.scope.as_ref().unwrap().domains {
             match domain.as_str() {
                 "frontend" => capabilities.extend(vec!["react".to_string(), "typescript".to_string(), "css".to_string()]),
                 "backend" => capabilities.extend(vec!["rust".to_string(), "api".to_string(), "database".to_string()]),
