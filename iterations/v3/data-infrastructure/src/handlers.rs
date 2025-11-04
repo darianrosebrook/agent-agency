@@ -277,7 +277,7 @@ pub async fn submit_task(
     // Submit to worker pool with real API integration
     let task_id_clone = task_id.clone();
     let description_clone = description.to_string();
-    let context_clone = context.clone();
+    let _context_clone = context.clone();
     let priority_clone = request.priority.clone();
     let worker_pool = state.worker_pool.clone();
 

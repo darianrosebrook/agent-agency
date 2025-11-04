@@ -393,7 +393,7 @@ impl RtoRpoMonitor {
     }
 
     /// Record incident response time
-    pub async fn record_incident_response(&self, response_time_seconds: u64) {
+    pub async fn record_incident_response(&self, _response_time_seconds: u64) {
         let mut status = self.compliance_status.write().await;
         status.last_incident_response_time = Some(Utc::now());
     }

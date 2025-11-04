@@ -330,7 +330,7 @@ impl CliInterface {
         output: Option<PathBuf>,
     ) -> Result<()> {
         // Read context file if provided
-        let context = if let Some(context_path) = context_file {
+        let _context = if let Some(context_path) = context_file {
             Some(std::fs::read_to_string(context_path)
                 .map_err(|e| CliError::IoError(e))?)
         } else {
