@@ -25,7 +25,6 @@ pub struct ExecutionRecord {
     pub created_at: DateTime<Utc>,
 }
 
-#[cfg(feature = "sqlx")]
 impl<'r> sqlx::FromRow<'r, sqlx::postgres::PgRow> for ExecutionRecord {
     fn from_row(row: &'r sqlx::postgres::PgRow) -> Result<Self, sqlx::Error> {
         use sqlx::Row;

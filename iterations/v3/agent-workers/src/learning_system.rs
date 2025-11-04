@@ -862,7 +862,8 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
                 let mut patterns = Vec::new();
                 for row in rows {
                     let pattern_type: PatternType = serde_json::from_value(row.get("pattern_type"))?;
-                    let conditions: HashMap<String, serde_json::Value> = row.get("metadata");
+                    let conditions: serde_json::Value = row.get("metadata");
+                    let conditions: HashMap<String, serde_json::Value> = serde_json::from_value(conditions)?;
 
                     patterns.push(SuccessPattern {
                         id: Uuid::new_v4(), // Generate new ID since we don't store it
@@ -918,7 +919,8 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
                 let mut patterns = Vec::new();
                 for row in rows {
                     let pattern_type: PatternType = serde_json::from_value(row.get("pattern_type"))?;
-                    let conditions: HashMap<String, serde_json::Value> = row.get("metadata");
+                    let conditions: serde_json::Value = row.get("metadata");
+                    let conditions: HashMap<String, serde_json::Value> = serde_json::from_value(conditions)?;
                     let common_errors: Vec<String> = serde_json::from_value(row.get("outcomes"))?;
 
                     patterns.push(FailurePattern {

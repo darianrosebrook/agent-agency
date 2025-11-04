@@ -369,7 +369,7 @@ pub type ParallelResult<T> = Result<T, ParallelError>;
 /// Errors that can occur during parallel execution
 
 #[derive(Debug, Serialize, JsonSchema, thiserror::Error)]
-enum ParallelError {
+pub enum ParallelError {
     #[error("Decomposition error: {message}")]
     Decomposition { message: String, source: Option<Box<dyn std::error::Error + Send + Sync>> },
     

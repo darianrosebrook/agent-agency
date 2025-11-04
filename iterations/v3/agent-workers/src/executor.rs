@@ -1893,10 +1893,11 @@ impl TaskExecutor {
                 })?;
             Ok(result)
         } else {
+            let status = response.status();
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
             Err(WorkerError::ExecutionFailed {
                 worker_id: WorkerId(worker_id),
-                message: format!("Worker execution failed with status {}: {}", response.status(), error_text),
+                message: format!("Worker execution failed with status {}: {}", status, error_text),
             })
         }
     }

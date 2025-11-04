@@ -17,7 +17,7 @@ use crate::learning::{
     ExecutionRecord, WorkerPerformanceProfile, SuccessPattern, FailurePattern, 
     OptimalConfig, ConfigurationRecommendations, OptimizationEvent, TaskPattern
 };
-use crate::worker_types::{WorkerSpecialty, TaskDefinition, TaskStatus, ExecutionOutcome, LearningMode, WorkerBreakdown, QualityRequirements, Progress, ValidationContext};
+use crate::worker_types::{WorkerSpecialty, TaskDefinition, TaskStatus, ExecutionOutcome, LearningMode, QualityRequirements, Progress, ValidationContext};
 use agent_agency_contracts::task_executor::{TaskExecutor, TaskSpec, ExecutionStatus};
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
 use std::collections::HashMap;
