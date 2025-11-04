@@ -3,6 +3,7 @@
 //! Comprehensive audit trail for database operations, security events,
 //! and compliance monitoring with structured logging and retention.
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -12,10 +13,14 @@ use tracing::{debug, warn};
 use uuid::Uuid;
 
 /// Task audit event structure (matches task_audit_logs table)
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct TaskAuditEvent {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub task_id: Uuid,
+    #[schemars(with = "String")]
+
     pub ts: DateTime<Utc>,
     pub category: String,
     pub actor: String,
@@ -25,9 +30,12 @@ pub struct TaskAuditEvent {
 }
 
 /// Database audit event
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DatabaseAuditEvent {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub event_type: AuditEventType,
     pub actor: String,
@@ -41,7 +49,7 @@ pub struct DatabaseAuditEvent {
 }
 
 /// Audit event types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum AuditEventType {
     Query,
     Connection,
@@ -176,7 +184,7 @@ impl DatabaseAuditLogger {
     /// Get audit events within a time range
     pub async fn get_events(
         &self,
-        start_time: DateTime<Utc>,
+    start_time: DateTime<Utc>,
         end_time: Option<DateTime<Utc>>,
         event_type: Option<AuditEventType>,
         actor: Option<String>,
@@ -258,7 +266,7 @@ impl DatabaseAuditLogger {
 }
 
 /// Audit statistics summary
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AuditStatistics {
     pub total_events: usize,
     pub event_counts: HashMap<String, usize>,

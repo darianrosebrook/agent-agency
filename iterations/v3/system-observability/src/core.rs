@@ -8,10 +8,9 @@ use tdigest::TDigest;
 use tracing::warn;
 use std::collections::VecDeque;
 use redis::aio::ConnectionManager;
-
 /// Wrapper for Redis ConnectionManager to implement Debug
 #[derive(Clone)]
-pub struct RedisConnectionManager(pub ConnectionManager);
+pub struct RedisConnectionManager (pub ConnectionManager);
 
 impl std::fmt::Debug for RedisConnectionManager {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

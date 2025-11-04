@@ -15,7 +15,7 @@ use reqwest::Client;
 use anyhow::{Context, Result};
 
 /// Knowledge graph entity
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct Entity {
     pub id: String,
     pub entity_type: EntityType,
@@ -24,13 +24,16 @@ pub struct Entity {
     pub properties: HashMap<String, serde_json::Value>,
     pub embedding: Option<Vec<f32>>,
     pub confidence: f32,
+    #[schemars(with = "String")]
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
     pub updated_at: DateTime<Utc>,
+    #[schemars(with = "Vec<String>")]
     pub source_memories: Vec<MemoryId>,
 }
 
 /// Entity types in the knowledge graph
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
 pub enum EntityType {
     Agent,
     Task,
@@ -69,7 +72,7 @@ impl TryFrom<i32> for EntityType {
 }
 
 /// Relationship between entities
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct Relationship {
     pub id: String,
     pub source_entity: String,
@@ -79,13 +82,16 @@ pub struct Relationship {
     pub strength: f32,
     pub confidence: f32,
     pub bidirectional: bool,
+    #[schemars(with = "String")]
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
     pub updated_at: DateTime<Utc>,
+    #[schemars(with = "Vec<String>")]
     pub source_memories: Vec<MemoryId>,
 }
 
 /// Types of relationships between entities
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
 pub enum RelationshipType {
     Performs,
     Requires,

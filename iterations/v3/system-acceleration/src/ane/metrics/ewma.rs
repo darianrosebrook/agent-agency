@@ -3,6 +3,8 @@
 //! This module provides EWMA calculation utilities for performance monitoring
 //! and adaptive metrics tracking in ANE operations.
 
+use schemars::JsonSchema;
+
 /// EWMA calculation utilities
 pub struct Ewma;
 
@@ -229,7 +231,7 @@ impl Ewma {
 }
 
 /// EWMA-based performance metrics tracker
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct PerformanceTracker {
     /// Latency EWMA
     pub latency_ewma: f64,
@@ -246,7 +248,7 @@ pub struct PerformanceTracker {
 }
 
 /// Alpha values for different metrics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct MetricAlphas {
     pub latency: f64,
     pub throughput: f64,
@@ -266,7 +268,7 @@ impl Default for MetricAlphas {
 }
 
 /// Sample counts for metrics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct MetricCounts {
     pub latency: u64,
     pub throughput: u64,
@@ -351,7 +353,7 @@ impl PerformanceTracker {
 }
 
 /// Performance summary
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct PerformanceSummary {
     pub latency_ms: f64,
     pub throughput_ips: f64,

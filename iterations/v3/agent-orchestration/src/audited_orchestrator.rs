@@ -28,8 +28,9 @@ use crate::audit_trail::{
 use crate::types::OrchestratorConfig;
 
 // Placeholder orchestrator type until main orchestrator is implemented
-#[derive(Debug)]
-pub struct Orchestrator {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct Orchestrator {
     config: OrchestratorConfig,
 }
 
@@ -450,8 +451,9 @@ use crate::error_handling::{CircuitBreaker, CircuitBreakerStats, CircuitBreakerS
 
 // Real types now imported from data_infrastructure::file_operations
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum RiskLevel {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum RiskLevel {
     Low,
     Medium,
     High,
@@ -459,8 +461,9 @@ pub enum RiskLevel {
 }
 
 // Supporting types for real implementations
-#[derive(Debug, Clone)]
-pub struct TaskComplexity {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct TaskComplexity {
     pub lines_of_code: usize,
     pub file_count: usize,
     pub dependency_count: usize,
@@ -468,24 +471,27 @@ pub struct TaskComplexity {
     pub risk_level: RiskLevel,
 }
 
-#[derive(Debug, Clone)]
-pub struct ExecutionStrategy {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ExecutionStrategy {
     pub approach: StrategyApproach,
     pub parallelization_level: ParallelizationLevel,
     pub resource_requirements: ResourceRequirements,
     pub estimated_duration: std::time::Duration,
 }
 
-#[derive(Debug, Clone)]
-pub enum StrategyApproach {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum StrategyApproach {
     Sequential,
     Parallel,
     Hybrid,
     Adaptive,
 }
 
-#[derive(Debug, Clone)]
-pub enum ParallelizationLevel {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum ParallelizationLevel {
     None,
     Low,
     Medium,
@@ -493,39 +499,44 @@ pub enum ParallelizationLevel {
     Maximum,
 }
 
-#[derive(Debug, Clone)]
-pub struct ResourceRequirements {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ResourceRequirements {
     pub cpu_cores: usize,
     pub memory_mb: usize,
     pub disk_space_mb: usize,
     pub network_bandwidth_mbps: usize,
 }
 
-#[derive(Debug, Clone)]
-pub struct ResourceAllocation {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ResourceAllocation {
     pub allocated_cpu_cores: usize,
     pub allocated_memory_mb: usize,
     pub allocated_disk_space_mb: usize,
     pub priority_level: PriorityLevel,
 }
 
-#[derive(Debug, Clone)]
-pub enum PriorityLevel {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum PriorityLevel {
     Low,
     Normal,
     High,
     Critical,
 }
 
-#[derive(Debug, Clone)]
-pub struct ExecutionPlan {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ExecutionPlan {
     pub steps: Vec<ExecutionStep>,
     pub dependencies: Vec<Dependency>,
     pub rollback_plan: Option<RollbackPlan>,
 }
 
-#[derive(Debug, Clone)]
-pub struct ExecutionStep {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ExecutionStep {
     pub id: String,
     pub name: String,
     pub operation_type: OperationType,
@@ -534,8 +545,9 @@ pub struct ExecutionStep {
     pub dependencies: Vec<String>,
 }
 
-#[derive(Debug, Clone)]
-pub enum OperationType {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum OperationType {
     CodeGeneration,
     Testing,
     Refactoring,
@@ -545,75 +557,85 @@ pub enum OperationType {
     Custom(String),
 }
 
-#[derive(Debug, Clone)]
-pub struct Dependency {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct Dependency {
     pub from_step: String,
     pub to_step: String,
     pub dependency_type: DependencyType,
 }
 
-#[derive(Debug, Clone)]
-pub enum DependencyType {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum DependencyType {
     Sequential,
     Parallel,
     Conditional,
     Resource,
 }
 
-#[derive(Debug, Clone)]
-pub struct RollbackPlan {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct RollbackPlan {
     pub steps: Vec<RollbackStep>,
     pub rollback_triggers: Vec<RollbackTrigger>,
 }
 
-#[derive(Debug, Clone)]
-pub struct RollbackStep {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct RollbackStep {
     pub id: String,
     pub name: String,
     pub rollback_action: RollbackAction,
 }
 
-#[derive(Debug, Clone)]
-pub enum RollbackAction {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum RollbackAction {
     RevertFile,
     RestoreBackup,
     UndoOperation,
     CleanupResources,
 }
 
-#[derive(Debug, Clone)]
-pub enum RollbackTrigger {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum RollbackTrigger {
     Error(String),
     Timeout(std::time::Duration),
     ResourceExhaustion,
     QualityGateFailure,
 }
 
-#[derive(Debug, Clone)]
-pub struct PlanValidationResult {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct PlanValidationResult {
     pub is_valid: bool,
     pub reason: String,
     pub warnings: Vec<String>,
     pub recommendations: Vec<String>,
 }
 
-#[derive(Debug, Clone)]
-pub struct CouncilMember {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct CouncilMember {
     pub id: String,
     pub name: String,
     pub expertise: Vec<String>,
     pub availability: AvailabilityStatus,
 }
 
-#[derive(Debug, Clone)]
-pub enum AvailabilityStatus {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum AvailabilityStatus {
     Available,
     Busy,
     Unavailable,
 }
 
-#[derive(Debug, Clone)]
-pub struct ReviewMaterials {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ReviewMaterials {
     pub task_summary: String,
     pub execution_plan: ExecutionPlan,
     pub code_changes: Vec<CodeChange>,
@@ -621,8 +643,9 @@ pub struct ReviewMaterials {
     pub quality_metrics: QualityMetrics,
 }
 
-#[derive(Debug, Clone)]
-pub struct CodeChange {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct CodeChange {
     pub file_path: String,
     pub change_type: ChangeType,
     pub lines_added: usize,
@@ -630,32 +653,36 @@ pub struct CodeChange {
     pub diff_summary: String,
 }
 
-#[derive(Debug, Clone)]
-pub enum ChangeType {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum ChangeType {
     Addition,
     Modification,
     Deletion,
     Refactoring,
 }
 
-#[derive(Debug, Clone)]
-pub struct TestResults {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct TestResults {
     pub total_tests: usize,
     pub passed_tests: usize,
     pub failed_tests: usize,
     pub coverage_percentage: f64,
 }
 
-#[derive(Debug, Clone)]
-pub struct QualityMetrics {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct QualityMetrics {
     pub complexity_score: f64,
     pub maintainability_score: f64,
     pub security_score: f64,
     pub performance_score: f64,
 }
 
-#[derive(Debug, Clone)]
-pub struct MemberReview {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct MemberReview {
     pub member_id: String,
     pub decision: ReviewDecision,
     pub comments: String,
@@ -664,39 +691,44 @@ pub struct MemberReview {
     pub confidence_score: f64,
 }
 
-#[derive(Debug, Clone)]
-pub enum ReviewDecision {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum ReviewDecision {
     Approve,
     Reject,
     RequestChanges,
     Abstain,
 }
 
-#[derive(Debug, Clone)]
-pub struct ConsensusResult {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ConsensusResult {
     pub decision: CouncilDecision,
     pub confidence: f64,
     pub dissenting_opinions: Vec<String>,
     pub consensus_strength: ConsensusStrength,
 }
 
-#[derive(Debug, Clone)]
-pub enum CouncilDecision {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum CouncilDecision {
     Approve,
     Reject,
     RequestChanges,
 }
 
-#[derive(Debug, Clone)]
-pub enum ConsensusStrength {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum ConsensusStrength {
     Weak,
     Moderate,
     Strong,
     Unanimous,
 }
 
-#[derive(Debug, Clone)]
-pub struct FinalVerdict {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct FinalVerdict {
     pub decision: CouncilDecision,
     pub reason: String,
     pub recommendations: Vec<String>,
@@ -704,23 +736,26 @@ pub struct FinalVerdict {
     pub risk_assessment: RiskAssessment,
 }
 
-#[derive(Debug, Clone)]
-pub struct RiskAssessment {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct RiskAssessment {
     pub overall_risk: RiskLevel,
     pub technical_risks: Vec<TechnicalRisk>,
     pub mitigation_strategies: Vec<String>,
 }
 
-#[derive(Debug, Clone)]
-pub struct TechnicalRisk {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct TechnicalRisk {
     pub risk_type: RiskType,
     pub probability: f64,
     pub impact: RiskImpact,
     pub description: String,
 }
 
-#[derive(Debug, Clone)]
-pub enum RiskType {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum RiskType {
     Security,
     Performance,
     Maintainability,
@@ -728,8 +763,9 @@ pub enum RiskType {
     Scalability,
 }
 
-#[derive(Debug, Clone)]
-pub enum RiskImpact {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum RiskImpact {
     Low,
     Medium,
     High,
@@ -739,11 +775,13 @@ pub enum RiskImpact {
 // Functions now imported from data_infrastructure::file_operations
 
 /// Context for tracking active operations
-#[derive(Debug, Clone)]
-pub struct OperationContext {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct OperationContext {
     /// Operation ID for correlation
     pub operation_id: String,
     /// Start time
+    #[schemars(with = "String")]
     pub start_time: Instant,
     /// Operation type
     pub operation_type: String,
@@ -754,8 +792,9 @@ pub struct OperationContext {
 }
 
 /// Audited orchestrator that wraps all operations with comprehensive audit logging
-#[derive(Debug)]
-pub struct AuditedOrchestrator {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct AuditedOrchestrator {
     /// The underlying orchestrator
     orchestrator: Arc<Orchestrator>,
     /// Audit trail manager
@@ -771,8 +810,9 @@ pub struct AuditedOrchestrator {
 }
 
 /// Configuration for the audited orchestrator
-#[derive(Debug, Clone)]
-pub struct AuditedOrchestratorConfig {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct AuditedOrchestratorConfig {
     /// Base orchestrator configuration
     pub orchestrator_config: OrchestratorConfig,
     /// Audit configuration
@@ -1055,16 +1095,16 @@ impl AuditedOrchestrator {
         let mut waivers = Vec::new();
         for row in rows {
             let waiver = serde_json::json!({
-                "id": row.get::<Uuid, &str>("id"),
-                "title": row.get::<String, &str>("title"),
-                "reason": row.get::<String, &str>("reason"),
-                "description": row.get::<String, &str>("description"),
-                "gates": row.get::<Vec<String>, &str>("gates"),
-                "approved_by": row.get::<String, &str>("approved_by"),
-                "impact_level": row.get::<String, &str>("impact_level"),
-                "expires_at": row.get::<chrono::DateTime<chrono::Utc>, &str>("expires_at"),
-                "created_at": row.get::<chrono::DateTime<chrono::Utc>, &str>("created_at"),
-                "metadata": row.get::<serde_json::Value, &str>("metadata")
+                "id": row.get("id"),
+                "title": row.get("title"),
+                "reason": row.get("reason"),
+                "description": row.get("description"),
+                "gates": row.get("gates"),
+                "approved_by": row.get("approved_by"),
+                "impact_level": row.get("impact_level"),
+                "expires_at": row.get("expires_at"),
+                "created_at": row.get("created_at"),
+                "metadata": row.get("metadata")
             });
             waivers.push(waiver);
         }
@@ -1687,8 +1727,9 @@ pub struct AuditStatistics {
 }
 
 /// Audit error wrapper
-#[derive(Debug, thiserror::Error)]
-pub enum AuditError {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
+enum AuditError {
     #[error("Orchestration error: {0}")]
     Orchestration(String),
 
@@ -1727,4 +1768,3 @@ pub use crate::audit_trail::AuditQuery;
 // - Current status: Disabled due to missing MultimodalRetriever dependency
 //
 // Current implementation provides placeholder types and local implementations
-// until proper integration with the new modular architecture is complete.

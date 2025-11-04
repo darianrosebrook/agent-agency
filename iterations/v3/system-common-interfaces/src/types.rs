@@ -11,7 +11,7 @@ use chrono::{DateTime, Utc};
 
 /// Unique identifier for tasks and operations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct TaskId(pub Uuid);
+pub struct TaskId (pub Uuid);
 
 impl TaskId {
     pub fn new() -> Self {
@@ -73,7 +73,7 @@ pub struct TaskResult {
 }
 
 /// Resource usage information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ResourceUsage {
     pub cpu_percent: f64,
     pub memory_mb: u64,
@@ -82,10 +82,12 @@ pub struct ResourceUsage {
 }
 
 /// Performance metrics for operations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct PerformanceMetrics {
     pub operation_name: String,
+    #[schemars(with = "String")]
     pub start_time: DateTime<Utc>,
+    #[schemars(with = "String")]
     pub end_time: DateTime<Utc>,
     pub duration_ms: u64,
     pub resource_usage: ResourceUsage,
@@ -94,9 +96,11 @@ pub struct PerformanceMetrics {
 }
 
 /// Audit log entry for security and compliance
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct AuditLogEntry {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub user_id: Option<String>,
     pub action: String,
@@ -110,7 +114,7 @@ pub struct AuditLogEntry {
 
 /// Message envelope for inter-service communication
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MessageEnvelope<T> {
+pub struct MessageEnvelope <T> {
     pub id: Uuid,
     pub timestamp: DateTime<Utc>,
     pub sender: String,
@@ -135,9 +139,11 @@ pub enum SystemEvent {
 }
 
 /// Event metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct EventMetadata {
+    #[schemars(with = "String")]
     pub event_id: Uuid,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub source: String,
     pub severity: EventSeverity,
@@ -145,7 +151,7 @@ pub struct EventMetadata {
 }
 
 /// Event severity levels
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize, schemars::JsonSchema)]
 pub enum EventSeverity {
     Debug,
     Info,
@@ -155,7 +161,7 @@ pub enum EventSeverity {
 }
 
 /// Pagination parameters for list operations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct Pagination {
     pub page: u32,
     pub per_page: u32,
@@ -211,15 +217,17 @@ pub struct QueryParams {
 
 /// API response wrapper
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ApiResponse<T> {
+pub struct ApiResponse <T> {
     pub data: T,
     pub metadata: ResponseMetadata,
 }
 
 /// Response metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ResponseMetadata {
+    #[schemars(with = "String")]
     pub request_id: Uuid,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub processing_time_ms: u64,
     pub api_version: String,
@@ -227,24 +235,27 @@ pub struct ResponseMetadata {
 }
 
 /// Rate limit information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct RateLimitInfo {
     pub limit: u32,
     pub remaining: u32,
+    #[schemars(with = "String")]
     pub reset_time: DateTime<Utc>,
     pub retry_after_seconds: Option<u64>,
 }
 
 /// Error response structure
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ErrorResponse {
     pub error: ErrorDetails,
+    #[schemars(with = "String")]
     pub request_id: Uuid,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 }
 
 /// Error details
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ErrorDetails {
     pub code: String,
     pub message: String,
@@ -272,39 +283,43 @@ pub struct HealthCheckResponse {
 }
 
 /// Individual health check status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct HealthCheckStatus {
     pub status: String,
     pub message: Option<String>,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub response_time_ms: u64,
 }
 
 /// Metrics data point
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct MetricDataPoint {
     pub name: String,
     pub value: f64,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub tags: HashMap<String, String>,
 }
 
 /// Metrics snapshot
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct MetricsSnapshot {
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub metrics: Vec<MetricDataPoint>,
     pub interval_seconds: u64,
 }
 
 /// Service discovery information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ServiceInfo {
     pub name: String,
     pub address: String,
     pub port: u16,
     pub health_endpoint: Option<String>,
     pub metadata: HashMap<String, String>,
+    #[schemars(with = "String")]
     pub last_seen: DateTime<Utc>,
 }
 

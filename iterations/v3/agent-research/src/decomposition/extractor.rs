@@ -1,5 +1,7 @@
 //! Atomic claim extraction functionality
 
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use crate::extraction_types::*;
 use anyhow::Result;
 use regex::Regex;
@@ -8,7 +10,8 @@ use tracing::debug;
 use uuid::Uuid;
 
 /// Atomic claim extractor implementation
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ClaimExtractor {
     subject_verb_patterns: Vec<Regex>,
     negation_patterns: Vec<Regex>,

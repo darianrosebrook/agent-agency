@@ -2,11 +2,12 @@
 //!
 //! Schedules and manages multimodal processing jobs across different modalities.
 
+use schemars::JsonSchema;
 use crate::worker_errors::WorkerError;
 use serde::{Deserialize, Serialize};
 
 /// Multimodal scheduler configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MultimodalSchedulerConfig {
     pub max_concurrent_jobs: usize,
     pub priority_levels: usize,
@@ -22,7 +23,7 @@ impl Default for MultimodalSchedulerConfig {
 }
 
 /// Multimodal job types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum MultimodalJobType {
     TextProcessing,
     ImageAnalysis,
@@ -32,7 +33,7 @@ pub enum MultimodalJobType {
 }
 
 /// Job priority levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
 pub enum JobPriority {
     Low,
     Medium,
@@ -40,7 +41,7 @@ pub enum JobPriority {
 }
 
 /// Multimodal job definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MultimodalJob {
     pub id: String,
     pub job_type: MultimodalJobType,
@@ -49,7 +50,7 @@ pub struct MultimodalJob {
 }
 
 /// Job status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum MultimodalJobStatus {
     Pending,
     Running,
@@ -74,7 +75,7 @@ impl MultimodalJobScheduler {
 }
 
 /// Scheduler statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SchedulerStats {
     pub active_jobs: usize,
     pub completed_jobs: usize,

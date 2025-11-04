@@ -209,7 +209,6 @@ pub enum RedisMetricsError {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[test]
     fn test_redis_circuit_breaker() {
         let breaker = RedisCircuitBreaker::new(3, 1000);

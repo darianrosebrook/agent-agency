@@ -3,6 +3,7 @@
 //! Provides persistent storage for execution artifacts with versioning,
 //! compression, and integrity verification.
 
+use schemars::JsonSchema;
 use std::sync::Arc;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -20,9 +21,11 @@ use agent_agency_contracts::{ExecutionArtifacts, execution_artifacts::ArtifactMe
 pub type ArtifactId = Uuid;
 
 /// Metadata for stored artifacts (storage layer)
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct DatabaseArtifactMetadata {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub size_bytes: u64,
@@ -33,7 +36,7 @@ pub struct DatabaseArtifactMetadata {
 }
 
 /// Version metadata information
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct VersionMetadata {
     /// Version string (e.g., "1", "2", "3")
     pub version: String,
@@ -50,7 +53,7 @@ pub struct VersionMetadata {
 }
 
 /// Version diff information between two versions
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct VersionDiff {
     /// From version
     pub from_version: String,
@@ -67,7 +70,7 @@ pub struct VersionDiff {
 }
 
 /// Error type for artifact storage operations
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum ArtifactStorageError {
     #[error("Database error: {0}")]
     DatabaseError(String),
@@ -769,7 +772,7 @@ impl DatabaseArtifactStorage {
 }
 
 /// Database row representation for artifacts
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct DbArtifactRow {
     task_id: Uuid,
     session_id: Option<Uuid>,
@@ -892,12 +895,12 @@ impl ArtifactStorage for DatabaseArtifactStorage {
 
         let stored_collection_checksum = metadata_row
             .as_ref()
-            .and_then(|row| row.get::<Option<String>, _>("checksum"))
+            .and_then(|row: &sqlx::postgres::PgRow| Some(row.get::<String, &str>("checksum")))
             .unwrap_or_default();
 
         let integrity_verified = metadata_row
             .as_ref()
-            .and_then(|row| row.get::<Option<bool>, _>("integrity_verified"))
+            .and_then(|row| row.get("integrity_verified"))
             .unwrap_or(false);
 
         let rows = sqlx::query(
@@ -1060,7 +1063,7 @@ impl ArtifactStorage for DatabaseArtifactStorage {
 
     async fn find_old_artifacts(
         &self,
-        cutoff_date: DateTime<Utc>,
+    cutoff_date: DateTime<Utc>,
     ) -> Result<Vec<agent_agency_contracts::execution_artifacts::ArtifactMetadata>, ArtifactStorageError> {
         let rows = sqlx::query(
             r#"
@@ -1080,7 +1083,8 @@ impl ArtifactStorage for DatabaseArtifactStorage {
             .map(|row| {
                 let _id: Uuid = row.get("id");
                 let _task_id: Uuid = row.get("task_id");
-                let _created_at: DateTime<Utc> = row.get("created_at");
+                let
+    _created_at: DateTime<Utc> = row.get("created_at");
                 let _size_bytes: i64 = row.get("size_bytes");
                 let db_metadata: serde_json::Value = row.get("metadata");
 
@@ -1130,7 +1134,8 @@ impl ArtifactStorage for DatabaseArtifactStorage {
             Some(row) => {
                 let _id: Uuid = row.get("id");
                 let _task_id: Uuid = row.get("task_id");
-                let _created_at: DateTime<Utc> = row.get("created_at");
+                let
+    _created_at: DateTime<Utc> = row.get("created_at");
                 let _size_bytes: i64 = row.get("size_bytes");
                 let _version: i32 = row.get("version");
                 let db_metadata: serde_json::Value = row.get("metadata");
@@ -1174,7 +1179,8 @@ impl ArtifactStorage for DatabaseArtifactStorage {
             Some(row) => {
                 let _id: Uuid = row.get("id");
                 let _task_id: Uuid = row.get("task_id");
-                let _created_at: DateTime<Utc> = row.get("created_at");
+                let
+    _created_at: DateTime<Utc> = row.get("created_at");
                 let _size_bytes: i64 = row.get("size_bytes");
                 let _version: i32 = row.get("version");
                 let db_metadata: serde_json::Value = row.get("metadata");

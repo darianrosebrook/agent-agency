@@ -3,14 +3,16 @@
 //! The refinement engine analyzes validation issues and applies
 //! automated improvements to working specifications.
 
+use schemars::JsonSchema;
 use async_trait::async_trait;
 
 use crate::planning_agent::planning_errors::PlanningResult;
 use system_configuration::types::ValidationIssue;
 
 /// Refinement suggestion from the engine
-#[derive(Debug, Clone)]
-pub struct RefinementSuggestion {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct RefinementSuggestionn {
     /// Actions that were applied
     pub applied_actions: Vec<String>,
 

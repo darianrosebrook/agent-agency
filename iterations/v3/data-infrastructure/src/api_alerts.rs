@@ -3,14 +3,17 @@
 //! Defines the interface for monitoring system reliability metrics,
 //! compliance status, and recovery operations.
 
+use schemars::JsonSchema;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 /// Compliance status for RTO/RPO monitoring
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ComplianceStatus {
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub overall_compliant: bool,
     pub rto_compliant: bool,
@@ -21,7 +24,7 @@ pub struct ComplianceStatus {
 }
 
 /// Service compliance status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ServiceComplianceStatus {
     pub service_name: String,
     pub current_rto_seconds: u64,
@@ -31,9 +34,12 @@ pub struct ServiceComplianceStatus {
 }
 
 /// Compliance violation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ComplianceViolation {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub violation_type: ViolationType,
     pub severity: ViolationSeverity,
@@ -46,7 +52,7 @@ pub struct ComplianceViolation {
 }
 
 /// Violation types
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum ViolationType {
     RTOExceeded,
     RPOExceeded,
@@ -54,7 +60,7 @@ pub enum ViolationType {
 }
 
 /// Violation severity levels
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum ViolationSeverity {
     Low,
     Medium,
@@ -63,7 +69,7 @@ pub enum ViolationSeverity {
 }
 
 /// Recovery metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RecoveryMetrics {
     pub total_incidents: u64,
     pub average_rto_seconds: u64,
@@ -73,8 +79,10 @@ pub struct RecoveryMetrics {
 }
 
 /// Monthly statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MonthlyStats {
+    #[schemars(with = "String")]
+
     pub period_start: DateTime<Utc>,
     pub incidents: u64,
     pub violations: u64,
@@ -83,9 +91,12 @@ pub struct MonthlyStats {
 }
 
 /// Compliance alert
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ComplianceAlert {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub alert_type: AlertType,
     pub severity: AlertSeverity,
@@ -95,7 +106,7 @@ pub struct ComplianceAlert {
 }
 
 /// Alert types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum AlertType {
     RTOViolation,
     RPOViolation,
@@ -107,7 +118,7 @@ pub enum AlertType {
 }
 
 /// Alert severity levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum AlertSeverity {
     Low,
     Medium,
@@ -116,7 +127,7 @@ pub enum AlertSeverity {
 }
 
 /// Severity levels (alias for AlertSeverity)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum Severity {
     Low,
     Medium,
@@ -125,7 +136,7 @@ pub enum Severity {
 }
 
 /// Service types
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, JsonSchema)]
 pub enum ServiceType {
     Database,
     API,
@@ -141,7 +152,7 @@ pub enum ServiceType {
 }
 
 /// Alert manager for handling compliance alerts
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct AlertManager {
     pub alerts: std::collections::HashMap<Uuid, ComplianceAlert>,
 }

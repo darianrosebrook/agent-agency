@@ -3,6 +3,7 @@
 //! Consolidated from the worker crate - provides command-line interface
 //! for running the worker service.
 
+use schemars::JsonSchema;
 use axum::{
     routing::post,
     Json, Router,
@@ -34,8 +35,10 @@ pub struct Args {
     pub worker_id: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct TaskExecutionRequest {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct TaskExecutionRequest {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub prompt: String,
     pub execution_mode: Option<String>,
@@ -44,8 +47,10 @@ pub struct TaskExecutionRequest {
     pub caws_spec: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Serialize)]
-pub struct TaskExecutionResponse {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct TaskExecutionResponse {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub worker_id: String,
     pub status: String,
@@ -57,14 +62,18 @@ pub struct TaskExecutionResponse {
     pub completed_at: String,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct TaskCancelRequest {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct TaskCancelRequest {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub reason: String,
 }
 
-#[derive(Debug, Serialize)]
-pub struct TaskCancelResponse {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct TaskCancelResponse {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub worker_id: String,
     pub status: String,

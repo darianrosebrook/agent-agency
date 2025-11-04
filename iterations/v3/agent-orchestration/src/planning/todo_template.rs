@@ -46,10 +46,12 @@ pub struct TodoTemplate {
 
     /// Created timestamp
     #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
 
     /// Last updated timestamp
     #[schemars(with = "String")]
+
     pub updated_at: DateTime<Utc>,
 }
 
@@ -189,10 +191,12 @@ pub struct TodoInstance {
 
     /// Created timestamp
     #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
 
     /// Last updated timestamp
     #[schemars(with = "String")]
+
     pub updated_at: DateTime<Utc>,
 }
 
@@ -263,6 +267,7 @@ pub struct QualityResult {
 
     /// Verified timestamp
     #[schemars(with = "String")]
+
     pub verified_at: DateTime<Utc>,
 
     /// Verified by
@@ -293,8 +298,9 @@ pub struct QualityVerification {
 }
 
 /// TODO template system
-#[derive(Debug)]
-pub struct TodoTemplateSystem {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct TodoTemplateSystem {
     /// Available templates
     templates: HashMap<String, TodoTemplate>,
 
@@ -306,8 +312,9 @@ pub struct TodoTemplateSystem {
 }
 
 /// Quality gate enforcer
-#[derive(Debug)]
-pub struct QualityGateEnforcer {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct QualityGateEnforcer {
     /// Enforced gates that cannot be bypassed
     enforced_gates: HashSet<String>,
 }
@@ -340,7 +347,7 @@ impl TodoTemplateSystem {
         let instance = TodoInstance {
             id: Uuid::new_v4(),
             template_id: template.id,
-            plan_id: plan.contract_plan.id.to_string(),
+            plan_id: plan.id,
             milestone_id: milestone_id.clone(),
             current_step: None,
             completed_steps: HashSet::new(),
@@ -360,9 +367,10 @@ impl TodoTemplateSystem {
 
     /// Start working on a TODO step
     pub async fn start_step(&mut self, instance_id: Uuid, step_id: &str, worker_id: Option<String>) -> Result<()> {
-        let instance = self.active_instances.get_mut(&instance_id)
+        // Check dependencies and quality gates before getting mutable reference
+        let instance = self.active_instances.get(&instance_id)
             .ok_or_else(|| anyhow!("Instance {} not found", instance_id))?;
-
+        
         // Check if step can be started (dependencies satisfied)
         if !self.can_start_step(instance, step_id)? {
             return Err(anyhow!("Cannot start step '{}': dependencies not satisfied", step_id));
@@ -372,6 +380,10 @@ impl TodoTemplateSystem {
         if !self.quality_enforcer.can_start_step(instance, step_id)? {
             return Err(anyhow!("Cannot start step '{}': quality gates not satisfied", step_id));
         }
+        
+        // Now get mutable reference to update the instance
+        let instance = self.active_instances.get_mut(&instance_id)
+            .ok_or_else(|| anyhow!("Instance {} not found", instance_id))?;
 
         // Update step status
         if let Some(status) = instance.step_statuses.get_mut(step_id) {

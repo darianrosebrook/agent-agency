@@ -3,6 +3,7 @@
 //! Implements CAWS-compliant conflict resolution through structured debates,
 //! evidence synthesis, and consensus building mechanisms.
 
+use schemars::JsonSchema;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -886,7 +887,7 @@ impl EvidenceSynthesizer {
 // Data structures
 
 /// Evidence item for debate
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceItem {
     pub id: String,
     pub content: String,
@@ -896,7 +897,7 @@ pub struct EvidenceItem {
 }
 
 /// Debate session
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DebateSession {
     pub id: String,
     pub topic: String,
@@ -911,7 +912,7 @@ pub struct DebateSession {
 }
 
 /// Debate round
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DebateRound {
     pub round_number: usize,
     pub arguments: Vec<DebateArgument>,
@@ -921,7 +922,7 @@ pub struct DebateRound {
 }
 
 /// Debate argument
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DebateArgument {
     pub participant: String,
     pub round: usize,
@@ -933,7 +934,7 @@ pub struct DebateArgument {
 }
 
 /// Debate stance
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum DebateStance {
     StrictCompliance,
     TechnicalMerit,
@@ -955,28 +956,28 @@ impl std::fmt::Display for DebateStance {
 }
 
 /// Debate status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum DebateStatus {
     Active,
     Concluded,
 }
 
 /// Round result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RoundResult {
     pub winner: String,
     pub confidence: f64,
 }
 
 /// Debate record
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DebateRecord {
     pub session: DebateSession,
     pub concluded_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Debate position
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DebatePosition {
     pub participant: String,
     pub participant_type: String,
@@ -986,7 +987,7 @@ pub struct DebatePosition {
 }
 
 /// Consensus result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ConsensusResult {
     pub decision: String,
     pub confidence: f64,
@@ -995,7 +996,7 @@ pub struct ConsensusResult {
 }
 
 /// Consensus strategy
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum ConsensusStrategy {
     MajorityVote,
     WeightedVote,
@@ -1004,7 +1005,7 @@ pub enum ConsensusStrategy {
 }
 
 /// Evidence synthesis result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceSynthesis {
     pub synthesized_claims: Vec<SynthesizedClaim>,
     pub unresolved_conflicts: usize,
@@ -1014,7 +1015,7 @@ pub struct EvidenceSynthesis {
 }
 
 /// Weighting strategy for evidence
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum WeightingStrategy {
     EqualWeight,
     SourceReliability,
@@ -1023,7 +1024,7 @@ pub enum WeightingStrategy {
 }
 
 /// Conflict analysis
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ConflictAnalysis {
     pub conflicts: Vec<Conflict>,
     pub resolved: Vec<Conflict>,
@@ -1031,7 +1032,7 @@ pub struct ConflictAnalysis {
 }
 
 /// Conflict between evidence items
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct Conflict {
     pub evidence_a: String,
     pub evidence_b: String,
@@ -1040,7 +1041,7 @@ pub struct Conflict {
 }
 
 /// Conflict type
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum ConflictType {
     ContradictoryClaims,
     ConflictingEvidence,
@@ -1048,7 +1049,7 @@ pub enum ConflictType {
 }
 
 /// Conflict severity
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum ConflictSeverity {
     Low,
     Medium,
@@ -1057,18 +1058,17 @@ pub enum ConflictSeverity {
 }
 
 /// Conflict resolution
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ConflictResolution {
     pub synthesized_claims: Vec<SynthesizedClaim>,
 }
 
 /// Synthesized claim
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SynthesizedClaim {
     pub claim: String,
     pub supporting_evidence: Vec<String>,
     pub confidence: f64,
     pub resolution_method: String,
 }
-
 

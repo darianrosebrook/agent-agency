@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use schemars::JsonSchema;
 
 use crate::contract_errors::{ContractError, ContractKind, ValidationIssue};
 use crate::schema::JUDGE_VERDICT_SCHEMA;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct JudgeVerdictContract {
     pub judge_id: String,
     pub version: String,
@@ -14,7 +15,7 @@ pub struct JudgeVerdictContract {
     pub evidence: Vec<EvidenceItem>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum JudgeDecision {
     Pass,
@@ -22,7 +23,7 @@ pub enum JudgeDecision {
     Uncertain,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct EvidenceItem {
     #[serde(rename = "type")]
     pub kind: EvidenceType,
@@ -31,7 +32,7 @@ pub struct EvidenceItem {
     pub summary: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum EvidenceType {
     Research,
@@ -75,6 +76,7 @@ pub fn validate_judge_verdict_value(value: &Value) -> Result<(), ContractError> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use schemars::JsonSchema;
 
     #[test]
     fn judge_verdict_validation() {

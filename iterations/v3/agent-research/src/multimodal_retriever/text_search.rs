@@ -1,5 +1,6 @@
 //! Text search engine with BM25 and vector search capabilities
 
+use schemars::JsonSchema;
 use std::sync::Arc;
 use std::collections::HashMap;
 use anyhow::Result;
@@ -9,9 +10,11 @@ use serde_json;
 
 use super::core::MultimodalSearchResult;
 use super::query_processing::ProcessedQuery;
+use data_infrastructure::embedding::embedding_types::MultimodalSearchResult as DataInfraSearchResult;
 
 /// BM25 index for keyword-based text search
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Bm25Index {
     documents: HashMap<String, String>, // doc_id -> content
     term_frequencies: HashMap<String, HashMap<String, usize>>, // term -> (doc_id -> frequency)
@@ -108,7 +111,8 @@ impl Bm25Index {
 }
 
 /// Vector index for dense embedding search
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct VectorIndex {
     vectors: HashMap<String, Vec<f32>>, // doc_id -> embedding vector
     dimension: usize,
@@ -163,16 +167,17 @@ impl VectorIndex {
 }
 
 /// Text search API bridge with BM25 and dense vector search
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct TextSearchBridge {
     bm25_index: Bm25Index,
     vector_index: VectorIndex,
-    embedding_service: Option<Arc<dyn embedding_service::EmbeddingService>>,
+    embedding_service: Option<Arc<dyn data_infrastructure::embedding::embedding_service::EmbeddingService>>,
 }
 
 impl TextSearchBridge {
     /// Create a new text search bridge
-    pub fn new(embedding_service: Option<Arc<dyn embedding_service::EmbeddingService>>) -> Self {
+    pub fn new(embedding_service: Option<Arc<dyn data_infrastructure::embedding::embedding_service::EmbeddingService>>) -> Self {
         Self {
             bm25_index: Bm25Index::new(),
             vector_index: VectorIndex::new(384), // Default dimension
@@ -195,7 +200,7 @@ impl TextSearchBridge {
     }
 
     /// Search using hybrid BM25 + vector approach
-    pub async fn search(&self, query: &str, k: usize) -> Result<Vec<embedding_service::MultimodalSearchResult>> {
+    pub async fn search(&self, query: &str, k: usize) -> Result<Vec<DataInfraSearchResult>> {
         let mut results = Vec::new();
 
         // BM25 search
@@ -203,13 +208,17 @@ impl TextSearchBridge {
 
         // Vector search if available
         if let Some(service) = &self.embedding_service {
-            if let Ok(query_embedding) = service.generate_embedding(query).await {
-                let vector_results = self.vector_index.search(&query_embedding, k * 2);
+            if let Ok(query_embedding) = service.generate_embedding(
+                query,
+                data_infrastructure::embedding::embedding_types::ContentType::Text,
+                "text_search"
+            ).await {
+                let vector_results = self.vector_index.search(&query_embedding.vector.values, k * 2);
 
                 // Combine results with reciprocal rank fusion
                 let combined = self.reciprocal_rank_fusion(bm25_results, vector_results, k);
                 results = combined.into_iter().map(|(doc_id, score)| {
-                    embedding_service::MultimodalSearchResult {
+                    DataInfraSearchResult {
                         ref_id: doc_id,
                         kind: data_infrastructure::embedding::embedding_types::ContentType::Text,
                         snippet: self.bm25_index.documents.get(&doc_id).unwrap_or(&String::new()).clone(),
@@ -227,7 +236,7 @@ impl TextSearchBridge {
         // Fallback to BM25 only
         if results.is_empty() {
             results = bm25_results.into_iter().map(|(doc_id, score)| {
-                embedding_service::MultimodalSearchResult {
+                DataInfraSearchResult {
                     ref_id: doc_id,
                     kind: data_infrastructure::embedding::embedding_types::ContentType::Text,
                     snippet: self.bm25_index.documents.get(&doc_id).unwrap_or(&String::new()).clone(),
@@ -274,7 +283,8 @@ impl TextSearchBridge {
 }
 
 /// Text search engine combining multiple search strategies
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct TextSearchEngine {
     config: super::core::MultimodalRetrieverConfig,
     search_bridge: TextSearchBridge,
@@ -318,11 +328,13 @@ impl TextSearchEngine {
 
             let results = bridge_results.into_iter().map(|result| {
                 MultimodalSearchResult {
-                    id: result.id,
-                    content: result.content,
-                    modality_scores: HashMap::from([("text".to_string(), result.score)]),
-                    combined_score: result.score,
-                    metadata: result.metadata,
+                    id: result.ref_id,
+                    content: result.snippet,
+                    modality_scores: HashMap::from([("text".to_string(), result.feature.score)]),
+                    combined_score: result.feature.score,
+                    metadata: result.feature.metadata.as_object().unwrap_or(&serde_json::Map::new()).iter()
+                        .map(|(k, v)| (k.clone(), v.clone()))
+                        .collect(),
                     timestamp: Utc::now(),
                     source_modality: "text".to_string(),
                     project_scope: query.project_scope.clone(),
@@ -355,7 +367,8 @@ impl TextSearchEngine {
 }
 
 /// Search engine statistics
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SearchEngineStats {
     pub total_searches: u64,
     pub average_latency_ms: f64,

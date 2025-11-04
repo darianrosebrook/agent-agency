@@ -1,5 +1,6 @@
 //! Failure taxonomy for categorizing and analyzing failures
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
@@ -303,8 +304,9 @@ impl Default for FailureTaxonomy {
 }
 
 /// Failure statistics
-#[derive(Debug, Clone)]
-pub struct FailureStatistics {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct FailureStatistics {
     pub total_failures: usize,
     pub category_counts: HashMap<FailureCategory, usize>,
     pub most_common_category: Option<FailureCategory>,

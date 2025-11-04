@@ -19,7 +19,7 @@ impl DataExtractor {
         let analysis_results = self.parse_data_analysis_results(analysis_output)?;
 
         // Extract statistical claims
-        for stat in &analysis_results.statistics {
+        for stat in &analysis_results.statistical {
             if let Some(stat_claim) = self.extract_statistical_claim(stat, data_schema)? {
                 claims.push(stat_claim);
             }
@@ -45,8 +45,9 @@ impl DataExtractor {
     /// Parse data analysis results from raw text or structured data
     pub fn parse_data_analysis_results(&self, analysis_output: &DataAnalysisOutput) -> Result<DataAnalysisResults, Box<dyn std::error::Error + Send + Sync>> {
         let mut results = DataAnalysisResults {
-            statistics: analysis_output.results.clone(),
+            statistical: analysis_output.results.statistical.clone(),
             correlations: analysis_output.correlations.clone(),
+            patterns: analysis_output.results.patterns.clone(),
             insights: vec![],
         };
 
@@ -54,7 +55,7 @@ impl DataExtractor {
         if let Some(raw_text) = &analysis_output.raw_text {
             // Parse statistical output
             let stats = self.parse_statistical_output(raw_text)?;
-            results.statistics.extend(stats);
+            results.statistical.extend(stats);
 
             // Parse correlation output
             let corrs = self.parse_correlation_output(raw_text)?;
@@ -73,10 +74,10 @@ impl DataExtractor {
         let re = Regex::new(r"(?i)(\w+)\s+(mean|median|std_dev|p_value)\s*=\s*([\-0-9.]+)")?;
         Ok(re.captures_iter(text)
           .filter_map(|c| Some(StatisticalResult {
-              variable: c.get(1)?.as_str().to_string(),
               metric:   c.get(2)?.as_str().to_string(),
               value:    c.get(3)?.as_str().parse().ok()?,
-              p_value:  1.0, // fill if present elsewhere
+              confidence: 1.0, // default confidence
+              context: Some(c.get(1)?.as_str().to_string()), // use first capture as context
           }))
           .collect())
     }
@@ -88,8 +89,9 @@ impl DataExtractor {
           .filter_map(|c| Some(CorrelationResult {
               variable1: c.get(1)?.as_str().to_string(),
               variable2: c.get(2)?.as_str().to_string(),
+              correlation: c.get(3)?.as_str().parse().ok()?,
               correlation_coefficient: c.get(3)?.as_str().parse().ok()?,
-              p_value: c.get(4)?.as_str().parse().ok()?,
+              significance: c.get(4)?.as_str().parse().ok()?, // p-value becomes significance
           })).collect())
     }
 
@@ -102,7 +104,7 @@ impl DataExtractor {
         };
 
         // Call both parsers and combine
-        results.statistics.extend(self.parse_statistical_output(text)?);
+        results.statistical.extend(self.parse_statistical_output(text)?);
         results.correlations.extend(self.parse_correlation_output(text)?);
 
         // Extract insights from remaining text
@@ -127,7 +129,7 @@ impl DataExtractor {
     /// Extract statistical claim from data
     fn extract_statistical_claim(&self, stat: &StatisticalResult, _schema: &DataSchema) -> Result<Option<AtomicClaim>, Box<dyn std::error::Error + Send + Sync>> {
         // Create claim about statistical finding
-        let claim_text = format!("{} has {} of {:.3}", stat.variable, stat.metric, stat.value);
+        let claim_text = format!("{} has {} of {:.3}", stat.context.as_deref().unwrap_or("variable"), stat.metric, stat.value);
 
         Ok(Some(AtomicClaim {
             id: uuid::Uuid::new_v4(),

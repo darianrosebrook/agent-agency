@@ -7,6 +7,7 @@
 //! - Visual Captioning: Generate descriptions for images
 //! - Circuit breaker pattern for reliability
 
+use schemars::JsonSchema;
 use crate::pipeline::PipelineStage;
 use crate::data_processing_types::*;
 use crate::{DataProcessingResult, DataProcessingError};
@@ -38,7 +39,7 @@ pub trait EnrichmentStage: Send + Sync {
 }
 
 /// Circuit breaker configuration for enrichment reliability
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EnrichmentCircuitBreakerConfig {
     pub failure_threshold: u64,
     pub recovery_timeout_secs: u64,
@@ -58,7 +59,7 @@ impl Default for EnrichmentCircuitBreakerConfig {
 }
 
 /// ASR enrichment result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AsrEnrichmentResult {
     pub transcription: String,
     pub confidence: f32,
@@ -68,7 +69,7 @@ pub struct AsrEnrichmentResult {
 }
 
 /// Speaker segment for diarization
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SpeakerSegment {
     pub speaker_id: String,
     pub start_time: f32,
@@ -77,7 +78,7 @@ pub struct SpeakerSegment {
 }
 
 /// Vision enrichment result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct VisionEnrichmentResult {
     pub ocr_text: String,
     pub confidence: f32,
@@ -86,7 +87,7 @@ pub struct VisionEnrichmentResult {
 }
 
 /// Bounding box for OCR
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BoundingBox {
     pub x: f32,
     pub y: f32,
@@ -97,21 +98,21 @@ pub struct BoundingBox {
 }
 
 /// Document layout information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DocumentLayout {
     pub pages: Vec<PageLayout>,
     pub structure: DocumentStructure,
 }
 
 /// Page layout
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PageLayout {
     pub page_number: u32,
     pub elements: Vec<LayoutElement>,
 }
 
 /// Layout element
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LayoutElement {
     pub element_type: String,
     pub bounding_box: BoundingBox,
@@ -119,7 +120,7 @@ pub struct LayoutElement {
 }
 
 /// Document structure
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DocumentStructure {
     pub title: Option<String>,
     pub headings: Vec<String>,
@@ -128,21 +129,21 @@ pub struct DocumentStructure {
 }
 
 /// Table structure
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TableStructure {
     pub headers: Vec<String>,
     pub rows: Vec<Vec<String>>,
 }
 
 /// Entity extraction result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EntityExtractionResult {
     pub entities: Vec<ExtractedEntity>,
     pub topics: Vec<ExtractedTopic>,
 }
 
 /// Extracted entity
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExtractedEntity {
     pub entity_type: String,
     pub text: String,
@@ -153,7 +154,7 @@ pub struct ExtractedEntity {
 }
 
 /// Extracted topic
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExtractedTopic {
     pub topic: String,
     pub confidence: f32,
@@ -161,7 +162,7 @@ pub struct ExtractedTopic {
 }
 
 /// Visual captioning result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct VisualCaptioningResult {
     pub caption: String,
     pub confidence: f32,
@@ -170,7 +171,7 @@ pub struct VisualCaptioningResult {
 }
 
 /// Detected object in image
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DetectedObject {
     pub object_class: String,
     pub confidence: f32,
@@ -1400,7 +1401,7 @@ pub struct CircuitBreaker {
     last_failure_time: Option<std::time::Instant>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
 pub enum CircuitState {
     Closed,
     Open,
@@ -1482,7 +1483,7 @@ impl CircuitBreaker {
 }
 
 /// Types of enrichment operations available
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, JsonSchema)]
 pub enum EnrichmentType {
     Asr,
     Vision,

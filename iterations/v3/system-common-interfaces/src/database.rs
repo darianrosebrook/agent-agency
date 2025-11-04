@@ -164,11 +164,12 @@ pub trait DatabaseHealthCheck: Send + Sync {
 }
 
 /// Database health status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct DatabaseHealth {
     pub status: super::HealthStatus,
     pub message: String,
     pub details: HashMap<String, serde_json::Value>,
+    #[schemars(with = "String")]
     pub last_check: DateTime<Utc>,
 }
 
@@ -186,14 +187,16 @@ pub struct DatabaseMetrics {
 }
 
 /// Audit trail entry creation input
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct CreateAuditEntry {
     pub entity_type: String,
+    #[schemars(with = "String")]
     pub entity_id: Uuid,
     pub action: String,
     pub details: serde_json::Value,
     pub user_id: Option<String>,
     pub ip_address: Option<String>,
+    #[schemars(with = "Option<String>")]
     pub timestamp: Option<DateTime<Utc>>,
 }
 

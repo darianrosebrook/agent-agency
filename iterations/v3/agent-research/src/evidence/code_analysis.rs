@@ -8,8 +8,9 @@ use anyhow::Result;
 use tracing::debug;
 
 /// Code analysis evidence collector
-#[derive(Debug)]
-pub struct CodeAnalysisCollector {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct CodeAnalysisCollectorr {
     config: EvidenceCollectorConfig,
     analysis_engine: CodeAnalysisEngine,
 }

@@ -1,4 +1,5 @@
 use anyhow::Result;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -18,7 +19,7 @@ pub struct GarbageCollector {
 }
 
 /// GC configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct GcConfig {
     /// Enable automatic GC
     pub auto_gc: bool,
@@ -54,7 +55,7 @@ impl Default for GcConfig {
 }
 
 /// Reachability information for objects
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ReachabilityInfo {
     /// Objects that are reachable
     pub reachable: HashSet<Digest>,
@@ -69,7 +70,7 @@ pub struct ReachabilityInfo {
 }
 
 /// GC statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct GcStats {
     /// Total objects processed
     pub objects_processed: usize,
@@ -92,7 +93,7 @@ pub struct GcStats {
 }
 
 /// Grace period tracker for objects
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct GracePeriodTracker {
     /// Objects in grace period with their timestamps
     pub grace_objects: HashMap<Digest, u64>,
@@ -546,7 +547,7 @@ impl GarbageCollector {
 }
 
 /// Result of a GC cycle
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct GcResult {
     /// Number of reachable objects
     pub reachable_objects: usize,

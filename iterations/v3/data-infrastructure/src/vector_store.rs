@@ -3,6 +3,7 @@
 //! Provides database-backed vector storage using pgvector extension
 //! with HNSW indices for efficient similarity search.
 
+use schemars::JsonSchema;
 use anyhow::{Context, Result};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -18,14 +19,17 @@ pub struct DatabasePool {
 }
 
 /// Inner pool data that is reference counted
+#[derive(JsonSchema)]
 struct PoolInner {
     /// The actual database pool
+    #[schemars(skip)]
     pool: sqlx::Pool<sqlx::Postgres>,
     /// Active reference counter
     active_refs: AtomicUsize,
     /// Pool identifier for tracking
     pool_id: String,
     /// Creation timestamp
+    #[schemars(with = "String")]
     created_at: DateTime<Utc>,
 }
 
@@ -142,42 +146,53 @@ impl std::ops::Deref for DatabasePool {
 }
 
 /// Statistics for a database pool
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PoolStats {
     pub pool_id: String,
     pub active_refs: usize,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
     pub pool_size: usize,
     pub idle_connections: usize,
 }
 
 /// Vector record for database storage
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BlockVectorRecord {
+    #[schemars(with = "String")]
     pub block_id: Uuid,
     pub vector: Vec<f32>,
     pub model_id: String,
     pub modality: String,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
 }
 
 /// Search audit entry for logging
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SearchAuditEntry {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub query: String,
     pub query_type: String,
     pub results_count: usize,
     pub search_time_ms: u64,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
     pub results: Option<serde_json::Value>,
     pub features: Option<serde_json::Value>,
 }
 
 /// Search result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SearchResult {
+    #[schemars(with = "String")]
     pub block_id: Uuid,
     pub score: f32,
     pub text_snippet: String,
@@ -185,7 +200,7 @@ pub struct SearchResult {
 }
 
 /// Vector search query
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct VectorQuery {
     pub vector: Vec<f32>,
     pub model_id: String,
@@ -194,8 +209,9 @@ pub struct VectorQuery {
 }
 
 /// Vector search result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct VectorSearchResult {
+    #[schemars(with = "String")]
     pub block_id: Uuid,
     pub score: f32,
     pub vector: Vec<f32>,
@@ -554,7 +570,7 @@ impl DatabaseVectorStore {
 }
 
 /// Vector store statistics
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct VectorStoreStats {
     /// Total number of vectors stored
     pub total_vectors: u64,
@@ -591,8 +607,8 @@ mod tests {
     use uuid::Uuid;
 
     // Stub types for tests
-    #[derive(Debug, Clone)]
-    pub struct BlockVectorRecord {
+    #[derive(Debug, Clone, JsonSchema)]
+pub struct BlockVectorRecord {
         pub block_id: String,
         pub vector: Vec<f32>,
         pub model_id: String,
@@ -600,8 +616,8 @@ mod tests {
         pub created_at: chrono::DateTime<chrono::Utc>,
     }
 
-    #[derive(Debug, Clone)]
-    pub struct SearchAuditEntry {
+    #[derive(Debug, Clone, JsonSchema)]
+pub struct SearchAuditEntry {
         pub query_id: String,
         pub query_type: String,
         pub results_count: usize,

@@ -2,11 +2,12 @@
 //!
 //! Validates that worker tasks comply with CAWS (Coding Agent Workflow System) standards.
 
+use schemars::JsonSchema;
 use crate::worker_errors::WorkerError;
 use serde::{Deserialize, Serialize};
 
 /// CAWS compliance check result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CawsCheckResult {
     pub compliant: bool,
     pub violations: Vec<String>,

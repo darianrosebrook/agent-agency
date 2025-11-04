@@ -6,6 +6,7 @@ use data_infrastructure::DatabaseClient;
 use uuid::Uuid;
 use crate::{HistoricalClaim, VerificationStatus, ValidationOutcome};
 use tracing::warn;
+use sqlx::Row;
 
 /// Historical claims lookup
 pub struct HistoricalLookup {
@@ -55,9 +56,9 @@ impl HistoricalLookup {
                 for row in rows {
                     // Parse database row into HistoricalClaim
                     let claim = HistoricalClaim {
-                        id: row.try_get::<&str, _>("id").unwrap_or("").to_string(),
-                        claim_text: row.try_get::<&str, _>("claim_text").unwrap_or("Unknown claim").to_string(),
-                        verification_status: row.try_get::<&str, _>("verification_status")
+                        id: row.try_get::<String, _>("id").unwrap_or_else(|_| "".to_string()),
+                        claim_text: row.try_get::<String, _>("claim_text").unwrap_or_else(|_| "Unknown claim".to_string()),
+                        verification_status: row.try_get::<String, _>("verification_status")
                             .map(|s| match s {
                                 "Verified" => VerificationStatus::Verified,
                                 "Unverified" => VerificationStatus::Unverified,

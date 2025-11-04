@@ -28,8 +28,6 @@
 //! @author @darianrosebrook
 
 use serde::{Deserialize, Serialize};
-use async_trait::async_trait;
-use std::collections::HashMap;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
@@ -48,9 +46,9 @@ pub use database::*;
 pub use observability::{ObservabilityInterface, TracingInterface, LoggingInterface, HealthMonitoringInterface, PerformanceMonitoringInterface, MetricValue, MetricType, ObsValue, SpanHandle, SpanStatus, PerformanceMetrics as ObsPerformanceMetrics, PerformanceMetric, SystemPerformanceStats, HealthReport as ObsHealthReport, ComponentHealth};
 pub use health::{HealthCheck, HealthCheckRegistry, HealthCheckExecutor, HealthCheckResult, HealthCheckInfo, HealthReport, HealthSummary, HealthCheckScheduler, ScheduledCheckStatus, DependencyHealthCheck, DependencyHealth, DatabaseHealthCheck, HttpHealthCheck};
 pub use config::*;
-pub use types::*;
+pub use types::{TaskId, TaskPriority, TaskStatus, TaskResult, PerformanceMetrics, AuditLogEntry, MessageEnvelope, SystemEvent, EventMetadata, EventSeverity, Pagination, Sorting, SortDirection, Filter, FilterOperator, QueryParams, ApiResponse, ResponseMetadata, RateLimitInfo, ErrorResponse, ErrorDetails, VersionInfo, HealthCheckResponse, HealthCheckStatus, MetricDataPoint, MetricsSnapshot, ServiceInfo, CircuitBreakerState, CircuitBreakerStats, RetryConfig, TimeoutConfig};
 pub use file_operations::*;
-pub use learning::*;
+pub use learning::{LearningError, AlgorithmConfig, QTable, AlgorithmStatistics, Experience, LearningContext, TaskPerformance, OptimizationGoal, LearningInsights, Pattern, PatternType, Improvement, ImprovementType, Difficulty, OptimizationRecommendation, RecommendationType, Priority, LearningStatistics};
 pub use model_orchestration::{ModelOrchestrator, InferenceRequest as OrchestratorInferenceRequest, InferenceResponse, RoutingDecision, RoutingStrategy, ModelInstance, ModelCapabilities, PerformanceCharacteristics, ModelStatistics, OrchestrationStatistics, OrchestrationError, OrchestrationResult, Priority as OrchestratorPriority, PerformanceRequirements as OrchestratorPerformanceRequirements, QualityRequirements as OrchestratorQualityRequirements};
 pub use memory::*;
 pub use common::*;
@@ -59,7 +57,7 @@ pub use common::*;
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 /// Service health status
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub enum HealthStatus {
     Healthy,
     Degraded,
@@ -77,11 +75,13 @@ pub enum ServiceState {
 }
 
 /// Common service metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ServiceMetadata {
     pub service_name: String,
     pub service_version: String,
+    #[schemars(with = "String")]
     pub instance_id: Uuid,
+    #[schemars(with = "String")]
     pub started_at: DateTime<Utc>,
     pub environment: String,
 }
@@ -121,44 +121,3 @@ pub enum OrderDirection {
     Desc,
 }
 
-/// Common filter structure
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FilterParams {
-    pub filters: HashMap<String, serde_json::Value>,
-}
-
-/// Combined pagination and filter parameters
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QueryParams {
-    pub pagination: Option<PaginationParams>,
-    pub filters: Option<FilterParams>,
-}
-
-/// Generic response wrapper
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ApiResponse<T> {
-    pub data: T,
-    pub metadata: Option<ResponseMetadata>,
-}
-
-/// Response metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResponseMetadata {
-    pub total_count: Option<u64>,
-    pub page: Option<u32>,
-    pub per_page: Option<u32>,
-    pub has_more: Option<bool>,
-}
-
-/// Common audit log entry
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuditEntry {
-    pub id: Uuid,
-    pub timestamp: DateTime<Utc>,
-    pub service: String,
-    pub action: String,
-    pub resource: String,
-    pub user_id: Option<String>,
-    pub details: serde_json::Value,
-    pub ip_address: Option<String>,
-}

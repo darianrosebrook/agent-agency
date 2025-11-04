@@ -2,6 +2,8 @@
 //!
 //! Provides signals and policy adjustments for RL-based agent improvement.
 
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use std::sync::Arc;
 use std::collections::HashMap;
 use tokio::sync::RwLock;
@@ -10,7 +12,8 @@ use crate::reflexive_types::AlgorithmConfig;
 use crate::self_prompting_agent::prompting_types::SelfPromptingAgentError;
 
 /// RL signal for feedback
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RLSignal {
     pub signal_type: String,
     pub value: f64,
@@ -87,7 +90,8 @@ impl RLSignalGenerator {
 }
 
 /// Policy adjustment based on RL signals
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PolicyAdjustment {
     pub parameter: String,
     pub current_value: f64,
@@ -303,6 +307,7 @@ impl RLTrainer {
 }
 
 /// Experience buffer for RL training
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExperienceBuffer {
     experiences: Vec<Experience>,
     max_size: usize,
@@ -343,7 +348,8 @@ impl ExperienceBuffer {
 }
 
 /// RL experience tuple
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Experience {
     pub state: String,
     pub action: String,

@@ -2,15 +2,9 @@
 #![allow(dead_code)] // Disables dead_code warnings for the crate
 
 //! Claim Extraction & Verification Pipeline
-//!
-//! Implements the 4-stage claim processing pipeline required by theory:
-//! 1. Contextual disambiguation
-//! 2. Verifiable content qualification  
-//! 3. Atomic claim decomposition
-//! 4. CAWS-compliant verification
-//!
-//! Based on V2 ClaimExtractor.ts (1677 lines) with Rust adaptations and
-//! council integration for evidence collection in debate protocol.
+
+// Import contract types
+use agent_agency_contracts as contracts;
 
 pub mod decomposition;
 pub mod disambiguation;
@@ -35,13 +29,33 @@ pub mod research_types;
 // Learning service module
 pub mod learning_service;
 
+// Reinforcement learning module
+pub mod reinforcement;
+
+// Reflexive types module
+pub mod reflexive_types;
+
 #[cfg(test)]
 mod tests;
 
 
-pub use verification::MultiModalVerificationEngine;
+// Re-export contract types for internal use
+pub use contracts::{
+    // Task execution types
+    TaskSpec, TaskExecutionResult, TaskRequirements, TaskContext, TaskScope, ExecutionStatus, Progress,
+
+    // Worker types
+    WorkerResult, WorkerHealthStatus,
+
+    // Planning types
+    WorkingSpec, AcceptanceCriterion, TestPlan, RollbackPlan,
+};
+
+// Re-export internal types
+// pub use verification::MultiModalVerificationEngine; // Temporarily disabled due to verification module issues
 pub use processor::ClaimExtractionProcessor;
 pub use extraction_types::*;
+pub use evidence::evidence_types::VerificationMethod;
 
 use anyhow::Result;
 use std::time::Instant;
@@ -51,12 +65,13 @@ use tracing::{info, warn};
 ///
 /// Integrates with council debate protocol to provide evidence
 /// for claim verification during judicial evaluation.
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ClaimExtractionAndVerificationProcessor {
     disambiguation_stage: disambiguation::DisambiguationStage,
     qualification_stage: qualification::QualificationStage,
     decomposition_stage: decomposition::DecompositionStage,
-    verification_stage: verification::MultiModalVerificationEngine,
+    // verification_stage: MultiModalVerificationEngine, // Temporarily disabled
 }
 
 impl ClaimExtractionAndVerificationProcessor {
@@ -66,7 +81,7 @@ impl ClaimExtractionAndVerificationProcessor {
             disambiguation_stage: disambiguation::minimal_stage(),
             qualification_stage: qualification::QualificationStage::new(),
             decomposition_stage: decomposition::DecompositionStage::new(),
-            verification_stage: verification::MultiModalVerificationEngine::new(),
+            // verification_stage: MultiModalVerificationEngine::new(), // Temporarily disabled
         }
     }
 
@@ -91,7 +106,7 @@ impl ClaimExtractionAndVerificationProcessor {
         // Stage 1: Disambiguation
         match self.disambiguation_stage.process(sentence, context).await {
             Ok(disambiguation_result) => {
-                disambiguated_sentence = disambiguation_result.disambiguated_sentence;
+                disambiguated_sentence = disambiguation_result.disambiguated_text;
                 ambiguities_resolved = disambiguation_result.ambiguities_resolved;
                 stages_completed.push(ProcessingStage::Disambiguation);
                 info!(

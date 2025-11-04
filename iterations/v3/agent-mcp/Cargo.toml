@@ -17,6 +17,9 @@ anyhow.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 
+# Schema generation for API docs
+schemars = { version = "0.8", features = ["derive"] }
+
 # Circuit breaker functionality moved to local implementation to avoid cyclic dependencies
 # agent-orchestration = { path = "../agent-orchestration" }
 

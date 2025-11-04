@@ -11,7 +11,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
-
 /// Real-time dashboard service
 #[derive(Debug)]
 pub struct DashboardService {
@@ -24,6 +23,7 @@ pub struct DashboardService {
     /// Dashboard data cache
     data_cache: Arc<RwLock<DashboardData>>,
     /// System start time for uptime calculation
+    #[schemars(with = "String")]
     system_start_time: DateTime<Utc>,
 }
 
@@ -65,8 +65,10 @@ pub struct DashboardSession {
     /// User ID (if authenticated)
     pub user_id: Option<String>,
     /// Session start time
+    #[schemars(with = "String")]
     pub start_time: DateTime<Utc>,
     /// Last activity time
+    #[schemars(with = "String")]
     pub last_activity: DateTime<Utc>,
     /// Session preferences
     pub preferences: DashboardPreferences,
@@ -160,6 +162,7 @@ pub struct DashboardData {
     /// Capacity utilization
     pub capacity_utilization: CapacityMetrics,
     /// Last updated timestamp
+    #[schemars(with = "String")]
     pub last_updated: DateTime<Utc>,
 }
 
@@ -654,6 +657,7 @@ impl Clone for DashboardService {
 /// Real-time update structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RealTimeUpdate {
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub system_health: Option<SystemHealthUpdate>,
     pub agent_performance: Option<AgentPerformanceUpdate>,

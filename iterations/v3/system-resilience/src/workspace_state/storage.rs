@@ -2,6 +2,7 @@
  * @fileoverview Storage implementations for workspace state management
  * @author @darianrosebrook
  */
+use schemars::JsonSchema;
 use super::state_types::*;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -354,12 +355,13 @@ pub struct MemoryStorage {
     metrics: tokio::sync::RwLock<StorageMetrics>,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, JsonSchema)]
 pub struct StorageMetrics {
     pub total_states_stored: usize,
     pub total_diffs_stored: usize,
     pub total_storage_size_bytes: u64,
     pub total_reads: usize,
+    #[schemars(with = "Option<String>")]
     pub last_cleanup_time: Option<chrono::DateTime<chrono::Utc>>,
 }
 

@@ -1,5 +1,6 @@
 //! Predictive learning system components for V3
 
+use schemars::JsonSchema;
 use std::collections::HashSet;
 use tracing::{debug, instrument};
 
@@ -11,7 +12,8 @@ use crate::reflexive_types::{
 };
 
 /// Configuration parameters for predictive learning
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PredictiveLearningConfig {
     pub success_baseline: f64,
     pub partial_penalty: f64,
@@ -33,7 +35,8 @@ impl Default for PredictiveLearningConfig {
 }
 
 /// Predictive learning system orchestrator
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct PredictiveLearningSystem {
     config: PredictiveLearningConfig,
     performance_predictor: PerformancePredictor,
@@ -91,7 +94,8 @@ impl PredictiveLearningSystem {
 }
 
 /// Future performance prediction engine
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct PerformancePredictor {
     config: PredictiveLearningConfig,
 }
@@ -335,7 +339,8 @@ impl PerformancePredictor {
 }
 
 /// Proactive strategy optimization engine
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct StrategyOptimizer {
     config: PredictiveLearningConfig,
 }
@@ -495,7 +500,8 @@ impl StrategyOptimizer {
 }
 
 /// Resource requirement prediction engine
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ResourcePredictor {
     config: PredictiveLearningConfig,
 }

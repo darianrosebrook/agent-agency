@@ -1,9 +1,11 @@
 //! Aggregated metrics with tail-aware quantiles
 
+use schemars::JsonSchema;
 use super::quantiles::OnlineQuantiles;
 
 /// Aggregated metrics with tail-aware quantiles
-#[derive(Clone, Debug)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Aggregates {
     pub latency_quantiles: OnlineQuantiles,
     pub quality_quantiles: OnlineQuantiles,
@@ -107,8 +109,9 @@ impl Default for Aggregates {
 }
 
 /// Latency statistics
-#[derive(Debug, Clone)]
-pub struct LatencyStats {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct LatencyStats {
     pub p50: Option<f64>,
     pub p95: Option<f64>,
     pub p99: Option<f64>,
@@ -117,8 +120,9 @@ pub struct LatencyStats {
 }
 
 /// Quality statistics
-#[derive(Debug, Clone)]
-pub struct QualityStats {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct QualityStats {
     pub p50: Option<f64>,
     pub p95: Option<f64>,
     pub p99: Option<f64>,
@@ -126,8 +130,9 @@ pub struct QualityStats {
 }
 
 /// Queue time statistics
-#[derive(Debug, Clone)]
-pub struct QueueTimeStats {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct QueueTimeStats {
     pub p50: Option<f64>,
     pub p95: Option<f64>,
     pub p99: Option<f64>,

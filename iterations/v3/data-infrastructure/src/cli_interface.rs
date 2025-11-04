@@ -3,19 +3,20 @@
 //! Provides command-line interface for submitting tasks, monitoring execution,
 //! and managing the autonomous development system.
 
+use schemars::JsonSchema;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::sync::Arc;
 use clap::{Parser, Subcommand};
 use tokio::time::{sleep, Duration};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 
 use crate::api::{Orchestrator, ProgressTracker};
 use crate::api::TaskSubmissionRequest;
 
 /// Execution modes with different safety guardrails
-#[derive(Debug, Clone, clap::ValueEnum)]
+#[derive(Debug, Clone, clap::ValueEnum, JsonSchema)]
 pub enum ExecutionMode {
     /// Manual approval required for each changeset before application
     Strict,
@@ -26,7 +27,7 @@ pub enum ExecutionMode {
 }
 
 /// CLI configuration
-#[derive(Debug, Clone, Parser)]
+#[derive(Debug, Clone, Parser, JsonSchema)]
 pub struct CliConfig {
     /// Server host
     #[arg(long, default_value = "localhost")]
@@ -53,7 +54,7 @@ pub struct CliConfig {
     pub no_interactive: bool,
 }
 
-#[derive(Debug, Clone, clap::ValueEnum)]
+#[derive(Debug, Clone, clap::ValueEnum, JsonSchema)]
 pub enum OutputFormat {
     Json,
     Yaml,
@@ -70,7 +71,7 @@ pub struct Cli {
 }
 
 /// Available CLI commands
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Subcommand, JsonSchema)]
 pub enum Commands {
     /// Submit a task for autonomous execution
     Submit {
@@ -160,7 +161,7 @@ pub enum Commands {
 }
 
 /// Self-prompting agent subcommands
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Subcommand, JsonSchema)]
 pub enum SelfPromptCommands {
     /// Execute task with self-prompting agent
     Execute {
@@ -221,7 +222,7 @@ pub enum SelfPromptCommands {
 }
 
 /// Quality management subcommands
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Subcommand, JsonSchema)]
 pub enum QualityCommands {
     /// Check quality gate status
     Status,
@@ -1046,7 +1047,7 @@ impl CliInterface {
 
 pub type Result<T> = std::result::Result<T, CliError>;
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum CliError {
     #[error("Invalid task ID: {0}")]
     InvalidTaskId(String),
@@ -1055,6 +1056,7 @@ pub enum CliError {
     TaskNotFound(String),
 
     #[error("IO error: {0}")]
+    #[schemars(skip)]
     IoError(#[from] std::io::Error),
 
     #[error("Network error: {0}")]

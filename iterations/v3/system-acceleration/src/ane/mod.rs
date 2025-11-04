@@ -2,10 +2,11 @@
 //!
 //! This module has been refactored into submodules for better organization.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// ANE capabilities information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ANECapabilities {
     /// Whether ANE is available on this system
     pub is_available: bool,
@@ -20,7 +21,7 @@ pub struct ANECapabilities {
 }
 
 /// Tensor specification for model I/O
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct TensorSpec {
     /// Tensor name
     pub name: String,

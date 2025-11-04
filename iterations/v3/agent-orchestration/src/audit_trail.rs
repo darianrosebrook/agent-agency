@@ -54,6 +54,7 @@ use sqlx::{PgPool, postgres::PgPoolOptions};
 use tracing::info;
 
 /// Central audit trail manager coordinating all audit operations
+
 #[derive(Debug)]
 pub struct AuditTrailManager {
     config: AuditConfig,
@@ -69,7 +70,7 @@ pub struct AuditTrailManager {
 }
 
 /// Configuration for audit trail system
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, JsonSchema)]
 pub struct AuditConfig {
     /// Enable file operations auditing
     pub enable_file_audit: bool,
@@ -98,8 +99,7 @@ pub struct AuditConfig {
 }
 
 /// Audit log verbosity levels
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, Default)]
 pub enum AuditLogLevel {
     /// Minimal logging - only critical operations
     Minimal,
@@ -113,7 +113,7 @@ pub enum AuditLogLevel {
 }
 
 /// Output format for audit logs
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum AuditOutputFormat {
     /// JSON format for structured analysis
     Json,
@@ -165,7 +165,7 @@ impl Default for GlobalAuditStats {
 }
 
 /// Performance metrics for audit system itself
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, JsonSchema)]
 pub struct AuditPerformanceMetrics {
     /// Average time to record an audit event (microseconds)
     pub avg_record_time_us: u64,
@@ -220,7 +220,7 @@ pub struct AuditEvent {
 }
 
 /// Audit event categories
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub enum AuditCategory {
     FileOperation,
     TerminalCommand,
@@ -236,7 +236,7 @@ pub enum AuditCategory {
 }
 
 /// Audit event severity levels
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum AuditSeverity {
     Debug,
     Info,
@@ -750,11 +750,15 @@ impl AuditTrailManager {
 }
 
 /// Database row representation of audit event
-#[derive(Debug, sqlx::FromRow, serde::Serialize)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, sqlx::FromRow, serde::Serialize)]
 struct AuditEventRow {
+    #[schemars(with = "String")]
     id: uuid::Uuid,
+    #[schemars(with = "String")]
     timestamp: chrono::DateTime<chrono::Utc>,
     correlation_id: Option<String>,
+    #[schemars(with = "Option<String>")]
     parent_event_id: Option<uuid::Uuid>,
     category: serde_json::Value,
     severity: serde_json::Value,
@@ -803,12 +807,14 @@ impl AuditEventRow {
 
 /// Audit query for searching events
 #[derive(Debug, Clone)]
-#[derive(Default)]
+
+#[derive(Serialize, Deserialize, JsonSchema, Default)]
 pub struct AuditQuery {
     pub category: Option<AuditCategory>,
     pub severity: Option<AuditSeverity>,
     pub actor: Option<String>,
     pub operation: Option<String>,
+    #[schemars(skip)]
     pub time_range: Option<(DateTime<Utc>, DateTime<Utc>)>,
     pub correlation_id: Option<String>,
     pub tags: Vec<String>,
@@ -816,12 +822,15 @@ pub struct AuditQuery {
 }
 
 /// Audit error type
-#[derive(Debug, thiserror::Error)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
 pub enum AuditError {
     #[error("I/O error: {0}")]
+    #[schemars(with = "String")]
     Io(#[from] std::io::Error),
 
     #[error("Serialization error: {0}")]
+    #[schemars(with = "String")]
     Serialization(#[from] serde_json::Error),
 
     #[error("Configuration error: {0}")]
@@ -850,9 +859,11 @@ mod auditors {
     use super::*;
 
     /// File operations auditor
-    #[derive(Debug)]
-    pub struct FileOperationsAuditor {
+    
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct FileOperationsAuditor {
         config: AuditConfig,
+        #[schemars(skip)]
         global_stats: Arc<RwLock<GlobalAuditStats>>,
     }
 
@@ -963,17 +974,22 @@ mod auditors {
     }
 
     /// Terminal commands auditor
-    #[derive(Debug)]
-    pub struct TerminalAuditor {
+    
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct TerminalAuditor {
         config: AuditConfig,
+        #[schemars(skip)]
         global_stats: Arc<RwLock<GlobalAuditStats>>,
+        #[schemars(skip)]
         active_commands: Arc<RwLock<HashMap<String, CommandAudit>>>,
     }
 
-    #[derive(Debug, Clone)]
-    struct CommandAudit {
+    
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct CommandAudit {
         command_id: String,
         command: String,
+        #[schemars(with = "String")]
         start_time: Instant,
         correlation_id: Option<String>,
     }
@@ -1118,9 +1134,11 @@ mod auditors {
     }
 
     /// Council decision auditor
-    #[derive(Debug)]
-    pub struct CouncilAuditor {
+    
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct CouncilAuditor {
         config: AuditConfig,
+        #[schemars(skip)]
         global_stats: Arc<RwLock<GlobalAuditStats>>,
     }
 
@@ -1237,9 +1255,11 @@ mod auditors {
     }
 
     /// Agent thinking auditor
-    #[derive(Debug)]
-    pub struct AgentThinkingAuditor {
+    
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct AgentThinkingAuditor {
         config: AuditConfig,
+        #[schemars(skip)]
         global_stats: Arc<RwLock<GlobalAuditStats>>,
     }
 
@@ -1355,9 +1375,11 @@ mod auditors {
     }
 
     /// Performance auditor
-    #[derive(Debug)]
-    pub struct PerformanceAuditor {
+    
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct PerformanceAuditor {
         config: AuditConfig,
+        #[schemars(skip)]
         global_stats: Arc<RwLock<GlobalAuditStats>>,
     }
 
@@ -1434,9 +1456,11 @@ mod auditors {
     }
 
     /// Error recovery auditor
-    #[derive(Debug)]
-    pub struct ErrorRecoveryAuditor {
+    
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct ErrorRecoveryAuditor {
         config: AuditConfig,
+        #[schemars(skip)]
         global_stats: Arc<RwLock<GlobalAuditStats>>,
     }
 
@@ -1550,9 +1574,11 @@ mod auditors {
     }
 
     /// Learning auditor
-    #[derive(Debug)]
-    pub struct LearningAuditor {
+    
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct LearningAuditor {
         config: AuditConfig,
+        #[schemars(skip)]
         global_stats: Arc<RwLock<GlobalAuditStats>>,
     }
 

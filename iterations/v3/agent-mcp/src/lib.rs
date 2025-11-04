@@ -14,10 +14,13 @@ pub mod tools;
 pub mod prompting_types;
 pub mod mcp_types;
 
+// Import schemars for JsonSchema derive
+use schemars::JsonSchema;
+
 pub use mcp_caws_integration::CawsIntegration;
 pub use server::{MCPServer, AuthRateLimitStats};
 // Local circuit breaker implementation to avoid cyclic dependencies
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct CircuitBreakerStats {
     pub total_requests: u64,
     pub successful_requests: u64,
@@ -26,7 +29,7 @@ pub struct CircuitBreakerStats {
     pub last_failure_time: Option<chrono::DateTime<chrono::Utc>>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub enum CircuitBreakerState {
     Closed,
     Open,
@@ -59,7 +62,7 @@ pub use prompting_types::{
 };
 
 /// MCP integration configuration
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct MCPConfig {
     /// Server configuration
     pub server: ServerConfig,
@@ -73,7 +76,7 @@ pub struct MCPConfig {
     pub performance: PerformanceConfig,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct ServerConfig {
     pub server_name: String,
     pub version: String,
@@ -90,7 +93,7 @@ pub struct ServerConfig {
     pub requests_per_minute: Option<u32>,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct ToolDiscoveryConfig {
     /// Enable automatic tool discovery
     pub enable_auto_discovery: bool,
@@ -104,7 +107,7 @@ pub struct ToolDiscoveryConfig {
     pub enable_validation: bool,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct CawsIntegrationConfig {
     /// Enable CAWS compliance checking
     pub enable_caws_checking: bool,
@@ -118,7 +121,7 @@ pub struct CawsIntegrationConfig {
     pub validation_strictness: ValidationStrictness,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct ToolRegistryConfig {
     /// Enable tool registration
     pub enable_registration: bool,
@@ -132,7 +135,7 @@ pub struct ToolRegistryConfig {
     pub enable_indexing: bool,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct PerformanceConfig {
     /// Maximum concurrent tool executions
     pub max_concurrent_executions: u32,
@@ -146,7 +149,7 @@ pub struct PerformanceConfig {
     pub enable_monitoring: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub enum ValidationStrictness {
     /// Strict validation - all rules must pass
     Strict,

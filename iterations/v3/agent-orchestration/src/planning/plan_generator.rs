@@ -5,6 +5,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 use chrono::Utc;
@@ -40,8 +41,9 @@ pub struct PlanGenerator {
 }
 
 /// Plan generation strategy
-#[derive(Debug, Clone)]
-pub enum PlanGenerationStrategy {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum PlanGenerationStrategy {
     /// Pure AI-assisted generation
     AIAssisted,
 
@@ -577,15 +579,17 @@ impl PlanGenerator {
 }
 
 // Supporting types and implementations
-#[derive(Debug, Clone)]
-pub enum TaskComplexity {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum TaskComplexity {
     Simple,
     Moderate,
     Complex,
 }
 
-#[derive(Debug, Clone)]
-pub struct DependencyAnalysis {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct DependencyAnalysis {
     pub dependencies: HashMap<String, Vec<String>>,
     pub blocking_items: HashSet<String>,
     pub dependency_graph: DependencyGraph,

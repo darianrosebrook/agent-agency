@@ -4,16 +4,18 @@
 //! and real-time updates during autonomous task processing.
 
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use uuid::Uuid;
 
 /// Task response with execution status and tracking information
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct TaskResponse {
     /// Contract version for compatibility
     pub version: String,
 
     /// Task identifier
+    #[schemars(with = "String")]
     pub task_id: Uuid,
 
     /// Current execution status
@@ -29,6 +31,7 @@ pub struct TaskResponse {
 
     /// Estimated completion timestamp
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Option<String>")]
     pub estimated_completion: Option<chrono::DateTime<chrono::Utc>>,
 
     /// Current execution progress
@@ -45,7 +48,7 @@ pub struct TaskResponse {
 }
 
 /// Current task execution status
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum TaskStatus {
     /// Task accepted and queued for processing
@@ -74,7 +77,7 @@ pub enum TaskStatus {
 }
 
 /// Summary of working specification (for response size optimization)
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct WorkingSpecSummary {
     /// Working spec identifier
@@ -97,7 +100,7 @@ pub struct WorkingSpecSummary {
 }
 
 /// Current execution progress information
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct TaskProgress {
     /// Current execution phase
@@ -126,7 +129,7 @@ pub struct TaskProgress {
 }
 
 /// Task execution error information
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct TaskError {
     /// Error code for programmatic handling
@@ -145,18 +148,21 @@ pub struct TaskError {
 }
 
 /// Execution metadata and statistics
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct TaskExecutionMetadata {
     /// When execution was created
+    #[schemars(with = "String")]
     pub created_at: chrono::DateTime<chrono::Utc>,
 
     /// When execution started (if applicable)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Option<String>")]
     pub started_at: Option<chrono::DateTime<chrono::Utc>>,
 
     /// When execution completed (if applicable)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Option<String>")]
     pub completed_at: Option<chrono::DateTime<chrono::Utc>>,
 
     /// Total execution duration in seconds

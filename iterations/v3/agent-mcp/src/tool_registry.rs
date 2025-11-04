@@ -30,7 +30,7 @@ use system_common_interfaces::{
 /// This placeholder returns errors for all operations, encouraging users to inject
 /// a real implementation via `ToolRegistry::with_file_ops()`.
 #[derive(Debug)]
-struct PlaceholderFileOperationsService;
+struct PlaceholderFileOperationsService ;
 
 #[async_trait::async_trait]
 impl FileOperationsService for PlaceholderFileOperationsService {

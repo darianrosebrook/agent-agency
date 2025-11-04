@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-
 /// Trace context for distributed tracing
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TraceContext {

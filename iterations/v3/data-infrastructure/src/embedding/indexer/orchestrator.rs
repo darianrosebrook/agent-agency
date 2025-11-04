@@ -3,6 +3,7 @@
 //! Main orchestrator that coordinates text, visual, and graph indexing
 //! with unified search capabilities and storage management.
 
+use schemars::JsonSchema;
 use super::text::{TextIndexer, TextDocument};
 use super::visual::{VisualIndexer, VisualDocument};
 use super::graph::{GraphIndexer, NodeProperty, GraphEdge};
@@ -201,7 +202,7 @@ pub enum HealthStatus {
 }
 
 /// Indexer configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct IndexerConfig {
     pub enable_persistence: bool,
     pub max_index_size: usize,

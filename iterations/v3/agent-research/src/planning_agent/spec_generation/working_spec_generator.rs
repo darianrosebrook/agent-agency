@@ -31,7 +31,7 @@ pub async fn generate_working_spec(
         context,
         non_functional_requirements: None,
         validation_results: None,
-        metadata: std::collections::HashMap::new(),
+        metadata: None,
     })
 }
 
@@ -83,6 +83,7 @@ fn generate_acceptance_criteria(description: &str) -> PlanningResult<Vec<agent_a
         given: "Task is executed".to_string(),
         when: "All preconditions are met".to_string(),
         then: "Task completes without errors".to_string(),
+        priority: Some(agent_agency_contracts::working_spec::MoSCoWPriority::Must),
     });
 
     criteria.push(agent_agency_contracts::working_spec::AcceptanceCriterion {
@@ -90,6 +91,7 @@ fn generate_acceptance_criteria(description: &str) -> PlanningResult<Vec<agent_a
         given: "Task requirements are implemented".to_string(),
         when: "Task is executed".to_string(),
         then: "Functionality works as described in requirements".to_string(),
+        priority: Some(agent_agency_contracts::working_spec::MoSCoWPriority::Must),
     });
 
     // Add domain-specific criteria

@@ -9,16 +9,13 @@ use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use chrono::Utc;
 
-use system_common_interfaces::{
-    learning::{
-        LearningService, LearningResult, LearningError, LearningContext, TaskPerformance,
+use system_common_interfaces::learning::{
+        LearningService, LearningResult, LearningContext, TaskPerformance,
         LearningInsights, Pattern, Improvement, OptimizationRecommendation,
         LearningStatistics, OptimizationGoal, RecommendationType, Priority,
-        PatternType, ImprovementType, Difficulty, SystemMetrics, ResourceUsage,
-    },
-};
+        PatternType, ImprovementType, Difficulty,
+    };
 
 /// Simple Q-learning based learning service
 #[derive(Debug)]
@@ -50,6 +47,11 @@ impl SimpleLearningService {
             discount_factor: 0.9,
             exploration_rate: 0.1,
         }
+    }
+
+    /// Get the exploration rate used in learning
+    pub fn exploration_rate(&self) -> f64 {
+        self.exploration_rate
     }
 
     /// Get Q-value for state-action pair

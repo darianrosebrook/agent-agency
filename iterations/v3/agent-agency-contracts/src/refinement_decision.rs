@@ -3,18 +3,19 @@
 //! Defines the council's decision on current artifacts with targeted
 //! refinement directives, risk assessments, and specific improvement actions.
 
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Council-directed refinement decision with targeted improvement focus
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct RefinementDecision {
     /// Contract version for compatibility
     pub version: String,
 
     /// Task identifier
+    #[schemars(with = "String")]
     pub task_id: Uuid,
 
     /// Working spec identifier
@@ -52,7 +53,7 @@ pub struct RefinementDecision {
 }
 
 /// Council's decision on current artifacts
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum CouncilDecision {
     /// Accept current artifacts as meeting requirements
@@ -69,7 +70,7 @@ pub enum CouncilDecision {
 }
 
 /// Evidence supporting the council's decision
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct EvidenceItem {
     /// Type of evidence
@@ -87,7 +88,7 @@ pub struct EvidenceItem {
 }
 
 /// Type of evidence supporting decision
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum EvidenceType {
     QualityReport,
@@ -99,7 +100,7 @@ pub enum EvidenceType {
 }
 
 /// Evidence severity levels
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum EvidenceSeverity {
     Critical,
@@ -110,7 +111,7 @@ pub enum EvidenceSeverity {
 }
 
 /// Detailed refinement instructions for improvement
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct RefinementDirective {
     /// Areas requiring focused improvement
@@ -141,7 +142,7 @@ pub struct RefinementDirective {
 }
 
 /// Areas requiring focused improvement
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum FocusArea {
     UnitTests,
@@ -162,7 +163,7 @@ pub enum FocusArea {
 }
 
 /// Specific quality targets to achieve
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct QualityTargets {
     /// Minimum overall quality score required
@@ -179,7 +180,7 @@ pub struct QualityTargets {
 }
 
 /// Suggested constraint adjustments
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct ConstraintAdjustments {
     /// Increase change budget if needed
@@ -196,7 +197,7 @@ pub struct ConstraintAdjustments {
 }
 
 /// Increase change budget
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct BudgetIncrease {
     /// Additional files that can be modified
@@ -209,7 +210,7 @@ pub struct BudgetIncrease {
 }
 
 /// Adjust scope restrictions
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct ScopeAdjustment {
     /// Add allowed paths
@@ -222,7 +223,7 @@ pub struct ScopeAdjustment {
 }
 
 /// Specific actionable improvement
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct SpecificAction {
     /// Type of action to perform
@@ -243,7 +244,7 @@ pub struct SpecificAction {
 }
 
 /// Type of specific action
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ActionType {
     AddTests,
@@ -259,7 +260,7 @@ pub enum ActionType {
 }
 
 /// Action priority levels
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ActionPriority {
     Critical,
@@ -269,7 +270,7 @@ pub enum ActionPriority {
 }
 
 /// Effort level estimation
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum EffortLevel {
     Trivial,
@@ -279,7 +280,7 @@ pub enum EffortLevel {
 }
 
 /// Detailed council voting and consensus information
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct CouncilVerdict {
     /// Whether quorum was achieved for decision
@@ -301,7 +302,7 @@ pub struct CouncilVerdict {
 }
 
 /// Dissenting opinion from a judge
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct DissentingOpinion {
     /// Judge identifier
@@ -315,7 +316,7 @@ pub struct DissentingOpinion {
 }
 
 /// Individual judge's contribution to the decision
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct JudgeContribution {
     /// Judge identifier
@@ -368,7 +369,7 @@ pub enum JudgeType {
 }
 
 /// Risk assessment and mitigation recommendations
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct RiskAssessment {
     /// Current risk level assessment
@@ -392,7 +393,7 @@ pub struct RiskAssessment {
 }
 
 /// Risk level assessment
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum RiskLevel {
     Low,
@@ -402,7 +403,7 @@ pub enum RiskLevel {
 }
 
 /// Individual risk factor
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct RiskFactor {
     /// Risk factor description
@@ -416,10 +417,11 @@ pub struct RiskFactor {
 }
 
 /// Decision metadata and processing information
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct DecisionMetadata {
     /// When the decision was made
+    #[schemars(with = "String")]
     pub decided_at: chrono::DateTime<chrono::Utc>,
 
     /// How long the decision process took

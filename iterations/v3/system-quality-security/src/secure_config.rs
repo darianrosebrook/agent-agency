@@ -1,5 +1,6 @@
 //! Secure configuration management with validated environment variable loading
 
+use schemars::JsonSchema;
 use crate::input_validation::validate_env_var_name;
 use std::collections::HashMap;
 use std::env;
@@ -303,7 +304,7 @@ fn mask_sensitive_value(value: &str) -> String {
 }
 
 /// Errors that can occur during secure configuration loading
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum SecureConfigError {
     #[error("Validation failed: {0:?}")]
     ValidationFailed(Vec<String>),

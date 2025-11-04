@@ -6,18 +6,22 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 
 /// Execution event types for real-time monitoring
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ExecutionEvent {
     /// Execution started
     ExecutionStarted {
+        #[schemars(with = "String")]
         task_id: Uuid,
         working_spec_id: String,
-        timestamp: DateTime<Utc>,
+        #[schemars(with = "String")]
+    timestamp: DateTime<Utc>,
     },
     /// Execution completed successfully
     ExecutionCompleted {
+        #[schemars(with = "String")]
         task_id: Uuid,
         success: bool,
         artifacts: crate::ExecutionArtifacts,
@@ -25,6 +29,7 @@ pub enum ExecutionEvent {
     },
     /// Execution failed
     ExecutionFailed {
+        #[schemars(with = "String")]
         task_id: Uuid,
         error: String,
         working_spec_id: String,
@@ -32,30 +37,38 @@ pub enum ExecutionEvent {
     },
     /// Worker assigned to task
     WorkerAssigned {
+        #[schemars(with = "String")]
         task_id: Uuid,
+        #[schemars(with = "String")]
         worker_id: Uuid,
-        estimated_completion_time: DateTime<Utc>,
+        #[schemars(with = "String")]
+    estimated_completion_time: DateTime<Utc>,
     },
     /// Quality check completed
     QualityCheckCompleted {
+        #[schemars(with = "String")]
         task_id: Uuid,
         check_type: String,
         passed: bool,
     },
     /// Execution phase started
     ExecutionPhaseStarted {
+        #[schemars(with = "String")]
         task_id: Uuid,
         phase: String,
-        timestamp: DateTime<Utc>,
+        #[schemars(with = "String")]
+    timestamp: DateTime<Utc>,
     },
     /// Execution phase completed
     ExecutionPhaseCompleted {
+        #[schemars(with = "String")]
         task_id: Uuid,
         phase: String,
         duration_ms: u64,
     },
     /// Execution progress update
     ExecutionProgress {
+        #[schemars(with = "String")]
         task_id: Uuid,
         phase: String,
         progress_percent: f32,

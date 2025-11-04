@@ -3,19 +3,23 @@
 //! Learning session state, progress tracking, and state persistence
 //! for multi-turn learning coordination.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Learning session state
-#[derive(Debug, Clone)]
-pub struct LearningSession {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct LearningSessionn {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub state: SessionState,
     pub progress: LearningProgress,
     pub history: Vec<LearningEvent>,
 }
 
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum SessionState {
     Initializing,
     Active,
@@ -24,15 +28,17 @@ pub enum SessionState {
     Failed,
 }
 
-#[derive(Debug, Clone)]
-pub struct LearningProgress {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct LearningProgresss {
     pub completed_steps: u32,
     pub total_steps: u32,
     pub current_quality_score: f64,
     pub improvement_trend: Vec<f64>,
 }
 
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LearningEvent {
     pub timestamp: chrono::DateTime<chrono::Utc>,
     pub event_type: EventType,
@@ -40,7 +46,8 @@ pub struct LearningEvent {
     pub data: HashMap<String, String>,
 }
 
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum EventType {
     Started,
     Progress,
@@ -53,8 +60,9 @@ pub enum EventType {
 }
 
 /// State manager for learning sessions
-#[derive(Debug)]
-pub struct StateManager {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct StateManagerr {
     sessions: HashMap<Uuid, LearningSession>,
 }
 
@@ -112,8 +120,9 @@ impl StateManager {
     }
 }
 
-#[derive(Debug)]
-pub enum SessionUpdate {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub enum SessionUpdatee {
     State(SessionState),
     Progress(LearningProgress),
     AddEvent(LearningEvent),

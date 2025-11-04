@@ -1,15 +1,19 @@
 //! Reinforcement learning algorithms for reflexive learning
 
+use schemars::JsonSchema;
 use crate::reflexive_types::*;
 use rand::prelude::*;
+use rand::rngs::StdRng;
+use rand::SeedableRng;
 use std::collections::HashMap;
 
 /// Q-learning implementation with epsilon-greedy exploration
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QLearning {
     q_table: QTable,
     config: AlgorithmConfig,
-    rng: ThreadRng,
+    rng: StdRng,
 }
 
 impl QLearning {
@@ -17,7 +21,7 @@ impl QLearning {
         Self {
             q_table: QTable::new(),
             config,
-            rng: thread_rng(),
+            rng: StdRng::from_entropy(),
         }
     }
 
@@ -63,7 +67,8 @@ impl QLearning {
 }
 
 /// SARSA (State-Action-Reward-State-Action) learning algorithm
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Sarsa {
     q_table: QTable,
     config: AlgorithmConfig,
@@ -110,7 +115,8 @@ impl Sarsa {
 }
 
 /// Deep Q-Network implementation with feedforward neural network
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DeepQLearning {
     config: AlgorithmConfig,
     // Neural network layers

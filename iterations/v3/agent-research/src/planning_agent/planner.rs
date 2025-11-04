@@ -3,6 +3,7 @@
 //! The PlanningAgent is responsible for transforming TaskRequests into
 //! validated WorkingSpecs through a multi-stage planning pipeline.
 
+use schemars::JsonSchema;
 use std::sync::Arc;
 use tokio::time::{timeout, Duration};
 use uuid::Uuid;
@@ -18,6 +19,10 @@ use crate::planning_agent::planning_errors::{PlanningError, PlanningResult};
 use crate::planning_agent::planning_caws_integration::CawsValidator;
 use crate::planning_agent::validation_pipeline::ValidationPipeline;
 use crate::planning_agent::refinement_engine::RefinementEngine;
+use crate::planning_agent::types::{
+    PlanningConfig, PlanningRequest, PlanningResponse, PlanningMetadata,
+    ValidationResults, RefinementRecord, RiskAssessment,
+};
 use system_configuration::types::*;
 use crate::planning_agent::validation::*;
 use crate::planning_agent::spec_generation::*;
@@ -501,7 +506,7 @@ impl PlanningAgent {
 /// Comprehensive Goal Extraction and Analysis Implementation
 
 /// Configuration for goal analysis
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct GoalAnalysisConfig {
     /// Enable semantic analysis using BERT
     pub enable_semantic_analysis: bool,
@@ -522,7 +527,7 @@ pub struct GoalAnalysisConfig {
 }
 
 /// Result of comprehensive goal analysis
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct GoalAnalysisResult {
     /// Extracted goals with metadata
     pub goals: Vec<ExtractedGoal>,
@@ -537,7 +542,7 @@ pub struct GoalAnalysisResult {
 }
 
 /// Individual extracted goal with comprehensive metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExtractedGoal {
     /// Unique goal identifier
     pub id: String,
@@ -572,7 +577,7 @@ pub struct ExtractedGoal {
 }
 
 /// Goal type classifications
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, JsonSchema)]
 pub enum GoalType {
     /// Functional requirements
     Functional,
@@ -595,7 +600,7 @@ pub enum GoalType {
 }
 
 /// Timeline constraints for goals
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct GoalTimeline {
     /// Target completion date
     pub target_date: Option<chrono::DateTime<chrono::Utc>>,
@@ -608,7 +613,7 @@ pub struct GoalTimeline {
 }
 
 /// Goal hierarchy with dependencies
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct GoalHierarchy {
     /// Root goals (no dependencies)
     pub root_goals: Vec<String>,
@@ -623,7 +628,7 @@ pub struct GoalHierarchy {
 }
 
 /// Goal prioritization results
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct GoalPrioritization {
     /// Goals ranked by priority score
     pub ranked_goals: Vec<String>,
@@ -636,7 +641,7 @@ pub struct GoalPrioritization {
 }
 
 /// Priority score breakdown
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PriorityBreakdown {
     /// Business value component
     pub business_value: f64,
@@ -653,7 +658,7 @@ pub struct PriorityBreakdown {
 }
 
 /// Business value analysis
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BusinessValueAnalysis {
     /// ROI estimates for each goal
     pub roi_estimates: HashMap<String, f64>,
@@ -666,7 +671,7 @@ pub struct BusinessValueAnalysis {
 }
 
 /// Cost-benefit analysis result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CostBenefitResult {
     /// Estimated costs
     pub estimated_costs: f64,
@@ -681,7 +686,7 @@ pub struct CostBenefitResult {
 }
 
 /// Goal validation results
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct GoalValidation {
     /// Goal ID being validated
     pub goal_id: String,
@@ -698,7 +703,7 @@ pub struct GoalValidation {
 }
 
 /// Validation types for goals
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, JsonSchema)]
 pub enum ValidationType {
     /// SMART criteria validation
     SmartCriteria,
@@ -719,7 +724,7 @@ pub enum ValidationType {
 }
 
 /// Validation results
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Serialize, Deserialize)]
 pub enum ValidationResult {
     Pass,
     Warning,
@@ -727,7 +732,7 @@ pub enum ValidationResult {
 }
 
 /// Validation severity levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ValidationSeverity {
     Info,
     Warning,
@@ -736,7 +741,7 @@ pub enum ValidationSeverity {
 }
 
 /// Goal analysis metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct GoalAnalysisMetadata {
     /// Analysis timestamp
     pub timestamp: chrono::DateTime<chrono::Utc>,
@@ -773,29 +778,33 @@ pub struct AdvancedGoalAnalyzer {
 }
 
 /// Goal prioritization engine
-#[derive(Debug)]
-struct GoalPrioritizationEngine {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct GoalPrioritizationEngine {
     /// ML model for priority prediction (simplified)
     priority_weights: HashMap<String, f64>,
 }
 
 /// Goal dependency analyzer
-#[derive(Debug)]
-struct GoalDependencyAnalyzer {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct GoalDependencyAnalyzer {
     /// Dependency patterns
     dependency_patterns: Vec<Regex>,
 }
 
 /// Goal validation engine
-#[derive(Debug)]
-struct GoalValidationEngine {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct GoalValidationEngine {
     /// Validation rules
     validation_rules: Vec<GoalValidationRule>,
 }
 
 /// Goal validation rule
-#[derive(Debug)]
-struct GoalValidationRule {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct GoalValidationRule {
     /// Rule type
     rule_type: ValidationType,
     /// Validation function (simplified)

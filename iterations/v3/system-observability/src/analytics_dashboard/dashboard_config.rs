@@ -2,7 +2,6 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-
 /// Analytics dashboard configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalyticsDashboardConfig {
@@ -44,8 +43,10 @@ pub struct AnalyticsSession {
     /// User ID
     pub user_id: Option<String>,
     /// Session start time
+    #[schemars(with = "String")]
     pub start_time: DateTime<Utc>,
     /// Last activity time
+    #[schemars(with = "String")]
     pub last_activity: DateTime<Utc>,
     /// Session preferences
     pub preferences: AnalyticsPreferences,

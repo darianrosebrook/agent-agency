@@ -1,5 +1,6 @@
 //! Worker communication message types and handling
 
+use schemars::JsonSchema;
 use crate::parallel_types::*;
 use crate::WorkerMessage;
 use chrono::{DateTime, Utc};
@@ -114,8 +115,9 @@ pub struct MessageFilter {
 }
 
 /// Types of messages for filtering
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum MessageType {
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+enum MessageType {
     Started,
     Progress,
     Blocked,

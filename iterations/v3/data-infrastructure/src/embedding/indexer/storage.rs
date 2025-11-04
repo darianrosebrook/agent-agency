@@ -3,10 +3,10 @@
 //! Database operations for embedding storage, index persistence,
 //! and retrieval with connection pooling and health monitoring.
 
+use schemars::JsonSchema;
 use crate::embedding::embedding_types::*;
 use anyhow::Result;
 use sqlx::{PgPool, Row};
-use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Database client for embedding operations
@@ -16,7 +16,7 @@ pub struct EmbeddingStorage {
     config: DatabaseConfig,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct DatabaseConfig {
     pub max_connections: u32,
     pub min_connections: u32,
@@ -68,15 +68,15 @@ impl EmbeddingStorage {
         .await?;
 
         Ok(row.map(|r: sqlx::postgres::PgRow| EmbeddingRecord {
-            id: r.get("id"),
-            content_id: r.get("content_id"),
+            id: r.get::<uuid::Uuid, &str>("id"),
+            content_id: r.get::<uuid::Uuid, &str>("content_id"),
             embedding: EmbeddingVector {
-                values: r.get("embedding"),
-                model: r.get("model"),
-                dimensions: r.get::<i32, _>("dimensions") as usize,
+                values: r.get::<Vec<f32>, &str>("embedding"),
+                model: r.get::<String, &str>("model"),
+                dimensions: r.get::<i32, &str>("dimensions") as usize,
             },
-            created_at: r.get("created_at"),
-            updated_at: r.get("updated_at"),
+            created_at: r.get::<chrono::DateTime<chrono::Utc>, &str>("created_at"),
+            updated_at: Some(r.get::<chrono::DateTime<chrono::Utc>, &str>("updated_at")),
         }))
     }
 
@@ -96,9 +96,9 @@ impl EmbeddingStorage {
         .await?;
 
         Ok(rows.into_iter().map(|row: sqlx::postgres::PgRow| EmbeddingSimilarity {
-            embedding_id: row.get("id"),
-            content_id: row.get("content_id"),
-            similarity: row.get::<Option<f64>, _>("similarity").unwrap_or(0.0),
+            embedding_id: row.get::<uuid::Uuid, &str>("id"),
+            content_id: row.get::<uuid::Uuid, &str>("content_id"),
+            similarity: row.get::<f64, &str>("similarity"),
         }).collect())
     }
 
@@ -188,9 +188,11 @@ impl EmbeddingStorage {
 }
 
 /// Embedding similarity result
-#[derive(Debug)]
+#[derive(Debug, JsonSchema)]
 pub struct EmbeddingSimilarity {
+    #[schemars(with = "String")]
     pub embedding_id: Uuid,
+    #[schemars(with = "String")]
     pub content_id: Uuid,
     pub similarity: f64,
 }
@@ -205,9 +207,11 @@ pub struct DatabaseStats {
 }
 
 /// Embedding record for database storage
-#[derive(Debug, Clone, sqlx::FromRow)]
+#[derive(Debug, Clone, sqlx::FromRow, JsonSchema)]
 pub struct EmbeddingRecord {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub content_id: Uuid,
     pub embedding: EmbeddingVector,
     pub created_at: chrono::DateTime<chrono::Utc>,

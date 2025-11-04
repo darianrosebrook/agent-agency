@@ -2,6 +2,7 @@
 //!
 //! Provides hooks for policy adaptation and reinforcement learning integration.
 
+use schemars::JsonSchema;
 use std::sync::Arc;
 use crate::self_prompting_agent::prompting_types::SelfPromptingAgentError;
 use crate::self_prompting_agent::learning_bridge::LearningBridge;
@@ -73,7 +74,8 @@ impl AdaptiveAgent {
 }
 
 /// Policy state snapshot
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PolicyState {
     pub temperature: f64,
     pub max_iterations: usize,
@@ -148,7 +150,8 @@ pub trait PolicyHook: Send + Sync {
 }
 
 /// Policy decision
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum PolicyDecision {
     Allow,
     Deny(String),

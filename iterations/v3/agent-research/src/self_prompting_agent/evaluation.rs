@@ -2,6 +2,8 @@
 //!
 //! Provides comprehensive evaluation of task results against quality criteria.
 
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use std::sync::Arc;
 use async_trait::async_trait;
 
@@ -13,7 +15,8 @@ pub struct EvaluationOrchestrator {
 }
 
 /// Evaluation result
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EvaluationResult {
     pub score: f64,
     pub status: EvalStatus,

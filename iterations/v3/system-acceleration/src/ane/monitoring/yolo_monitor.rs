@@ -3,14 +3,13 @@
 //! Provides comprehensive monitoring for YOLO inference performance,
 //! ANE utilization, and optimization recommendations.
 
+use schemars::JsonSchema;
 use crate::telemetry::TelemetryCollector;
-use crate::ane::infer::execute::InferenceMetrics;
-use crate::ane::ane_errors::{ANEError, Result};
-use std::time::{Duration, Instant};
-use tracing::{info, warn, error};
+use crate::ane::ane_errors::Result;
+use tracing::{info, warn};
 
 /// YOLO-specific performance metrics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct YOLOPerformanceMetrics {
     /// Total inference time in milliseconds
     pub total_inference_time_ms: f64,
@@ -33,7 +32,7 @@ pub struct YOLOPerformanceMetrics {
 }
 
 /// YOLO performance thresholds and alerts
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct YOLOPerformanceThresholds {
     /// Maximum acceptable inference time in milliseconds
     pub max_inference_time_ms: f64,
@@ -281,7 +280,7 @@ impl YOLOPerformanceMonitor {
 }
 
 /// Performance statistics summary
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct YOLOPerformanceStats {
     pub total_inferences: usize,
     pub average_inference_time_ms: f64,

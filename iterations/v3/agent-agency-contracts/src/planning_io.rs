@@ -12,7 +12,7 @@ use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 
 // Import canonical types from types module
-use crate::types::planning::{ExecutionMode, BlastRadius, TaskDescriptor, PlanningStrategy};
+use crate::types::planning::PlanningStrategy;
 use crate::types::execution::ExecutionContext;
 
 /// Execution plan with milestone breakdown

@@ -10,7 +10,7 @@ use schemars::JsonSchema;
 use uuid::Uuid;
 
 /// Execution mode for task orchestration
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ExecutionMode {
     /// Dry run - validate without execution
     DryRun,
@@ -21,7 +21,7 @@ pub enum ExecutionMode {
 }
 
 /// Task scope definition
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct TaskScope {
     /// Files and directories that are in scope
     pub in_scope: Vec<String>,
@@ -41,7 +41,7 @@ pub enum TaskPriority {
 }
 
 /// Risk tier assessment
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum RiskTier {
     /// Tier 1: Critical systems (auth, billing, migrations)
     Tier1,
@@ -77,7 +77,7 @@ pub enum PlanningStrategy {
 }
 
 /// Blast radius for change impact analysis
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BlastRadius {
     /// Affected modules
     pub modules: Vec<String>,
@@ -88,9 +88,10 @@ pub struct BlastRadius {
 }
 
 /// Task descriptor for orchestration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskDescriptor {
     /// Unique task identifier
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     /// Human-readable task description
     pub description: String,

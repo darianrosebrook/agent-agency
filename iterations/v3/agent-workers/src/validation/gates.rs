@@ -1,5 +1,6 @@
 //! Quality gates and validation framework
 
+use schemars::JsonSchema;
 use crate::parallel_types::*;
 use crate::{ValidationResult, ValidationContext};
 use async_trait::async_trait;
@@ -182,7 +183,8 @@ impl QualityGateRunner {
 }
 
 /// Result of running a single quality gate
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct GateResult {
     pub gate_name: String,
     pub description: String,
@@ -192,7 +194,8 @@ pub struct GateResult {
 }
 
 /// Summary of all gate results
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct GateSummary {
     pub total_gates: usize,
     pub passed_gates: usize,

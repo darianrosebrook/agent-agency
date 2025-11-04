@@ -16,7 +16,7 @@ use tracing::{debug, info, warn};
 
 /// Sequential pipeline that executes stages in order
 #[derive(Debug)]
-pub struct SequentialPipeline<Input> {
+pub struct SequentialPipeline <Input> {
     config: SequentialPipelineConfig,
     stages: Arc<RwLock<Vec<Box<dyn PipelineStage<Input, Input>>>>>,
     metrics: PipelineMetrics,
@@ -211,7 +211,7 @@ mod tests {
 
     // Mock stage for testing
     #[derive(Debug)]
-    struct MockStage {
+struct MockStage {
         name: String,
         should_fail: bool,
     }

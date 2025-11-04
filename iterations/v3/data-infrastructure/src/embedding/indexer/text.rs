@@ -3,19 +3,18 @@
 //! BM25 sparse indexing, dense embeddings, and HNSW-based
 //! approximate nearest neighbor search for text documents.
 
+use schemars::JsonSchema;
 use crate::embedding::embedding_types::*;
-use crate::embedding::provider::EmbeddingProvider;
 use crate::embedding::embedding_service::EmbeddingServiceFactory;
-use crate::embedding::tokenization::SimpleTokenizer;
 use anyhow::Result;
 use std::collections::HashMap;
 use std::sync::Arc;
 use uuid::Uuid;
-use tokio::sync::OnceCell;
 
 /// Text document representation for indexing
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct TextDocument {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub content: String,
     pub title: Option<String>,
@@ -24,7 +23,7 @@ pub struct TextDocument {
 }
 
 /// HNSW index metadata for efficient search
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct HnswMetadata {
     pub dimensions: usize,
     pub max_connections: usize,
@@ -294,8 +293,9 @@ impl TextIndexer {
 }
 
 /// Search result structure
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct SearchResult {
+    #[schemars(with = "String")]
     pub document_id: Uuid,
     pub score: f64,
     pub content_preview: String,
@@ -303,7 +303,7 @@ pub struct SearchResult {
 }
 
 /// Index statistics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct IndexStatistics {
     pub total_documents: usize,
     pub total_terms: usize,

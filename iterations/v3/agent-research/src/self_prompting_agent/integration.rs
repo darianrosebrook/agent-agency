@@ -2,6 +2,8 @@
 //!
 //! Coordinates between multiple autonomous agents and external systems.
 
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use async_trait::async_trait;
@@ -12,13 +14,24 @@ use agent_workers::decomposition::{DecompositionEngine, TaskAnalysis, SubTask};
 #[cfg(feature = "workers")]
 use agent_workers::parallel_types::{ComplexTask, TaskId, TaskScope, Priority, QualityRequirements};
 use chrono::Utc;
-use system_observability::orchestrator::{SystemHealthMonitor, AgentHealthMetrics};
+use system_observability::health_metrics::MetricsCollector;
+
+/// Agent health metrics placeholder
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct AgentHealthMetrics {
+    health_score: f64,
+    success_rate: f64,
+    current_load: usize,
+    max_load: usize,
+    response_time_p95: u64,
+}
 
 /// Integrated autonomous agent coordinator
 pub struct IntegratedAutonomousAgent {
     agents: Vec<Arc<dyn AutonomousAgent>>,
     state: Arc<RwLock<IntegrationState>>,
-    performance_tracker: Option<Arc<SystemHealthMonitor>>,
+    performance_tracker: Option<Arc<MetricsCollector>>,
 }
 
 impl IntegratedAutonomousAgent {
@@ -32,7 +45,7 @@ impl IntegratedAutonomousAgent {
     }
     
     /// Create with performance tracking
-    pub fn with_performance_tracker(performance_tracker: Arc<SystemHealthMonitor>) -> Self {
+    pub fn with_performance_tracker(performance_tracker: Arc<MetricsCollector>) -> Self {
         Self {
             agents: Vec::new(),
             state: Arc::new(RwLock::new(IntegrationState::default())),
@@ -148,13 +161,15 @@ impl IntegratedAutonomousAgent {
     async fn select_agent_with_metrics(
         &self,
         agents: Vec<&Arc<dyn AutonomousAgent>>,
-        tracker: &SystemHealthMonitor,
+        tracker: &MetricsCollector,
     ) -> Result<Arc<dyn AutonomousAgent>, SelfPromptingAgentError> {
         let mut scored_agents: Vec<(Arc<dyn AutonomousAgent>, f64)> = Vec::new();
         
         for agent in agents {
             let agent_name = agent.name();
-            let metrics = tracker.get_agent_health(agent_name);
+            // PLACEHOLDER: MetricsCollector doesn't have get_agent_health method
+            // Using a default scoring approach instead
+            let metrics: Option<AgentHealthMetrics> = None;
             
             let score = if let Some(metrics) = metrics {
                 // Calculate selection score based on multiple factors
@@ -225,7 +240,8 @@ pub trait AutonomousAgent: Send + Sync {
 }
 
 /// Task execution result for integration layer
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskResult {
     pub task_id: uuid::Uuid,
     pub agent_name: String,
@@ -235,8 +251,9 @@ pub struct TaskResult {
 }
 
 /// Integration state
-#[derive(Debug, Default)]
-struct IntegrationState {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
+pub struct IntegrationState {
     active_agent: Option<String>,
     completed_tasks: usize,
     failed_tasks: usize,
@@ -244,7 +261,8 @@ struct IntegrationState {
 }
 
 /// Integration status
-#[derive(Debug, Clone, serde::Serialize)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, serde::Serialize)]
 pub struct IntegrationStatus {
     pub registered_agents: usize,
     pub active_agent: Option<String>,
@@ -501,7 +519,8 @@ impl MultiAgentCoordinator {
 }
 
 /// Coordinated execution result
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CoordinatedResult {
     pub task_id: uuid::Uuid,
     pub subtasks: Vec<TaskResult>,
@@ -538,7 +557,8 @@ impl AgentCommunicationHub {
 }
 
 /// Inter-agent message
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Message {
     pub from: String,
     pub to: String,
@@ -547,7 +567,8 @@ pub struct Message {
 }
 
 /// Message types
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum MessageType {
     TaskRequest,
     TaskResult,

@@ -1,27 +1,32 @@
 //! Database models and types for Agent Agency V3
 
+use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Provenance entry model
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProvenanceEntry {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub action: String,
     pub actor: String,
     pub resource_id: Option<Uuid>,
     pub resource_type: Option<String>,
     pub change_summary: String,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub metadata: serde_json::Value,
 }
 
 /// Waiver model
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Waiver {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub title: String,
     pub reason: String,
@@ -30,16 +35,23 @@ pub struct Waiver {
     pub approved_by: String,
     pub impact_level: String,
     pub mitigation_plan: String,
+    #[schemars(with = "String")]
+
     pub expires_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub updated_at: DateTime<Utc>,
     pub status: String,
     pub metadata: serde_json::Value,
 }
 
 /// Judge model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct Judge {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub name: String,
     pub model_name: String,
@@ -48,13 +60,18 @@ pub struct Judge {
     pub timeout_ms: i32,
     pub optimization_target: String,
     pub is_active: bool,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub updated_at: DateTime<Utc>,
 }
 
 /// Worker model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct Worker {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub name: String,
     pub worker_type: String,
@@ -64,13 +81,18 @@ pub struct Worker {
     pub capabilities: serde_json::Value,
     pub performance_history: serde_json::Value,
     pub is_active: bool,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub updated_at: DateTime<Utc>,
 }
 
 /// Task model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct Task {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub title: String,
     pub description: String,
@@ -81,7 +103,11 @@ pub struct Task {
     pub caws_spec: Option<serde_json::Value>,
     pub status: String,
     pub assigned_worker_id: Option<Uuid>,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub updated_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
     pub priority: Option<i32>,
@@ -90,11 +116,15 @@ pub struct Task {
 }
 
 /// Task execution model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct TaskExecution {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub task_id: Uuid,
+    #[schemars(with = "String")]
     pub worker_id: Uuid,
+    #[schemars(with = "String")]
     pub execution_started_at: DateTime<Utc>,
     pub execution_completed_at: Option<DateTime<Utc>>,
     pub execution_time_ms: Option<i32>,
@@ -104,6 +134,8 @@ pub struct TaskExecution {
     pub metadata: serde_json::Value,
     pub error_message: Option<String>,
     pub tokens_used: Option<i32>,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
     pub execution_metadata: Option<serde_json::Value>,
@@ -111,16 +143,21 @@ pub struct TaskExecution {
 }
 
 /// Council verdict model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct CouncilVerdict {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub task_id: Uuid,
+    #[schemars(with = "String")]
     pub verdict_id: Uuid,
     pub consensus_score: f32,
     pub final_verdict: serde_json::Value,
     pub individual_verdicts: serde_json::Value,
     pub debate_rounds: i32,
     pub evaluation_time_ms: i32,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
     pub contract: serde_json::Value,
     pub updated_at: Option<DateTime<Utc>>,
@@ -128,15 +165,20 @@ pub struct CouncilVerdict {
 }
 
 /// Judge evaluation model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct JudgeEvaluation {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub verdict_id: Uuid,
+    #[schemars(with = "String")]
     pub judge_id: Uuid,
     pub judge_verdict: serde_json::Value,
     pub evaluation_time_ms: i32,
     pub tokens_used: Option<i32>,
     pub confidence: Option<f32>,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
     pub evaluation_score: Option<f32>,
     pub confidence_score: Option<f32>,
@@ -149,22 +191,28 @@ pub struct JudgeEvaluation {
 }
 
 /// Debate session model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct DebateSession {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub session_id: Uuid,
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub conflicting_judges: serde_json::Value,
     pub rounds: serde_json::Value,
     pub status: String,
     pub final_consensus: Option<serde_json::Value>,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
     pub resolved_at: Option<DateTime<Utc>>,
 }
 
 /// Knowledge entry model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct KnowledgeEntry {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub title: String,
     pub content: String,
@@ -173,7 +221,11 @@ pub struct KnowledgeEntry {
     pub relevance_score: f32,
     pub tags: serde_json::Value,
     pub embedding: Option<Vec<f32>>, // pgvector as Vec<f32>
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub updated_at: DateTime<Utc>,
     pub content_type: Option<String>,
     pub metadata: Option<serde_json::Value>,
@@ -184,22 +236,28 @@ pub struct KnowledgeEntry {
 }
 
 /// Performance metric model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct PerformanceMetric {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub entity_type: String,
+    #[schemars(with = "String")]
     pub entity_id: Uuid,
     pub metric_name: String,
     pub metric_value: f64,
     pub metric_unit: Option<String>,
     pub metadata: serde_json::Value,
+    #[schemars(with = "String")]
+
     pub recorded_at: DateTime<Utc>,
 }
 
 /// CAWS compliance model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct CawsCompliance {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub verdict_id: Option<Uuid>,
     pub compliance_score: f32,
@@ -208,25 +266,32 @@ pub struct CawsCompliance {
     pub budget_adherence: serde_json::Value,
     pub quality_gates: serde_json::Value,
     pub provenance_trail: serde_json::Value,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
 }
 
 /// Audit trail entry model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct AuditTrailEntry {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub entity_type: String,
+    #[schemars(with = "String")]
     pub entity_id: Uuid,
     pub action: String,
     pub details: serde_json::Value,
     pub user_id: Option<String>,
     pub ip_address: Option<String>,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
 }
 
 /// Source integrity record model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct SourceIntegrityRecord {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub source_id: String,
     pub source_type: String,
@@ -236,17 +301,25 @@ pub struct SourceIntegrityRecord {
     pub integrity_status: String,
     pub tampering_indicators: serde_json::Value,
     pub verification_metadata: serde_json::Value,
+    #[schemars(with = "String")]
+
     pub first_seen_at: DateTime<Utc>,
     pub last_verified_at: Option<DateTime<Utc>>,
     pub verification_count: i32,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub updated_at: DateTime<Utc>,
 }
 
 /// Source integrity verification model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct SourceIntegrityVerification {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub source_integrity_id: Uuid,
     pub verification_type: String,
     pub verification_result: String,
@@ -257,13 +330,17 @@ pub struct SourceIntegrityVerification {
     pub verification_details: serde_json::Value,
     pub verified_by: Option<String>,
     pub verification_duration_ms: Option<i32>,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
 }
 
 /// Source integrity alert model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct SourceIntegrityAlert {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub source_integrity_id: Uuid,
     pub alert_type: String,
     pub severity: String,
@@ -275,11 +352,13 @@ pub struct SourceIntegrityAlert {
     pub resolved: bool,
     pub resolved_by: Option<String>,
     pub resolved_at: Option<DateTime<Utc>>,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
 }
 
 /// Input types for creating new records
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateJudge {
     pub name: String,
     pub model_name: String,
@@ -289,7 +368,7 @@ pub struct CreateJudge {
     pub optimization_target: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateWorker {
     pub name: String,
     pub worker_type: String,
@@ -299,7 +378,7 @@ pub struct CreateWorker {
     pub capabilities: serde_json::Value,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateTask {
     pub title: String,
     pub description: String,
@@ -310,9 +389,11 @@ pub struct CreateTask {
     pub caws_spec: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateTaskExecution {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
+    #[schemars(with = "String")]
     pub worker_id: Uuid,
     pub worker_output: serde_json::Value,
     pub self_assessment: serde_json::Value,
@@ -321,9 +402,11 @@ pub struct CreateTaskExecution {
     pub execution_metadata: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateCouncilVerdict {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
+    #[schemars(with = "String")]
     pub verdict_id: Uuid,
     pub consensus_score: f32,
     pub final_verdict: serde_json::Value,
@@ -332,9 +415,11 @@ pub struct CreateCouncilVerdict {
     pub evaluation_time_ms: i32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateJudgeEvaluation {
+    #[schemars(with = "String")]
     pub verdict_id: Uuid,
+    #[schemars(with = "String")]
     pub judge_id: Uuid,
     pub judge_verdict: serde_json::Value,
     pub evaluation_time_ms: i32,
@@ -349,7 +434,7 @@ pub struct CreateJudgeEvaluation {
     pub risk_assessment: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateKnowledgeEntry {
     pub title: String,
     pub content: String,
@@ -362,7 +447,7 @@ pub struct CreateKnowledgeEntry {
     pub metadata: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateSourceIntegrityRecord {
     pub source_id: String,
     pub source_type: String,
@@ -374,8 +459,9 @@ pub struct CreateSourceIntegrityRecord {
     pub verification_metadata: serde_json::Value,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateSourceIntegrityVerification {
+    #[schemars(with = "String")]
     pub source_integrity_id: Uuid,
     pub verification_type: String,
     pub verification_result: String,
@@ -388,8 +474,9 @@ pub struct CreateSourceIntegrityVerification {
     pub verification_duration_ms: Option<i32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateSourceIntegrityAlert {
+    #[schemars(with = "String")]
     pub source_integrity_id: Uuid,
     pub alert_type: String,
     pub severity: String,
@@ -397,9 +484,10 @@ pub struct CreateSourceIntegrityAlert {
     pub alert_data: serde_json::Value,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreatePerformanceMetric {
     pub entity_type: String,
+    #[schemars(with = "String")]
     pub entity_id: Uuid,
     pub metric_name: String,
     pub metric_value: f64,
@@ -412,8 +500,9 @@ pub struct CreatePerformanceMetric {
     pub timestamp: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateCawsCompliance {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub verdict_id: Option<Uuid>,
     pub compliance_score: f32,
@@ -431,7 +520,7 @@ pub struct CreateCawsCompliance {
 
 
 /// Update types for modifying existing records
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UpdateJudge {
     pub name: Option<String>,
     pub model_name: Option<String>,
@@ -442,7 +531,7 @@ pub struct UpdateJudge {
     pub is_active: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UpdateWorker {
     pub name: Option<String>,
     pub worker_type: Option<String>,
@@ -456,7 +545,7 @@ pub struct UpdateWorker {
     pub last_seen: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UpdateTask {
     pub title: Option<String>,
     pub description: Option<String>,
@@ -473,7 +562,7 @@ pub struct UpdateTask {
     pub metadata: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UpdateTaskExecution {
     pub execution_completed_at: Option<DateTime<Utc>>,
     pub execution_time_ms: Option<i32>,
@@ -489,7 +578,7 @@ pub struct UpdateTaskExecution {
 }
 
 /// Query filters and pagination
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PaginationParams {
     pub page: u32,
     pub page_size: u32,
@@ -508,7 +597,7 @@ impl Default for PaginationParams {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskFilters {
     pub status: Option<String>,
     pub risk_tier: Option<String>,
@@ -517,7 +606,7 @@ pub struct TaskFilters {
     pub created_before: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct VerdictFilters {
     pub task_id: Option<Uuid>,
     pub consensus_score_min: Option<f32>,
@@ -530,7 +619,7 @@ pub struct VerdictFilters {
     pub created_before: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct KnowledgeFilters {
     pub source: Option<String>,
     pub tags: Option<Vec<String>>,
@@ -543,8 +632,10 @@ pub struct KnowledgeFilters {
 }
 
 /// Statistics and analytics types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CouncilMetrics {
+    #[schemars(with = "String")]
+
     pub date: DateTime<Utc>,
     pub total_verdicts: i64,
     pub avg_consensus_score: Option<f64>,
@@ -555,8 +646,9 @@ pub struct CouncilMetrics {
     pub avg_evaluation_time_ms: Option<f64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct JudgePerformance {
+    #[schemars(with = "String")]
     pub judge_id: Uuid,
     pub judge_name: String,
     pub model_name: String,
@@ -572,8 +664,9 @@ pub struct JudgePerformance {
     pub rejected_count: Option<i32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerPerformance {
+    #[schemars(with = "String")]
     pub worker_id: Uuid,
     pub worker_name: String,
     pub worker_type: String,
@@ -585,8 +678,9 @@ pub struct WorkerPerformance {
     pub avg_tokens_used: Option<f64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskExecutionSummary {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub title: String,
     pub status: String,
@@ -604,9 +698,11 @@ pub struct TaskExecutionSummary {
 }
 
 /// CAWS violation model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct CawsViolation {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub violation_code: String,
     pub severity: String,
@@ -617,13 +713,15 @@ pub struct CawsViolation {
     pub rule_id: String,
     pub constitutional_reference: Option<String>,
     pub status: String,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
     pub resolved_at: Option<DateTime<Utc>>,
     pub metadata: serde_json::Value,
 }
 
 /// CAWS rule model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct CawsRule {
     pub id: String,
     pub name: String,
@@ -634,24 +732,33 @@ pub struct CawsRule {
     pub config: serde_json::Value,
     pub constitutional_reference: Option<String>,
     pub is_active: bool,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub updated_at: DateTime<Utc>,
 }
 
 /// CAWS specification model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct CawsSpecification {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub name: String,
     pub version: String,
     pub specification: serde_json::Value,
     pub is_active: bool,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub updated_at: DateTime<Utc>,
 }
 
 /// Knowledge source type
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum KnowledgeSource {
     Wikidata,
@@ -669,7 +776,7 @@ impl KnowledgeSource {
 }
 
 /// External knowledge entity from database
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExternalKnowledgeEntity {
     pub id: Option<Uuid>,
     pub source: KnowledgeSource,
@@ -689,10 +796,12 @@ pub struct ExternalKnowledgeEntity {
 }
 
 /// Knowledge relationship between entities
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct KnowledgeRelationship {
     pub id: Option<Uuid>,
+    #[schemars(with = "String")]
     pub source_entity_id: Uuid,
+    #[schemars(with = "String")]
     pub target_entity_id: Uuid,
     pub relationship_type: String,
     pub confidence: f64,
@@ -700,7 +809,7 @@ pub struct KnowledgeRelationship {
 }
 
 /// Knowledge base statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct KnowledgeStats {
     pub source: String,
     pub total_entities: i64,
@@ -708,36 +817,47 @@ pub struct KnowledgeStats {
     pub total_relationships: i64,
     pub avg_confidence: f64,
     pub avg_usage_count: f64,
+    #[schemars(with = "String")]
+
     pub last_updated: DateTime<Utc>,
 }
 
 /// Audit log model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct AuditLog {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub action: String,
     pub actor: Option<String>,
     pub resource_id: Option<Uuid>,
     pub resource_type: Option<String>,
     pub change_summary: serde_json::Value,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
 }
 
 /// Planning telemetry model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct PlanningTelemetry {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub plan_id: Uuid,
     pub metric_type: String,
     pub metric_value: serde_json::Value,
+    #[schemars(with = "String")]
+
     pub collected_at: DateTime<Utc>,
     pub metadata: serde_json::Value,
 }
 
 /// Execution plan model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct ExecutionPlan {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub session_id: Uuid,
     pub working_spec_id: String,
     pub title: String,
@@ -750,16 +870,21 @@ pub struct ExecutionPlan {
     pub evidence_requirements: serde_json::Value,
     pub active_waivers: serde_json::Value,
     pub metadata: serde_json::Value,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub updated_at: DateTime<Utc>,
     pub approved_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
 }
 
 /// Milestone model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct Milestone {
     pub id: String,
+    #[schemars(with = "String")]
     pub plan_id: Uuid,
     pub objective: String,
     pub scope: serde_json::Value,
@@ -778,49 +903,68 @@ pub struct Milestone {
     pub metrics: Option<serde_json::Value>,
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub updated_at: DateTime<Utc>,
 }
 
 /// Planning session model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct PlanningSession {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub plan_id: Uuid,
     pub orchestrator_id: String,
     pub worker_pool_id: String,
     pub council_session_id: Option<Uuid>,
+    #[schemars(with = "String")]
     pub audit_correlation_id: Uuid,
     pub status: String,
     pub execution_state: serde_json::Value,
+    #[schemars(with = "String")]
+
     pub started_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
 }
 
 /// Evidence artifact model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct EvidenceArtifact {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub milestone_id: String,
+    #[schemars(with = "String")]
     pub plan_id: Uuid,
     pub artifact_type: String,
     pub artifact_data: serde_json::Value,
     pub verified: Option<bool>,
+    #[schemars(with = "String")]
+
     pub collected_at: DateTime<Utc>,
     pub verified_at: Option<DateTime<Utc>>,
     pub metadata: serde_json::Value,
 }
 
 /// Planning audit event model from database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct PlanningAuditEvent {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub plan_id: Uuid,
     pub milestone_id: Option<String>,
     pub worker_id: Option<Uuid>,
     pub event_type: String,
     pub description: String,
     pub metadata: serde_json::Value,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
 }

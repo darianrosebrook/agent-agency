@@ -63,7 +63,7 @@ impl ConfidenceCalculator {
             return 0.0;
         }
 
-        let total_confidence: f32 = claims.iter().map(|c| c.confidence_score).sum();
+        let total_confidence: f32 = claims.iter().map(|c| c.confidence as f32).sum();
         let avg_confidence = total_confidence / claims.len() as f32;
 
         // Apply quality penalties

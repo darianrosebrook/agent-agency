@@ -5,6 +5,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use anyhow::{anyhow, Result};
 use uuid::Uuid;
@@ -53,7 +54,7 @@ impl ToolChainBridge {
         let constraints = self.create_planning_constraints(&working_spec)?;
 
         // Generate tool chain using the real tool chain planner
-        let tool_chain = self.tool_chain_planner.plan_chain(&planning_context, &constraints).await?;
+        let tool_chain = (*self.tool_chain_planner).plan_chain(&planning_context, &constraints).await?;
 
         // Convert tool chain back to execution plan format
         self.convert_tool_chain_to_execution_plan(tool_chain, working_spec).await
@@ -82,9 +83,9 @@ impl ToolChainBridge {
             available_tools: vec![], // TODO: Populate with available tools
             constraints,
             risk_tolerance,
-            task_description,
-            task_type,
-            complexity,
+            task_description: Some(task_description),
+            task_type: Some(task_type),
+            complexity: Some(complexity),
             required_capabilities,
             time_budget_ms: working_spec.constraints.max_duration_minutes.map(|mins| (mins as u64) * 60 * 1000),
             cost_budget_cents: Some(1000), // Default cost budget - no cost field in WorkingSpecConstraints
@@ -118,26 +119,31 @@ impl ToolChainBridge {
         let mut node_indices = std::collections::HashMap::new();
 
         // Map tool chain nodes to milestones
-        for (idx, node) in tool_chain.dag.node_references() {
-            let milestone_id = format!("TC-{}", node.tool_id);
-            let milestone = self.create_milestone_from_tool_node(&node, &milestone_id, &working_spec)?;
+        for (idx, node) in tool_chain.nodes.iter().enumerate() {
+            let milestone_id = format!("TC-{}", node.id);
+            let milestone = self.create_milestone_from_tool_node(node, &milestone_id, &working_spec)?;
             milestones.push(milestone);
             node_indices.insert(idx, milestone_id);
         }
 
-        // Create dependency graph from tool chain edges
+        // Create dependency graph from tool chain node dependencies
         let mut edges = Vec::new();
-        for edge in tool_chain.dag.edge_references() {
-            let from_id = node_indices.get(&edge.source()).unwrap().clone();
-            let to_id = node_indices.get(&edge.target()).unwrap().clone();
-
-            edges.push(DependencyEdge {
-                from: from_id,
-                to: to_id,
-                edge_type: DependencyEdgeType::Hard, // Tool chains have hard dependencies
-                weight: 1.0,
-                metadata: std::collections::HashMap::new(),
-            });
+        for (idx, node) in tool_chain.nodes.iter().enumerate() {
+            let to_id = node_indices.get(&idx).unwrap().clone();
+            for dep_id in &node.dependencies {
+                // Find the milestone ID for the dependency node
+                if let Some((dep_idx, _)) = tool_chain.nodes.iter().enumerate().find(|(_, n)| &n.id == dep_id) {
+                    if let Some(from_id) = node_indices.get(&dep_idx) {
+                        edges.push(DependencyEdge {
+                            from: from_id.clone(),
+                            to: to_id.clone(),
+                            edge_type: DependencyEdgeType::Hard, // Tool chains have hard dependencies
+                            weight: 1.0,
+                            metadata: std::collections::HashMap::new(),
+                        });
+                    }
+                }
+            }
         }
 
         // Create nodes for dependency graph
@@ -181,7 +187,7 @@ impl ToolChainBridge {
         };
 
         Ok(ContractExecutionPlan {
-            contract_plan: None,
+            contract_plan: working_spec.clone(),
             execution_context: None,
             id: uuid::Uuid::new_v4(),
             session_id: uuid::Uuid::new_v4(),
@@ -195,7 +201,29 @@ impl ToolChainBridge {
             quality_gates: self.create_quality_gates(&working_spec),
             evidence_requirements: self.create_evidence_requirements(&working_spec),
             active_waivers: vec![],
-            metadata: Default::default(),
+            metadata: agent_agency_contracts::planning_io::PlanMetadata {
+                created_at: chrono::Utc::now(),
+                updated_at: chrono::Utc::now(),
+                approved_at: None,
+                completed_at: None,
+                created_by: agent_agency_contracts::planning_io::PlanCreator::AI {
+                    model: "tool-chain-planner".to_string(),
+                    version: "1.0.0".to_string(),
+                },
+                version: "1.0.0".to_string(),
+                source: "tool-chain-bridge".to_string(),
+                confidence_score: None,
+                generation_time_ms: None,
+                model_used: None,
+                fallback_used: false,
+                strategy: agent_agency_contracts::types::planning::PlanningStrategy::AIAssisted,
+                confidence: 0.8,
+                estimated_duration_ms: 0,
+                estimated_cost_cents: 0,
+                adaptive: false,
+                engine_version: "1.0.0".to_string(),
+                additional_metadata: std::collections::HashMap::new(),
+            },
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
             approved_at: None,
@@ -214,7 +242,7 @@ impl ToolChainBridge {
 
         Ok(Milestone {
             id: milestone_id.to_string(),
-            objective: format!("Execute tool: {}", node.tool_id),
+            objective: format!("Execute tool: {}", node.id),
             scope: MilestoneScope {
                 files: vec![], // Tool-specific files would be determined by tool
                 directories: vec![],
@@ -230,13 +258,13 @@ impl ToolChainBridge {
             evidence_gate: self.create_tool_evidence_gate(working_spec.risk_tier as u8),
             quality_gates: vec![], // Quality gates from evidence gate
             dependencies: vec![], // Set by dependency graph
-            estimated_duration: Some((node.sla_ms / 60000) as u32), // Convert ms to minutes
+            estimated_duration: Some(5), // Default 5 minutes for tool execution
             rollback_plan: "Tool execution cannot be rolled back".to_string(),
             state: agent_agency_contracts::planning_io::MilestoneState::Pending,
             assigned_workers: vec![],
-            estimated_effort: (node.sla_ms as f64) / (3600.0 * 1000.0), // Convert ms to hours
+            estimated_effort: 0.083, // Default ~5 minutes (0.083 hours) for tool execution
             priority: MilestonePriority::Normal,
-            risk_tier: working_spec.risk_tier,
+            risk_tier: working_spec.risk_tier as u8,
             is_blocking: false,
             blocking_reason: None,
             metrics: None,
@@ -261,9 +289,9 @@ impl ToolChainBridge {
         use agent_agency_contracts::planning_io::{ChangeBudget, BudgetEnforcement};
 
         ChangeBudget {
-            max_files: working_spec.constraints.budget_limits.as_ref().and_then(|b| b.max_files),
-            max_loc: working_spec.constraints.budget_limits.as_ref().and_then(|b| b.max_loc),
-            max_migrations: Some(5),
+            max_files: working_spec.constraints.budget_limits.as_ref().and_then(|b| b.max_files).map(|v| v as usize).unwrap_or(25),
+            max_loc: working_spec.constraints.budget_limits.as_ref().and_then(|b| b.max_loc).map(|v| v as usize).unwrap_or(1000),
+            max_migrations: 5,
             allow_breaking_changes: working_spec.risk_tier > 1,
             allow_new_dependencies: working_spec.risk_tier > 1,
             enforcement_mode: if working_spec.risk_tier == 1 {
@@ -296,7 +324,6 @@ impl ToolChainBridge {
                     ("high".to_string(), if working_spec.risk_tier == 1 { 0 } else { 2 }),
                 ]),
                 required_controls: vec![],
-                audit_requirements: vec![],
             },
             performance_requirements: PerformanceRequirements {
                 max_regressions: 0, // Tools should not cause regressions
@@ -369,7 +396,9 @@ impl ToolChainBridge {
             capabilities.push("security".to_string());
         }
 
-        if working_spec.coverage_targets.line_coverage > 0.8 {
+        if working_spec.coverage_targets.as_ref()
+            .and_then(|ct| ct.line_coverage)
+            .unwrap_or(0.0) > 0.8 {
             capabilities.push("quality_gate".to_string());
         }
 
@@ -403,8 +432,9 @@ impl ToolChainBridge {
 }
 
 /// Tool chain execution specification
-#[derive(Debug, Clone)]
-pub struct ToolChainExecution {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ToolChainExecution {
     /// Tool chain identifier
     pub chain_id: String,
 
@@ -419,8 +449,9 @@ pub struct ToolChainExecution {
 }
 
 /// Tool specification
-#[derive(Debug, Clone)]
-pub struct ToolSpec {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ToolSpec {
     /// Tool name
     pub name: String,
 
@@ -438,8 +469,9 @@ pub struct ToolSpec {
 }
 
 /// Data flow between tools
-#[derive(Debug, Clone)]
-pub struct DataFlow {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct DataFlow {
     /// Source tool output
     pub from_tool: String,
 
@@ -457,8 +489,9 @@ pub struct DataFlow {
 }
 
 /// Execution constraints
-#[derive(Debug, Clone)]
-pub struct ExecutionConstraints {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ExecutionConstraints {
     /// Maximum execution time
     pub max_execution_time_ms: u64,
 
@@ -470,8 +503,9 @@ pub struct ExecutionConstraints {
 }
 
 /// Retry policy
-#[derive(Debug, Clone)]
-pub struct RetryPolicy {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct RetryPolicy {
     /// Maximum attempts
     pub max_attempts: u32,
 
@@ -486,8 +520,9 @@ pub struct RetryPolicy {
 }
 
 /// Execution result
-#[derive(Debug, Clone)]
-pub struct ExecutionResult {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ExecutionResult {
     /// Success status
     pub success: bool,
 
@@ -505,8 +540,9 @@ pub struct ExecutionResult {
 }
 
 /// Tool execution result
-#[derive(Debug, Clone)]
-pub struct ToolResult {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ToolResult {
     /// Tool name
     pub tool_name: String,
 
@@ -524,8 +560,9 @@ pub struct ToolResult {
 }
 
 /// Evidence artifact from execution
-#[derive(Debug, Clone)]
-pub struct EvidenceArtifact {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct EvidenceArtifact {
     /// Artifact type
     pub artifact_type: String,
 
@@ -533,6 +570,7 @@ pub struct EvidenceArtifact {
     pub data: serde_json::Value,
 
     /// Collection timestamp
+    #[schemars(with = "String")]
     pub collected_at: chrono::DateTime<chrono::Utc>,
 }
 

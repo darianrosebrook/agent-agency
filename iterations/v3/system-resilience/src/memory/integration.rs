@@ -6,6 +6,7 @@
 //! - HTTP client pooling
 //! - Cache memory management
 
+use schemars::JsonSchema;
 use super::*;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -444,7 +445,7 @@ impl MemoryPerformanceMonitor {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, JsonSchema)]
 pub enum MemoryTrend {
     Increasing,
     Decreasing,

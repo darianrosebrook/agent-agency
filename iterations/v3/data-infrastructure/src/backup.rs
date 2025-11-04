@@ -3,6 +3,7 @@
 //! Provides automated backup capabilities with encryption, compression,
 //! and recovery testing for production database hardening.
 
+use schemars::JsonSchema;
 use system_quality_security::DatabaseConfig;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
@@ -24,7 +25,7 @@ pub struct BackupManager {
 }
 
 /// Backup configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BackupConfig {
     /// Enable automated backups
     pub enabled: bool,
@@ -45,11 +46,13 @@ pub struct BackupConfig {
 }
 
 /// Backup result information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BackupResult {
     /// Backup ID
     pub backup_id: String,
     /// Backup timestamp
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     /// Backup file path
     pub file_path: PathBuf,

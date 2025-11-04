@@ -3,6 +3,7 @@
 //! Provides conversion functions between different task representations
 //! to enable integration between orchestration, research, and workers.
 
+use schemars::JsonSchema;
 use crate::prompting_types::{Task as ResearchTask, TaskType};
 use std::collections::HashMap;
 
@@ -47,7 +48,8 @@ fn infer_task_type(description: &str) -> TaskType {
 }
 
 /// Convert Research Task to simple benchmark-compatible format
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SimpleTask {
     pub id: String,
     pub description: String,

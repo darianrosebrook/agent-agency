@@ -2,6 +2,7 @@
  * @fileoverview Core types for workspace state management
  * @author @darianrosebrook
  */
+use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -9,8 +10,8 @@ use std::path::PathBuf;
 use uuid::Uuid;
 
 /// Unique identifier for a workspace state snapshot
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct StateId(pub Uuid);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+pub struct StateId(#[schemars(with = "String")] pub Uuid);
 
 impl StateId {
     /// Generate a new unique state ID
@@ -32,7 +33,7 @@ impl std::fmt::Display for StateId {
 }
 
 /// Represents a file in the workspace with its metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FileState {
     /// Path relative to workspace root
     pub path: PathBuf,
@@ -41,6 +42,8 @@ pub struct FileState {
     /// SHA-256 hash of file contents
     pub content_hash: String,
     /// Last modified timestamp
+    #[schemars(with = "String")]
+
     pub modified_at: DateTime<Utc>,
     /// File permissions (Unix-style)
     pub permissions: u32,
@@ -55,7 +58,7 @@ pub struct FileState {
 }
 
 /// Represents a directory in the workspace
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DirectoryState {
     /// Path relative to workspace root
     pub path: PathBuf,
@@ -66,15 +69,19 @@ pub struct DirectoryState {
     /// Total size of all files in this directory (recursive)
     pub total_size: u64,
     /// Last modified timestamp of most recent file
+    #[schemars(with = "String")]
+
     pub last_modified: DateTime<Utc>,
 }
 
 /// Represents the complete state of a workspace at a point in time
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkspaceState {
     /// Unique identifier for this state
     pub id: StateId,
     /// Timestamp when this state was captured
+    #[schemars(with = "String")]
+
     pub captured_at: DateTime<Utc>,
     /// Workspace root path
     pub workspace_root: PathBuf,
@@ -93,6 +100,8 @@ pub struct WorkspaceState {
     /// Metadata about the capture process
     pub metadata: CaptureMetadata,
     /// Legacy timestamp field for compatibility
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
 }
 
@@ -106,7 +115,7 @@ impl WorkspaceState {
 }
 
 /// Metadata about how a workspace state was captured
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CaptureMetadata {
     /// Duration of capture process in milliseconds
     pub capture_duration_ms: u64,
@@ -123,7 +132,7 @@ pub struct CaptureMetadata {
 }
 
 /// Method used to capture workspace state
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum CaptureMethod {
     /// Full recursive scan of all files
     FullScan,
@@ -136,7 +145,7 @@ pub enum CaptureMethod {
 }
 
 /// Represents changes between two workspace states
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkspaceDiff {
     /// Source state ID
     pub from_state: StateId,
@@ -161,15 +170,19 @@ pub struct WorkspaceDiff {
     /// Number of files modified
     pub files_modified: usize,
     /// Timestamp when diff was computed
+    #[schemars(with = "String")]
+
     pub computed_at: DateTime<Utc>,
     /// Legacy timestamp field for compatibility
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     /// Detailed changes for advanced diff operations
     pub changes: Vec<DiffChange>,
 }
 
 /// Represents a specific change in a diff
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum DiffChange {
     /// File was added with content
     Add { path: PathBuf, content: Vec<u8> },
@@ -188,7 +201,7 @@ pub enum DiffChange {
 }
 
 /// Configuration for workspace state management
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkspaceConfig {
     /// Whether to track git information
     pub track_git: bool,
@@ -230,8 +243,8 @@ impl Default for WorkspaceConfig {
 }
 
 /// Result of a workspace state operation
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkspaceResult<T> {
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct WorkspaceResult <T> {
     /// The result data
     pub data: T,
     /// Any warnings generated during the operation

@@ -3,17 +3,18 @@
 //! This module provides circuit breaker functionality for protecting
 //! against cascading failures in Core ML model inference operations.
 
+use schemars::JsonSchema;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
 pub enum CircuitState {
     Closed,   // Normal operation
     Open,     // Too many failures, reject calls
     HalfOpen, // Testing if service recovered
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct CircuitBreakerConfig {
     pub failure_threshold: usize,
     pub success_threshold: usize,
@@ -173,7 +174,7 @@ impl CircuitBreaker {
     }
 
     /// Acquire a permit for execution (async version)
-    pub async fn acquire(&self) -> Result<CircuitBreakerPermit, CircuitBreakerError> {
+    pub async fn acquire(&self) -> Result<CircuitBreakerPermit<'_>, CircuitBreakerError> {
         if self.is_open() {
             return Err(CircuitBreakerError::CircuitOpen);
         }
@@ -192,12 +193,13 @@ impl<'a> Drop for CircuitBreakerPermit<'a> {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum CircuitBreakerError {
     #[error("Circuit breaker is open")]
     CircuitOpen,
 
     #[error("Operation failed: {0}")]
+    #[schemars(with = "String")]
     OperationFailed(#[source] Box<dyn std::error::Error + Send + Sync>),
 }
 

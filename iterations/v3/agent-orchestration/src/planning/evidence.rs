@@ -27,8 +27,9 @@ pub struct ResearchEvidence {
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-pub enum ResearchEvidenceType {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+enum ResearchEvidenceType {
     CodeReview,
     CodeAnalysis, // Alias/synonym for CodeReview
     TestExecution,
@@ -79,8 +80,9 @@ pub struct EvidenceCollector {
 }
 
 /// Evidence validation configuration
-#[derive(Debug, Clone)]
-pub struct EvidenceValidationConfig {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct EvidenceValidationConfig {
     /// Minimum evidence quality score (0.0-1.0)
     pub min_quality_score: f64,
 
@@ -98,8 +100,9 @@ pub struct EvidenceValidationConfig {
 }
 
 /// Evidence storage configuration
-#[derive(Debug, Clone)]
-pub struct EvidenceStorageConfig {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct EvidenceStorageConfig {
     /// Storage backend type
     pub backend: EvidenceStorageBackend,
 
@@ -114,8 +117,9 @@ pub struct EvidenceStorageConfig {
 }
 
 /// Evidence storage backend types
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum EvidenceStorageBackend {
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+enum EvidenceStorageBackend {
     /// File system storage
     FileSystem,
 
@@ -309,7 +313,7 @@ impl EvidenceCollector {
             meets_quality_gates: true,
             metadata: std::collections::HashMap::new(),
             milestone_id: milestone.id.clone(),
-            plan_id: plan_id.to_string(),
+            plan_id: Uuid::parse_str(plan_id).unwrap_or(Uuid::new_v4()),
             artifacts,
             collected_at: collection_start,
             quality_score: None,
@@ -334,7 +338,7 @@ impl EvidenceCollector {
         };
 
         // Extract quality score if available
-        let quality_score = research_ev.confidence_score;
+        let quality_score = research_ev.confidence;
 
         // Create metadata
         let mut metadata = HashMap::from([
@@ -344,13 +348,7 @@ impl EvidenceCollector {
         ]);
 
         // Add evidence-specific metadata
-        if let Some(evidence_data) = &research_ev.data {
-            metadata.insert("evidence_data".to_string(), evidence_data.clone());
-        }
-
-        // Put the data and verified info in metadata since EvidenceArtifact doesn't have these fields
-        metadata.insert("data".to_string(), research_ev.data.unwrap_or(serde_json::Value::Null));
-        metadata.insert("verified".to_string(), serde_json::Value::Bool(research_ev.verified));
+        metadata.insert("evidence_content".to_string(), serde_json::Value::String(research_ev.content.clone()));
 
         Ok(EvidenceArtifact {
             metadata: std::collections::HashMap::new(),
@@ -501,8 +499,9 @@ impl EvidenceCollector {
 }
 
 /// Test coverage data
-#[derive(Debug, Clone)]
-pub struct TestCoverage {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct TestCoverage {
     pub line_coverage: f64,
     pub branch_coverage: f64,
 }

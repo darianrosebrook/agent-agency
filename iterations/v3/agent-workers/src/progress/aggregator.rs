@@ -1,64 +1,51 @@
 //! Progress aggregation across all workers
 
-use crate::parallel_types::*;
-use crate::{WorkerProgress, Progress};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use crate::parallel_types::{SubTaskId, WorkerId};
+use crate::{Progress, WorkerProgress, WorkerProgressStatus};
 use crate::error::*;
-use std::collections::HashMap;
-use std::sync::Arc;
 use parking_lot::RwLock;
+use std::collections::HashMap;
+use std::convert::TryFrom;
+use std::sync::Arc;
 
 /// Aggregates progress across multiple workers for overall task progress
 pub struct ProgressAggregator {
     overall_progress: Arc<RwLock<Progress>>,
     worker_contributions: Arc<RwLock<HashMap<WorkerId, WorkerContribution>>>,
-    task_id: TaskId,
 }
 
 impl ProgressAggregator {
-    pub fn new(task_id: TaskId) -> Self {
+    pub fn new() -> Self {
         Self {
-            overall_progress: Arc::new(RwLock::new(Progress {
-                task_id: task_id.clone(),
-                percentage: 0.0,
-                completed_subtasks: 0,
-                total_subtasks: 0,
-                active_workers: 0,
-                blocked_workers: 0,
-                failed_workers: 0,
-                estimated_completion: None,
-                last_update: chrono::Utc::now(),
-            })),
+            overall_progress: Arc::new(RwLock::new(Progress::default())),
             worker_contributions: Arc::new(RwLock::new(HashMap::new())),
-            task_id,
         }
     }
 
     /// Update overall progress from worker progress updates
     pub fn update_from_worker_progress(&self, worker_progress: &WorkerProgress) -> ProgressResult<()> {
         let mut contributions = self.worker_contributions.write();
-        let contribution = contributions.entry(worker_progress.worker_id.clone())
+        let worker_id = WorkerId(worker_progress.worker_id);
+        let subtask_id = SubTaskId(worker_progress.subtask_id);
+        let contribution = contributions.entry(worker_id)
             .or_insert_with(|| WorkerContribution {
-                worker_id: worker_progress.worker_id.clone(),
-                subtask_id: worker_progress.subtask_id.clone(),
+                worker_id,
+                subtask_id: subtask_id.clone(),
                 weight: worker_progress.task_weight,
                 current_progress: 0.0,
-                status: WorkerStatus::Pending,
+                status: WorkerProgressStatus::Pending,
             });
 
         // Update contribution based on worker progress
         contribution.current_progress = if worker_progress.total > 0 {
-            worker_progress.completed as f32 / worker_progress.total as f32
+            (worker_progress.completed as f32 / worker_progress.total as f32).clamp(0.0, 1.0)
         } else {
-            0.0
+            (worker_progress.progress_percentage / 100.0).clamp(0.0, 1.0)
         };
 
-        contribution.status = match worker_progress.status.as_str() {
-            s if s.starts_with("completed") => WorkerStatus::Completed,
-            s if s.starts_with("failed") => WorkerStatus::Failed,
-            s if s.starts_with("blocked") => WorkerStatus::Blocked,
-            s if s.starts_with("running") => WorkerStatus::Running,
-            _ => WorkerStatus::Pending,
-        };
+        contribution.status = worker_progress.status.clone();
 
         // Recalculate overall progress
         self.recalculate_overall_progress()?;
@@ -74,7 +61,7 @@ impl ProgressAggregator {
             subtask_id,
             weight,
             current_progress: 0.0,
-            status: WorkerStatus::Pending,
+            status: WorkerProgressStatus::Pending,
         });
 
         self.recalculate_overall_progress()?;
@@ -96,52 +83,51 @@ impl ProgressAggregator {
         let mut overall_progress = self.overall_progress.write();
 
         if contributions.is_empty() {
-            overall_progress.percentage = 0.0;
-            overall_progress.completed_subtasks = 0;
-            overall_progress.total_subtasks = 0;
-            overall_progress.active_workers = 0;
-            overall_progress.blocked_workers = 0;
-            overall_progress.failed_workers = 0;
-            overall_progress.last_update = chrono::Utc::now();
+            *overall_progress = Progress {
+                total_tasks: 0,
+                completed_tasks: 0,
+                failed_tasks: 0,
+                in_progress_tasks: 0,
+                overall_percentage: 0.0,
+                estimated_completion: None,
+                last_updated: chrono::Utc::now(),
+            };
             return Ok(());
         }
 
-        let total_weight: f32 = contributions.values().map(|c| c.weight).sum();
+        let total_weight: f32 = contributions.values().map(|c| c.weight.max(0.0)).sum();
         let mut completed_weight = 0.0;
-        let mut active_workers = 0;
-        let mut blocked_workers = 0;
-        let mut failed_workers = 0;
-        let mut completed_subtasks = 0;
+        let mut completed = 0usize;
+        let mut failed = 0usize;
+        let mut running = 0usize;
+        let mut blocked = 0usize;
+        let mut pending = 0usize;
 
         for contribution in contributions.values() {
-            // Add weighted progress contribution
-            completed_weight += contribution.current_progress * contribution.weight;
+            completed_weight += contribution.current_progress.clamp(0.0, 1.0) * contribution.weight.max(0.0);
 
-            // Count by status
             match contribution.status {
-                WorkerStatus::Running => active_workers += 1,
-                WorkerStatus::Blocked => blocked_workers += 1,
-                WorkerStatus::Failed => failed_workers += 1,
-                WorkerStatus::Completed => {
-                    completed_subtasks += 1;
-                    active_workers += 1; // Completed workers are still "active" until cleaned up
-                }
-                WorkerStatus::Pending => {} // Don't count pending workers
+                WorkerProgressStatus::Pending => pending += 1,
+                WorkerProgressStatus::Running => running += 1,
+                WorkerProgressStatus::Completed => completed += 1,
+                WorkerProgressStatus::Failed => failed += 1,
+                WorkerProgressStatus::Blocked => blocked += 1,
             }
         }
 
-        overall_progress.percentage = if total_weight > 0.0 {
-            (completed_weight / total_weight * 100.0).min(100.0)
+        let overall_fraction = if total_weight > 0.0 {
+            (completed_weight / total_weight).clamp(0.0, 1.0)
         } else {
             0.0
         };
 
-        overall_progress.completed_subtasks = completed_subtasks;
-        overall_progress.total_subtasks = contributions.len();
-        overall_progress.active_workers = active_workers;
-        overall_progress.blocked_workers = blocked_workers;
-        overall_progress.failed_workers = failed_workers;
-        overall_progress.last_update = chrono::Utc::now();
+        overall_progress.total_tasks = to_u32(contributions.len());
+        overall_progress.completed_tasks = to_u32(completed);
+        overall_progress.failed_tasks = to_u32(failed);
+        overall_progress.in_progress_tasks = to_u32(running + blocked + pending);
+        overall_progress.overall_percentage = overall_fraction * 100.0;
+        overall_progress.estimated_completion = compute_estimated_completion(overall_fraction, &contributions);
+        overall_progress.last_updated = chrono::Utc::now();
 
         Ok(())
     }
@@ -164,7 +150,7 @@ impl ProgressAggregator {
     /// Check if task is completed (all workers done)
     pub fn is_task_completed(&self) -> bool {
         let contributions = self.worker_contributions.read();
-        contributions.values().all(|c| matches!(c.status, WorkerStatus::Completed | WorkerStatus::Failed))
+        contributions.values().all(|c| matches!(c.status, WorkerProgressStatus::Completed | WorkerProgressStatus::Failed))
     }
 
     /// Get progress statistics
@@ -180,16 +166,16 @@ impl ProgressAggregator {
 
         for contribution in contributions.values() {
             match contribution.status {
-                WorkerStatus::Pending => pending_workers += 1,
-                WorkerStatus::Running => running_workers += 1,
-                WorkerStatus::Completed => completed_workers += 1,
-                WorkerStatus::Failed => failed_workers += 1,
-                WorkerStatus::Blocked => blocked_workers += 1,
+                WorkerProgressStatus::Pending => pending_workers += 1,
+                WorkerProgressStatus::Running => running_workers += 1,
+                WorkerProgressStatus::Completed => completed_workers += 1,
+                WorkerProgressStatus::Failed => failed_workers += 1,
+                WorkerProgressStatus::Blocked => blocked_workers += 1,
             }
         }
 
         ProgressStats {
-            overall_progress: progress.percentage,
+            overall_progress: progress.overall_percentage,
             total_workers: contributions.len(),
             pending_workers,
             running_workers,
@@ -217,60 +203,30 @@ impl ProgressAggregator {
 
     /// Get estimated completion time based on current progress
     pub fn estimate_completion_time(&self) -> Option<chrono::DateTime<chrono::Utc>> {
+        let overall_percentage = {
+            let progress = self.overall_progress.read();
+            progress.overall_percentage / 100.0
+        };
+
         let contributions = self.worker_contributions.read();
-
-        if contributions.is_empty() {
-            return None;
-        }
-
-        // Find workers that are actively making progress
-        let active_workers: Vec<_> = contributions.values()
-            .filter(|c| matches!(c.status, WorkerStatus::Running) && c.current_progress > 0.0)
-            .collect();
-
-        if active_workers.is_empty() {
-            return None;
-        }
-
-        // Calculate average progress rate (progress per unit time)
-        // This is a simplified estimation - in practice you'd want historical data
-        let avg_progress_rate = 0.01; // Assume 1% progress per minute as baseline
-        let remaining_progress = 1.0 - self.get_overall_progress().percentage / 100.0;
-
-        if remaining_progress <= 0.0 {
-            return Some(chrono::Utc::now());
-        }
-
-        let minutes_remaining = remaining_progress / avg_progress_rate;
-        let duration = chrono::Duration::minutes(minutes_remaining as i64);
-
-        Some(chrono::Utc::now() + duration)
+        compute_estimated_completion(overall_percentage, &contributions)
     }
 }
 
 /// Contribution of a single worker to overall progress
-#[derive(Debug, Clone)]
-pub struct WorkerContribution {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct WorkerContribution {
     pub worker_id: WorkerId,
     pub subtask_id: SubTaskId,
     pub weight: f32,
     pub current_progress: f32,
-    pub status: WorkerStatus,
+    pub status: WorkerProgressStatus,
 }
 
 /// Status of a worker
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum WorkerStatus {
-    Pending,
-    Running,
-    Completed,
-    Failed,
-    Blocked,
-}
-
-/// Statistics for progress tracking
-#[derive(Debug, Clone)]
-pub struct ProgressStats {
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ProgressStats {
     pub overall_progress: f32,
     pub total_workers: usize,
     pub pending_workers: usize,
@@ -282,7 +238,8 @@ pub struct ProgressStats {
 }
 
 /// Progress milestone tracking
-pub struct ProgressMilestones {
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ProgressMilestones {
     milestones: Vec<ProgressMilestone>,
     current_milestone: Option<usize>,
 }
@@ -299,8 +256,9 @@ impl ProgressMilestones {
     pub fn check_milestones(&mut self, current_progress: f32) -> Vec<ProgressMilestone> {
         let mut reached = Vec::new();
 
-        for (index, milestone) in self.milestones.iter().enumerate() {
+        for (index, milestone) in self.milestones.iter_mut().enumerate() {
             if current_progress >= milestone.threshold && !milestone.reached {
+                milestone.mark_reached();
                 reached.push(milestone.clone());
                 self.current_milestone = Some(index);
             }
@@ -325,7 +283,8 @@ impl ProgressMilestones {
 }
 
 /// A progress milestone
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProgressMilestone {
     pub name: String,
     pub description: String,
@@ -350,4 +309,38 @@ impl ProgressMilestone {
         self.reached = true;
         self.timestamp = Some(chrono::Utc::now());
     }
+}
+
+fn to_u32(value: usize) -> u32 {
+    u32::try_from(value).unwrap_or(u32::MAX)
+}
+
+fn compute_estimated_completion(
+    completion_fraction: f32,
+    contributions: &HashMap<WorkerId, WorkerContribution>,
+) -> Option<chrono::DateTime<chrono::Utc>> {
+    if contributions.is_empty() {
+        return None;
+    }
+
+    let active: Vec<_> = contributions
+        .values()
+        .filter(|c| matches!(c.status, WorkerProgressStatus::Running) && c.current_progress > 0.0)
+        .collect();
+
+    if active.is_empty() {
+        return None;
+    }
+
+    let remaining_fraction = (1.0 - completion_fraction).max(0.0);
+    if remaining_fraction <= f32::EPSILON {
+        return Some(chrono::Utc::now());
+    }
+
+    // Baseline assumption: 1% per minute
+    let avg_progress_rate = 0.01_f32;
+    let minutes_remaining = remaining_fraction / avg_progress_rate;
+    let duration = chrono::Duration::minutes(minutes_remaining.max(0.0) as i64);
+
+    Some(chrono::Utc::now() + duration)
 }

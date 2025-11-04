@@ -3,6 +3,7 @@
 //! Structured error management with recovery mechanisms, error classification,
 //! and comprehensive error tracking for production reliability.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -11,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 /// Error severity levels
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash, JsonSchema)]
 pub enum ErrorSeverity {
     Debug,
     Info,
@@ -22,7 +23,7 @@ pub enum ErrorSeverity {
 }
 
 /// Error context for detailed error information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ErrorContext {
     pub component: String,
     pub operation: String,
@@ -30,12 +31,14 @@ pub struct ErrorContext {
     pub task_id: Option<String>,
     pub session_id: Option<String>,
     pub request_id: Option<String>,
+    ##[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
 
 /// Error recovery strategy
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ErrorRecovery {
     /// Retry the operation
     Retry {
@@ -67,7 +70,7 @@ pub enum ErrorRecovery {
 }
 
 /// Degradation levels for graceful degradation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum DegradationLevel {
     None,
     Minimal,
@@ -77,7 +80,7 @@ pub enum DegradationLevel {
 }
 
 /// Escalation priorities for manual intervention
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum EscalationPriority {
     Low,
     Medium,
@@ -97,12 +100,16 @@ pub struct ProductionError {
     pub cause: Option<Box<ProductionError>>,
     pub stack_trace: Option<String>,
     pub occurrences: u64,
+    ##[schemars(with = "String")]
+
     pub first_seen: DateTime<Utc>,
+    ##[schemars(with = "String")]
+
     pub last_seen: DateTime<Utc>,
 }
 
 /// Error handler configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ErrorHandlerConfig {
     pub enable_structured_logging: bool,
     pub enable_error_tracking: bool,
@@ -113,7 +120,7 @@ pub struct ErrorHandlerConfig {
 }
 
 /// Error statistics for monitoring
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ErrorStatistics {
     pub total_errors: u64,
     pub errors_by_severity: HashMap<ErrorSeverity, u64>,

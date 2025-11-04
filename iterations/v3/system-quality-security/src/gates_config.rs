@@ -1,10 +1,11 @@
 //! Configuration for quality gates
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Quality gate configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityGateConfig {
     /// Maximum lines per file
     pub max_lines_per_file: usize,
@@ -49,7 +50,7 @@ impl Default for QualityGateConfig {
 }
 
 /// Quality gate severity levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
 pub enum Severity {
     Info,
     Warning,
@@ -57,7 +58,7 @@ pub enum Severity {
 }
 
 /// Quality violation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityViolation {
     pub rule: String,
     pub severity: Severity,
@@ -70,7 +71,7 @@ pub struct QualityViolation {
 }
 
 /// Quality gate results
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityGateResults {
     pub violations: Vec<QualityViolation>,
     pub passed: bool,

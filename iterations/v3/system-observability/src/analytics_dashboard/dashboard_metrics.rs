@@ -4,7 +4,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::data::{AnalyticsInsight, PredictiveModelResult};
-
 /// System metrics collected from monitoring sources
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SystemMetrics {
@@ -15,6 +14,7 @@ pub struct SystemMetrics {
     pub response_time_ms: f64,
     pub error_rate: f64,
     pub uptime_seconds: u64,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 }
 
@@ -28,6 +28,7 @@ pub struct AgentMetrics {
     pub average_response_time: f64,
     pub total_requests_processed: u64,
     pub success_rate: f64,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 }
 
@@ -40,6 +41,7 @@ pub struct TaskMetrics {
     pub pending_tasks: u32,
     pub average_completion_time: f64,
     pub throughput_tasks_per_hour: f64,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 }
 
@@ -52,6 +54,7 @@ pub struct ProcessedSystemMetrics {
     pub task_success_rate: f64,
     pub agent_utilization: f64,
     pub system_stability: f64,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 }
 
@@ -62,6 +65,7 @@ pub struct ValidatedPredictions {
     pub performance_forecasts: Vec<PredictiveModelResult>,
     pub quality_predictions: Vec<PredictiveModelResult>,
     pub cost_projections: Vec<PredictiveModelResult>,
+    #[schemars(with = "String")]
     pub validation_timestamp: DateTime<Utc>,
 }
 
@@ -71,6 +75,7 @@ pub struct CachedInsights {
     /// Cached insights
     pub insights: Vec<AnalyticsInsight>,
     /// Cache timestamp
+    #[schemars(with = "String")]
     pub cached_at: DateTime<Utc>,
     /// Cache metadata
     pub metadata: CacheMetadata,
@@ -105,5 +110,6 @@ pub struct CachePerformanceMetrics {
     /// Number of cache operations
     pub operations_count: u64,
     /// Last cache update
+    #[schemars(with = "String")]
     pub last_update: DateTime<Utc>,
 }

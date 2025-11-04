@@ -554,7 +554,7 @@ impl ApiIngestor {
 
 /// Captions ingestor for video captions
 #[derive(Debug)]
-pub struct CaptionsIngestor;
+pub struct CaptionsIngestor ;
 
 impl CaptionsIngestor {
     /// Parse captions from content based on file format
@@ -876,7 +876,7 @@ impl IngestionStage for CaptionsIngestor {
 
 /// Diagrams ingestor for technical diagrams
 #[derive(Debug)]
-pub struct DiagramsIngestor;
+pub struct DiagramsIngestor ;
 
 impl DiagramsIngestor {
     pub fn new() -> Self {
@@ -957,7 +957,7 @@ impl IngestionStage for DiagramsIngestor {
 
 /// Video ingestor for video content
 #[derive(Debug)]
-pub struct VideoIngestor;
+pub struct VideoIngestor ;
 
 impl VideoIngestor {
     pub fn new() -> Self {
@@ -1038,7 +1038,7 @@ impl IngestionStage for VideoIngestor {
 
 /// Slides ingestor for presentation slides
 #[derive(Debug)]
-pub struct SlidesIngestor;
+pub struct SlidesIngestor ;
 
 impl SlidesIngestor {
     pub fn new() -> Self {

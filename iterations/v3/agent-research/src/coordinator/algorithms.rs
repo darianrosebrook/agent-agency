@@ -3,11 +3,13 @@
 //! Core learning algorithms, optimization strategies, and
 //! adaptive learning mechanisms for coordination.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 
 /// Learning algorithm types
-#[derive(Debug, Clone)]
-pub enum LearningAlgorithm {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub enum LearningAlgorithmm {
     ReinforcementLearning,
     SupervisedLearning,
     UnsupervisedLearning,
@@ -16,8 +18,9 @@ pub enum LearningAlgorithm {
 }
 
 /// Learning algorithm implementation
-#[derive(Debug)]
-pub struct LearningAlgorithms {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct LearningAlgorithmss {
     algorithms: HashMap<LearningAlgorithm, Box<dyn LearningStrategy>>,
 }
 
@@ -283,14 +286,16 @@ pub trait LearningStrategy {
     fn execute(&self, input: LearningInput) -> LearningOutput;
 }
 
-#[derive(Debug, Clone)]
-pub struct LearningInput {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct LearningInputt {
     pub data: Vec<f64>,
     pub context: HashMap<String, String>,
 }
 
-#[derive(Debug, Clone)]
-pub struct LearningOutput {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct LearningOutputt {
     pub result: String,
     pub confidence: f64,
     pub improvements: Vec<String>,

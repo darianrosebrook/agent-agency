@@ -1,11 +1,12 @@
 //! Core observability types and configuration
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 
 /// Observability configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ObservabilityConfig {
     /// Enable metrics collection
     pub enable_metrics: bool,
@@ -38,7 +39,7 @@ impl Default for ObservabilityConfig {
 }
 
 /// Health check status
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum HealthStatus {
     /// Component is healthy
     Healthy,
@@ -62,13 +63,15 @@ impl std::fmt::Display for HealthStatus {
 }
 
 /// Health check result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Serialize, Deserialize)]
 pub struct HealthCheckResult {
     /// Component name
     pub component: String,
     /// Health status
     pub status: HealthStatus,
     /// Timestamp of the check
+    ##[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     /// Optional error message
     pub error_message: Option<String>,
@@ -105,7 +108,7 @@ impl HealthCheckResult {
 }
 
 /// Log entry levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
 pub enum LogLevel {
     /// Debug information
     Debug = 1,
@@ -132,7 +135,7 @@ impl std::fmt::Display for LogLevel {
 }
 
 /// Log entry
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LogEntry {
     /// Log level
     pub level: LogLevel,
@@ -141,6 +144,8 @@ pub struct LogEntry {
     /// Component that generated the log
     pub component: String,
     /// Timestamp
+    ##[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     /// Additional fields
     pub fields: HashMap<String, serde_json::Value>,

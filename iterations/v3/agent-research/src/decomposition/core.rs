@@ -1,5 +1,7 @@
 //! Core decomposition functionality
 
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use crate::extraction_types::*;
 use anyhow::Result;
 use std::sync::Arc;
@@ -7,7 +9,8 @@ use tokio::sync::RwLock;
 use tracing::debug;
 
 /// Stage 3: Decomposition into atomic claims
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct DecompositionStage {
     claim_extractor: Arc<RwLock<ClaimExtractor>>,
     context_bracket_adder: Arc<RwLock<ContextBracketAdder>>,
@@ -56,13 +59,14 @@ impl DecompositionStage {
             return 0.0;
         }
 
-        let total_confidence: f32 = claims.iter().map(|c| c.confidence_score).sum();
+        let total_confidence: f32 = claims.iter().map(|c| c.confidence as f32).sum();
         total_confidence / claims.len() as f32
     }
 }
 
 /// Configuration for decomposition processing
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DecompositionConfig {
     /// Maximum number of atomic claims to extract
     pub max_atomic_claims: usize,
@@ -86,7 +90,8 @@ impl Default for DecompositionConfig {
 }
 
 /// Result of decomposition processing
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DecompositionResult {
     /// Extracted atomic claims
     pub atomic_claims: Vec<AtomicClaim>,
@@ -103,14 +108,15 @@ impl DecompositionResult {
     /// Get claims above confidence threshold
     pub fn high_confidence_claims(&self, threshold: f32) -> Vec<&AtomicClaim> {
         self.atomic_claims.iter()
-            .filter(|c| c.confidence_score >= threshold)
+            .filter(|c| c.confidence >= threshold as f64)
             .collect()
     }
 }
 
 /// Forward declarations for types that will be implemented in other modules
-#[derive(Debug)]
-pub struct ClaimExtractor;
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct ClaimExtractor;
 
 impl ClaimExtractor {
     pub fn new() -> Self {
@@ -127,8 +133,9 @@ impl ClaimExtractor {
     }
 }
 
-#[derive(Debug)]
-pub struct ContextBracketAdder;
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct ContextBracketAdder ;
 
 impl ContextBracketAdder {
     pub fn new() -> Self {

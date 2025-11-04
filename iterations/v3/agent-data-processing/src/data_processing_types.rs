@@ -3,6 +3,7 @@
 //! These types are shared across all pipeline stages and provide
 //! the data contracts between ingestion, enrichment, indexing, knowledge, and operations.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -14,7 +15,7 @@ use agent_memory::graph_engine::{Relationship, RelationshipType};
 
 // Stub definitions for when memory integration is not available
 #[cfg(not(feature = "memory-integration"))]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Relationship {
     pub id: String,
     pub source_entity: String,
@@ -25,7 +26,7 @@ pub struct Relationship {
 }
 
 #[cfg(not(feature = "memory-integration"))]
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub enum RelationshipType {
     WorksFor,
     LocatedIn,
@@ -52,7 +53,7 @@ impl std::fmt::Display for RelationshipType {
 }
 
 /// Basic data block for processing
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Block {
     pub id: ProcessingId,
     pub content_type: ContentType,
@@ -61,7 +62,7 @@ pub struct Block {
 }
 
 /// Data contained in a block
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum BlockData {
     Text(String),
     Binary(Vec<u8>),
@@ -69,7 +70,7 @@ pub enum BlockData {
 }
 
 /// Enriched block with additional processing results
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EnrichedBlock {
     pub block: Block,
     pub enriched_content: EnrichedContent,
@@ -77,7 +78,7 @@ pub struct EnrichedBlock {
 }
 
 /// Enriched content from processing stages
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EnrichedContent {
     pub entities: Vec<ExtractedEntity>,
     pub visual_elements: Vec<VisualElement>,
@@ -87,7 +88,7 @@ pub struct EnrichedContent {
 }
 
 /// Extracted entity from content
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExtractedEntity {
     pub id: String,
     pub name: String,
@@ -98,7 +99,7 @@ pub struct ExtractedEntity {
 }
 
 /// Visual element detected in content
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct VisualElement {
     pub element_type: VisualElementType,
     pub position: BoundingBox,
@@ -108,7 +109,7 @@ pub struct VisualElement {
 }
 
 /// Type of visual element
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum VisualElementType {
     Image,
     Text,
@@ -118,7 +119,7 @@ pub enum VisualElementType {
 }
 
 /// Extracted topic from content
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExtractedTopic {
     pub name: String,
     pub confidence: f32,
@@ -126,7 +127,7 @@ pub struct ExtractedTopic {
 }
 
 /// Text position information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TextPosition {
     pub start: usize,
     pub end: usize,
@@ -134,8 +135,8 @@ pub struct TextPosition {
 }
 
 /// Unique identifier for data processing operations
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct ProcessingId(pub Uuid);
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+pub struct ProcessingId (pub Uuid);
 
 impl ProcessingId {
     pub fn new() -> Self {
@@ -162,7 +163,7 @@ impl std::fmt::Display for ProcessingId {
 }
 
 /// Raw input data for processing
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DataInput {
     pub id: ProcessingId,
     pub source: DataSource,
@@ -172,7 +173,7 @@ pub struct DataInput {
 }
 
 /// Source of the data being processed
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum DataSource {
     File(FileSource),
     Url(UrlSource),
@@ -182,16 +183,17 @@ pub enum DataSource {
 }
 
 /// File-based data source
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FileSource {
     pub path: PathBuf,
     pub content_type: ContentType,
     pub size_bytes: u64,
+    #[schemars(with = "String")]
     pub last_modified: DateTime<Utc>,
 }
 
 /// URL-based data source
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UrlSource {
     pub url: String,
     pub content_type: Option<ContentType>,
@@ -199,14 +201,14 @@ pub struct UrlSource {
 }
 
 /// Streaming data source
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StreamSource {
     pub stream_id: String,
     pub content_type: ContentType,
 }
 
 /// Database-backed data source
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DatabaseSource {
     pub table: String,
     pub record_id: String,
@@ -214,7 +216,7 @@ pub struct DatabaseSource {
 }
 
 /// API-based data source
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ApiSource {
     pub endpoint: String,
     pub method: String,
@@ -222,7 +224,7 @@ pub struct ApiSource {
 }
 
 /// Content types supported by the pipeline
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub enum ContentType {
     Text,
     Pdf,
@@ -280,7 +282,7 @@ impl ContentType {
 }
 
 /// The actual content data
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum DataContent {
     Text(String),
     Binary(Vec<u8>),
@@ -289,7 +291,7 @@ pub enum DataContent {
 }
 
 /// Processing context and metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProcessingContext {
     pub request_id: String,
     pub user_id: Option<String>,
@@ -300,7 +302,7 @@ pub struct ProcessingContext {
 }
 
 /// Processing priority levels
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ProcessingPriority {
     Low,
     Normal,
@@ -315,18 +317,19 @@ impl Default for ProcessingPriority {
 }
 
 /// Output from data processing pipeline
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProcessingOutput {
     pub id: ProcessingId,
     pub original_input: DataInput,
     pub processed_content: ProcessedContent,
     pub extracted_metadata: HashMap<String, serde_json::Value>,
     pub processing_stats: ProcessingStats,
+    #[schemars(with = "String")]
     pub created_at: DateTime<Utc>,
 }
 
 /// Raw processed content data
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ProcessedContentData {
     Text(String),
     Binary(Vec<u8>),
@@ -334,7 +337,7 @@ pub enum ProcessedContentData {
 }
 
 /// Processed content with multiple representations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProcessedContent {
     pub data: ProcessedContentData,
     pub content_type: ContentType,
@@ -349,7 +352,7 @@ pub struct ProcessedContent {
 
 
 /// Named entity extracted from content
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Entity {
     pub id: String,
     pub name: String,
@@ -360,7 +363,7 @@ pub struct Entity {
 }
 
 /// Types of entities that can be extracted
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub enum EntityType {
     Person,
     Organization,
@@ -377,7 +380,7 @@ pub enum EntityType {
 
 
 /// Query for retrieving processed data
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DataQuery {
     pub query_type: QueryType,
     pub text_query: Option<String>,
@@ -389,7 +392,7 @@ pub struct DataQuery {
 }
 
 /// Types of queries supported
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum QueryType {
     TextSearch,
     SemanticSearch,
@@ -398,7 +401,7 @@ pub enum QueryType {
 }
 
 /// Filter for entity-based queries
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EntityFilter {
     pub entity_type: EntityType,
     pub entity_names: Vec<String>,
@@ -406,7 +409,7 @@ pub struct EntityFilter {
 }
 
 /// Filter for content-based queries
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContentFilter {
     pub content_type: ContentType,
     pub date_range: Option<DateRange>,
@@ -414,14 +417,16 @@ pub struct ContentFilter {
 }
 
 /// Date range for filtering
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DateRange {
+    #[schemars(with = "String")]
     pub start: DateTime<Utc>,
+    #[schemars(with = "String")]
     pub end: DateTime<Utc>,
 }
 
 /// Retrieved data from queries
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RetrievedData {
     pub id: ProcessingId,
     pub content: ProcessedContent,
@@ -444,7 +449,7 @@ impl RetrievedData {
 }
 
 /// Processing metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProcessingMetadata {
     pub source_url: Option<String>,
     pub content_hash: String,
@@ -455,7 +460,7 @@ pub struct ProcessingMetadata {
 }
 
 /// Processing statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProcessingStats {
     pub processing_time_ms: u64,
     pub bytes_processed: u64,
@@ -466,7 +471,7 @@ pub struct ProcessingStats {
 }
 
 /// System-wide statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SystemStats {
     pub pipeline: PipelineStats,
     #[cfg(feature = "memory-integration")]
@@ -476,7 +481,7 @@ pub struct SystemStats {
 }
 
 /// Pipeline-level statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PipelineStats {
     pub total_processed: u64,
     pub active_operations: usize,

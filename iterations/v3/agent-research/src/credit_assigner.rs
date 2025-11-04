@@ -1,14 +1,17 @@
 //! Credit assignment for learning
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreditRecord {
+    #[schemars(with = "String")]
     pub participant_id: Uuid,
+    #[schemars(with = "String")]
     pub session_id: Uuid,
     pub action_sequence: Vec<ActionContribution>,
     pub total_credit: f64,
@@ -17,7 +20,7 @@ pub struct CreditRecord {
     pub validated: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ActionContribution {
     pub action_id: String,
     pub contribution_score: f64,
@@ -26,7 +29,7 @@ pub struct ActionContribution {
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreditPolicy {
     pub temporal_decay_factor: f64,    // How much credit decays over time
     pub quality_weight: f64,          // Weight given to action quality
@@ -47,7 +50,8 @@ impl Default for CreditPolicy {
     }
 }
 
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct CreditAssigner {
     credit_records: Arc<RwLock<HashMap<Uuid, Vec<CreditRecord>>>>,
     participant_balances: Arc<RwLock<HashMap<Uuid, f64>>>,
@@ -55,10 +59,12 @@ pub struct CreditAssigner {
     credit_history: Arc<RwLock<Vec<CreditTransaction>>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreditTransaction {
+    #[schemars(with = "String")]
     pub transaction_id: Uuid,
     pub from_participant: Option<Uuid>,
+    #[schemars(with = "String")]
     pub to_participant: Uuid,
     pub amount: f64,
     pub transaction_type: TransactionType,
@@ -66,7 +72,7 @@ pub struct CreditTransaction {
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum TransactionType {
     Assignment,
     Transfer,
@@ -382,7 +388,7 @@ impl CreditAssigner {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationReport {
     pub total_records: usize,
     pub validated_records: usize,
@@ -390,7 +396,7 @@ pub struct ValidationReport {
     pub validation_issues: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreditExport {
     pub participant_balances: HashMap<Uuid, f64>,
     pub credit_records: HashMap<Uuid, Vec<CreditRecord>>,

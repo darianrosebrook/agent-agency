@@ -14,6 +14,7 @@ use crate::adapter::{LegacyOrchestratorAdapter, ValidationResult};
 use crate::evidence_enrichment::{EvidenceEnrichmentCoordinator, EnrichmentConfig};
 use crate::frontier::{Frontier, FrontierConfig};
 use anyhow::Result;
+use uuid::Uuid;
 
 /// Example of using the restored orchestration functionality
 pub async fn example_orchestration_workflow() -> Result<()> {
@@ -21,15 +22,15 @@ pub async fn example_orchestration_workflow() -> Result<()> {
 
     // 1. Create a task descriptor
     let task_descriptor = TaskDescriptor {
-        task_id: "FEAT-001".to_string(),
+        task_id: uuid::Uuid::new_v4(),
         description: "Add user authentication feature".to_string(),
-        scope_in: TaskScope {
-            in_scope: vec!["src/auth/".to_string(), "tests/auth/".to_string()],
-            out_scope: vec!["node_modules/".to_string()],
+        scope_in: agent_agency_contracts::task_request::ScopeRestrictions {
+            allowed_paths: vec!["src/auth/.*".to_string(), "tests/auth/.*".to_string()],
+            blocked_paths: vec!["node_modules/.*".to_string()],
         },
-        scope_out: Some(TaskScope {
-            in_scope: vec![],
-            out_scope: vec!["src/other/".to_string()],
+        scope_out: Some(agent_agency_contracts::task_request::ScopeRestrictions {
+            allowed_paths: vec![],
+            blocked_paths: vec!["src/other/.*".to_string()],
         }),
         change_budget: ChangeBudget {
             max_files: 25,
@@ -46,36 +47,77 @@ pub async fn example_orchestration_workflow() -> Result<()> {
         },
         priority: TaskPriority::High,
         execution_mode: agent_agency_contracts::types::planning::ExecutionMode::Auto,
-        task_type: "feature".to_string(),
         risk_tier: Some(RiskTier::Tier2),
         acceptance: Some("User can login and access protected routes".to_string()),
     };
 
     // 2. Create a working specification
     let working_spec = WorkingSpec {
+        version: "1.0".to_string(),
         id: "FEAT-001".to_string(),
         title: "User Authentication Feature".to_string(),
+        description: task_descriptor.description.clone(),
+        goals: vec!["Implement user authentication".to_string()],
         risk_tier: 2,
-        mode: "feature".to_string(),
+        constraints: agent_agency_contracts::working_spec::WorkingSpecConstraints {
+            max_duration_minutes: None,
+            max_iterations: None,
+            budget_limits: Some(agent_agency_contracts::working_spec::BudgetLimits {
+                max_files: Some(task_descriptor.change_budget.max_files as u32),
+                max_loc: Some(task_descriptor.change_budget.max_loc as u32),
+            }),
+            scope_restrictions: Some(agent_agency_contracts::working_spec::ScopeRestrictions {
+                allowed_paths: task_descriptor.scope_in.allowed_paths.clone(),
+                blocked_paths: task_descriptor.scope_in.blocked_paths.clone(),
+            }),
+        },
         change_budget: task_descriptor.change_budget.clone(),
-        blast_radius: task_descriptor.blast_radius.clone(),
-        scope: task_descriptor.scope_in.clone(),
+        scope: vec![agent_agency_contracts::working_spec::ScopeRestrictions {
+            allowed_paths: task_descriptor.scope_in.allowed_paths.clone(),
+            blocked_paths: task_descriptor.scope_in.blocked_paths.clone(),
+        }],
         acceptance_criteria: vec![
             AcceptanceCriterion {
-                priority: agent_agency_contracts::planning_io::MilestonePriority::Normal,
+                priority: Some(agent_agency_contracts::working_spec::MoSCoWPriority::Should),
                 id: "A1".to_string(),
                 given: "User is not logged in".to_string(),
                 when: "User submits valid credentials".to_string(),
                 then: "User is logged in and redirected to dashboard".to_string(),
             },
             AcceptanceCriterion {
-                priority: agent_agency_contracts::planning_io::MilestonePriority::Normal,
+                priority: Some(agent_agency_contracts::working_spec::MoSCoWPriority::Should),
                 id: "A2".to_string(),
                 given: "User has invalid session token".to_string(),
                 when: "User attempts to access protected route".to_string(),
                 then: "User is redirected to login with error message".to_string(),
             },
         ],
+        test_plan: agent_agency_contracts::working_spec::TestPlan {
+            unit_tests: vec![],
+            integration_tests: vec![],
+            e2e_scenarios: vec![],
+            coverage_targets: None,
+        },
+        rollback_plan: agent_agency_contracts::working_spec::RollbackPlan {
+            strategy: agent_agency_contracts::working_spec::RollbackStrategy::GitRevert,
+            automated_steps: vec!["git revert".to_string()],
+            manual_steps: vec![],
+            data_impact: agent_agency_contracts::working_spec::DataImpact::None,
+            downtime_required: Some(false),
+            rollback_window_minutes: Some(30),
+        },
+        context: agent_agency_contracts::working_spec::WorkingSpecContext {
+            workspace_root: ".".to_string(),
+            git_branch: "main".to_string(),
+            recent_changes: vec![],
+            dependencies: std::collections::HashMap::new(),
+            environment: agent_agency_contracts::task_request::Environment::Development,
+        },
+        coverage_targets: None,
+        file_changes: vec![],
+        metadata: None,
+        created_at: chrono::Utc::now(),
+        updated_at: chrono::Utc::now(),
     };
 
     // 3. Create diff statistics
@@ -151,7 +193,7 @@ pub async fn example_orchestration_workflow() -> Result<()> {
         // This is a simplified example - in production, you would fetch these from storage
 
         // 11. Mark task as completed
-        frontier.complete_task(&task_descriptor.task_id).await?;
+        frontier.complete_task(&task_descriptor.task_id.to_string()).await?;
         println!("🎉 Task marked as completed: {}", task_descriptor.task_id);
     }
 

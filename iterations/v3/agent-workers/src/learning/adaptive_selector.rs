@@ -1,8 +1,10 @@
 //! Adaptive worker selector
 
+use schemars::JsonSchema;
 use std::sync::Arc;
 use std::collections::HashMap;
 use anyhow::Result;
+use tracing::error;
 
 use crate::parallel_types::{WorkerId, WorkerSpecialty, SubTask};
 use crate::learning::types::*;
@@ -10,7 +12,8 @@ use crate::learning::PatternAnalyzer;
 use crate::worker_types::{ExecutionOutcome, LearningMode};
 
 /// Strategy for worker selection
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum WorkerSelectionStrategy {
     /// Select based on performance history
     PerformanceBased,

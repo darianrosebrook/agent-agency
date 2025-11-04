@@ -1,18 +1,20 @@
 //! Core types for evidence collection
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 /// Code metrics for analysis
-#[derive(Debug)]
-pub struct CodeMetrics {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct CodeMetricss {
     pub lines_of_code: usize,
     pub function_count: usize,
 }
 
 /// Test timing data structures
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TestTimingData {
     pub test_name: String,
     pub duration_ms: f64,
@@ -22,7 +24,7 @@ pub struct TestTimingData {
     pub status: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TestSuiteTimingData {
     pub suite_name: String,
     pub tests: Vec<TestTimingData>,
@@ -30,7 +32,8 @@ pub struct TestSuiteTimingData {
     pub timestamp: String,
 }
 
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct TestTimingAnalysis {
     pub test_count: usize,
     pub average_time_ms: f64,
@@ -40,7 +43,8 @@ pub struct TestTimingAnalysis {
 }
 
 /// Verification methods enumeration
-#[derive(Debug, Clone, PartialEq)]
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum VerificationMethod {
     CodeAnalysis,
     TestExecution,
@@ -54,7 +58,8 @@ pub enum VerificationMethod {
 }
 
 /// Evidence collection configuration
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceCollectorConfig {
     pub min_relevance_threshold: f64,
     pub min_credibility_threshold: f64,

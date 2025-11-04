@@ -1,7 +1,9 @@
 //! Telemetry collection for Core ML operations
 
+use schemars::JsonSchema;
+
 /// Core ML metrics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct CoreMLMetrics {
     pub compile_time_ms: u64,
     pub inference_count: u64,
@@ -9,7 +11,7 @@ pub struct CoreMLMetrics {
 }
 
 /// Failure mode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum FailureMode {
     CompileError,
     LoadError,
@@ -18,7 +20,7 @@ pub enum FailureMode {
 }
 
 /// Inference metrics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct InferenceMetrics {
     pub total_inferences: u64,
     pub successful_inferences: u64,
@@ -27,7 +29,7 @@ pub struct InferenceMetrics {
 }
 
 /// Telemetry collector
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct TelemetryCollector {
     metrics: CoreMLMetrics,
 }
@@ -53,7 +55,7 @@ impl TelemetryCollector {
     }
 
     /// Record an inference
-    pub fn record_inference(&mut self, duration_ms: u64, success: bool) {
+    pub fn record_inference(&mut self, _duration_ms: u64, success: bool) {
         self.metrics.inference_count += 1;
         if !success {
             self.metrics.error_count += 1;

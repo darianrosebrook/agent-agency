@@ -3,13 +3,14 @@
 //! Graph-based indexing for diagrams, knowledge graphs, and
 //! relational data with adjacency lists and property management.
 
+use schemars::JsonSchema;
 use crate::embedding::embedding_types::*;
 use anyhow::Result;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 /// Graph node properties
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct NodeProperty {
     pub node_type: NodeType,
     pub label: String,
@@ -18,7 +19,7 @@ pub struct NodeProperty {
 }
 
 /// Node type enumeration
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, JsonSchema)]
 pub enum NodeType {
     Entity,
     Concept,
@@ -29,7 +30,7 @@ pub enum NodeType {
 }
 
 /// Graph filter types for querying
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum GraphFilter {
     NodeType(NodeType),
     MinSimilarity(f32),
@@ -38,7 +39,7 @@ pub enum GraphFilter {
 }
 
 /// Property value types
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, JsonSchema)]
 pub enum PropertyValue {
     String(String),
     Integer(i64),
@@ -49,9 +50,11 @@ pub enum PropertyValue {
 }
 
 /// Graph edge representation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct GraphEdge {
+    #[schemars(with = "String")]
     pub source: Uuid,
+    #[schemars(with = "String")]
     pub target: Uuid,
     pub edge_type: EdgeType,
     pub weight: f64,
@@ -59,7 +62,7 @@ pub struct GraphEdge {
 }
 
 /// Edge type enumeration
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, JsonSchema)]
 pub enum EdgeType {
     RelatedTo,
     Contains,
@@ -323,7 +326,7 @@ impl GraphIndexer {
 }
 
 /// Graph statistics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct GraphStatistics {
     pub total_nodes: usize,
     pub total_edges: usize,
@@ -340,7 +343,7 @@ pub struct GraphQueryBuilder {
     max_depth: Option<usize>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum QueryFilter {
     NodeType(NodeType),
     Property(String, PropertyValue),

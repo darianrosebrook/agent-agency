@@ -5,6 +5,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -13,7 +14,7 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// Audit event types for categorization
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum AuditEventType {
     /// Authentication events (login, logout, token operations)
     Authentication,
@@ -34,7 +35,7 @@ pub enum AuditEventType {
 }
 
 /// Severity levels for audit events
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum AuditSeverity {
     /// Informational events
     Info,
@@ -47,11 +48,14 @@ pub enum AuditSeverity {
 }
 
 /// Audit record with comprehensive event tracking
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AuditRecord {
     /// Unique audit record ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Timestamp of the event
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     /// Event type classification
     pub event_type: AuditEventType,
@@ -80,7 +84,7 @@ pub struct AuditRecord {
 }
 
 /// Result of audit operation
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum AuditResult {
     /// Operation succeeded
     Success,
@@ -93,7 +97,7 @@ pub enum AuditResult {
 }
 
 /// Audit logger configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AuditLoggerConfig {
     /// Enable audit logging
     pub enabled: bool,
@@ -148,7 +152,7 @@ pub struct AuditLogger {
     db_pool: Option<sqlx::PgPool>,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, JsonSchema)]
 struct AuditStats {
     total_events: u64,
     events_by_type: HashMap<AuditEventType, u64>,

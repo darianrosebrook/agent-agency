@@ -3,13 +3,14 @@
 //! Provides hooks to store processed data in agent memory and retrieve
 //! contextual memories to enhance data processing.
 
+use schemars::JsonSchema;
 use crate::data_processing_types::*;
 use agent_memory::{MemoryManager, AgentExperience, TaskContext, MemoryStats, memory_manager::MemoryQuery};
 use crate::{DataProcessingResult, DataProcessingError};
 use std::sync::Arc;
 
 /// Configuration for memory integration
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct MemoryConfig {
     pub enable_contextual_retrieval: bool,
     pub store_processing_experiences: bool,

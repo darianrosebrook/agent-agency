@@ -13,7 +13,7 @@ use chrono::{DateTime, Utc};
 use crate::router_decision::WorkerType;
 
 /// Worker specialty types for task routing
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum WorkerSpecialty {
     /// Compilation error fixing
     CompilationErrors { error_codes: Vec<String> },
@@ -43,9 +43,10 @@ pub trait SpecializedWorker: Send + Sync + std::fmt::Debug {
 
 
 /// Context for worker task execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerContext {
     /// Unique task identifier
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     /// Task description
     pub description: String,
@@ -60,7 +61,7 @@ pub struct WorkerContext {
 }
 
 /// Result from worker execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerResult {
     /// Success status
     pub success: bool,
@@ -72,10 +73,19 @@ pub struct WorkerResult {
     pub error_message: Option<String>,
     /// Additional metadata
     pub metadata: HashMap<String, serde_json::Value>,
+    /// Execution metrics (optional)
+    pub metrics: Option<HashMap<String, serde_json::Value>>,
+    /// Execution artifacts (optional)
+    pub artifacts: Option<HashMap<String, serde_json::Value>>,
+    /// Worker identifier (for parallel execution)
+    #[schemars(with = "Option<String>")]
+    pub worker_id: Option<Uuid>,
+    /// Quality score (0.0 to 1.0)
+    pub quality_score: Option<f64>,
 }
 
 /// Worker health status
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum WorkerHealthStatus {
     Healthy,
     Degraded,
@@ -96,7 +106,7 @@ pub struct WorkerHealthMetrics {
 }
 
 /// Worker pool statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerPoolStats {
     pub total_workers: u32,
     pub available_workers: u32,
@@ -119,7 +129,7 @@ pub struct WorkerAssignment {
 }
 
 /// Worker registration request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerRegistration {
     pub name: String,
     pub worker_type: WorkerType,
@@ -132,7 +142,7 @@ pub struct WorkerRegistration {
 }
 
 /// Worker update request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerUpdate {
     pub capabilities: Option<Vec<String>>,
     pub max_concurrent_tasks: Option<u32>,
@@ -140,31 +150,47 @@ pub struct WorkerUpdate {
 }
 
 /// Worker pool events for monitoring
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum WorkerPoolEvent {
     WorkerRegistered {
+        #[schemars(with = "String")]
+
         worker_id: Uuid,
         capabilities: Vec<String>,
     },
     WorkerHealthChecked {
+        #[schemars(with = "String")]
+
         worker_id: Uuid,
         is_healthy: bool,
         response_time_ms: u64,
-        checked_at: DateTime<Utc>,
+        #[schemars(with = "String")]
+    checked_at: DateTime<Utc>,
     },
     WorkerAssigned {
+        #[schemars(with = "String")]
         task_id: Uuid,
+        #[schemars(with = "String")]
         worker_id: Uuid,
-        estimated_completion_time: DateTime<Utc>,
+        #[schemars(with = "String")]
+    estimated_completion_time: DateTime<Utc>,
     },
     WorkerTaskCompleted {
+        #[schemars(with = "String")]
+
         task_id: Uuid,
+        #[schemars(with = "String")]
+
         worker_id: Uuid,
         success: bool,
         execution_time_ms: u64,
     },
     WorkerTaskFailed {
+        #[schemars(with = "String")]
+
         task_id: Uuid,
+        #[schemars(with = "String")]
+
         worker_id: Uuid,
         error: String,
         retry_count: u32,
@@ -172,7 +198,7 @@ pub enum WorkerPoolEvent {
 }
 
 /// Worker event types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum WorkerEventType {
     Registration,
     HealthCheck,

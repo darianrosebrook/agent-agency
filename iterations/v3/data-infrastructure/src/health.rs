@@ -3,6 +3,7 @@
 //! Comprehensive health checks, statistics collection, and status monitoring
 //! for database connectivity, performance, and operational health.
 
+use schemars::JsonSchema;
 use crate::database_circuit_breaker::CircuitState;
 use super::database_metrics::DatabaseMetrics;
 use anyhow::Result;
@@ -10,10 +11,10 @@ use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tracing::{debug, info, warn};
+use tracing::debug;
 
 /// Database health status summary
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DatabaseHealthStatus {
     pub connectivity_ok: bool,
     pub pool_size: u32,
@@ -24,12 +25,14 @@ pub struct DatabaseHealthStatus {
     pub avg_execution_time_ms: u64,
     pub max_execution_time_ms: u64,
     pub circuit_breaker_trips: u64,
+    #[schemars(with = "String")]
+
     pub last_health_check: DateTime<Utc>,
     pub overall_health: HealthStatus,
 }
 
 /// Overall health status
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub enum HealthStatus {
     Healthy,
     Degraded,
@@ -38,11 +41,12 @@ pub enum HealthStatus {
 }
 
 /// Database statistics with comprehensive metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DatabaseStats {
     pub pool_size: u32,
     pub idle_connections: u32,
     pub table_counts: HashMap<String, i64>,
+    #[schemars(with = "String")]
     pub uptime: Option<Duration>,
     pub memory_usage_mb: Option<u64>,
     pub active_connections: u32,
@@ -208,7 +212,7 @@ impl DatabaseHealthMonitor {
 }
 
 /// Comprehensive health report
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct HealthReport {
     pub status: DatabaseHealthStatus,
     pub recommendations: Vec<String>,
@@ -217,7 +221,7 @@ pub struct HealthReport {
 }
 
 /// Performance trend analysis
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct PerformanceTrends {
     pub query_time_trend: Trend,
     pub success_rate_trend: Trend,
@@ -225,7 +229,7 @@ pub struct PerformanceTrends {
 }
 
 /// Trend direction
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum Trend {
     Improving,
     Degrading,
@@ -233,15 +237,17 @@ pub enum Trend {
 }
 
 /// Health alert
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct HealthAlert {
     pub level: AlertLevel,
     pub message: String,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
 }
 
 /// Alert severity level
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum AlertLevel {
     Info,
     Warning,

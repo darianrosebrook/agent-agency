@@ -22,6 +22,7 @@ pub struct ConfigLoader {
 
 /// Configuration watcher for change notifications
 pub struct ConfigWatcher {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub callback: Arc<dyn Fn(&HashMap<String, serde_json::Value>) -> Result<()> + Send + Sync>,
 }

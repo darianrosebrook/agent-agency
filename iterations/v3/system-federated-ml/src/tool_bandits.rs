@@ -3,6 +3,7 @@
 //! Implements LinUCB/Thompson sampling with contextual features and hard constraints
 //! for production-safe tool selection with offline IPS/DR evaluation.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -23,7 +24,7 @@ pub trait ToolPolicy: Send + Sync {
 pub type ToolId = String;
 
 /// Contextual features for tool selection
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ToolContextFeatures {
     pub task_type: String,
     pub prompt_len: usize,
@@ -35,7 +36,7 @@ pub struct ToolContextFeatures {
 }
 
 /// Hard constraints for tool selection
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ToolConstraints {
     pub max_latency_ms: u64,
     pub max_cost_cents: u32,
@@ -280,7 +281,7 @@ impl ThompsonSamplingPolicy {
 }
 
 /// Simple matrix utilities
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, JsonSchema)]
 struct Matrix {
     data: Vec<Vec<f64>>,
 }
@@ -398,7 +399,7 @@ impl ToolLearningSystem {
 }
 
 /// Errors from tool learning operations
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum ToolLearningError {
     #[error("Policy not found: {0}")]
     PolicyNotFound(String),

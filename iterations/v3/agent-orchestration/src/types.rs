@@ -27,8 +27,9 @@ pub struct TaskScope {
 // Use agent_agency_contracts::prelude::* to access them
 
 /// Memory-informed orchestration decision
-#[derive(Debug, Clone)]
-pub struct MemoryInformedDecision {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct MemoryInformedDecision {
     /// Whether parallel execution is preferred based on historical success
     pub prefers_parallel: bool,
     /// Suggested worker IDs based on past performance
@@ -47,7 +48,7 @@ pub struct MemoryInformedDecision {
 // Use agent_agency_contracts::ExecutionArtifacts
 
 /// Execution status for tasks
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, JsonSchema, Serialize, Deserialize)]
 pub enum ExecutionStatus {
     Pending,
     InProgress,
@@ -71,8 +72,9 @@ pub enum ExecutionStatus {
 }
 
 /// Quality report from orchestration
-#[derive(Debug, Clone)]
-pub struct QualityReport {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct QualityReport {
     /// Overall quality score (0.0 to 1.0)
     pub score: f32,
     /// Quality metrics
@@ -167,8 +169,9 @@ impl Default for RetryConfig {
 // (removed duplicate definition)
 
 /// Task type classification
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TaskType {
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+enum TaskType {
     Feature,
     BugFix,
     Refactor,
@@ -214,7 +217,8 @@ pub struct WorkingSpec {
 }
 
 /// Acceptance criterion for tasks
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AcceptanceCriterion {
     /// Criterion ID
     pub id: String,
@@ -227,7 +231,8 @@ pub struct AcceptanceCriterion {
 }
 
 /// Diff statistics for change tracking
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DiffStats {
     /// Number of files changed
     pub files_changed: u32,
@@ -250,8 +255,9 @@ pub struct DiffStats {
 }
 
 /// Multimodal task for processing different content types
-#[derive(Debug, Clone)]
-pub struct MultimodalTask {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct MultimodalTask {
     /// Task ID
     pub task_id: String,
     /// Task description
@@ -265,8 +271,9 @@ pub struct MultimodalTask {
 }
 
 /// Result of multimodal processing
-#[derive(Debug, Clone)]
-pub struct MultimodalProcessingResult {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct MultimodalProcessingResult {
     /// Task ID
     pub task_id: String,
     /// Processing status (uses contracts ExecutionStatus for standard statuses, local for orchestration-specific)
@@ -280,8 +287,9 @@ pub struct MultimodalProcessingResult {
 }
 
 /// Working specification scope
-#[derive(Debug, Clone)]
-pub struct WorkingSpecScope {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct WorkingSpecScope {
     /// Files and directories included in scope
     pub in_scope: Vec<String>,
     /// Files and directories excluded from scope

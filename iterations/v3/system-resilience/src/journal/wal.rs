@@ -2,6 +2,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -160,28 +161,31 @@ impl WriteAheadLog {
 }
 
 /// Journal record types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum JournalRecord {
     Begin {
         change_id: ChangeId,
         path: PathBuf,
-        timestamp: DateTime<Utc>,
+        #[schemars(with = "String")]
+    timestamp: DateTime<Utc>,
     },
     Commit {
         change_id: ChangeId,
         digest: Digest,
-        timestamp: DateTime<Utc>,
+        #[schemars(with = "String")]
+    timestamp: DateTime<Utc>,
     },
     Denied {
         change_id: ChangeId,
         reason: DenialReason,
         fingerprint: Digest,
-        timestamp: DateTime<Utc>,
+        #[schemars(with = "String")]
+    timestamp: DateTime<Utc>,
     },
 }
 
 /// Result of journal replay
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct ReplayResult {
     pub orphaned_begin_records: Vec<ChangeId>,
     pub completed_operations: usize,

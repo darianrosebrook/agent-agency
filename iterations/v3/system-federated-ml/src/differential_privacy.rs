@@ -3,6 +3,7 @@
 /// Implements noise addition mechanisms to protect individual participant
 /// privacy while maintaining model learning effectiveness.
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use rand::prelude::*;
@@ -21,7 +22,7 @@ pub struct DifferentialPrivacyEngine {
 }
 
 /// Privacy parameters for differential privacy
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, JsonSchema)]
 pub struct PrivacyParameters {
     /// Privacy budget (epsilon)
     pub epsilon: f32,
@@ -36,7 +37,7 @@ pub struct PrivacyParameters {
 }
 
 /// Available noise mechanisms
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, JsonSchema)]
 pub enum NoiseMechanism {
     /// Laplace mechanism
     #[default]
@@ -225,7 +226,7 @@ impl DifferentialPrivacyEngine {
 }
 
 /// Privacy cost for a specific operation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PrivacyCost {
     /// Epsilon consumed by the operation
     pub epsilon_consumed: f32,
@@ -236,7 +237,7 @@ pub struct PrivacyCost {
 }
 
 /// Privacy-preserving summary of data
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PrivateSummary {
     /// Noisy count of data points
     pub noisy_count: f32,
@@ -296,5 +297,4 @@ mod tests {
         assert!(norm <= 1.0 + 1e-6); // Should be clipped to max_norm
     }
 }
-
 

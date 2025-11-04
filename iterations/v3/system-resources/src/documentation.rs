@@ -3,13 +3,14 @@
 //! Comprehensive documentation generation for deployment guides,
 //! API documentation, architecture docs, and operational procedures.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 
 /// Documentation configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DocumentationConfig {
     pub output_directory: PathBuf,
     pub include_api_docs: bool,
@@ -659,7 +660,7 @@ impl DocumentationGenerator {
 
 pub type Result<T> = std::result::Result<T, DocumentationError>;
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum DocumentationError {
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),

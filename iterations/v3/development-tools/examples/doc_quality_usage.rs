@@ -3,6 +3,7 @@
 //! Demonstrates how to use the documentation quality validator
 //! in the V3 Rust architecture.
 
+use schemars::JsonSchema;
 use agent_mcp::{
     tools::DocQualityValidator,
     ToolRegistry,
@@ -298,7 +299,7 @@ We have **100% complete** implementation with **enterprise-grade** quality.
 }
 
 /// Documentation quality result structure for deserialization
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, JsonSchema)]
 struct DocQualityResult {
     validation_id: String,
     quality_score: f64,
@@ -307,7 +308,7 @@ struct DocQualityResult {
     recommendations: Vec<String>,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, JsonSchema)]
 struct QualityIssue {
     severity: String,
     rule_id: String,
@@ -316,7 +317,7 @@ struct QualityIssue {
     suggested_fix: String,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, JsonSchema)]
 struct QualityMetrics {
     superiority_claims: u32,
     unfounded_achievements: u32,

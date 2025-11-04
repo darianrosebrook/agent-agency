@@ -1,6 +1,7 @@
 use crate::evaluator::EvaluationContext;
 use crate::evaluator_types::*;
 use anyhow::Result;
+use schemars::JsonSchema;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use tracing::debug;
@@ -593,7 +594,7 @@ impl ChangeClassifier {
 }
 
 /// Aggregated diff pattern analysis
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct PatternAnalysis {
     total_additions: usize,
     total_deletions: usize,
@@ -696,7 +697,7 @@ impl PatternAnalysis {
 }
 
 /// Per-file flags derived from diff headers
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, JsonSchema)]
 struct FileFlags {
     is_doc: bool,
     is_test: bool,
@@ -705,7 +706,7 @@ struct FileFlags {
 }
 
 /// Summarized language analysis signals
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, JsonSchema)]
 struct LanguageSummary {
     total_changes: usize,
     high_impact_changes: usize,
@@ -746,7 +747,7 @@ impl LanguageSummary {
 }
 
 /// Signals derived from evaluation context metadata
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, JsonSchema)]
 struct ContextSignals {
     bugfix: bool,
     refactor: bool,

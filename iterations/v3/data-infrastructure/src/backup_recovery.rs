@@ -2,6 +2,7 @@
 //!
 //! Provides comprehensive backup, recovery, and failover capabilities for production resilience.
 
+use schemars::JsonSchema;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -15,7 +16,7 @@ use tracing::{info, warn, error};
 use crate::simple_client::DatabaseClient;
 
 /// Backup configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BackupConfig {
     /// Backup directory path
     pub backup_dir: String,
@@ -51,7 +52,7 @@ impl Default for BackupConfig {
 }
 
 /// Recovery configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RecoveryConfig {
     /// Recovery Time Objective (seconds)
     pub rto_seconds: u64,
@@ -78,9 +79,11 @@ impl Default for RecoveryConfig {
 }
 
 /// Backup metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BackupMetadata {
     pub id: String,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub size_bytes: u64,
     pub checksum: String,
@@ -92,10 +95,12 @@ pub struct BackupMetadata {
 }
 
 /// Recovery operation status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RecoveryStatus {
     pub operation_id: String,
     pub status: RecoveryState,
+    #[schemars(with = "String")]
+
     pub start_time: DateTime<Utc>,
     pub end_time: Option<DateTime<Utc>>,
     pub progress: f64, // 0.0 to 1.0
@@ -104,7 +109,7 @@ pub struct RecoveryStatus {
     pub data_loss_seconds: Option<u64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum RecoveryState {
     Pending,
     InProgress,
@@ -243,7 +248,7 @@ impl DisasterRecoveryManager {
 
         let rows = self.db_client.query(query, &[]).await?;
         let tables = rows.iter()
-            .map(|row| row.get::<String, _>("table_name"))
+            .map(|row| row.get("table_name"))
             .collect();
 
         Ok(tables)
@@ -465,6 +470,7 @@ impl DisasterRecoveryManager {
 
     /// Apply WAL logs for point-in-time recovery
     async fn apply_wal_logs(&self, target_time: DateTime<Utc>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        
         // TODO: Implement comprehensive WAL log replay and point-in-time recovery
         // - Integrate with PostgreSQL WAL archiving and replay mechanisms
         // - Support WAL-G (WAL shipping) and streaming replication
@@ -474,7 +480,8 @@ impl DisasterRecoveryManager {
         // - Implement WAL retention policies and cleanup
         // - Add WAL performance monitoring and bottleneck identification
         // - Support database-specific WAL formats and optimizations
-        info!("Applying WAL logs up to: {}", target_time);
+
+        info!("NOT IMPLEMENTED: Applying WAL logs up to: {}", target_time);
         // TODO: Implement actual WAL log application logic
         // - Parse WAL records and apply changes in correct order
         // - Handle different WAL record types (INSERT, UPDATE, DELETE, DDL)
@@ -653,7 +660,7 @@ impl DisasterRecoveryManager {
 }
 
 /// RTO/RPO status information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RtoRpoStatus {
     pub last_backup_time: Option<DateTime<Utc>>,
     pub time_since_last_backup: u64,

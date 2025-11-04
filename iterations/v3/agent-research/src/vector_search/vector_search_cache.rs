@@ -2,6 +2,7 @@
 //!
 //! Handles LRU caching and persistent cache storage for vector search operations.
 
+use schemars::JsonSchema;
 use crate::research_types::*;
 use anyhow::Result;
 use lru::LruCache;
@@ -21,7 +22,7 @@ const DEFAULT_PERSISTENT_CACHE_DIR: &str = "cache/vector_search";
 const DEFAULT_PERSISTENT_CACHE_LIMIT: usize = 10_000;
 
 /// Persistent embedding record for disk storage
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PersistentEmbeddingRecord {
     pub embedding: Vec<f32>,
     pub last_updated: i64,

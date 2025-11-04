@@ -4,6 +4,7 @@
 //! enabling the system to validate claims across different modalities (text, code,
 //! images, audio, video) and fuse evidence from multiple sources for robust verification.
 
+use schemars::JsonSchema;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -720,26 +721,30 @@ impl Tool for SemanticIntegrator {
 // Data structures
 
 /// Result of cross-modal evidence correlation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CorrelationResult {
     pub correlations: Vec<EvidenceCorrelation>,
     pub overall_confidence: f64,
     pub correlation_strength: CorrelationStrength,
+
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 }
 
 /// Individual evidence correlation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceCorrelation {
     pub evidence_pair: (String, String),
     pub correlation_type: CorrelationType,
     pub confidence: f64,
     pub supporting_factors: Vec<String>,
+
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 }
 
 /// Type of correlation between evidence items
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum CorrelationType {
     Causal,
     Supporting,
@@ -749,7 +754,7 @@ pub enum CorrelationType {
 }
 
 /// Strength of overall correlation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum CorrelationStrength {
     Weak,
     Moderate,
@@ -757,18 +762,20 @@ pub enum CorrelationStrength {
 }
 
 /// Result of evidence fusion
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FusionResult {
     pub fused_confidence: f64,
     pub fusion_method: String,
     pub evidence_count: usize,
     pub consensus_reached: bool,
     pub contradictions: Vec<EvidenceContradiction>,
+
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 }
 
 /// Evidence contradiction
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceContradiction {
     pub evidence_pair: (String, String),
     pub contradiction_type: ContradictionType,
@@ -777,7 +784,7 @@ pub struct EvidenceContradiction {
 }
 
 /// Type of contradiction
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ContradictionType {
     Direct,
     ConfidenceDisparity,
@@ -785,7 +792,7 @@ pub enum ContradictionType {
 }
 
 /// Severity level
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum Severity {
     Low,
     Medium,
@@ -793,7 +800,7 @@ pub enum Severity {
 }
 
 /// Fusion strategy for evidence combination
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum FusionStrategy {
     WeightedAverage,
     HighestConfidence,
@@ -802,17 +809,19 @@ pub enum FusionStrategy {
 }
 
 /// Result of semantic alignment
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SemanticAlignmentResult {
     pub concept_alignments: Vec<ConceptAlignment>,
     pub overall_alignment_score: f64,
     pub modality_coverage: HashMap<Modality, usize>,
     pub semantic_consistency: f64,
+
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 }
 
 /// Alignment of a semantic concept across modalities
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ConceptAlignment {
     pub concept: String,
     pub modality_evidence: Vec<ModalityEvidence>,
@@ -821,7 +830,7 @@ pub struct ConceptAlignment {
 }
 
 /// Evidence in a specific modality
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ModalityEvidence {
     pub modality: Modality,
     pub evidence_count: usize,
@@ -830,7 +839,7 @@ pub struct ModalityEvidence {
 }
 
 /// Semantic mapping for a concept in a modality
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SemanticMapping {
     pub modality: Modality,
     pub indicators: Vec<String>,
@@ -838,11 +847,10 @@ pub struct SemanticMapping {
 }
 
 /// Modality types
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub enum Modality {
     Text,
     Code,
     Data,
     Visual,
     Audio,
-}

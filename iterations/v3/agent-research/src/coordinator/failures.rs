@@ -3,11 +3,13 @@
 //! Failure detection, analysis, categorization, and recovery
 //! strategies for learning coordination and error handling.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 
 /// Failure categories for classification
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
-pub enum FailureCategory {
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+pub enum FailureCategoryy {
     Timeout,
     ResourceExhaustion,
     QualityDegradation,
@@ -19,8 +21,9 @@ pub enum FailureCategory {
 }
 
 /// Heuristic mapping for failure analysis
-#[derive(Debug, Clone)]
-pub struct FailureHeuristics {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct FailureHeuristicss {
     pub failure_patterns: HashMap<FailureCategory, FailurePattern>,
     pub remediation_strategies: HashMap<FailureCategory, Vec<String>>,
     pub recovery_weights: HashMap<FailureCategory, f64>,
@@ -208,8 +211,9 @@ impl FailureHeuristics {
 }
 
 /// Pattern for failure analysis
-#[derive(Debug, Clone)]
-pub struct FailurePattern {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct FailurePatternn {
     pub keywords: Vec<String>,
     pub severity_indicators: Vec<String>,
     pub recovery_probability: f64,
@@ -217,7 +221,8 @@ pub struct FailurePattern {
 }
 
 /// Failure analysis result
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FailureAnalysis {
     pub category: FailureCategory,
     pub severity: FailureSeverity,
@@ -227,8 +232,9 @@ pub struct FailureAnalysis {
 }
 
 /// Severity levels for failure analysis
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum FailureSeverity {
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub enum FailureSeverityy {
     Low,
     Medium,
     High,
@@ -236,8 +242,9 @@ pub enum FailureSeverity {
 }
 
 /// Context information for failure analysis
-#[derive(Debug, Clone)]
-pub struct FailureContext {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct FailureContextt {
     pub execution_time: f64,
     pub timeout_threshold: f64,
     pub resource_usage: super::resources::ResourceMetrics,
@@ -247,8 +254,9 @@ pub struct FailureContext {
 }
 
 /// Failure recovery strategy
-#[derive(Debug, Clone)]
-pub enum RecoveryStrategy {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub enum RecoveryStrategyy {
     RetryWithBackoff,
     ReduceComplexity,
     IncreaseResources,

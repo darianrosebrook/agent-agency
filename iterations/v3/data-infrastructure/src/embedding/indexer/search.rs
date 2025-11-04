@@ -8,6 +8,7 @@ use super::visual::VisualIndexer;
 use super::graph::{GraphIndexer, GraphQueryBuilder};
 use crate::embedding::embedding_types::*;
 use anyhow::Result;
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -49,8 +50,9 @@ impl Default for ModalityWeights {
 }
 
 /// Unified search result
-#[derive(Debug)]
+#[derive(Debug, JsonSchema)]
 pub struct UnifiedSearchResult {
+    #[schemars(with = "String")]
     pub document_id: Uuid,
     pub combined_score: f64,
     pub modality_scores: HashMap<String, f64>,
@@ -165,7 +167,7 @@ impl MultimodalSearchEngine {
 
     /// Real graph query execution implementation
     fn execute_graph_query(&self, graph_query: &GraphQuery) -> Vec<Uuid> {
-        use tracing::{info, debug, warn};
+        use tracing::{info, debug};
         
         info!("Executing graph query with {} filters", graph_query.filters.len());
         

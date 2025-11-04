@@ -4,6 +4,7 @@
 //! ConnectionPoolManager implementation. This ensures consistent connection patterns
 //! across all database clients and modules.
 
+use schemars::JsonSchema;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -13,7 +14,7 @@ use tokio::sync::RwLock;
 use tracing::{error, info};
 
 /// Centralized database connection configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DatabaseConnectionConfig {
     /// Database host address
     pub host: String,
@@ -61,7 +62,7 @@ impl Default for DatabaseConnectionConfig {
 }
 
 /// Connection pool statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PoolStats {
     /// Total number of connections
     pub total_count: u32,

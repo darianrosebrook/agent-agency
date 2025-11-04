@@ -9,8 +9,9 @@ use chrono::{DateTime, Utc};
 use crate::{ResearchSession, ResearchQuery};
 
 /// Session manager for research sessions
-#[derive(Debug)]
-pub struct SessionManager {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct SessionManagerr {
     sessions: Arc<RwLock<HashMap<Uuid, ResearchSession>>>,
 }
 

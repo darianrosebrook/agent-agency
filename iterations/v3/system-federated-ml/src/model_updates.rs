@@ -3,13 +3,14 @@
 /// Manages the creation, validation, and aggregation of model updates
 /// from federation participants.
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{debug, info};
 
 /// Model update from a participant
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ModelUpdate {
     /// Participant identifier
     pub participant_id: String,
@@ -24,7 +25,7 @@ pub struct ModelUpdate {
 }
 
 /// Metadata for a model update
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UpdateMetadata {
     /// Training data size used for this update
     pub training_samples: usize,
@@ -41,7 +42,7 @@ pub struct UpdateMetadata {
 }
 
 /// Quality metrics for the update
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UpdateQualityMetrics {
     /// Gradient norm
     pub gradient_norm: f32,
@@ -61,7 +62,7 @@ pub struct UpdateAggregator {
 }
 
 /// Quality thresholds for accepting updates
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityThresholds {
     pub min_gradient_norm: f32,
     pub max_gradient_norm: f32,
@@ -333,7 +334,7 @@ impl UpdateAggregator {
 }
 
 /// Result of validating an update
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema, Serialize, Deserialize)]
 pub struct ValidationResult {
     pub is_valid: bool,
     pub score: f32,
@@ -341,7 +342,7 @@ pub struct ValidationResult {
 }
 
 /// Statistics from aggregation process
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AggregationStats {
     pub total_updates: usize,
     pub valid_updates: usize,
@@ -351,7 +352,7 @@ pub struct AggregationStats {
 
 // Placeholder for the UpdateValidator that will be implemented in validation.rs
 #[derive(Debug)]
-pub struct UpdateValidator;
+pub struct UpdateValidator ;
 
 impl UpdateValidator {
     pub fn new() -> Self {

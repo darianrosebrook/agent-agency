@@ -2,6 +2,7 @@
 //!
 //! Provides clean integration points for MCP and orchestration systems.
 
+use schemars::JsonSchema;
 use crate::validator::{CawsValidator, ValidationResult, ValidationContext};
 use crate::validation_budget::{BudgetChecker, BudgetLimits};
 use crate::policy::CawsPolicy;
@@ -62,7 +63,7 @@ pub trait OrchestrationIntegration: Send + Sync {
 }
 
 /// MCP validation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct McpValidationResult {
     pub tool_id: String,
     pub compliant: bool,
@@ -72,7 +73,7 @@ pub struct McpValidationResult {
 }
 
 /// Tool execution context
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolExecutionContext {
     pub tool_id: String,
     pub parameters: serde_json::Value,
@@ -81,7 +82,7 @@ pub struct ToolExecutionContext {
 }
 
 /// Budget check result for MCP
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BudgetCheckResult {
     pub allowed: bool,
     pub remaining_budget: f32,
@@ -89,7 +90,7 @@ pub struct BudgetCheckResult {
 }
 
 /// Tool execution record
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolExecutionRecord {
     pub tool_id: String,
     pub execution_id: String,
@@ -101,7 +102,7 @@ pub struct ToolExecutionRecord {
 }
 
 /// Task execution context
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskExecutionContext {
     pub task_id: String,
     pub risk_tier: String,
@@ -111,7 +112,7 @@ pub struct TaskExecutionContext {
 }
 
 /// Resource usage tracking
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResourceUsage {
     pub cpu_seconds: f64,
     pub memory_mb: f64,
@@ -121,7 +122,7 @@ pub struct ResourceUsage {
 }
 
 /// Budget compliance result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BudgetComplianceResult {
     pub compliant: bool,
     pub utilization_percent: f64,
@@ -129,7 +130,7 @@ pub struct BudgetComplianceResult {
 }
 
 /// Waiver result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WaiverResult {
     pub waiver_id: Option<String>,
     pub approved: bool,
@@ -138,7 +139,7 @@ pub struct WaiverResult {
 }
 
 /// MCP integration error
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum McpIntegrationError {
     #[error("Validation failed: {0}")]
     ValidationError(String),
@@ -154,7 +155,7 @@ pub enum McpIntegrationError {
 }
 
 /// Orchestration integration error
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum OrchestrationIntegrationError {
     #[error("Task validation failed: {0}")]
     TaskValidationError(String),
@@ -645,7 +646,7 @@ fn analyze_waiver_eligibility(violations: &[String]) -> Result<WaiverEligibility
 }
 
 /// Waiver eligibility analysis result
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct WaiverEligibility {
     eligible: bool,
     reason: String,
@@ -658,7 +659,7 @@ struct WaiverEligibility {
 // ============================================================================
 
 /// Orchestration-specific types (matching orchestration/src/caws_runtime.rs)
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub enum ViolationCode {
     OutOfScope,
     BudgetExceeded,
@@ -667,14 +668,14 @@ pub enum ViolationCode {
     DisallowedTool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Violation {
     pub code: ViolationCode,
     pub message: String,
     pub remediation: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, JsonSchema)]
 pub struct ComplianceSnapshot {
     pub within_scope: bool,
     pub within_budget: bool,
@@ -682,23 +683,24 @@ pub struct ComplianceSnapshot {
     pub deterministic: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WaiverRef {
     pub id: String,
     pub reason: String,
     pub scope: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct OrchestrationValidationResult {
     pub task_id: String,
     pub snapshot: ComplianceSnapshot,
     pub violations: Vec<Violation>,
     pub waivers: Vec<WaiverRef>,
+    #[schemars(with = "String")]
     pub validated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkingSpec {
     pub risk_tier: u8,
     pub scope_in: Vec<String>,
@@ -706,14 +708,14 @@ pub struct WorkingSpec {
     pub change_budget_max_loc: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum ExecutionMode {
     Strict,
     Auto,
     DryRun,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskDescriptor {
     pub task_id: String,
     pub scope_in: Vec<String>,
@@ -723,7 +725,7 @@ pub struct TaskDescriptor {
     pub metadata: Option<std::collections::BTreeMap<String, String>>,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
 pub struct DiffStats {
     pub files_changed: u32,
     pub lines_added: i32,
@@ -732,7 +734,7 @@ pub struct DiffStats {
 }
 
 /// Execution decision result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionDecision {
     pub allowed: bool,
     pub reason: String,

@@ -40,6 +40,7 @@ pub struct CommonResourceUsage {
     pub network_usage_mb: Option<u64>,
     pub active_connections: Option<u64>,
     pub queue_depth: Option<u64>,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -98,6 +99,7 @@ pub struct CommonPerformanceMetrics {
     pub p99_latency_ms: Option<f64>,
     pub error_rate: Option<f64>, // 0.0-1.0
     pub success_rate: Option<f64>, // 0.0-1.0
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -160,6 +162,7 @@ pub struct CommonQualityMetrics {
     pub maintainability_index: Option<f64>,
     pub reliability_score: Option<f64>,
     pub security_score: Option<f64>,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
 }

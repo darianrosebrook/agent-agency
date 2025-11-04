@@ -48,6 +48,7 @@ pdf = "0.8"
 # Subtitle parsing
 # subtitle-parser = "0.1" # TODO: Add when crate becomes available
 regex = "1.10"
+schemars = { version = "0.8", features = ["derive"] }
 
 # Compression and archiving
 tar = "0.4"
@@ -87,8 +88,8 @@ parking_lot = "0.12"
 futures = "0.3"
 
 [features]
-default = ["workspace-integration"] 
-# memory-integration = ["agent-memory"]  # Removed to avoid circular dependencies
+default = ["workspace-integration"]
+memory-integration = []  # Feature flag for memory integration (currently disabled)
 workspace-integration = ["system-resilience"]
 embeddings = ["data-infrastructure"] # Re-enabled for conditional compilation
 

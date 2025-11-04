@@ -38,6 +38,9 @@ agent-research = { path = "../agent-research", optional = true }
 anyhow = "1.0"
 futures = "0.3"
 
+# Schema generation for JSON schemas
+schemars = { version = "0.8", features = ["derive"] }
+
 [features]
 default = []
 full = ["agent-research", "system-federated-ml"]

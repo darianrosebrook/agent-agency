@@ -371,6 +371,17 @@ async fn test_progress_tracking_and_plateau_detection() {
 }
 
 #[tokio::test]
+async fn test_autonomous_executor_creation() {
+    tracing_subscriber::fmt::init();
+
+    let executor = create_test_executor();
+
+    // Just verify the executor was created successfully
+    // This tests that the AutonomousExecutor struct and its dependencies can be instantiated
+    println!("✅ AutonomousExecutor created successfully");
+}
+
+#[tokio::test]
 async fn test_end_to_end_autonomous_execution() {
     tracing_subscriber::fmt::init();
     

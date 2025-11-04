@@ -5,6 +5,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -20,7 +21,7 @@ pub struct PrivacyAnonymizationService {
 }
 
 /// Privacy configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PrivacyConfig {
     /// GDPR compliance level
     pub gdpr_level: GdprLevel,
@@ -35,7 +36,7 @@ pub struct PrivacyConfig {
 }
 
 /// GDPR compliance levels
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub enum GdprLevel {
     /// Basic anonymization (minimal PII removal)
     Basic,
@@ -48,7 +49,7 @@ pub enum GdprLevel {
 }
 
 /// Differential privacy parameters
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DifferentialPrivacyParams {
     /// Privacy budget (epsilon)
     pub epsilon: f64,
@@ -59,7 +60,7 @@ pub struct DifferentialPrivacyParams {
 }
 
 /// Anonymization result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AnonymizationResult {
     /// Anonymized data
     pub anonymized: serde_json::Value,
@@ -70,7 +71,7 @@ pub struct AnonymizationResult {
 }
 
 /// Privacy metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PrivacyMetrics {
     /// k-anonymity achieved
     pub k_anonymity: Option<usize>,
@@ -83,7 +84,7 @@ pub struct PrivacyMetrics {
 }
 
 /// Anonymization methods
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub enum AnonymizationMethod {
     /// PII removal
     PiiRemoval,
@@ -457,7 +458,7 @@ impl PrivacyAnonymizationService {
 }
 
 /// Privacy anonymization errors
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum PrivacyAnonymizationError {
     #[error("Configuration error: {message}")]
     ConfigurationError { message: String },

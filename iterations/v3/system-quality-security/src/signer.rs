@@ -3,6 +3,7 @@
 //! Implements JWS signing per ADR-003 requirements for cryptographic integrity
 //! of provenance records.
 
+use schemars::JsonSchema;
 use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use base64::{
@@ -43,14 +44,14 @@ pub trait SignerTrait: Send + Sync {
 }
 
 /// Signing algorithm types
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum SigningAlgorithm {
     RS256,
     ES256,
     EdDSA,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
 enum KeyFormat {
     Pkcs8,
     Pem,
@@ -187,7 +188,7 @@ impl SignerTrait for JwsSigner {
 }
 
 /// JWT claims structure
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 struct JwtClaims {
     iss: String, // Issuer
     sub: String, // Subject (verdict ID)
@@ -200,7 +201,7 @@ struct JwtClaims {
 }
 
 /// Provenance payload in JWT claims
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 struct ProvenancePayload {
     verdict_id: uuid::Uuid,
     task_id: uuid::Uuid,
@@ -392,7 +393,7 @@ impl LocalKeySigner {
 }
 
 /// Signing payload for local key signer
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 struct SigningPayload {
     verdict_id: uuid::Uuid,
     task_id: uuid::Uuid,

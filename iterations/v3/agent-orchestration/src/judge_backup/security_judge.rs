@@ -15,8 +15,9 @@ use crate::judge_backup::risk::{RiskAssessment, RiskLevel};
 use std::time::{Duration, Instant};
 
 /// Security Judge for security analysis and vulnerability assessment
-#[derive(Debug)]
-pub struct SecurityJudge {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct SecurityJudge {
     config: JudgeConfig,
     health_metrics: JudgeHealthMetrics,
     last_review_time: Option<Instant>,

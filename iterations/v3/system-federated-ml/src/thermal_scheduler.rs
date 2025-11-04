@@ -1,6 +1,7 @@
 /// Thermal scheduler for managing device temperatures and preventing
 /// thermal throttling during intensive AI workloads on Apple Silicon.
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -17,7 +18,7 @@ pub struct ThermalScheduler {
 }
 
 /// Thermal configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ThermalConfig {
     /// Maximum allowed temperature in Celsius
     pub max_temperature_celsius: f32,
@@ -34,7 +35,7 @@ pub struct ThermalConfig {
 }
 
 /// Device thermal load information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DeviceLoad {
     /// Device identifier
     pub device_id: String,
@@ -51,7 +52,7 @@ pub struct DeviceLoad {
 }
 
 /// Thermal zone information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct ThermalZone {
     name: String,
     max_temp: f32,
@@ -62,7 +63,7 @@ struct ThermalZone {
 }
 
 /// Scheduling decision for workload management
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct SchedulingDecision {
     /// Whether to proceed with the workload
     pub can_proceed: bool,
@@ -423,7 +424,7 @@ struct ThermalState {
 }
 
 /// Overall thermal status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ThermalStatus {
     pub overall_status: ThermalStatusLevel,
     pub zones: Vec<ZoneStatus>,
@@ -431,7 +432,7 @@ pub struct ThermalStatus {
 }
 
 /// Thermal status level
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ThermalStatusLevel {
     Normal,
     Warning,
@@ -439,7 +440,7 @@ pub enum ThermalStatusLevel {
 }
 
 /// Individual zone status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ZoneStatus {
     pub name: String,
     pub temperature_celsius: f32,
@@ -457,4 +458,3 @@ pub struct WorkloadSpec {
     pub estimated_duration_seconds: u64,
     pub thermal_impact: f32,
 }
-

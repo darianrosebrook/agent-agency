@@ -3,6 +3,7 @@
 /// Defines the communication protocol and message types used for
 /// secure coordination between federation participants and coordinator.
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -15,7 +16,7 @@ pub struct FederationProtocol {
 }
 
 /// Protocol message types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ProtocolMessage {
     /// Coordinator starts a new round
     RoundStart {
@@ -57,7 +58,7 @@ pub enum ProtocolMessage {
 }
 
 /// Participant contribution data
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParticipantContribution {
     /// Encrypted model update
     pub encrypted_update: Vec<u8>,
@@ -68,7 +69,7 @@ pub struct ParticipantContribution {
 }
 
 /// Contribution metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContributionMetadata {
     /// Training samples used
     pub training_samples: usize,
@@ -81,7 +82,7 @@ pub struct ContributionMetadata {
 }
 
 /// Quality metrics for aggregation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityMetrics {
     pub convergence_score: f32,
     pub diversity_score: f32,
@@ -90,7 +91,7 @@ pub struct QualityMetrics {
 }
 
 /// Zero-knowledge proof structure
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ZeroKnowledgeProof {
     pub proof_data: Vec<u8>,
     pub public_inputs: Vec<u8>,
@@ -104,7 +105,7 @@ pub struct SecurityValidator {
 }
 
 /// Participant credentials for authentication
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct ParticipantCredentials {
     public_key: Vec<u8>,
     certificate_chain: Vec<u8>,
@@ -271,7 +272,7 @@ pub enum MessageData {
 }
 
 /// Protocol statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProtocolStatistics {
     pub handlers_registered: usize,
     pub messages_processed: u64,

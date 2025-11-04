@@ -1,5 +1,6 @@
 //! Core tool discovery types and service
 
+use schemars::JsonSchema;
 use crate::mcp_types::*;
 use crate::tool_discovery::validation::ValidationResult;
 use anyhow::Result;
@@ -225,7 +226,7 @@ impl ToolDiscovery {
 }
 
 /// Configuration for tool discovery
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ToolDiscoveryConfig {
     /// Paths to search for tool manifests
     pub discovery_paths: Vec<String>,
@@ -266,7 +267,7 @@ impl Default for ToolDiscoveryConfig {
 }
 
 /// Result of a tool discovery operation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ToolDiscoveryResult {
     /// Successfully discovered tools
     pub discovered_tools: Vec<MCPTool>,
@@ -275,6 +276,7 @@ pub struct ToolDiscoveryResult {
     /// Time taken for discovery in milliseconds
     pub discovery_time_ms: u64,
     /// Timestamp when discovery completed
+    #[schemars(with = "String")]
     pub discovered_at: DateTime<Utc>,
 }
 
@@ -333,7 +335,7 @@ impl ToolDiscovery {
 }
 
 /// Error encountered during tool discovery
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct DiscoveryError {
     /// Path or location where error occurred
     pub path: String,
@@ -346,7 +348,7 @@ pub struct DiscoveryError {
 }
 
 /// Types of discovery errors
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum DiscoveryErrorType {
     /// File not found
     FileNotFound,
@@ -379,7 +381,7 @@ impl std::fmt::Display for DiscoveryErrorType {
 }
 
 /// Tool discovery statistics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct DiscoveryStats {
     /// Total discovery time in milliseconds
     pub total_time_ms: u64,
@@ -394,6 +396,7 @@ pub struct DiscoveryStats {
     /// Number of network errors
     pub network_errors: usize,
     /// Timestamp when stats were collected
+    #[schemars(with = "String")]
     pub collected_at: DateTime<Utc>,
 }
 
@@ -413,7 +416,7 @@ impl Default for DiscoveryStats {
 }
 
 /// Health status enumeration
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum HealthStatus {
     Healthy,
     Degraded,
@@ -422,10 +425,11 @@ pub enum HealthStatus {
 }
 
 /// Health check result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct HealthCheckResult {
     pub status: HealthStatus,
     pub message: String,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub details: HashMap<String, serde_json::Value>,
 }

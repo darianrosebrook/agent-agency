@@ -3,13 +3,14 @@
 //! Consolidated from workers crate - provides autonomous execution capabilities
 //! with arbitration and decision-making integration.
 
+use schemars::JsonSchema;
 use crate::worker_errors::WorkerError;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 /// Configuration for autonomous execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AutonomousExecutorConfig {
     pub max_iterations: usize,
     pub decision_threshold: f32,
@@ -27,7 +28,7 @@ impl Default for AutonomousExecutorConfig {
 }
 
 /// Result of autonomous execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionResult {
     pub task_id: String,
     pub success: bool,

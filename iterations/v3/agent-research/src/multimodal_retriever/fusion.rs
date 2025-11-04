@@ -5,8 +5,9 @@ use anyhow::Result;
 use super::core::MultimodalSearchResult;
 
 /// Fusion engine for combining results from different modalities
-#[derive(Debug)]
-pub struct FusionEngine {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct FusionEnginee {
     config: super::core::MultimodalRetrieverConfig,
 }
 

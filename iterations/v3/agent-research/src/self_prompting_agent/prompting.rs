@@ -2,10 +2,12 @@
 //!
 //! Provides prompt engineering, validation, and optimization.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 
 /// Prompt frame with metadata
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PromptFrame {
     pub content: String,
     pub metadata: HashMap<String, String>,
@@ -14,7 +16,8 @@ pub struct PromptFrame {
 }
 
 /// Patch action for prompt modification
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PatchAction {
     pub action_type: String,
     pub target: String,
@@ -58,7 +61,8 @@ impl ToolCallValidator {
 }
 
 /// Tool schema error
-#[derive(Debug, thiserror::Error)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
 pub enum ToolSchemaError {
     #[error("Invalid tool schema")]
     InvalidSchema,
@@ -130,7 +134,8 @@ impl AgentTelemetryCollector {
 }
 
 /// Telemetry event
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TelemetryEvent {
     pub event_type: String,
     pub timestamp: chrono::DateTime<chrono::Utc>,
@@ -166,7 +171,8 @@ impl PromptOptimizer {
 }
 
 /// Prompt analysis result
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PromptAnalysis {
     pub original_prompt: String,
     pub quality_score: f64,

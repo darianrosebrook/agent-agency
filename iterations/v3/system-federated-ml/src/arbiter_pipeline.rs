@@ -4,6 +4,7 @@
 //! supporting 1000+ tasks/minute sustained throughput while maintaining CAWS compliance.
 //! Now uses common-pipeline framework for standardized patterns.
 
+use schemars::JsonSchema;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -15,7 +16,7 @@ use common_pipeline::{SequentialPipeline, SequentialPipelineConfig, PipelineStag
 
 /// Configuration for arbiter decision pipeline optimization
 /// Now wraps SequentialPipelineConfig with domain-specific settings
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DecisionPipelineConfig {
     /// Base sequential pipeline configuration
     #[serde(flatten)]
@@ -62,7 +63,7 @@ pub struct ArbiterPipelineOptimizer {
 }
 
 /// Input for decision pipeline
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DecisionInput {
     /// Task description
     pub task_description: String,
@@ -73,7 +74,7 @@ pub struct DecisionInput {
 }
 
 /// Cached decision result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DecisionResult {
     /// Task classification
     pub task_type: String,
@@ -88,7 +89,7 @@ pub struct DecisionResult {
 }
 
 /// Decision pipeline stages
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum DecisionStage {
     CacheLookup,
     Classification,
@@ -199,7 +200,7 @@ impl CommonPipelineStage<DecisionInput, DecisionResult> for DecisionStageAdapter
 }
 
 /// Pipeline performance metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PipelineMetrics {
     /// Average decision latency (ms)
     pub avg_latency_ms: f64,

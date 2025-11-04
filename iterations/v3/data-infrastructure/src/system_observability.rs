@@ -3,10 +3,11 @@
 //! Placeholder module for system observability functionality.
 //! This provides basic SLO (Service Level Objective) definitions.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Service Level Objective definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SLO {
     pub name: String,
     pub description: String,

@@ -1,6 +1,7 @@
 /// Quality guardrails for ensuring optimization doesn't compromise
 /// system reliability, accuracy, or compliance requirements.
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -17,7 +18,7 @@ pub struct QualityGuardrails {
 }
 
 /// Individual compliance check result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ComplianceCheck {
     /// Check identifier
     pub check_id: String,
@@ -36,7 +37,7 @@ pub struct ComplianceCheck {
 }
 
 /// Check status enumeration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum CheckStatus {
     /// Check passed successfully
     Passed,
@@ -49,7 +50,7 @@ pub enum CheckStatus {
 }
 
 /// Severity levels for checks
-#[derive(Debug, Clone, Serialize, Deserialize, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialOrd, Ord, PartialEq, Eq, JsonSchema)]
 pub enum Severity {
     /// Informational only
     Info,
@@ -62,7 +63,7 @@ pub enum Severity {
 }
 
 /// Performance threshold configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceThreshold {
     /// Minimum acceptable throughput (ops/sec)
     pub min_throughput: f32,
@@ -77,7 +78,7 @@ pub struct PerformanceThreshold {
 }
 
 /// Guardrail check configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct GuardrailCheck {
     check_type: CheckType,
     enabled: bool,
@@ -86,7 +87,7 @@ struct GuardrailCheck {
     consecutive_failures: u32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 enum CheckType {
     Accuracy,
     Performance,
@@ -478,7 +479,7 @@ pub struct RemediationAction {
 }
 
 /// Risk level for remediation actions
-#[derive(Debug, Clone, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialOrd, Ord, PartialEq, Eq, JsonSchema)]
 pub enum RiskLevel {
     Low,
     Medium,

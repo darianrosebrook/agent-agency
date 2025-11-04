@@ -4,16 +4,18 @@
 //! test results, coverage data, and complete audit trails.
 
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use uuid::Uuid;
 
 /// All artifacts produced during task execution with provenance
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct ExecutionArtifacts {
     /// Contract version for compatibility
     pub version: String,
 
     /// Task identifier
+    #[schemars(with = "String")]
     pub task_id: Uuid,
 
     /// Working spec identifier
@@ -60,7 +62,7 @@ impl Default for ExecutionArtifacts {
 }
 
 /// All code changes made during execution
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct CodeChanges {
     /// Unified diffs for all code changes
@@ -90,8 +92,7 @@ impl Default for CodeChanges {
 }
 
 /// Unified diff artifact
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct DiffArtifact {
     /// File path
     pub file_path: String,
@@ -114,7 +115,7 @@ pub struct DiffArtifact {
 }
 
 /// Type of code change
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ChangeType {
     Added,
@@ -124,8 +125,7 @@ pub enum ChangeType {
 }
 
 /// Individual diff hunk
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct DiffHunk {
     /// Old file starting line
     pub old_start: u32,
@@ -144,8 +144,7 @@ pub struct DiffHunk {
 }
 
 /// Newly created file artifact
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct NewFileArtifact {
     /// File path
     pub path: String,
@@ -159,8 +158,7 @@ pub struct NewFileArtifact {
 }
 
 /// Code change statistics
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct CodeChangeStats {
     /// Total files modified
     pub files_modified: u32,
@@ -187,7 +185,7 @@ impl Default for CodeChangeStats {
 }
 
 /// All test artifacts and execution results
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct TestArtifacts {
     /// Unit test execution results
@@ -216,8 +214,7 @@ impl Default for TestArtifacts {
 }
 
 /// Test suite execution results
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct TestSuiteResults {
     /// Total tests in suite
     pub total: u32,
@@ -253,7 +250,7 @@ impl Default for TestSuiteResults {
 }
 
 /// Individual test result
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct TestResult {
     /// Test name
@@ -280,7 +277,7 @@ pub struct TestResult {
 }
 
 /// Test execution status
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum TestStatus {
     Passed,
@@ -290,8 +287,7 @@ pub enum TestStatus {
 }
 
 /// End-to-end test execution results
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct E2eTestResults {
     /// Total E2E tests
     pub total: u32,
@@ -327,7 +323,7 @@ impl Default for E2eTestResults {
 }
 
 /// Individual E2E scenario result
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct E2eScenarioResult {
     /// Scenario name
@@ -353,7 +349,7 @@ pub struct E2eScenarioResult {
 }
 
 /// Test file information
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct TestFileInfo {
     /// Test file path
@@ -368,7 +364,7 @@ pub struct TestFileInfo {
 }
 
 /// Type of test file
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum TestFileType {
     Unit,
@@ -378,7 +374,7 @@ pub enum TestFileType {
 }
 
 /// Test file status
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum TestFileStatus {
     New,
@@ -387,7 +383,7 @@ pub enum TestFileStatus {
 }
 
 /// Code coverage analysis results
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct CoverageResults {
     /// Percentage of lines covered by tests (0.0-1.0)
@@ -430,7 +426,7 @@ impl Default for CoverageResults {
 }
 
 /// Uncovered lines in a file
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct UncoveredLines {
     /// File path
@@ -441,7 +437,7 @@ pub struct UncoveredLines {
 }
 
 /// Uncovered branch in code
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct UncoveredBranch {
     /// File path
@@ -455,7 +451,7 @@ pub struct UncoveredBranch {
 }
 
 /// Linting and static analysis results
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct LintingResults {
     /// Total number of issues found
@@ -497,7 +493,7 @@ impl Default for LintingResults {
 }
 
 /// Individual linting issue
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct LintingIssue {
     /// Line number
@@ -522,7 +518,7 @@ pub struct LintingIssue {
 }
 
 /// Issue severity levels
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum IssueSeverity {
     Error,
@@ -531,10 +527,10 @@ pub enum IssueSeverity {
 }
 
 /// Complete provenance and audit trail
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct Provenance {
     /// Unique execution identifier
+    #[schemars(with = "String")]
     pub execution_id: Uuid,
 
     /// Worker that performed the execution
@@ -546,10 +542,12 @@ pub struct Provenance {
     pub worker_version: Option<String>,
 
     /// When execution started
+    #[schemars(with = "String")]
     pub started_at: chrono::DateTime<chrono::Utc>,
 
     /// When execution completed
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "String")]
     pub completed_at: Option<chrono::DateTime<chrono::Utc>>,
 
     /// Total execution duration in milliseconds
@@ -587,7 +585,7 @@ impl Default for Provenance {
 }
 
 /// Execution environment details
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct ExecutionEnvironment {
     /// Operating system
@@ -616,7 +614,7 @@ impl Default for ExecutionEnvironment {
 }
 
 /// Git repository information
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct GitInfo {
     /// Current commit hash
@@ -645,7 +643,7 @@ impl Default for GitInfo {
 }
 
 /// Deterministic seeds used for reproducible execution
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct ExecutionSeeds {
     /// Time seed for deterministic timestamps
@@ -669,10 +667,11 @@ impl Default for ExecutionSeeds {
 }
 
 /// Individual audit event in the execution trail
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct AuditEvent {
     /// When the event occurred
+    #[schemars(with = "String")]
     pub timestamp: chrono::DateTime<chrono::Utc>,
 
     /// Event type or description
@@ -684,8 +683,7 @@ pub struct AuditEvent {
 }
 
 /// Artifact storage and management metadata
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct ArtifactMetadata {
     /// Whether artifacts were compressed for storage
     #[serde(skip_serializing_if = "Option::is_none")]

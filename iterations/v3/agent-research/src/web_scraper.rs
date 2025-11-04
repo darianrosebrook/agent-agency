@@ -9,8 +9,9 @@ use tokio::sync::RwLock;
 use tracing::info;
 
 /// Web scraper for content extraction
-#[derive(Debug)]
-pub struct WebScraper {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct WebScraperr {
     config: WebScrapingConfig,
     client: reqwest::Client,
     cache: Arc<RwLock<std::collections::HashMap<String, WebScrapingResult>>>,

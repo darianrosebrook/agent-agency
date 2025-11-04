@@ -3,6 +3,7 @@
 //! This module manages the state transitions and workflow orchestration
 //! for council review sessions.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 
@@ -11,8 +12,9 @@ use crate::council::{CouncilSession, SessionStatus};
 use crate::decision_making::FinalDecision;
 
 /// Workflow orchestrator for council sessions
-#[derive(Debug)]
-pub struct CouncilWorkflow {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct CouncilWorkflow {
     session: CouncilSession,
     workflow_state: WorkflowState,
     state_history: Vec<StateTransition>,
@@ -20,8 +22,9 @@ pub struct CouncilWorkflow {
 }
 
 /// Current workflow state
-#[derive(Debug, Clone, PartialEq)]
-pub enum WorkflowState {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum WorkflowState {
     /// Session initialized
     Initialized,
 
@@ -57,18 +60,21 @@ pub enum WorkflowState {
 }
 
 /// State transition record
-#[derive(Debug, Clone)]
-pub struct StateTransition {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct StateTransition {
     pub from_state: WorkflowState,
     pub to_state: WorkflowState,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub trigger: TransitionTrigger,
     pub metadata: HashMap<String, String>,
 }
 
 /// What triggered the state transition
-#[derive(Debug, Clone)]
-pub enum TransitionTrigger {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum TransitionTrigger {
     /// Automatic transition based on workflow rules
     Automatic { rule: String },
 
@@ -337,8 +343,9 @@ impl CouncilWorkflow {
 }
 
 /// Workflow summary for reporting
-#[derive(Debug, Clone)]
-pub struct WorkflowSummary {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct WorkflowSummary {
     pub session_id: String,
     pub current_state: WorkflowState,
     pub total_transitions: usize,
@@ -349,8 +356,9 @@ pub struct WorkflowSummary {
 }
 
 /// Workflow manager for coordinating multiple council sessions
-#[derive(Debug)]
-pub struct WorkflowManager {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct WorkflowManager {
     active_workflows: HashMap<String, CouncilWorkflow>,
     completed_workflows: Vec<CouncilWorkflow>,
     max_concurrent_sessions: usize,
@@ -460,8 +468,9 @@ impl WorkflowManager {
 }
 
 /// Workflow statistics
-#[derive(Debug, Clone)]
-pub struct WorkflowStatistics {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct WorkflowStatistics {
     pub total_active: usize,
     pub total_completed: usize,
     pub completed_successful: usize,

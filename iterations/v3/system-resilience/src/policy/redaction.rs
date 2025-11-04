@@ -1,9 +1,10 @@
 use regex::Regex;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Severity levels for redaction patterns
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum PatternSeverity {
     Low,
     Medium,
@@ -12,7 +13,7 @@ pub enum PatternSeverity {
 }
 
 /// Result of a redaction check
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum CheckResult {
     Allowed,
     Denied {
@@ -23,7 +24,7 @@ pub enum CheckResult {
 }
 
 /// Reasons for denying content
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum DenialReason {
     Secret,
     Policy,
@@ -31,7 +32,7 @@ pub enum DenialReason {
 }
 
 /// Redaction pattern definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RedactionPattern {
     pub name: String,
     pub patterns: Vec<String>,

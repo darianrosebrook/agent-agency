@@ -28,14 +28,13 @@ pub mod inference;
 pub mod deployment;
 pub mod monitoring;
 
-pub use models::*;
+// Export specific types to avoid registry naming conflicts
+pub use models::ModelRegistry;
 pub use inference::*;
-pub use deployment::*;
+pub use deployment::{DeploymentRegistry, DeploymentInfo, LoadBalancer};
 pub use monitoring::*;
 pub use types::*;
 
-// Re-export load balancer for compatibility with existing demos
-pub use deployment::load_balancer::LoadBalancer;
 
 /// Main model management orchestrator
 ///
@@ -139,16 +138,15 @@ impl ModelManager {
         model_id: &str,
         tuning_params: TuningParameters,
     ) -> Result<TuningResult, ModelManagementError> {
-        use tracing::{info, warn};
-        
+        use tracing::info;
         // Verify model exists
-        let model_info = self.model_registry.get_model(model_id).await?
+        let _model_info = self.model_registry.get_model(model_id).await?
             .ok_or_else(|| ModelManagementError::ModelNotFound(model_id.to_string()))?;
         
         info!("Tuning parameters for model {}: {:?}", model_id, tuning_params.parameters);
         
         // If validation criteria specified, perform test run
-        if let Some(ref validation) = tuning_params.validation_criteria {
+        if let Some(ref _validation) = tuning_params.validation_criteria {
             info!("Running validation test for parameter tuning");
             
             // PLACEHOLDER: In a real implementation, this would:

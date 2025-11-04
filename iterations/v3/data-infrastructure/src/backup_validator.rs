@@ -3,6 +3,7 @@
 //! Comprehensive system for validating backup integrity, testing restore procedures,
 //! and ensuring backups are actually usable in disaster scenarios.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
@@ -17,7 +18,7 @@ use tempfile;
 use crate::simple_client::DatabaseClient;
 
 /// Backup validation configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BackupValidationConfig {
     /// Enable integrity checks
     pub enable_integrity_checks: bool,
@@ -50,9 +51,11 @@ impl Default for BackupValidationConfig {
 }
 
 /// Validation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationResult {
     pub backup_id: String,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub overall_success: bool,
     pub validation_duration_ms: u64,
@@ -63,7 +66,7 @@ pub struct ValidationResult {
     pub score: u8, // 0-100 quality score
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct IntegrityCheckResults {
     pub file_integrity_ok: bool,
     pub checksum_verification_ok: bool,
@@ -73,7 +76,7 @@ pub struct IntegrityCheckResults {
     pub issues_found: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RestoreTestResults {
     pub restore_successful: bool,
     pub data_integrity_ok: bool,
@@ -92,7 +95,7 @@ struct RestoredDataValidation {
     consistency_score: f64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub enum RiskLevel {
     Low,      // Backup is highly reliable
     Medium,   // Backup has some issues but generally usable
@@ -863,7 +866,7 @@ impl BackupValidator {
 }
 
 /// Backup health metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BackupHealthMetrics {
     pub total_validations: usize,
     pub success_rate: f64,

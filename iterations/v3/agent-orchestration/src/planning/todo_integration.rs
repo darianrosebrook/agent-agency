@@ -23,7 +23,7 @@ pub struct TodoIntegration {
     db_ops: Arc<dyn DatabaseOperations>,
 
     /// Active TODO instances by plan ID
-    plan_todos: HashMap<Uuid, Uuid>, // plan_id -> todo_instance_id
+    plan_todos: HashMap<String, Uuid>, // plan_id -> todo_instance_id
 
     /// Quality gate enforcer
     quality_enforcer: TodoQualityEnforcer,
@@ -79,14 +79,14 @@ impl TodoIntegration {
             )?
         };
 
-        // Parse plan id to Uuid
-        let plan_id = Uuid::parse_str(&plan.contract_plan.id).unwrap_or_else(|_| Uuid::new_v4());
+        // Get plan id as String
+        let plan_id = plan.contract_plan.id.to_string();
 
         // Track the association
-        self.plan_todos.insert(plan_id, todo_instance_id);
+        self.plan_todos.insert(plan_id.clone(), todo_instance_id);
 
         // Persist the association
-        self.persist_plan_todo_association(plan_id, todo_instance_id).await?;
+        self.persist_plan_todo_association(Uuid::parse_str(&plan_id)?, todo_instance_id).await?;
 
         info!(
             plan_id = %plan.contract_plan.id,
@@ -100,7 +100,7 @@ impl TodoIntegration {
 
     /// Check if plan can progress to next milestone
     pub async fn can_progress_to_milestone(&self, plan_id: Uuid, milestone_id: &str) -> Result<bool> {
-        let todo_instance_id = self.plan_todos.get(&plan_id)
+        let todo_instance_id = self.plan_todos.get(&plan_id.to_string())
             .ok_or_else(|| anyhow!("No TODO instance for plan {}", plan_id))?;
 
         // Get the TODO instance and check dependencies
@@ -123,7 +123,7 @@ impl TodoIntegration {
 
     /// Complete TODO step when milestone is completed
     pub async fn milestone_completed(&mut self, plan_id: Uuid, milestone_id: &str) -> Result<()> {
-        let todo_instance_id = self.plan_todos.get(&plan_id)
+        let todo_instance_id = self.plan_todos.get(&plan_id.to_string())
             .ok_or_else(|| anyhow!("No TODO instance for plan {}", plan_id))?;
 
         // Map milestone to TODO step
@@ -152,7 +152,7 @@ impl TodoIntegration {
 
     /// Check for blocked progress due to TODO requirements
     pub async fn check_blocked_progress(&self, plan_id: Uuid) -> Result<Vec<String>> {
-        let todo_instance_id = self.plan_todos.get(&plan_id)
+        let todo_instance_id = self.plan_todos.get(&plan_id.to_string())
             .ok_or_else(|| anyhow!("No TODO instance for plan {}", plan_id))?;
 
         // Get instance and check for blocking conditions
@@ -200,7 +200,7 @@ impl TodoIntegration {
 
     /// Get TODO progress for plan
     pub async fn get_plan_progress(&self, plan_id: Uuid) -> Result<crate::planning::todo_template::TodoProgress> {
-        let todo_instance_id = self.plan_todos.get(&plan_id)
+        let todo_instance_id = self.plan_todos.get(&plan_id.to_string())
             .ok_or_else(|| anyhow!("No TODO instance for plan {}", plan_id))?;
 
         // Get instance progress from the TODO system
@@ -397,14 +397,14 @@ impl TodoQualityEnforcer {
                             .unwrap_or(false)
                     }
                 })
-                .max_by_key(|t| t.collected_at);
+                .max_by_key(|t| t.timestamp);
             
-            // Extract result from metric_value JSONB
+            // Extract result from metadata (metric_value is f64, not JSON)
             if let Some(gate_telemetry) = latest_gate {
-                let result = gate_telemetry.metric_value
+                let result = gate_telemetry.metadata
                     .get("result")
                     .and_then(|v| v.as_bool())
-                    .unwrap_or(false);
+                    .unwrap_or(gate_telemetry.metric_value > 0.0);
                 
                 debug!(
                     plan_id = %plan_id,
@@ -632,6 +632,5 @@ mod tests {
         assert!(result.is_ok());
     }
 }
-
 
 

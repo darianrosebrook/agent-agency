@@ -3,6 +3,7 @@
 //! This provides a simple interface to the complex DatabaseClient
 //! for backwards compatibility with existing code.
 
+use schemars::JsonSchema;
 use crate::client::orchestrator::DatabaseClient as ComplexDatabaseClient;
 use crate::database_config::DatabaseConfig;
 use crate::database_operations::DatabaseOperations;
@@ -13,8 +14,9 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 /// Simple database client that wraps the complex DatabaseClient
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, JsonSchema)]
 pub struct DatabaseClient {
+    #[schemars(skip)]
     inner: Arc<ComplexDatabaseClient>,
 }
 
@@ -689,7 +691,7 @@ impl DatabaseClient {
 /// let adapter = ProvenanceClientAdapter::new(client);
 /// // Agent-research can then implement DatabaseClientTrait for ProvenanceClientAdapter
 /// ```
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, JsonSchema)]
 pub struct ProvenanceClientAdapter {
     client: Arc<DatabaseClient>,
 }

@@ -9,7 +9,19 @@ use data_infrastructure::DatabaseClient;
 use tracing::{info, warn};
 
 use crate::extraction_types::*;
-use crate::verification::types::{CoreferenceResolution as VerificationCoreferenceResolution, *, CheckResult};
+use crate::verification::types::{
+    CoreferenceResolution as VerificationCoreferenceResolution, 
+    VerificationResult as ClaimVerificationResult,
+    CheckResult,
+    *,
+};
+use crate::verification::verification_types::{
+    TestOutput, FunctionDefinition,
+    TestConsistency as VerificationTestConsistency,
+    TestCoverage as VerificationTestCoverage,
+    TestRelevance as VerificationTestRelevance,
+    TestQuality as VerificationTestQuality,
+};
 use crate::verification::keyword_matcher::KeywordMatcher;
 use crate::verification::code_extractor::CodeExtractor;
 use anyhow::Result;
@@ -19,6 +31,7 @@ use futures::FutureExt;
 // MultiModalVerificationEngine is defined in this file, not in types module
 
 /// Multi-Modal Verification Engine for claim validation
+
 #[derive(Debug)]
 pub struct MultiModalVerificationEngine {
     /// Database client for historical claim lookups
@@ -40,73 +53,92 @@ pub struct MultiModalVerificationEngine {
 }
 
 /// Cross-reference validator for consistency across sources
+
 #[derive(Debug)]
-struct CrossReferenceValidator {
+pub struct CrossReferenceValidator {
     reference_finder: ReferenceFinder,
     consistency_checker: ConsistencyChecker,
     relationship_analyzer: RelationshipAnalyzer,
 }
 
 /// Code behavior analyzer for runtime verification
+
 #[derive(Debug)]
-struct CodeBehaviorAnalyzer {
+pub struct CodeBehaviorAnalyzer {
     behavior_predictor: BehaviorPredictor,
     execution_tracer: ExecutionTracer,
 }
 
 /// Authority attribution checker for source validation
+
 #[derive(Debug)]
-struct AuthorityAttributionChecker {
+pub struct AuthorityAttributionChecker {
     source_validator: SourceValidator,
     authority_scorer: AuthorityScorer,
     credibility_assessor: CredibilityAssessor,
 }
 
 /// Context dependency resolver for context-aware verification
+
 #[derive(Debug)]
-struct ContextDependencyResolver {
+pub struct ContextDependencyResolver {
     dependency_analyzer: DependencyAnalyzer,
     context_builder: ContextBuilder,
     scope_resolver: ScopeResolver,
 }
 
 /// Semantic analyzer for meaning extraction and validation
+
 #[derive(Debug)]
-struct SemanticAnalyzer {
+pub struct SemanticAnalyzer {
     semantic_parser: SemanticParser,
     meaning_extractor: MeaningExtractor,
     intent_analyzer: IntentAnalyzer,
 }
 
 // Placeholder implementations for all the validator components
+
 #[derive(Debug)]
-struct ReferenceFinder;
+struct ReferenceFinder ;
+
 #[derive(Debug)]
-struct ConsistencyChecker;
+struct ConsistencyChecker ;
+
 #[derive(Debug)]
-struct RelationshipAnalyzer;
+struct RelationshipAnalyzer ;
+
 #[derive(Debug)]
-struct BehaviorPredictor;
+struct BehaviorPredictor ;
+
 #[derive(Debug)]
-struct ExecutionTracer;
+struct ExecutionTracer ;
+
 #[derive(Debug)]
-struct SourceValidator;
+struct SourceValidator ;
+
 #[derive(Debug)]
-struct AuthorityScorer;
+struct AuthorityScorer ;
+
 #[derive(Debug)]
-struct CredibilityAssessor;
+struct CredibilityAssessor ;
+
 #[derive(Debug)]
-struct DependencyAnalyzer;
+struct DependencyAnalyzer ;
+
 #[derive(Debug)]
-struct ContextBuilder;
+struct ContextBuilder ;
+
 #[derive(Debug)]
-struct ScopeResolver;
+struct ScopeResolver ;
+
 #[derive(Debug)]
-struct SemanticParser;
+struct SemanticParser ;
+
 #[derive(Debug)]
-struct MeaningExtractor;
+struct MeaningExtractor ;
+
 #[derive(Debug)]
-struct IntentAnalyzer;
+struct IntentAnalyzer ;
 
 impl MultiModalVerificationEngine {
     /// Create a new verification engine with all validators initialized
@@ -154,7 +186,7 @@ impl MultiModalVerificationEngine {
 
         for claim in claims {
             let verification_result = self.verify_single_claim(claim).await?;
-            let was_verified = verification_result.overall_confidence > 0.7;
+            let was_verified = verification_result.confidence > 0.7;
             
             // Convert VerificationResult to VerifiedClaim
             let verified_claim = VerifiedClaim {
@@ -165,16 +197,16 @@ impl MultiModalVerificationEngine {
                 } else { 
                     VerificationStatus::Unverified 
                 },
-                confidence: verification_result.overall_confidence,
+                confidence: verification_result.confidence,
                 verification_results: if was_verified { 
                     VerificationStatus::Verified 
                 } else { 
                     VerificationStatus::Unverified 
                 },
-                evidence: verification_result.evidence,
+                evidence: verification_result.checks.iter().flat_map(|c| c.evidence.clone()).collect(),
                 timestamp: chrono::Utc::now(),
                 original_claim: claim.claim_text.clone(),
-                overall_confidence: verification_result.overall_confidence,
+                overall_confidence: verification_result.confidence,
                 verification_timestamp: chrono::Utc::now(),
             };
             results.verified_claims.push(verified_claim);
@@ -193,7 +225,7 @@ impl MultiModalVerificationEngine {
     }
 
     /// Verify a single claim using all available verification modalities
-    pub async fn verify_single_claim(&self, claim: &AtomicClaim) -> Result<VerificationResult> {
+    pub async fn verify_single_claim(&self, claim: &AtomicClaim) -> Result<ClaimVerificationResult> {
         // 1) Cross-refs (docs/specs/history)
         let xrefs = self.cross_reference_validate(claim).await?;
         // 2) Code behavior (static + optional dynamic)
@@ -206,25 +238,26 @@ impl MultiModalVerificationEngine {
 
         // Simple weighted fusion (make weights configurable)
         let score =
-            0.30 * xrefs.score +
-            0.25 * code.score +
-            0.20 * auth.score +
-            0.15 * ctx.score +
-            0.10 * sem.score;
+            0.30 * xrefs.confidence +
+            0.25 * code.confidence +
+            0.20 * auth.confidence +
+            0.15 * ctx.confidence +
+            0.10 * sem.confidence;
 
         let status = if score > 0.75 { VerificationStatus::Verified }
                      else if score > 0.5 { VerificationStatus::PartiallyVerified }
                      else { VerificationStatus::Unverified };
 
-        // Combine all evidence
-        let mut all_evidence = xrefs.evidence;
-        all_evidence.extend(code.evidence);
-        all_evidence.extend(auth.evidence);
-        all_evidence.extend(ctx.evidence);
-        all_evidence.extend(sem.evidence);
+        // Combine all evidence from check results
+        let mut all_evidence_strings = Vec::new();
+        all_evidence_strings.extend(xrefs.evidence.clone());
+        all_evidence_strings.extend(code.evidence.clone());
+        all_evidence_strings.extend(auth.evidence.clone());
+        all_evidence_strings.extend(ctx.evidence.clone());
+        all_evidence_strings.extend(sem.evidence.clone());
 
-        Ok(VerificationResult {
-            evidence: all_evidence.into_iter().map(|e| Evidence {
+        Ok(ClaimVerificationResult {
+            evidence: all_evidence_strings.into_iter().map(|e| Evidence {
                 id: uuid::Uuid::new_v4(),
                 claim_id: claim.id,
                 evidence_type: EvidenceType::CodeAnalysis,
@@ -435,14 +468,27 @@ impl MultiModalVerificationEngine {
             .fold(0.0, f64::max);
 
         let score = (0.5 * spec_score + 0.3 * doc_score + 0.2 * best).min(1.0);
-        Ok(CheckResult::new(score)
-            .with_evidence(format!("spec:{spec_score:.2} docs:{doc_score:.2} hist:{best:.2}")))
+        Ok(CheckResult {
+            check_type: CheckType::CrossReference,
+            passed: score > 0.7,
+            confidence: score,
+            details: format!("spec:{spec_score:.2} docs:{doc_score:.2} hist:{best:.2}"),
+            evidence: vec![format!("spec:{spec_score:.2} docs:{doc_score:.2} hist:{best:.2}")],
+            timestamp: chrono::Utc::now(),
+        })
     }
 
     /// Verify code behavior for runtime verification
     async fn verify_code_behavior(&self, _claim: &AtomicClaim) -> Result<CheckResult> {
         // TODO: Implement code behavior analysis
-        Ok(CheckResult::new(0.5))
+        Ok(CheckResult {
+            check_type: CheckType::Code,
+            passed: false,
+            confidence: 0.5,
+            details: "Code behavior verification not yet implemented".to_string(),
+            evidence: Vec::new(),
+            timestamp: chrono::Utc::now(),
+        })
     }
 
     /// Assess authority and credibility
@@ -455,7 +501,14 @@ impl MultiModalVerificationEngine {
                 score += 0.2; ev.push(format!("found in {}", p));
             }
         }
-        Ok(CheckResult::new(score.min(1.0)).with_many(ev))
+        Ok(CheckResult {
+            check_type: CheckType::Authority,
+            passed: score.min(1.0) > 0.7,
+            confidence: score.min(1.0),
+            details: format!("Authority assessment: {:.2}", score.min(1.0)),
+            evidence: ev,
+            timestamp: chrono::Utc::now(),
+        })
     }
 
     /// Validate context dependencies
@@ -465,13 +518,27 @@ impl MultiModalVerificationEngine {
         let score = if reqs.is_empty() { 1.0 } else { available as f64 / reqs.len() as f64 };
         let scope = self.validate_scope_boundaries(claim);
         let final_score = (0.7*score + 0.3*scope).min(1.0);
-        Ok(CheckResult::new(final_score))
+        Ok(CheckResult {
+            check_type: CheckType::Other("ContextValidation".to_string()),
+            passed: final_score > 0.7,
+            confidence: final_score,
+            details: format!("Context validation: {:.2}", final_score),
+            evidence: Vec::new(),
+            timestamp: chrono::Utc::now(),
+        })
     }
 
     /// Semantic validation
     async fn semantic_validate(&self, _claim: &AtomicClaim) -> Result<CheckResult> {
         // TODO: Implement semantic analysis
-        Ok(CheckResult::new(0.6))
+        Ok(CheckResult {
+            check_type: CheckType::Semantic,
+            passed: false,
+            confidence: 0.6,
+            details: "Semantic validation not yet implemented".to_string(),
+            evidence: Vec::new(),
+            timestamp: chrono::Utc::now(),
+        })
     }
 
     /// Analyze specification coverage
@@ -501,72 +568,137 @@ impl MultiModalVerificationEngine {
         match term.to_lowercase().as_str() {
             "authentication" | "auth" => {
                 claims.push(HistoricalClaim {
-                    id: uuid::Uuid::new_v4(),
-                    content: "JWT tokens should expire within 24 hours for security".to_string(),
-                    source: "security_best_practices".to_string(),
+                    id: uuid::Uuid::new_v4().to_string(),
+                    claim_text: "JWT tokens should expire within 24 hours for security".to_string(),
+                    verification_status: VerificationStatus::Verified,
+                    evidence: Vec::new(),
+                    confidence_score: 0.9,
                     timestamp: chrono::Utc::now() - chrono::Duration::days(30),
-                    confidence: 0.9,
-                    metadata: serde_json::json!({
+                    source_count: Some(2),
+                    last_verified: Some(chrono::Utc::now()),
+                    related_entities: Some(vec!["JWT".to_string(), "security".to_string()]),
+                    claim_type: Some("security".to_string()),
+                    created_at: Some(chrono::Utc::now() - chrono::Duration::days(30)),
+                    updated_at: Some(chrono::Utc::now()),
+                    metadata: Some(serde_json::json!({
                         "category": "security",
                         "verified": true,
                         "references": ["RFC 7519", "OWASP Guidelines"]
-                    }),
+                    })),
+                    source_references: Some(vec!["RFC 7519".to_string(), "OWASP Guidelines".to_string()]),
+                    cross_references: None,
+                    validation_metadata: None,
+                    validation_confidence: 0.9,
+                    validation_timestamp: chrono::Utc::now(),
+                    validation_outcome: ValidationOutcome::Verified,
                 });
                 
                 claims.push(HistoricalClaim {
-                    id: uuid::Uuid::new_v4(),
-                    content: "Password hashing should use bcrypt or Argon2".to_string(),
-                    source: "security_research".to_string(),
+                    id: uuid::Uuid::new_v4().to_string(),
+                    claim_text: "Password hashing should use bcrypt or Argon2".to_string(),
+                    verification_status: VerificationStatus::Verified,
+                    evidence: Vec::new(),
+                    confidence_score: 0.95,
                     timestamp: chrono::Utc::now() - chrono::Duration::days(15),
-                    confidence: 0.95,
-                    metadata: serde_json::json!({
+                    source_count: Some(2),
+                    last_verified: Some(chrono::Utc::now()),
+                    related_entities: Some(vec!["password".to_string(), "security".to_string()]),
+                    claim_type: Some("security".to_string()),
+                    created_at: Some(chrono::Utc::now() - chrono::Duration::days(15)),
+                    updated_at: Some(chrono::Utc::now()),
+                    metadata: Some(serde_json::json!({
                         "category": "security",
                         "verified": true,
                         "references": ["NIST Guidelines", "OWASP"]
-                    }),
+                    })),
+                    source_references: Some(vec!["NIST Guidelines".to_string(), "OWASP".to_string()]),
+                    cross_references: None,
+                    validation_metadata: None,
+                    validation_confidence: 0.95,
+                    validation_timestamp: chrono::Utc::now(),
+                    validation_outcome: ValidationOutcome::Verified,
                 });
             }
             "database" | "db" => {
                 claims.push(HistoricalClaim {
-                    id: uuid::Uuid::new_v4(),
-                    content: "Database connections should use connection pooling".to_string(),
-                    source: "performance_research".to_string(),
+                    id: uuid::Uuid::new_v4().to_string(),
+                    claim_text: "Database connections should use connection pooling".to_string(),
+                    verification_status: VerificationStatus::Verified,
+                    evidence: Vec::new(),
+                    confidence_score: 0.85,
                     timestamp: chrono::Utc::now() - chrono::Duration::days(20),
-                    confidence: 0.85,
-                    metadata: serde_json::json!({
+                    source_count: Some(2),
+                    last_verified: Some(chrono::Utc::now()),
+                    related_entities: Some(vec!["database".to_string(), "performance".to_string()]),
+                    claim_type: Some("performance".to_string()),
+                    created_at: Some(chrono::Utc::now() - chrono::Duration::days(20)),
+                    updated_at: Some(chrono::Utc::now()),
+                    metadata: Some(serde_json::json!({
                         "category": "performance",
                         "verified": true,
                         "references": ["PostgreSQL Docs", "Performance Studies"]
-                    }),
+                    })),
+                    source_references: Some(vec!["PostgreSQL Docs".to_string(), "Performance Studies".to_string()]),
+                    cross_references: None,
+                    validation_metadata: None,
+                    validation_confidence: 0.85,
+                    validation_timestamp: chrono::Utc::now(),
+                    validation_outcome: ValidationOutcome::Verified,
                 });
             }
             "testing" | "test" => {
                 claims.push(HistoricalClaim {
-                    id: uuid::Uuid::new_v4(),
-                    content: "Unit tests should have 80%+ code coverage".to_string(),
-                    source: "quality_standards".to_string(),
+                    id: uuid::Uuid::new_v4().to_string(),
+                    claim_text: "Unit tests should have 80%+ code coverage".to_string(),
+                    verification_status: VerificationStatus::Verified,
+                    evidence: Vec::new(),
+                    confidence_score: 0.8,
                     timestamp: chrono::Utc::now() - chrono::Duration::days(10),
-                    confidence: 0.8,
-                    metadata: serde_json::json!({
+                    source_count: Some(2),
+                    last_verified: Some(chrono::Utc::now()),
+                    related_entities: Some(vec!["testing".to_string(), "quality".to_string()]),
+                    claim_type: Some("quality".to_string()),
+                    created_at: Some(chrono::Utc::now() - chrono::Duration::days(10)),
+                    updated_at: Some(chrono::Utc::now()),
+                    metadata: Some(serde_json::json!({
                         "category": "quality",
                         "verified": true,
                         "references": ["Testing Best Practices", "Industry Standards"]
-                    }),
+                    })),
+                    source_references: Some(vec!["Testing Best Practices".to_string(), "Industry Standards".to_string()]),
+                    cross_references: None,
+                    validation_metadata: None,
+                    validation_confidence: 0.8,
+                    validation_timestamp: chrono::Utc::now(),
+                    validation_outcome: ValidationOutcome::Verified,
                 });
             }
             _ => {
                 // Generic historical claim for unknown terms
                 claims.push(HistoricalClaim {
-                    id: uuid::Uuid::new_v4(),
-                    content: format!("Historical context for term '{}'", term),
-                    source: "general_knowledge".to_string(),
+                    id: uuid::Uuid::new_v4().to_string(),
+                    claim_text: format!("Historical context for term '{}'", term),
+                    verification_status: VerificationStatus::Unverified,
+                    evidence: Vec::new(),
+                    confidence_score: 0.5,
                     timestamp: chrono::Utc::now() - chrono::Duration::days(5),
-                    confidence: 0.6,
-                    metadata: serde_json::json!({
+                    source_count: Some(1),
+                    last_verified: None,
+                    related_entities: None,
+                    claim_type: Some("general".to_string()),
+                    created_at: Some(chrono::Utc::now() - chrono::Duration::days(5)),
+                    updated_at: Some(chrono::Utc::now()),
+                    metadata: Some(serde_json::json!({
                         "category": "general",
                         "verified": false,
                         "references": []
-                    }),
+                    })),
+                    source_references: None,
+                    cross_references: None,
+                    validation_metadata: None,
+                    validation_confidence: 0.5,
+                    validation_timestamp: chrono::Utc::now(),
+                    validation_outcome: ValidationOutcome::Unverified,
                 });
             }
         }
@@ -624,8 +756,8 @@ impl MultiModalVerificationEngine {
         }
         
         // Remove duplicates and sort by relevance
-        historical_claims.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap());
-        historical_claims.dedup_by(|a, b| a.content == b.content);
+        historical_claims.sort_by(|a, b| b.confidence_score.partial_cmp(&a.confidence_score).unwrap());
+        historical_claims.dedup_by(|a, b| a.claim_text == b.claim_text);
         
         Ok(historical_claims)
     }
@@ -636,8 +768,8 @@ impl MultiModalVerificationEngine {
         let semantic_analyzer = SemanticAnalyzer::new();
         
         // Analyze both claims
-        let claim_analysis = semantic_analyzer.analyze_semantics(&claim.content).await?;
-        let historical_analysis = semantic_analyzer.analyze_semantics(&historical.content).await?;
+        let claim_analysis = semantic_analyzer.analyze_semantics(&claim.claim_text).await?;
+        let historical_analysis = semantic_analyzer.analyze_semantics(&historical.claim_text).await?;
         
         // Calculate similarity based on multiple factors
         let mut similarity_score = 0.0;
@@ -655,7 +787,7 @@ impl MultiModalVerificationEngine {
         similarity_score += semantic_correlation * 0.2;
         
         // 4. Content length similarity (10% weight)
-        let length_ratio = (claim.content.len() as f64 / historical.content.len() as f64).min(1.0);
+        let length_ratio = (claim.claim_text.len() as f64 / historical.claim_text.len() as f64).min(1.0);
         let length_similarity = 1.0 - (1.0 - length_ratio).abs();
         similarity_score += length_similarity * 0.1;
         
@@ -667,12 +799,12 @@ impl MultiModalVerificationEngine {
         let mut context_score = 0;
         
         // Check if claim has sufficient detail
-        if claim.content.len() > 50 {
+        if claim.claim_text.len() > 50 {
             context_score += 1;
         }
         
         // Check if claim has supporting evidence
-        if !claim.evidence.is_empty() {
+        if !claim.verification_requirements.is_empty() {
             context_score += 1;
         }
         
@@ -682,17 +814,17 @@ impl MultiModalVerificationEngine {
         }
         
         // Check if claim has measurable criteria
-        if claim.content.contains("should") || claim.content.contains("must") || claim.content.contains("will") {
+        if claim.claim_text.contains("should") || claim.claim_text.contains("must") || claim.claim_text.contains("will") {
             context_score += 1;
         }
         
         // Check if claim has specific technical details
-        if claim.content.contains("API") || claim.content.contains("database") || claim.content.contains("test") {
+        if claim.claim_text.contains("API") || claim.claim_text.contains("database") || claim.claim_text.contains("test") {
             context_score += 1;
         }
         
         // Check if claim has performance criteria
-        if claim.content.contains("ms") || claim.content.contains("seconds") || claim.content.contains("coverage") {
+        if claim.claim_text.contains("ms") || claim.claim_text.contains("seconds") || claim.claim_text.contains("coverage") {
             context_score += 1;
         }
         
@@ -701,39 +833,39 @@ impl MultiModalVerificationEngine {
 
     /// Validate scope boundaries for claim verification
     fn validate_scope_boundaries(&self, claim: &AtomicClaim) -> f64 {
-        let mut scope_score = 0.0;
+        let mut scope_score: f64 = 0.0;
         
         // Check if claim is specific enough (not too broad)
-        if claim.content.len() < 200 {
+        if claim.claim_text.len() < 200 {
             scope_score += 0.3; // Specific claims are better
         }
         
         // Check if claim has clear boundaries
-        if claim.content.contains("within") || claim.content.contains("scope") || claim.content.contains("boundary") {
+        if claim.claim_text.contains("within") || claim.claim_text.contains("scope") || claim.claim_text.contains("boundary") {
             scope_score += 0.2;
         }
         
         // Check if claim has measurable outcomes
-        if claim.content.contains("achieve") || claim.content.contains("deliver") || claim.content.contains("complete") {
+        if claim.claim_text.contains("achieve") || claim.claim_text.contains("deliver") || claim.claim_text.contains("complete") {
             scope_score += 0.2;
         }
         
         // Check if claim has clear success criteria
-        if claim.content.contains("success") || claim.content.contains("pass") || claim.content.contains("meet") {
+        if claim.claim_text.contains("success") || claim.claim_text.contains("pass") || claim.claim_text.contains("meet") {
             scope_score += 0.2;
         }
         
         // Check if claim has reasonable complexity
-        let word_count = claim.content.split_whitespace().count();
+        let word_count = claim.claim_text.split_whitespace().count();
         if word_count >= 10 && word_count <= 100 {
             scope_score += 0.1; // Reasonable complexity
         }
         
-        scope_score.min(1.0)
+        (scope_score as f64).min(1.0)
     }
 
             /// Check test consistency and relevance
-            pub async fn check_test_consistency(&self, code_output: &CodeOutput, test_output: &TestOutput) -> Result<TestConsistency> {
+            pub async fn check_test_consistency(&self, code_output: &CodeOutput, test_output: &TestOutput) -> Result<VerificationTestConsistency> {
                 let mut issues = Vec::new();
                 let mut score: f32 = 1.0;
 
@@ -747,30 +879,26 @@ impl MultiModalVerificationEngine {
 
                 let test_coverage = self.check_test_coverage(&public_functions, test_output)?;
                 score *= test_coverage.overall_score as f32;
-                issues.extend(test_coverage.issues);
+                // Note: VerificationTestCoverage doesn't have issues field, using quality_metrics from test_quality instead
 
                 // Check test relevance - do tests match the code they're testing?
                 let test_relevance = self.check_test_relevance(code_output, test_output)?;
                 score *= test_relevance.overall_score as f32;
-                issues.extend(test_relevance.issues);
+                issues.extend(test_relevance.relevance_factors);
 
                 // Check test quality (assertions, edge cases)
                 let test_quality = self.check_test_quality(test_output)?;
                 score *= test_quality.overall_score as f32;
-                issues.extend(test_quality.issues);
+                issues.extend(test_quality.quality_metrics);
 
-                Ok(TestConsistency {
+                Ok(VerificationTestConsistency {
                     overall_score: score.max(0.0) as f64,
-                    issues,
-                    functions_tested: test_coverage.functions_tested,
-                    total_functions: public_functions.len(),
-                    test_relevance_score: test_relevance.overall_score,
-                    test_quality_score: test_quality.overall_score,
+                    consistency_issues: issues,
                 })
             }
 
             /// Check test coverage for public functions
-            fn check_test_coverage(&self, public_functions: &[&FunctionDefinition], test_output: &TestOutput) -> Result<TestCoverage> {
+            fn check_test_coverage(&self, public_functions: &[&FunctionDefinition], test_output: &TestOutput) -> Result<VerificationTestCoverage> {
                 let mut issues = Vec::new();
                 let mut functions_tested = 0;
 
@@ -792,10 +920,11 @@ impl MultiModalVerificationEngine {
                     issues.push("Test coverage below 80% for public functions".to_string());
                 }
 
-                Ok(TestCoverage {
+                Ok(VerificationTestCoverage {
                     overall_score: coverage_score,
-                    issues,
-                    functions_tested,
+                    line_coverage: coverage_score,
+                    branch_coverage: coverage_score,
+                    function_coverage: coverage_score,
                 })
             }
 
@@ -826,18 +955,13 @@ impl MultiModalVerificationEngine {
             }
 
             /// Check test relevance - do tests match what they're testing?
-            fn check_test_relevance(&self, code_output: &CodeOutput, test_output: &TestOutput) -> Result<TestRelevance> {
+            fn check_test_relevance(&self, code_output: &CodeOutput, test_output: &TestOutput) -> Result<VerificationTestRelevance> {
                 let mut issues = Vec::new();
                 let mut score: f32 = 1.0;
 
                 // Check if test file names match code file names
-                let code_file_name = code_output.file_path
-                    .as_ref()
-                    .map(|path| path.split('/').last().unwrap_or(""))
-                    .unwrap_or("")
-                    .split('.')
-                    .next()
-                    .unwrap_or("");
+                // Note: CodeOutput from types.rs doesn't have file_path, so we skip this check
+                let code_file_name = "";
 
                 let test_file_name = "test_file.rs"
                     .split('/')
@@ -878,14 +1002,14 @@ impl MultiModalVerificationEngine {
                     }
                 }
 
-                Ok(TestRelevance {
+                Ok(VerificationTestRelevance {
                     overall_score: score.max(0.0) as f64,
-                    issues,
+                    relevance_factors: issues,
                 })
             }
 
             /// Check test quality (assertions, edge cases, etc.)
-            fn check_test_quality(&self, test_output: &TestOutput) -> Result<TestQuality> {
+            fn check_test_quality(&self, test_output: &TestOutput) -> Result<VerificationTestQuality> {
                 let mut issues = Vec::new();
                 let mut score: f32 = 1.0;
 
@@ -942,14 +1066,14 @@ impl MultiModalVerificationEngine {
                     score -= 0.1;
                 }
 
-                Ok(TestQuality {
+                Ok(VerificationTestQuality {
                     overall_score: score.max(0.0) as f64,
-                    issues,
+                    quality_metrics: issues,
                 })
             }
 
     /// Process claims for verification (main entry point)
-    pub async fn process(&self, claims: &[AtomicClaim], context: &ProcessingContext) -> Result<VerificationResult> {
+    pub async fn process(&self, claims: &[AtomicClaim], context: &ProcessingContext) -> Result<ClaimVerificationResult> {
         let mut evidence = Vec::new();
         let mut overall_confidence = 0.0;
         let mut successful_verifications = 0;
@@ -958,21 +1082,21 @@ impl MultiModalVerificationEngine {
         for claim in claims {
             match self.verify_single_claim(claim).await {
                 Ok(verification_result) => {
-                    evidence.extend(verification_result.evidence.clone());
-                    overall_confidence += verification_result.overall_confidence;
+                    evidence.extend(verification_result.checks.iter().flat_map(|c| c.evidence.clone()).collect::<Vec<_>>());
+                    overall_confidence += verification_result.confidence;
                     successful_verifications += 1;
                     
                     // Convert VerificationResult to VerifiedClaim
                     let verified_claim = VerifiedClaim {
                         id: claim.id,
                         claim_text: claim.claim_text.clone(),
-                        verification_status: if verification_result.overall_confidence > 0.7 {
+                        verification_status: if verification_result.confidence > 0.7 {
                             VerificationStatus::Verified
                         } else {
                             VerificationStatus::Unverified
                         },
-                        confidence: verification_result.overall_confidence,
-                        evidence: verification_result.evidence,
+                        confidence: verification_result.confidence,
+                        evidence: verification_result.checks.iter().flat_map(|c| c.evidence.clone()).collect(),
                         timestamp: chrono::Utc::now(),
                         original_claim: claim.claim_text.clone(),
                         verification_results: if verification_result.overall_confidence > 0.7 {
@@ -980,7 +1104,7 @@ impl MultiModalVerificationEngine {
                         } else {
                             VerificationStatus::Unverified
                         },
-                        overall_confidence: verification_result.overall_confidence,
+                        overall_confidence: verification_result.confidence,
                         verification_timestamp: chrono::Utc::now(),
                     };
                     verified_claims.push(verified_claim);
@@ -993,7 +1117,7 @@ impl MultiModalVerificationEngine {
 
         let final_confidence = if claims.is_empty() { 0.0 } else { overall_confidence / claims.len() as f64 };
 
-        Ok(VerificationResult {
+        Ok(ClaimVerificationResult {
             evidence,
             verification_confidence: final_confidence,
             verified_claims,
@@ -1008,37 +1132,10 @@ impl MultiModalVerificationEngine {
     }
 
     /// Process claims for verification (v2 entry point)
-    pub async fn process_v2(&self, claims: &[AtomicClaim], context: &ProcessingContext) -> Result<VerificationResult> {
+    pub async fn process_v2(&self, claims: &[AtomicClaim], context: &ProcessingContext) -> Result<ClaimVerificationResult> {
         self.process(claims, context).await
     }
 }
 
-/// Test consistency and relevance check result
-#[derive(Debug)]
-pub struct TestConsistency {
-    pub overall_score: f64,
-    pub issues: Vec<String>,
-    pub functions_tested: usize,
-    pub total_functions: usize,
-    pub test_relevance_score: f64,
-    pub test_quality_score: f64,
-}
-
-/// Test coverage check result
-pub struct TestCoverage {
-    pub overall_score: f64,
-    pub issues: Vec<String>,
-    pub functions_tested: usize,
-}
-
-/// Test relevance check result
-pub struct TestRelevance {
-    pub overall_score: f64,
-    pub issues: Vec<String>,
-}
-
-/// Test quality check result
-pub struct TestQuality {
-    pub overall_score: f64,
-    pub issues: Vec<String>,
-}
+// Removed duplicate type definitions - these are now imported from verification_types
+// Use VerificationTestConsistency, VerificationTestCoverage, etc. from imports

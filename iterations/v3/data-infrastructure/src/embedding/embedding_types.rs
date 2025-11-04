@@ -1,11 +1,12 @@
 //! Core types for embedding service
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
 
 /// Embedding vector with metadata
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct EmbeddingVector {
     /// The actual vector values
     pub values: Vec<f32>,
@@ -38,8 +39,8 @@ impl EmbeddingVector {
 }
 
 /// Unique identifier for an embedding
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct EmbeddingId(String);
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+pub struct EmbeddingId (String);
 
 impl EmbeddingId {
     pub fn new(id: String) -> Self {
@@ -64,7 +65,7 @@ impl AsRef<str> for EmbeddingId {
 }
 
 /// Metadata associated with an embedding
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EmbeddingMetadata {
     pub source: String,
     pub content_type: ContentType,
@@ -74,7 +75,7 @@ pub struct EmbeddingMetadata {
 }
 
 /// Type of content being embedded
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, JsonSchema)]
 pub enum ContentType {
     Text,
     Code,
@@ -90,7 +91,7 @@ pub enum ContentType {
 }
 
 /// Stored embedding with metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StoredEmbedding {
     pub id: EmbeddingId,
     pub vector: EmbeddingVector,
@@ -98,7 +99,7 @@ pub struct StoredEmbedding {
 }
 
 /// Request to generate embeddings
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EmbeddingRequest {
     pub texts: Vec<String>,
     pub content_type: ContentType,
@@ -108,14 +109,14 @@ pub struct EmbeddingRequest {
 }
 
 /// Response containing generated embeddings
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EmbeddingResponse {
     pub embeddings: Vec<StoredEmbedding>,
     pub processing_time_ms: u64,
 }
 
 /// Similarity search request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SimilarityRequest {
     pub query_vector: EmbeddingVector,
     pub limit: usize,
@@ -125,14 +126,14 @@ pub struct SimilarityRequest {
 }
 
 /// Similarity search result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SimilarityResult {
     pub embedding: StoredEmbedding,
     pub similarity_score: f32,
 }
 
 /// Semantic context for tasks
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SemanticContext {
     pub task_description: String,
     pub context_vector: EmbeddingVector,
@@ -141,7 +142,7 @@ pub struct SemanticContext {
 }
 
 /// Configuration for embedding service
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EmbeddingConfig {
     /// Model name (e.g., "coreml-embedding-placeholder", "dummy")
     pub model_name: String,
@@ -168,7 +169,7 @@ impl Default for EmbeddingConfig {
 }
 
 /// Embedding model registry entry (config-driven)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EmbeddingModel {
     pub id: String,       // registry key (e.g., 'embeddinggemma', 'clip-vit-b32')
     pub modality: String, // 'text' | 'image' | 'audio'
@@ -178,7 +179,7 @@ pub struct EmbeddingModel {
 }
 
 /// Per-block vector (one row per block-model pair)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BlockVector {
     pub block_id: String,     // UUID of block
     pub model_id: String,     // embedding model identifier
@@ -187,7 +188,7 @@ pub struct BlockVector {
 }
 
 /// Search result feature with per-index scores
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SearchResultFeature {
     pub score_text: Option<f32>,          // BM25 + dense text similarity
     pub score_image: Option<f32>,         // CLIP/visual similarity
@@ -197,7 +198,7 @@ pub struct SearchResultFeature {
 }
 
 /// Multimodal search result with citation and feature trace
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MultimodalSearchResult {
     pub ref_id: String, // UUID of block/segment
     pub kind: ContentType,
@@ -208,7 +209,7 @@ pub struct MultimodalSearchResult {
 }
 
 /// Content features extracted from search results for scope matching
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ContentFeatures {
     pub text_features: Vec<String>,
     pub visual_features: Vec<String>,

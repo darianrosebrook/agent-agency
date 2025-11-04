@@ -49,6 +49,7 @@ pub struct CommonExecutionContext {
     pub id: String,
     pub task_id: String,
     pub worker_id: Option<String>,
+    #[schemars(with = "String")]
     pub start_time: DateTime<Utc>,
     pub timeout_ms: u64,
     pub parameters: HashMap<String, serde_json::Value>,
@@ -98,6 +99,7 @@ pub struct WorkspaceContext {
     pub recent_changes: Vec<String>,
     pub dependencies: HashMap<String, String>,
     pub environment: DeploymentEnvironment,
+    #[schemars(with = "String")]
     pub created_at: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -132,6 +134,7 @@ pub struct RequestContext {
     pub session_id: Option<String>,
     pub ip_address: Option<String>,
     pub user_agent: Option<String>,
+    #[schemars(with = "String")]
     pub start_time: DateTime<Utc>,
     pub timeout_ms: u64,
     pub headers: HashMap<String, String>,

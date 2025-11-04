@@ -3,6 +3,7 @@
 //! Implements shadow → canary → guarded → general rollout with auto-rollback
 //! and SLO monitoring for safe parameter optimization deployment.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -15,7 +16,7 @@ use crate::counterfactual_log::TaskOutcome;
 use crate::reward::TaskOutcome;
 
 /// Rollout phase enumeration
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub enum RolloutPhase {
     Shadow,        // 0% traffic, log only
     Canary,        // ≤5% traffic
@@ -24,27 +25,31 @@ pub enum RolloutPhase {
 }
 
 /// Rollout state for a task type
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RolloutState {
     pub phase: RolloutPhase,
     pub traffic_percentage: f64,
+    #[schemars(with = "String")]
+
     pub started_at: DateTime<Utc>,
     pub slo_breaches: Vec<SLOBreach>,
     pub auto_rollback_enabled: bool,
 }
 
 /// SLO breach record
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SLOBreach {
     pub metric: String,
     pub threshold: f64,
     pub actual_value: f64,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub severity: BreachSeverity,
 }
 
 /// Breach severity levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum BreachSeverity {
     Warning,
     Critical,
@@ -57,7 +62,7 @@ pub struct RolloutManager {
 }
 
 /// SLO monitor configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SLOMonitor {
     pub p99_latency_threshold_ms: u64,
     pub quality_floor: f64,
@@ -308,7 +313,7 @@ impl RolloutManager {
 }
 
 /// Phase transition result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum PhaseTransition {
     Initialized { phase: RolloutPhase },
     Advanced { from: RolloutPhase, to: RolloutPhase },
@@ -317,7 +322,7 @@ pub enum PhaseTransition {
 }
 
 /// Rollback decision
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RollbackDecision {
     pub reason: String,
     pub new_phase: RolloutPhase,

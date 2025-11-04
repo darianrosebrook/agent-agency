@@ -10,7 +10,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-
 use crate::orchestrator::SystemHealthMonitor;
 
 /// Agent types for performance tracking
@@ -44,6 +43,7 @@ pub struct AgentPerformanceMetrics {
     /// Success rate (0.0 to 1.0)
     pub success_rate: f64,
     /// Last activity timestamp
+    #[schemars(with = "String")]
     pub last_activity: DateTime<Utc>,
     /// Current active tasks
     pub active_tasks: u32,
@@ -266,6 +266,7 @@ pub struct AgentPerformanceTracker {
     /// Response times for calculating averages
     response_times: VecDeque<u64>,
     /// Last activity timestamp
+    #[schemars(with = "String")]
     last_activity: DateTime<Utc>,
     /// Current active tasks
     active_tasks: u32,

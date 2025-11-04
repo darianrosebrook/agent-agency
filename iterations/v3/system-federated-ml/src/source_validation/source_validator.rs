@@ -3,6 +3,7 @@
 //! Assesses the credibility and reliability of information sources
 //! to determine trustworthiness for evidence collection.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
@@ -11,13 +12,15 @@ use chrono::{DateTime, Utc};
 use crate::evidence_types::*;
 
 /// Source credibility assessment result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SourceAssessment {
     /// Source identifier
     pub source_id: String,
     /// Credibility score
     pub credibility: SourceCredibility,
     /// Assessment timestamp
+    #[schemars(with = "String")]
+
     pub assessed_at: DateTime<Utc>,
     /// Assessment factors
     pub assessment_factors: Vec<String>,

@@ -3,10 +3,12 @@
 //! Quality assessment, thresholds, and pattern analysis for
 //! learning coordination and performance evaluation.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 
 /// Quality indicators for assessment
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub enum QualityIndicator {
     Compliance,
     EvidenceStrength,
@@ -16,8 +18,9 @@ pub enum QualityIndicator {
 }
 
 /// Quality heuristics for assessment
-#[derive(Debug, Clone)]
-pub struct QualityHeuristics {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct QualityHeuristicss {
     /// Weight for different quality indicators
     pub indicator_weights: HashMap<QualityIndicator, f64>,
     /// Thresholds for quality classification
@@ -86,8 +89,9 @@ impl QualityHeuristics {
 }
 
 /// Quality classification levels
-#[derive(Debug, Clone, PartialEq)]
-pub enum QualityLevel {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub enum QualityLevell {
     Excellent,
     Good,
     Acceptable,
@@ -96,8 +100,9 @@ pub enum QualityLevel {
 }
 
 /// Quality thresholds for classification
-#[derive(Debug, Clone)]
-pub struct QualityThresholds {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct QualityThresholdss {
     pub excellent_min: f64,
     pub good_min: f64,
     pub acceptable_min: f64,
@@ -116,8 +121,9 @@ impl Default for QualityThresholds {
 }
 
 /// Keyword patterns for quality analysis
-#[derive(Debug, Clone)]
-pub struct QualityPatterns {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct QualityPatternss {
     pub positive_indicators: Vec<String>,
     pub negative_indicators: Vec<String>,
     pub compliance_indicators: Vec<String>,
@@ -160,8 +166,9 @@ impl Default for QualityPatterns {
 }
 
 /// Quality assessment result
-#[derive(Debug, Clone)]
-pub struct QualityAssessment {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct QualityAssessmentt {
     pub overall_score: f64,
     pub quality_level: QualityLevel,
     pub indicator_scores: HashMap<QualityIndicator, f64>,

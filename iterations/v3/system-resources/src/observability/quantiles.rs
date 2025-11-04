@@ -1,10 +1,11 @@
 //! Quantile estimation algorithms for statistical analysis
 
+use schemars::JsonSchema;
 use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 /// Quantile estimation configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QuantileConfig {
     /// Quantile estimation algorithm to use
     pub algorithm: QuantileAlgorithm,
@@ -40,7 +41,7 @@ impl Default for QuantileConfig {
 }
 
 /// Quantile estimation algorithms
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub enum QuantileAlgorithm {
     /// P² algorithm (piecewise parabolic approximation)
     P2,
@@ -235,7 +236,7 @@ impl QuantileEstimatorTrait for QuantileEstimator {
 }
 
 /// Histogram data for metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct HistogramData {
     /// Total count of observations
     pub count: u64,
@@ -246,7 +247,7 @@ pub struct HistogramData {
 }
 
 /// Summary data for metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SummaryData {
     /// Total count of observations
     pub count: u64,
@@ -326,7 +327,7 @@ impl CKMSQuantileEstimator {
 }
 
 /// Statistical summary for quantile estimation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QuantileStats {
     /// Total number of observations
     pub count: usize,

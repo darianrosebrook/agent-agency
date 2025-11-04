@@ -5,6 +5,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -46,12 +47,14 @@ pub struct FileStorage {
 }
 
 /// Cached session data for fast access
-#[derive(Debug, Clone)]
-pub struct CachedSession {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct CachedSession {
     /// Session data
     session: DbPlanningSession,
 
     /// Last accessed timestamp
+    #[schemars(with = "String")]
     last_accessed: DateTime<Utc>,
 
     /// Whether session has unsaved changes
@@ -59,8 +62,9 @@ pub struct CachedSession {
 }
 
 /// Storage configuration
-#[derive(Debug, Clone)]
-pub struct StorageConfig {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct StorageConfig {
     /// Maximum cache size for sessions
     max_cache_size: usize,
 
@@ -157,7 +161,7 @@ impl PlanningStorage {
         metadata.insert("session_id".to_string(), serde_json::Value::String(session_id.to_string()));
         metadata.insert("orchestrator_id".to_string(), serde_json::Value::String(plan.orchestration_meta.orchestrator_id.clone()));
         metadata.insert("worker_pool_id".to_string(), serde_json::Value::String(plan.orchestration_meta.worker_pool_id.clone()));
-        metadata.insert("council_session_id".to_string(), serde_json::Value::String(plan.orchestration_meta.council_session_id.to_string()));
+        metadata.insert("council_session_id".to_string(), serde_json::Value::String(plan.orchestration_meta.council_session_id.as_ref().unwrap_or(&"none".to_string()).clone()));
         metadata.insert("audit_correlation_id".to_string(), serde_json::Value::String(plan.orchestration_meta.audit_correlation_id.to_string()));
         metadata.insert("status".to_string(), serde_json::Value::String("active".to_string()));
         metadata.insert("execution_state".to_string(), serde_json::to_value(&plan.execution_state).unwrap_or_default());
@@ -188,7 +192,8 @@ impl PlanningStorage {
         {
             let cache = self.session_cache.read().await;
             if let Some(cached) = cache.get(&session_id) {
-                // Update last accessed
+                // Clone the session before dropping the read lock
+                let session = cached.session.clone();
                 let mut updated_cached = cached.clone();
                 updated_cached.last_accessed = Utc::now();
 
@@ -197,7 +202,7 @@ impl PlanningStorage {
                 let mut cache = self.session_cache.write().await;
                 cache.insert(session_id, updated_cached);
 
-                return Ok(Some(cached.session.clone()));
+                return Ok(Some(session));
             }
         }
 
@@ -246,10 +251,20 @@ impl PlanningStorage {
 
     /// Log planning audit event
     pub async fn log_audit_event(&self, event: AuditEvent) -> Result<()> {
-        let mut metadata = event.metadata;
+        // Convert event.metadata (serde_json::Value) to HashMap<String, serde_json::Value>
+        let mut metadata: HashMap<String, serde_json::Value> = match event.metadata {
+            serde_json::Value::Object(map) => {
+                map.into_iter().map(|(k, v)| (k, v)).collect()
+            },
+            _ => HashMap::new(),
+        };
         metadata.insert("id".to_string(), serde_json::Value::String(Uuid::new_v4().to_string()));
-        metadata.insert("milestone_id".to_string(), serde_json::Value::String(event.milestone_id.to_string()));
-        metadata.insert("worker_id".to_string(), serde_json::Value::String(event.worker_id.to_string()));
+        if let Some(milestone_id) = &event.milestone_id {
+            metadata.insert("milestone_id".to_string(), serde_json::Value::String(milestone_id.clone()));
+        }
+        if let Some(worker_id) = &event.worker_id {
+            metadata.insert("worker_id".to_string(), serde_json::Value::String(worker_id.to_string()));
+        }
 
         let db_event = CreatePlanningAuditEvent {
             plan_id: event.plan_id,
@@ -336,7 +351,7 @@ impl PlanningStorage {
             overview: None,
         };
 
-        self.db_ops.update_execution_plan(plan_id, update).await?;
+        let _updated = self.db_ops.update_execution_plan(plan_id, update).await?;
         Ok(())
     }
 
@@ -399,12 +414,12 @@ impl PlanningStorage {
     async fn update_plan_in_database(&self, plan: &ExecutionPlan) -> Result<()> {
         let update = UpdateExecutionPlan {
             id: plan.contract_plan.id,
-            status: Some(plan.contract_plan.state.to_string()),
+            status: Some(serde_json::to_string(&plan.contract_plan.state)?.trim_matches('"').to_string()),
             title: None,
             overview: None,
         };
 
-        self.db_ops.update_execution_plan(plan.contract_plan.id, update).await?;
+        let _updated = self.db_ops.update_execution_plan(plan.contract_plan.id, update).await?;
         Ok(())
     }
 
@@ -415,8 +430,7 @@ impl PlanningStorage {
         // Note: WorkingSpec doesn't have lifecycle fields, only ExecutionPlan has state
         // The lifecycle timestamps are managed at the ExecutionPlan level in the database
         // state field doesn't exist in contract plan
-        merged.contract_plan.id = db_plan.id.parse().unwrap_or_default()
-            .unwrap_or(merged.contract_plan.state);
+        merged.contract_plan.id = db_plan.id;
 
         Ok(merged)
     }
@@ -468,13 +482,18 @@ use crate::planning::{
 };
 
 /// Audit event for storage operations
-#[derive(Debug, Clone)]
-pub struct AuditEvent {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct AuditEvent {
+    #[schemars(with = "String")]
     pub plan_id: Uuid,
     pub milestone_id: Option<String>,
+    #[schemars(with = "Option<String>")]
     pub worker_id: Option<Uuid>,
     pub event_type: String,
     pub description: String,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub metadata: serde_json::Value,
 }
@@ -673,6 +692,9 @@ mod tests {
         }
     }
 
+}
+
+impl PlanningStorage {
     /// Store execution result for a plan
     pub async fn store_execution_result(&self, plan_id: Uuid, result: &agent_agency_contracts::planning::PlanExecutionResult) -> Result<()> {
         // Store execution result as JSON file

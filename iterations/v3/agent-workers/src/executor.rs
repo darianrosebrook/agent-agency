@@ -2,10 +2,11 @@
 //!
 //! Executes tasks by communicating with worker models and handling the execution lifecycle.
 
+use schemars::JsonSchema;
 use crate::worker_types::{TaskContext as WorkerTaskContext, UuidGenerator, TaskPriority, CawsSpec, *};
 use crate::parallel_types::{WorkerId, TaskResult};
 use crate::worker_errors::WorkerExecutionResult;
-use agent_agency_contracts::{IssueSeverity, task_executor::{TaskExecutor as TaskExecutorTrait, TaskExecutionResult, TaskSpec as ContractTaskSpec, TaskContext as CouncilTaskContext, TaskSpec}, task_request::RiskTier, AcceptanceCriterion};
+use agent_agency_contracts::{IssueSeverity, task_executor::{TaskExecutor as TaskExecutorTrait, TaskExecutionResult, TaskSpec as ContractTaskSpec, TaskContext as CouncilTaskContext, TaskSpec, TaskRequirements}, task_request::RiskTier, AcceptanceCriterion};
 use system_resilience::resilience_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
 use system_resilience::retry::{RetryConfig, RetryPolicy};
 use anyhow::{Context, Result};
@@ -15,10 +16,12 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::{info, warn, error};
 use uuid::Uuid;
+use sqlx::Row;
 
 // Additional types for distributed worker execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerCapabilities {
+    #[schemars(with = "String")]
     pub worker_id: Uuid,
     pub name: String,
     pub specialty: String,
@@ -32,7 +35,7 @@ pub struct WorkerCapabilities {
     pub endpoint_url: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CapabilityMatch {
     pub is_suitable: bool,
     pub missing_capabilities: Vec<String>,
@@ -40,7 +43,7 @@ pub struct CapabilityMatch {
     pub worker_specialty_match: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionStrategy {
     pub execution_mode: ExecutionMode,
     pub timeout_seconds: u64,
@@ -50,21 +53,21 @@ pub struct ExecutionStrategy {
     pub enable_cancellation: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ExecutionMode {
     Sync,
     Async,
     Streaming,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResourceAllocation {
     pub memory_mb: i32,
     pub cpu_cores: i32,
     pub priority: TaskPriority,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct HealthStatus {
     pub is_healthy: bool,
     pub health_message: String,
@@ -75,7 +78,7 @@ pub struct HealthStatus {
     pub health_score: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AuthResult {
     pub is_authorized: bool,
     pub auth_message: String,
@@ -85,7 +88,7 @@ pub struct AuthResult {
     pub max_risk_tier: Option<i32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum TaskComplexity {
     Low,
     Medium,
@@ -118,7 +121,7 @@ impl TaskComplexity {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, JsonSchema)]
 pub struct WorkerLoad {
     pub active_tasks: i64,
     pub avg_execution_time_ms: Option<i64>,
@@ -127,7 +130,8 @@ pub struct WorkerLoad {
 }
 
 /// Task executor for running tasks with workers
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct TaskExecutor {
     // HTTP client for model communication with robust error handling and performance optimization
     client: reqwest::Client,
@@ -141,7 +145,8 @@ pub struct TaskExecutor {
 }
 
 /// Internal execution statistics for tracking performance
-#[derive(Debug, Default)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
 struct ExecutionStats {
     total_executions: u64,
     successful_executions: u64,
@@ -152,7 +157,7 @@ struct ExecutionStats {
 
 impl TaskExecutor {
     /// Create a new task executor with default configuration
-    pub fn new(db_client: Arc<agent_agency_database::DatabaseClient>) -> Self {
+    pub fn new(db_client: Arc<data_infrastructure::DatabaseClient>) -> Self {
         Self::with_timeouts(
             std::time::Duration::from_secs(30), // execution timeout
             std::time::Duration::from_secs(10), // connect timeout
@@ -284,7 +289,8 @@ impl TaskExecutor {
 
         info!(
             "Task {} execution completed with status: {:?}",
-            task_id, result.status
+            task_id,
+            crate::worker_types::get_execution_status(&result)
         );
         Ok(result)
     }
@@ -319,17 +325,19 @@ impl TaskExecutor {
         prompt.push_str("**SCOPE**:\n");
         prompt.push_str(&format!(
             "- Files affected: {}\n",
-            task_spec.scope.files_affected.join(", ")
+            task_spec.scope.as_ref().map(|s| s.files_affected.join(", ")).unwrap_or_default()
         ));
-        if let Some(max_files) = task_spec.scope.max_files {
-            prompt.push_str(&format!("- Max files: {}\n", max_files));
-        }
-        if let Some(max_loc) = task_spec.scope.max_loc {
-            prompt.push_str(&format!("- Max lines of code: {}\n", max_loc));
+        if let Some(scope) = &task_spec.scope {
+            if let Some(max_files) = scope.max_files {
+                prompt.push_str(&format!("- Max files: {}\n", max_files));
+            }
+            if let Some(max_loc) = scope.max_loc {
+                prompt.push_str(&format!("- Max lines of code: {}\n", max_loc));
+            }
         }
         prompt.push_str(&format!(
             "- Domains: {}\n\n",
-            task_spec.scope.domains.join(", ")
+            task_spec.scope.as_ref().map(|s| s.domains.join(", ")).unwrap_or_default()
         ));
 
         // Add acceptance criteria
@@ -413,14 +421,14 @@ impl TaskExecutor {
         TaskRequirements {
             required_languages,
             required_frameworks,
-            required_domains: task_spec.scope.domains.clone(),
+            required_domains: task_spec.scope.as_ref().map(|s| s.domains.clone()).unwrap_or_default(),
             min_quality_score: match task_spec.risk_tier {
                 RiskTier::Tier1 => 0.9,
                 RiskTier::Tier2 => 0.8,
                 RiskTier::Tier3 => 0.7,
             },
             min_caws_awareness: 0.8,
-            max_execution_time_ms: task_spec.scope.max_loc.map(|loc| loc as u64 * 100),
+            max_execution_time_ms: task_spec.scope.as_ref().and_then(|s| s.max_loc.map(|loc| loc as u64 * 100)),
             preferred_worker_type: None,
             context_length_estimate,
         }
@@ -760,6 +768,8 @@ impl TaskExecutor {
             raw_output: response_text,
             execution_time_ms: execution_time,
             tokens_used: tokens_used.map(|t| t as u32),
+            quality_score: 0.5, // Default quality score
+            metadata: std::collections::HashMap::new(),
             error: None,
         })
     }
@@ -773,72 +783,104 @@ impl TaskExecutor {
         started_at: chrono::DateTime<chrono::Utc>,
     ) -> Result<TaskExecutionResult> {
         let completed_at = self.clock.now();
+        let duration_ms = raw_result.execution_time_ms;
+        let execution_id = self.id_gen.generate();
+        let mut metadata = HashMap::new();
+
+        if let Some(tokens) = raw_result.tokens_used {
+            metadata.insert(META_TOKENS_USED.to_string(), serde_json::json!(tokens));
+        }
 
         if let Some(error) = raw_result.error {
+            metadata.insert(
+                META_EXECUTION_STATUS.to_string(),
+                serde_json::json!("Failed"),
+            );
             return Ok(TaskExecutionResult {
+                execution_id,
                 task_id,
-                worker_id,
-                status: ExecutionStatus::Failed,
-                output: None,
-                error_message: Some(error),
-                execution_time_ms: raw_result.execution_time_ms,
-                tokens_used: raw_result.tokens_used,
-                quality_metrics: QualityMetrics::default(),
-                caws_compliance: CawsComplianceResult::default(),
+                success: false,
+                output: raw_result.raw_output.clone(),
+                errors: vec![error],
+                metadata,
                 started_at,
                 completed_at,
+                duration_ms,
+                worker_id: Some(worker_id),
             });
         }
 
-        // Parse worker output
+        // Parse worker output for quality and compliance evaluation
         let worker_output = match serde_json::from_str::<WorkerOutput>(&raw_result.raw_output) {
             Ok(output) => output,
             Err(e) => {
-                warn!("Failed to parse worker output: {}", e);
+                metadata.insert(
+                    META_EXECUTION_STATUS.to_string(),
+                    serde_json::json!("Failed"),
+                );
+                let error_message = format!("Invalid output format: {}", e);
                 return Ok(TaskExecutionResult {
+                    execution_id,
                     task_id,
-                    worker_id,
-                    status: ExecutionStatus::Failed,
-                    output: None,
-                    error_message: Some(format!("Invalid output format: {}", e)),
-                    execution_time_ms: raw_result.execution_time_ms,
-                    tokens_used: raw_result.tokens_used,
-                    quality_metrics: QualityMetrics::default(),
-                    caws_compliance: CawsComplianceResult::default(),
+                    success: false,
+                    output: raw_result.raw_output.clone(),
+                    errors: vec![error_message],
+                    metadata,
                     started_at,
                     completed_at,
+                    duration_ms,
+                    worker_id: Some(worker_id),
                 });
             }
         };
 
-        // Calculate quality metrics
         let quality_metrics = self.calculate_quality_metrics(&worker_output);
+        if let Ok(value) = serde_json::to_value(&quality_metrics) {
+            metadata.insert(META_QUALITY_METRICS.to_string(), value);
+        }
 
-        // Check CAWS compliance
         let caws_compliance =
             self.check_caws_compliance(&worker_output, raw_result.execution_time_ms);
+        if let Ok(value) = serde_json::to_value(&caws_compliance) {
+            metadata.insert(META_CAWS_COMPLIANCE.to_string(), value);
+        }
 
-        // Determine execution status
-        let status = if caws_compliance.is_compliant && quality_metrics.completeness_score > 0.8 {
-            ExecutionStatus::Completed
+        if let Ok(value) = serde_json::to_value(&worker_output) {
+            metadata.insert(META_WORKER_OUTPUT.to_string(), value);
+        }
+
+        let status_label = if caws_compliance.is_compliant
+            && quality_metrics.completeness_score > 0.8
+        {
+            "Completed"
         } else if quality_metrics.completeness_score > 0.5 {
-            ExecutionStatus::Partial
+            "Partial"
         } else {
-            ExecutionStatus::Failed
+            "Failed"
         };
 
+        metadata.insert(
+            META_EXECUTION_STATUS.to_string(),
+            serde_json::json!(status_label),
+        );
+
+        let success = status_label == "Completed";
+        let mut errors = Vec::new();
+        if !success {
+            errors.push("Execution failed quality or compliance checks".to_string());
+        }
+
         Ok(TaskExecutionResult {
+            execution_id,
             task_id,
-            worker_id,
-            status,
-            output: Some(worker_output),
-            error_message: None,
-            execution_time_ms: raw_result.execution_time_ms,
-            tokens_used: raw_result.tokens_used,
-            quality_metrics,
-            caws_compliance,
+            success,
+            output: raw_result.raw_output.clone(),
+            errors,
+            metadata,
             started_at,
             completed_at,
+            duration_ms,
+            worker_id: Some(worker_id),
         })
     }
 
@@ -1046,7 +1088,7 @@ impl TaskExecutor {
         let is_compliant = violations.is_empty();
         CawsComplianceResult {
             is_compliant,
-            compliance_score: compliance_score.max(0.0f32),
+            compliance_score: compliance_score.max(0.0),
             violations,
             budget_adherence: BudgetAdherence {
                 files_used: file_count,
@@ -1202,10 +1244,12 @@ impl TaskExecutorTrait for TaskExecutor {
             title: task_spec.title,
             description: task_spec.description,
             priority: match task_spec.priority {
-                TaskPriority::Low => TaskPriority::Low,
-                TaskPriority::Medium => TaskPriority::Medium,
-                TaskPriority::High => TaskPriority::High,
-                TaskPriority::Critical => TaskPriority::Critical,
+                agent_agency_contracts::types::planning::TaskPriority::Low => TaskPriority::Low,
+                agent_agency_contracts::types::planning::TaskPriority::Normal => TaskPriority::Medium,
+                agent_agency_contracts::types::planning::TaskPriority::Medium => TaskPriority::Medium,
+                agent_agency_contracts::types::planning::TaskPriority::High => TaskPriority::High,
+                agent_agency_contracts::types::planning::TaskPriority::Urgent => TaskPriority::High,
+                agent_agency_contracts::types::planning::TaskPriority::Critical => TaskPriority::Critical,
             },
             required_capabilities: task_spec.required_capabilities,
             context: task_spec.context,
@@ -1243,10 +1287,12 @@ impl TaskExecutorTrait for TaskExecutor {
             title: task_spec.title,
             description: task_spec.description,
             priority: match task_spec.priority {
-                TaskPriority::Low => TaskPriority::Low,
-                TaskPriority::Medium => TaskPriority::Medium,
-                TaskPriority::High => TaskPriority::High,
-                TaskPriority::Critical => TaskPriority::Critical,
+                agent_agency_contracts::types::planning::TaskPriority::Low => TaskPriority::Low,
+                agent_agency_contracts::types::planning::TaskPriority::Normal => TaskPriority::Medium,
+                agent_agency_contracts::types::planning::TaskPriority::Medium => TaskPriority::Medium,
+                agent_agency_contracts::types::planning::TaskPriority::High => TaskPriority::High,
+                agent_agency_contracts::types::planning::TaskPriority::Urgent => TaskPriority::High,
+                agent_agency_contracts::types::planning::TaskPriority::Critical => TaskPriority::Critical,
             },
             required_capabilities: task_spec.required_capabilities,
             context: task_spec.context,
@@ -1483,7 +1529,7 @@ impl TaskExecutor {
         match self.db_client.query(query, &[&worker_id]).await {
             Ok(rows) => {
                 if let Some(row) = rows.first() {
-                    let capabilities_json: serde_json::Value = row.get(4);
+                    let capabilities_json: serde_json::Value = row.try_get::<serde_json::Value, _>(4)?;
                     let capabilities: Vec<String> = capabilities_json
                         .as_array()
                         .unwrap_or(&vec![])
@@ -1493,16 +1539,16 @@ impl TaskExecutor {
 
                     Ok(WorkerCapabilities {
                         worker_id,
-                        name: row.get(1),
-                        specialty: row.get(2),
+                        name: row.try_get::<String, _>(1)?,
+                        specialty: row.try_get::<String, _>(2)?,
                         capabilities,
-                        max_concurrent_tasks: row.get(5),
-                        memory_limit_mb: row.get(6),
-                        cpu_limit_cores: row.get(7),
-                        is_active: row.get(8),
-                        last_heartbeat: row.get(9),
-                        version: row.get(10),
-                        endpoint_url: row.get(11),
+                        max_concurrent_tasks: row.try_get::<i32, _>(5)?,
+                        memory_limit_mb: row.try_get::<i32, _>(6)?,
+                        cpu_limit_cores: row.try_get::<i32, _>(7)?,
+                        is_active: row.try_get::<bool, _>(8)?,
+                        last_heartbeat: row.try_get::<DateTime<Utc>, _>(9)?,
+                        version: row.try_get::<String, _>(10)?,
+                        endpoint_url: row.try_get::<Option<String>, _>(11)?,
                     })
                 } else {
                     Err(anyhow::anyhow!("Worker {} not found in registry", worker_id))
@@ -1674,12 +1720,16 @@ impl TaskExecutor {
 
                     // Check domain restrictions
                     let domain_allowed = if !allowed_domains.is_empty() {
-                        task_spec.scope.domains.iter().any(|domain| allowed_domains.contains(domain))
+                        task_spec.scope.as_ref()
+                            .map(|s| s.domains.iter().any(|domain| allowed_domains.contains(domain)))
+                            .unwrap_or(true)
                     } else {
                         true
                     };
 
-                    let domain_restricted = task_spec.scope.domains.iter().any(|domain| restricted_domains.contains(domain));
+                    let domain_restricted = task_spec.scope.as_ref()
+                        .map(|s| s.domains.iter().any(|domain| restricted_domains.contains(domain)))
+                        .unwrap_or(false);
 
                     // Check risk tier restrictions
                     let risk_tier_allowed = max_risk_tier.map_or(true, |max_tier| {
@@ -1755,7 +1805,7 @@ impl TaskExecutor {
         execution_input: &ExecutionInput,
         strategy: &ExecutionStrategy,
         circuit_breaker: &Arc<CircuitBreaker>,
-    ) -> Result<WorkerExecutionResult> {
+    ) -> WorkerExecutionResult<RawExecutionResult> {
         let retry_config = &strategy.retry_config;
         
         self.retry_with_backoff_local(
@@ -1784,7 +1834,7 @@ impl TaskExecutor {
         worker_id: Uuid,
         execution_input: &ExecutionInput,
         strategy: &ExecutionStrategy,
-    ) -> Result<WorkerExecutionResult> {
+    ) -> WorkerExecutionResult<RawExecutionResult> {
         let worker_endpoint = self.get_worker_endpoint(worker_id).await?;
         
         // Create HTTP client with timeout
@@ -1865,15 +1915,17 @@ impl TaskExecutor {
 
     fn check_specialty_match(&self, task_spec: &TaskSpec, worker_info: &WorkerCapabilities) -> bool {
         // Check if worker specialty matches task requirements
-        task_spec.scope.domains.iter().any(|domain| {
-            worker_info.specialty.to_lowercase().contains(&domain.to_lowercase())
-        })
+        task_spec.scope.as_ref()
+            .map(|s| s.domains.iter().any(|domain| {
+                worker_info.specialty.to_lowercase().contains(&domain.to_lowercase())
+            }))
+            .unwrap_or(false)
     }
 
     fn assess_task_complexity(&self, task_spec: &TaskSpec) -> TaskComplexity {
-        let file_count = task_spec.scope.files_affected.len();
-        let loc_estimate = task_spec.scope.max_loc.unwrap_or(100);
-        let domain_count = task_spec.scope.domains.len();
+        let file_count = task_spec.scope.as_ref().map(|s| s.files_affected.len()).unwrap_or(0);
+        let loc_estimate = task_spec.scope.as_ref().and_then(|s| s.max_loc).unwrap_or(100);
+        let domain_count = task_spec.scope.as_ref().map(|s| s.domains.len()).unwrap_or(0);
         let criteria_count = task_spec.acceptance_criteria.len();
 
         let complexity_score = (file_count * 2) + (loc_estimate / 100) + (domain_count * 3) + (criteria_count * 2);

@@ -1,8 +1,11 @@
 //! Progress synthesis and result combination
 
+use schemars::JsonSchema;
 use crate::parallel_types::*;
+use crate::worker_types::TaskStatus;
 use crate::{Artifact, ArtifactType};
 use crate::error::*;
+use crate::worker_errors::{SynthesisResult, SynthesisError};
 
 /// Synthesizes final results from worker outputs
 pub struct ProgressSynthesizer;
@@ -22,7 +25,7 @@ impl ProgressSynthesizer {
         }
 
         // Extract task ID from first result (all should be the same)
-        let task_id = results[0].subtask_id.clone(); // This should be task_id, but we use subtask_id for now
+        let task_id = results[0].task_id;
 
         // Calculate overall success
         let success = results.iter().all(|r| r.success);
@@ -56,14 +59,29 @@ impl ProgressSynthesizer {
         self.detect_conflicts(&results)?;
 
         Ok(TaskResult {
-            task_id: TaskId(task_id.0), // Convert from SubTaskId to TaskId - this needs proper handling
+            task_id,
             success,
             subtasks_completed: completed_subtasks,
             total_subtasks,
             execution_time,
+            execution_time_ms: execution_time.as_millis() as u64,
             summary,
             worker_breakdown,
             quality_scores,
+            errors: results.iter().flat_map(|r| r.errors.clone()).collect(),
+            error_message: results
+                .iter()
+                .find(|r| !r.success && !r.errors.is_empty())
+                .and_then(|r| r.errors.first().cloned()),
+            tool_used: None, // Parallel execution doesn't specify a single tool
+            status: if success { TaskStatus::Completed } else { TaskStatus::Failed },
+            metadata: {
+                let mut map = std::collections::HashMap::new();
+                map.insert("parallel_execution".to_string(), serde_json::json!(true));
+                map.insert("total_workers".to_string(), serde_json::json!(results.len()));
+                map.insert("successful_workers".to_string(), serde_json::json!(results.iter().filter(|r| r.success).count()));
+                map
+            },
         })
     }
 
@@ -102,10 +120,6 @@ impl ProgressSynthesizer {
             total_execution_time.as_secs_f32()
         ));
 
-        if let Some(avg_cpu) = self.calculate_average_metric(results, |r| r.metrics.cpu_usage_percent) {
-            summary.push_str(&format!(" at {:.1}% avg CPU", avg_cpu));
-        }
-
         summary
     }
 
@@ -118,38 +132,25 @@ impl ProgressSynthesizer {
                 .unwrap_or(std::time::Duration::from_secs(0));
 
             WorkerBreakdown {
-                worker_id: WorkerId(format!("worker-{}", result.subtask_id.0)), // Generate worker ID from subtask
-                subtask_id: result.subtask_id.clone(),
-                specialty: WorkerSpecialty::Custom {
-                    domain: "parallel-execution".to_string(),
-                    capabilities: vec!["execution".to_string()],
-                }, // This should be passed in from the actual worker
+                worker_id: result.worker_id,
+                subtasks_assigned: 1,
+                subtasks_completed: if result.success { 1 } else { 0 },
                 execution_time,
-                success: result.success,
-                files_modified: result.metrics.files_modified,
-                lines_changed: result.metrics.lines_changed,
+                quality_score: result.quality_score,
+                errors: result.errors.clone(),
             }
         }).collect()
     }
 
     /// Calculate quality scores from results
-    fn calculate_quality_scores(&self, results: &[WorkerResult]) -> std::collections::HashMap<String, f32> {
+    fn calculate_quality_scores(&self, results: &[WorkerResult]) -> std::collections::HashMap<String, f64> {
         let mut scores = std::collections::HashMap::new();
 
         // Success rate
-        let success_rate = results.iter().filter(|r| r.success).count() as f32 / results.len() as f32;
+        let success_rate = results.iter().filter(|r| r.success).count() as f64 / results.len() as f64;
         scores.insert("success_rate".to_string(), success_rate * 100.0);
 
         // Average CPU usage
-        if let Some(avg_cpu) = self.calculate_average_metric(results, |r| r.metrics.cpu_usage_percent) {
-            scores.insert("avg_cpu_usage".to_string(), avg_cpu);
-        }
-
-        // Average memory usage
-        if let Some(avg_memory) = self.calculate_average_metric(results, |r| r.metrics.memory_usage_mb) {
-            scores.insert("avg_memory_usage_mb".to_string(), avg_memory);
-        }
-
         // Productivity score (lines changed per minute)
         let total_lines_changed: usize = results.iter().map(|r| r.metrics.lines_changed).sum();
         let total_execution_time: std::time::Duration = results.iter()
@@ -158,7 +159,7 @@ impl ProgressSynthesizer {
             .sum();
 
         if total_execution_time.as_secs() > 0 {
-            let lines_per_minute = total_lines_changed as f32 / (total_execution_time.as_secs() as f32 / 60.0);
+            let lines_per_minute = total_lines_changed as f64 / (total_execution_time.as_secs() as f64 / 60.0);
             scores.insert("productivity_lines_per_minute".to_string(), lines_per_minute);
         }
 
@@ -188,8 +189,8 @@ impl ProgressSynthesizer {
         if !conflicts.is_empty() {
             let conflict_descriptions: Vec<String> = conflicts.iter()
                 .map(|(path, workers)| {
-                    format!("{} modified by workers: {:?}", path.display(),
-                           workers.iter().map(|w| w.0.clone()).collect::<Vec<_>>())
+                    format!("{} modified by workers: {:?}", path,
+                           workers.iter().map(|w| w.0).collect::<Vec<_>>())
                 })
                 .collect();
 
@@ -202,21 +203,6 @@ impl ProgressSynthesizer {
     }
 
     /// Calculate average of an optional metric across results
-    fn calculate_average_metric<F>(&self, results: &[WorkerResult], extractor: F) -> Option<f32>
-    where
-        F: Fn(&WorkerResult) -> Option<f32>,
-    {
-        let values: Vec<f32> = results.iter()
-            .filter_map(extractor)
-            .collect();
-
-        if values.is_empty() {
-            None
-        } else {
-            Some(values.iter().sum::<f32>() / values.len() as f32)
-        }
-    }
-
     /// Merge artifacts from multiple workers
     pub fn merge_artifacts(&self, results: &[WorkerResult]) -> Vec<Artifact> {
         let mut merged = Vec::new();
@@ -230,9 +216,14 @@ impl ProgressSynthesizer {
                     // Merge duplicate artifacts (same path)
                     if let Some(existing) = merged.iter_mut()
                         .find(|a| a.path == artifact.path) {
-                        // Combine sizes and update metadata
-                        existing.size_bytes = existing.size_bytes.max(artifact.size_bytes);
-                        // Could add conflict markers here
+                        // Merge metadata entries
+                        for (key, value) in &artifact.metadata {
+                            existing.metadata.entry(key.clone()).or_insert_with(|| value.clone());
+                        }
+                        if existing.content != artifact.content {
+                            existing.content.push_str("\n---\n");
+                            existing.content.push_str(&artifact.content);
+                        }
                     }
                 }
             }
@@ -276,8 +267,9 @@ impl ProgressSynthesizer {
 }
 
 /// Performance summary for parallel execution
-#[derive(Debug, Clone)]
-pub struct PerformanceSummary {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct PerformanceSummary {
     pub total_workers: usize,
     pub total_execution_time: std::time::Duration,
     pub avg_execution_time_per_worker: std::time::Duration,
@@ -317,11 +309,6 @@ impl ResultMerger {
             merged.metrics.start_time = merged.metrics.start_time.min(result.metrics.start_time);
             merged.metrics.end_time = merged.metrics.end_time.max(result.metrics.end_time);
 
-            // Combine CPU/memory averages (weighted)
-            if let (Some(cpu1), Some(cpu2)) = (merged.metrics.cpu_usage_percent, result.metrics.cpu_usage_percent) {
-                merged.metrics.cpu_usage_percent = Some((cpu1 + cpu2) / 2.0);
-            }
-
             // Merge artifacts
             merged.artifacts.extend(result.artifacts.clone());
         }
@@ -336,14 +323,7 @@ impl ResultMerger {
             .join("\n---\n");
 
         // Combine errors if any
-        let error_messages: Vec<_> = results.iter()
-            .filter_map(|r| r.error_message.as_ref())
-            .map(|s| s.as_str())
-            .collect();
-
-        if !error_messages.is_empty() {
-            merged.error_message = Some(error_messages.join("; "));
-        }
+        merged.errors = results.iter().flat_map(|r| r.errors.clone()).collect();
 
         Ok(merged)
     }

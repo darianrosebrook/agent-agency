@@ -1,6 +1,7 @@
 /// Kokoro-inspired hyper-tuning pipeline for precision engineering
 /// of AI model performance with Bayesian optimization and thermal management.
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -12,7 +13,7 @@ use tracing::{debug, info, warn};
 use crate::bayesian_optimizer::OptimizationResult;
 
 /// Configuration for Kokoro tuner
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct KokoroConfig {
     /// Maximum tuning iterations
     pub max_iterations: usize,
@@ -42,7 +43,7 @@ pub struct KokoroTuner {
 }
 
 /// Result of a tuning iteration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TuningResult {
     /// Unique tuning session identifier
     pub session_id: String,
@@ -59,7 +60,7 @@ pub struct TuningResult {
 }
 
 /// Performance metrics from tuning
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TuningMetrics {
     /// Throughput in operations per second
     pub throughput_ops_per_sec: f32,
@@ -404,14 +405,14 @@ impl PerformanceTracker {
 }
 
 /// Parameter range for optimization
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct ParameterRange {
     min: f32,
     max: f32,
 }
 
 /// Specification for the workload being tuned
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct WorkloadSpec {
     pub name: String,
     pub input_size: usize,

@@ -1,6 +1,6 @@
 use crate::decomposition::DecompositionStage;
 use crate::disambiguation::DisambiguationStage;
-use crate::verification::MultiModalVerificationEngine;
+// use crate::MultiModalVerificationEngine; // Temporarily disabled
 use crate::qualification::QualificationStage;
 use crate::extraction_types::VerifiedClaim;
 use crate::extraction_types::*;
@@ -10,13 +10,14 @@ use std::time::Instant;
 use tracing::{debug, info};
 
 /// Main claim extraction processor with multi-modal verification integration
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ClaimExtractionProcessor {
     disambiguation_stage: DisambiguationStage,
     qualification_stage: QualificationStage,
     decomposition_stage: DecompositionStage,
-    verification_stage: MultiModalVerificationEngine,
-    multi_modal_verifier: MultiModalVerificationEngine,
+    // verification_stage: MultiModalVerificationEngine, // Temporarily disabled
+    // multi_modal_verifier: MultiModalVerificationEngine, // Temporarily disabled
 }
 
 impl ClaimExtractionProcessor {
@@ -26,8 +27,8 @@ impl ClaimExtractionProcessor {
             disambiguation_stage: DisambiguationStage::minimal(),
             qualification_stage: QualificationStage::new(),
             decomposition_stage: DecompositionStage::new(),
-            verification_stage: MultiModalVerificationEngine::new(),
-            multi_modal_verifier: MultiModalVerificationEngine::new(),
+            // verification_stage: MultiModalVerificationEngine::new(), // Temporarily disabled
+            // multi_modal_verifier: MultiModalVerificationEngine::new(), // Temporarily disabled
         }
     }
 

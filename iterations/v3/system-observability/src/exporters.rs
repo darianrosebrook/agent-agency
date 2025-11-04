@@ -340,7 +340,6 @@ impl PrometheusExporter {
 mod tests {
     use super::*;
     use std::sync::Arc;
-
     #[tokio::test]
     async fn test_exporter_creation() {
         let config = ExportConfig::default();

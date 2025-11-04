@@ -5,6 +5,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use std::collections::{HashMap, HashSet};
 use anyhow::{anyhow, Result};
 use uuid::Uuid;
@@ -28,8 +29,9 @@ pub struct WorkerAssignmentStrategy {
 }
 
 /// Assignment configuration
-#[derive(Debug, Clone)]
-pub struct AssignmentConfig {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct AssignmentConfig {
     /// Maximum load factor before worker is considered busy
     pub max_load_factor: f64,
 
@@ -50,8 +52,9 @@ pub struct AssignmentConfig {
 }
 
 /// Load balancing strategies
-#[derive(Debug, Clone)]
-pub enum LoadBalancingAlgorithm {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum LoadBalancingAlgorithm {
     /// Round-robin assignment
     RoundRobin,
 
@@ -69,7 +72,8 @@ pub enum LoadBalancingAlgorithm {
 }
 
 /// Load balancing strategy implementation
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 struct LoadBalancingStrategy {
     algorithm: LoadBalancingAlgorithm,
     round_robin_index: std::sync::atomic::AtomicUsize,
@@ -134,9 +138,11 @@ impl LoadBalancingStrategy {
 }
 
 /// Worker candidate for assignment
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct WorkerCandidate {
     /// Worker ID
+    #[schemars(with = "String")]
     worker_id: Uuid,
 
     /// Capability match score (0.0-1.0)
@@ -153,7 +159,8 @@ struct WorkerCandidate {
 }
 
 /// Worker performance metrics
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct WorkerPerformance {
     /// Tasks completed
     tasks_completed: u64,
@@ -171,6 +178,7 @@ struct WorkerPerformance {
     performance_score: f64,
 
     /// Last updated
+    #[schemars(with = "String")]
     last_updated: chrono::DateTime<chrono::Utc>,
 }
 
@@ -366,13 +374,16 @@ impl WorkerAssignmentStrategy {
         // In a real implementation, this would query current task load
 
         // Base load from performance history (if available)
-        let base_load = match serde_json::from_value::<HashMap<String, serde_json::Value>>(worker.performance_history.clone()) {
-            Ok(history) => {
-                history.get("current_load")
-                    .and_then(|v| v.as_f64())
-                    .unwrap_or(0.0)
+        let base_load = match worker.metadata.get("performance_history") {
+            Some(perf_history) => match perf_history {
+                serde_json::Value::Object(history) => {
+                    history.get("current_load")
+                        .and_then(|v| v.as_f64())
+                        .unwrap_or(0.0)
+                }
+                _ => 0.0,
             }
-            Err(_) => 0.0,
+            None => 0.0,
         };
 
         // Add some randomization to simulate real load variation
@@ -452,8 +463,9 @@ impl WorkerAssignmentStrategy {
 }
 
 /// Assignment statistics
-#[derive(Debug, Clone)]
-pub struct AssignmentStats {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct AssignmentStats {
     /// Total number of available workers
     pub total_workers: usize,
 

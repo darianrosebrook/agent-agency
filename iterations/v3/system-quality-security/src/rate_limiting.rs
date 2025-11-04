@@ -3,6 +3,7 @@
 //! Provides distributed rate limiting capabilities to prevent abuse
 //! and ensure fair resource usage across the system.
 
+use schemars::JsonSchema;
 use crate::policy_types::*;
 use anyhow::Result;
 use chrono::{DateTime, Duration, Utc};
@@ -162,12 +163,14 @@ impl RateLimiter {
 }
 
 /// Internal rate limit entry
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct RateLimitEntry {
     _client_id: String,
     _operation: String,
     count: u32,
+    #[schemars(with = "String")]
     window_start: DateTime<Utc>,
+    #[schemars(with = "String")]
     last_request: DateTime<Utc>,
 }
 

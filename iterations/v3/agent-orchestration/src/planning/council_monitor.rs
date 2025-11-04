@@ -15,23 +15,27 @@ use schemars::JsonSchema;
 use agent_agency_contracts::*;
 // Council coordinator trait is now imported from contracts
 
-#[derive(Debug, Clone)]
-pub struct ReviewContext {
-    pub plan_id: Uuid,
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ReviewContext {
+    pub plan_id: String,
+    #[schemars(with = "String")]
     pub execution_id: Uuid,
     pub review_type: String,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum ReviewPriority {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum ReviewPriority {
     Low,
     Normal,
     High,
     Critical,
 }
 
-#[derive(Debug, Clone)]
-pub enum CouncilResult {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum CouncilResult {
     Approved,
     Rejected(String),
     Escalated(String),
@@ -62,8 +66,9 @@ pub struct CouncilMonitor {
 }
 
 /// Configuration for council monitoring
-#[derive(Debug, Clone)]
-pub struct MonitorConfig {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct MonitorConfig {
     /// Check interval for ongoing monitoring (seconds)
     pub check_interval_seconds: u64,
 
@@ -81,8 +86,9 @@ pub struct MonitorConfig {
 }
 
 /// Active plan monitoring session
-#[derive(Debug, Clone)]
-pub struct PlanSession {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct PlanSession {
     /// Plan ID being monitored
     plan_id: String,
 
@@ -90,9 +96,11 @@ pub struct PlanSession {
     plan: ExecutionPlan,
 
     /// Session start time
+    #[schemars(with = "String")]
     started_at: chrono::DateTime<Utc>,
 
     /// Last check time
+    #[schemars(with = "String")]
     last_check: chrono::DateTime<Utc>,
 
     /// Current violations
@@ -106,8 +114,9 @@ pub struct PlanSession {
 }
 
 /// Session status
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SessionStatus {
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+enum SessionStatus {
     /// Actively monitoring
     Active,
 
@@ -158,7 +167,7 @@ impl CouncilMonitor {
 
         // Create review context
         let context = ReviewContext {
-            plan_id: plan.contract_plan.id,
+            plan_id: plan.contract_plan.id.to_string(),
             execution_id: Uuid::new_v4(), // TODO: Get actual execution ID
             review_type: "execution_check".to_string(),
         };
@@ -184,7 +193,10 @@ impl CouncilMonitor {
                 data_migration: false,
                 external_deps: vec![],
             },
-            scope_in: None,
+            scope_in: agent_agency_contracts::task_request::ScopeRestrictions {
+                allowed_paths: vec![],
+                blocked_paths: vec![],
+            },
             scope_out: None,
             acceptance: None,
         }).await;
@@ -242,7 +254,7 @@ impl CouncilMonitor {
                 session.status = SessionStatus::Terminated;
                 return Err(anyhow!(
                     "Plan {} terminated due to violations: {:?}",
-                    plan_id, session.violations
+                    plan_id.to_string(), session.violations
                 ));
             }
 
@@ -264,7 +276,7 @@ impl CouncilMonitor {
 
             // Trigger a council review for the intervention
             let review_context = ReviewContext {
-                plan_id,
+                plan_id: plan_id.to_string(),
                 execution_id: Uuid::new_v4(),
                 review_type: "intervention".to_string(),
             };
@@ -289,7 +301,10 @@ impl CouncilMonitor {
                     data_migration: false,
                     external_deps: vec![],
                 },
-                scope_in: None,
+                scope_in: agent_agency_contracts::task_request::ScopeRestrictions {
+                allowed_paths: vec![],
+                blocked_paths: vec![],
+            },
                 scope_out: None,
                 acceptance: None,
             }).await {
@@ -323,7 +338,7 @@ impl CouncilMonitor {
 
         // Query the council for specific recommendations based on plan execution
         let review_context = ReviewContext {
-            plan_id: Uuid::parse_str(plan_id).unwrap_or_else(|_| Uuid::new_v4()),
+            plan_id: plan_id.to_string(),
             execution_id: Uuid::new_v4(),
             review_type: "recommendations".to_string(),
         };
@@ -348,7 +363,10 @@ impl CouncilMonitor {
                 data_migration: false,
                 external_deps: vec![],
             },
-            scope_in: None,
+            scope_in: agent_agency_contracts::task_request::ScopeRestrictions {
+                allowed_paths: vec![],
+                blocked_paths: vec![],
+            },
             scope_out: None,
             acceptance: None,
         }).await {
@@ -516,7 +534,7 @@ impl CouncilMonitor {
             metadata: None,
             milestones: vec![],
             change_budget: plan.contract_plan.change_budget.clone(),
-            file_changes: file_changes.into_iter().map(|fc| agent_agency_contracts::FileChange {
+            file_changes: file_changes.into_iter().map(|fc| agent_agency_contracts::working_spec::FileChange {
                 file: fc.file,
                 change_type: fc.change_type,
                 timestamp: fc.timestamp,
@@ -728,8 +746,9 @@ impl CouncilMonitor {
 }
 
 /// Monitoring statistics
-#[derive(Debug, Clone)]
-pub struct MonitoringStats {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct MonitoringStats {
     /// Total number of monitoring sessions
     pub total_sessions: usize,
 

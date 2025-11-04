@@ -46,7 +46,7 @@ pub trait PlanningEngine: Send + Sync {
 
 /// Planning engine capabilities
 /// Describes what features and constraints a planning engine supports
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PlanningCapabilities {
     /// Supports parallel execution of independent milestones
     pub supports_parallel_execution: bool,
@@ -191,9 +191,10 @@ pub enum ValidationCategory {
 }
 
 /// Plan execution result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PlanExecutionResult {
     /// Plan identifier
+    #[schemars(with = "String")]
     pub plan_id: Uuid,
 
     /// Whether execution completed successfully
@@ -219,7 +220,7 @@ pub struct PlanExecutionResult {
 }
 
 /// Execution evidence bundle
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionEvidence {
     /// Plan-level evidence
     pub plan_evidence: Vec<EvidenceArtifact>,
@@ -323,7 +324,7 @@ pub struct CouncilReviewResult {
 }
 
 /// Execution metrics and statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionMetrics {
     /// Total milestones attempted
     pub total_milestones: usize,
@@ -354,7 +355,7 @@ pub struct ExecutionMetrics {
 }
 
 /// Resource utilization statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResourceUtilization {
     /// CPU utilization percentage
     pub cpu_utilization: f64,
@@ -373,7 +374,7 @@ pub struct ResourceUtilization {
 }
 
 /// Quality metrics from execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityMetrics {
     /// Average test coverage achieved
     pub avg_coverage: f64,
@@ -392,7 +393,7 @@ pub struct QualityMetrics {
 }
 
 /// Detailed quality metrics for plan evaluation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DetailedQualityMetrics {
     /// Overall quality score (0.0 to 1.0)
     pub overall_score: f64,
@@ -410,11 +411,12 @@ pub struct DetailedQualityMetrics {
     pub documentation_quality: DocumentationQualityMetrics,
 
     /// Measured at timestamp
+    #[schemars(with = "String")]
     pub measured_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Coverage metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CoverageMetrics {
     /// Line coverage percentage (0.0 to 100.0)
     pub line_coverage_percent: f64,
@@ -430,7 +432,7 @@ pub struct CoverageMetrics {
 }
 
 /// Test quality metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TestQualityMetrics {
     /// Test to code ratio
     pub test_to_code_ratio: f64,
@@ -446,7 +448,7 @@ pub struct TestQualityMetrics {
 }
 
 /// Code quality metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CodeQualityMetrics {
     /// Cyclomatic complexity average
     pub avg_cyclomatic_complexity: f64,
@@ -462,7 +464,7 @@ pub struct CodeQualityMetrics {
 }
 
 /// Documentation quality metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DocumentationQualityMetrics {
     /// Documentation coverage percentage
     pub documentation_coverage_percent: f64,
@@ -478,7 +480,7 @@ pub struct DocumentationQualityMetrics {
 }
 
 /// Hardware resource requirements for plan execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct HardwareResourceRequirements {
     /// Total CPU cores needed
     pub total_cpu_cores: usize,
@@ -509,7 +511,7 @@ impl Default for HardwareResourceRequirements {
 }
 
 /// Network requirements
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct NetworkRequirements {
     /// Peak bandwidth needed (Mbps)
     pub peak_bandwidth_mbps: f64,
@@ -532,7 +534,7 @@ impl Default for NetworkRequirements {
 }
 
 /// Human resource requirements for task execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct HumanResourceRequirements {
     /// Number of engineers needed
     pub engineer_count: usize,
@@ -545,7 +547,7 @@ pub struct HumanResourceRequirements {
 }
 
 /// Performance metrics from execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceMetrics {
     /// Total execution time
     pub total_time_ms: u64,

@@ -3,6 +3,7 @@
 //! Ensures data integrity across distributed systems during failures,
 //! failovers, and recovery operations.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -16,7 +17,7 @@ use futures_util::future::join_all;
 use crate::simple_client::DatabaseClient;
 
 /// Transaction state
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum TransactionState {
     Pending,
     Committed,
@@ -25,7 +26,7 @@ pub enum TransactionState {
 }
 
 /// Two-phase commit vote
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum Vote {
     /// Participant agrees to commit
     Yes,
@@ -34,7 +35,7 @@ pub enum Vote {
 }
 
 /// Participant information for distributed transactions
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TransactionParticipant {
     /// Service or database identifier
     pub service_id: String,
@@ -45,7 +46,7 @@ pub struct TransactionParticipant {
 }
 
 /// Operation within a distributed transaction
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TransactionOperation {
     /// Type of operation (insert, update, delete)
     pub operation_type: String,
@@ -56,19 +57,23 @@ pub struct TransactionOperation {
 }
 
 /// Distributed transaction record
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DistributedTransaction {
     pub id: String,
     pub coordinator_id: String,
     pub participants: Vec<TransactionParticipant>, // Detailed participant info
     pub state: TransactionState,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub timeout_at: DateTime<Utc>,
     pub metadata: serde_json::Value,
 }
 
 /// Data consistency level
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum ConsistencyLevel {
     /// Strong consistency - all replicas have same data
     Strong,
@@ -81,9 +86,11 @@ pub enum ConsistencyLevel {
 }
 
 /// Consistency check result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ConsistencyCheckResult {
     pub check_id: String,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub service_id: String,
     pub table_name: String,
@@ -95,7 +102,7 @@ pub struct ConsistencyCheckResult {
 }
 
 /// Data inconsistency record
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Inconsistency {
     pub record_id: String,
     pub primary_value: serde_json::Value,
@@ -105,7 +112,7 @@ pub struct Inconsistency {
 }
 
 /// Inconsistency severity levels
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum InconsistencySeverity {
     Low,      // Cosmetic differences
     Medium,   // Functional impact
@@ -114,7 +121,7 @@ pub enum InconsistencySeverity {
 }
 
 /// Recovery action
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum RecoveryAction {
     /// Repair data by copying from primary
     RepairFromPrimary { record_ids: Vec<String> },

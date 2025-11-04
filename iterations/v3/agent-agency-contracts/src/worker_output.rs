@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use schemars::JsonSchema;
 
 use crate::contract_errors::{ContractError, ContractKind, ValidationIssue};
 use crate::schema::WORKER_OUTPUT_SCHEMA;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub struct WorkerOutputContract {
     pub metadata: WorkerMetadata,
     pub artifacts: WorkerArtifacts,
@@ -19,46 +20,46 @@ pub struct WorkerOutputContract {
     pub evidence_refs: Vec<EvidenceReference>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct WorkerMetadata {
     pub task_id: String,
     pub risk_tier: u8,
     pub seeds: WorkerSeeds,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct WorkerSeeds {
     pub time_seed: String,
     pub uuid_seed: String,
     pub random_seed: i64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub struct WorkerArtifacts {
     pub patches: Vec<PatchArtifact>,
     #[serde(default)]
     pub commands: Vec<CommandArtifact>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct PatchArtifact {
     pub path: String,
     pub diff: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct CommandArtifact {
     pub cmd: String,
     pub dry_run: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub struct WorkerSelfAssessment {
     pub caws_checklist: CawsChecklist,
     pub notes: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct CawsChecklist {
     pub within_scope: bool,
     pub within_budget: bool,
@@ -66,7 +67,7 @@ pub struct CawsChecklist {
     pub deterministic: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct WaiverContract {
     pub id: String,
     pub reason: String,
@@ -74,7 +75,7 @@ pub struct WaiverContract {
     pub scope: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct ClaimContract {
     pub id: String,
     pub title: String,
@@ -82,7 +83,7 @@ pub struct ClaimContract {
     pub summary: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct EvidenceReference {
     pub claim_id: String,
     #[serde(rename = "ref")]
@@ -127,6 +128,7 @@ pub fn validate_worker_output_value(value: &Value) -> Result<(), ContractError> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use schemars::JsonSchema;
 
     #[test]
     fn worker_output_round_trip() {

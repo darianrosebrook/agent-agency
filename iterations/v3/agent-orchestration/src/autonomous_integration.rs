@@ -5,6 +5,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use std::path::Path;
 use std::sync::Arc;
 use async_trait::async_trait;
@@ -23,8 +24,9 @@ use crate::autonomous_file_editor::{AutonomousFileEditor, FileChange, ChangeType
 use agent_agency_contracts::{TaskDescriptor, TaskScope, ChangeBudget, BlastRadius};
 
 /// Comprehensive autonomous agent integration
-#[derive(Debug)]
-pub struct AutonomousAgentIntegration {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct AutonomousAgentIntegration {
     /// File operations service
     file_ops: Arc<dyn FileOperationsService>,
     /// Learning service for self-improvement
@@ -101,12 +103,12 @@ impl AutonomousAgentIntegration {
 
         // Phase 3: Parse planning response and execute file changes
         let file_changes = self.parse_planning_response(&planning_response.text)?;
-        let execution_result = self.execute_file_changes(&task.task_id, file_changes).await?;
+        let execution_result = self.execute_file_changes(&task.task_id.to_string(), file_changes).await?;
 
         // Phase 4: Learn from execution results
         let performance = self.build_performance_metrics(&execution_result, start_time.elapsed());
         let learning_context = LearningContext {
-            task_id: task.task_id.clone(),
+            task_id: task.task_id.to_string(),
             state: format!("task_completed_{}", execution_result.success),
             available_actions: vec![
                 "optimize_algorithm".to_string(),
@@ -148,7 +150,7 @@ impl AutonomousAgentIntegration {
         info!("Autonomous task execution completed in {:.2}s", total_time.as_secs_f64());
 
         Ok(AutonomousExecutionResult {
-            task_id: task.task_id.clone(),
+            task_id: task.task_id.to_string(),
             success: execution_result.success,
             changes_applied: execution_result.changes_applied,
             learning_insights,
@@ -524,15 +526,18 @@ VERIFICATION:
 }
 
 /// Context gathered during task analysis
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct TaskAnalysisContext {
+    #[schemars(skip)]
     system_metrics: SystemMetrics,
     task_complexity: f64,
     available_resources: ResourceEstimate,
 }
 
 /// Resource estimation for task execution
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct ResourceEstimate {
     estimated_cpu_ms: u64,
     estimated_memory_mb: u64,
@@ -540,7 +545,8 @@ struct ResourceEstimate {
 }
 
 /// Result of file execution
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct FileExecutionResult {
     success: bool,
     changes_applied: usize,
@@ -548,29 +554,34 @@ struct FileExecutionResult {
 }
 
 /// Result of autonomous task execution
-#[derive(Debug, Clone)]
-pub struct AutonomousExecutionResult {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct AutonomousExecutionResult {
     pub task_id: String,
     pub success: bool,
     pub changes_applied: usize,
+    #[schemars(skip)]
     pub learning_insights: system_common_interfaces::LearningInsights,
     pub execution_time: std::time::Duration,
     pub model_used: String,
 }
 
 /// Health status of the autonomous integration
-#[derive(Debug, Clone)]
-pub struct AutonomousHealthStatus {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct AutonomousHealthStatus {
     pub overall_healthy: bool,
     pub file_operations: bool,
     pub learning_service: bool,
     pub model_orchestrator: bool,
+    #[schemars(with = "String")]
     pub last_check: chrono::DateTime<chrono::Utc>,
 }
 
 /// Errors that can occur during autonomous integration
-#[derive(thiserror::Error, Debug)]
-pub enum AutonomousIntegrationError {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
+enum AutonomousIntegrationError {
     #[error("File operations error: {0}")]
     FileOps(String),
 

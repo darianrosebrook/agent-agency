@@ -1,12 +1,14 @@
 //! Planning Agent error types and results
 
+use schemars::JsonSchema;
 use std::fmt;
 
 /// Result type for planning operations
 pub type PlanningResult<T> = Result<T, PlanningError>;
 
 /// Errors that can occur during planning operations
-#[derive(Debug, thiserror::Error)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
 pub enum PlanningError {
     #[error("Task request validation failed: {0}")]
     InvalidTaskRequest(String),

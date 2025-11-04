@@ -3,6 +3,7 @@
 //! JSON Schema-backed registry with autoconversion capabilities for safe
 //! tool chain data flow and type safety across tool boundaries.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -288,7 +289,7 @@ impl SchemaRegistry for CachedSchemaRegistry {
 }
 
 /// Schema validation error
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum SchemaError {
     #[error("Schema not found: {0}")]
     NotFound(String),
@@ -352,14 +353,14 @@ pub struct SchemaEvolutionTracker {
     compatibility_graph: HashMap<(String, String), CompatibilityType>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, JsonSchema)]
 pub struct SchemaVersion {
     version: String,
     schema: Value,
     created_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, JsonSchema)]
 pub enum CompatibilityType {
     FullyCompatible,
     BackwardCompatible,
@@ -409,4 +410,3 @@ impl SchemaEvolutionTracker {
             None
         }
     }
-}

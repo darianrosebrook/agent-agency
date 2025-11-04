@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 /// JavaScript-specific analyzer
 #[derive(Debug)]
-pub struct JavaScriptAnalyzer;
+pub struct JavaScriptAnalyzer ;
 
 impl JavaScriptAnalyzer {
     /// Create a new JavaScript analyzer

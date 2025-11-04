@@ -13,10 +13,11 @@
 #![warn(unused_variables, dead_code)]
 #![allow(ambiguous_glob_reexports, unused_variables, dead_code, unused_assignments)]
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Scope for filesystem check operations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum FsckScope {
     /// Check entire repository
     Full,
@@ -27,7 +28,7 @@ pub enum FsckScope {
 }
 
 /// Status of filesystem check operation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum FsckStatus {
     /// Check completed successfully
     Ok,
@@ -38,7 +39,7 @@ pub enum FsckStatus {
 }
 
 /// Report from filesystem check operation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FsckReport {
     /// Overall status
     pub status: FsckStatus,
@@ -66,6 +67,8 @@ pub mod index;
 pub mod recovery_types;
 pub mod integration;
 pub mod recovery_metrics;
+pub mod resilience_circuit_breaker;
+pub mod retry;
 
 // Workspace state management (consolidated from workspace-state-manager crate)
 pub mod workspace_state;
@@ -78,4 +81,6 @@ pub use recovery_api::*;
 pub use recovery_types::*;
 pub use integration::*;
 pub use recovery_metrics::{*, MetricsBackend};
+pub use resilience_circuit_breaker::*;
+pub use retry::*;
 // pub use source_integrity::{Digest, StreamingHasher, MerkleTree};  // Temporarily disabled

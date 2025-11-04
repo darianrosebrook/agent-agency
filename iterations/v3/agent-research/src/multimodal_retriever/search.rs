@@ -1,5 +1,6 @@
 //! Search coordination across multiple modalities
 
+use schemars::JsonSchema;
 use std::sync::Arc;
 use anyhow::Result;
 use tracing::{info, debug};
@@ -10,7 +11,8 @@ use super::visual_search::VisualSearchEngine;
 use super::query_processing::ProcessedQuery;
 
 /// Search coordinator managing multimodal search execution
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct SearchCoordinator {
     config: MultimodalRetrieverConfig,
     text_engine: Arc<TextSearchEngine>,
@@ -113,7 +115,8 @@ impl SearchCoordinator {
 }
 
 /// Search execution statistics
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, serde::Serialize, serde::Deserialize)]
 pub struct SearchStats {
     pub text_searches: u64,
     pub visual_searches: u64,

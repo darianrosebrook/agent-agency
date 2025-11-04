@@ -1,13 +1,13 @@
 //! Learning persistence trait and implementations
 
 use async_trait::async_trait;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use anyhow::{Context, Result};
 use uuid::Uuid;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use tracing::{info, warn, error, debug};
 
-use crate::parallel_types::{TaskId, WorkerId};
+use crate::parallel_types::{TaskId, WorkerId, WorkerSpecialty};
 use crate::learning::types::*;
 
 /// Trait for persisting learning data
@@ -279,11 +279,12 @@ impl DatabaseLearningPersistence {
                 id UUID PRIMARY KEY,
                 worker_type VARCHAR(100) NOT NULL,
                 task_type VARCHAR(100) NOT NULL,
-                parameters JSONB NOT NULL,
+                config JSONB NOT NULL,
                 performance_metrics JSONB NOT NULL,
                 confidence DOUBLE PRECISION NOT NULL,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                expires_at TIMESTAMP WITH TIME ZONE
+                expires_at TIMESTAMP WITH TIME ZONE,
+                metadata JSONB DEFAULT '{}'
             )
             "#
         )
@@ -337,11 +338,12 @@ impl LearningPersistence for DatabaseLearningPersistence {
         for record in records {
             sqlx::query(
                 r#"
-                INSERT INTO execution_records (id, task_id, worker_id, execution_time_ms, success, error_message, metadata, created_at)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                INSERT INTO execution_records (id, task_id, worker_id, execution_time_ms, success, quality_score, error_message, metadata, created_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 ON CONFLICT (id) DO UPDATE SET
                     execution_time_ms = EXCLUDED.execution_time_ms,
                     success = EXCLUDED.success,
+                    quality_score = EXCLUDED.quality_score,
                     error_message = EXCLUDED.error_message,
                     metadata = EXCLUDED.metadata
                 "#
@@ -351,6 +353,7 @@ impl LearningPersistence for DatabaseLearningPersistence {
             .bind(record.worker_id.0)
             .bind(record.execution_time_ms as i64)
             .bind(record.success)
+            .bind(record.quality_score)
             .bind(record.error_message.as_deref())
             .bind(&record.metadata)
             .bind(record.created_at)
@@ -369,7 +372,7 @@ impl LearningPersistence for DatabaseLearningPersistence {
         let query = if let Some(limit) = limit {
             sqlx::query_as::<_, ExecutionRecord>(
                 r#"
-                SELECT id, task_id, worker_id, execution_time_ms, success, error_message, metadata, created_at
+                SELECT id, task_id, worker_id, execution_time_ms, success, quality_score, error_message, metadata, created_at
                 FROM execution_records
                 WHERE metadata @> $1
                 ORDER BY created_at DESC
@@ -381,7 +384,7 @@ impl LearningPersistence for DatabaseLearningPersistence {
         } else {
             sqlx::query_as::<_, ExecutionRecord>(
                 r#"
-                SELECT id, task_id, worker_id, execution_time_ms, success, error_message, metadata, created_at
+                SELECT id, task_id, worker_id, execution_time_ms, success, quality_score, error_message, metadata, created_at
                 FROM execution_records
                 WHERE metadata @> $1
                 ORDER BY created_at DESC
@@ -407,28 +410,33 @@ impl LearningPersistence for DatabaseLearningPersistence {
         debug!("Storing {} worker profiles to database", profiles.len());
 
         for (worker_id, profile) in profiles {
+            // Serialize complex fields as JSON
+            let metadata = serde_json::json!({
+                "specialty": serde_json::to_string(&profile.specialty).unwrap_or_default(),
+                "average_quality_score": profile.average_quality_score,
+                "performance_trend": serde_json::to_string(&profile.performance_trend).unwrap_or_default(),
+                "capability_scores": profile.capability_scores
+            });
+
             sqlx::query(
                 r#"
-                INSERT INTO worker_performance_profiles (id, worker_id, total_executions, successful_executions, failed_executions, average_execution_time_ms, success_rate, metadata, last_updated)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                INSERT INTO worker_performance_profiles (worker_id, total_executions, successful_executions, average_execution_time_ms, success_rate, metadata, last_updated)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
                 ON CONFLICT (worker_id) DO UPDATE SET
                     total_executions = EXCLUDED.total_executions,
                     successful_executions = EXCLUDED.successful_executions,
-                    failed_executions = EXCLUDED.failed_executions,
                     average_execution_time_ms = EXCLUDED.average_execution_time_ms,
                     success_rate = EXCLUDED.success_rate,
                     metadata = EXCLUDED.metadata,
                     last_updated = EXCLUDED.last_updated
                 "#
             )
-            .bind(profile.id)
             .bind(worker_id.0)
             .bind(profile.total_executions as i64)
             .bind(profile.successful_executions as i64)
-            .bind(profile.failed_executions as i64)
             .bind(profile.average_execution_time_ms)
-            .bind(profile.success_rate)
-            .bind(&profile.metadata)
+            .bind(profile.average_quality_score) // Using average_quality_score as success_rate approximation
+            .bind(&metadata)
             .bind(Utc::now())
             .execute(&self.pool)
             .await
@@ -442,9 +450,22 @@ impl LearningPersistence for DatabaseLearningPersistence {
     async fn get_worker_profile(&self, worker_id: &WorkerId) -> Result<Option<WorkerPerformanceProfile>> {
         debug!("Retrieving worker profile for: {}", worker_id.0);
 
-        let profile = sqlx::query_as::<_, WorkerPerformanceProfile>(
+        
+#[derive(Serialize, Deserialize, JsonSchema, sqlx::FromRow)]
+struct WorkerProfileRow {
+            worker_id: Uuid,
+            total_executions: i64,
+            successful_executions: i64,
+            average_execution_time_ms: f64,
+            success_rate: f64,
+            metadata: serde_json::Value,
+            #[schemars(with = "String")]
+    last_updated: DateTime<Utc>,
+        }
+
+        let row = sqlx::query_as::<_, WorkerProfileRow>(
             r#"
-            SELECT id, worker_id, total_executions, successful_executions, failed_executions, average_execution_time_ms, success_rate, metadata, last_updated
+            SELECT worker_id, total_executions, successful_executions, average_execution_time_ms, success_rate, metadata, last_updated
             FROM worker_performance_profiles
             WHERE worker_id = $1
             "#
@@ -454,7 +475,39 @@ impl LearningPersistence for DatabaseLearningPersistence {
         .await
         .context("Failed to retrieve worker profile")?;
 
-        Ok(profile)
+        if let Some(row) = row {
+            // Deserialize the metadata JSON
+            let specialty_str = row.metadata.get("specialty")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown");
+            let specialty: WorkerSpecialty = serde_json::from_str(specialty_str).unwrap_or(WorkerSpecialty::General);
+
+            let performance_trend_str = row.metadata.get("performance_trend")
+                .and_then(|v| v.as_str())
+                .unwrap_or("\"Unknown\"");
+            let performance_trend: PerformanceTrend = serde_json::from_str(performance_trend_str).unwrap_or(PerformanceTrend::Unknown);
+
+            let capability_scores: HashMap<String, f64> = row.metadata.get("capability_scores")
+                .and_then(|v| v.as_object())
+                .map(|obj| obj.iter().filter_map(|(k, v)| v.as_f64().map(|f| (k.clone(), f))).collect())
+                .unwrap_or_default();
+
+            let profile = WorkerPerformanceProfile {
+                worker_id: WorkerId(row.worker_id),
+                specialty,
+                total_executions: row.total_executions as u64,
+                successful_executions: row.successful_executions as u64,
+                average_execution_time_ms: row.average_execution_time_ms,
+                average_quality_score: row.success_rate, // Stored as success_rate in DB
+                last_updated: row.last_updated,
+                performance_trend,
+                capability_scores,
+            };
+
+            Ok(Some(profile))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn store_success_patterns(&self, patterns: Vec<SuccessPattern>) -> Result<()> {
@@ -467,25 +520,22 @@ impl LearningPersistence for DatabaseLearningPersistence {
         for pattern in patterns {
             sqlx::query(
                 r#"
-                INSERT INTO success_patterns (id, pattern_name, pattern_type, confidence_score, frequency, conditions, outcomes, created_at, last_seen)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                INSERT INTO success_patterns (id, pattern_type, success_rate, average_quality, frequency, conditions, created_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
                 ON CONFLICT (id) DO UPDATE SET
-                    confidence_score = EXCLUDED.confidence_score,
+                    success_rate = EXCLUDED.success_rate,
+                    average_quality = EXCLUDED.average_quality,
                     frequency = EXCLUDED.frequency,
-                    conditions = EXCLUDED.conditions,
-                    outcomes = EXCLUDED.outcomes,
-                    last_seen = EXCLUDED.last_seen
+                    conditions = EXCLUDED.conditions
                 "#
             )
             .bind(pattern.id)
-            .bind(&pattern.pattern_name)
-            .bind(&pattern.pattern_type)
-            .bind(pattern.confidence_score)
-            .bind(pattern.frequency as i32)
+            .bind(serde_json::to_string(&pattern.pattern_type).unwrap_or_default())
+            .bind(pattern.success_rate)
+            .bind(pattern.average_quality)
+            .bind(pattern.frequency as i64)
             .bind(&pattern.conditions)
-            .bind(&pattern.outcomes)
             .bind(pattern.created_at)
-            .bind(pattern.last_seen)
             .execute(&self.pool)
             .await
             .context("Failed to store success pattern")?;
@@ -498,16 +548,50 @@ impl LearningPersistence for DatabaseLearningPersistence {
     async fn get_success_patterns(&self) -> Result<Vec<SuccessPattern>> {
         debug!("Retrieving all success patterns from database");
 
-        let patterns = sqlx::query_as::<_, SuccessPattern>(
+        
+#[derive(Serialize, Deserialize, JsonSchema, sqlx::FromRow)]
+struct SuccessPatternRow {
+            id: Uuid,
+            pattern_type: String,
+            success_rate: f64,
+            average_quality: f64,
+            frequency: i64,
+            conditions: serde_json::Value,
+            #[schemars(with = "String")]
+    created_at: DateTime<Utc>,
+        }
+
+        let rows = sqlx::query_as::<_, SuccessPatternRow>(
             r#"
-            SELECT id, pattern_name, pattern_type, confidence_score, frequency, conditions, outcomes, created_at, last_seen
+            SELECT id, pattern_type, success_rate, average_quality, frequency, conditions, created_at
             FROM success_patterns
-            ORDER BY confidence_score DESC, frequency DESC
+            ORDER BY success_rate DESC, frequency DESC
             "#
         )
         .fetch_all(&self.pool)
         .await
         .context("Failed to retrieve success patterns")?;
+
+        let patterns = rows.into_iter().filter_map(|row| {
+            // Deserialize pattern_type from JSON string
+            let pattern_type: PatternType = serde_json::from_str(&row.pattern_type).ok()?;
+
+            // Convert conditions from JSON Value to HashMap
+            let conditions: HashMap<String, serde_json::Value> = row.conditions
+                .as_object()
+                .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                .unwrap_or_default();
+
+            Some(SuccessPattern {
+                id: row.id,
+                pattern_type,
+                conditions,
+                success_rate: row.success_rate,
+                average_quality: row.average_quality,
+                frequency: row.frequency as u64,
+                created_at: row.created_at,
+            })
+        }).collect();
 
         debug!("Retrieved {} success patterns", patterns.len());
         Ok(patterns)
@@ -523,25 +607,22 @@ impl LearningPersistence for DatabaseLearningPersistence {
         for pattern in patterns {
             sqlx::query(
                 r#"
-                INSERT INTO failure_patterns (id, pattern_name, pattern_type, confidence_score, frequency, conditions, outcomes, created_at, last_seen)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                INSERT INTO failure_patterns (id, pattern_type, failure_rate, frequency, conditions, common_errors, created_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
                 ON CONFLICT (id) DO UPDATE SET
-                    confidence_score = EXCLUDED.confidence_score,
+                    failure_rate = EXCLUDED.failure_rate,
                     frequency = EXCLUDED.frequency,
                     conditions = EXCLUDED.conditions,
-                    outcomes = EXCLUDED.outcomes,
-                    last_seen = EXCLUDED.last_seen
+                    common_errors = EXCLUDED.common_errors
                 "#
             )
             .bind(pattern.id)
-            .bind(&pattern.pattern_name)
-            .bind(&pattern.pattern_type)
-            .bind(pattern.confidence_score)
-            .bind(pattern.frequency as i32)
+            .bind(serde_json::to_string(&pattern.pattern_type).unwrap_or_default())
+            .bind(pattern.failure_rate)
+            .bind(pattern.frequency as i64)
             .bind(&pattern.conditions)
-            .bind(&pattern.outcomes)
+            .bind(&pattern.common_errors)
             .bind(pattern.created_at)
-            .bind(pattern.last_seen)
             .execute(&self.pool)
             .await
             .context("Failed to store failure pattern")?;
@@ -554,16 +635,50 @@ impl LearningPersistence for DatabaseLearningPersistence {
     async fn get_failure_patterns(&self) -> Result<Vec<FailurePattern>> {
         debug!("Retrieving all failure patterns from database");
 
-        let patterns = sqlx::query_as::<_, FailurePattern>(
+        
+#[derive(Serialize, Deserialize, JsonSchema, sqlx::FromRow)]
+struct FailurePatternRow {
+            id: Uuid,
+            pattern_type: String,
+            failure_rate: f64,
+            frequency: i64,
+            conditions: serde_json::Value,
+            common_errors: Vec<String>,
+            #[schemars(with = "String")]
+    created_at: DateTime<Utc>,
+        }
+
+        let rows = sqlx::query_as::<_, FailurePatternRow>(
             r#"
-            SELECT id, pattern_name, pattern_type, confidence_score, frequency, conditions, outcomes, created_at, last_seen
+            SELECT id, pattern_type, failure_rate, frequency, conditions, common_errors, created_at
             FROM failure_patterns
-            ORDER BY confidence_score DESC, frequency DESC
+            ORDER BY failure_rate DESC, frequency DESC
             "#
         )
         .fetch_all(&self.pool)
         .await
         .context("Failed to retrieve failure patterns")?;
+
+        let patterns = rows.into_iter().filter_map(|row| {
+            // Deserialize pattern_type from JSON string
+            let pattern_type: PatternType = serde_json::from_str(&row.pattern_type).ok()?;
+
+            // Convert conditions from JSON Value to HashMap
+            let conditions: HashMap<String, serde_json::Value> = row.conditions
+                .as_object()
+                .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                .unwrap_or_default();
+
+            Some(FailurePattern {
+                id: row.id,
+                pattern_type,
+                conditions,
+                failure_rate: row.failure_rate,
+                common_errors: row.common_errors,
+                frequency: row.frequency as u64,
+                created_at: row.created_at,
+            })
+        }).collect();
 
         debug!("Retrieved {} failure patterns", patterns.len());
         Ok(patterns)
@@ -579,23 +694,22 @@ impl LearningPersistence for DatabaseLearningPersistence {
         for config in configs {
             sqlx::query(
                 r#"
-                INSERT INTO optimal_configs (id, worker_type, task_type, parameters, performance_metrics, confidence, created_at, expires_at)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                INSERT INTO optimal_configs (id, config_type, parameters, performance_metrics, conditions, confidence, created_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
                 ON CONFLICT (id) DO UPDATE SET
                     parameters = EXCLUDED.parameters,
                     performance_metrics = EXCLUDED.performance_metrics,
-                    confidence = EXCLUDED.confidence,
-                    expires_at = EXCLUDED.expires_at
+                    conditions = EXCLUDED.conditions,
+                    confidence = EXCLUDED.confidence
                 "#
             )
             .bind(config.id)
-            .bind(&config.worker_type)
-            .bind(&config.task_type)
+            .bind(serde_json::to_string(&config.config_type).unwrap_or_default())
             .bind(&config.parameters)
             .bind(&config.performance_metrics)
+            .bind(&config.conditions)
             .bind(config.confidence)
             .bind(config.created_at)
-            .bind(config.expires_at)
             .execute(&self.pool)
             .await
             .context("Failed to store optimal config")?;
@@ -608,17 +722,65 @@ impl LearningPersistence for DatabaseLearningPersistence {
     async fn get_optimal_configs(&self) -> Result<Vec<OptimalConfig>> {
         debug!("Retrieving all optimal configs from database");
 
-        let configs = sqlx::query_as::<_, OptimalConfig>(
+        
+#[derive(Serialize, Deserialize, JsonSchema, sqlx::FromRow)]
+struct OptimalConfigRow {
+            id: Uuid,
+            config_type: String,
+            parameters: serde_json::Value,
+            performance_metrics: serde_json::Value,
+            conditions: serde_json::Value,
+            confidence: f64,
+            #[schemars(with = "String")]
+    created_at: DateTime<Utc>,
+        }
+
+        let rows = sqlx::query_as::<_, OptimalConfigRow>(
             r#"
-            SELECT id, worker_type, task_type, parameters, performance_metrics, confidence, created_at, expires_at
+            SELECT id, config_type, parameters, performance_metrics, conditions, confidence, created_at
             FROM optimal_configs
-            WHERE expires_at IS NULL OR expires_at > NOW()
             ORDER BY confidence DESC
             "#
         )
         .fetch_all(&self.pool)
         .await
         .context("Failed to retrieve optimal configs")?;
+
+        let configs = rows.into_iter().filter_map(|row| {
+            // Deserialize config_type from JSON string
+            let config_type: ConfigType = serde_json::from_str(&row.config_type).ok()?;
+
+            // Convert parameters and conditions from JSON Value to HashMap
+            let parameters: HashMap<String, serde_json::Value> = row.parameters
+                .as_object()
+                .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                .unwrap_or_default();
+
+            let conditions: HashMap<String, serde_json::Value> = row.conditions
+                .as_object()
+                .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                .unwrap_or_default();
+
+            // Deserialize performance_metrics from JSON
+            let performance_metrics: PerformanceMetrics = serde_json::from_value(row.performance_metrics)
+                .unwrap_or_else(|_| PerformanceMetrics {
+                    execution_time_ms: 0.0,
+                    quality_score: 0.0,
+                    success_rate: 0.0,
+                    resource_utilization: 0.0,
+                    cost_score: 0.0,
+                });
+
+            Some(OptimalConfig {
+                id: row.id,
+                config_type,
+                parameters,
+                performance_metrics,
+                conditions,
+                confidence: row.confidence,
+                created_at: row.created_at,
+            })
+        }).collect();
 
         debug!("Retrieved {} optimal configs", configs.len());
         Ok(configs)
@@ -634,15 +796,16 @@ impl LearningPersistence for DatabaseLearningPersistence {
         for event in events {
             sqlx::query(
                 r#"
-                INSERT INTO optimization_events (id, config_id, event_type, event_data, created_at)
-                VALUES ($1, $2, $3, $4, $5)
+                INSERT INTO optimization_events (id, event_type, config_id, performance_delta, timestamp, metadata)
+                VALUES ($1, $2, $3, $4, $5, $6)
                 "#
             )
             .bind(event.id)
+            .bind(serde_json::to_string(&event.event_type).unwrap_or_default())
             .bind(event.config_id)
-            .bind(&event.event_type)
-            .bind(&event.event_data)
-            .bind(event.created_at)
+            .bind(&event.performance_delta)
+            .bind(event.timestamp)
+            .bind(&event.metadata)
             .execute(&self.pool)
             .await
             .context("Failed to store optimization event")?;
@@ -655,18 +818,64 @@ impl LearningPersistence for DatabaseLearningPersistence {
     async fn get_optimization_events(&self, config_id: &Uuid) -> Result<Vec<OptimizationEvent>> {
         debug!("Retrieving optimization events for config: {}", config_id);
 
-        let events = sqlx::query_as::<_, OptimizationEvent>(
+        
+#[derive(Serialize, Deserialize, JsonSchema, sqlx::FromRow)]
+struct OptimizationEventRow {
+            id: Uuid,
+            event_type: String,
+            config_id: Uuid,
+            performance_delta: serde_json::Value,
+            #[schemars(with = "String")]
+    timestamp: DateTime<Utc>,
+            metadata: serde_json::Value,
+        }
+
+        let rows = sqlx::query_as::<_, OptimizationEventRow>(
             r#"
-            SELECT id, config_id, event_type, event_data, created_at
+            SELECT id, event_type, config_id, performance_delta, timestamp, metadata
             FROM optimization_events
             WHERE config_id = $1
-            ORDER BY created_at DESC
+            ORDER BY timestamp DESC
             "#
         )
         .bind(config_id)
         .fetch_all(&self.pool)
         .await
         .context("Failed to retrieve optimization events")?;
+
+        let events = rows.into_iter().filter_map(|row| {
+            // Deserialize event_type from JSON string
+            let event_type: OptimizationEventType = serde_json::from_str(&row.event_type).ok()?;
+
+            // Convert metadata from JSON Value to HashMap
+            let metadata: HashMap<String, serde_json::Value> = row.metadata
+                .as_object()
+                .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                .unwrap_or_default();
+
+            // Deserialize performance_delta from JSON
+            let performance_delta: PerformanceMetrics = serde_json::from_value(row.performance_delta)
+                .unwrap_or_else(|_| PerformanceMetrics {
+                    execution_time_ms: 0.0,
+                    quality_score: 0.0,
+                    success_rate: 0.0,
+                    resource_utilization: 0.0,
+                    cost_score: 0.0,
+                });
+
+            Some(OptimizationEvent {
+                id: row.id,
+                event_type,
+                config_id: row.config_id,
+                performance_delta,
+                timestamp: row.timestamp,
+                metadata,
+                config_before: None,
+                config_after: None,
+                performance_improvement: None,
+                optimization_type: None,
+            })
+        }).collect();
 
         debug!("Retrieved {} optimization events", events.len());
         Ok(events)

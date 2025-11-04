@@ -4,6 +4,7 @@
 //! execution for overlapping computation, enabling efficient pipelined workflows.
 //! Now uses common-pipeline framework for standardized streaming patterns.
 
+use schemars::JsonSchema;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -21,7 +22,7 @@ use crate::chunked_stubs::{ChunkedExecutor, ChunkConfig, ExecutionChunk};
 
 /// Streaming pipeline configuration
 /// Now wraps StreamingPipelineConfig with domain-specific settings
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StreamConfig {
     /// Base streaming pipeline configuration
     #[serde(flatten)]
@@ -40,7 +41,7 @@ pub struct StreamConfig {
 }
 
 /// Pipeline execution metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PipelineMetrics {
     /// Current active streams
     pub active_streams: usize,
@@ -59,7 +60,7 @@ pub struct PipelineMetrics {
 }
 
 /// Stream execution state
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum StreamState {
     /// Stream is being prepared
     Preparing,
@@ -74,7 +75,7 @@ pub enum StreamState {
 }
 
 /// Result from streaming pipeline processing
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StreamResult {
     /// Stream ID
     pub stream_id: String,
@@ -109,7 +110,7 @@ pub struct StreamingPipelineExecutor {
 }
 
 /// Stream execution context
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct StreamExecution {
     /// Stream ID
     pub id: String,
@@ -128,7 +129,7 @@ pub struct StreamExecution {
 }
 
 /// Stream commands for pipeline control
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum StreamCommand {
     /// Start a new stream
     StartStream { id: String, task_data: Vec<u8> },
@@ -143,7 +144,7 @@ pub enum StreamCommand {
 }
 
 /// Stream events emitted during execution
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum StreamEvent {
     /// Stream started
     StreamStarted { id: String, timestamp: chrono::DateTime<chrono::Utc> },
@@ -788,5 +789,4 @@ impl Default for StreamConfig {
         }
     }
 }
-
 

@@ -1,12 +1,13 @@
 //! Research agent types and data structures
 
+use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Research query types
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub enum QueryType {
     /// General knowledge search
     Knowledge,
@@ -25,7 +26,7 @@ pub enum QueryType {
 }
 
 /// Research priority levels
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
 pub enum ResearchPriority {
     Low = 1,
     Normal = 2,
@@ -34,7 +35,7 @@ pub enum ResearchPriority {
 }
 
 /// Fusion methods for combining multimodal search results
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum FusionMethod {
     /// Reciprocal Rank Fusion
     RRF,
@@ -45,21 +46,22 @@ pub enum FusionMethod {
 }
 
 /// Search context for multimodal knowledge seeking
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SearchContext {
     pub project_scope: Option<String>,
 }
 
 /// Configuration update for research agent
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ConfigurationUpdate {
     pub field: String,
     pub value: serde_json::Value,
 }
 
 /// Knowledge query for research
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct KnowledgeQuery {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub query: String,
     pub query_type: QueryType,
@@ -70,8 +72,9 @@ pub struct KnowledgeQuery {
 }
 
 /// Search result from various sources
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SearchResult {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub title: String,
     pub content: String,
@@ -83,7 +86,7 @@ pub struct SearchResult {
 }
 
 /// Knowledge source types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum KnowledgeSource {
     /// Web page content
     WebPage(String),
@@ -118,8 +121,9 @@ impl std::fmt::Display for KnowledgeSource {
 }
 
 /// Research query
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResearchQuery {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub query: String,
     pub query_type: QueryType,
@@ -127,14 +131,17 @@ pub struct ResearchQuery {
     pub context: Option<String>,
     pub max_results: Option<u32>,
     pub sources: Vec<KnowledgeSource>,
+    ##[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
     pub deadline: Option<DateTime<Utc>>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
 
 /// Research result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResearchResult {
+    #[schemars(with = "String")]
     pub query_id: Uuid,
     pub source: KnowledgeSource,
     pub title: String,
@@ -142,29 +149,37 @@ pub struct ResearchResult {
     pub summary: Option<String>,
     pub relevance_score: f32,
     pub confidence_score: f32,
+    ##[schemars(with = "String")]
+
     pub extracted_at: DateTime<Utc>,
     pub url: Option<String>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
 
 /// Synthesized context
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SynthesizedContext {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub query_id: Uuid,
     pub context_summary: String,
     pub key_findings: Vec<String>,
     pub supporting_evidence: Vec<ResearchResult>,
     pub confidence_score: f32,
+    ##[schemars(with = "String")]
+
     pub synthesized_at: DateTime<Utc>,
     pub sources: Vec<KnowledgeSource>,
     pub cross_references: Vec<CrossReference>,
 }
 
 /// Cross-reference between knowledge sources
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CrossReference {
+    #[schemars(with = "String")]
     pub source_id: Uuid,
+    #[schemars(with = "String")]
     pub target_id: Uuid,
     pub relationship: CrossReferenceType,
     pub strength: f32,
@@ -172,7 +187,7 @@ pub struct CrossReference {
 }
 
 /// Types of cross-references
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum CrossReferenceType {
     /// Source supports target
     Supports,
@@ -189,19 +204,24 @@ pub enum CrossReferenceType {
 }
 
 /// Vector embedding for semantic search
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct VectorEmbedding {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub content_id: Uuid,
     pub vector: Vec<f32>,
     pub model: String,
     pub dimension: u32,
+    ##[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
 }
 
 /// Knowledge base entry
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct KnowledgeEntry {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub title: String,
     pub content: String,
@@ -211,7 +231,11 @@ pub struct KnowledgeEntry {
     pub language: Option<String>,
     pub tags: Vec<String>,
     pub embedding: Option<VectorEmbedding>,
+    ##[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
+    ##[schemars(with = "String")]
+
     pub updated_at: DateTime<Utc>,
     pub access_count: u64,
     pub last_accessed: Option<DateTime<Utc>>,
@@ -219,7 +243,7 @@ pub struct KnowledgeEntry {
 }
 
 /// Content types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ContentType {
     /// Plain text content
     Text,
@@ -242,12 +266,14 @@ pub enum ContentType {
 }
 
 /// Web scraping result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WebScrapingResult {
     pub url: String,
     pub title: String,
     pub content: String,
     pub content_type: ContentType,
+    ##[schemars(with = "String")]
+
     pub scraped_at: DateTime<Utc>,
     pub status_code: u16,
     pub content_size: usize,
@@ -256,7 +282,7 @@ pub struct WebScrapingResult {
 }
 
 /// Content processing result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContentProcessingResult {
     pub original_content: String,
     pub processed_content: String,
@@ -270,7 +296,7 @@ pub struct ContentProcessingResult {
 }
 
 /// Research performance metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResearchMetrics {
     pub total_queries: u64,
     pub successful_queries: u64,
@@ -283,11 +309,13 @@ pub struct ResearchMetrics {
     pub web_scraping_success_rate: f32,
     pub context_synthesis_quality: f32,
     pub fuzzy_match_adjustments: u64,
+    ##[schemars(with = "String")]
+
     pub last_updated: DateTime<Utc>,
 }
 
 /// Research agent status
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ResearchAgentStatus {
     /// Agent is available for queries
     Available,
@@ -302,28 +330,35 @@ pub enum ResearchAgentStatus {
 }
 
 /// Research configuration update
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResearchConfigUpdate {
     pub field: String,
     pub value: serde_json::Value,
+    ##[schemars(with = "String")]
+
     pub updated_at: DateTime<Utc>,
 }
 
 /// Research session for tracking related queries
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResearchSession {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub session_name: String,
     pub queries: Vec<Uuid>,
     pub context: Option<String>,
+    ##[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
+    ##[schemars(with = "String")]
+
     pub last_activity: DateTime<Utc>,
     pub is_active: bool,
     pub metadata: HashMap<String, serde_json::Value>,
 }
 
 /// Research agent capabilities
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResearchCapabilities {
     pub supported_query_types: Vec<QueryType>,
     pub supported_sources: Vec<KnowledgeSource>,
@@ -337,14 +372,14 @@ pub struct ResearchCapabilities {
 }
 
 /// Performance configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceConfig {
     pub max_concurrent_requests: usize,
     pub request_timeout_ms: u64,
 }
 
 /// Research agent configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResearchAgentConfig {
     pub vector_search: VectorSearchConfig,
     pub web_scraping: WebScrapingConfig,
@@ -354,7 +389,7 @@ pub struct ResearchAgentConfig {
 }
 
 /// Vector search configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct VectorSearchConfig {
     pub enabled: bool,
     pub qdrant_url: String,
@@ -367,7 +402,7 @@ pub struct VectorSearchConfig {
 }
 
 /// Web scraping configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WebScrapingConfig {
     pub enabled: bool,
     pub max_depth: u32,
@@ -381,7 +416,7 @@ pub struct WebScrapingConfig {
 }
 
 /// Context synthesis configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContextSynthesisConfig {
     pub enabled: bool,
     pub similarity_threshold: f32,
@@ -391,7 +426,7 @@ pub struct ContextSynthesisConfig {
 }
 
 /// Fuzzy matching configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FuzzyMatchingConfig {
     pub enabled: bool,
     pub similarity_threshold: f32,

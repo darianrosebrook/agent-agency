@@ -3,11 +3,12 @@
 //! Provides a comprehensive dashboard for monitoring YOLO inference performance,
 //! ANE utilization, and optimization recommendations.
 
-use crate::ane::monitoring::yolo_monitor::{YOLOPerformanceMonitor, YOLOPerformanceStats, YOLOPerformanceThresholds};
+use schemars::JsonSchema;
+use crate::ane::monitoring::yolo_monitor::{YOLOPerformanceMonitor, YOLOPerformanceThresholds};
 use crate::ane::optimization::ane_optimizer::{ANEOptimizer, ANEOptimizationStrategy, ANEMemoryOptimizer, BatchOptimizer};
 use crate::telemetry::TelemetryCollector;
 use std::time::{Duration, Instant};
-use tracing::{info, warn, debug};
+use tracing::warn;
 
 /// Comprehensive YOLO performance dashboard
 pub struct YOLOPerformanceDashboard {
@@ -212,7 +213,7 @@ impl YOLOPerformanceDashboard {
 }
 
 /// Real-time dashboard metrics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct DashboardMetrics {
     pub total_inferences: usize,
     pub current_avg_inference_time_ms: f64,
@@ -229,8 +230,9 @@ pub struct PerformanceAlerts {
     max_alerts: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct PerformanceAlert {
+    #[schemars(with = "String")]
     pub timestamp: chrono::DateTime<chrono::Utc>,
     pub level: AlertLevel,
     pub message: String,
@@ -239,7 +241,7 @@ pub struct PerformanceAlert {
     pub threshold: f64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum AlertLevel {
     Info,
     Warning,
@@ -356,7 +358,7 @@ impl PerformancePredictor {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct PerformancePrediction {
     pub predicted_avg_inference_time_ms: f64,
     pub confidence_level: f64,
@@ -364,7 +366,7 @@ pub struct PerformancePrediction {
     pub data_points: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum PerformanceTrend {
     Improving,
     Stable,

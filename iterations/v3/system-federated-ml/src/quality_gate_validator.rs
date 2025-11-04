@@ -3,6 +3,7 @@
 //! Implements trust region validation, quality floor checks, and pre-deployment
 //! validation for safe parameter optimization.
 
+use schemars::JsonSchema;
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -13,7 +14,7 @@ use crate::bandit_policy::ParameterSet;
 use crate::reward::{OptimizationConstraints, BaselineMetrics};
 
 /// Validation result for parameter proposals
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Serialize, Deserialize)]
 pub enum ValidationResult {
     Approved {
         quality_delta: f64,
@@ -27,7 +28,7 @@ pub enum ValidationResult {
     },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ValidationSeverity {
     Info,
     Warning,
@@ -51,7 +52,7 @@ pub trait ComplianceValidator: Send + Sync {
 }
 
 /// Compliance validation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ComplianceValidationResult {
     pub passed: bool,
     pub violations: Vec<String>,
@@ -358,7 +359,7 @@ impl QualityGateValidator {
 }
 
 /// Validation statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationStats {
     pub task_type: String,
     pub baseline_quality: f64,

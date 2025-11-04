@@ -3,6 +3,7 @@
 //! Provides secure storage, retrieval, rotation, and audit logging for sensitive configuration
 //! values including database credentials, API keys, JWT secrets, and encryption keys.
 
+use schemars::JsonSchema;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -11,7 +12,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
 
 /// Secret metadata for audit and tracking
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SecretMetadata {
     pub key: String,
     pub version: String,
@@ -24,7 +25,7 @@ pub struct SecretMetadata {
 }
 
 /// Secret value with metadata
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct Secret {
     pub value: String,
     pub metadata: SecretMetadata,
@@ -34,7 +35,7 @@ pub struct Secret {
 pub type SecretResult<T> = Result<T, SecretError>;
 
 /// Secret management errors
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum SecretError {
     #[error("Secret not found: {key}")]
     NotFound { key: String },
@@ -59,7 +60,7 @@ pub enum SecretError {
 }
 
 /// Secret provider types
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, JsonSchema)]
 pub enum SecretProvider {
     HashiCorpVault,
     AwsSecretsManager,
@@ -69,7 +70,7 @@ pub enum SecretProvider {
 }
 
 /// Secret manager configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct SecretManagerConfig {
     pub provider: SecretProvider,
     pub endpoint: Option<String>,

@@ -148,6 +148,12 @@ pub struct ProgressError {
     pub context: Option<HashMap<String, serde_json::Value>>,
 }
 
+impl std::fmt::Display for ProgressError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ProgressError[{}]: {}", self.code, self.message)
+    }
+}
+
 /// Execution event for monitoring
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionEvent {
@@ -190,15 +196,20 @@ pub enum EventType {
 }
 
 /// Real-time progress tracker implementation
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct RealTimeProgressTracker {
     /// In-memory progress storage
+    #[schemars(skip)]
     progress_store: Arc<RwLock<HashMap<Uuid, ExecutionProgress>>>,
     /// Event subscribers
+    #[schemars(skip)]
     subscribers: Arc<RwLock<HashMap<Uuid, Vec<mpsc::Sender<ExecutionProgress>>>>>,
     /// Event emitter
+    #[schemars(skip)]
     event_emitter: Arc<RwLock<Vec<mpsc::Sender<ExecutionEvent>>>>,
     /// Persistence backend
+    #[schemars(skip)]
     persistence_backend: Option<Arc<dyn ProgressPersistence + Send + Sync>>,
 }
 

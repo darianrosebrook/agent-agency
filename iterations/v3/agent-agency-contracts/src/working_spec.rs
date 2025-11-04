@@ -422,6 +422,16 @@ pub enum ChangeType {
     Deleted,
 }
 
+impl std::fmt::Display for ChangeType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ChangeType::Added => write!(f, "added"),
+            ChangeType::Modified => write!(f, "modified"),
+            ChangeType::Deleted => write!(f, "deleted"),
+        }
+    }
+}
+
 /// Non-functional requirements
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]

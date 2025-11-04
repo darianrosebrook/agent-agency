@@ -2,6 +2,7 @@
 //!
 //! Manages model quantization for Apple Silicon optimization.
 
+use schemars::JsonSchema;
 use crate::QuantizationMethod;
 // use anyhow::{anyhow, bail, Context, Result};
 use serde::{Deserialize, Serialize};
@@ -13,7 +14,7 @@ use tokio::sync::RwLock;
 // use tracing::{debug, info, warn};
 
 /// Quantization configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QuantizationConfig {
     /// Quantization method to use
     pub method: QuantizationMethod,
@@ -37,7 +38,7 @@ impl Default for QuantizationConfig {
 }
 
 /// Quantization parameters
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QuantizationParams {
     /// Target precision for quantization
     pub target_precision: Option<String>,
@@ -64,7 +65,7 @@ impl Default for QuantizationParams {
 }
 
 /// Scale computation methods
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ScaleMethod {
     /// Min-Max scaling
     MinMax,
@@ -75,7 +76,7 @@ pub enum ScaleMethod {
 }
 
 /// Validation configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationConfig {
     /// Enable accuracy validation
     pub enable_accuracy_check: bool,
@@ -99,7 +100,7 @@ impl Default for ValidationConfig {
 }
 
 /// Optimization configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct OptimizationConfig {
     /// Enable parallel processing
     pub enable_parallel: bool,
@@ -123,7 +124,7 @@ impl Default for OptimizationConfig {
 }
 
 /// Quantization result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QuantizationResult {
     /// Original model path
     pub original_model: String,
@@ -144,7 +145,7 @@ pub struct QuantizationResult {
 }
 
 /// Quantization statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QuantizationStats {
     /// Original model size in bytes
     pub original_size_bytes: u64,
@@ -159,7 +160,7 @@ pub struct QuantizationStats {
 }
 
 /// Error metrics for quantization quality
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ErrorMetrics {
     /// Mean squared error
     pub mse: f32,
@@ -172,7 +173,7 @@ pub struct ErrorMetrics {
 }
 
 /// Validation results
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationResults {
     /// Accuracy loss percentage
     pub accuracy_loss: f32,
@@ -208,7 +209,7 @@ impl QuantizationManager {
     pub fn test() {}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ModelFormat {
     ONNX,
     PyTorch,

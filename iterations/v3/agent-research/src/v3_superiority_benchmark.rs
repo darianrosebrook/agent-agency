@@ -8,6 +8,7 @@
 //! - Predictive learning accuracy (85%+ prediction accuracy)
 //! - Intelligent testing coverage (95%+ edge case detection)
 
+use schemars::JsonSchema;
 use crate::metrics_collector::MetricsCollector;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
@@ -17,9 +18,11 @@ use tracing::info;
 use uuid::Uuid;
 
 /// V3 Superiority Benchmark Results
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct V3SuperiorityReport {
+    #[schemars(with = "String")]
     pub report_id: Uuid,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub benchmark_duration_ms: u64,
 
@@ -42,7 +45,7 @@ pub struct V3SuperiorityReport {
 }
 
 /// Multi-modal verification benchmark results
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct VerificationBenchmarkResults {
     pub mathematical_validation: ValidationMetrics,
     pub code_behavior_analysis: ValidationMetrics,
@@ -57,7 +60,7 @@ pub struct VerificationBenchmarkResults {
 }
 
 /// Advanced arbitration benchmark results
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ArbitrationBenchmarkResults {
     pub conflict_resolution_rate: f64,
     pub consensus_quality_score: f64,
@@ -69,7 +72,7 @@ pub struct ArbitrationBenchmarkResults {
 }
 
 /// Predictive learning benchmark results
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LearningBenchmarkResults {
     pub performance_prediction_accuracy: f64,
     pub strategy_optimization_effectiveness: f64,
@@ -82,7 +85,7 @@ pub struct LearningBenchmarkResults {
 }
 
 /// Intelligent testing benchmark results
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TestingBenchmarkResults {
     pub edge_case_detection_rate: f64,
     pub test_generation_coverage: f64,
@@ -94,7 +97,7 @@ pub struct TestingBenchmarkResults {
 }
 
 /// Validation metrics for individual verification methods
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationMetrics {
     pub accuracy: f64,
     pub precision: f64,
@@ -111,7 +114,7 @@ pub struct V3SuperiorityBenchmark {
 }
 
 /// V2 baseline metrics for comparison
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct V2BaselineMetrics {
     pub verification_speed_tokens_per_second: f64,
     pub verification_accuracy_percentage: f64,

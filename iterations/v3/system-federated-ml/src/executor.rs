@@ -3,6 +3,7 @@
 //! Tokio-based executor with bounded queues, semaphores, and CancellationToken
 //! for safe, concurrent tool chain execution with circuit breakers.
 
+use schemars::JsonSchema;
 use petgraph::graph::{Graph, NodeIndex};
 use petgraph::visit::{Topo, EdgeRef};
 use serde_json::Value;
@@ -19,7 +20,7 @@ use crate::schema_registry::{SchemaRegistry, Converter};
 use crate::tool_registry::ToolRegistry;
 
 /// Chain execution result
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, JsonSchema)]
 pub struct ExecutionResult {
     pub chain_hash: u64,
     pub success: bool,
@@ -260,7 +261,7 @@ impl ChainExecutor {
 }
 
 /// Errors from chain execution
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum ChainExecutionError {
     #[error("Missing dependency result for step: {0}")]
     MissingDependency(String),
@@ -307,7 +308,7 @@ pub struct CircuitBreaker {
     last_failure: Option<Instant>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, JsonSchema)]
 enum CircuitState {
     Closed,
     Open { until: Instant },
@@ -425,4 +426,3 @@ impl<'a> Drop for ResourceGuard<'a> {
         self.limiter.current_memory_mb.fetch_sub(self.memory_mb, std::sync::atomic::Ordering::Relaxed);
         self.limiter.current_cpu_percent.fetch_sub(self.cpu_percent, std::sync::atomic::Ordering::Relaxed);
     }
-}

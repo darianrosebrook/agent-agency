@@ -3,6 +3,7 @@
 /// Orchestrates the entire federated learning process, managing participants,
 /// coordinating aggregation rounds, and ensuring protocol compliance.
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -22,7 +23,7 @@ pub struct FederationCoordinator {
 }
 
 /// Configuration for the federation coordinator
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FederationConfig {
     /// Minimum number of participants required for a round
     pub min_participants: usize,
@@ -41,7 +42,7 @@ pub struct FederationConfig {
 }
 
 /// Aggregation round managed by the coordinator
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct AggregationRound {
     round_id: u64,
     start_time: chrono::DateTime<chrono::Utc>,
@@ -52,7 +53,7 @@ struct AggregationRound {
 }
 
 /// Status of an aggregation round
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 enum RoundStatus {
     Preparing,
     Collecting,
@@ -62,7 +63,7 @@ enum RoundStatus {
 }
 
 /// Security requirements for the federation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SecurityRequirements {
     /// Require zero-knowledge proofs
     pub require_zkp: bool,
@@ -75,7 +76,7 @@ pub struct SecurityRequirements {
 }
 
 /// Quality thresholds for accepting contributions
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityThresholds {
     /// Minimum model accuracy
     pub min_accuracy: f32,
@@ -391,7 +392,7 @@ impl FederationCoordinator {
 }
 
 /// Statistics about the federation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FederationStatistics {
     pub total_participants: usize,
     pub active_participants: usize,
@@ -400,7 +401,7 @@ pub struct FederationStatistics {
 }
 
 /// Information about the current round
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RoundInfo {
     pub round_id: u64,
     pub status: String,
@@ -416,5 +417,4 @@ use crate::participant::FederationParticipant;
 use crate::security::ZeroKnowledgeProof;
 use crate::ParticipantContribution;
 use crate::differential_privacy::PrivacyParameters;
-
 

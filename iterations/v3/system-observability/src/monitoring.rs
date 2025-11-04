@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-
 use crate::{TelemetryCollector, TelemetryData, TelemetryError, TelemetryDataType};
 
 /// Health monitor for system components
@@ -241,6 +240,11 @@ impl AlertManager {
             name,
             alerts: Arc::new(RwLock::new(Vec::new())),
         }
+    }
+
+    /// Get the name of this alert manager
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     /// Create a new alert

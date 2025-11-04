@@ -61,6 +61,16 @@ pub struct TaskSpec {
     pub working_spec_id: Option<String>,
     /// Execution timeout in seconds
     pub timeout_seconds: Option<u64>,
+    /// Task scope definition
+    pub scope: Option<TaskScope>,
+    /// Risk tier (1=critical, 2=standard, 3=low)
+    pub risk_tier: Option<u32>,
+    /// Acceptance criteria in Given-When-Then format
+    pub acceptance_criteria: Option<Vec<crate::types::execution::AcceptanceCriterion>>,
+    /// CAWS specification (generic for now to avoid circular deps)
+    pub caws_spec: Option<HashMap<String, serde_json::Value>>,
+    /// Task execution requirements
+    pub requirements: Option<TaskRequirements>,
 }
 
 // Use the unified TaskPriority from types/planning.rs
@@ -96,9 +106,10 @@ pub trait TaskExecutor: Send + Sync + std::fmt::Debug {
 }
 
 /// Health status of the task executor
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskExecutorHealth {
     pub status: HealthStatus,
+    #[schemars(with = "String")]
     pub last_execution_time: Option<DateTime<Utc>>,
     pub active_tasks: u32,
     pub queued_tasks: u32,
@@ -107,7 +118,7 @@ pub struct TaskExecutorHealth {
 }
 
 /// Health status enum
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum HealthStatus {
     Healthy,
     Degraded,
@@ -115,7 +126,7 @@ pub enum HealthStatus {
 }
 
 /// Task execution statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskExecutionStats {
     pub total_executions: u64,
     pub successful_executions: u64,
@@ -127,7 +138,7 @@ pub struct TaskExecutionStats {
 }
 
 /// Task requirements for execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskRequirements {
     pub required_languages: Vec<String>,
     pub required_frameworks: Vec<String>,
@@ -155,7 +166,7 @@ pub struct TaskContext {
 }
 
 /// Task scope definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskScope {
     pub domains: Vec<String>,
     pub files_affected: Vec<String>,
@@ -163,7 +174,7 @@ pub struct TaskScope {
 }
 
 /// Execution status for tasks
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ExecutionStatus {
     Pending,
     Running,
@@ -171,4 +182,28 @@ pub enum ExecutionStatus {
     Failed,
     Cancelled,
     Timeout,
+}
+
+/// Task execution progress tracking
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct Progress {
+    /// Completion percentage (0.0 to 100.0)
+    pub percentage: f64,
+    /// Number of completed subtasks
+    pub completed_subtasks: usize,
+    /// Total number of subtasks
+    pub total_subtasks: usize,
+    /// Number of active workers
+    pub active_workers: usize,
+    /// Number of blocked workers
+    pub blocked_workers: usize,
+    /// Number of failed workers
+    pub failed_workers: usize,
+    /// Last progress update timestamp
+    #[schemars(with = "String")]
+    pub last_update: chrono::DateTime<chrono::Utc>,
+    /// Current status
+    pub status: ExecutionStatus,
+    /// Additional progress metadata
+    pub metadata: HashMap<String, serde_json::Value>,
 }

@@ -7,6 +7,7 @@
 //! - Cross-references between knowledge sources
 //! - On-demand knowledge retrieval
 
+use schemars::JsonSchema;
 use crate::data_processing_types::*;
 use crate::{DataProcessingResult, DataProcessingError};
 use async_trait::async_trait;
@@ -34,7 +35,7 @@ pub trait KnowledgeStage: Send + Sync {
 }
 
 /// Types of knowledge sources supported
-#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub enum KnowledgeSource {
     Wikidata,
     WordNet,
@@ -42,7 +43,7 @@ pub enum KnowledgeSource {
 }
 
 /// Query for knowledge retrieval
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct KnowledgeQuery {
     pub query_type: KnowledgeQueryType,
     pub text_query: Option<String>,
@@ -53,7 +54,7 @@ pub struct KnowledgeQuery {
 }
 
 /// Types of knowledge queries
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub enum KnowledgeQueryType {
     EntityLookup,
     ConceptSearch,
@@ -62,7 +63,7 @@ pub enum KnowledgeQueryType {
 }
 
 /// Knowledge item retrieved from sources
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct KnowledgeItem {
     pub id: String,
     pub source: KnowledgeSource,
@@ -77,7 +78,7 @@ pub struct KnowledgeItem {
 }
 
 /// Relationship in knowledge graph
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct KnowledgeRelationship {
     pub target_id: String,
     pub relationship_type: String,

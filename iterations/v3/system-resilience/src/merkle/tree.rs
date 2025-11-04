@@ -2,6 +2,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -11,7 +12,7 @@ use crate::recovery_types::{Digest, StreamingHasher};
 use crate::recovery_types::*;
 
 /// Tree entry for file metadata
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct TreeEntry {
     pub name: String,
     pub mode: FileMode,
@@ -56,7 +57,7 @@ impl TreeEntry {
 }
 
 /// Merkle tree for file metadata
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct FileTree {
     pub entries: Vec<TreeEntry>,
     pub digest: Digest,
@@ -327,7 +328,7 @@ impl FileTree {
 }
 
 /// Tree diff result
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct TreeDiff {
     pub added: Vec<TreeEntry>,
     pub modified: Vec<TreeEntry>,

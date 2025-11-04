@@ -3,6 +3,7 @@
 //! Deadpool-to-SQLx bridge for robust connection pooling with health checks,
 //! timeout handling, and comprehensive monitoring.
 
+use schemars::JsonSchema;
 use crate::database_config::DatabaseConfig;
 use crate::database_metrics::DatabaseMetrics;
 use anyhow::{Context, Result};
@@ -15,10 +16,12 @@ use tracing::info;
 ///
 /// This wrapper implements the sqlx::Pool interface over deadpool::Pool,
 /// providing seamless integration between the two connection pool systems.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct DeadpoolSqlxBridge {
+    #[schemars(skip)]
     deadpool: DeadpoolPool,
     config: DatabaseConfig,
+    #[schemars(skip)]
     metrics: Arc<DatabaseMetrics>,
 }
 

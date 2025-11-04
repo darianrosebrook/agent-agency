@@ -242,15 +242,18 @@ pub enum RecoveryStrategyType {
 }
 
 /// Circuit breaker for external service resilience
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct CircuitBreaker {
     /// Service identifier
     service_name: String,
     /// Current state of the circuit breaker
+    #[schemars(skip)]
     state: Arc<RwLock<CircuitBreakerState>>,
     /// Configuration
     config: ErrorHandlingCircuitBreakerConfig,
     /// Statistics for monitoring
+    #[schemars(skip)]
     stats: Arc<RwLock<CircuitBreakerStats>>,
 }
 
@@ -266,7 +269,8 @@ pub enum CircuitBreakerState {
 }
 
 /// Circuit breaker configuration for error handling
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ErrorHandlingCircuitBreakerConfig {
     /// Failure threshold (number of failures before opening)
     pub failure_threshold: u32,
@@ -281,7 +285,8 @@ pub struct ErrorHandlingCircuitBreakerConfig {
 }
 
 /// Circuit breaker statistics
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CircuitBreakerStats {
     /// Total requests made
     pub total_requests: u64,
@@ -292,16 +297,20 @@ pub struct CircuitBreakerStats {
     /// Current consecutive failures
     pub consecutive_failures: u32,
     /// Last failure time
+    #[schemars(with = "String")]
     pub last_failure_time: Option<Instant>,
     /// Last success time
+    #[schemars(with = "String")]
     pub last_success_time: Option<Instant>,
     /// State change history
     pub state_changes: Vec<StateChange>,
 }
 
 /// State change record
-#[derive(Debug, Clone)]
-pub struct StateChange {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct StateChange {
+    #[schemars(with = "String")]
     pub timestamp: Instant,
     pub from_state: CircuitBreakerState,
     pub to_state: CircuitBreakerState,
@@ -544,7 +553,8 @@ impl CircuitBreaker {
 }
 
 /// Retry mechanism with exponential backoff for error handling
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ErrorHandlingRetryConfig {
     /// Maximum number of retry attempts
     pub max_attempts: u32,
@@ -603,9 +613,11 @@ where
 }
 
 /// Graceful degradation manager
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct DegradationManager {
     /// Current degradation state
+    #[schemars(skip)]
     state: Arc<RwLock<DegradationState>>,
     /// Degradation policies by component
     policies: HashMap<String, DegradationPolicy>,
@@ -627,7 +639,8 @@ pub struct DegradationState {
 }
 
 /// Degradation policy for a component
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DegradationPolicy {
     /// Component name
     pub component: String,
@@ -726,7 +739,8 @@ impl DegradationManager {
 }
 
 /// Error recovery orchestrator
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct RecoveryOrchestrator {
     /// Circuit breakers for external services
     circuit_breakers: HashMap<String, Arc<CircuitBreaker>>,

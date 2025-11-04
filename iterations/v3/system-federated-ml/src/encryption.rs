@@ -3,6 +3,7 @@
 /// Provides homomorphic encryption and secure communication
 /// primitives for privacy-preserving federated learning.
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
@@ -52,7 +53,7 @@ impl HomomorphicEncryption for PlaceholderHomomorphicEncryption {
 }
 
 /// Encryption scheme configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EncryptionScheme {
     /// Encryption algorithm
     pub algorithm: EncryptionAlgorithm,
@@ -65,7 +66,7 @@ pub struct EncryptionScheme {
 }
 
 /// Supported encryption algorithms
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum EncryptionAlgorithm {
     /// Paillier homomorphic encryption
     Paillier,
@@ -78,7 +79,7 @@ pub enum EncryptionAlgorithm {
 }
 
 /// Security levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum SecurityLevel {
     /// 128-bit security
     L128,
@@ -89,7 +90,7 @@ pub enum SecurityLevel {
 }
 
 /// Homomorphic operations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum HomomorphicOperation {
     Addition,
     Multiplication,
@@ -139,7 +140,7 @@ impl SecureChannel {
 }
 
 /// Encrypted model parameters
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EncryptedParameters {
     /// Encrypted parameter data
     pub encrypted_data: Vec<u8>,

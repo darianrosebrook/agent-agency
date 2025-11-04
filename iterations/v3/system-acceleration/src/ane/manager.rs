@@ -3,6 +3,7 @@
 //! This module contains the core ANE manager and device management
 //! functionality for Apple Neural Engine operations.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
@@ -44,18 +45,19 @@ pub struct ANEManager {
 }
 
 /// ANE model representation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ANEModel {
     pub model_id: String,
     pub model_path: String,
     pub input_shape: Vec<usize>,
     pub output_shape: Vec<usize>,
     pub is_loaded: bool,
+    #[schemars(with = "String")]
     pub last_used: std::time::Instant,
 }
 
 /// ANE resource pool for memory and computation management
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ANEResourcePool {
     pub total_memory_mb: usize,
     pub available_memory_mb: usize,
@@ -64,17 +66,27 @@ pub struct ANEResourcePool {
 }
 
 /// ANE framework symbols loaded from private frameworks
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ANESymbols {
+    #[schemars(with = "String")]
     pub ane_create_device: *const (),
+    #[schemars(with = "String")]
     pub ane_release_device: *const (),
+    #[schemars(with = "String")]
     pub ane_get_device_info: *const (),
+    #[schemars(with = "String")]
     pub ane_create_command_queue: *const (),
+    #[schemars(with = "String")]
     pub ane_load_model: *const (),
+    #[schemars(with = "String")]
     pub ane_execute_inference: *const (),
+    #[schemars(with = "String")]
     pub ane_get_performance_stats: *const (),
+    #[schemars(with = "String")]
     pub ane_wait_completion: *const (),
+    #[schemars(with = "String")]
     pub ane_is_available: *const (),
+    #[schemars(with = "String")]
     pub ane_get_driver_version: *const (),
 }
 
@@ -96,7 +108,7 @@ impl Default for ANESymbols {
 }
 
 /// ANE device capabilities and limits
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ANEDeviceCapabilities {
     pub max_memory_mb: usize,
     pub supported_precisions: Vec<String>,
@@ -105,17 +117,18 @@ pub struct ANEDeviceCapabilities {
 }
 
 /// ANE performance metrics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ANEPerformanceMetrics {
     pub total_inferences: u64,
     pub average_latency_ms: f64,
     pub peak_memory_usage_mb: usize,
     pub error_count: u64,
+    #[schemars(with = "String")]
     pub last_inference_time: std::time::Instant,
 }
 
 /// ANE device configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ANEDeviceConfig {
     pub preferred_precision: Option<String>,
     pub memory_limit_mb: Option<usize>,
@@ -126,7 +139,7 @@ pub struct ANEDeviceConfig {
 }
 
 /// ANE performance profiles
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum ANEPerformanceProfile {
     PowerSaver,      // Minimize power, acceptable performance
     Balanced,        // Balance performance and power
@@ -135,7 +148,7 @@ pub enum ANEPerformanceProfile {
 }
 
 /// ANE thermal management configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ANEThermalConfig {
     pub max_temperature_celsius: Option<f32>,
     pub throttling_enabled: bool,
@@ -143,7 +156,7 @@ pub struct ANEThermalConfig {
 }
 
 /// ANE fan control settings
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum ANEFanControl {
     Auto,           // System manages fan speed
     Manual(u8),     // Fixed fan speed (0-100%)
@@ -151,7 +164,7 @@ pub enum ANEFanControl {
 }
 
 /// ANE power optimization configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ANEPowerConfig {
     pub power_limit_watts: Option<f32>,
     pub dynamic_power_scaling: bool,
@@ -159,7 +172,7 @@ pub struct ANEPowerConfig {
 }
 
 /// ANE device status
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ANEDeviceStatus {
     pub is_available: bool,
     pub memory_used_mb: u32,
@@ -171,7 +184,7 @@ pub struct ANEDeviceStatus {
 }
 
 /// Model architecture types supported by ANE
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, JsonSchema)]
 pub enum ModelArchitecture {
     /// Transformer-based models (BERT, GPT, LLaMA, etc.)
     Transformer,
@@ -184,7 +197,7 @@ pub enum ModelArchitecture {
 }
 
 /// ANE tokenizer management
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ANETokenizers {
     pub bpe_tokenizer: Option<String>,
     pub wordpiece_tokenizer: Option<String>,

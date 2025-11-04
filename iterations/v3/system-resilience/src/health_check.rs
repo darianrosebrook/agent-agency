@@ -5,6 +5,7 @@
 //!
 //! Ported from V2 health check patterns with Rust optimizations.
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -15,7 +16,7 @@ use tokio::time::{interval, sleep};
 use tracing::error;
 
 /// Health check status
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum HealthStatus {
     /// Service is healthy
     Healthy,
@@ -48,7 +49,7 @@ impl HealthStatus {
 }
 
 /// Health check result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Serialize, Deserialize)]
 pub struct HealthCheckResult {
     pub status: HealthStatus,
     pub message: String,
@@ -58,7 +59,7 @@ pub struct HealthCheckResult {
 }
 
 /// Health check configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct HealthCheckConfig {
     /// Health check name
     pub name: String,

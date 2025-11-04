@@ -16,7 +16,7 @@ use tracing::{debug, info, warn};
 
 /// Parallel pipeline that executes stages concurrently
 #[derive(Debug)]
-pub struct ParallelPipeline<Input, Output> {
+pub struct ParallelPipeline <Input, Output> {
     config: ParallelPipelineConfig,
     stages: Arc<RwLock<Vec<Box<dyn PipelineStage<Input, Output>>>>>,
     metrics: PipelineMetrics,
@@ -236,7 +236,7 @@ mod tests {
 
     // Mock stage for testing
     #[derive(Debug)]
-    struct MockStage {
+struct MockStage {
         name: String,
         delay_ms: u64,
         should_fail: bool,

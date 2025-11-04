@@ -3,6 +3,7 @@
 //! Provides secure authentication middleware, token management, and role-based
 //! access control to protect API endpoints from unauthorized access.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -19,7 +20,7 @@ use chrono::{DateTime, Utc};
 use tracing::{info, warn};
 
 /// JWT claims structure
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Claims {
     /// Subject (user ID)
     pub sub: String,
@@ -36,7 +37,7 @@ pub struct Claims {
 }
 
 /// Password policy configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct PasswordPolicy {
     /// Minimum password length
     pub min_length: usize,
@@ -69,7 +70,7 @@ impl Default for PasswordPolicy {
 }
 
 /// Authentication configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct AuthConfig {
     /// JWT secret key (must be at least 32 characters)
     pub jwt_secret: String,
@@ -78,6 +79,7 @@ pub struct AuthConfig {
     /// Refresh token expiration time in seconds
     pub refresh_token_expiry_seconds: u64,
     /// Password hashing parameters
+    #[schemars(with = "String")]
     pub password_hash_params: argon2::Params,
     /// Maximum failed login attempts before lockout
     pub max_failed_attempts: u32,
@@ -88,7 +90,7 @@ pub struct AuthConfig {
 }
 
 /// User authentication data
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UserCredentials {
     pub user_id: String,
     pub username: String,
@@ -97,7 +99,11 @@ pub struct UserCredentials {
     pub is_active: bool,
     pub failed_attempts: u32,
     pub locked_until: Option<DateTime<Utc>>,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub updated_at: DateTime<Utc>,
 }
 
@@ -381,28 +387,7 @@ pub mod middleware {
         Ok(next.run(request).await)
     }
 
-    /// Authorization middleware for specific roles
-    pub async fn require_role(
-        required_role: String,
-        auth_service: Arc<AuthService>,
-        headers: HeaderMap,
-        mut request: Request,
-        next: Next,
-    ) -> Result<Response, StatusCode> {
-        let claims = request.extensions().get::<Claims>()
-            .ok_or(StatusCode::UNAUTHORIZED)?;
-
-        let has_permission = auth_service.check_permission(&claims.sub, &required_role)
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-        if !has_permission {
-            return Err(StatusCode::FORBIDDEN);
-        }
-
-        Ok(next.run(request).await)
-    }
-
+    /// Extract Bearer token from Authorization header
     fn extract_bearer_token(headers: &HeaderMap) -> Option<String> {
         headers
             .get(AUTHORIZATION)
@@ -414,6 +399,42 @@ pub mod middleware {
                     None
                 }
             })
+    }
+
+    /// Authorization middleware for specific roles
+    pub async fn require_role(
+        required_role: String,
+        auth_service: Arc<AuthService>,
+        headers: HeaderMap,
+        mut request: Request,
+        next: Next,
+    ) -> Result<Response, StatusCode> {
+        // Extract Bearer token
+        let token = match extract_bearer_token(&headers) {
+            Some(token) => token,
+            None => return Err(StatusCode::UNAUTHORIZED),
+        };
+
+        // Validate token
+        let claims = match auth_service.validate_token(&token).await {
+            Ok(claims) => claims,
+            Err(_) => return Err(StatusCode::UNAUTHORIZED),
+        };
+
+        // Check if user has required role
+        let has_permission = auth_service
+            .check_permission(&claims.sub, &required_role)
+            .await
+            .unwrap_or(false);
+
+        if !has_permission {
+            return Err(StatusCode::FORBIDDEN);
+        }
+
+        // Add claims to request extensions
+        request.extensions_mut().insert(claims);
+
+        Ok(next.run(request).await)
     }
 }
 

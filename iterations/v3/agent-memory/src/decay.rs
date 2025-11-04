@@ -9,7 +9,6 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc, Duration};
 use serde::{Deserialize, Serialize};
 use tracing::{info, debug, warn};
-
 /// Memory decay engine for managing importance and decay
 #[derive(Debug)]
 pub struct MemoryDecayEngine {

@@ -1,6 +1,7 @@
 /// Precision engineering for optimizing model execution on Apple Silicon
 /// with graph optimization, quantization, and memory management.
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -17,7 +18,7 @@ pub struct PrecisionEngineer {
 }
 
 /// Quantization strategy configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QuantizationStrategy {
     /// Target precision (8, 16, 32 bits)
     pub target_precision: u8,
@@ -32,7 +33,7 @@ pub struct QuantizationStrategy {
 }
 
 /// Quantization method options
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum QuantizationMethod {
     /// Post-training static quantization
     Static,
@@ -45,7 +46,7 @@ pub enum QuantizationMethod {
 }
 
 /// Graph optimization configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct GraphOptimization {
     /// Enable operator fusion
     pub operator_fusion: bool,
@@ -60,7 +61,7 @@ pub struct GraphOptimization {
 }
 
 /// Target hardware architecture
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum TargetArchitecture {
     /// Apple Neural Engine
     ANE,
@@ -73,7 +74,7 @@ pub enum TargetArchitecture {
 }
 
 /// Optimization result metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct OptimizationResult {
     /// Original model size in MB
     pub original_size_mb: f32,

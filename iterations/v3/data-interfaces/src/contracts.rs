@@ -2,6 +2,7 @@
 //!
 //! Interface contracts and validation.
 
+use schemars::JsonSchema;
 use crate::{ContractConfig, InterfaceError};
 
 /// Interface contract validator
@@ -32,7 +33,7 @@ impl ContractValidator {
 }
 
 /// Interface contract definition
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct InterfaceContract {
     pub name: String,
     pub version: u32,
@@ -40,7 +41,7 @@ pub struct InterfaceContract {
 }
 
 /// Validation result
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ValidationResult {
     pub valid: bool,
     pub errors: Vec<String>,

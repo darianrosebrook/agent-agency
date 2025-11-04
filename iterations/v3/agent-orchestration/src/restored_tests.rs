@@ -218,4 +218,3 @@ mod tests {
         let next_task = heap.pop().unwrap();
         assert_eq!(next_task.priority_score, 800);
     }
-}

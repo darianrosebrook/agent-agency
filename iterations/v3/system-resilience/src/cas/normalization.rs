@@ -1,11 +1,12 @@
 use anyhow::Result;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::recovery_types::Eol;
 
 /// Text normalization configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct NormalizationConfig {
     /// Target line ending for normalization
     pub target_eol: Eol,
@@ -347,7 +348,7 @@ impl TextNormalizer {
 }
 
 /// Result of text normalization
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct NormalizationResult {
     /// The normalized content
     pub normalized_content: Vec<u8>,
@@ -362,7 +363,7 @@ pub struct NormalizationResult {
 }
 
 /// EOL statistics for a file
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EolStats {
     /// Total number of lines
     pub total_lines: usize,

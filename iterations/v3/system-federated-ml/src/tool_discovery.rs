@@ -3,6 +3,7 @@
 //! Enables runtime discovery of tool capabilities, automatic registration,
 //! and intelligent tool selection based on task requirements.
 
+use schemars::JsonSchema;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -27,7 +28,7 @@ pub struct ToolDiscoveryEngine {
 }
 
 /// Tool capability description
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolCapability {
     /// Tool name
     pub name: String,
@@ -54,7 +55,7 @@ pub struct ToolCapability {
 }
 
 /// Input requirement specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct InputRequirement {
     /// Parameter name
     pub name: String,
@@ -67,7 +68,7 @@ pub struct InputRequirement {
 }
 
 /// Output specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct OutputSpecification {
     /// Output name
     pub name: String,
@@ -78,7 +79,7 @@ pub struct OutputSpecification {
 }
 
 /// Quality metrics for tool evaluation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityMetrics {
     /// Accuracy score (0.0-1.0)
     pub accuracy: f64,
@@ -91,7 +92,7 @@ pub struct QualityMetrics {
 }
 
 /// Performance characteristics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceCharacteristics {
     /// Average execution time (ms)
     pub avg_execution_time_ms: f64,
@@ -119,7 +120,7 @@ pub trait DiscoverySource: Send + Sync {
 }
 
 /// Task requirements for tool matching
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskRequirements {
     /// Required operations
     pub required_operations: Vec<String>,
@@ -136,7 +137,7 @@ pub struct TaskRequirements {
 }
 
 /// Quality thresholds for tool selection
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityThresholds {
     /// Minimum accuracy required
     pub min_accuracy: f64,
@@ -147,7 +148,7 @@ pub struct QualityThresholds {
 }
 
 /// Performance constraints
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceConstraints {
     /// Maximum execution time (ms)
     pub max_execution_time_ms: Option<u64>,
@@ -158,7 +159,7 @@ pub struct PerformanceConstraints {
 }
 
 /// Tool recommendation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolRecommendation {
     /// Recommended tool capability
     pub tool: ToolCapability,
@@ -173,7 +174,7 @@ pub struct ToolRecommendation {
 }
 
 /// Risk assessment for tool usage
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RiskAssessment {
     /// Overall risk level
     pub risk_level: RiskLevel,
@@ -186,7 +187,7 @@ pub struct RiskAssessment {
 }
 
 /// Risk level enumeration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum RiskLevel {
     Low,
     Medium,
@@ -195,7 +196,7 @@ pub enum RiskLevel {
 }
 
 /// Discovery statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DiscoveryStats {
     /// Total tools discovered
     pub total_discovered: usize,
@@ -618,5 +619,4 @@ impl DiscoverySource for PluginSource {
         "plugin"
     }
 }
-
 

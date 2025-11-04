@@ -3,6 +3,7 @@
 //! The Council orchestrates the entire review process from judge selection
 //! through verdict aggregation to final decision making.
 
+use schemars::JsonSchema;
 use std::sync::Arc;
 use tokio::time::{timeout, Duration};
 use uuid::Uuid;
@@ -32,8 +33,9 @@ use crate::error_handling::{AgencyError, CircuitBreaker, ErrorHandlingCircuitBre
 use tracing::{debug, info, instrument, warn};
 
 /// Worker solution proposal with evidence and rationale
-#[derive(Debug, Clone)]
-pub struct WorkerSolution {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct WorkerSolution {
     pub worker_id: String,
     pub solution_id: String,
     pub working_spec: agent_agency_contracts::WorkingSpec,
@@ -42,8 +44,9 @@ pub struct WorkerSolution {
 }
 
 /// Evidence supporting a worker solution
-#[derive(Debug, Clone)]
-pub struct SolutionEvidence {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct SolutionEvidence {
     pub test_results: Vec<String>,
     pub coverage_metrics: Option<f64>,
     pub lint_results: Vec<String>,
@@ -52,8 +55,9 @@ pub struct SolutionEvidence {
 }
 
 /// Budget adherence verification
-#[derive(Debug, Clone)]
-pub struct BudgetAdherence {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct BudgetAdherence {
     pub files_changed: usize,
     pub max_files_allowed: usize,
     pub lines_changed: usize,
@@ -62,8 +66,9 @@ pub struct BudgetAdherence {
 }
 
 /// Worker defense plea for their solution
-#[derive(Debug, Clone)]
-pub struct WorkerPlea {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct WorkerPlea {
     pub solution_id: String,
     pub worker_id: String,
     pub defense_argument: String,
@@ -73,8 +78,9 @@ pub struct WorkerPlea {
 }
 
 /// Result of a debate between competing solutions
-#[derive(Debug, Clone)]
-pub struct DebateResult {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct DebateResult {
     pub winner_solution_id: String,
     pub winner_worker_id: String,
     pub winning_score: f64,
@@ -84,8 +90,9 @@ pub struct DebateResult {
 }
 
 /// Score for a solution from debate evaluation
-#[derive(Debug, Clone)]
-pub struct SolutionScore {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct SolutionScore {
     pub solution_id: String,
     pub worker_id: String,
     pub total_score: f64,
@@ -96,7 +103,8 @@ pub struct SolutionScore {
 }
 
 /// Judge performance metrics for performance-weighted selection
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct JudgePerformanceMetrics {
     /// Average response time in milliseconds
     avg_response_time_ms: u64,
@@ -105,11 +113,14 @@ struct JudgePerformanceMetrics {
     /// Number of reviews completed
     review_count: u64,
     /// Last used timestamp for round-robin
+    #[schemars(with = "Option<String>")]
     last_used_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 /// Configuration for the council
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct CouncilConfig {
     /// Maximum time for a council session (seconds)
     pub session_timeout_seconds: u64,
@@ -146,8 +157,9 @@ pub struct CouncilConfig {
 }
 
 /// Judge selection strategy
-#[derive(Debug, Clone)]
-pub enum JudgeSelectionStrategy {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum JudgeSelectionStrategy {
     /// All available judges
     AllAvailable,
 
@@ -165,7 +177,8 @@ pub enum JudgeSelectionStrategy {
 }
 
 /// A council session for reviewing a working specification
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct CouncilSession {
     pub session_id: String,
     working_spec: agent_agency_contracts::WorkingSpec,
@@ -179,8 +192,9 @@ pub struct CouncilSession {
 }
 
 /// Session status
-#[derive(Debug, Clone, PartialEq)]
-pub enum SessionStatus {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum SessionStatus {
     Initialized,
     JudgeSelection,
     ReviewInProgress,
@@ -192,7 +206,7 @@ pub enum SessionStatus {
 }
 
 /// The main Council that coordinates reviews
-#[derive(Debug)]
+
 pub struct Council {
     config: CouncilConfig,
     available_judges: Vec<Arc<dyn Judge>>,
@@ -765,7 +779,7 @@ impl Council {
             
             // Assign contributions to session
             session.contributions = contributions;
-            Ok(())
+            return Ok(());
         } else {
             // Sequential execution with error handling
             for judge in &session.selected_judges {
@@ -1508,10 +1522,11 @@ impl Council {
 
 impl CouncilSession {
     /// Review a task and return consensus result
-    /// 
+    ///
     /// Note: This method requires the session to have been processed through Council.run_review_process()
     /// or Council.review_working_spec() to populate final_decision. If the session hasn't been reviewed yet,
     /// use Council.review_working_spec() instead.
+    #[cfg(feature = "api-server")]
     pub async fn review_task(&self, task: &crate::OrchestratedTask) -> CouncilResult<crate::autonomous_executor::ConsensusResult> {
         // If session already has a final decision, convert it to ConsensusResult
         if let Some(ref decision) = self.final_decision {
@@ -1581,8 +1596,9 @@ impl CouncilSession {
 }
 
 /// Council health metrics
-#[derive(Debug, Clone)]
-pub struct CouncilHealthMetrics {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct CouncilHealthMetrics {
     pub total_judges: usize,
     pub available_judges: usize,
     pub average_response_time_ms: u64,

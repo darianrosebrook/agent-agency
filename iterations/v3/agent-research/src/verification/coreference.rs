@@ -9,8 +9,9 @@ use md5;
 use regex::Regex;
 use once_cell::sync::Lazy;
 use anyhow::Result;
+use serde_json::Value;
 
-use crate::verification::types::{Entity, EntityType, CoreferenceResolution, CoreferenceChain, CoreferenceType};
+use crate::verification::verification_types::{Entity, EntityType, CoreferenceChain, CoreferenceType, CoreferenceResolution};
 
 /// Static patterns for coreference resolution
 static PRONOUNS: Lazy<HashMap<&'static str, Vec<&'static str>>> = Lazy::new(|| {
@@ -93,13 +94,16 @@ impl CoreferenceResolver {
             let pattern = format!(r"\b(?:the\s+)?{}\b", entity_type);
             if let Ok(regex) = Regex::new(&pattern) {
                 for capture in regex.find_iter(&text_lower) {
+                    let capture_text = capture.as_str().to_string();
                     entities.push(Entity {
                         id: format!("entity_{}", entities.len()),
-                        text: capture.as_str().to_string(),
+                        name: capture_text.clone(),
+                        text: capture_text.clone(),
                         entity_type: EntityType::CodeEntity,
                         confidence: 0.8,
-                        position: (capture.start(), capture.end()),
-                        metadata: HashMap::from([("source".to_string(), "pattern_match".to_string())]),
+                        context: None,
+                        position: Some((capture.start(), capture.end())),
+                        metadata: Some(HashMap::from([("source".to_string(), serde_json::Value::String("pattern_match".to_string()))])),
                     });
                 }
             }
@@ -114,13 +118,16 @@ impl CoreferenceResolver {
         for pattern in &system_patterns {
             if let Ok(regex) = Regex::new(pattern) {
                 for capture in regex.find_iter(&text_lower) {
+                    let capture_text = capture.as_str().to_string();
                     entities.push(Entity {
                         id: format!("entity_{}", entities.len()),
-                        text: capture.as_str().to_string(),
+                        name: capture_text.clone(),
+                        text: capture_text.clone(),
                         entity_type: EntityType::SystemComponent,
                         confidence: 0.7,
-                        position: (capture.start(), capture.end()),
-                        metadata: HashMap::from([("source".to_string(), "pattern_match".to_string())]),
+                        context: None,
+                        position: Some((capture.start(), capture.end())),
+                        metadata: Some(HashMap::from([("source".to_string(), serde_json::Value::String("pattern_match".to_string()))])),
                     });
                 }
             }
@@ -173,11 +180,13 @@ impl CoreferenceResolver {
                     if chain.representative.id == best_match.id {
                         chain.mentions.push(Entity {
                             id: format!("mention_{}", chain.mentions.len()),
+                            name: pronoun.clone(),
                             text: pronoun.clone(),
-                            entity_type: EntityType::Other,
+                            entity_type: EntityType::Other(String::new()),
                             confidence: 0.6,
-                            position: *pronoun_pos,
-                            metadata: HashMap::from([("antecedent".to_string(), best_match.text.clone())]),
+                            context: None,
+                            position: Some(*pronoun_pos),
+                            metadata: Some(HashMap::from([("antecedent".to_string(), serde_json::Value::String(best_match.text.clone()))])),
                         });
                         chain.confidence = (chain.confidence + 0.6) / 2.0;
                         found_chain = true;
@@ -190,11 +199,13 @@ impl CoreferenceResolver {
                         representative: best_match.clone(),
                         mentions: vec![Entity {
                             id: format!("mention_0"),
+                            name: pronoun.clone(),
                             text: pronoun.clone(),
-                            entity_type: EntityType::Other,
+                            entity_type: EntityType::Other(String::new()),
                             confidence: 0.6,
-                            position: *pronoun_pos,
-                            metadata: HashMap::from([("antecedent".to_string(), best_match.text.clone())]),
+                            context: None,
+                            position: Some(*pronoun_pos),
+                            metadata: Some(HashMap::from([("antecedent".to_string(), serde_json::Value::String(best_match.text.clone()))])),
                         }],
                         confidence: 0.7,
                         chain_type: CoreferenceType::Anaphoric,
@@ -219,8 +230,12 @@ impl CoreferenceResolver {
 
         entities.iter()
             .filter(|entity| {
-                let entity_end = entity.position.1;
-                entity_end < pronoun_start && entity_end >= window_start
+                if let Some(pos) = entity.position {
+                    let entity_end = pos.1;
+                    entity_end < pronoun_start && entity_end >= window_start
+                } else {
+                    false
+                }
             })
             .collect()
     }

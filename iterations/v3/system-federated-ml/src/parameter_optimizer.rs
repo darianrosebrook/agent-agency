@@ -3,6 +3,7 @@
 //! Implements safe, constrained parameter optimization using contextual bandits
 //! with trust regions, quality gates, and CAWS compliance.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -42,26 +43,30 @@ pub struct LLMParameterOptimizer {
 }
 
 /// Parameter evaluation record
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParameterEvaluation {
     pub parameters: ParameterSet,
     pub objective_value: f64,
     pub quality_score: f64,
     pub compliance_score: f64,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
 }
 
 /// Optimal parameter set for a task type
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct OptimalParameterSet {
     pub parameters: ParameterSet,
     pub confidence: f64,
     pub sample_count: usize,
+    #[schemars(with = "String")]
+
     pub last_updated: DateTime<Utc>,
 }
 
 /// Optimization constraints
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct OptimizationConstraints {
     pub max_latency_ms: u64,
     pub max_tokens: u32,
@@ -72,7 +77,7 @@ pub struct OptimizationConstraints {
 }
 
 /// Objective weights for reward calculation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ObjectiveWeights {
     /// Reward = w_q * quality - w_l * norm_latency - w_t * norm_tokens
     pub w_quality: f64,
@@ -81,7 +86,7 @@ pub struct ObjectiveWeights {
 }
 
 /// Recommended parameters with uncertainty
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RecommendedParameters {
     pub set: ParameterSet,
     pub confidence: f64,               // Calibrated [0,1]
@@ -101,7 +106,7 @@ pub struct QualityGateValidator {
 }
 
 /// Baseline metrics for comparison
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BaselineMetrics {
     pub avg_quality: f64,
     pub avg_latency: u64,
@@ -352,7 +357,7 @@ impl QualityGateValidator {
 }
 
 /// Validation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Serialize, Deserialize)]
 pub enum ValidationResult {
     Approved {
         quality_delta: f64,
@@ -389,4 +394,3 @@ impl Default for TaskFeatures {
     }
 }
 
-pub type Result<T> = std::result::Result<T, anyhow::Error>;

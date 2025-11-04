@@ -30,6 +30,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -44,7 +45,7 @@ pub use invariants::run_caws_invariants;
 pub use metrics::CouncilMetrics;
 
 /// Council decision result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FinalDecision {
     /// Overall decision label
     pub label: agent_agency_contracts::VerdictLabel,
@@ -66,7 +67,7 @@ pub struct FinalDecision {
 }
 
 /// Error types for council operations
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, JsonSchema)]
 pub enum CouncilError {
     #[error("Engine error: {0}")]
     Engine(#[from] agent_agency_contracts::EngineError),

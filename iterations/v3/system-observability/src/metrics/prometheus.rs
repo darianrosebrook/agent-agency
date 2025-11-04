@@ -297,7 +297,6 @@ pub enum MetricsBackendError {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[test]
     fn test_prometheus_creation() {
         let prometheus = PrometheusMetrics::new().unwrap();

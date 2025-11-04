@@ -4,6 +4,7 @@ use std::sync::Arc;
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
+use anyhow::Result;
 
 use crate::learning::types::*;
 use crate::learning::PatternAnalyzer;
@@ -121,6 +122,10 @@ impl ConfigurationOptimizer {
             performance_delta: performance_metrics,
             timestamp: Utc::now(),
             metadata: HashMap::new(),
+            config_before: None,
+            config_after: None,
+            performance_improvement: None,
+            optimization_type: None,
         };
 
         let mut history = self.optimization_history.write().await;
@@ -179,6 +184,10 @@ impl ConfigurationOptimizer {
             performance_delta: performance_metrics,
             timestamp: Utc::now(),
             metadata: HashMap::new(),
+            config_before: None,
+            config_after: None,
+            performance_improvement: None,
+            optimization_type: None,
         };
 
         let mut history = self.optimization_history.write().await;

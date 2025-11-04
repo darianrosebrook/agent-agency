@@ -63,10 +63,10 @@ pub mod provenance;
 
 use std::sync::Arc;
 use anyhow::{Context, Result};
-
 // Import types from memory_types
+// Note: ContextualMemory is re-exported via pub use below, so we use the full path internally
 use crate::memory_types::{
-    AgentExperience, MemoryId, TaskContext, ContextualMemory, 
+    AgentExperience, MemoryId, TaskContext,
     ContextMatch, ReasoningQuery, ReasoningResult, TimeRange, TemporalAnalysis
 };
 
@@ -83,7 +83,7 @@ pub use decay::{MemoryDecayEngine, DecayStats};
 pub use graph_engine::{KnowledgeGraphEngine, Entity, Relationship, GraphQuery, GraphStats};
 pub use memory_manager::{MemoryManager, MemoryStats};
 pub use temporal_reasoning::{TemporalReasoningEngine};
-pub use memory_types::{MemoryConfig, MemoryType, TemporalContext, TaskPriority, ExperienceOutcome, AgentFeedback, ExperienceContext};
+pub use memory_types::{MemoryConfig, MemoryType, TemporalContext, TaskPriority, ExperienceOutcome, AgentFeedback, ExperienceContext, ContextualMemory};
 // NOTE: prompting_types exists in agent-research crate. See note above for import options.
 // pub use prompting_types::*; // TODO: Uncomment when module is created or imported from agent-research
 
@@ -288,7 +288,7 @@ impl MemorySystem {
     }
 
     /// Retrieve contextual memories based on current context
-    pub async fn retrieve_contextual_memories(&self, context: &TaskContext, limit: usize) -> MemoryResult<Vec<ContextualMemory>> {
+    pub async fn retrieve_contextual_memories(&self, context: &TaskContext, limit: usize) -> MemoryResult<Vec<crate::memory_types::ContextualMemory>> {
         let mut all_memories = Vec::new();
 
         #[cfg(feature = "embeddings")]
@@ -299,7 +299,7 @@ impl MemorySystem {
             // Add semantic matches
             for (memory_id, similarity) in semantic_matches {
                 if let Ok(memory) = self.manager.retrieve_memory(memory_id).await {
-                    all_memories.push(ContextualMemory {
+                    all_memories.push(crate::memory_types::ContextualMemory {
                         memory,
                         relevance_score: similarity,
                         context_match: ContextMatch::Semantic,

@@ -177,7 +177,6 @@ pub enum MetricsBackendError {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[test]
     fn test_statsd_circuit_breaker() {
         let breaker = StatsDCircuitBreaker::new(3, 1000);

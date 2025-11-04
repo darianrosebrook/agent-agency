@@ -97,7 +97,7 @@ pub use execution_events::{
     ExecutionEvent,
 };
 pub use task_executor::{
-    TaskExecutor, TaskExecutionResult, TaskSpec, TaskRequirements, TaskContext, TaskScope, ExecutionStatus,
+    TaskExecutor, TaskExecutionResult, TaskSpec, TaskRequirements, TaskContext, TaskScope, ExecutionStatus, Progress,
 };
 pub use task_executor_provider::{
     TaskExecutorProvider, TaskExecutorFactory,
@@ -120,4 +120,8 @@ pub use ports::research_evidence::ResearchEvidenceCollector;
 pub use ports::tool_chain::ToolChainPlanner;
 pub use ports::data_processing::DataProcessingService;
 pub use types::prelude::*;
-pub use errors::*;
+pub use errors::{
+    CouncilError, CouncilResult, SecurityError, SecurityResult, ConfigError, ConfigResult,
+    ServiceError, ServiceResult, ValidationError, OperationalError, OperationalResult,
+    DataProcessingError, DataProcessingResult, PlanningError, MemoryError, DatabaseError
+};

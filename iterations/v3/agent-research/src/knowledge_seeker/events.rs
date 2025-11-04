@@ -4,8 +4,9 @@ use tokio::sync::mpsc;
 use crate::ResearchEvent;
 
 /// Event emitter for research events
-#[derive(Debug)]
-pub struct EventEmitter {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct EventEmitterr {
     sender: mpsc::UnboundedSender<ResearchEvent>,
 }
 

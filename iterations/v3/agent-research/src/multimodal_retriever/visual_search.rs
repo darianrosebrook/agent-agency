@@ -4,11 +4,13 @@ use std::path::Path;
 use anyhow::Result;
 use image::DynamicImage;
 
-use super::core::{MultimodalSearchResult, VisualSearchResult, VisualSearchConfig};
+use super::core::MultimodalSearchResult;
+use super::core::{VisualSearchResult, VisualSearchConfig};
 
 /// Visual search bridge for image processing and similarity
-#[derive(Debug)]
-pub struct VisualSearchBridge {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct VisualSearchBridgee {
     config: VisualSearchConfig,
 }
 
@@ -34,8 +36,9 @@ impl VisualSearchBridge {
 }
 
 /// Visual search engine
-#[derive(Debug)]
-pub struct VisualSearchEngine {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct VisualSearchEnginee {
     config: super::core::MultimodalRetrieverConfig,
     search_bridge: VisualSearchBridge,
 }

@@ -8,13 +8,14 @@
 
 mod cli;
 
+use schemars::JsonSchema;
 use std::io::{self, Write};
 use clap::{Parser, Subcommand};
 use reqwest::Client;
 use cli::*;
 
 /// Execution modes with different intervention levels
-#[derive(Debug, Clone, clap::ValueEnum)]
+#[derive(Debug, Clone, clap::ValueEnum, JsonSchema)]
 pub enum ExecutionMode {
     /// Manual approval required for each changeset before application
     Strict,
@@ -25,7 +26,7 @@ pub enum ExecutionMode {
 }
 
 /// CLI configuration
-#[derive(Debug, Clone, Parser)]
+#[derive(Debug, Clone, Parser, JsonSchema)]
 pub struct CliConfig {
     /// Enable verbose output
     #[arg(short, long)]
@@ -46,7 +47,7 @@ pub struct Cli {
 }
 
 /// Available CLI commands
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Subcommand, JsonSchema)]
 pub enum Commands {
     /// Execute autonomous task with intervention controls
     Execute {

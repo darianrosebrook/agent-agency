@@ -3,45 +3,39 @@
 //! Contains the main RestApi struct and core business logic methods
 //! for task management, execution, and API operations.
 
-use std::collections::HashMap;
-use std::sync::Arc;
-use axum::{
-    routing::{get, 
-        // post, 
-        // delete
-    },
-    Router,
-};
+use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
-use sqlx::Row;
 use serde::{Deserialize, Serialize};
-use tokio::sync::RwLock;
 use uuid::Uuid;
 
 #[cfg(feature = "orchestration")]
 use agent_orchestration::audited_orchestrator::Orchestrator;
 #[cfg(feature = "orchestration")]
 use agent_orchestration::progress_tracker::{ProgressTracker, ExecutionProgress};
-use crate::simple_client::DatabaseClient;
 
-use super::{ApiError, Result, TaskSubmissionRequest, TaskSubmissionResponse, TaskStatusResponse, DashboardTaskSummary, DashboardDiffSummary, TaskResultResponse, SavedQueryResponse, SaveQueryRequest, WorkingSpec, ExecutionArtifacts, QualityReport, ChangeBudget, BlastRadius, Scope, AcceptanceCriterion, NonFunctionalRequirements, PerformanceRequirements, Contract, ArtifactMetadata};
-use super::types::ApiConfig;
+use super::{ApiError, Result, WorkingSpec, ExecutionArtifacts, QualityReport};
 // use super::handlers::{get_metrics, get_dashboard_data, get_diff_summary, list_tasks, acknowledge_slo_alert, list_slos, get_slo_status, get_slo_measurements, list_slo_alerts, create_waiver, approve_waiver, get_task_provenance, list_provenance_records, link_provenance_to_commit, verify_provenance_trailer, get_provenance_by_commit, cancel_task, pause_task, resume_task, list_saved_queries, save_query, delete_saved_query, list_waivers, health_check, submit_task, get_task_status, get_task_result};
 
 // Stub types for compilation
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ExecutionProgress {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub status: String,
     pub progress_percentage: f64,
     pub current_phase: String,
+    #[schemars(with = "String")]
+
     pub started_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ProgressTracker {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
 }
 
@@ -78,8 +72,9 @@ impl ProgressTracker {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct Orchestrator {
+    #[schemars(with = "String")]
     pub id: Uuid,
 }
 
@@ -110,7 +105,7 @@ pub struct RestApi {
     pub db_client: Arc<DatabaseClient>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct TaskState {
     description: String,
     status: TaskStatus,
@@ -118,13 +113,15 @@ struct TaskState {
     working_spec: Option<WorkingSpec>,
     artifacts: Option<ExecutionArtifacts>,
     quality_report: Option<QualityReport>,
+    #[schemars(with = "String")]
     started_at: DateTime<Utc>,
+    #[schemars(with = "String")]
     updated_at: DateTime<Utc>,
     completed_at: Option<DateTime<Utc>>,
     error_message: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 enum TaskStatus {
     Pending,
     Planning,

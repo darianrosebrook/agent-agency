@@ -1,5 +1,6 @@
 //! Metrics collection for benchmarking
 
+use schemars::JsonSchema;
 use crate::benchmark_types::*;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
@@ -18,23 +19,31 @@ pub struct MetricsCollector {
     model_summaries: Arc<RwLock<HashMap<Uuid, ModelPerformanceSummary>>>,
 }
 
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceSnapshot {
+    ##[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
+    #[schemars(with = "String")]
     pub model_id: Uuid,
     pub benchmark_type: BenchmarkType,
     pub metrics: BenchmarkMetrics,
     pub score: f64,
 }
 
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ModelPerformanceSummary {
+    #[schemars(with = "String")]
     pub model_id: Uuid,
     pub model_name: String,
     pub total_benchmarks: usize,
     pub average_score: f64,
     pub best_score: f64,
     pub worst_score: f64,
+    ##[schemars(with = "String")]
+
     pub last_updated: DateTime<Utc>,
     pub performance_trend: PerformanceTrend,
 }
@@ -321,8 +330,11 @@ impl MetricsCollector {
     }
 }
 
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceReport {
+    ##[schemars(with = "String")]
+
     pub generated_at: DateTime<Utc>,
     pub total_models: usize,
     pub total_benchmarks: usize,

@@ -1,5 +1,6 @@
 //! Logging and log management
 
+use schemars::JsonSchema;
 use std::collections::{HashMap, VecDeque};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -184,7 +185,7 @@ impl Logger {
 }
 
 /// Logging error types
-#[derive(Debug, Clone, thiserror::Error)]
+#[derive(Debug, Clone, thiserror::Error, JsonSchema)]
 pub enum LoggingError {
     #[error("Log sink error: {message}")]
     SinkError { message: String },

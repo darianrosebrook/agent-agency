@@ -13,7 +13,8 @@ use super::processing::ContentProcessorManager;
 use super::events::{EventEmitter, ResearchEvent};
 
 /// Web scraping coordinator
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ScrapingCoordinator {
     web_scraper: Arc<WebScraper>,
     content_processor: Arc<ContentProcessorManager>,

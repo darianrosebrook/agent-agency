@@ -6,7 +6,6 @@ use redis::{aio::Connection, Client as RedisClientImpl};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-
 /// Redis client trait for cache operations
 #[async_trait::async_trait]
 pub trait RedisClient: Send + Sync + std::fmt::Debug {
@@ -217,7 +216,7 @@ impl ProductionRedisClient {
 impl RedisClient for ProductionRedisClient {
     async fn get(&self, key: &str) -> Result<Option<Vec<u8>>> {
         let mut conn = self.get_connection().await?;
-        let result = conn.get::<_, Option<Vec<u8>>>(key).await;
+        let result = conn.get>>(key).await;
         self.return_connection(conn).await;
 
         match result {

@@ -17,7 +17,9 @@ pub struct Alert {
     pub labels: HashMap<String, String>,
     pub annotations: HashMap<String, String>,
     pub status: AlertStatus,
+    #[schemars(with = "String")]
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
     pub updated_at: DateTime<Utc>,
     pub resolved_at: Option<DateTime<Utc>>,
     pub value: Option<f64>,
@@ -418,7 +420,6 @@ pub fn create_default_alert_rules() -> Vec<AlertRule> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[tokio::test]
     async fn test_alert_creation_and_resolution() {
         let manager = AlertManager::new();

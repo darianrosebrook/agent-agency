@@ -3,7 +3,6 @@
 //! Intelligent lifecycle management for long-term memory storage and retrieval.
 
 use serde::{Deserialize, Serialize};
-
 pub mod lifecycle;
 pub mod archival;
 pub mod reinforcement;

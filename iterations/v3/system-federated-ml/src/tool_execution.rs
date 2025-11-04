@@ -3,6 +3,7 @@
 //! Provides secure execution environment for tool invocation with timeout,
 //! resource limits, and error handling.
 
+use schemars::JsonSchema;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -23,7 +24,7 @@ pub struct ToolExecutor {
 }
 
 /// Tool invocation request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolInvocation {
     /// Tool name to execute
     pub tool_name: String,
@@ -36,7 +37,7 @@ pub struct ToolInvocation {
 }
 
 /// Tool execution result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolResult {
     /// Tool name that was executed
     pub tool_name: String,
@@ -49,7 +50,7 @@ pub struct ToolResult {
 }
 
 /// Execution metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionMetadata {
     /// Execution time (ms)
     pub execution_time_ms: u64,
@@ -64,7 +65,7 @@ pub struct ExecutionMetadata {
 }
 
 /// Resource usage tracking
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResourceUsage {
     /// CPU time used (ms)
     pub cpu_time_ms: u64,
@@ -77,7 +78,7 @@ pub struct ResourceUsage {
 }
 
 /// Execution statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionStats {
     /// Total executions
     pub total_executions: u64,
@@ -107,7 +108,7 @@ struct ExecutionContext {
 }
 
 /// Resource tracker for execution monitoring
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct ResourceTracker {
     /// Initial memory usage
     initial_memory: f64,

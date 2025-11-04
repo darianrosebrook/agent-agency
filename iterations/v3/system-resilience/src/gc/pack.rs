@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
@@ -20,7 +21,7 @@ pub struct PackFile {
 }
 
 /// Pack file header
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PackHeader {
     /// Magic number for pack files
     pub magic: [u8; 4],
@@ -39,7 +40,7 @@ pub struct PackHeader {
 }
 
 /// Pack index entry
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PackIndexEntry {
     /// Object digest
     pub digest: Digest,
@@ -52,7 +53,7 @@ pub struct PackIndexEntry {
 }
 
 /// Object type in pack file
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ObjectType {
     /// Blob object
     Blob,
@@ -91,7 +92,7 @@ pub struct PackManager {
 }
 
 /// Pack configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PackConfig {
     /// Maximum objects per pack file
     pub max_objects_per_pack: usize,
@@ -385,7 +386,7 @@ impl PackFile {
 }
 
 /// Object header in pack file
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct ObjectHeader {
     digest: Digest,
     size: u32,
@@ -568,7 +569,7 @@ impl PackManager {
 }
 
 /// Pack statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PackStats {
     /// Number of active pack files
     pub active_packs: usize,

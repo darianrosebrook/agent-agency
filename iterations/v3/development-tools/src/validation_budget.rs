@@ -3,12 +3,13 @@
 //! Consolidated budget checking logic extracted from self-prompting-agent
 //! and other implementations.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 
 /// Budget limits for different resource types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BudgetLimits {
     pub max_files: u32,
     pub max_loc: u32,
@@ -18,18 +19,20 @@ pub struct BudgetLimits {
 }
 
 /// Current budget state
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BudgetState {
     pub files_used: u32,
     pub loc_used: u32,
     pub time_used_seconds: u64,
     pub memory_used_mb: u64,
     pub cost_used_cents: u64,
+    #[schemars(with = "String")]
+
     pub last_updated: DateTime<Utc>,
 }
 
 /// Budget checking result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BudgetCheckResult {
     pub within_limits: bool,
     pub violations: Vec<BudgetViolation>,
@@ -37,7 +40,7 @@ pub struct BudgetCheckResult {
 }
 
 /// Budget violation details
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BudgetViolation {
     pub resource_type: String,
     pub current_usage: u64,

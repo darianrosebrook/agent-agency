@@ -5,6 +5,7 @@
 //!
 //! Ported from V2 retry patterns with Rust optimizations.
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -13,7 +14,7 @@ use tokio::time::{sleep, Instant};
 use tracing::{error, info, warn};
 
 /// Retry configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RetryConfig {
     /// Maximum number of retry attempts
     pub max_attempts: u32,
@@ -46,7 +47,7 @@ impl Default for RetryConfig {
 }
 
 /// Retry statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RetryStats {
     pub total_attempts: u32,
     pub successful_attempts: u32,

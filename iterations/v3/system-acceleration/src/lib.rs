@@ -14,6 +14,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 pub mod ane;
@@ -31,7 +32,7 @@ pub use buffer_pool::BufferPool;
 pub use quantization::QuantizationConfig;
 
 /// ANE capabilities structure
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, JsonSchema)]
 pub struct ANECapabilities {
     /// Whether ANE is available
     pub is_available: bool,
@@ -52,7 +53,7 @@ pub struct ANECapabilities {
 }
 
 /// Tensor specification for model inputs/outputs
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct TensorSpec {
     /// Tensor name
     pub name: String,
@@ -65,7 +66,7 @@ pub struct TensorSpec {
 }
 
 /// Quantization method enumeration
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum QuantizationMethod {
     /// No quantization
     None,

@@ -1,5 +1,6 @@
 //! Communication hub that orchestrates message passing
 
+use schemars::JsonSchema;
 use crate::parallel_types::*;
 use crate::WorkerMessage;
 use crate::error::*;
@@ -105,8 +106,9 @@ impl Default for CommunicationHub {
 }
 
 /// Statistics for communication monitoring
-#[derive(Debug, Clone)]
-pub struct CommunicationStats {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct CommunicationStats {
     pub active_workers: usize,
     pub healthy_channels: usize,
     pub pending_messages: usize,
@@ -155,8 +157,9 @@ impl MessageRouter {
 }
 
 /// Message type for routing
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum MessageType {
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+enum MessageType {
     Started,
     Progress,
     Blocked,

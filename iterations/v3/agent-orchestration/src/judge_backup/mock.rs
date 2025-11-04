@@ -3,6 +3,7 @@
 //! Configurable mock judge that returns predetermined verdicts
 //! for testing council workflows and integration scenarios.
 
+use schemars::JsonSchema;
 use crate::council_errors::CouncilResult;
 use crate::judge_backup::backup_types::JudgeType;
 use crate::judge_backup::traits::Judge;
@@ -14,8 +15,9 @@ use crate::judge_backup::risk::{RiskAssessment, RiskLevel};
 use rand::Rng;
 
 /// Verdict strategy for mock judge behavior
-#[derive(Debug, Clone)]
-pub enum VerdictStrategy {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum VerdictStrategy {
     AlwaysApprove,
     AlwaysRefine(Vec<RequiredChange>),
     AlwaysReject(Vec<CriticalIssue>),
@@ -25,8 +27,9 @@ pub enum VerdictStrategy {
 }
 
 /// Mock judge for testing and development
-#[derive(Debug)]
-pub struct MockJudge {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct MockJudge {
     config: JudgeConfig,
     verdict_strategy: VerdictStrategy,
 }
@@ -366,5 +369,4 @@ pub fn create_mock_judge_panel() -> Vec<MockJudge> {
         ),
     ]
 }
-
 

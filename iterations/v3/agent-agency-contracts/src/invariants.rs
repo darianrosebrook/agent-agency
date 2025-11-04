@@ -7,10 +7,11 @@
 //! @author @darianrosebrook
 
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use crate::working_spec::WorkingSpec;
 
 /// CAWS invariant rules that are never waivable
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, JsonSchema)]
 pub enum CAWSInvariant {
     /// No console.log in production code
     NoConsoleDotLog,
@@ -38,14 +39,14 @@ pub enum CAWSInvariant {
 }
 
 /// Result of running invariant checks
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct InvariantResults {
     /// Individual check results
     pub checks: Vec<InvariantCheck>,
 }
 
 /// Individual invariant check result
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct InvariantCheck {
     /// The invariant that was checked
     pub invariant: CAWSInvariant,
@@ -58,7 +59,7 @@ pub struct InvariantCheck {
 }
 
 /// Location of a violation in the working spec
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ViolationLocation {
     /// Rule that was violated
     pub rule_id: String,
@@ -74,7 +75,7 @@ pub struct ViolationLocation {
 }
 
 /// Violation severity levels
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum Severity {
     /// Minor issues, suggestions
     Info,
@@ -358,6 +359,7 @@ fn check_caws_compliance(spec: &WorkingSpec) -> InvariantCheck {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use schemars::JsonSchema;
     use crate::working_spec::{
         WorkingSpec, WorkingSpecMetadata, WorkingSpecConstraints, AcceptanceCriterion,
         TestPlan, RollbackPlan, RollbackStrategy, DataImpact, WorkingSpecContext,

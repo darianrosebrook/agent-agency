@@ -4,6 +4,7 @@
  * REST API endpoints for keystore operations with proper authentication and audit logging.
  */
 
+use schemars::JsonSchema;
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
@@ -12,16 +13,15 @@ use axum::{
     Router,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use uuid::Uuid;
 use base64::{Engine as _, engine::general_purpose};
 
 use crate::AppState;
 use crate::audit::extract_audit_context;
-use system_quality_security::{Keystore, KeyType, KeyPermission, KeystoreResult, KeyMetadata};
+use system_quality_security::{Keystore, KeyType, KeyPermission, KeyMetadata};
 
 /// Request to store a new key
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct StoreKeyRequest {
     pub name: String,
     pub key_type: KeyType,
@@ -33,7 +33,7 @@ pub struct StoreKeyRequest {
 }
 
 /// Request to update a key
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct UpdateKeyRequest {
     pub value: Option<String>, // Base64 encoded
     pub permissions: Option<Vec<KeyPermission>>,
@@ -43,7 +43,7 @@ pub struct UpdateKeyRequest {
 }
 
 /// Query parameters for listing keys
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct ListKeysQuery {
     pub owner: Option<String>,
     pub key_type: Option<KeyType>,
@@ -51,8 +51,8 @@ pub struct ListKeysQuery {
 }
 
 /// API response for successful operations
-#[derive(Debug, Serialize)]
-pub struct ApiResponse<T> {
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct ApiResponse <T> {
     pub success: bool,
     pub data: Option<T>,
     pub error: Option<String>,

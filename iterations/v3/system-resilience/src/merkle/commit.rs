@@ -2,6 +2,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -11,7 +12,7 @@ use crate::recovery_types::*;
 // use super::tree::FileTree; // Unused
 
 /// Commit object with Merkle tree root
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct Commit {
     pub id: Digest,
     pub parent: Option<Digest>,
@@ -20,12 +21,14 @@ pub struct Commit {
     pub caws_verdict_id: Option<String>,
     pub message: Option<String>,
     pub stats: ChangeStats,             // Observability
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub author: AuthorInfo,
 }
 
 /// Author information for commits
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct AuthorInfo {
     pub name: String,
     pub email: String,
@@ -277,7 +280,7 @@ impl Default for CommitBuilder {
 }
 
 /// Commit chain for tracking history
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct CommitChain {
     pub commits: Vec<Commit>,
 }

@@ -3,6 +3,7 @@
 //! Implements counterfactual logging with propensity scoring for offline
 //! policy evaluation using IPS (Inverse Propensity Scoring) and DR (Doubly Robust) estimators.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -16,8 +17,9 @@ use crate::bandit_policy::{ParameterSet, TaskFeatures, BanditPolicy};
 use crate::bandit_stubs::{ParameterSet, TaskFeatures, BanditPolicy};
 
 /// Logged decision for offline policy evaluation (IPS/DR)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LoggedDecision {
+    #[schemars(with = "String")]
     pub request_id: Uuid,
     pub task_type: String,
     pub model_name: String,
@@ -27,11 +29,13 @@ pub struct LoggedDecision {
     pub log_propensity: f64,           // π(a|x) - probability policy assigned
     pub outcome: TaskOutcome,
     pub policy_version: String,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
 }
 
 /// Task outcome metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskOutcome {
     pub quality_score: f64,            // 0.0-1.0
     pub latency_ms: u64,
@@ -255,7 +259,7 @@ impl OfflineEvaluator {
 }
 
 /// Policy evaluation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PolicyEvaluationResult {
     pub estimated_reward: f64,
     pub confidence_interval: (f64, f64),  // Lower, upper at α=0.05

@@ -1,5 +1,6 @@
 //! HTTP request handlers for the Agent Agency API Server
 
+use schemars::JsonSchema;
 use crate::AppState;
 use axum::{
     extract::{Path, State},
@@ -12,14 +13,14 @@ use chrono;
 use serde::{Deserialize, Serialize};
 
 // Task submission request/response types
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskSubmissionRequest {
     pub description: String,
     pub context: String,
     pub priority: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, JsonSchema)]
 pub struct TaskSubmissionResponse {
     pub task_id: String,
     pub status: String,
@@ -53,11 +54,9 @@ impl axum::response::IntoResponse for ApiError {
 }
 
 // Additional imports for handlers
-use async_trait::async_trait;
-use std::sync::Arc;
 use std::net::IpAddr;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct PersistedTask {
     pub id: String,
     pub spec: String,

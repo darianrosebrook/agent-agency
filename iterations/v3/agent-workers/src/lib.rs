@@ -38,7 +38,8 @@ pub use worker_types::{
     WorkerMessage, WorkerProgress, Progress, ValidationResult, ValidationContext,
     Artifact, ArtifactType, WorkerHealth, SeverityLevel, TaskPriority,
     WorkerSpecialty, TaskDefinition, TaskStatus, ExecutionOutcome, LearningMode,
-    Priority, WorkerBreakdown, QualityRequirements, ToolId, ValidationRuleType
+    Priority, WorkerBreakdown, QualityRequirements, ToolId, ValidationRuleType,
+    SystemClock, UuidGenerator, Clock, CawsSpec
 };
 
 // Consolidated from workers/ crate

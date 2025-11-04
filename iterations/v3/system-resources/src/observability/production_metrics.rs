@@ -1,5 +1,6 @@
 //! Metrics collection and management
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -11,7 +12,7 @@ use super::core::{ObservabilityConfig, LogEntry};
 use super::quantiles::QuantileEstimator;
 
 /// Metric types supported by the observability system
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum MetricType {
     /// Monotonically increasing counter
     Counter,
@@ -35,7 +36,7 @@ impl std::fmt::Display for MetricType {
 }
 
 /// Metric value container
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum MetricValue {
     /// Counter value
     Counter(u64),
@@ -77,7 +78,7 @@ impl MetricValue {
 }
 
 /// Individual metric data point
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MetricDataPoint {
     /// Metric name
     pub name: String,
@@ -86,6 +87,8 @@ pub struct MetricDataPoint {
     /// Label dimensions
     pub labels: HashMap<String, String>,
     /// Timestamp when the metric was recorded
+    ##[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
 }
 
@@ -117,14 +120,15 @@ impl MetricDataPoint {
     }
 
     /// Set a custom timestamp
-    pub fn with_timestamp(mut self, timestamp: DateTime<Utc>) -> Self {
+    pub fn with_timestamp(mut self, #[schemars(with = "String")]
+    timestamp: DateTime<Utc>) -> Self {
         self.timestamp = timestamp;
         self
     }
 }
 
 /// Observability error types
-#[derive(Debug, Clone, thiserror::Error)]
+#[derive(Debug, Clone, thiserror::Error, JsonSchema)]
 pub enum ObservabilityError {
     #[error("Metrics collection error: {message}")]
     CollectionError { message: String },

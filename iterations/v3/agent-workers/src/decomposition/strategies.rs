@@ -2,6 +2,7 @@
 
 use crate::parallel_types::*;
 use crate::error::*;
+use std::collections::HashMap;
 
 /// Decomposition strategy interface
 #[async_trait::async_trait]
@@ -44,26 +45,32 @@ impl DecompositionStrategy for CompilationErrorStrategy {
             if let TaskPattern::CompilationErrors { error_groups } = pattern {
                 for (i, error_group) in error_groups.iter().enumerate() {
                     let subtask = SubTask {
-                        id: SubTaskId(format!("compile-fix-{}-{}", error_group.error_code, i)),
+                        id: SubTaskId::new(),
+                        parent_task_id: task.id.clone(),
                         parent_id: task.id.clone(),
-                        title: format!("Fix {} {} errors", error_group.count, error_group.error_code),
+                        title: format!("Fix {} compilation errors", error_group.error_count),
                         description: format!(
-                            "Resolve {} compilation errors of type {} in {} files",
-                            error_group.count, error_group.error_code, error_group.affected_files.len()
+                            "Resolve {} compilation errors in {}",
+                            error_group.error_count, error_group.file_path
                         ),
-                        scope: TaskScope {
-                            files: error_group.affected_files.clone(),
-                            directories: vec![],
-                    patterns: vec![format!("*{}*", error_group.error_code)],
-                            // time_budget: std::time::Duration::from_secs(300), // 5 minutes
-                            // quality_requirements: QualityRequirements::default(),
-                        },
-                        specialty: WorkerSpecialty::CompilationErrors {
-                            error_codes: vec![error_group.error_code.clone()],
-                        },
+                        complexity: 0.8,
                         dependencies: vec![], // Independent by default
-                        estimated_effort: std::time::Duration::from_secs(120), // 2 minutes
+                        assigned_worker: None,
+                        status: SubTaskStatus::Pending,
                         priority: Priority::High,
+                        estimated_duration: std::time::Duration::from_secs(120), // 2 minutes
+                        scope: TaskScope {
+                            domains: vec![],
+                            files_affected: vec![error_group.file_path.clone()],
+                            files: vec![],
+                            directories: vec![],
+                            patterns: vec![],
+                            max_files: None,
+                            max_loc: None,
+                        },
+                        specialty: WorkerSpecialty::Compilation,
+                        estimated_effort: 120.0, // 2 minutes in seconds
+                        metadata: HashMap::new(),
                     };
 
                     subtasks.push(subtask);
@@ -74,23 +81,29 @@ impl DecompositionStrategy for CompilationErrorStrategy {
         // If no specific patterns found, create a general compilation subtask
         if subtasks.is_empty() {
             subtasks.push(SubTask {
-                id: SubTaskId("compile-general".to_string()),
+                id: SubTaskId::new(),
+                parent_task_id: task.id.clone(),
                 parent_id: task.id.clone(),
                 title: "Fix compilation errors".to_string(),
                 description: "Resolve all compilation errors in the codebase".to_string(),
+                complexity: 0.9,
+                dependencies: vec![],
+                assigned_worker: None,
+                status: SubTaskStatus::Pending,
+                priority: Priority::Critical,
+                estimated_duration: std::time::Duration::from_secs(300), // 5 minutes
                 scope: TaskScope {
+                    domains: vec![],
+                    files_affected: vec![],
                     files: vec![],
                     directories: vec![],
-                    patterns: vec!["*.rs".to_string()],
-                    // time_budget: std::time::Duration::from_secs(600), // 10 minutes
-                    // quality_requirements: QualityRequirements::default(),
+                    patterns: vec![],
+                    max_files: None,
+                    max_loc: None,
                 },
-                specialty: WorkerSpecialty::CompilationErrors {
-                    error_codes: vec![],
-                },
-                dependencies: vec![],
-                estimated_effort: std::time::Duration::from_secs(300), // 5 minutes
-                priority: Priority::Critical,
+                specialty: WorkerSpecialty::Compilation,
+                estimated_effort: 300.0, // 5 minutes in seconds
+                metadata: HashMap::new(),
             });
         }
 
@@ -130,28 +143,31 @@ impl DecompositionStrategy for RefactoringStrategy {
             if let TaskPattern::RefactoringOperations { operations } = pattern {
                 for (i, operation) in operations.iter().enumerate() {
                     let subtask = SubTask {
-                        id: SubTaskId(format!("refactor-{}-{}", operation.operation_type, i)),
+                        id: SubTaskId::new(),
+                        parent_task_id: task.id.clone(),
                         parent_id: task.id.clone(),
                         title: format!("{} operation", operation.operation_type),
-                        description: format!(
-                            "Perform {} refactoring operation across {} files",
-                            operation.operation_type, operation.affected_files.len()
-                        ),
-                        scope: TaskScope {
-                            files: operation.affected_files.clone(),
-                            directories: vec![],
-                patterns: vec![],
-                            // time_budget: std::time::Duration::from_secs(300), // 5 minutes
-                            // quality_requirements: QualityRequirements::default(),
-                        },
-                        specialty: WorkerSpecialty::Refactoring {
-                            strategies: vec![operation.operation_type.clone()],
-                        },
+                        description: operation.description.clone(),
+                        complexity: operation.complexity,
                         dependencies: vec![], // Will be set by dependency analysis
-                        estimated_effort: std::time::Duration::from_secs(
+                        assigned_worker: None,
+                        status: SubTaskStatus::Pending,
+                        priority: Priority::Medium,
+                        estimated_duration: std::time::Duration::from_secs(
                             (operation.complexity * 300.0) as u64
                         ),
-                        priority: Priority::Medium,
+                        scope: TaskScope {
+                            domains: vec![],
+                            files_affected: vec![],
+                            files: vec![],
+                            directories: vec![],
+                            patterns: vec![],
+                            max_files: None,
+                            max_loc: None,
+                        },
+                        specialty: WorkerSpecialty::Refactoring,
+                        estimated_effort: (operation.complexity * 300.0),
+                        metadata: HashMap::new(),
                     };
 
                     subtasks.push(subtask);
@@ -162,23 +178,29 @@ impl DecompositionStrategy for RefactoringStrategy {
         // If no specific patterns found, create a general refactoring subtask
         if subtasks.is_empty() {
             subtasks.push(SubTask {
-                id: SubTaskId("refactor-general".to_string()),
+                id: SubTaskId::new(),
+                parent_task_id: task.id.clone(),
                 parent_id: task.id.clone(),
                 title: "General refactoring".to_string(),
                 description: "Perform general refactoring operations".to_string(),
+                complexity: 0.7,
+                dependencies: vec![],
+                assigned_worker: None,
+                status: SubTaskStatus::Pending,
+                priority: Priority::Medium,
+                estimated_duration: std::time::Duration::from_secs(300), // 5 minutes
                 scope: TaskScope {
+                    domains: vec![],
+                    files_affected: vec![],
                     files: vec![],
                     directories: vec![],
-                    patterns: vec!["*.rs".to_string()],
-                    // time_budget: std::time::Duration::from_secs(600), // 10 minutes
-                    // quality_requirements: QualityRequirements::default(),
+                    patterns: vec![],
+                    max_files: None,
+                    max_loc: None,
                 },
-                specialty: WorkerSpecialty::Refactoring {
-                    strategies: vec!["general".to_string()],
-                },
-                dependencies: vec![],
-                estimated_effort: std::time::Duration::from_secs(300), // 5 minutes
-                priority: Priority::Medium,
+                specialty: WorkerSpecialty::Refactoring,
+                estimated_effort: 300.0,
+                metadata: HashMap::new(),
             });
         }
 
@@ -218,20 +240,30 @@ impl DecompositionStrategy for TestingStrategy {
                 for (i, test_gap) in missing_tests.iter().enumerate() {
                     let subtask = SubTask {
                         id: SubTaskId(format!("test-{}", i)),
+                        parent_task_id: task.id.clone(),
                         parent_id: task.id.clone(),
                         title: format!("Add {}", test_gap),
                         description: test_gap.clone(),
+                        complexity: 0.6,
+                        dependencies: vec![],
+                        assigned_worker: None,
+                        status: SubTaskStatus::Pending,
+                        priority: Priority::High,
+                        estimated_duration: std::time::Duration::from_secs(180), // 3 minutes
                         scope: TaskScope {
+                            domains: vec![],
+                            files_affected: vec![],
                             files: vec![],
                             directories: vec![],
                             patterns: vec!["*.rs".to_string(), "*test*.rs".to_string()],
+                            max_files: None,
+                            max_loc: None,
                         },
                         specialty: WorkerSpecialty::Testing {
                             frameworks: vec!["rust".to_string()], // Could be parameterized
                         },
-                        dependencies: vec![],
-                        estimated_effort: std::time::Duration::from_secs(180), // 3 minutes
-                        priority: Priority::High,
+                        estimated_effort: 180.0, // 3 minutes in seconds
+                        metadata: HashMap::new(),
                     };
 
                     subtasks.push(subtask);
@@ -242,41 +274,62 @@ impl DecompositionStrategy for TestingStrategy {
         // If no specific patterns found, create general testing subtasks
         if subtasks.is_empty() {
             // Unit tests
+            let unit_test_id = SubTaskId::new();
             subtasks.push(SubTask {
-                id: SubTaskId("unit-tests".to_string()),
+                id: unit_test_id.clone(),
+                parent_task_id: task.id.clone(),
                 parent_id: task.id.clone(),
                 title: "Add unit tests".to_string(),
                 description: "Add unit tests for functions and methods".to_string(),
+                complexity: 0.7,
+                dependencies: vec![],
+                assigned_worker: None,
+                status: SubTaskStatus::Pending,
+                priority: Priority::High,
+                estimated_duration: std::time::Duration::from_secs(600), // 10 minutes
                 scope: TaskScope {
+                    domains: vec![],
+                    files_affected: vec![],
                     files: vec![],
                     directories: vec![],
                     patterns: vec!["src/**/*.rs".to_string()],
+                    max_files: None,
+                    max_loc: None,
                 },
                 specialty: WorkerSpecialty::Testing {
                     frameworks: vec!["rust".to_string()],
                 },
-                dependencies: vec![],
-                estimated_effort: std::time::Duration::from_secs(300), // 5 minutes
-                priority: Priority::High,
+                estimated_effort: 600.0, // 10 minutes in seconds
+                metadata: HashMap::new(),
             });
 
             // Integration tests
             subtasks.push(SubTask {
-                id: SubTaskId("integration-tests".to_string()),
+                id: SubTaskId::new(),
+                parent_task_id: task.id.clone(),
                 parent_id: task.id.clone(),
                 title: "Add integration tests".to_string(),
                 description: "Add integration tests for component interactions".to_string(),
+                complexity: 0.8,
+                dependencies: vec![unit_test_id], // Depends on unit tests
+                assigned_worker: None,
+                status: SubTaskStatus::Pending,
+                priority: Priority::High,
+                estimated_duration: std::time::Duration::from_secs(900), // 15 minutes
                 scope: TaskScope {
+                    domains: vec![],
+                    files_affected: vec![],
                     files: vec![],
                     directories: vec![],
                     patterns: vec!["tests/**/*.rs".to_string()],
+                    max_files: None,
+                    max_loc: None,
                 },
                 specialty: WorkerSpecialty::Testing {
                     frameworks: vec!["rust".to_string()],
                 },
-                dependencies: vec![SubTaskId("unit-tests".to_string())], // Depends on unit tests
-                estimated_effort: std::time::Duration::from_secs(300), // 5 minutes
-                priority: Priority::Medium,
+                estimated_effort: 900.0, // 15 minutes in seconds
+                metadata: HashMap::new(),
             });
         }
 
@@ -316,20 +369,30 @@ impl DecompositionStrategy for DocumentationStrategy {
                 for (i, doc_need) in missing_docs.iter().enumerate() {
                     let subtask = SubTask {
                         id: SubTaskId(format!("doc-{}", i)),
+                        parent_task_id: task.id.clone(),
                         parent_id: task.id.clone(),
                         title: format!("Add {}", doc_need),
                         description: doc_need.clone(),
+                        complexity: 0.5,
+                        dependencies: vec![],
+                        assigned_worker: None,
+                        status: SubTaskStatus::Pending,
+                        priority: Priority::Low,
+                        estimated_duration: std::time::Duration::from_secs(120), // 2 minutes
                         scope: TaskScope {
+                            domains: vec![],
+                            files_affected: vec![],
                             files: vec![],
                             directories: vec![],
                             patterns: vec!["*.rs".to_string(), "*.md".to_string()],
+                            max_files: None,
+                            max_loc: None,
                         },
                         specialty: WorkerSpecialty::Documentation {
                             formats: vec!["markdown".to_string(), "rustdoc".to_string()],
                         },
-                        dependencies: vec![],
-                        estimated_effort: std::time::Duration::from_secs(120), // 2 minutes
-                        priority: Priority::Low,
+                        estimated_effort: 120.0, // 2 minutes in seconds
+                        metadata: HashMap::new(),
                     };
 
                     subtasks.push(subtask);
@@ -340,41 +403,62 @@ impl DecompositionStrategy for DocumentationStrategy {
         // If no specific patterns found, create general documentation subtasks
         if subtasks.is_empty() {
             // API documentation
+            let api_docs_id = SubTaskId::new();
             subtasks.push(SubTask {
-                id: SubTaskId("api-docs".to_string()),
+                id: api_docs_id.clone(),
+                parent_task_id: task.id.clone(),
                 parent_id: task.id.clone(),
                 title: "Add API documentation".to_string(),
                 description: "Add documentation comments to public APIs".to_string(),
+                complexity: 0.6,
+                dependencies: vec![],
+                assigned_worker: None,
+                status: SubTaskStatus::Pending,
+                priority: Priority::Low,
+                estimated_duration: std::time::Duration::from_secs(180), // 3 minutes
                 scope: TaskScope {
+                    domains: vec![],
+                    files_affected: vec![],
                     files: vec![],
                     directories: vec![],
                     patterns: vec!["src/**/*.rs".to_string()],
+                    max_files: None,
+                    max_loc: None,
                 },
                 specialty: WorkerSpecialty::Documentation {
                     formats: vec!["rustdoc".to_string()],
                 },
-                dependencies: vec![],
-                estimated_effort: std::time::Duration::from_secs(180), // 3 minutes
-                priority: Priority::Low,
+                estimated_effort: 180.0, // 3 minutes in seconds
+                metadata: HashMap::new(),
             });
 
             // README updates
             subtasks.push(SubTask {
-                id: SubTaskId("readme-docs".to_string()),
+                id: SubTaskId::new(),
+                parent_task_id: task.id.clone(),
                 parent_id: task.id.clone(),
                 title: "Update README".to_string(),
                 description: "Update README with usage examples and API documentation".to_string(),
+                complexity: 0.5,
+                dependencies: vec![api_docs_id.clone()], // Depends on API docs
+                assigned_worker: None,
+                status: SubTaskStatus::Pending,
+                priority: Priority::Low,
+                estimated_duration: std::time::Duration::from_secs(120), // 2 minutes
                 scope: TaskScope {
-                    files: vec!["README.md".into()],
+                    domains: vec![],
+                    files_affected: vec!["README.md".to_string()],
+                    files: vec!["README.md".to_string()],
                     directories: vec![],
                     patterns: vec!["README.md".to_string()],
+                    max_files: None,
+                    max_loc: None,
                 },
                 specialty: WorkerSpecialty::Documentation {
                     formats: vec!["markdown".to_string()],
                 },
-                dependencies: vec![SubTaskId("api-docs".to_string())], // Depends on API docs
-                estimated_effort: std::time::Duration::from_secs(120), // 2 minutes
-                priority: Priority::Low,
+                estimated_effort: 120.0, // 2 minutes in seconds
+                metadata: HashMap::new(),
             });
         }
 

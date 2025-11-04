@@ -3,6 +3,7 @@
 //! This module provides admission control, memory accounting, and concurrency
 //! limits using semaphores and atomic operations for thread-safe resource management.
 
+use schemars::JsonSchema;
 use crate::ane::ane_errors::{ANEError, Result};
 use parking_lot::Mutex;
 use std::sync::Arc;
@@ -53,13 +54,14 @@ pub struct Pool {
 }
 
 /// Pool statistics for monitoring
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct PoolStats {
     pub total_admissions: u64,
     pub active_admissions: u64,
     pub peak_memory_usage_mb: usize,
     pub total_memory_allocated_mb: u64,
     pub admission_failures: u64,
+    #[schemars(with = "String")]
     pub last_admission_time: Option<Instant>,
 }
 
@@ -220,14 +222,14 @@ impl Pool {
 }
 
 /// Pool configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct PoolConfig {
     pub max_concurrent: usize,
     pub mem_total_mb: usize,
 }
 
 /// Resource pool builder for configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct PoolBuilder {
     max_concurrent: Option<usize>,
     mem_total_mb: Option<usize>,

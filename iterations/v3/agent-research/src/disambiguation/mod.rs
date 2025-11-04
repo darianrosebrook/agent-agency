@@ -40,6 +40,7 @@ pub use types::{
 };
 
 pub use detection::AmbiguityDetector;
+pub use patterns::EntityPatterns;
 pub use entities::NamedEntityRecognizer;
 pub use context::ContextResolver;
 pub use stage::DisambiguationStage;

@@ -3,7 +3,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-
 /// Analytics insight
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalyticsInsight {
@@ -20,6 +19,7 @@ pub struct AnalyticsInsight {
     /// Confidence score
     pub confidence: f64,
     /// Timestamp
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     /// Related metrics
     pub related_metrics: Vec<String>,
@@ -114,6 +114,7 @@ pub struct AnalyticsDashboardData {
     /// Performance insights
     pub performance_insights: Vec<AnalyticsInsight>,
     /// Last updated
+    #[schemars(with = "String")]
     pub last_updated: DateTime<Utc>,
 }
 
@@ -229,6 +230,7 @@ pub struct AnomalyDetectionResult {
     /// Confidence in detection
     pub confidence: f64,
     /// Timestamp of anomaly
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     /// Description
     pub description: String,
@@ -259,6 +261,7 @@ pub struct PredictiveModelResult {
     /// Prediction horizon in hours
     pub prediction_horizon_hours: u64,
     /// Timestamp
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     /// Recommendations
     pub recommendations: Vec<String>,
@@ -327,6 +330,7 @@ pub struct CachedInsights {
     /// Cached insights
     pub insights: Vec<AnalyticsInsight>,
     /// Cache timestamp
+    #[schemars(with = "String")]
     pub cached_at: DateTime<Utc>,
     /// Cache metadata
     pub metadata: CacheMetadata,
@@ -342,6 +346,7 @@ pub struct CacheMetadata {
     /// Hit rate
     pub hit_rate: f64,
     /// Last access time
+    #[schemars(with = "String")]
     pub last_access: DateTime<Utc>,
 }
 
@@ -358,6 +363,7 @@ pub struct CpuStatistics {
 /// CPU measurement data point
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CpuMeasurement {
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub usage: f64,
     pub core_id: Option<u32>,

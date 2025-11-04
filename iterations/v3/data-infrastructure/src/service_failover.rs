@@ -3,6 +3,7 @@
 //! Provides automatic service failure detection, failover coordination,
 //! and recovery orchestration for production resilience.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -15,7 +16,7 @@ use crate::api_circuit_breaker::CircuitBreaker;
 use system_quality_security::CircuitBreakerConfig;
 
 /// Service types in the system
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub enum ServiceType {
     Database,
     ApiServer,
@@ -31,7 +32,7 @@ pub enum ServiceType {
 }
 
 /// Service instance information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ApiServiceInstance {
     pub id: String,
     pub service_type: ServiceType,
@@ -40,13 +41,14 @@ pub struct ApiServiceInstance {
     pub zone: String,
     pub priority: u32, // Lower number = higher priority
     pub is_primary: bool,
+    #[schemars(with = "String")]
     pub last_health_check: Instant,
     pub consecutive_failures: u32,
     pub status: ServiceStatus,
 }
 
 /// Service health status
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum ServiceStatus {
     Healthy,
     Degraded,
@@ -56,7 +58,7 @@ pub enum ServiceStatus {
 }
 
 /// Failover configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FailoverConfig {
     /// Health check interval (seconds)
     pub health_check_interval_secs: u64,
@@ -86,7 +88,7 @@ impl Default for FailoverConfig {
 }
 
 /// Failover event types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum FailoverEvent {
     ServiceFailure {
         service_id: String,

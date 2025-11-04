@@ -2,6 +2,7 @@
 //!
 //! Provides recovery-specific metrics that integrate with the v3 observability system.
 
+use schemars::JsonSchema;
 use crate::recovery_types::{RecoveryMetrics, ChangeStats};
 use anyhow::Result;
 use async_trait::async_trait;
@@ -508,8 +509,8 @@ pub trait MetricsBackend: Send + Sync {
 }
 
 /// No-op metrics backend for testing
-#[derive(Debug, Clone)]
-pub struct NoOpMetricsBackend;
+#[derive(Debug, Clone, JsonSchema)]
+pub struct NoOpMetricsBackend ;
 
 #[async_trait]
 impl MetricsBackend for NoOpMetricsBackend {

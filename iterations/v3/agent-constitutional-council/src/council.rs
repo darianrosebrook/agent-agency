@@ -3,6 +3,7 @@
 //! Generic coordinator that composes judges with an inference engine.
 //! Engine-agnostic design allows for different inference backends (CoreML, API, etc.).
 
+use schemars::JsonSchema;
 use std::sync::Arc;
 use async_trait::async_trait;
 use tracing::{info, instrument, warn};
@@ -15,7 +16,7 @@ use crate::judges::Judge;
 
 
 /// Review context for a working spec
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ReviewContext {
     /// The working spec being reviewed
     pub working_spec: WorkingSpec,
@@ -28,7 +29,7 @@ pub struct ReviewContext {
 }
 
 /// Review priority levels
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, JsonSchema)]
 pub enum ReviewPriority {
     Low,
     Normal,
@@ -38,7 +39,7 @@ pub enum ReviewPriority {
 
 /// Council coordinator generic over engine type
 #[derive(Debug)]
-pub struct CouncilCoordinator<E: JudgeEngine> {
+pub struct CouncilCoordinator <E: JudgeEngine> {
     /// Inference engine for judges
     engine: Arc<E>,
 
@@ -162,8 +163,8 @@ impl<E: JudgeEngine> CouncilCoordinator<E> {
 }
 
 /// Aggregates judge verdicts into consensus
-#[derive(Debug, Default)]
-struct VerdictAggregator;
+#[derive(Debug, Default, JsonSchema)]
+struct VerdictAggregator ;
 
 impl VerdictAggregator {
     /// Aggregate multiple judge verdicts
@@ -249,8 +250,8 @@ struct VerdictAggregation {
 }
 
 /// Makes final decisions based on verdict aggregation
-#[derive(Debug, Default)]
-struct DecisionEngine;
+#[derive(Debug, Default, JsonSchema)]
+struct DecisionEngine ;
 
 impl DecisionEngine {
     /// Make final decision from aggregated verdicts

@@ -5,7 +5,6 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-
 /// Trace context information for distributed tracing
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TraceContext {
@@ -147,7 +146,7 @@ impl Default for TraceConfig {
 }
 
 /// Result of a health check operation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Serialize, Deserialize)]
 pub struct HealthCheckResult {
     /// Component being checked
     pub component: String,

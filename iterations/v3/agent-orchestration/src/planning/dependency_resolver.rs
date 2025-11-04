@@ -5,6 +5,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use std::collections::{HashMap, HashSet, VecDeque};
 use anyhow::{anyhow, Result};
 use petgraph::algo::toposort;
@@ -139,8 +140,9 @@ impl DependencyResolver {
 }
 
 /// Execution statistics for dependency analysis
-#[derive(Debug, Clone)]
-pub struct ExecutionStats {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ExecutionStats {
     /// Total number of milestones
     pub total_milestones: usize,
 

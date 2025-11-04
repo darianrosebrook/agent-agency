@@ -16,6 +16,7 @@ thiserror.workspace = true
 uuid.workspace = true
 chrono.workspace = true
 clap = { version = "4.0", features = ["derive"] }
+schemars = { version = "0.8", features = ["derive"] }
 
 # Web framework (from cli)
 axum = { version = "0.7", features = ["json", "ws"] }

@@ -5,6 +5,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use anyhow::Result;
 use agent_agency_contracts::{
@@ -92,8 +93,9 @@ impl LegacyPlanAdapter {
 }
 
 /// Legacy task plan structure
-#[derive(Debug, Clone)]
-pub struct LegacyTaskPlan {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct LegacyTaskPlan {
     /// Plan identifier
     pub id: String,
 
@@ -111,8 +113,9 @@ pub struct LegacyTaskPlan {
 }
 
 /// Legacy subtask structure
-#[derive(Debug, Clone)]
-pub struct LegacySubTask {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct LegacySubTask {
     /// Subtask identifier
     pub id: String,
 
@@ -130,8 +133,9 @@ pub struct LegacySubTask {
 }
 
 /// Legacy task priority levels
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum LegacyTaskPriority {
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+enum LegacyTaskPriority {
     /// Low priority
     Low,
 

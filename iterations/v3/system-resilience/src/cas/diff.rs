@@ -1,11 +1,12 @@
 use anyhow::{anyhow, Result};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::recovery_types::Digest;
 
 /// Unified diff with explicit lineage information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LineagedDiff {
     /// Base commit ID that this diff is relative to
     pub base_commit: String,
@@ -20,7 +21,7 @@ pub struct LineagedDiff {
 }
 
 /// Metadata about a unified diff
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DiffMetadata {
     /// Number of lines added
     pub lines_added: usize,
@@ -45,7 +46,7 @@ pub struct DiffGenerator {
 }
 
 /// Configuration for diff generation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DiffConfig {
     /// Number of context lines to include around changes
     pub context_lines: usize,
@@ -356,7 +357,7 @@ impl DiffGenerator {
 }
 
 /// Information about a diff hunk
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct HunkInfo {
     base_start: usize,
     base_count: usize,

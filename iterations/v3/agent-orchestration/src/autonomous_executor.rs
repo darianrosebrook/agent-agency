@@ -4,6 +4,7 @@
 //! end-to-end with progress tracking, error recovery, and consensus-based
 //! decision making.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -18,12 +19,15 @@ use agent_agency_contracts::working_spec::{
     WorkingSpec, WorkingSpecConstraints, BudgetLimits, ScopeRestrictions, TestPlan, RollbackPlan,
     WorkingSpecContext, NonFunctionalRequirements, PerformanceRequirements, ScalabilityRequirements,
     WorkingSpecMetadata, UnitTestSpec, IntegrationTestSpec, E2eScenario, RollbackStrategy, DataImpact,
-    AcceptanceCriterion
+    AcceptanceCriterion, MoSCoWPriority
 };
-use agent_agency_contracts::task_request::{TaskRequest, TaskContext, TaskConstraints, TaskMetadata, RiskTier, BudgetLimits as RequestBudgetLimits, ScopeRestrictions as RequestScopeRestrictions, Environment, TaskPriority as RequestTaskPriority};
+use agent_agency_contracts::task_request::{TaskRequest, TaskContext, TaskConstraints, TaskMetadata, BudgetLimits as RequestBudgetLimits, ScopeRestrictions as RequestScopeRestrictions, Environment, TaskPriority as RequestTaskPriority};
 use agent_agency_contracts::types::prelude::*;
 use agent_agency_contracts::ExecutionStatus;
 use agent_agency_contracts::task_executor_provider::TaskExecutorProvider;
+
+// Import local types for council integration
+use crate::council_types::RiskTier;
 
 // Import evaluation framework
 use agent_evaluation::{EvaluationOrchestrator, EvaluationHook, IterationEvaluation, StopReason};
@@ -43,8 +47,9 @@ use agent_agency_contracts::refinement_decision::{CouncilDecision, CouncilVerdic
 use agent_agency_contracts::final_verdict::FinalVerdictContract;
 
 // Define missing types that were referenced from non-existent crates
-#[derive(Debug, Clone)]
-pub struct ConsensusResult {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ConsensusResult {
     pub approved: bool,
     pub confidence: f64,
     pub reason: String,
@@ -69,7 +74,8 @@ pub type ConsensusCoordinatorType = Arc<dyn ConsensusCoordinator>;
 
 /// Helper struct for folded context summaries (used in context offloading)
 #[cfg(feature = "memory")]
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct FoldedContextSummary {
     summary: String,
     context_count: usize,
@@ -87,8 +93,9 @@ pub trait VerdictWriter: Send + Sync + std::fmt::Debug {
 }
 
 /// Mock implementation of CawsRuntimeValidator for testing and default construction
-#[derive(Debug, Default)]
-pub struct MockCawsRuntimeValidator;
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
+pub struct MockCawsRuntimeValidator ;
 
 impl CawsRuntimeValidator for MockCawsRuntimeValidator {
     fn validate(&self, _spec: &WorkingSpec) -> Result<(), String> {
@@ -97,8 +104,9 @@ impl CawsRuntimeValidator for MockCawsRuntimeValidator {
 }
 
 /// Mock implementation of VerdictWriter for testing and default construction
-#[derive(Debug, Clone, Default)]
-pub struct MockVerdictWriter;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
+pub struct MockVerdictWriter ;
 
 impl VerdictWriter for MockVerdictWriter {
     fn write_verdict(&self, _verdict: &agent_agency_contracts::final_verdict::FinalVerdictContract) -> Result<(), String> {
@@ -107,7 +115,7 @@ impl VerdictWriter for MockVerdictWriter {
 }
 
 /// Internal execution status with detailed phases
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum TypesExecutionStatus {
     /// Task is queued but not yet started
     Pending,
@@ -133,7 +141,8 @@ pub enum TypesExecutionStatus {
     Cancelled,
 }
 
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct OrchestrationProvenanceEmitter {
     pub id: String,
 }
@@ -155,15 +164,20 @@ impl Default for OrchestrationProvenanceEmitter {
 // Traits imported from system crates above
 
 /// Execution progress tracking
-#[derive(Debug, Clone)]
-pub struct ExecutionProgress {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ExecutionProgress {
+    #[schemars(with = "String")]
     pub task_id: uuid::Uuid,
     pub status: ExecutionStatus,
     pub completion_percentage: f64,
     pub current_step: String,
+    #[schemars(with = "Option<String>")]
     pub estimated_completion: Option<chrono::DateTime<chrono::Utc>>,
     pub error_message: Option<String>,
+    #[schemars(with = "Option<String>")]
     pub start_time: Option<chrono::DateTime<chrono::Utc>>,
+    #[schemars(with = "Option<String>")]
     pub last_update: Option<chrono::DateTime<chrono::Utc>>,
     pub events: Vec<String>,
 }
@@ -213,7 +227,7 @@ impl From<ExecutionProgress> for ProgressTrackerExecutionProgress {
 pub fn to_task_spec(task_descriptor: &TaskDescriptor) -> agent_agency_contracts::WorkingSpec {
     use tracing::{info, warn};
     
-    info!("Converting task descriptor to working spec: {}", task_descriptor.task_id);
+    info!("Converting task descriptor to working spec: {}", task_descriptor.task_id.to_string());
     
     // Calculate risk tier based on task complexity
     let risk_tier = calculate_risk_tier(task_descriptor);
@@ -572,7 +586,7 @@ pub fn orchestrate_task(
 ) -> Result<agent_agency_contracts::final_verdict::FinalVerdictContract, Box<dyn std::error::Error + Send + Sync>> {
     use tracing::{info, warn, error};
     
-    info!("Starting orchestration for task: {}", task_descriptor.task_id);
+    info!("Starting orchestration for task: {}", task_descriptor.task_id.to_string());
     
     // Convert task descriptor to working spec if needed
     let spec = if working_spec.id == "placeholder" {
@@ -803,7 +817,8 @@ fn verify_acceptance_criterion(criterion: &agent_agency_contracts::AcceptanceCri
 }
 
 /// Validation result
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 struct ValidationResult {
     is_valid: bool,
     reason: String,
@@ -811,7 +826,9 @@ struct ValidationResult {
 }
 
 /// Configuration for the autonomous executor
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AutonomousExecutorConfig {
     /// Maximum concurrent tasks
     pub max_concurrent_tasks: usize,
@@ -832,11 +849,13 @@ pub struct AutonomousExecutorConfig {
 }
 
 /// Task execution state
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskExecutionState {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub task_descriptor: TaskDescriptor,
     pub working_spec: WorkingSpec,
+    #[schemars(with = "String")]
     pub start_time: DateTime<Utc>,
     pub status: TypesExecutionStatus,
     pub retry_count: usize,
@@ -851,15 +870,18 @@ pub struct TaskExecutionState {
     /// Iteration history with refinement changes
     pub iteration_history: Vec<IterationRecord>,
     /// Last saved timestamp
+    #[schemars(with = "Option<String>")]
     pub last_saved_at: Option<DateTime<Utc>>,
     /// Session ID for multi-session context continuity
+    #[schemars(with = "Option<String>")]
     pub session_id: Option<Uuid>,
 }
 
 /// Record of a single iteration's execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct IterationRecord {
     pub iteration: u32,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub working_spec_snapshot: WorkingSpec,
     pub quality_score: f64,
@@ -870,7 +892,7 @@ pub struct IterationRecord {
 }
 
 /// Autonomous executor that runs tasks end-to-end
-#[derive(Clone)]
+
 pub struct AutonomousExecutor {
     config: AutonomousExecutorConfig,
     progress_tracker: Arc<dyn ProgressTracker>,
@@ -945,7 +967,7 @@ impl AutonomousExecutor {
     /// * `task_descriptor` - The task to execute
     /// * `session_id` - Optional session ID for multi-session context continuity
     pub async fn submit_task(&self, task_descriptor: TaskDescriptor, session_id: Option<Uuid>) -> Result<Uuid, Box<dyn std::error::Error + Send + Sync>> {
-        let task_id = Uuid::parse_str(&task_descriptor.task_id).unwrap_or_else(|_| Uuid::new_v4());
+        let task_id = task_descriptor.task_id;
 
         // Create initial execution state
         let execution_state = TaskExecutionState {
@@ -1141,8 +1163,12 @@ impl AutonomousExecutor {
         
         // Convert ChangeBudget and BlastRadius to TaskConstraints
         let constraints = Some(TaskConstraints {
-            risk_tier: task_descriptor.risk_tier.unwrap_or_else(|| match task_descriptor.priority {
-                    agent_agency_contracts::types::planning::TaskPriority::Critical | agent_agency_contracts::types::planning::TaskPriority::High => agent_agency_contracts::task_request::RiskTier::Tier1,
+            risk_tier: task_descriptor.risk_tier.clone().map(|rt| match rt {
+                agent_agency_contracts::types::planning::RiskTier::Tier1 => agent_agency_contracts::task_request::RiskTier::Tier1,
+                agent_agency_contracts::types::planning::RiskTier::Tier2 => agent_agency_contracts::task_request::RiskTier::Tier2,
+                agent_agency_contracts::types::planning::RiskTier::Tier3 => agent_agency_contracts::task_request::RiskTier::Tier3,
+            }).unwrap_or_else(|| match task_descriptor.priority {
+                    agent_agency_contracts::types::planning::TaskPriority::Critical | agent_agency_contracts::types::planning::TaskPriority::High | agent_agency_contracts::types::planning::TaskPriority::Urgent => agent_agency_contracts::task_request::RiskTier::Tier1,
                     agent_agency_contracts::types::planning::TaskPriority::Medium | agent_agency_contracts::types::planning::TaskPriority::Normal => agent_agency_contracts::task_request::RiskTier::Tier2,
                     agent_agency_contracts::types::planning::TaskPriority::Low => agent_agency_contracts::task_request::RiskTier::Tier3,
             }),
@@ -1188,7 +1214,7 @@ impl AutonomousExecutor {
 
     /// Execute a single task end-to-end
     async fn execute_task(&self, task_descriptor: TaskDescriptor) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let task_id = Uuid::parse_str(&task_descriptor.task_id).unwrap_or_else(|_| Uuid::new_v4());
+        let task_id = task_descriptor.task_id;
         let start_time = Instant::now();
 
         tracing::info!("Starting execution of task {} in mode {:?}", task_id, task_descriptor.execution_mode);
@@ -1294,7 +1320,7 @@ impl AutonomousExecutor {
                     tracing::info!("Planning execution completed successfully for task {}", task_id);
                     self.update_task_progress(task_id.clone(), 90.0, Some(format!(
                         "Planning execution complete: {} milestones, {} evidence artifacts",
-                        planning_result.execution_result.milestone_results.len(),
+                        planning_result.execution_result.milestones_completed,
                         planning_result.evidence_count
                     ))).await?;
                     
@@ -1433,7 +1459,7 @@ impl AutonomousExecutor {
             ExecutionMode::DryRun => {
                 tracing::info!("Dry-run mode: Skipping actual orchestration, simulating results");
                 // Create a mock verdict for dry-run
-                agent_agency_contracts::final_verdict::FinalVerdictContract {
+                Ok(agent_agency_contracts::final_verdict::FinalVerdictContract {
                     decision: agent_agency_contracts::final_verdict::FinalDecision::Accept,
                     votes: vec![],
                     dissent: String::new(),
@@ -1444,7 +1470,7 @@ impl AutonomousExecutor {
                         claims_verified: 1,
                         coverage_pct: 100.0,
                     },
-                }
+                })
             }
             ExecutionMode::Strict | ExecutionMode::Auto => {
                     // Execute with error recovery and retry logic
@@ -1493,7 +1519,7 @@ impl AutonomousExecutor {
                         }
                     }
                 }
-            };
+            }?;
 
             // Calculate quality score from verdict using evaluation orchestrator
             let quality_score = self.evaluation_orchestrator.calculate_quality_score(&verdict);
@@ -1605,7 +1631,7 @@ impl AutonomousExecutor {
                             if let Some(state) = active_tasks.get_mut(&task_id) {
                                 if let Some(last_record) = state.iteration_history.last_mut() {
                                     last_record.council_approved = approved;
-                                    last_record.refinement_reason = refinement_reason.clone();
+                                    last_record.refinement_reason = Some(refinement_reason.clone());
                                     last_record.council_feedback = Some(format!("Approved: {}, Needs refinement: {}", approved, needs_refinement));
                                 }
                             }
@@ -1681,7 +1707,7 @@ impl AutonomousExecutor {
         }
 
         let final_verdict = final_verdict.expect("Final verdict should be set after refinement loop");
-        self.update_task_progress(task_id.clone(), 80.0, Some(format!("Task orchestration complete after {} iterations", iteration)).to_string()).await?;
+        self.update_task_progress(task_id.clone(), 80.0, Some(format!("Task orchestration complete after {} iterations", iteration))).await?;
 
         // Phase 5: Post-execution processing
         self.process_results(&final_verdict, &task_descriptor).await?;
@@ -1731,7 +1757,7 @@ impl AutonomousExecutor {
                 },
                 priority: agent_agency_contracts::types::planning::TaskPriority::Normal,
                 execution_mode: agent_agency_contracts::types::planning::ExecutionMode::Auto,
-                risk_tier: Some(agent_agency_contracts::task_request::RiskTier::Tier2),
+                risk_tier: Some(RiskTier::Tier2),
                 blast_radius: agent_agency_contracts::types::planning::BlastRadius {
                     modules: vec![],
                     data_migration: false,
@@ -1758,7 +1784,7 @@ impl AutonomousExecutor {
                         title: task_request.description.clone(),
                         description: task_request.description.clone(),
                         goals: contract_plan.milestones.iter()
-                            .map(|m| m.description.clone())
+                            .map(|m| m.objective.clone())
                             .collect(),
                         risk_tier: 2, // Default tier, could be extracted from planning metadata
                         constraints: agent_agency_contracts::working_spec::WorkingSpecConstraints {
@@ -1934,7 +1960,7 @@ impl AutonomousExecutor {
 
             // Store consensus result
             let mut active_tasks = self.active_tasks.write().await;
-            let task_uuid = Uuid::parse_str(&task_descriptor.task_id).unwrap_or_else(|_| Uuid::new_v4());
+            let task_uuid = task_descriptor.task_id;
             if let Some(state) = active_tasks.get_mut(&task_uuid) {
                 // Convert ConsensusResult to CouncilVerdict and store in state
                 state.consensus_result = Some(
@@ -2009,7 +2035,7 @@ impl AutonomousExecutor {
             verification_summary: agent_agency_contracts::final_verdict::VerificationSummary {
                 claims_total: 1,
                 claims_verified: if execution_successful { 1 } else { 0 },
-                coverage_pct: quality_score * 100.0, // Use quality score as proxy for coverage
+                coverage_pct: (quality_score * 100.0) as f32, // Use quality score as proxy for coverage
             },
         };
 
@@ -2020,7 +2046,7 @@ impl AutonomousExecutor {
     async fn process_results(&self, final_verdict: &FinalVerdict, task_descriptor: &TaskDescriptor) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Store final verdict
         let mut active_tasks = self.active_tasks.write().await;
-        let task_uuid = Uuid::parse_str(&task_descriptor.task_id).unwrap_or_else(|_| Uuid::new_v4());
+        let task_uuid = task_descriptor.task_id;
         if let Some(state) = active_tasks.get_mut(&task_uuid) {
             state.final_verdict = Some(final_verdict.clone());
         }
@@ -2068,32 +2094,32 @@ impl AutonomousExecutor {
         let consensus_result = match session.final_decision.as_ref() {
             Some(decision) => {
                 match decision {
-                    crate::decision_making::FinalDecision::Proceed { confidence, rationale, .. } => {
+                    crate::decision_making::FinalDecision::Proceed { confidence, .. } => {
                         crate::autonomous_executor::ConsensusResult {
                             approved: true,
                             confidence: *confidence,
-                            reason: rationale.clone().unwrap_or_else(|| "Task approved by council".to_string()),
+                            reason: "Task approved by council".to_string(),
                         }
                     },
-                    crate::decision_making::FinalDecision::Refine { rationale, .. } => {
+                    crate::decision_making::FinalDecision::Refine { .. } => {
                         crate::autonomous_executor::ConsensusResult {
                             approved: false,
                             confidence: 0.5,
-                            reason: rationale.clone().unwrap_or_else(|| "Task requires refinement".to_string()),
+                            reason: "Task requires refinement".to_string(),
                         }
                     },
-                    crate::decision_making::FinalDecision::Reject { rationale, .. } => {
+                    crate::decision_making::FinalDecision::Reject { reason, .. } => {
                         crate::autonomous_executor::ConsensusResult {
                             approved: false,
                             confidence: 0.2,
-                            reason: rationale.clone().unwrap_or_else(|| "Task rejected by council".to_string()),
+                            reason: reason.clone(),
                         }
                     },
-                    crate::decision_making::FinalDecision::Escalate { rationale, .. } => {
+                    crate::decision_making::FinalDecision::Escalate { reason, .. } => {
                         crate::autonomous_executor::ConsensusResult {
                             approved: false,
                             confidence: 0.3,
-                            reason: rationale.clone().unwrap_or_else(|| "Task escalated for human review".to_string()),
+                            reason: reason.clone(),
                         }
                     },
                 }
@@ -2354,7 +2380,13 @@ impl AutonomousExecutor {
         }
         
         // Add refinement note to acceptance criteria
-        refined_spec.acceptance_criteria.push(format!("Address: {}", refinement_reason));
+        refined_spec.acceptance_criteria.push(agent_agency_contracts::AcceptanceCriterion {
+            id: format!("REFINE-{}", refined_spec.acceptance_criteria.len() + 1),
+            given: "Task requires refinement".to_string(),
+            when: "Council provides feedback".to_string(),
+            then: format!("Address: {}", refinement_reason),
+            priority: Some(MoSCoWPriority::Should),
+        });
         
         tracing::info!("Working spec refined based on feedback: {}", refinement_reason);
         Ok(refined_spec)
@@ -2682,12 +2714,12 @@ impl AutonomousExecutor {
         {
             // Fallback for other platforms
             cpu_usage = 0.0;
-            memory_usage = 0;
+            memory_usage = 0u64;
         }
 
         crate::progress_tracker::ProgressMetrics {
             cpu_usage,
-            memory_usage,
+            memory_usage: memory_usage.try_into().unwrap(),
             network_io: 0, // TODO: Implement network I/O tracking if needed
             disk_io: 0,   // TODO: Implement disk I/O tracking if needed
             processing_rate: 0.0, // Will be set by caller
@@ -2805,9 +2837,9 @@ impl AutonomousExecutor {
             tracing::info!("{}", report);
 
             // Update progress tracker with report
-            self.update_task_progress(task_id, 
-                (current_iteration as f64 / MAX_REFINEMENT_ITERATIONS as f64 * 100.0).min(100.0),
-                Some(format!("Progress report generated: {} iterations, avg quality {:.3}", 
+            self.update_task_progress(task_id,
+                (current_iteration as f64 / MAX_REFINEMENT_ITERATIONS as f64 * 100.0).min(100.0) as f32,
+                Some(format!("Progress report generated: {} iterations, avg quality {:.3}",
                     current_iteration, avg_quality))).await?;
         }
 
@@ -3183,7 +3215,7 @@ impl AutonomousExecutor {
         };
         
         // Calculate execution time from task execution state
-        let task_uuid = Uuid::parse_str(&task_descriptor.task_id).unwrap_or_else(|_| Uuid::new_v4());
+        let task_uuid = task_descriptor.task_id;
         let execution_time_ms = {
             let active_tasks = self.active_tasks.read().await;
             if let Some(state) = active_tasks.get(&task_uuid) {
@@ -3268,7 +3300,7 @@ impl AutonomousExecutor {
     async fn update_task_progress(&self, task_id: Uuid, completion_percentage: f32, phase: Option<String>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut progress = ExecutionProgress {
             task_id,
-            status: TypesExecutionStatus::Running,
+            status: ExecutionStatus::Running,
             completion_percentage: completion_percentage as f64,
             current_step: phase.unwrap_or_else(|| "Processing".to_string()),
             estimated_completion: None,
@@ -3298,7 +3330,13 @@ impl AutonomousExecutor {
 
         let progress = ExecutionProgress {
             task_id: task_id.clone(),
-            status: status.clone(),
+            status: match status {
+                TypesExecutionStatus::Running => ExecutionStatus::Running,
+                TypesExecutionStatus::Completed => ExecutionStatus::Completed,
+                TypesExecutionStatus::Failed => ExecutionStatus::Failed,
+                TypesExecutionStatus::Pending => ExecutionStatus::Pending,
+                _ => ExecutionStatus::Running, // Default fallback
+            },
             completion_percentage: 0.0,
             current_step: format!("{:?}", status),
             estimated_completion: None,

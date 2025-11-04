@@ -4,7 +4,6 @@
 
 use crate::long_term_management::*;
 use uuid::Uuid;
-
 /// Retrieval configuration
 #[derive(Debug, Clone)]
 pub struct RetrievalConfig {

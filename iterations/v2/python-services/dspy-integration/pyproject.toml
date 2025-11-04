@@ -5,10 +5,10 @@ description = "DSPy Integration Service for Agent Agency"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
-    {name = "Darian Rosebrook", email = "darian@example.com"},
+    {name = "Darian Rosebrook", email = "hello@darianrosebrook.com"},
 ]
 maintainers = [
-    {name = "Darian Rosebrook", email = "darian@example.com"},
+    {name = "Darian Rosebrook", email = "hello@darianrosebrook.com"},
 ]
 keywords = ["dspy", "ai", "agent", "optimization", "evaluation"]
 classifiers = [

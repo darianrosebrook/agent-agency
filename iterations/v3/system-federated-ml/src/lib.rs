@@ -48,6 +48,7 @@ pub use tool_registry::{ToolRegistry, RegisteredTool, ToolRegistration};
 // pub use workflow_tools::{WorkflowTool, TaskDecomposer, ProgressTracker}; // Module not implemented yet
 // pub use crate::tool_orchestrator::ToolOrchestrator; // Module not implemented yet
 
+use schemars::JsonSchema;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -56,7 +57,7 @@ use tokio::sync::RwLock;
 use tracing::{info, debug, warn, error};
 
 /// Policy validation result
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum PolicyValidationResult {
     /// Task is allowed
     Allowed,

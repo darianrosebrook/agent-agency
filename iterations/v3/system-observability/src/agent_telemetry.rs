@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-
 /// Agent types in the system
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum AgentType {
@@ -53,6 +52,7 @@ pub struct AgentPerformanceMetrics {
     /// Health score (0.0 to 1.0)
     pub health_score: f64,
     /// Last activity timestamp
+    #[schemars(with = "String")]
     pub last_activity: DateTime<Utc>,
     /// Current load (active tasks)
     pub current_load: u32,
@@ -124,6 +124,7 @@ pub struct SystemDashboard {
     /// Capacity utilization metrics
     pub capacity_utilization: CapacityMetrics,
     /// Last updated timestamp
+    #[schemars(with = "String")]
     pub last_updated: DateTime<Utc>,
 }
 
@@ -150,6 +151,7 @@ pub struct AgentStatus {
     /// Current load
     pub current_load: u32,
     /// Last activity
+    #[schemars(with = "String")]
     pub last_activity: DateTime<Utc>,
     /// Performance metrics
     pub performance: AgentPerformanceMetrics,
@@ -205,6 +207,7 @@ pub struct PerformanceTrends {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceDataPoint {
     /// Timestamp
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     /// Value
     pub value: f64,
@@ -224,6 +227,7 @@ pub struct SystemAlert {
     /// Alert message
     pub message: String,
     /// Timestamp
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     /// Affected agents
     pub affected_agents: Vec<String>,
@@ -289,6 +293,7 @@ pub struct SystemResourceMonitor {
     /// CPU usage percentage
     cpu_usage_percent: f64,
     /// Last update timestamp
+    #[schemars(with = "String")]
     last_update: DateTime<Utc>,
 }
 

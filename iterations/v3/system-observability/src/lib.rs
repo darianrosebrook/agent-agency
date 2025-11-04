@@ -21,7 +21,6 @@ pub use system_configuration::{
 };
 
 use serde::{Deserialize, Serialize};
-
 // Re-export key functionality
 pub use telemetry::*;
 pub use monitoring::*;

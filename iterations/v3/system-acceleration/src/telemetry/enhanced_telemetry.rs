@@ -1,7 +1,9 @@
 //! Enhanced telemetry and monitoring
 
+use schemars::JsonSchema;
+
 /// Alert level
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum AlertLevel {
     Info,
     Warning,
@@ -9,7 +11,7 @@ pub enum AlertLevel {
 }
 
 /// Anomaly detection result
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct AnomalyDetectionResult {
     pub is_anomaly: bool,
     pub confidence: f32,
@@ -35,7 +37,7 @@ impl EnhancedTelemetry {
 }
 
 /// Performance alert
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct PerformanceAlert {
     pub level: AlertLevel,
     pub message: String,
@@ -43,14 +45,14 @@ pub struct PerformanceAlert {
 }
 
 /// SLA configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct SLAConfig {
     pub max_latency_ms: u64,
     pub min_throughput: f32,
 }
 
 /// Telemetry metric
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct TelemetryMetric {
     pub name: String,
     pub value: f64,
@@ -58,7 +60,7 @@ pub struct TelemetryMetric {
 }
 
 /// Metric point for time series
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct MetricPoint {
     pub timestamp: u64,
     pub value: f64,

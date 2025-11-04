@@ -3,6 +3,7 @@
 /// Implements secure multi-party computation protocols for aggregating
 /// model updates without revealing individual contributions.
 
+use schemars::JsonSchema;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -26,7 +27,7 @@ pub struct Aggregator {
 }
 
 /// State of a federation participant
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct ParticipantState {
     participant_id: String,
     last_update_round: u64,
@@ -36,7 +37,7 @@ struct ParticipantState {
 }
 
 /// Current aggregation round state
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct AggregationRound {
     round_id: u64,
     participants_contributed: usize,
@@ -47,7 +48,7 @@ struct AggregationRound {
 }
 
 /// Status of aggregation round
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 enum RoundStatus {
     WaitingForContributions,
     Aggregating,
@@ -56,7 +57,7 @@ enum RoundStatus {
 }
 
 /// Aggregation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AggregationResult {
     /// Round identifier
     pub round_id: u64,
@@ -71,7 +72,7 @@ pub struct AggregationResult {
 }
 
 /// Quality metrics for aggregation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityMetrics {
     /// Aggregation convergence score (0.0-1.0)
     pub convergence_score: f32,

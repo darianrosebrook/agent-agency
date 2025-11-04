@@ -1,5 +1,6 @@
 //! Parallel coordinator - main orchestrator for parallel task execution
 
+use schemars::JsonSchema;
 use crate::parallel_types::{ComplexTask, SubTask, TaskId, SubTaskId, WorkerId, TaskResult, WorkerResult, ParallelResult};
 use crate::error::{ParallelError, CommunicationError, ValidationError, ProgressError};
 use crate::decomposition::{DecompositionEngine};
@@ -167,8 +168,9 @@ pub struct ParallelCoordinator {
     system_metrics_collector: Arc<SystemMetricsCollector>, // For disk/network I/O tracking
 }
 
-#[derive(Debug, Clone)]
-pub struct ParallelCoordinatorConfig {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ParallelCoordinatorConfig {
     pub enabled: bool,
     pub max_concurrent_workers: usize,
     pub max_subtasks_per_task: usize,
@@ -281,7 +283,7 @@ impl ParallelCoordinator {
         Self {
             decomposition_engine: DecompositionEngine::new(),
             worker_manager: WorkerManager::new(worker_pool),
-            progress_aggregator: ProgressAggregator::new(TaskId::new()),
+            progress_aggregator: ProgressAggregator::new(),
             progress_synthesizer: ProgressSynthesizer::new(),
             validation_runner: ValidationRunner::new(4), // Run 4 validations in parallel
             communication_hub,
@@ -370,7 +372,7 @@ impl ParallelCoordinator {
         ).await.ok();
 
         // 3. Initialize progress tracking
-        self.progress_aggregator = ProgressAggregator::new(task.id.clone());
+        self.progress_aggregator = ProgressAggregator::new();
 
         // 4. Execute subtasks in parallel
         let results = self.execute_subtasks_parallel(subtasks).await?;
@@ -824,8 +826,9 @@ impl ParallelCoordinator {
 
 
 /// Statistics for parallel execution
-#[derive(Debug, Clone)]
-pub struct ParallelExecutionStats {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ParallelExecutionStats {
     pub active_workers: usize,
     pub completed_subtasks: usize,
     pub total_subtasks: usize,
@@ -889,7 +892,7 @@ pub mod integration {
             }
         }
 
-        ((base_benefit * multiplier) as f32).min(1.0f32).max(0.0f32)
+        ((base_benefit * multiplier) as f32).min(1.0).max(0.0)
     }
 
     /// Convert Task from orchestration crate to ComplexTask for parallel execution
@@ -1797,7 +1800,7 @@ impl RealFailureTaxonomy {
 }
 
 // Additional types for the real implementations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QueueHealthMetrics {
     pub total_tasks: i64,
     pub pending_tasks: i64,
@@ -1828,7 +1831,7 @@ impl Default for QueueHealthMetrics {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FailureClassification {
     pub failure_type: FailureType,
     pub severity: FailureSeverity,
@@ -1838,7 +1841,7 @@ pub struct FailureClassification {
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum FailureType {
     Timeout,
     ResourceExhaustion,
@@ -1849,7 +1852,7 @@ pub enum FailureType {
     Unknown,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum FailureSeverity {
     Low,
     Medium,
@@ -2143,8 +2146,9 @@ impl LearningPersistence for RealLearningPersistence {
 }
 
 /// Real implementation of orchestration quality bridge
-#[derive(Debug)]
-pub struct OrchestrationQualityBridge {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct OrchestrationQualityBridge {
     /// Quality gate thresholds
     quality_thresholds: QualityRequirements,
 }
@@ -2215,8 +2219,9 @@ impl OrchestrationQualityBridge {
 }
 
 /// Execution metrics for worker performance tracking
-#[derive(Debug, Clone)]
-pub struct ExecutionMetrics {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ExecutionMetrics {
     pub execution_time_ms: Option<u64>,
     pub cpu_usage_percent: Option<f64>,
     pub memory_usage_mb: Option<f64>,
@@ -2237,8 +2242,9 @@ impl Default for ExecutionMetrics {
 }
 
 /// Real implementation of orchestration monitoring bridge
-#[derive(Debug)]
-pub struct OrchestrationMonitoringBridge {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct OrchestrationMonitoringBridge {
     /// Metrics collection
     metrics: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, f64>>>,
 }
@@ -2315,8 +2321,9 @@ impl OrchestrationMonitoringBridge {
 }
 
 /// Real implementation of council learning bridge
-#[derive(Debug)]
-pub struct CouncilLearningBridge {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct CouncilLearningBridge {
     /// Learning signals sent to council
     signals: std::sync::Arc<std::sync::RwLock<std::collections::VecDeque<crate::learning::council_bridge::LearningSignal>>>,
 }

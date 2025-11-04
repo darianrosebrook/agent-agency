@@ -3,6 +3,7 @@
 //! Connects Tool Chain Executor with ParallelCoordinator for distributed
 //! tool execution across multiple workers with load balancing and fault tolerance.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Semaphore};
@@ -551,7 +552,7 @@ impl ParallelToolCoordinator {
 }
 
 /// Parallel task representation
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, JsonSchema)]
 pub struct ParallelTask {
     pub task_id: String,
     pub node_idx: petgraph::graph::NodeIndex,
@@ -563,7 +564,7 @@ pub struct ParallelTask {
 }
 
 /// Worker task representation
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, JsonSchema)]
 pub struct WorkerTask {
     pub task_id: String,
     pub tool_id: String,
@@ -573,7 +574,7 @@ pub struct WorkerTask {
 }
 
 /// Parallel execution errors
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum ParallelExecutionError {
     #[error("Sequential execution failed: {0}")]
     SequentialExecution(#[from] Box<dyn std::error::Error + Send + Sync>),
@@ -595,4 +596,3 @@ pub enum ParallelExecutionError {
 
     #[error("Timeout exceeded")]
     Timeout,
-}

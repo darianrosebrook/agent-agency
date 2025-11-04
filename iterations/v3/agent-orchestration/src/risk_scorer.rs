@@ -11,15 +11,17 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 // Missing enum definitions
-#[derive(Debug, Clone, PartialEq)]
-pub enum RiskTrend {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum RiskTrend {
     Increasing,
     Stable,
     Decreasing,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum InflectionType {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum InflectionType {
     RiskReduction,
     RiskSpike,
     ExternalChange,
@@ -34,38 +36,43 @@ pub struct RiskInflectionPoint {
     pub impact_score: f64,
 }
 
-#[derive(Debug, Clone)]
-pub struct RiskProjections {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct RiskProjections {
     pub short_term_trend: RiskTrend,
     pub medium_term_trend: RiskTrend,
     pub long_term_trend: RiskTrend,
     pub inflection_points: Vec<RiskInflectionPoint>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum ImpactType {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum ImpactType {
     Positive,
     Negative,
     Neutral,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum ImpactDuration {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum ImpactDuration {
     ShortTerm,
     MediumTerm,
     LongTerm,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum InfrastructureRequirement {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum InfrastructureRequirement {
     Minimal,
     Moderate,
     Extensive,
     Specialized,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum UpdateFrequency {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum UpdateFrequency {
     Daily,
     Weekly,
     Monthly,
@@ -73,39 +80,44 @@ pub enum UpdateFrequency {
     Annually,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum GrowthPattern {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum GrowthPattern {
     Linear,
     Exponential,
     Logarithmic,
     SCurve,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum IndustryTransformation {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum IndustryTransformation {
     Incremental,
     Significant,
     Revolutionary,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum EngagementLevel {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum EngagementLevel {
     Minimal,
     Moderate,
     Intensive,
     Critical,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum MoatStrength {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum MoatStrength {
     Weak,
     Moderate,
     Strong,
     VeryStrong,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum RiskInteractionType {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum RiskInteractionType {
     Compounding,
     Amplifying,
     Mitigating,
@@ -114,8 +126,9 @@ pub enum RiskInteractionType {
 
 
 /// Multi-dimensional risk scorer
-#[derive(Debug)]
-pub struct RiskScorer {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct RiskScorer {
     /// Technical risk weights (should sum to 1.0)
     technical_weights: TechnicalRiskWeights,
     /// Ethical risk weights
@@ -129,8 +142,9 @@ pub struct RiskScorer {
 }
 
 /// Weights for technical risk components
-#[derive(Debug, Clone)]
-pub struct TechnicalRiskWeights {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct TechnicalRiskWeights {
     pub feasibility_weight: f32,
     pub complexity_weight: f32,
     pub resource_weight: f32,
@@ -140,8 +154,9 @@ pub struct TechnicalRiskWeights {
 }
 
 /// Weights for ethical risk components
-#[derive(Debug, Clone)]
-pub struct EthicalRiskWeights {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct EthicalRiskWeights {
     pub concern_weight: f32,
     pub stakeholder_weight: f32,
     pub regulatory_weight: f32,
@@ -150,8 +165,9 @@ pub struct EthicalRiskWeights {
 }
 
 /// Weights for operational risk components
-#[derive(Debug, Clone)]
-pub struct OperationalRiskWeights {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct OperationalRiskWeights {
     pub deployment_weight: f32,
     pub maintenance_weight: f32,
     pub scalability_weight: f32,
@@ -160,8 +176,9 @@ pub struct OperationalRiskWeights {
 }
 
 /// Weights for business risk components
-#[derive(Debug, Clone)]
-pub struct BusinessRiskWeights {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct BusinessRiskWeights {
     pub market_weight: f32,
     pub financial_weight: f32,
     pub stakeholder_weight: f32,
@@ -170,8 +187,9 @@ pub struct BusinessRiskWeights {
 }
 
 /// Weights for overall risk dimensions
-#[derive(Debug, Clone)]
-pub struct DimensionWeights {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct DimensionWeights {
     pub technical_weight: f64,
     pub ethical_weight: f64,
     pub operational_weight: f64,
@@ -179,76 +197,86 @@ pub struct DimensionWeights {
 }
 
 /// Computational complexity levels
-#[derive(Debug, Clone, PartialEq)]
-pub enum ComputationalComplexity {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum ComputationalComplexity {
     Linear,
     Polynomial,
     Exponential,
 }
 
 /// Assessment of algorithmic complexity
-#[derive(Debug, Clone)]
-pub struct ComplexityAssessment {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ComplexityAssessment {
     pub algorithmic_complexity: ComputationalComplexity,
     pub integration_points: u32,
     pub external_dependencies: u32,
 }
 
 /// Resource availability and cost volatility risk
-#[derive(Debug, Clone)]
-pub struct ResourceRisk {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ResourceRisk {
     pub availability_risk: f64,
     pub cost_volatility: f64,
 }
 
 /// Technology maturity assessment
-#[derive(Debug, Clone)]
-pub enum TechnologyMaturityLevel {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum TechnologyMaturityLevel {
     Experimental,
     EarlyAdopter,
     Mature,
     Legacy,
 }
 
-#[derive(Debug, Clone)]
-pub struct TechnologyMaturity {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct TechnologyMaturity {
     pub maturity_level: TechnologyMaturityLevel,
     pub stability_score: f64,
 }
 
 /// Integration complexity assessment
-#[derive(Debug, Clone)]
-pub struct IntegrationComplexity {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct IntegrationComplexity {
     pub api_integrations: u32,
     pub protocol_diversity: f64,
 }
 
 /// Performance risk assessment
-#[derive(Debug, Clone)]
-pub enum PerformanceRiskType {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum PerformanceRiskType {
     LatencyViolation,
     ScalabilityBottleneck,
     ResourceContention,
     MemoryLeak,
 }
 
-#[derive(Debug, Clone)]
-pub struct PerformanceRisk {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct PerformanceRisk {
     pub risk_type: PerformanceRiskType,
     pub severity: f64,
     pub likelihood: f64,
 }
 
 /// Ethical concern category
-#[derive(Debug, Clone)]
-pub struct EthicalConcernCategory {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct EthicalConcernCategory {
     pub category: crate::judge_backup::risk::EthicalCategory,
     pub severity_score: f64,
 }
 
 /// Stakeholder impact assessment
-#[derive(Debug, Clone)]
-pub struct StakeholderImpact {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct StakeholderImpact {
     pub stakeholder_group: String,
     pub impact_type: ImpactType,
     pub impact_magnitude: f64,
@@ -256,8 +284,9 @@ pub struct StakeholderImpact {
 }
 
 /// Regulatory risk assessment
-#[derive(Debug, Clone)]
-pub enum RegulationType {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum RegulationType {
     DataPrivacy,
     Financial,
     Healthcare,
@@ -265,8 +294,9 @@ pub enum RegulationType {
     Employment,
 }
 
-#[derive(Debug, Clone)]
-pub struct RegulatoryRisk {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct RegulatoryRisk {
     pub jurisdiction: String,
     pub regulation_type: RegulationType,
     pub compliance_cost: f64,
@@ -274,8 +304,9 @@ pub struct RegulatoryRisk {
 }
 
 /// Societal impact assessment
-#[derive(Debug, Clone)]
-pub struct SocietalImpact {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct SocietalImpact {
     pub impact_type: ImpactType,
     pub affected_population: u64,
     pub long_term_effects: String,
@@ -283,72 +314,81 @@ pub struct SocietalImpact {
 }
 
 /// Deployment complexity assessment
-#[derive(Debug, Clone)]
-pub struct DeploymentComplexity {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct DeploymentComplexity {
     pub infrastructure_requirements: InfrastructureRequirement,
     pub deployment_steps: u32,
     pub rollback_complexity: f64,
 }
 
 /// Maintenance requirements assessment
-#[derive(Debug, Clone)]
-pub struct MaintenanceRequirements {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct MaintenanceRequirements {
     pub update_frequency: UpdateFrequency,
     pub monitoring_overhead: f64,
     pub support_cost: f64,
 }
 
 /// Scalability concern assessment
-#[derive(Debug, Clone)]
-pub struct ScalabilityConcern {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ScalabilityConcern {
     pub concern_type: String,
     pub severity: f64,
     pub mitigation_cost: f64,
 }
 
 /// Growth projection assessment
-#[derive(Debug, Clone)]
-pub struct GrowthProjection {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct GrowthProjection {
     pub growth_pattern: GrowthPattern,
     pub projected_users: u64,
     pub timeline_months: u8,
 }
 
 /// Monitoring requirements assessment
-#[derive(Debug, Clone)]
-pub struct MonitoringRequirements {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct MonitoringRequirements {
     pub metrics_count: u32,
     pub alert_thresholds: u32,
     pub dashboard_complexity: f64,
 }
 
 /// Incident response assessment
-#[derive(Debug, Clone)]
-pub struct IncidentResponseAssessment {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct IncidentResponseAssessment {
     pub response_time_hours: f64,
     pub recovery_time_hours: f64,
     pub business_impact: f64,
 }
 
 /// Incident severity levels
-#[derive(Debug, Clone)]
-pub struct IncidentSeverityLevels {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct IncidentSeverityLevels {
     pub critical_threshold: f64,
     pub high_threshold: f64,
     pub medium_threshold: f64,
 }
 
 /// Recovery objectives assessment
-#[derive(Debug, Clone)]
-pub struct RecoveryObjectives {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct RecoveryObjectives {
     pub rto_hours: f64,
     pub rpo_minutes: f64,
     pub acceptable_downtime: f64,
 }
 
 /// Population size categories for impact assessment
-#[derive(Debug, Clone)]
-pub enum PopulationSize {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum PopulationSize {
     Individual,
     SmallGroup,
     LargeGroup,
@@ -356,8 +396,9 @@ pub enum PopulationSize {
 }
 
 /// Market impact assessment
-#[derive(Debug, Clone)]
-pub struct MarketImpact {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct MarketImpact {
     pub disruption_potential: f64,
     pub competitive_advantage: f64,
     pub market_share_change: f64,
@@ -1144,4 +1185,3 @@ impl RiskScorer {
         let uncertainty_penalty = ethical.uncertainty_factors.len() as f64 * 0.05;
         (confidence - uncertainty_penalty).max(0.1) // Minimum confidence of 10%
     }
-}

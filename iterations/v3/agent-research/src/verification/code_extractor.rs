@@ -5,6 +5,10 @@
 use regex::Regex;
 use std::collections::HashMap;
 use crate::verification::types::*;
+use crate::verification::verification_types::{
+    TestOutput, FunctionDefinition, CodeStructure, TypeDefinition, 
+    ImplementationBlock, DocumentationStructure, UsageExample,
+};
 use crate::extraction_types::{AtomicClaim, VerifiabilityLevel, ClaimScope, DataImpact};
 use anyhow::Result;
 
@@ -59,12 +63,12 @@ impl CodeExtractor {
         }
 
         // Check comment consistency
-        let comment_consistency = self.check_comment_consistency(&code_output.content)?;
+        let comment_consistency = self.check_comment_consistency(&code_output.code)?;
         score *= comment_consistency.overall_score;
         issues.extend(comment_consistency.issues);
 
         // Check comment style
-        let style_score = self.check_comment_style(&code_output.content)?;
+        let style_score = self.check_comment_style(&code_output.code)?;
         score *= style_score;
         if style_score < 0.9 {
             issues.push("Comment style inconsistent".to_string());
@@ -75,7 +79,7 @@ impl CodeExtractor {
             issues,
             functions_documented: code_structure.functions.len(),
             types_documented: code_structure.types.len(),
-            comment_density: self.calculate_comment_density(&code_output.content),
+            comment_density: self.calculate_comment_density(&code_output.code),
         })
     }
 
@@ -87,7 +91,7 @@ impl CodeExtractor {
 
         // Parse Rust functions
         let rust_fn_re = Regex::new(r"(?:pub\s+)?(?:async\s+)?fn\s+(\w+)\s*\([^}]*\)\s*(?:->\s*[^{]+)?")?;
-        for capture in rust_fn_re.captures_iter(&code_output.content) {
+        for capture in rust_fn_re.captures_iter(&code_output.code) {
             if let Some(name) = capture.get(1) {
                 functions.push(FunctionDefinition {
                     name: name.as_str().to_string(),
@@ -100,7 +104,7 @@ impl CodeExtractor {
 
         // Parse TypeScript/JavaScript functions
         let ts_fn_re = Regex::new(r"(?:export\s+)?(?:async\s+)?(?:function\s+(\w+)|\(\w*\)\s*=>|\w+\s*\([^}]*\)\s*\{)")?;
-        for capture in ts_fn_re.captures_iter(&code_output.content) {
+        for capture in ts_fn_re.captures_iter(&code_output.code) {
             if let Some(name) = capture.get(1) {
                 functions.push(FunctionDefinition {
                     name: name.as_str().to_string(),
@@ -113,7 +117,7 @@ impl CodeExtractor {
 
         // Parse struct/enum types (Rust)
         let rust_type_re = Regex::new(r"(?:pub\s+)?(struct|enum)\s+(\w+)")?;
-        for capture in rust_type_re.captures_iter(&code_output.content) {
+        for capture in rust_type_re.captures_iter(&code_output.code) {
             if let Some(name) = capture.get(2) {
                 types.push(TypeDefinition {
                     name: name.as_str().to_string(),
@@ -125,7 +129,7 @@ impl CodeExtractor {
 
         // Parse class/interface types (TypeScript)
         let ts_type_re = Regex::new(r"(?:export\s+)?(class|interface)\s+(\w+)")?;
-        for capture in ts_type_re.captures_iter(&code_output.content) {
+        for capture in ts_type_re.captures_iter(&code_output.code) {
             if let Some(name) = capture.get(2) {
                 types.push(TypeDefinition {
                     name: name.as_str().to_string(),
@@ -137,7 +141,7 @@ impl CodeExtractor {
 
         // Parse implementations
         let impl_re = Regex::new(r"impl(?:<[^>]*>)?\s+(\w+)(?:\s+for\s+(\w+))?")?;
-        for capture in impl_re.captures_iter(&code_output.content) {
+        for capture in impl_re.captures_iter(&code_output.code) {
             if let Some(trait_name) = capture.get(1) {
                 implementations.push(ImplementationBlock {
                     target: trait_name.as_str().to_string(),

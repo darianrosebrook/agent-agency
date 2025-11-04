@@ -7,7 +7,6 @@
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 
@@ -16,7 +15,7 @@ use crate::planning_io::DocumentationRequirements;
 
 /// Milestone execution contract
 /// Defines the complete specification for executing a milestone
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MilestoneContract {
     /// Milestone identifier
     pub milestone_id: String,
@@ -47,7 +46,7 @@ pub struct MilestoneContract {
 }
 
 /// Execution specification for milestone
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionSpec {
     /// Execution strategy (parallel, sequential, conditional)
     pub strategy: ExecutionStrategy,
@@ -75,7 +74,7 @@ pub struct ExecutionSpec {
 }
 
 /// Execution strategy options
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ExecutionStrategy {
     /// Execute all tasks in parallel
     Parallel,
@@ -91,7 +90,7 @@ pub enum ExecutionStrategy {
 }
 
 /// Worker capability requirement
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerRequirement {
     /// Required capability name
     pub capability: String,
@@ -107,7 +106,7 @@ pub struct WorkerRequirement {
 }
 
 /// Retry backoff configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RetryBackoff {
     /// Initial delay in milliseconds
     pub initial_delay_ms: u64,
@@ -123,7 +122,7 @@ pub struct RetryBackoff {
 }
 
 /// Execution environment requirements
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionEnvironment {
     /// Required operating system
     pub os: Option<String>,
@@ -148,7 +147,7 @@ pub struct ExecutionEnvironment {
 }
 
 /// Evidence collection specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceSpec {
     /// Evidence collection strategy
     pub collection_strategy: EvidenceCollectionStrategy,
@@ -167,7 +166,7 @@ pub struct EvidenceSpec {
 }
 
 /// Evidence collection strategy
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum EvidenceCollectionStrategy {
     /// Collect all possible evidence
     Comprehensive,
@@ -183,7 +182,7 @@ pub enum EvidenceCollectionStrategy {
 }
 
 /// Artifact requirement specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ArtifactRequirement {
     /// Artifact type identifier
     pub artifact_type: String,
@@ -208,7 +207,7 @@ pub struct ArtifactRequirement {
 }
 
 /// Validation rule for evidence
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationRule {
     /// Rule identifier
     pub rule_id: String,
@@ -230,7 +229,7 @@ pub struct ValidationRule {
 }
 
 /// Validation rule types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ValidationRuleType {
     /// Schema validation
     Schema,
@@ -249,7 +248,7 @@ pub enum ValidationRuleType {
 }
 
 /// Validation severity levels
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ValidationSeverity {
     /// Informational only
     Info,
@@ -265,7 +264,7 @@ pub enum ValidationSeverity {
 }
 
 /// Evidence storage configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceStorageConfig {
     /// Storage backend type
     pub backend: EvidenceStorageBackend,
@@ -284,7 +283,7 @@ pub struct EvidenceStorageConfig {
 }
 
 /// Evidence storage backend types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum EvidenceStorageBackend {
     /// Local file system
     FileSystem,
@@ -303,7 +302,7 @@ pub enum EvidenceStorageBackend {
 }
 
 /// Compression configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CompressionConfig {
     /// Compression algorithm
     pub algorithm: String,
@@ -316,7 +315,7 @@ pub struct CompressionConfig {
 }
 
 /// Encryption configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EncryptionConfig {
     /// Encryption algorithm
     pub algorithm: String,
@@ -329,7 +328,7 @@ pub struct EncryptionConfig {
 }
 
 /// Access control configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AccessControlConfig {
     /// Access control model
     pub model: String,
@@ -342,7 +341,7 @@ pub struct AccessControlConfig {
 }
 
 /// Evidence retention policy
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceRetentionPolicy {
     /// Retention duration in days
     pub retention_days: u32,
@@ -358,7 +357,7 @@ pub struct EvidenceRetentionPolicy {
 }
 
 /// Retention strategy options
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum RetentionStrategy {
     /// Keep all evidence for retention period
     KeepAll,
@@ -374,7 +373,7 @@ pub enum RetentionStrategy {
 }
 
 /// Archive configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ArchiveConfig {
     /// Archive location
     pub location: String,
@@ -387,7 +386,7 @@ pub struct ArchiveConfig {
 }
 
 /// Deletion configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DeletionConfig {
     /// Deletion method
     pub method: String,
@@ -400,7 +399,7 @@ pub struct DeletionConfig {
 }
 
 /// Quality specification for milestone
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualitySpec {
     /// Code quality requirements
     pub code_quality: CodeQualityRequirements,
@@ -422,7 +421,7 @@ pub struct QualitySpec {
 }
 
 /// Code quality requirements
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CodeQualityRequirements {
     /// Minimum code coverage (0.0-1.0)
     pub min_coverage: f64,
@@ -441,7 +440,7 @@ pub struct CodeQualityRequirements {
 }
 
 /// Testing requirements
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TestingRequirements {
     /// Required test types
     pub required_test_types: Vec<String>,
@@ -457,7 +456,7 @@ pub struct TestingRequirements {
 }
 
 /// Security requirements
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SecurityRequirements {
     /// Required security scans
     pub required_scans: Vec<String>,
@@ -473,7 +472,7 @@ pub struct SecurityRequirements {
 }
 
 /// Performance requirements
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceRequirements {
     /// Maximum execution time in milliseconds
     pub max_execution_time_ms: u64,
@@ -491,7 +490,7 @@ pub struct PerformanceRequirements {
 // DocumentationRequirements moved to planning_io.rs for consolidation
 
 /// Resource specification for milestone
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResourceSpec {
     /// CPU requirements
     pub cpu: CpuRequirements,
@@ -513,7 +512,7 @@ pub struct ResourceSpec {
 }
 
 /// CPU requirements
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CpuRequirements {
     /// Minimum CPU cores required
     pub min_cores: usize,
@@ -529,7 +528,7 @@ pub struct CpuRequirements {
 }
 
 /// Memory requirements
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MemoryRequirements {
     /// Minimum memory in MB
     pub min_memory_mb: usize,
@@ -545,7 +544,7 @@ pub struct MemoryRequirements {
 }
 
 /// Disk requirements
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DiskRequirements {
     /// Minimum disk space in MB
     pub min_disk_mb: usize,
@@ -561,7 +560,7 @@ pub struct DiskRequirements {
 }
 
 /// Network requirements
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct NetworkRequirements {
     /// Required network bandwidth (Mbps)
     pub min_bandwidth_mbps: Option<f64>,
@@ -577,7 +576,7 @@ pub struct NetworkRequirements {
 }
 
 /// Service dependency specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ServiceDependency {
     /// Service name
     pub service_name: String,
@@ -596,7 +595,7 @@ pub struct ServiceDependency {
 }
 
 /// Resource allocation strategy
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ResourceAllocationStrategy {
     /// Allocate resources as needed
     OnDemand,
@@ -612,7 +611,7 @@ pub enum ResourceAllocationStrategy {
 }
 
 /// Recovery specification for milestone
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RecoverySpec {
     /// Rollback strategy
     pub rollback_strategy: RollbackStrategy,
@@ -634,7 +633,7 @@ pub struct RecoverySpec {
 }
 
 /// Rollback strategy options
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum RollbackStrategy {
     /// No rollback possible
     None,
@@ -653,7 +652,7 @@ pub enum RollbackStrategy {
 }
 
 /// Recovery procedure specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RecoveryProcedure {
     /// Procedure name
     pub name: String,
@@ -672,7 +671,7 @@ pub struct RecoveryProcedure {
 }
 
 /// Recovery procedure types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum RecoveryProcedureType {
     /// Rollback to previous state
     Rollback,
@@ -691,7 +690,7 @@ pub enum RecoveryProcedureType {
 }
 
 /// Checkpoint configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CheckpointConfig {
     /// Checkpoint frequency in milliseconds
     pub frequency_ms: u64,
@@ -707,7 +706,7 @@ pub struct CheckpointConfig {
 }
 
 /// Failure handling strategy
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum FailureHandlingStrategy {
     /// Stop on first failure
     FailFast,
@@ -723,7 +722,7 @@ pub enum FailureHandlingStrategy {
 }
 
 /// Monitoring specification for milestone
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MonitoringSpec {
     /// Metrics to collect
     pub metrics: Vec<MetricSpec>,
@@ -742,7 +741,7 @@ pub struct MonitoringSpec {
 }
 
 /// Metric specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MetricSpec {
     /// Metric name
     pub name: String,
@@ -761,7 +760,7 @@ pub struct MetricSpec {
 }
 
 /// Metric types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum MetricType {
     /// Counter metric
     Counter,
@@ -777,7 +776,7 @@ pub enum MetricType {
 }
 
 /// Log specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LogSpec {
     /// Log name
     pub name: String,
@@ -796,7 +795,7 @@ pub struct LogSpec {
 }
 
 /// Log levels
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum LogLevel {
     /// Debug level
     Debug,
@@ -815,7 +814,7 @@ pub enum LogLevel {
 }
 
 /// Trace specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TraceSpec {
     /// Trace name
     pub name: String,
@@ -831,7 +830,7 @@ pub struct TraceSpec {
 }
 
 /// Alert specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AlertSpec {
     /// Alert name
     pub name: String,
@@ -850,7 +849,7 @@ pub struct AlertSpec {
 }
 
 /// Alert severity levels
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum AlertSeverity {
     /// Informational alert
     Info,
@@ -866,7 +865,7 @@ pub enum AlertSeverity {
 }
 
 /// Alert throttling configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AlertThrottling {
     /// Throttling window in milliseconds
     pub window_ms: u64,
@@ -879,7 +878,7 @@ pub struct AlertThrottling {
 }
 
 /// Throttling strategies
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ThrottlingStrategy {
     /// Drop excess alerts
     Drop,
@@ -892,7 +891,7 @@ pub enum ThrottlingStrategy {
 }
 
 /// Dashboard specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DashboardSpec {
     /// Dashboard name
     pub name: String,

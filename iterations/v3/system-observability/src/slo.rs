@@ -25,7 +25,9 @@ pub struct SLOTarget {
     pub current_value: f64,
     pub compliance_percentage: f64,
     pub remaining_budget: f64, // Error budget remaining (0.0 to 1.0)
+    #[schemars(with = "String")]
     pub period_start: DateTime<Utc>,
+    #[schemars(with = "String")]
     pub period_end: DateTime<Utc>,
     pub status: SLOStatus,
 }
@@ -41,6 +43,7 @@ pub enum SLOStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SLOMeasurement {
     pub slo_name: String,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub value: f64,
     pub sample_count: u64,
@@ -55,9 +58,11 @@ pub struct SLOAlert {
     pub alert_type: SLOAlertType,
     pub severity: AlertSeverity,
     pub message: String,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub actual_value: f64,
     pub target_value: f64,
+    #[schemars(with = "String")]
     pub triggered_at: DateTime<Utc>,
     pub resolved_at: Option<DateTime<Utc>>,
     pub time_to_violation: Option<Duration>,
@@ -81,6 +86,7 @@ pub enum AlertSeverity {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SLODataPoint {
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub value: f64,
     pub is_good: bool, // Whether this measurement meets the SLO criteria
@@ -182,7 +188,7 @@ impl SLOTracker {
         ).await?;
         let slo_id: uuid::Uuid = rows.into_iter().next()
             .ok_or("SLO definition not found")?
-            .get::<_, String>(0)
+            .get(0)
             .parse()
             .map_err(|e| format!("Invalid UUID: {}", e))?;
 
@@ -246,7 +252,7 @@ impl SLOTracker {
             .ok_or("SLO not found")?;
 
         let name: String = row.get(0);
-        let target_value: f64 = row.get::<_, f64>(1) as f64;
+        let target_value: f64 = row.get(1) as f64;
         let window_minutes: i32 = row.get(2);
         let current_value: Option<f64> = row.get(3);
         let error_budget_used: Option<f64> = row.get(4);
@@ -309,7 +315,7 @@ impl SLOTracker {
 
         for row in rows {
             let name: String = row.get(0);
-            let target_value: f64 = row.get::<_, f64>(1) as f64;
+            let target_value: f64 = row.get(1) as f64;
             let window_minutes: i32 = row.get(2);
             let current_value: Option<f64> = row.get(3);
             let error_budget_used: Option<f64> = row.get(4);
@@ -372,20 +378,21 @@ impl SLOTracker {
 
         let mut alerts = Vec::new();
         for row in rows {
-            let id: uuid::Uuid = row.get::<_, String>(0).parse().map_err(|e| format!("Invalid UUID: {}", e))?;
+            let id: uuid::Uuid = row.get(0).parse().map_err(|e| format!("Invalid UUID: {}", e))?;
             let slo_name: String = row.get(1);
             let alert_type_str: String = row.get(2);
             let severity_str: String = row.get(3);
             let message: String = row.get(4);
             let actual_value: Option<f64> = row.get(5);
             let target_value: Option<f64> = row.get(6);
-            let triggered_at: DateTime<Utc> = {
+            let #[schemars(with = "String")]
+    triggered_at: DateTime<Utc> = {
                 let timestamp_str: String = row.get(7);
                 DateTime::parse_from_rfc3339(&timestamp_str)
                     .map_err(|e| format!("Invalid timestamp: {}", e))?
                     .with_timezone(&Utc)
             };
-            let resolved_at: Option<DateTime<Utc>> = row.get::<_, Option<String>>(8)
+            let resolved_at: Option<DateTime<Utc>> = row.get>(8)
                 .map(|ts_str| DateTime::parse_from_rfc3339(&ts_str)
                     .map_err(|e| format!("Invalid timestamp: {}", e))
                     .map(|dt| dt.with_timezone(&Utc)))
@@ -522,6 +529,7 @@ pub struct SLOExport {
     pub definitions: HashMap<String, SLODefinition>,
     pub measurements: HashMap<String, Vec<SLODataPoint>>,
     pub alerts: Vec<SLOAlert>,
+    #[schemars(with = "String")]
     pub export_timestamp: DateTime<Utc>,
 }
 
@@ -570,7 +578,6 @@ pub fn create_default_slos() -> Vec<SLODefinition> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[tokio::test]
     async fn test_slo_registration_and_measurement() {
         let tracker = SLOTracker::new(Arc::new(agent_agency_database::DatabaseClient::new(

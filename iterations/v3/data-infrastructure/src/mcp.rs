@@ -4,7 +4,9 @@
 //! bridging the sophisticated MCP integration with the rest of the Agent Agency system.
 
 #[cfg(feature = "mcp")]
-use agent_mcp::{
+mod mcp_module {
+    use schemars::JsonSchema;
+    use agent_mcp::{
     MCPServer as InnerMCPServer,
     server::DatabaseClient as McpDatabaseClient,
     ToolDiscovery,
@@ -35,13 +37,6 @@ use agent_mcp::{
 };
 // TODO: Add agent_orchestration crate when available
 // use agent_orchestration::error_handling::CircuitBreakerStats;
-use crate::simple_client::DatabaseClient;
-use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use tokio::sync::RwLock;
 
 /// Configuration for the MCP interface
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -435,8 +430,8 @@ mod tests {
     use std::sync::Arc;
 
     // Stub types for testing
-    #[derive(Debug, Clone)]
-    pub struct McpServerBuilder {
+    #[derive(Debug, Clone, JsonSchema)]
+pub struct McpServerBuilder {
         pub address: String,
         pub auto_discovery: bool,
         pub caws_checking: bool,
@@ -474,8 +469,8 @@ mod tests {
         }
     }
 
-    #[derive(Debug, Clone)]
-    pub struct McpConfig {
+    #[derive(Debug, Clone, JsonSchema)]
+pub struct McpConfig {
         pub server: ServerConfig,
     }
 
@@ -487,8 +482,8 @@ mod tests {
         }
     }
 
-    #[derive(Debug, Clone)]
-    pub struct ServerConfig {
+    #[derive(Debug, Clone, JsonSchema)]
+pub struct ServerConfig {
         pub port: u16,
     }
 
@@ -516,4 +511,5 @@ mod tests {
         let config = McpConfig::default();
         assert_eq!(config.server.port, 8080);
     }
+}
 }

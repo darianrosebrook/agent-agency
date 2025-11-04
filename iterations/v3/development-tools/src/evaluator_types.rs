@@ -1,12 +1,14 @@
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Minimal diff evaluation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DiffEvaluationResult {
     /// Evaluation ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Overall surgical change score (0.0 to 1.0, higher is better)
     pub surgical_change_score: f64,
@@ -27,7 +29,7 @@ pub struct DiffEvaluationResult {
 }
 
 /// Language-specific analysis result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LanguageAnalysisResult {
     /// Programming language detected
     pub language: ProgrammingLanguage,
@@ -44,7 +46,7 @@ pub struct LanguageAnalysisResult {
 }
 
 /// Programming language types
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, JsonSchema)]
 pub enum ProgrammingLanguage {
     Rust,
     TypeScript,
@@ -77,9 +79,10 @@ pub enum ProgrammingLanguage {
 }
 
 /// AST change representation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ASTChange {
     /// Change ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Change type
     pub change_type: ASTChangeType,
@@ -96,7 +99,7 @@ pub struct ASTChange {
 }
 
 /// AST change types
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, JsonSchema)]
 pub enum ASTChangeType {
     /// Function signature change
     FunctionSignature,
@@ -127,7 +130,7 @@ pub enum ASTChangeType {
 }
 
 /// Source location information
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, JsonSchema)]
 pub struct SourceLocation {
     /// File path
     pub file_path: String,
@@ -146,7 +149,7 @@ pub struct SourceLocation {
 }
 
 /// Impact level
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
 pub enum ImpactLevel {
     /// No impact
     None,
@@ -161,7 +164,7 @@ pub enum ImpactLevel {
 }
 
 /// Quality metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityMetrics {
     /// Cyclomatic complexity
     pub cyclomatic_complexity: u32,
@@ -178,7 +181,7 @@ pub struct QualityMetrics {
 }
 
 /// Complexity metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ComplexityMetrics {
     /// Structural complexity
     pub structural_complexity: f64,
@@ -191,9 +194,10 @@ pub struct ComplexityMetrics {
 }
 
 /// Language violation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LanguageViolation {
     /// Violation ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Rule violated
     pub rule: String,
@@ -208,7 +212,7 @@ pub struct LanguageViolation {
 }
 
 /// Violation severity
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
 pub enum ViolationSeverity {
     /// Info level
     Info,
@@ -221,9 +225,10 @@ pub enum ViolationSeverity {
 }
 
 /// Language warning
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LanguageWarning {
     /// Warning ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Rule that triggered warning
     pub rule: String,
@@ -236,7 +241,7 @@ pub struct LanguageWarning {
 }
 
 /// Change classification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ChangeClassification {
     /// Primary change type
     pub primary_type: ChangeType,
@@ -251,7 +256,7 @@ pub struct ChangeClassification {
 }
 
 /// Change type
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, JsonSchema)]
 pub enum ChangeType {
     /// Bug fix
     BugFix,
@@ -280,7 +285,7 @@ pub enum ChangeType {
 }
 
 /// Change category
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub enum ChangeCategory {
     /// Functional change
     Functional,
@@ -297,7 +302,7 @@ pub enum ChangeCategory {
 }
 
 /// Risk level
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash, JsonSchema)]
 pub enum RiskLevel {
     /// Very low risk
     VeryLow,
@@ -312,7 +317,7 @@ pub enum RiskLevel {
 }
 
 /// Impact analysis
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, JsonSchema)]
 pub struct ImpactAnalysis {
     /// Files affected
     pub files_affected: u32,
@@ -337,9 +342,10 @@ pub struct ImpactAnalysis {
 }
 
 /// Recommendation for improvement
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Recommendation {
     /// Recommendation ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Recommendation type
     pub recommendation_type: RecommendationType,
@@ -356,7 +362,7 @@ pub struct Recommendation {
 }
 
 /// Recommendation type
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub enum RecommendationType {
     /// Reduce complexity
     ReduceComplexity,
@@ -379,7 +385,7 @@ pub enum RecommendationType {
 }
 
 /// Priority level
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
 pub enum PriorityLevel {
     /// Low priority
     Low,
@@ -392,7 +398,7 @@ pub enum PriorityLevel {
 }
 
 /// Effort level
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
 pub enum EffortLevel {
     /// Minimal effort
     Minimal,
@@ -407,9 +413,10 @@ pub enum EffortLevel {
 }
 
 /// Evaluation metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EvaluationMetadata {
     /// Evaluation timestamp
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     /// Evaluation duration (milliseconds)
     pub duration_ms: u64,
@@ -426,7 +433,7 @@ pub struct EvaluationMetadata {
 }
 
 /// Diff evaluation configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DiffEvaluationConfig {
     /// Enable AST-based analysis
     pub enable_ast_analysis: bool,
@@ -445,7 +452,7 @@ pub struct DiffEvaluationConfig {
 }
 
 /// Language-specific configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LanguageConfig {
     /// Enable language-specific analysis
     pub enabled: bool,
@@ -458,7 +465,7 @@ pub struct LanguageConfig {
 }
 
 /// Complexity thresholds
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ComplexityThresholds {
     /// Maximum cyclomatic complexity
     pub max_cyclomatic_complexity: u32,
@@ -473,7 +480,7 @@ pub struct ComplexityThresholds {
 }
 
 /// Quality thresholds
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityThresholds {
     /// Minimum test coverage percentage
     pub min_test_coverage: f64,
@@ -488,7 +495,7 @@ pub struct QualityThresholds {
 }
 
 /// Diff evaluation statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DiffEvaluationStats {
     /// Total evaluations performed
     pub total_evaluations: u64,
@@ -505,5 +512,6 @@ pub struct DiffEvaluationStats {
     /// Evaluations by risk level
     pub evaluations_by_risk_level: HashMap<RiskLevel, u64>,
     /// Last updated
+    #[schemars(with = "String")]
     pub last_updated: DateTime<Utc>,
 }

@@ -3,6 +3,7 @@
 //! Implements Bayesian optimization for runtime parameter tuning, achieving
 //! 2-4x throughput improvements while preserving CAWS compliance and quality standards.
 
+use schemars::JsonSchema;
 use anyhow::{Result, Context};
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -12,7 +13,7 @@ use tracing::{debug, info, warn};
 use crate::performance_monitor::PerformanceMetrics;
 
 /// Bayesian optimization configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct OptimizationConfig {
     /// Parameter space definition
     pub parameter_space: ParameterSpace,
@@ -39,7 +40,7 @@ pub struct OptimizationConfig {
     pub policy_version: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct OptimizationConstraints {
     pub max_latency_ms: u64,
     pub max_tokens: u32,
@@ -49,7 +50,7 @@ pub struct OptimizationConstraints {
     pub max_delta_max_tokens: u32,    // e.g., 200
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ObjectiveWeights {
     /// Reward = w_q * quality - w_l * norm_latency - w_t * norm_tokens
     pub w_quality: f64,
@@ -58,7 +59,7 @@ pub struct ObjectiveWeights {
 }
 
 /// Parameter space definition for optimization
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParameterSpace {
     /// Parameter definitions with bounds
     pub parameters: HashMap<String, ParameterDefinition>,
@@ -67,7 +68,7 @@ pub struct ParameterSpace {
 }
 
 /// Parameter definition with optimization bounds
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParameterDefinition {
     /// Parameter name
     pub name: String,
@@ -82,7 +83,7 @@ pub struct ParameterDefinition {
 }
 
 /// Parameter types for different optimization strategies
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ParameterType {
     /// Continuous real-valued parameter
     Continuous,
@@ -93,7 +94,7 @@ pub enum ParameterType {
 }
 
 /// Optimization result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct OptimizationResult {
     /// Optimal parameter values
     pub optimal_parameters: HashMap<String, f64>,
@@ -108,7 +109,7 @@ pub struct OptimizationResult {
 }
 
 /// Optimization metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct OptimizationMetadata {
     /// Number of iterations performed
     pub iterations: usize,
@@ -121,7 +122,7 @@ pub struct OptimizationMetadata {
 }
 
 /// Parameter evaluation record
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParameterEvaluation {
     /// Parameter values tested
     pub parameters: HashMap<String, f64>,

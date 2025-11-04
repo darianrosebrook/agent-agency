@@ -1,9 +1,11 @@
 //! Online quantile estimation using t-digest for mergeable, tail-aware metrics
 
+use schemars::JsonSchema;
 use tdigest::TDigest;
 
 /// Online quantile estimation using t-digest for mergeable, tail-aware metrics
-#[derive(Clone, Debug)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct OnlineQuantiles {
     digest: TDigest,
     count: u64,

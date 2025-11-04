@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 /// Rust-specific analyzer
 #[derive(Debug)]
-pub struct RustAnalyzer;
+pub struct RustAnalyzer ;
 
 impl RustAnalyzer {
     /// Create a new Rust analyzer

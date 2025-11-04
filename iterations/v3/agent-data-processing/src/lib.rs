@@ -39,6 +39,9 @@ pub mod memory_hooks;
 #[cfg(feature = "workspace-integration")]
 pub mod workspace_hooks;
 
+// Import schemars for JsonSchema derive
+use schemars::JsonSchema;
+
 // Re-export main types
 pub use pipeline::{DataPipeline, PipelineConfig, PipelineResult};
 pub use data_processing_types::ProcessingStats;
@@ -245,7 +248,7 @@ impl DataProcessingSystem {
 }
 
 /// Configuration for the complete data processing system
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct DataProcessingConfig {
     pub pipeline: PipelineConfig,
     #[cfg(feature = "memory-integration")]

@@ -1,5 +1,6 @@
 //! Learning orchestrator for coordinating algorithm selection and execution
 
+use schemars::JsonSchema;
 use crate::reflexive_types::*;
 use crate::reinforcement::*;
 use crate::supervised::*;
@@ -10,7 +11,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// Learning orchestrator that coordinates algorithm selection and execution
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct LearningOrchestrator {
     /// Available learning algorithms
     algorithms: HashMap<LearningAlgorithmType, Box<dyn LearningAlgorithm>>,
@@ -131,13 +133,16 @@ impl Default for LearningOrchestrator {
 }
 
 /// Learning system health monitor
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LearningSystemHealth {
     pub algorithm_count: usize,
     pub total_training_sessions: u64,
     pub average_performance: f64,
     pub system_uptime_seconds: u64,
     pub memory_usage_mb: f64,
+    ##[schemars(with = "String")]
+
     pub last_health_check: DateTime<Utc>,
 }
 
@@ -218,7 +223,8 @@ impl LearningSystemHealth {
 }
 
 /// Meta-learning coordinator for algorithm improvement
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct MetaLearningCoordinator {
     orchestrator: Arc<RwLock<LearningOrchestrator>>,
     meta_algorithms: HashMap<String, Box<dyn MetaLearningAlgorithm>>,

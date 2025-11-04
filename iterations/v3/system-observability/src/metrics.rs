@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-
 /// Metrics registry for managing all metrics
 pub struct MetricsRegistry {
     counters: Arc<RwLock<HashMap<String, Counter>>>,

@@ -3,6 +3,7 @@
 //! Implements CAWS budget tracking, waiver management, and provenance
 //! for LLM parameter optimization with compliance enforcement.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -22,20 +23,24 @@ pub struct CAWSBudgetTracker {
 }
 
 /// Token budget for a task type
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TokenBudget {
     pub task_type: String,
     pub daily_limit: u64,
     pub used_today: u64,
+    #[schemars(with = "String")]
+
     pub reset_at: DateTime<Utc>,
 }
 
 /// Budget check result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BudgetCheckResult {
     pub within_budget: bool,
     pub remaining_tokens: u64,
     pub usage_percentage: f64,
+    #[schemars(with = "String")]
+
     pub reset_time: DateTime<Utc>,
 }
 
@@ -91,7 +96,8 @@ impl CAWSBudgetTracker {
         task_type: &str,
         reason: String,
         approver: String,
-        expiry: DateTime<Utc>,
+        #[schemars(with = "String")]
+    expiry: DateTime<Utc>,
     ) -> Result<WaiverId> {
         let waiver_id = Uuid::new_v4();
         
@@ -135,8 +141,9 @@ impl CAWSBudgetTracker {
 }
 
 /// Parameter change provenance for CAWS compliance
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParameterChangeProvenance {
+    #[schemars(with = "String")]
     pub change_id: Uuid,
     pub task_type: String,
     pub old_params: ParameterSet,
@@ -145,6 +152,8 @@ pub struct ParameterChangeProvenance {
     pub approved_by: Option<String>,
     pub waiver_id: Option<WaiverId>,
     pub policy_version: String,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
 }
 
@@ -259,7 +268,7 @@ impl CAWSComplianceValidator {
 }
 
 /// Compliance validation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ComplianceValidationResult {
     pub approved: bool,
     pub reason: String,

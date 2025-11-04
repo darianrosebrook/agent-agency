@@ -3,9 +3,10 @@
 //! Provides real-time monitoring and alerting for Recovery Time Objectives (RTO)
 //! and Recovery Point Objectives (RPO) to ensure disaster recovery compliance.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use tokio::sync::{RwLock, mpsc};
@@ -20,7 +21,7 @@ use crate::api_alerts::{
 use crate::service_failover::{ServiceFailoverManager, ServiceType, ServiceStatus};
 
 /// RTO/RPO objectives configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RecoveryObjectives {
     /// Recovery Time Objective (seconds) - max time to restore service
     pub rto_seconds: u64,
@@ -30,7 +31,7 @@ pub struct RecoveryObjectives {
     pub service_objectives: HashMap<ServiceType, ServiceRecoveryObjectives>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ServiceRecoveryObjectives {
     pub rto_seconds: u64,
     pub rpo_seconds: u64,
@@ -46,7 +47,7 @@ pub struct ServiceRecoveryObjectives {
 // Using RecoveryMetrics and MonthlyStats from api_alerts module
 
 /// Alert configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AlertConfig {
     pub rto_violation_threshold_seconds: u64,
     pub rpo_violation_threshold_seconds: u64,
@@ -415,10 +416,16 @@ impl RtoRpoMonitor {
 }
 
 /// Compliance report
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ComplianceReport {
+    #[schemars(with = "String")]
+
     pub generated_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub period_start: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub period_end: DateTime<Utc>,
     pub overall_compliance_percentage: f64,
     pub rto_compliance_percentage: f64,
@@ -430,7 +437,7 @@ pub struct ComplianceReport {
     pub recommendations: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ServiceComplianceSummary {
     pub service_type: String,
     pub uptime_percentage: f64,
@@ -532,8 +539,10 @@ fn generate_recommendations(status: &ComplianceStatus, violations: &[ComplianceV
 }
 
 /// Compliance report for monitoring dashboards
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MonitoringComplianceReport {
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub overall_compliance_percentage: f64,
     pub rto_compliance_percentage: f64,

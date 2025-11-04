@@ -1,5 +1,6 @@
 //! Error types for the parallel worker system
 
+use schemars::JsonSchema;
 use std::path::PathBuf;
 use thiserror::Error;
 use crate::parallel_types::{TaskId, SubTaskId, WorkerId, WorkerSpecialty};
@@ -53,7 +54,8 @@ pub enum ParallelError {
 }
 
 /// Error type for decomposition operations
-#[derive(Error, Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Error)]
 pub enum DecompositionError {
     #[error("Pattern recognition failed: {message}")]
     PatternRecognition { message: String },
@@ -75,6 +77,96 @@ pub enum DecompositionError {
 
     #[error("Circular dependency detected involving subtasks: {subtask_ids:?}")]
     CircularDependency { subtask_ids: Vec<SubTaskId> },
+
+    #[error("No subtasks were generated from task decomposition")]
+    NoSubtasksGenerated,
+
+    #[error("Circular dependencies detected in subtask graph")]
+    CircularDependencies,
+
+    #[error("Decomposition does not provide complete coverage of the original task")]
+    IncompleteCoverage,
+}
+
+/// Error type for validation operations
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Error)]
+pub enum ValidationError {
+    #[error("External tool failure: {tool_name} - {message}")]
+    ExternalToolFailure {
+        tool_name: String,
+        message: String,
+    },
+
+    #[error("Validation failed: {message}")]
+    ValidationFailed { message: String },
+
+    #[error("Invalid input: {message}")]
+    InvalidInput { message: String },
+
+    #[error("Timeout during validation: {message}")]
+    Timeout { message: String },
+
+    #[error("Validation gate '{gate_name}' failed: {message}")]
+    GateFailed { gate_name: String, message: String },
+
+    #[error("Validation timeout after {timeout_secs} seconds")]
+    ValidationTimeout { timeout_secs: u64 },
+
+    #[error("Quality threshold not met: required {required}, got {actual}")]
+    ThresholdNotMet { required: f32, actual: f32 },
+
+    #[error("Validation context invalid: {message}")]
+    InvalidContext { message: String },
+}
+
+/// Error type for communication operations
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Error)]
+pub enum CommunicationError {
+    #[error("Channel send failed: {message}")]
+    ChannelSendFailed { message: String },
+
+    #[error("Channel receive failed: {message}")]
+    ChannelReceiveFailed { message: String },
+
+    #[error("Communication timeout after {timeout_secs} seconds")]
+    CommunicationTimeout { timeout_secs: u64 },
+
+    #[error("Connection failed: {message}")]
+    ConnectionFailed { message: String },
+
+    #[error("Message serialization failed: {message}")]
+    SerializationFailed { message: String },
+
+    #[error("Message deserialization failed: {message}")]
+    DeserializationFailed { message: String },
+
+    #[error("Channel buffer overflow")]
+    BufferOverflow,
+
+    #[error("Invalid message format: {message}")]
+    InvalidMessageFormat { message: String },
+}
+
+/// Error type for progress tracking operations
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Error)]
+pub enum ProgressError {
+    #[error("Progress update failed: {message}")]
+    UpdateFailed { message: String },
+
+    #[error("Progress tracking error: {message}")]
+    TrackingError { message: String },
+
+    #[error("Progress aggregation failed: {message}")]
+    AggregationFailed { message: String },
+
+    #[error("Progress synthesis failed: {message}")]
+    SynthesisFailed { message: String },
+
+    #[error("Invalid progress state: {message}")]
+    InvalidState { message: String },
+
+    #[error("Progress persistence failed: {message}")]
+    PersistenceFailed { message: String },
 }
 
 /// Error type for worker operations
@@ -123,6 +215,9 @@ pub enum WorkerError {
         #[serde(skip)]
         source: Option<Box<dyn std::error::Error + Send + Sync>>,
     },
+
+    #[error("Execution failed: {message}")]
+    ExecutionError { message: String },
 }
 
 impl Clone for WorkerError {
@@ -168,75 +263,15 @@ impl Clone for WorkerError {
             WorkerError::ResourceLimitsExceeded { resource_type } => WorkerError::ResourceLimitsExceeded {
                 resource_type: resource_type.clone(),
             },
+            WorkerError::ExecutionError { message } => WorkerError::ExecutionError {
+                message: message.clone(),
+            },
         }
     }
 }
 
-/// Error type for progress tracking operations
-#[derive(Error, Debug)]
-pub enum ProgressError {
-    #[error("Progress update failed: {message}")]
-    UpdateFailed { worker_id: WorkerId, message: String },
-
-    #[error("Progress aggregation failed: {message}")]
-    AggregationFailed { message: String },
-
-    #[error("Progress synthesis failed: {message}")]
-    SynthesisFailed { message: String },
-
-    #[error("Invalid progress state: {message}")]
-    InvalidState { message: String },
-
-    #[error("Progress persistence failed: {message}")]
-    PersistenceFailed { message: String },
-}
-
-/// Error type for quality validation operations
-#[derive(Error, Debug, Clone)]
-pub enum ValidationError {
-    #[error("Validation gate '{gate_name}' failed: {message}")]
-    GateFailed { gate_name: String, message: String },
-
-    #[error("Validation timeout after {timeout_secs} seconds")]
-    ValidationTimeout { timeout_secs: u64 },
-
-    #[error("Quality threshold not met: required {required}, got {actual}")]
-    ThresholdNotMet { required: f32, actual: f32 },
-
-    #[error("Validation context invalid: {message}")]
-    InvalidContext { message: String },
-
-    #[error("External validation tool failed: {tool_name} - {message}")]
-    ExternalToolFailure { tool_name: String, message: String },
-}
-
-/// Error type for communication operations
-#[derive(Error, Debug)]
-pub enum CommunicationError {
-    #[error("Channel send failed: {message}")]
-    ChannelSendFailed { message: String },
-
-    #[error("Channel receive failed: {message}")]
-    ChannelReceiveFailed { message: String },
-
-    #[error("Message serialization failed: {message}")]
-    SerializationFailed { message: String },
-
-    #[error("Message deserialization failed: {message}")]
-    DeserializationFailed { message: String },
-
-    #[error("Channel buffer overflow")]
-    BufferOverflow,
-
-    #[error("Communication timeout after {timeout_secs} seconds")]
-    CommunicationTimeout { timeout_secs: u64 },
-
-    #[error("Invalid message format: {message}")]
-    InvalidMessageFormat { message: String },
-}
-
 /// Error type for synthesis operations
-#[derive(Error, Debug)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Error)]
 pub enum SynthesisError {
     #[error("Result synthesis failed: {message}")]
     SynthesisFailed { message: String },
@@ -257,9 +292,9 @@ pub enum SynthesisError {
 /// Result type aliases for cleaner code
 pub type ParallelResult<T> = Result<T, ParallelError>;
 pub type DecompositionResult<T> = Result<T, DecompositionError>;
+pub type CommunicationResult<T> = Result<T, CommunicationError>;
 pub type WorkerExecutionResult<T> = Result<T, WorkerError>;
 pub type ProgressResult<T> = Result<T, ProgressError>;
-pub type CommunicationResult<T> = Result<T, CommunicationError>;
 pub type SynthesisResult<T> = Result<T, SynthesisError>;
 
 // Conversion implementations

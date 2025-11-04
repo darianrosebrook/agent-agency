@@ -7,6 +7,7 @@
  * Provides compliance-ready logging with proper context and metadata.
  */
 
+use schemars::JsonSchema;
 use std::net::IpAddr;
 use sqlx::Row;
 use uuid::Uuid;
@@ -15,7 +16,7 @@ use serde_json::Value;
 use crate::simple_client::DatabaseClient;
 
 /// Audit event types for different operations
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum AuditEventType {
     TaskCreated,
     TaskUpdated,
@@ -32,7 +33,7 @@ pub enum AuditEventType {
 }
 
 /// Audit severity levels
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum AuditSeverity {
     Debug,
     Info,
@@ -42,7 +43,7 @@ pub enum AuditSeverity {
 }
 
 /// Audit context for logging operations
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct AuditContext {
     pub user_id: Option<String>,
     pub session_id: Option<String>,
@@ -221,16 +222,16 @@ impl AuditLogger {
         let mut results = Vec::new();
         for row in rows {
             let audit_entry = serde_json::json!({
-                "id": row.get::<Uuid, _>("id").to_string(),
-                "timestamp": row.get::<String, _>("ts"),
-                "user_id": row.get::<Option<String>, _>("user_id"),
-                "action": row.get::<String, _>("action"),
-                "old_state": row.get::<Option<String>, _>("old_state"),
-                "new_state": row.get::<Option<String>, _>("new_state"),
-                "details": row.get::<Value, _>("details"),
-                "ip_address": row.get::<Option<String>, _>("ip_address"),
-                "user_agent": row.get::<Option<String>, _>("user_agent"),
-                "session_id": row.get::<Option<String>, _>("session_id"),
+                "id": row.get::<String, &str>("id").to_string(),
+                "timestamp": row.get::<chrono::DateTime<chrono::Utc>, &str>("ts"),
+                "user_id": row.get::<Option<String>, &str>("user_id"),
+                "action": row.get::<String, &str>("action"),
+                "old_state": row.get::<Option<serde_json::Value>, &str>("old_state"),
+                "new_state": row.get::<Option<serde_json::Value>, &str>("new_state"),
+                "details": row.get::<Option<serde_json::Value>, &str>("details"),
+                "ip_address": row.get::<Option<String>, &str>("ip_address"),
+                "user_agent": row.get::<Option<String>, &str>("user_agent"),
+                "session_id": row.get::<Option<String>, &str>("session_id"),
             });
             results.push(audit_entry);
         }

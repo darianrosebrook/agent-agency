@@ -12,7 +12,6 @@ use serde::{Deserialize, Serialize};
 use tracing::{info, debug, warn, error};
 use reqwest::Client;
 use anyhow::{Context, Result};
-
 /// Real HTTP-based temporal analysis service
 #[derive(Debug)]
 pub struct HttpTemporalAnalysisService {
@@ -160,8 +159,9 @@ pub struct TrendAnalysis {
 }
 
 /// Change point in time series
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ChangePoint {
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub confidence: f32,
     pub change_type: String,
@@ -169,18 +169,20 @@ pub struct ChangePoint {
 }
 
 /// Prediction for future values
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct Prediction {
     pub metric: String,
     pub predicted_value: f32,
     pub confidence: f32,
+    #[schemars(with = "String")]
     pub prediction_time: DateTime<Utc>,
 }
 
 /// Temporal event for causality analysis
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct TemporalEvent {
     pub event_id: String,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub event_type: String,
     pub properties: HashMap<String, serde_json::Value>,
@@ -664,10 +666,11 @@ impl TemporalReasoningEngine {
 }
 
 /// Performance prediction result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct PerformancePrediction {
     pub predicted_score: f32,
     pub confidence: f32,
+    #[schemars(with = "String")]
     pub prediction_date: DateTime<Utc>,
     pub based_on_days: usize,
 }

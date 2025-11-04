@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -27,7 +28,7 @@ pub struct SelfPromptingRecovery {
 }
 
 /// Recovery configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RecoveryConfig {
     /// Enable automatic checkpointing
     pub auto_checkpoint: bool,
@@ -342,7 +343,7 @@ impl SelfPromptingRecovery {
 }
 
 /// Result of a change operation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ChangeResult {
     /// Change was successful
     Success,
@@ -355,7 +356,7 @@ pub enum ChangeResult {
 }
 
 /// Result of a checkpoint operation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CheckpointResult {
     /// Commit ID
     pub commit_id: String,
@@ -366,7 +367,7 @@ pub struct CheckpointResult {
 }
 
 /// Recovery statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RecoveryStats {
     /// Whether there's an active session
     pub active_session: bool,

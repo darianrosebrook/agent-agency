@@ -1,10 +1,12 @@
 //! Inverted index for keyword search
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 
 /// Inverted index for efficient keyword search
-#[derive(Debug)]
-pub struct InvertedIndex {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct InvertedIndexx {
     index: HashMap<String, Vec<Posting>>,
 }
 
@@ -42,15 +44,17 @@ impl InvertedIndex {
 }
 
 /// Posting in the inverted index
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct Posting {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, serde::Serialize, serde::Deserialize)]
+pub struct Postingg {
     pub document_id: usize,
     pub positions: Vec<usize>,
     pub term_frequency: u32,
 }
 
 /// Search result from inverted index
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, serde::Serialize, serde::Deserialize)]
 pub struct SearchResult {
     pub document_id: usize,
     pub score: f32,

@@ -12,7 +12,7 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 /// Execution strategy types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ExecutionStrategy {
     /// Execute all tasks in parallel
     Parallel {
@@ -404,8 +404,9 @@ impl ExecutionStrategyService for DefaultExecutionStrategyService {
 }
 
 /// Execution strategy errors
-#[derive(Debug, thiserror::Error)]
-pub enum StrategyError {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
+enum StrategyError {
     #[error("Invalid strategy configuration: {0}")]
     InvalidConfig(String),
 
@@ -429,5 +430,6 @@ impl Default for StrategyConfig {
         }
     }
 }
+
 
 

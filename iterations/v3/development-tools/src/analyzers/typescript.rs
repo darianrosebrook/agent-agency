@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 /// TypeScript-specific analyzer
 #[derive(Debug)]
-pub struct TypeScriptAnalyzer;
+pub struct TypeScriptAnalyzer ;
 
 impl TypeScriptAnalyzer {
     /// Create a new TypeScript analyzer

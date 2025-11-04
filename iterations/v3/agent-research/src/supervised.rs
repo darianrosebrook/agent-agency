@@ -1,11 +1,13 @@
 //! Supervised learning algorithms for reflexive learning
 
+use schemars::JsonSchema;
 use crate::reflexive_types::*;
 use ndarray::{Array1, Array2, ArrayView1, ArrayView2};
 use std::collections::HashMap;
 
 /// Simple linear regression implementation
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LinearRegressionModel {
     /// Learned weights (coefficients)
     weights: Array1<f64>,
@@ -108,7 +110,8 @@ impl LinearRegressionModel {
 }
 
 /// Ridge regression (L2 regularization)
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RidgeRegression {
     base_model: LinearRegressionModel,
     alpha: f64, // Regularization strength
@@ -138,7 +141,8 @@ impl RidgeRegression {
 }
 
 /// Logistic regression for binary classification
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LogisticRegression {
     weights: Array1<f64>,
     bias: f64,

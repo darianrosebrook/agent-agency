@@ -54,6 +54,7 @@ impl RealTimeConsensusCoordinator {
     }
 }
 
+#[async_trait]
 impl ConsensusCoordinator for RealTimeConsensusCoordinator {
     fn make_decision(&self, _context: DecisionContext) -> ConsensusDecision {
         ConsensusDecision {

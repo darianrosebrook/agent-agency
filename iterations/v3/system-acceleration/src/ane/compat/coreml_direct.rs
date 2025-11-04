@@ -4,6 +4,7 @@
 // This module provides a direct Core ML implementation using coreml-rs
 // instead of the Swift bridges to avoid linking issues.
 
+use schemars::JsonSchema;
 use crate::ane::ane_errors::{ANEError, Result};
 use std::path::Path;
 
@@ -65,7 +66,7 @@ impl MLFeatureProvider {
 }
 
 // Simple MLFeatureValue implementation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum MLFeatureValue {
     MultiArray(MLMultiArray),
     String(String),
@@ -74,7 +75,7 @@ pub enum MLFeatureValue {
 }
 
 // Simple MLMultiArray implementation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct MLMultiArray {
     pub data: Vec<f32>,
     pub shape: Vec<i32>,
@@ -102,13 +103,13 @@ impl MLMultiArray {
 }
 
 // Simple MLModelConfiguration implementation
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct MLModelConfiguration {
     pub compute_units: MLComputeUnits,
     pub allow_low_precision_accumulation_on_gpu: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub enum MLComputeUnits {
     All,
     CpuOnly,
@@ -132,8 +133,8 @@ impl Default for MLModelConfiguration {
 }
 
 // Simple model reference wrapper
-#[derive(Debug, Clone)]
-pub struct ModelRef(u64);
+#[derive(Debug, Clone, JsonSchema)]
+pub struct ModelRef (u64);
 
 impl ModelRef {
     pub fn new(handle: u64) -> Self {

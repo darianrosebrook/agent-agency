@@ -1,5 +1,6 @@
 //! Quality validation runner with parallel execution
 
+use schemars::JsonSchema;
 use crate::{ValidationResult, ValidationContext};
 use crate::error::*;
 use super::gates::*;
@@ -199,8 +200,9 @@ impl ValidationRunner {
 }
 
 /// Validation tiers for different quality requirements
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ValidationTier {
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Copy)]
+enum ValidationTier {
     /// Fast feedback - compilation only
     Minimal,
     /// Balanced - compilation, testing, linting, security
@@ -210,8 +212,9 @@ pub enum ValidationTier {
 }
 
 /// Comprehensive validation report
-#[derive(Debug, Clone)]
-pub struct ValidationReport {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ValidationReport {
     pub context: ValidationContext,
     pub summary: GateSummary,
     pub execution_time: std::time::Duration,

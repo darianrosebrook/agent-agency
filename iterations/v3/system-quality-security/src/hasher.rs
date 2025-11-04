@@ -2,6 +2,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use blake3;
 use hex;
@@ -12,8 +13,8 @@ use serde::{Deserialize, Serialize};
 use crate::integrity_types::{HashAlgorithm, TamperingIndicator};
 
 /// BLAKE3 digest wrapper for content addressing
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct Digest(pub [u8; 32]);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+pub struct Digest (pub [u8; 32]);
 
 impl Digest {
     /// Create a new digest from BLAKE3 hash
@@ -85,7 +86,7 @@ impl Default for StreamingHasher {
 }
 
 /// Merkle tree node for content addressing
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct MerkleNode {
     pub digest: Digest,
     pub children: Vec<Digest>,
@@ -124,7 +125,7 @@ impl MerkleNode {
 }
 
 /// Merkle tree for content addressing
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct MerkleTree {
     pub root: MerkleNode,
     pub leaves: Vec<Digest>,

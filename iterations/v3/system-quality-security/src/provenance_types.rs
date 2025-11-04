@@ -1,15 +1,19 @@
 //! Types for provenance service
 
+use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Provenance record for a CAWS verdict
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProvenanceRecord {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub verdict_id: Uuid,
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub decision: VerdictDecision,
     pub consensus_score: f32,
@@ -19,12 +23,14 @@ pub struct ProvenanceRecord {
     pub git_commit_hash: Option<String>,
     pub git_trailer: String,
     pub signature: String,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
 
 /// Verdict decision types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum VerdictDecision {
     Accept {
         confidence: f32,
@@ -45,7 +51,7 @@ pub enum VerdictDecision {
 }
 
 /// Required changes for modification verdicts
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RequiredChange {
     pub priority: Priority,
     pub description: String,
@@ -54,7 +60,7 @@ pub struct RequiredChange {
 }
 
 /// Priority levels for changes
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum Priority {
     Critical,
     High,
@@ -63,7 +69,7 @@ pub enum Priority {
 }
 
 /// Judge verdict provenance data
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct JudgeVerdictProvenance {
     pub judge_id: String,
     pub verdict: String,
@@ -76,7 +82,7 @@ pub struct JudgeVerdictProvenance {
 }
 
 /// CAWS compliance provenance
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CawsComplianceProvenance {
     pub is_compliant: bool,
     pub compliance_score: f32,
@@ -86,7 +92,7 @@ pub struct CawsComplianceProvenance {
 }
 
 /// Violation provenance data
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ViolationProvenance {
     pub rule: String,
     pub severity: ViolationSeverity,
@@ -97,7 +103,7 @@ pub struct ViolationProvenance {
 }
 
 /// Violation severity levels
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, JsonSchema)]
 pub enum ViolationSeverity {
     Critical,
     Major,
@@ -106,7 +112,7 @@ pub enum ViolationSeverity {
 }
 
 /// Waiver provenance data
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WaiverProvenance {
     pub id: String,
     pub reason: String,
@@ -114,11 +120,13 @@ pub struct WaiverProvenance {
     pub time_bounded: bool,
     pub expires_at: Option<DateTime<Utc>>,
     pub granted_by: String,
+    #[schemars(with = "String")]
+
     pub granted_at: DateTime<Utc>,
 }
 
 /// Budget adherence tracking
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BudgetAdherence {
     pub max_files: u32,
     pub actual_files: u32,
@@ -130,7 +138,7 @@ pub struct BudgetAdherence {
 }
 
 /// Claim verification provenance
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ClaimVerificationProvenance {
     pub claims_total: u32,
     pub claims_verified: u32,
@@ -143,8 +151,9 @@ pub struct ClaimVerificationProvenance {
 }
 
 /// Evidence item provenance
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceItemProvenance {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub claim_id: Option<String>,
     pub source: EvidenceSource,
@@ -154,7 +163,7 @@ pub struct EvidenceItemProvenance {
 }
 
 /// Evidence source types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum EvidenceSource {
     WebSearch,
     CodeAnalysis,
@@ -166,7 +175,7 @@ pub enum EvidenceSource {
 }
 
 /// Verification status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum VerificationStatus {
     Verified,
     Unverified,
@@ -176,7 +185,7 @@ pub enum VerificationStatus {
 }
 
 /// Provenance query filters
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProvenanceQuery {
     pub task_id: Option<Uuid>,
     pub verdict_id: Option<Uuid>,
@@ -197,7 +206,7 @@ pub struct ProvenanceQuery {
 }
 
 /// Verdict decision type filter
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum VerdictDecisionType {
     Accept,
     Reject,
@@ -206,14 +215,18 @@ pub enum VerdictDecisionType {
 }
 
 /// Time range for queries
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TimeRange {
+    #[schemars(with = "String")]
+
     pub start: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub end: DateTime<Utc>,
 }
 
 /// Compliance status filter
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ComplianceStatus {
     Compliant,
     NonCompliant,
@@ -221,18 +234,23 @@ pub enum ComplianceStatus {
 }
 
 /// Provenance chain for audit trails
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProvenanceChain {
+    #[schemars(with = "String")]
     pub chain_id: Uuid,
     pub entries: Vec<ProvenanceRecord>,
     pub integrity_verified: bool,
     pub chain_length: u32,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub last_updated: DateTime<Utc>,
 }
 
 /// Provenance statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProvenanceStats {
     pub total_records: u64,
     pub total_verdicts: u64,
@@ -246,7 +264,7 @@ pub struct ProvenanceStats {
 }
 
 /// Violation statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ViolationStats {
     pub rule: String,
     pub count: u64,
@@ -255,18 +273,21 @@ pub struct ViolationStats {
 }
 
 /// Provenance export format
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProvenanceExport {
+    #[schemars(with = "String")]
     pub export_id: Uuid,
     pub format: ExportFormat,
     pub records: Vec<ProvenanceRecord>,
     pub metadata: ExportMetadata,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
     pub created_by: String,
 }
 
 /// Export formats
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ExportFormat {
     Json,
     Csv,
@@ -275,7 +296,7 @@ pub enum ExportFormat {
 }
 
 /// Export metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExportMetadata {
     pub total_records: u64,
     pub time_range: TimeRange,
@@ -285,17 +306,20 @@ pub struct ExportMetadata {
 }
 
 /// Provenance integrity check result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct IntegrityCheckResult {
     pub is_valid: bool,
     pub issues: Vec<IntegrityIssue>,
     pub checked_records: u64,
+    #[schemars(with = "String")]
+
     pub checked_at: DateTime<Utc>,
 }
 
 /// Integrity issue types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct IntegrityIssue {
+    #[schemars(with = "String")]
     pub record_id: Uuid,
     pub issue_type: IntegrityIssueType,
     pub description: String,
@@ -303,7 +327,7 @@ pub struct IntegrityIssue {
 }
 
 /// Integrity issue types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum IntegrityIssueType {
     SignatureInvalid,
     GitCommitMissing,
@@ -314,7 +338,7 @@ pub enum IntegrityIssueType {
 }
 
 /// Integrity issue severity
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum IntegritySeverity {
     Critical,
     Major,
@@ -519,7 +543,7 @@ mod tests {
 }
 
 /// Types of provenance filters
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub enum FilterType {
     TimeRange,
     EntityType,
@@ -532,7 +556,7 @@ pub enum FilterType {
 }
 
 /// Filter operators for provenance queries
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub enum FilterOperator {
     Equals,
     In,
@@ -540,7 +564,7 @@ pub enum FilterOperator {
 }
 
 /// Individual filter condition for provenance queries
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProvenanceFilter {
     pub filter_type: FilterType,
     pub operator: FilterOperator,

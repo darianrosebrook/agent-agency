@@ -1,9 +1,10 @@
 //! Common types for evidence collection and validation
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Processing context for evidence collection operations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProcessingContext {
     /// Source document or content identifier
     pub source_id: String,
@@ -14,7 +15,7 @@ pub struct ProcessingContext {
 }
 
 /// Processing configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProcessingConfig {
     /// Maximum claims to extract
     pub max_claims: usize,
@@ -27,7 +28,7 @@ pub struct ProcessingConfig {
 }
 
 /// Named entity extracted from content
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Entity {
     /// Entity type (PERSON, ORGANIZATION, LOCATION, etc.)
     pub entity_type: String,
@@ -40,7 +41,7 @@ pub struct Entity {
 }
 
 /// Result of claim extraction
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ClaimExtractionResult {
     /// Extracted claims
     pub claims: Vec<AtomicClaim>,
@@ -49,7 +50,7 @@ pub struct ClaimExtractionResult {
 }
 
 /// Metadata about the extraction process
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExtractionMetadata {
     /// Total processing time
     pub processing_time_ms: u64,
@@ -62,7 +63,7 @@ pub struct ExtractionMetadata {
 }
 
 /// Atomic claim that can be verified
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AtomicClaim {
     /// Unique claim identifier
     pub id: String,
@@ -81,7 +82,7 @@ pub struct AtomicClaim {
 }
 
 /// Types of claims that can be extracted
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ClaimType {
     /// Factual claim (verifiable truth)
     Factual,
@@ -98,7 +99,7 @@ pub enum ClaimType {
 }
 
 /// Verification result for a claim
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct VerificationResult {
     /// Claim being verified
     pub claim: AtomicClaim,
@@ -113,7 +114,7 @@ pub struct VerificationResult {
 }
 
 /// Status of claim verification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum VerificationStatus {
     /// Claim verified as true
     Verified,
@@ -126,7 +127,7 @@ pub enum VerificationStatus {
 }
 
 /// Source credibility assessment
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SourceCredibility {
     /// Overall credibility score (0.0-1.0)
     pub overall_score: f64,
@@ -145,7 +146,7 @@ pub struct SourceCredibility {
 }
 
 /// Evidence collection result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceResult {
     /// Collection of verified claims
     pub claims: Vec<AtomicClaim>,
@@ -160,7 +161,7 @@ pub struct EvidenceResult {
 }
 
 /// Metadata about evidence collection
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EvidenceMetadata {
     /// Processing start time
     pub start_time: chrono::DateTime<chrono::Utc>,

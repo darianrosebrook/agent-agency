@@ -235,8 +235,8 @@ impl FromContracts<ContractsWorkingSpec> for WorkingSpec {
         use agent_agency_contracts::planning_io::ChangeBudget as ContractsChangeBudget;
         let change_budget = if let Some(budget_limits) = &contracts.constraints.budget_limits {
             ContractsChangeBudget {
-                max_files: budget_limits.max_files.unwrap_or(25),
-                max_loc: budget_limits.max_loc.unwrap_or(1000),
+                max_files: budget_limits.max_files.unwrap_or(25) as usize,
+                max_loc: budget_limits.max_loc.unwrap_or(1000) as usize,
                 max_migrations: 0,
                 allow_breaking_changes: false,
                 allow_new_dependencies: false,

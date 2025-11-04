@@ -1,7 +1,6 @@
 //! Error types for the observability crate
 
 use std::fmt;
-
 /// Main error type for observability operations
 #[derive(Debug, thiserror::Error)]
 pub enum ObservabilityError {

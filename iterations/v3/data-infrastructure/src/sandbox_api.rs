@@ -4,6 +4,7 @@
  * REST API endpoints for sandbox operations with security controls and audit logging.
  */
 
+use schemars::JsonSchema;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -15,11 +16,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::AppState;
 use crate::audit::extract_audit_context;
-use system_quality_security::{Sandbox, SandboxMode, ResourceLimits, SandboxContext, ExecutionRequest, SandboxResult};
+use system_quality_security::{Sandbox, SandboxMode, SandboxContext, ExecutionRequest};
 use system_quality_security::sandbox::SandboxStatus;
 
 /// Request to create and execute in a sandbox
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct ExecuteRequest {
     pub command: Vec<String>,
     pub sandbox_mode: Option<SandboxMode>,
@@ -31,8 +32,8 @@ pub struct ExecuteRequest {
 }
 
 /// API response for successful operations
-#[derive(Debug, Serialize)]
-pub struct ApiResponse<T> {
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct ApiResponse <T> {
     pub success: bool,
     pub data: Option<T>,
     pub error: Option<String>,

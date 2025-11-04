@@ -6,17 +6,18 @@
 pub mod git_workspace;
 pub mod temp_workspace;
 
+use schemars::JsonSchema;
 use std::path::Path;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use chrono::{DateTime, Utc};
 
 /// Unique identifier for a changeset operation
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct ChangeSetId(pub String);
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+pub struct ChangeSetId (pub String);
 
 /// A single file patch operation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Patch {
     /// Relative path to the file
     pub path: String,
@@ -27,7 +28,7 @@ pub struct Patch {
 }
 
 /// A single hunk within a patch
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Hunk {
     /// Line number where old content starts
     pub old_start: u32,
@@ -42,21 +43,21 @@ pub struct Hunk {
 }
 
 /// A complete changeset containing multiple patches
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ChangeSet {
     /// All patches to apply atomically
     pub patches: Vec<Patch>,
 }
 
 /// Allow-list for file operations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AllowList {
     /// Glob patterns for allowed paths (e.g., ["src/**/*.rs", "tests/**/*.rs"])
     pub globs: Vec<String>,
 }
 
 /// Budget constraints for operations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Budgets {
     /// Maximum number of files that can be modified
     pub max_files: usize,
@@ -65,7 +66,7 @@ pub struct Budgets {
 }
 
 /// Types of budget violations
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ViolationType {
     TooManyFiles,
     TooManyLines,
@@ -73,7 +74,7 @@ pub enum ViolationType {
 }
 
 /// Severity levels for violations
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ViolationSeverity {
     Low,      // Minor exceedance, auto-approvable
     Medium,   // Significant exceedance, requires review
@@ -82,7 +83,7 @@ pub enum ViolationSeverity {
 }
 
 /// Individual budget violation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BudgetViolation {
     pub violation_type: ViolationType,
     pub actual_value: usize,
@@ -92,9 +93,11 @@ pub struct BudgetViolation {
 }
 
 /// Waiver request for budget exceedances
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WaiverRequest {
     pub id: String,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub changeset_fingerprint: String,
     pub budget_violations: Vec<BudgetViolation>,
@@ -107,7 +110,7 @@ pub struct WaiverRequest {
 }
 
 /// Risk assessment for waiver requests
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum RiskLevel {
     Low,      // Safe to auto-approve
     Medium,   // Requires justification
@@ -137,7 +140,7 @@ pub trait Workspace: Send + Sync {
 }
 
 /// Errors that can occur during file operations
-#[derive(Error, Debug)]
+#[derive(Error, Debug, JsonSchema)]
 pub enum FileOpsError {
     #[error("File operation blocked: {0}")]
     Blocked(String),
@@ -146,9 +149,11 @@ pub enum FileOpsError {
     Validation(String),
 
     #[error("I/O error: {0}")]
+    #[schemars(skip)]
     Io(#[from] std::io::Error),
 
     #[error("Serialization error: {0}")]
+    #[schemars(skip)]
     Serde(#[from] serde_json::Error),
 
     #[error("Path error: {0}")]

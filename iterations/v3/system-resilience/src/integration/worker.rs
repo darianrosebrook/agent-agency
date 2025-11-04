@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -26,7 +27,7 @@ pub struct WorkerRecovery {
 }
 
 /// Worker recovery configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerRecoveryConfig {
     /// Enable restore verification
     pub enable_verification: bool,
@@ -509,7 +510,7 @@ impl WorkerRecovery {
 }
 
 /// Restore preview information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RestorePreview {
     /// Total number of files
     pub total_files: usize,

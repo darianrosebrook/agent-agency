@@ -2,12 +2,13 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use crate::signer::SigningAlgorithm;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Security configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SecurityConfig {
     /// Authentication configuration
     pub authentication: AuthenticationConfig,
@@ -24,7 +25,7 @@ pub struct SecurityConfig {
 }
 
 /// Authentication configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AuthenticationConfig {
     /// Require multi-factor authentication
     pub mfa_required: bool,
@@ -54,7 +55,7 @@ impl Default for AuthenticationConfig {
 }
 
 /// MFA method types
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub enum MfaMethod {
     Totp,
     HardwareToken,
@@ -63,7 +64,7 @@ pub enum MfaMethod {
 }
 
 /// Password policy configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PasswordPolicy {
     /// Minimum password length
     pub min_length: usize,
@@ -90,7 +91,7 @@ impl Default for PasswordPolicy {
 }
 
 /// Input validation configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct InputValidationConfig {
     /// Enable schema validation
     pub schema_validation: bool,
@@ -114,7 +115,7 @@ impl Default for InputValidationConfig {
 }
 
 /// Rate limit configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RateLimitConfig {
     /// Requests per minute
     pub requests_per_minute: u32,
@@ -132,7 +133,7 @@ impl Default for RateLimitConfig {
 }
 
 /// Content scanning configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContentScanningConfig {
     /// Enable XSS detection
     pub xss_detection: bool,
@@ -156,7 +157,7 @@ impl Default for ContentScanningConfig {
 }
 
 /// Integrity configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct IntegrityConfig {
     /// Enable provenance tracking
     pub provenance_tracking: bool,
@@ -180,7 +181,7 @@ impl Default for IntegrityConfig {
 }
 
 /// Signing configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SigningConfig {
     /// Signing algorithm
     pub algorithm: SigningAlgorithm,
@@ -198,7 +199,7 @@ impl Default for SigningConfig {
 }
 
 /// Quality gates configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityGatesConfig {
     /// Minimum test coverage percentage
     pub test_coverage_minimum: f64,
@@ -225,7 +226,7 @@ impl Default for QualityGatesConfig {
 }
 
 /// Auditing configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AuditingConfig {
     /// Enable real-time monitoring
     pub real_time_monitoring: bool,
@@ -249,7 +250,7 @@ impl Default for AuditingConfig {
 }
 
 /// Alert configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AlertConfig {
     /// Enable email alerts
     pub email_alerts: bool,
@@ -270,7 +271,7 @@ impl Default for AlertConfig {
 }
 
 /// Secret management configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SecretManagementConfig {
     /// Encryption algorithm
     pub encryption_algorithm: EncryptionAlgorithm,
@@ -294,7 +295,7 @@ impl Default for SecretManagementConfig {
 }
 
 /// Encryption algorithm types
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub enum EncryptionAlgorithm {
     Aes256Gcm,
     ChaCha20Poly1305,
@@ -315,7 +316,7 @@ impl Default for SecurityConfig {
 }
 
 /// Quality configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityConfig {
     /// Test coverage requirements
     pub test_coverage: TestCoverageConfig,
@@ -339,7 +340,7 @@ impl Default for QualityConfig {
 }
 
 /// Test coverage configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TestCoverageConfig {
     /// Minimum line coverage percentage
     pub min_line_coverage: f64,
@@ -363,7 +364,7 @@ impl Default for TestCoverageConfig {
 }
 
 /// Code quality configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CodeQualityConfig {
     /// Maximum cyclomatic complexity
     pub max_cyclomatic_complexity: u32,
@@ -390,7 +391,7 @@ impl Default for CodeQualityConfig {
 }
 
 /// Documentation configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DocumentationConfig {
     /// Require README for all modules
     pub require_module_readme: bool,
@@ -414,7 +415,7 @@ impl Default for DocumentationConfig {
 }
 
 /// Documentation quality standards
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DocumentationQualityStandards {
     /// Prohibit marketing language
     pub prohibit_marketing_language: bool,
@@ -435,7 +436,7 @@ impl Default for DocumentationQualityStandards {
 }
 
 /// Performance configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceConfig {
     /// Maximum API response time in milliseconds (P95)
     pub max_api_response_time_ms: u64,

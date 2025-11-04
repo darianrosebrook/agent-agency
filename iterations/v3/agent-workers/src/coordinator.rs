@@ -1,5 +1,6 @@
 //! Parallel coordinator - main orchestrator for parallel task execution
 
+use schemars::JsonSchema;
 use crate::parallel_types::{ComplexTask, SubTask, TaskId, SubTaskId, WorkerId, TaskResult, WorkerResult, ParallelResult};
 use crate::error::{ParallelError, CommunicationError, ValidationError, ProgressError};
 use crate::decomposition::{DecompositionEngine};
@@ -16,7 +17,7 @@ use crate::learning::{
     OptimalConfig, ConfigurationRecommendations, OptimizationEvent, TaskPattern
 };
 use crate::worker_types::{WorkerSpecialty, TaskDefinition, TaskStatus, ExecutionOutcome, LearningMode, Priority, WorkerBreakdown, QualityRequirements, Progress, ValidationContext};
-use agent_agency_contracts::task_executor::{TaskExecutor, TaskSpec, TaskRequirements, TaskContext, TaskScope, ExecutionStatus};
+use agent_agency_contracts::task_executor::{TaskExecutor, TaskSpec, ExecutionStatus};
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -57,42 +58,28 @@ impl OrchestratorHandle for RealOrchestratorHandle {
         let start_time = std::time::Instant::now();
         
         // Convert ComplexTask to TaskSpec for the executor
+        let mut context = HashMap::new();
+        context.insert("task_id".to_string(), serde_json::Value::String(task.id.0.to_string()));
+        context.insert("domains".to_string(), serde_json::json!(task.scope.domains));
+        context.insert("files_affected".to_string(), serde_json::json!(task.scope.files_affected));
+        context.insert("complexity_score".to_string(), serde_json::json!(task.complexity_score));
+        context.insert("priority".to_string(), serde_json::json!(task.priority));
+        context.insert("metadata".to_string(), serde_json::json!(task.metadata));
+
         let task_spec = TaskSpec {
             id: task.id.0,
             title: task.title.clone(),
             description: task.description.clone(),
-            requirements: TaskRequirements {
-                required_languages: task.scope.domains.clone(),
-                required_frameworks: vec![],
-                required_domains: task.scope.domains.clone(),
-                min_quality_score: task.quality_requirements.min_coverage.unwrap_or(0.8) as f32,
-                min_caws_awareness: 0.7,
-                max_execution_time_ms: Some(300000), // 5 minutes
-                preferred_worker_type: None,
-                context_length_estimate: 4000,
+            priority: match task.priority {
+                Priority::Low => agent_agency_contracts::types::planning::TaskPriority::Low,
+                Priority::Medium => agent_agency_contracts::types::planning::TaskPriority::Medium,
+                Priority::High => agent_agency_contracts::types::planning::TaskPriority::High,
+                Priority::Critical => agent_agency_contracts::types::planning::TaskPriority::Critical,
             },
-            context: TaskContext {
-                task_id: task.id.0,
-                worker_id: uuid::Uuid::new_v4(),
-                start_time: chrono::Utc::now(),
-                timeout_ms: 300000,
-                retry_count: 0,
-                max_retries: 3,
-                metadata: task.metadata.clone(),
-            },
-            created_at: task.created_at,
-            deadline: task.deadline,
-            risk_tier: match task.priority {
-                Priority::Low => 3,
-                Priority::Medium => 2,
-                Priority::High => 1,
-                Priority::Critical => 1,
-            },
-            scope: TaskScope {
-                domains: task.scope.domains.clone(),
-                files_affected: task.scope.files_affected.clone(),
-                max_loc: task.scope.max_loc,
-            },
+            required_capabilities: task.scope.domains.clone(),
+            context,
+            working_spec_id: None,
+            timeout_seconds: Some(300), // 5 minutes
         };
         
         // Execute the task using the real TaskExecutor
@@ -111,6 +98,7 @@ impl OrchestratorHandle for RealOrchestratorHandle {
             subtasks_completed: 1,
             total_subtasks: 1,
             execution_time,
+            execution_time_ms: execution_time.as_millis() as u64,
             summary: if execution_result.success {
                 format!("Sequential execution completed successfully: {}", execution_result.output)
             } else {
@@ -126,7 +114,10 @@ impl OrchestratorHandle for RealOrchestratorHandle {
                 errors: execution_result.errors,
             }],
             quality_scores: std::collections::HashMap::new(),
-            errors: execution_result.errors,
+            errors: execution_result.errors.clone(),
+            error_message: execution_result.errors.first().cloned(),
+            tool_used: None, // Sequential execution doesn't specify a tool
+            status: if execution_result.success { TaskStatus::Completed } else { TaskStatus::Failed },
             metadata: execution_result.metadata,
         };
         
@@ -157,11 +148,12 @@ pub struct ParallelCoordinator {
     council_bridge: Arc<CouncilLearningBridge>,
     learning_persistence: Arc<dyn LearningPersistence>,
     fairness_monitor: Arc<RealFairnessMonitor>,
-    queue_health_monitor: Arc<RealQueueHealthMonitor>,
-    failure_taxonomy: Arc<RealFailureTaxonomy>,
+    queue_health_monitor: Arc<crate::learning::queue_health_monitor::QueueHealthMonitor>,
+    failure_taxonomy: Arc<crate::learning::failure_taxonomy::FailureTaxonomy>,
 }
 
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParallelCoordinatorConfig {
     pub enabled: bool,
     pub max_concurrent_workers: usize,
@@ -198,16 +190,20 @@ impl ParallelCoordinator {
 
         // Initialize learning components with real implementations
         let db_client = Arc::new(data_infrastructure::client::DatabaseClient::new());
+        let pattern_analyzer = Arc::new(PatternAnalyzer::new(5, 0.7)); // min_pattern_frequency=5, confidence_threshold=0.7
         let fairness_monitor = Arc::new(RealFairnessMonitor::new(db_client.clone()));
-        let adaptive_selector = Arc::new(RealAdaptiveSelector::new(db_client.clone(), pattern_analyzer.clone()));
-        let config_optimizer = Arc::new(RealConfigOptimizer::new(db_client.clone()));
-        let queue_health_monitor = Arc::new(RealQueueHealthMonitor::new(db_client.clone()));
-        let failure_taxonomy = Arc::new(RealFailureTaxonomy::new(db_client.clone()));
-        let learning_persistence = Arc::new(RealLearningPersistence::new(db_client.clone()));
+        let adaptive_selector = Arc::new(AdaptiveWorkerSelector::new(
+            crate::learning::adaptive_selector::WorkerSelectionStrategy::PerformanceBased,
+            fairness_monitor.clone(),
+            pattern_analyzer.clone(),
+        ));
+        let config_optimizer = Arc::new(ConfigurationOptimizer::new(pattern_analyzer.clone()));
+        let queue_health_monitor = Arc::new(crate::learning::queue_health_monitor::QueueHealthMonitor::new());
+        let failure_taxonomy = Arc::new(crate::learning::failure_taxonomy::FailureTaxonomy::new());
+        let learning_persistence = Arc::new(crate::learning::learning_persistence::InMemoryLearningPersistence::new());
 
         // Initialize other learning components
         let metrics_collector = Arc::new(ParallelWorkerMetricsCollector::new());
-        let pattern_analyzer = Arc::new(PatternAnalyzer::new());
         let council_bridge = Arc::new(CouncilLearningBridge::new());
 
         // Initialize bridges

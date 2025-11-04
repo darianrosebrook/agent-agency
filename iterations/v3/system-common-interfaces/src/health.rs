@@ -34,11 +34,12 @@ pub trait HealthCheck: Send + Sync {
 }
 
 /// Result of a health check execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct HealthCheckResult {
     pub status: HealthStatus,
     pub message: Option<String>,
     pub details: HashMap<String, serde_json::Value>,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub duration_ms: u64,
 }
@@ -84,17 +85,18 @@ pub trait HealthCheckExecutor: Send + Sync {
 }
 
 /// Comprehensive health report
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct HealthReport {
     pub overall_status: HealthStatus,
     pub summary: HealthSummary,
     pub results: Vec<HealthCheckResult>,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub duration_ms: u64,
 }
 
 /// Health report summary
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct HealthSummary {
     pub total_checks: usize,
     pub healthy_checks: usize,
@@ -123,12 +125,14 @@ pub trait HealthCheckScheduler: Send + Sync {
 }
 
 /// Status of a scheduled health check
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ScheduledCheckStatus {
     pub schedule_id: String,
     pub check_name: String,
     pub interval_ms: u64,
+    #[schemars(with = "String")]
     pub next_run: DateTime<Utc>,
+    #[schemars(with = "Option<String>")]
     pub last_run: Option<DateTime<Utc>>,
     pub last_result: Option<HealthCheckResult>,
     pub consecutive_failures: u32,

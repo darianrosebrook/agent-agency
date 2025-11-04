@@ -1,4 +1,5 @@
 use crate::policy_types::*;
+use schemars::JsonSchema;
 use anyhow::{Context, Result};
 use chrono::Utc;
 use flate2::read::GzDecoder;
@@ -805,7 +806,7 @@ impl SecurityAuditor {
 }
 
 /// Audit statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AuditStats {
     /// Total number of audit events
     pub total_events: u64,
@@ -820,8 +821,8 @@ pub struct AuditStats {
 }
 
 /// Severity analysis engine turns raw audit events into actionable insights.
-#[derive(Debug, Default)]
-pub struct SecurityAnalysisEngine;
+#[derive(Debug, Default, JsonSchema)]
+pub struct SecurityAnalysisEngine ;
 
 impl SecurityAnalysisEngine {
     /// Analyze audit entries to produce aggregated metrics and severity scoring.

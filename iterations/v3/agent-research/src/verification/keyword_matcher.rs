@@ -9,8 +9,9 @@ use anyhow::Result;
 use crate::verification::types::*;
 
 /// Keyword matcher for text search
-#[derive(Debug)]
-pub struct KeywordMatcher;
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct KeywordMatcher ;
 
 impl KeywordMatcher {
     /// Search for keywords in content

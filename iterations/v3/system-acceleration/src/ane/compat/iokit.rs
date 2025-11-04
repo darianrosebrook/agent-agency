@@ -3,6 +3,7 @@
 //! This module provides optional IOKit integration for hardware telemetry
 //! including temperature, power consumption, and device status monitoring.
 
+use schemars::JsonSchema;
 use crate::ane::ane_errors::{ANEError, Result};
 use tracing::{info, warn};
 
@@ -372,7 +373,7 @@ pub mod iokit {
 }
 
 /// Thermal status information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ThermalStatus {
     pub system_temperature: f32,
     pub ane_temperature: Option<f32>,
@@ -383,7 +384,7 @@ pub struct ThermalStatus {
 }
 
 /// Power status information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct PowerStatus {
     pub system_power: f32,
     pub ane_power: f32,
@@ -391,7 +392,7 @@ pub struct PowerStatus {
 }
 
 /// IOKit device information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct DeviceInfo {
     pub device_name: String,
     pub device_type: String,
@@ -429,7 +430,7 @@ pub fn get_thermal_capabilities() -> ThermalCapabilities {
 }
 
 /// Thermal management capabilities
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ThermalCapabilities {
     pub temperature_monitoring: bool,
     pub power_monitoring: bool,

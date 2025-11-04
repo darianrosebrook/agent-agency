@@ -216,7 +216,7 @@ pub type InterfaceContract = contracts::InterfaceContract;
 pub type ValidationResult = contracts::ValidationResult;
 
 /// Interface configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct InterfaceConfig {
     pub cli_config: CliConfig,
     pub api_config: ApiConfig,
@@ -225,7 +225,7 @@ pub struct InterfaceConfig {
 }
 
 /// CLI configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct CliConfig {
     pub interactive_mode: bool,
     pub command_timeout_seconds: u64,
@@ -233,7 +233,7 @@ pub struct CliConfig {
 }
 
 /// API configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ApiConfig {
     pub host: String,
     pub port: u16,
@@ -242,7 +242,7 @@ pub struct ApiConfig {
 }
 
 /// WebSocket configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct WebSocketConfig {
     pub max_connections: usize,
     pub heartbeat_interval_seconds: u64,
@@ -250,7 +250,7 @@ pub struct WebSocketConfig {
 }
 
 /// Contract configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ContractConfig {
     pub strict_validation: bool,
     pub schema_cache_size: usize,
@@ -258,7 +258,7 @@ pub struct ContractConfig {
 }
 
 /// Interface errors
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum InterfaceError {
     #[error("CLI error: {0}")]
     CliError(String),

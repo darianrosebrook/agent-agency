@@ -7,13 +7,13 @@ use crate::memory_types::{MemoryId, AgentExperience};
 use crate::MemoryResult;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-
 /// Provenance record for memory operations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ProvenanceRecord {
     pub id: String,
     pub memory_id: MemoryId,
     pub operation: ProvenanceOperation,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub agent_id: String,
     pub context: ProvenanceContext,

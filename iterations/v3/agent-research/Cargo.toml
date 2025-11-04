@@ -19,6 +19,7 @@ chrono.workspace = true
 anyhow.workspace = true
 sqlx.workspace = true
 ndarray = { workspace = true }
+schemars = { version = "0.8", features = ["derive"] }
 
 # Research-specific dependencies (from research)
 reqwest = { version = "0.11", features = ["json", "stream"] }

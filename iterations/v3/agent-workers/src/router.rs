@@ -2,13 +2,15 @@
 //!
 //! Routes tasks to appropriate workers based on capabilities, load, and performance.
 
+use schemars::JsonSchema;
 use crate::worker_errors::WorkerError;
 use crate::specialized_workers::SpecializedWorker;
 use std::collections::HashMap;
 
 /// Task router configuration
-#[derive(Debug, Clone)]
-pub struct RouterConfig {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct RouterConfig {
     pub capability_matching_threshold: f32,
     pub load_balancing_enabled: bool,
 }

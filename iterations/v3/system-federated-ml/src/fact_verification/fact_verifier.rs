@@ -3,6 +3,7 @@
 //! Verifies claims against multiple sources and evidence types
 //! to determine their factual accuracy.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
@@ -10,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::evidence_types::*;
 
 /// Verification method for different claim types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum VerificationMethod {
     /// Cross-reference with multiple sources
     SourceCrossReference,
@@ -23,7 +24,7 @@ pub enum VerificationMethod {
 }
 
 /// Priority level for verification
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub enum VerificationPriority {
     /// High priority - critical claims
     High,

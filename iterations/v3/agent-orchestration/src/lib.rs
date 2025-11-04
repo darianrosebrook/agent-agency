@@ -20,6 +20,7 @@
 #[macro_use]
 extern crate tracing;
 
+use schemars::JsonSchema;
 use std::sync::Arc;
 use uuid::Uuid;
 use crate::autonomous_executor::{OrchestrationProvenanceEmitter, MockCawsRuntimeValidator, MockVerdictWriter};
@@ -268,8 +269,10 @@ pub use types::DiffStats;
 ///
 /// Unified service that combines orchestration execution capabilities
 /// with council decision-making and arbitration systems.
-#[derive(Debug)]
-pub struct AgentOrchestrationService {
+#[cfg(feature = "api-server")]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct AgentOrchestrationService {
     /// Council for decision making and arbitration
     // pub council: council::Council,
     /// Multimodal orchestrator for task execution
@@ -280,6 +283,7 @@ pub struct AgentOrchestrationService {
     pub audit_trail: audit_trail::AuditTrailManager,
 }
 
+#[cfg(feature = "api-server")]
 impl AgentOrchestrationService {
     /// Create a new Agent Orchestration Service
     pub async fn new(config: OrchestrationConfig) -> Result<Self, OrchestrationError> {
@@ -340,6 +344,7 @@ impl AgentOrchestrationService {
     /// 2. Task orchestration and execution
     /// 3. Audit trail recording
     /// 4. Quality assurance and monitoring
+    #[cfg(feature = "api-server")]
     pub async fn execute_orchestrated_task(
         &self,
         task: OrchestratedTask,
@@ -404,6 +409,7 @@ impl AgentOrchestrationService {
     }
 
     /// Convert OrchestratedTask to TaskDescriptor
+    #[cfg(feature = "api-server")]
     fn to_task_descriptor(&self, task: &OrchestratedTask) -> agent_agency_contracts::TaskDescriptor {
         agent_agency_contracts::TaskDescriptor {
             task_id: Uuid::parse_str(&task.id).unwrap_or_else(|_| Uuid::new_v4()),
@@ -469,8 +475,10 @@ impl AgentOrchestrationService {
 }
 
 /// Configuration for the Agent Orchestration Service
-#[derive(Debug, Clone)]
-pub struct OrchestrationConfig {
+#[cfg(feature = "api-server")]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct OrchestrationConfig {
     pub council_config: council::CouncilConfig,
     pub orchestrator_config: crate::types::OrchestratorConfig,
     pub executor_config: autonomous_executor::AutonomousExecutorConfig,
@@ -478,8 +486,10 @@ pub struct OrchestrationConfig {
 }
 
 /// Orchestrated task input
-#[derive(Debug, Clone)]
-pub struct OrchestratedTask {
+#[cfg(feature = "api-server")]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct OrchestratedTask {
     pub id: String,
     pub description: String,
     pub requirements: Vec<String>,
@@ -488,23 +498,28 @@ pub struct OrchestratedTask {
 
 
 /// Orchestration execution result
-#[derive(Debug, Clone)]
-pub struct OrchestrationResult {
+#[cfg(feature = "api-server")]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct OrchestrationResult {
     pub council_decision: verdict_aggregation::CouncilDecision,
     pub execution_result: multimodal_orchestration::ProcessingResult,
     pub audit_id: Option<String>,
 }
 
 /// Unified orchestration error type
-#[derive(Debug, thiserror::Error)]
-pub enum OrchestrationError {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
+enum OrchestrationError {
     #[error("Council rejected task: {0}")]
     CouncilRejection(String),
 
     #[error("Orchestration execution failed: {0}")]
+    #[schemars(with = "String")]
     ExecutionError(#[from] Box<dyn std::error::Error + Send + Sync>),
 
     #[error("Council error: {0}")]
+    #[schemars(with = "String")]
     CouncilError(#[from] council_errors::CouncilError),
 
     #[error("Circuit breaker error: {0}")]
@@ -514,8 +529,10 @@ pub enum OrchestrationError {
     AuditError(String),
 
     #[error("IO error: {0}")]
+    #[schemars(with = "String")]
     IoError(#[from] std::io::Error),
 
     #[error("Anyhow error: {0}")]
+    #[schemars(with = "String")]
     AnyhowError(#[from] anyhow::Error),
 }

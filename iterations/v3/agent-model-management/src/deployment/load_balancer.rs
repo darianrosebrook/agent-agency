@@ -2,7 +2,6 @@
 
 use crate::ModelManagementError;
 use std::collections::HashMap;
-
 /// Simple load balancer for inference requests
 #[derive(Debug)]
 pub struct LoadBalancer {

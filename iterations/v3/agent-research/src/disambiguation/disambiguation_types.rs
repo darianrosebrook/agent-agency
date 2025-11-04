@@ -1,12 +1,14 @@
 //! Shared types and traits for disambiguation module
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use async_trait::async_trait;
 use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Programming languages supported by the system
-#[derive(Debug, Clone, PartialEq, Eq)]
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum Language {
     Rust,
     TypeScript,
@@ -16,7 +18,8 @@ pub enum Language {
 }
 
 /// Result of disambiguation process
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DisambiguationResult {
     pub original_sentence: String,
     pub disambiguated_sentence: String,
@@ -25,16 +28,22 @@ pub struct DisambiguationResult {
 }
 
 /// Represents an ambiguity found in text
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, serde::Serialize, serde::Deserialize)]
 pub struct Ambiguity {
+    pub text: String,
     pub ambiguity_type: AmbiguityType,
-    pub position: (usize, usize),
-    pub original_text: String,
+    pub start_pos: usize,
+    pub end_pos: usize,
+    pub position: (usize, usize),  // (start_pos, end_pos) tuple
+    pub original_text: String,  // Alias for text
     pub possible_resolutions: Vec<String>,
     pub confidence: f64,
+    pub context: Option<String>,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, serde::Serialize, serde::Deserialize)]
 pub enum AmbiguityType {
     Pronoun,
     TechnicalTerm,
@@ -44,14 +53,16 @@ pub enum AmbiguityType {
 }
 
 /// Ambiguity that cannot be resolved with available context
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, serde::Serialize, serde::Deserialize)]
 pub struct UnresolvableAmbiguity {
     pub ambiguity: Ambiguity,
     pub reason: UnresolvableReason,
     pub suggested_context: Vec<String>,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, serde::Serialize, serde::Deserialize)]
 pub enum UnresolvableReason {
     InsufficientContext,
     MultipleValidInterpretations,
@@ -60,7 +71,8 @@ pub enum UnresolvableReason {
 }
 
 /// Information about a pronoun referent
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ReferentInfo {
     pub entity: String,
     pub confidence: f64,
@@ -68,7 +80,8 @@ pub struct ReferentInfo {
 }
 
 /// Entity type classification
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub enum EntityType {
     Person,
     Organization,
@@ -80,7 +93,8 @@ pub enum EntityType {
 }
 
 /// Named entity with standardized field names
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct NamedEntity {
     pub text: String,
     pub entity_type: EntityType,
@@ -91,7 +105,8 @@ pub struct NamedEntity {
 }
 
 /// Entity match result for caching
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EntityMatch {
     pub entity: NamedEntity,
     pub confidence: f64,
@@ -100,8 +115,10 @@ pub struct EntityMatch {
 }
 
 /// Knowledge base search result
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct KnowledgeBaseResult {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub canonical_name: String,
     pub source: KbSource, // Renamed to avoid collision
@@ -109,7 +126,8 @@ pub struct KnowledgeBaseResult {
 }
 
 /// Knowledge source types (renamed from KnowledgeSource to avoid collision)
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum KbSource {
     Wikidata,
     WordNet,
@@ -117,8 +135,10 @@ pub enum KbSource {
 }
 
 /// Related entity information
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RelatedEntity {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub canonical_name: String,
     pub relationship_type: String,
@@ -126,22 +146,26 @@ pub struct RelatedEntity {
 }
 
 /// Analysis helpers
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct HistoricalEntityAnalysis {
+    #[schemars(with = "String")]
     pub entity_id: Uuid,
     pub historical_context: String,
     pub temporal_relevance: f64,
 }
 
-#[derive(Debug, Clone)]
-pub struct EntityRelationship {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct EntityRelationshipp {
     pub source_entity: String,
     pub target_entity: String,
     pub relationship: String,
     pub confidence: f64,
 }
 
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResolvedEntity {
     pub text: String,
     pub canonical_form: String,
@@ -149,16 +173,18 @@ pub struct ResolvedEntity {
     pub confidence: f64,
 }
 
-#[derive(Debug, Clone)]
-pub struct ContextAwareDisambiguation {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ContextAwareDisambiguationn {
     pub original_text: String,
     pub resolved_text: String,
     pub context_used: Vec<String>,
     pub confidence: f64,
 }
 
-#[derive(Debug, Clone)]
-pub struct DomainIntegration {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct DomainIntegrationn {
     pub domain: String,
     pub entities: Vec<String>,
     pub relationships: Vec<EntityRelationship>,
@@ -195,8 +221,10 @@ pub trait KnowledgeBase: Send + Sync {
 }
 
 /// External knowledge entity (simplified for disambiguation)
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExternalKnowledgeEntity {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub canonical_name: String,
     pub source: String,
@@ -210,8 +238,9 @@ pub trait KnowledgeIngest: Send + Sync {
 }
 
 /// Supported ingestion channels for on-demand knowledge acquisition
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum IngestionChannel {
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema, Copy)]
+pub enum IngestionChannell {
     Web,
     Api,
     Database,
@@ -230,8 +259,9 @@ impl IngestionChannel {
 }
 
 /// Ingestion candidate
-#[derive(Debug, Clone)]
-pub struct IngestionCandidate {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct IngestionCandidatee {
     pub channel: IngestionChannel,
     pub label: String,
     pub priority: i32,
@@ -239,7 +269,8 @@ pub struct IngestionCandidate {
 }
 
 /// Scheduled ingestion source
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ScheduledSource {
     pub channel: IngestionChannel,
     pub schedule: String,
@@ -247,8 +278,9 @@ pub struct ScheduledSource {
 }
 
 /// Ingestion cache entry
-#[derive(Debug, Clone)]
-pub struct IngestionCacheEntry {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct IngestionCacheEntryy {
     pub key: String,
     pub data: Vec<u8>,
     pub timestamp: chrono::DateTime<chrono::Utc>,
@@ -256,8 +288,9 @@ pub struct IngestionCacheEntry {
 }
 
 /// Pipeline statistics for ingestion
-#[derive(Debug, Clone)]
-pub struct IngestionPipelineStats {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct IngestionPipelineStatss {
     pub total_candidates: usize,
     pub processed: usize,
     pub failed: usize,

@@ -1,5 +1,6 @@
 //! Council types - Re-export types from contracts for backward compatibility
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 
 // Re-export types for backward compatibility
@@ -11,8 +12,9 @@ pub use agent_agency_contracts::refinement_decision::{CouncilDecision, JudgeType
 pub use agent_agency_contracts::final_verdict::FinalVerdictContract;
 
 /// Final verdict from council decision making
-#[derive(Debug, Clone)]
-pub struct FinalVerdict {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct FinalVerdict {
     pub decision: String,
     pub confidence: f64,
     pub summary: String,
@@ -20,8 +22,9 @@ pub struct FinalVerdict {
 }
 
 /// Task structure for planning
-#[derive(Debug, Clone)]
-pub struct Task {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct Task {
     pub id: String,
     pub description: String,
     pub scope: Vec<String>,
@@ -31,12 +34,12 @@ pub struct Task {
 }
 
 /// Change budget for task execution
-#[derive(Debug, Clone)]
-pub struct ChangeBudget {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ChangeBudget {
     pub max_files: u32,
     pub max_loc: u32,
 }
 
 // BlastRadius is now imported from agent_agency_contracts::types::planning
 // (removed duplicate definition)
-pub use agent_agency_contracts::types::planning::BlastRadius;

@@ -1,5 +1,6 @@
 //! Multi-dimensional scoring system
 
+use schemars::JsonSchema;
 use crate::benchmark_types::*;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -222,8 +223,9 @@ const STRENGTH_THRESHOLD: f64 = 0.85;
 const WEAKNESS_THRESHOLD: f64 = 0.7;
 const IMPROVEMENT_TARGET: f64 = 0.85;
 
-#[derive(Debug, Default)]
-struct ModelAggregate {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
+pub struct ModelAggregatee {
     count: usize,
     total_score: f64,
     total_accuracy: f64,
@@ -260,8 +262,9 @@ impl ModelAggregate {
     }
 }
 
-#[derive(Debug, Default)]
-struct MetricAverages {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
+pub struct MetricAveragess {
     accuracy: f64,
     speed: f64,
     efficiency: f64,
@@ -269,8 +272,9 @@ struct MetricAverages {
     compliance: f64,
 }
 
-#[derive(Debug, Default)]
-struct MetricTotals {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
+pub struct MetricTotalss {
     accuracy: f64,
     speed: f64,
     efficiency: f64,
@@ -302,7 +306,7 @@ impl MetricTotals {
     }
 }
 
-struct MetricWeights {
+pub struct MetricWeightss {
     accuracy: f64,
     speed: f64,
     efficiency: f64,
@@ -333,15 +337,17 @@ impl MetricWeights {
 const METRIC_WEIGHTS: MetricWeights = MetricWeights::new();
 
 // Supporting types for the scoring system
-#[derive(Debug, Clone)]
-pub enum ScoringAlgorithm {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub enum ScoringAlgorithmm {
     WeightedAverage,
     NormalizedSum,
     GeometricMean,
 }
 
-#[derive(Debug, Clone)]
-pub struct NormalizationSettings {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct NormalizationSettingss {
     pub min_score: f64,
     pub max_score: f64,
     pub normalization_method: NormalizationMethod,
@@ -357,14 +363,15 @@ impl Default for NormalizationSettings {
     }
 }
 
-#[derive(Debug, Clone)]
-pub enum NormalizationMethod {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub enum NormalizationMethodd {
     MinMax,
     ZScore,
     Robust,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ModelBenchmarkingMetrics {
     pub accuracy: f64,
     pub speed: f64,

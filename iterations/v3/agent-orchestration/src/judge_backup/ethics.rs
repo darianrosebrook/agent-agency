@@ -4,6 +4,7 @@
 //! ethical assessment, stakeholder analysis, and cultural
 //! considerations for working specification evaluation.
 
+use schemars::JsonSchema;
 use crate::council_errors::CouncilResult;
 use std::sync::RwLock;
 use crate::judge_backup::risk::{EthicalAssessment, EthicalConcern, StakeholderImpact, EthicalTradeoff, ConsequenceAssessment, CulturalConsideration, EthicalCategory, EthicalSeverity, TimeHorizon};
@@ -14,8 +15,10 @@ use crate::judge_backup::verdicts::JudgeVerdict;
 use std::collections::HashMap;
 
 /// Response cache for ethics judge
-#[derive(Debug, Clone)]
-pub struct ResponseCache {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ResponseCache {
+    #[schemars(skip)]
     pub cache: HashMap<String, (JudgeVerdict, chrono::DateTime<chrono::Utc>)>,
     pub max_size: usize,
     pub ttl_seconds: u64,
@@ -33,8 +36,9 @@ impl Default for ResponseCache {
 
 /// Advanced ethical reasoning judge with caching
 /// Enhanced with performance optimizations from integration testing
-#[derive(Debug)]
-pub struct EthicsJudge {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct EthicsJudge {
     config: JudgeConfig,
     ethical_frameworks: Vec<String>,
     cultural_contexts: Vec<String>,
@@ -452,5 +456,4 @@ impl Judge for EthicsJudge {
         }
     }
 }
-
 

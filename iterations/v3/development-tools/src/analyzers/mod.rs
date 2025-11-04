@@ -16,11 +16,12 @@ pub use rust::RustAnalyzer;
 pub use typescript::TypeScriptAnalyzer;
 pub use javascript::JavaScriptAnalyzer;
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Programming language types for AST analysis
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub enum ProgrammingLanguage {
     Rust,
     TypeScript,
@@ -61,7 +62,7 @@ impl ProgrammingLanguage {
 }
 
 /// Language analysis result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LanguageAnalysisResult {
     pub language: ProgrammingLanguage,
     pub complexity_score: f32,
@@ -71,7 +72,7 @@ pub struct LanguageAnalysisResult {
 }
 
 /// Language-specific violation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LanguageViolation {
     pub rule_id: String,
     pub severity: ViolationSeverity,
@@ -81,7 +82,7 @@ pub struct LanguageViolation {
 }
 
 /// Language-specific warning
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LanguageWarning {
     pub rule_id: String,
     pub message: String,
@@ -90,7 +91,7 @@ pub struct LanguageWarning {
 }
 
 /// Source code location
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SourceLocation {
     pub file_path: String,
     pub line: u32,
@@ -100,7 +101,7 @@ pub struct SourceLocation {
 }
 
 /// Violation severity levels
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub enum ViolationSeverity {
     Critical,
     High,

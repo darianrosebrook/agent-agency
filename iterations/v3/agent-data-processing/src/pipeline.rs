@@ -4,6 +4,7 @@
 //! composed and executed in sequence. Now uses common-pipeline framework
 //! for standardized patterns while maintaining domain-specific functionality.
 
+use schemars::JsonSchema;
 use crate::data_processing_types::*;
 use crate::{DataProcessingResult, DataProcessingError};
 use system_configuration::{SequentialPipeline, SequentialPipelineConfig, PipelineStage as SystemPipelineStage};
@@ -43,10 +44,11 @@ use std::sync::Arc;
 
 /// Configuration for the data processing pipeline
 /// Now wraps SequentialPipelineConfig with domain-specific settings
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct PipelineConfig {
     /// Base sequential pipeline configuration
     #[serde(flatten)]
+    #[schemars(skip)]
     pub base: SequentialPipelineConfig,
     /// Domain-specific configuration
     pub max_concurrent_operations: usize,
@@ -70,7 +72,7 @@ impl From<PipelineConfig> for SequentialPipelineConfig {
 }
 
 /// Result from pipeline processing
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct PipelineResult {
     pub success: bool,
     pub output: Option<ProcessingOutput>,

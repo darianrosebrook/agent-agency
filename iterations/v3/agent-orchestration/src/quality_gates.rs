@@ -5,6 +5,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use std::process::Command;
 use std::path::Path;
 use anyhow::{Result, Context};
@@ -13,8 +14,9 @@ use agent_agency_contracts::planning_io::QualityGates;
 use chrono::Utc;
 
 /// Quality gate execution result
-#[derive(Debug, Clone)]
-pub struct QualityGateResult {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct QualityGateResult {
     pub gate_name: String,
     pub passed: bool,
     pub score: f64,
@@ -25,8 +27,9 @@ pub struct QualityGateResult {
 }
 
 /// Individual issue found by a quality gate
-#[derive(Debug, Clone)]
-pub struct QualityGateIssue {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct QualityGateIssue {
     pub severity: IssueSeverity,
     pub code: String,
     pub message: String,
@@ -37,8 +40,9 @@ pub struct QualityGateIssue {
 }
 
 /// Issue severity levels
-#[derive(Debug, Clone)]
-pub enum IssueSeverity {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum IssueSeverity {
     Error,
     Warning,
     Info,

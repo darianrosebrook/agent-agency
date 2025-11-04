@@ -3,6 +3,7 @@
 //! Manages the execution of multi-step tool chains, handles dependencies,
 //! error recovery, and result aggregation for complex reasoning workflows.
 
+use schemars::JsonSchema;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
@@ -30,7 +31,7 @@ pub struct ToolCoordinator {
 }
 
 /// Tool chain definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolChain {
     /// Chain ID
     pub id: String,
@@ -43,7 +44,7 @@ pub struct ToolChain {
 }
 
 /// Tool chain step
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolChainStep {
     /// Step ID (unique within chain)
     pub step_id: String,
@@ -62,7 +63,7 @@ pub struct ToolChainStep {
 }
 
 /// Tool chain metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolChainMetadata {
     /// Description
     pub description: String,
@@ -97,7 +98,7 @@ pub struct ToolChainExecution {
 }
 
 /// Execution state
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ExecutionState {
     /// Chain is queued for execution
     Queued,
@@ -112,7 +113,7 @@ pub enum ExecutionState {
 }
 
 /// Step result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StepResult {
     /// Step ID
     pub step_id: String,
@@ -129,7 +130,7 @@ pub struct StepResult {
 }
 
 /// Tool execution result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolExecutionResult {
     /// Chain ID
     pub chain_id: String,
@@ -150,7 +151,7 @@ pub struct ToolExecutionResult {
 }
 
 /// Execution trace entry
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionTrace {
     /// Timestamp
     pub timestamp: chrono::DateTime<chrono::Utc>,
@@ -163,7 +164,7 @@ pub struct ExecutionTrace {
 }
 
 /// Trace event type
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum TraceEventType {
     ChainStarted,
     StepStarted,
@@ -175,7 +176,7 @@ pub enum TraceEventType {
 }
 
 /// Retry configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RetryConfig {
     /// Maximum retry attempts
     pub max_attempts: u32,
@@ -592,7 +593,7 @@ impl ToolCoordinator {
 }
 
 /// Execution statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionStats {
     /// Number of currently active chains
     pub active_chains: usize,

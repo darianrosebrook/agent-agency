@@ -3,6 +3,7 @@
 //! Implements the circuit breaker pattern to prevent cascading failures
 //! and provide graceful degradation during database connectivity issues.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -11,7 +12,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 
 /// Circuit breaker states
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum CircuitState {
     Closed,
     Open,
@@ -184,7 +185,7 @@ impl CircuitBreaker {
 }
 
 /// Circuit breaker error types
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum CircuitBreakerError {
     #[error("Circuit breaker is open")]
     CircuitOpen,

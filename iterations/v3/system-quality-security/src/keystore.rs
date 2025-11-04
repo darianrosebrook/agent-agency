@@ -5,6 +5,7 @@
  * Provides keystore functionality for API keys, certificates, and sensitive credentials.
  */
 
+use schemars::JsonSchema;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -15,7 +16,7 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 /// Key types supported by the keystore
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum KeyType {
     ApiKey,
     Certificate,
@@ -27,14 +28,19 @@ pub enum KeyType {
 }
 
 /// Key metadata for management and audit
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct KeyMetadata {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub name: String,
     pub key_type: KeyType,
     pub description: Option<String>,
     pub owner: String,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub updated_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
     pub access_count: u64,
@@ -44,7 +50,7 @@ pub struct KeyMetadata {
 }
 
 /// Key permissions for access control
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum KeyPermission {
     Read,
     Write,
@@ -54,7 +60,7 @@ pub enum KeyPermission {
 }
 
 /// Keystore entry combining metadata and encrypted value
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct KeyEntry {
     pub metadata: KeyMetadata,
     pub encrypted_value: Vec<u8>,
@@ -64,7 +70,7 @@ pub struct KeyEntry {
 pub type KeystoreResult<T> = Result<T, KeystoreError>;
 
 /// Keystore operation errors
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum KeystoreError {
     #[error("Key not found: {key_id}")]
     KeyNotFound { key_id: String },
@@ -145,8 +151,9 @@ pub struct ProductionKeystore {
     access_log: Arc<RwLock<Vec<AccessLogEntry>>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct AccessLogEntry {
+    #[schemars(with = "String")]
     timestamp: DateTime<Utc>,
     key_id: Uuid,
     requester: String,

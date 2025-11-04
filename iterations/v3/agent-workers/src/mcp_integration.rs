@@ -3,8 +3,13 @@
 //! Provides the bridge between workers and the agent-mcp crate's tool registry.
 //! Services register their capabilities as MCP tools that workers can discover and use.
 
-use agent_mcp::{ToolRegistry, ToolExecutionRequest, ToolExecutionResult};
-use agent_mcp::mcp_types::{MCPTool, ToolType, ToolCapability, ToolParameters, ParameterDefinition, ParameterConstraint, ToolManifest, CawsComplianceConfig, CawsComplianceStatus};
+use schemars::JsonSchema;
+use agent_mcp::ToolRegistry;
+use agent_mcp::mcp_types::{
+    ToolExecutionRequest, ToolExecutionResult, ExecutionPriority, ExecutionContext,
+    MCPTool, ToolType, ToolCapability, ToolParameters, ParameterDefinition,
+    ParameterConstraint, ToolManifest, CawsComplianceConfig, CawsComplianceStatus,
+};
 use anyhow::{Context, Result};
 use reqwest::Client;
 use std::sync::Arc;
@@ -46,17 +51,17 @@ impl MCPIntegration {
 
     /// Execute a tool using real HTTP calls to MCP server
     pub async fn execute_tool(&self, request: ToolExecutionRequest) -> Result<ToolExecutionResult, MCPIntegrationError> {
-        info!("Executing tool via HTTP MCP server: {}", request.tool_name);
+        info!("Executing tool via HTTP MCP server: {}", request.tool_id);
         
         // Get tool from registry first
-        let tool = self.tool_registry.get_tool(&request.tool_name).await
-            .map_err(|e| MCPIntegrationError::ExecutionFailed(format!("Tool not found: {}", e)))?;
+        let tool = self.tool_registry.get_tool(request.tool_id).await
+            .ok_or_else(|| MCPIntegrationError::ExecutionFailed(format!("Tool not found: {}", request.tool_id)))?;
 
         // Execute via HTTP call to MCP server
         let result = self.execute_via_http(&tool, &request).await
             .map_err(|e| MCPIntegrationError::ExecutionFailed(e.to_string()))?;
 
-        info!("Tool execution completed: {} -> {}", request.tool_name, result.status);
+        info!("Tool execution completed: {} -> {}", request.tool_id, result.status);
         Ok(result)
     }
 
@@ -64,14 +69,29 @@ impl MCPIntegration {
     async fn execute_via_http(&self, tool: &MCPTool, request: &ToolExecutionRequest) -> Result<ToolExecutionResult> {
         let url = format!("{}/api/v1/tools/execute", self.mcp_server_url);
         
+        let timeout_seconds = request.timeout_seconds.unwrap_or(30);
+        let context_value = request
+            .context
+            .as_ref()
+            .map(|ctx| {
+                serde_json::json!({
+                    "working_directory": ctx.working_directory,
+                    "environment_variables": ctx.environment_variables,
+                    "input_files": ctx.input_files,
+                    "output_directory": ctx.output_directory,
+                    "metadata": ctx.metadata,
+                })
+            })
+            .unwrap_or_else(|| serde_json::json!({}));
+
         let payload = serde_json::json!({
-            "tool_name": request.tool_name,
+            "request_id": request.id,
+            "tool_id": request.tool_id,
             "parameters": request.parameters,
-            "context": {
-                "priority": request.priority.unwrap_or("normal".to_string()),
-                "timeout_ms": request.timeout_ms.unwrap_or(30000),
-                "metadata": request.metadata.unwrap_or_default()
-            }
+            "priority": format!("{:?}", request.priority).to_lowercase(),
+            "timeout_seconds": timeout_seconds,
+            "requested_by": request.requested_by,
+            "context": context_value,
         });
 
         debug!("Sending tool execution request to: {}", url);
@@ -79,7 +99,7 @@ impl MCPIntegration {
         let response = self.http_client
             .post(&url)
             .json(&payload)
-            .timeout(std::time::Duration::from_millis(request.timeout_ms.unwrap_or(30000)))
+            .timeout(std::time::Duration::from_secs(timeout_seconds))
             .send()
             .await
             .context("Failed to send HTTP request to MCP server")?;
@@ -138,8 +158,9 @@ impl MCPIntegration {
 }
 
 /// Errors from MCP integration
-#[derive(Debug, thiserror::Error)]
-pub enum MCPIntegrationError {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
+enum MCPIntegrationError {
     #[error("Tool registration failed: {0}")]
     ToolRegistrationFailed(String),
 

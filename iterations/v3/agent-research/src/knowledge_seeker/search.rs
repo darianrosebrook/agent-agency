@@ -1,5 +1,6 @@
 //! Search coordination for vector and keyword search
 
+use schemars::JsonSchema;
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -12,7 +13,8 @@ use super::index::InvertedIndex;
 use super::events::EventEmitter;
 
 /// Search coordinator for managing different search strategies
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct SearchCoordinator {
     vector_search: Arc<VectorSearchEngine>,
     keyword_index: Arc<InvertedIndex>,
@@ -139,8 +141,9 @@ impl SearchCoordinator {
 }
 
 /// Inverted index for keyword-based search
-#[derive(Debug)]
-pub struct InvertedIndex {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct InvertedIndexx {
     index: std::collections::HashMap<String, Vec<Posting>>,
 }
 
@@ -179,7 +182,7 @@ impl InvertedIndex {
 }
 
 /// Posting in the inverted index
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Posting {
     pub document_id: usize,
     pub positions: Vec<usize>,
@@ -187,7 +190,7 @@ pub struct Posting {
 }
 
 /// Search result from inverted index
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SearchResult {
     pub document_id: usize,
     pub score: f32,

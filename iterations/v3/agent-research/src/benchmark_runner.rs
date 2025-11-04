@@ -1,5 +1,6 @@
 //! Benchmark runner for model performance testing
 
+use schemars::JsonSchema;
 use crate::scoring_system::MultiDimensionalScoringSystem;
 use crate::sla_validator::SlaValidator;
 use crate::benchmark_types::*;
@@ -11,8 +12,9 @@ use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 /// Execution telemetry for comprehensive performance monitoring
-#[derive(Debug, Clone)]
-struct ExecutionTelemetry {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ExecutionTelemetry {
     execution_id: Uuid,
     start_time: std::time::Instant,
     model_name: String,
@@ -286,7 +288,8 @@ pub struct BenchmarkRunner {
     sla_validator: SlaValidator,
 }
 
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BenchmarkConfig {
     /// Number of iterations for each benchmark
     pub iterations: usize,
@@ -312,15 +315,17 @@ impl Default for BenchmarkConfig {
 
 // Helper structs for benchmark execution
 
-#[derive(Debug)]
-struct MicroTaskResult {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct MicroTaskResult   {
     execution_time: Duration,
     memory_usage_mb: f64,
     success: bool,
 }
 
-#[derive(Debug)]
-struct ComplianceTestResult {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct ComplianceTestResult {
     compliance_score: f64,
     violation_count: usize,
     violations: Vec<String>,
@@ -341,7 +346,8 @@ impl Default for BenchmarkMetrics {
 
 /// Additional BenchmarkRunner methods
 /// Performance analysis results
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceAnalysis {
     pub overall_score: f32,
     pub bottlenecks: Vec<String>,
@@ -350,7 +356,8 @@ pub struct PerformanceAnalysis {
 }
 
 /// Quality analysis results
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityAnalysis {
     pub overall_quality_score: f32,
     pub quality_issues: Vec<String>,

@@ -5,8 +5,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Ensemble learning orchestrator
-#[derive(Debug)]
-pub struct LearningAlgorithms {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct LearningAlgorithmss {
     algorithms: HashMap<LearningAlgorithmType, Box<dyn LearningAlgorithm>>,
 }
 
@@ -63,7 +64,8 @@ pub trait LearningAlgorithm: Send + Sync {
 
 
 /// Ensemble analytics and component tracking
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct EnsembleAnalytics {
     component_stats: Vec<EnsembleComponentStatistics>,
     overall_performance: HashMap<String, f64>,
@@ -150,8 +152,9 @@ impl EnsembleAnalytics {
 }
 
 /// Problem characteristics analysis
-#[derive(Debug)]
-pub struct ProblemCharacteristicsAnalyzer {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct ProblemCharacteristicsAnalyzerr {
     characteristics_cache: HashMap<String, ProblemCharacteristics>,
 }
 

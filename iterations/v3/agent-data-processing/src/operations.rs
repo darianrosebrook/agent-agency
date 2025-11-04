@@ -7,6 +7,7 @@
 //! - Waiver system for budget exceedances
 //! - Safe file editing with rollback
 
+use schemars::JsonSchema;
 use crate::data_processing_types::*;
 use crate::DataProcessingResult;
 use crate::DataProcessingError;
@@ -38,7 +39,7 @@ pub trait OperationsStage: Send + Sync {
 }
 
 /// Types of operations supported
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, JsonSchema)]
 pub enum OperationType {
     FileWrite,
     FileMove,
@@ -49,8 +50,8 @@ pub enum OperationType {
 }
 
 /// Unique identifier for operations
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct OperationId(pub String);
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+pub struct OperationId (pub String);
 
 impl OperationId {
     pub fn new() -> Self {
@@ -65,7 +66,7 @@ impl Default for OperationId {
 }
 
 /// Changeset of file operations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FileChangeset {
     pub id: OperationId,
     pub operations: Vec<FileOperation>,
@@ -75,7 +76,7 @@ pub struct FileChangeset {
 }
 
 /// Individual file operation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FileOperation {
     pub operation_type: FileOperationType,
     pub path: PathBuf,
@@ -84,7 +85,7 @@ pub struct FileOperation {
 }
 
 /// Types of file operations
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum FileOperationType {
     Create,
     Update,
@@ -94,13 +95,13 @@ pub enum FileOperationType {
 }
 
 /// Allow-list for file operations (from original file-ops)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AllowList {
     pub globs: Vec<String>,
 }
 
 /// Budget constraints for operations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Budgets {
     pub max_files: usize,
     pub max_loc: usize,
@@ -108,7 +109,7 @@ pub struct Budgets {
 }
 
 /// Validation result for changesets
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema, Serialize, Deserialize)]
 pub struct ValidationResult {
     pub is_valid: bool,
     pub violations: Vec<BudgetViolation>,
@@ -116,7 +117,7 @@ pub struct ValidationResult {
 }
 
 /// Budget violation details
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BudgetViolation {
     pub violation_type: ViolationType,
     pub actual_value: usize,
@@ -126,7 +127,7 @@ pub struct BudgetViolation {
 }
 
 /// Types of violations
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ViolationType {
     TooManyFiles,
     TooManyLines,
@@ -135,7 +136,7 @@ pub enum ViolationType {
 }
 
 /// Violation severity levels
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ViolationSeverity {
     Low,
     Medium,
@@ -1124,7 +1125,7 @@ impl OperationHistory {
 }
 
 /// Statistics about operation history
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct HistoryStats {
     pub total_operations: usize,
     pub total_files_processed: usize,

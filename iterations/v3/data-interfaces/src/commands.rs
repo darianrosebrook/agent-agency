@@ -2,10 +2,11 @@
 //!
 //! Command definitions and handlers for the CLI interface.
 
+use schemars::JsonSchema;
 use crate::InterfaceError;
 
 /// Available CLI commands
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum CliCommand {
     /// Display help information
     Help,

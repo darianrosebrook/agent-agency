@@ -9,8 +9,9 @@ use std::fs;
 use std::path::Path;
 
 /// Code analysis engine for various code quality metrics
-#[derive(Debug)]
-pub struct CodeAnalysisEngine;
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct CodeAnalysisEngine ;
 
 impl CodeAnalysisEngine {
     pub fn new() -> Self {

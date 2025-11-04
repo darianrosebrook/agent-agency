@@ -1,5 +1,6 @@
 //! Individual worker progress tracking
 
+use schemars::JsonSchema;
 use crate::parallel_types::*;
 use crate::{WorkerProgress, Progress};
 use crate::error::*;
@@ -30,13 +31,13 @@ impl WorkerProgressTracker {
             total: 0,
             task_weight: 1.0,
             status: String::new(),
-            last_update: chrono::Utc::now(),
+            last_updated: chrono::Utc::now(),
         });
 
         worker_progress.completed = completed;
         worker_progress.total = total;
         worker_progress.status = status;
-        worker_progress.last_update = chrono::Utc::now();
+        worker_progress.last_updated = chrono::Utc::now();
 
         Ok(())
     }
@@ -52,13 +53,13 @@ impl WorkerProgressTracker {
             total: 0,
             task_weight,
             status: "assigned".to_string(),
-            last_update: chrono::Utc::now(),
+            last_updated: chrono::Utc::now(),
         });
 
         worker_progress.subtask_id = subtask_id;
         worker_progress.task_weight = task_weight;
         worker_progress.status = "assigned".to_string();
-        worker_progress.last_update = chrono::Utc::now();
+        worker_progress.last_updated = chrono::Utc::now();
 
         Ok(())
     }
@@ -69,7 +70,7 @@ impl WorkerProgressTracker {
 
         if let Some(worker_progress) = progress_map.get_mut(worker_id) {
             worker_progress.status = "running".to_string();
-            worker_progress.last_update = chrono::Utc::now();
+            worker_progress.last_updated = chrono::Utc::now();
         }
 
         Ok(())
@@ -82,7 +83,7 @@ impl WorkerProgressTracker {
         if let Some(worker_progress) = progress_map.get_mut(worker_id) {
             worker_progress.completed = worker_progress.total;
             worker_progress.status = "completed".to_string();
-            worker_progress.last_update = chrono::Utc::now();
+            worker_progress.last_updated = chrono::Utc::now();
         }
 
         Ok(())
@@ -94,7 +95,7 @@ impl WorkerProgressTracker {
 
         if let Some(worker_progress) = progress_map.get_mut(worker_id) {
             worker_progress.status = format!("failed: {}", error);
-            worker_progress.last_update = chrono::Utc::now();
+            worker_progress.last_updated = chrono::Utc::now();
         }
 
         Ok(())
@@ -106,7 +107,7 @@ impl WorkerProgressTracker {
 
         if let Some(worker_progress) = progress_map.get_mut(worker_id) {
             worker_progress.status = format!("blocked: {}", reason);
-            worker_progress.last_update = chrono::Utc::now();
+            worker_progress.last_updated = chrono::Utc::now();
         }
 
         Ok(())
@@ -181,8 +182,9 @@ impl WorkerProgressTracker {
 }
 
 /// Statistics for worker progress tracking
-#[derive(Debug, Clone)]
-pub struct WorkerProgressStats {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct WorkerProgressStats {
     pub total_workers: usize,
     pub running_workers: usize,
     pub completed_workers: usize,
@@ -247,8 +249,9 @@ impl ProgressHistory {
 }
 
 /// A snapshot of progress at a specific point in time
-#[derive(Debug, Clone)]
-pub struct ProgressSnapshot {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ProgressSnapshot {
     pub timestamp: chrono::DateTime<chrono::Utc>,
     pub stats: WorkerProgressStats,
 }

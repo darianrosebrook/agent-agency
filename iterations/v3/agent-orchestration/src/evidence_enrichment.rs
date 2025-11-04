@@ -5,14 +5,16 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use agent_agency_contracts::{TaskDescriptor, WorkingSpec};
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use tracing::{debug, info, warn};
 
 /// Evidence enrichment coordinator
-#[derive(Debug)]
-pub struct EvidenceEnrichmentCoordinator {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct EvidenceEnrichmentCoordinator {
     /// Configuration for enrichment
     config: EnrichmentConfig,
     /// Cache for enriched evidence
@@ -20,8 +22,9 @@ pub struct EvidenceEnrichmentCoordinator {
 }
 
 /// Configuration for evidence enrichment
-#[derive(Debug, Clone)]
-pub struct EnrichmentConfig {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct EnrichmentConfig {
     /// Maximum cache size
     pub max_cache_size: usize,
     /// Cache TTL in seconds
@@ -44,8 +47,9 @@ impl Default for EnrichmentConfig {
 }
 
 /// Enriched evidence with multimodal context
-#[derive(Debug, Clone)]
-pub struct EnrichedEvidence {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct EnrichedEvidence {
     /// Original evidence ID
     pub evidence_id: String,
     /// Enriched content
@@ -61,8 +65,9 @@ pub struct EnrichedEvidence {
 }
 
 /// Multimodal context item
-#[derive(Debug, Clone)]
-pub struct MultimodalContext {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct MultimodalContext {
     /// Context type (image, audio, video, etc.)
     pub context_type: ContextType,
     /// Content path or data
@@ -74,8 +79,9 @@ pub struct MultimodalContext {
 }
 
 /// Context type for multimodal content
-#[derive(Debug, Clone)]
-pub enum ContextType {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum ContextType {
     Image,
     Audio,
     Video,
@@ -85,8 +91,9 @@ pub enum ContextType {
 }
 
 /// Semantic analysis results
-#[derive(Debug, Clone)]
-pub struct SemanticAnalysis {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct SemanticAnalysis {
     /// Key concepts extracted
     pub concepts: Vec<String>,
     /// Sentiment analysis
@@ -98,8 +105,9 @@ pub struct SemanticAnalysis {
 }
 
 /// Sentiment score
-#[derive(Debug, Clone)]
-pub struct SentimentScore {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct SentimentScore {
     /// Overall sentiment (-1.0 to 1.0)
     pub score: f32,
     /// Sentiment label
@@ -109,8 +117,9 @@ pub struct SentimentScore {
 }
 
 /// Sentiment labels
-#[derive(Debug, Clone)]
-pub enum SentimentLabel {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum SentimentLabel {
     VeryNegative,
     Negative,
     Neutral,
@@ -119,8 +128,9 @@ pub enum SentimentLabel {
 }
 
 /// Named entity
-#[derive(Debug, Clone)]
-pub struct NamedEntity {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct NamedEntity {
     /// Entity text
     pub text: String,
     /// Entity type
@@ -130,8 +140,9 @@ pub struct NamedEntity {
 }
 
 /// Entity types
-#[derive(Debug, Clone)]
-pub enum EntityType {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum EntityType {
     Person,
     Organization,
     Location,
@@ -400,8 +411,9 @@ impl EvidenceEnrichmentCoordinator {
 }
 
 /// Enrichment statistics
-#[derive(Debug, Clone)]
-pub struct EnrichmentStats {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct EnrichmentStats {
     pub cache_size: usize,
     pub total_enriched: usize,
     pub cache_hit_rate: f32,

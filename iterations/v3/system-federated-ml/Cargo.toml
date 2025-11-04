@@ -29,6 +29,7 @@ uuid.workspace = true
 regex.workspace = true
 rand.workspace = true
 rand_distr = "0.4"
+schemars = { version = "0.8", features = ["derive"] }
 
 # Cryptography (from federated-learning)
 ring = "0.17"

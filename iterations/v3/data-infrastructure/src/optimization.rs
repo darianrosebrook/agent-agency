@@ -3,6 +3,7 @@
 //! Provides query optimization, index management, read/write splitting,
 //! and comprehensive performance monitoring for production databases.
 
+use schemars::JsonSchema;
 use crate::simple_client::DatabaseClient;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
@@ -15,7 +16,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 
 /// Database optimization configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DatabaseOptimizationConfig {
     /// Enable query performance monitoring
     pub enable_query_monitoring: bool,
@@ -51,7 +52,7 @@ impl Default for DatabaseOptimizationConfig {
 }
 
 /// Query performance metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QueryMetrics {
     pub query_hash: String,
     pub query_text: String,
@@ -60,12 +61,14 @@ pub struct QueryMetrics {
     pub average_execution_time_ms: f64,
     pub min_execution_time_ms: u64,
     pub max_execution_time_ms: u64,
+    #[schemars(with = "String")]
+
     pub last_executed: DateTime<Utc>,
     pub slow_execution_count: u64,
 }
 
 /// Index recommendation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct IndexRecommendation {
     pub table_name: String,
     pub column_name: String,
@@ -75,7 +78,7 @@ pub struct IndexRecommendation {
     pub priority: IndexPriority,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
 pub enum IndexPriority {
     Critical,
     High,
@@ -394,13 +397,13 @@ impl DatabaseIndexManager {
         let mut stats = HashMap::new();
 
         for row in rows {
-            let table_name: String = row.get("tablename");
+            let table_name: String = row.get::<String, &str>("tablename");
             let table_stats = TableStats {
-                inserts: row.get::<Option<i64>, _>("n_tup_ins").unwrap_or(0),
-                updates: row.get::<Option<i64>, _>("n_tup_upd").unwrap_or(0),
-                deletes: row.get::<Option<i64>, _>("n_tup_del").unwrap_or(0),
-                live_rows: row.get::<Option<i64>, _>("n_live_tup").unwrap_or(0),
-                dead_rows: row.get::<Option<i64>, _>("n_dead_tup").unwrap_or(0),
+                inserts: row.get::<Option<i64>, &str>("n_tup_ins").unwrap_or(0),
+                updates: row.get::<Option<i64>, &str>("n_tup_upd").unwrap_or(0),
+                deletes: row.get::<Option<i64>, &str>("n_tup_del").unwrap_or(0),
+                live_rows: row.get::<Option<i64>, &str>("n_live_tup").unwrap_or(0),
+                dead_rows: row.get::<Option<i64>, &str>("n_dead_tup").unwrap_or(0),
             };
             stats.insert(table_name, table_stats);
         }
@@ -410,7 +413,7 @@ impl DatabaseIndexManager {
 }
 
 /// Table statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TableStats {
     pub inserts: i64,
     pub updates: i64,
@@ -634,8 +637,10 @@ impl DatabaseOptimizationManager {
 }
 
 /// Database optimization report
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DatabaseOptimizationReport {
+    #[schemars(with = "String")]
+
     pub generated_at: DateTime<Utc>,
     pub total_queries_analyzed: usize,
     pub slow_queries_count: usize,

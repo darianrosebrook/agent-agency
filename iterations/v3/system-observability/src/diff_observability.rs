@@ -25,6 +25,7 @@ pub struct UnifiedDiff {
 pub struct DiffHeader {
     pub task_id: String,
     pub iteration: usize,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub agent_id: String,
     pub allow_list_violations: Vec<String>,
@@ -738,7 +739,6 @@ pub enum DiffError {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     fn create_test_collector() -> AgentTelemetryCollector {
         let config = TelemetryConfig::default();
         AgentTelemetryCollector::new(config)

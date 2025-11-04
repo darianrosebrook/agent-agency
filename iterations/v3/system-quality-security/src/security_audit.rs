@@ -1,12 +1,13 @@
 //! Audit logging for security events and compliance
 
+use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{error, info, warn};
 
 /// Security event types for audit logging
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum SecurityEventType {
     /// Authentication events
     Authentication,
@@ -25,7 +26,7 @@ pub enum SecurityEventType {
 }
 
 /// Security event severity levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum SecurityEventSeverity {
     Low,
     Medium,
@@ -34,11 +35,13 @@ pub enum SecurityEventSeverity {
 }
 
 /// Audit log entry for security events
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AuditLogEntry {
     /// Unique event ID
     pub event_id: String,
     /// Event timestamp
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     /// Event type
     pub event_type: SecurityEventType,
@@ -91,7 +94,7 @@ pub trait AuditSink: Send + Sync {
 }
 
 /// Audit sink error
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum AuditSinkError {
     #[error("Failed to write audit log: {0}")]
     WriteFailed(String),
@@ -438,7 +441,7 @@ impl SecurityEventType {
 }
 
 /// Audit logging error
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum AuditError {
     #[error("Audit logging failed: {0}")]
     LoggingFailed(String),

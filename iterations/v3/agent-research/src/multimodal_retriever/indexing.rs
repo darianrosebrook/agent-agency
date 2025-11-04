@@ -7,8 +7,9 @@ use super::text_search::TextSearchEngine;
 use super::visual_search::VisualSearchEngine;
 
 /// Document indexer for managing content indexing
-#[derive(Debug)]
-pub struct DocumentIndexer {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct DocumentIndexerr {
     text_engine: super::text_search::TextSearchEngine,
     visual_engine: super::visual_search::VisualSearchEngine,
 }

@@ -3,7 +3,6 @@
 //! Provides a way to create TaskExecutor instances without circular dependencies.
 //! This module acts as a bridge between orchestration and workers.
 
-use async_trait::async_trait;
 use std::sync::Arc;
 
 use crate::task_executor::TaskExecutor;

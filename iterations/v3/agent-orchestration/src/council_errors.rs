@@ -1,12 +1,14 @@
 //! Council error types and results
 
+use schemars::JsonSchema;
 use std::fmt;
 
 /// Result type for council operations
 pub type CouncilResult<T> = Result<T, CouncilError>;
 
 /// Errors that can occur during council operations
-#[derive(Debug, thiserror::Error)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
 pub enum CouncilError {
     #[error("Judge error: {judge_id} - {message}")]
     JudgeError { judge_id: String, message: String },

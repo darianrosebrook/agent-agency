@@ -2,6 +2,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -436,17 +437,19 @@ impl RecoveryIndex {
 }
 
 /// File version record
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct FileVersion {
     pub path: String,
     pub commit_id: Digest,
     pub digest: Digest,
     pub mode: FileMode,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
 }
 
 /// Index rebuild report
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct RebuildReport {
     pub commits_processed: u64,
     pub files_processed: u64,
@@ -454,7 +457,7 @@ pub struct RebuildReport {
 }
 
 /// Index statistics
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct IndexStats {
     pub file_versions: u64,
     pub commits: u64,

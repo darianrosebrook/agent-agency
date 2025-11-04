@@ -5,7 +5,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
-
 /// Memory type classification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MemoryType {
@@ -445,9 +444,10 @@ pub struct ReinforcementContext {
 }
 
 /// Context data structure (imported from agent-data-processing)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ContextData {
     /// Unique context ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Context type/category
     pub context_type: String,
@@ -456,8 +456,10 @@ pub struct ContextData {
     /// Context metadata
     pub metadata: ContextMetadata,
     /// Creation timestamp
+    #[schemars(with = "String")]
     pub created_at: chrono::DateTime<chrono::Utc>,
     /// Last access timestamp
+    #[schemars(with = "String")]
     pub last_accessed_at: chrono::DateTime<chrono::Utc>,
     /// Access count
     pub access_count: u64,
@@ -466,7 +468,7 @@ pub struct ContextData {
 }
 
 /// Context metadata (imported from agent-data-processing)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ContextMetadata {
     /// Human-readable title
     pub title: Option<String>,
@@ -529,7 +531,7 @@ pub enum PreservationPriority {
 }
 
 /// Retrieval options (imported from agent-data-processing)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct RetrievalOptions {
     /// Include metadata
     pub include_metadata: bool,
@@ -550,9 +552,10 @@ impl Default for RetrievalOptions {
 }
 
 /// Context retrieval request (imported from agent-data-processing)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ContextRetrievalRequest {
     /// Context ID to retrieve
+    #[schemars(with = "String")]
     pub context_id: Uuid,
     /// Retrieval options
     pub options: RetrievalOptions,

@@ -12,6 +12,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
@@ -62,7 +63,7 @@ struct PromptCache {
 }
 
 /// Cached verdict with expiration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct CachedVerdict {
     /// The cached verdict
     verdict: JudgeVerdict,
@@ -71,6 +72,7 @@ struct CachedVerdict {
     judge_type: JudgeType,
 
     /// Expiration timestamp
+    #[schemars(with = "String")]
     expires_at: chrono::DateTime<chrono::Utc>,
 }
 

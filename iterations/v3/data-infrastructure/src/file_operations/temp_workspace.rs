@@ -3,6 +3,7 @@
 //! Uses temporary directory mirroring for safe file editing in non-Git environments
 //! with rsync-based copying and snapshot capabilities.
 
+use schemars::JsonSchema;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::collections::{HashMap, HashSet};
@@ -12,7 +13,6 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use sha2::{Digest, Sha256};
-use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use crate::file_operations::{Workspace, ChangeSet, AllowList, Budgets, ChangeSetId, FileOpsError, Result, validate_changeset, Patch, Hunk};
 use crate::client::orchestrator::DatabaseClient;
@@ -46,7 +46,7 @@ pub struct ChangesetApplicationEngine {
     metrics: RwLock<ChangesetMetrics>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ChangesetApplicationState {
     /// Unique application ID
     pub application_id: String,
@@ -57,6 +57,8 @@ pub struct ChangesetApplicationState {
     /// Progress tracking
     pub progress: ApplicationProgress,
     /// Start time
+    #[schemars(with = "String")]
+
     pub start_time: DateTime<Utc>,
     /// Validation results
     pub validation_results: Vec<ChangesetValidationResult>,
@@ -66,7 +68,7 @@ pub struct ChangesetApplicationState {
     pub checkpoints: Vec<ApplicationCheckpoint>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum ApplicationPhase {
     Validation,
     ConflictDetection,
@@ -77,7 +79,7 @@ pub enum ApplicationPhase {
     Rollback,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ApplicationProgress {
     /// Total patches to apply
     pub total_patches: usize,
@@ -91,7 +93,7 @@ pub struct ApplicationProgress {
     pub current_operation: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ChangesetValidationResult {
     /// Validation type performed
     pub validation_type: ValidationType,
@@ -103,7 +105,7 @@ pub struct ChangesetValidationResult {
     pub severity: ValidationSeverity,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, JsonSchema)]
 pub enum ValidationType {
     Integrity,
     Conflict,
@@ -113,14 +115,14 @@ pub enum ValidationType {
     Content,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, JsonSchema)]
 pub enum ValidationSeverity {
     Error,
     Warning,
     Info,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ChangesetConflict {
     /// File path where conflict occurred
     pub file_path: PathBuf,
@@ -132,7 +134,7 @@ pub struct ChangesetConflict {
     pub resolution_suggestion: ConflictResolution,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, JsonSchema)]
 pub enum ConflictType {
     OverlappingHunks,
     FileModified,
@@ -141,7 +143,7 @@ pub enum ConflictType {
     ContentCorruption,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ConflictingLines {
     /// Line number in the file
     pub line_number: usize,
@@ -153,7 +155,7 @@ pub struct ConflictingLines {
     pub context: Vec<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum ConflictResolution {
     /// Automatically resolve using newer version
     UseNew,
@@ -167,11 +169,13 @@ pub enum ConflictResolution {
     Manual,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ApplicationCheckpoint {
     /// Checkpoint ID
     pub checkpoint_id: String,
     /// Timestamp
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     /// Files backed up at this checkpoint
     pub backed_up_files: Vec<PathBuf>,
@@ -181,13 +185,17 @@ pub struct ApplicationCheckpoint {
     pub applied_patches: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct CompletedChangesetApplication {
     /// Changeset that was applied
     pub changeset: ChangeSet,
     /// Application start time
+    #[schemars(with = "String")]
+
     pub start_time: DateTime<Utc>,
     /// Application completion time
+    #[schemars(with = "String")]
+
     pub completion_time: DateTime<Utc>,
     /// Final application status
     pub status: ApplicationStatus,
@@ -199,7 +207,7 @@ pub struct CompletedChangesetApplication {
     pub validation_summary: ValidationSummary,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, JsonSchema)]
 pub enum ApplicationStatus {
     Success,
     PartialSuccess,
@@ -207,7 +215,7 @@ pub enum ApplicationStatus {
     RolledBack,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 #[derive(Default)]
 pub struct ApplicationPerformance {
     /// Total application time
@@ -226,7 +234,7 @@ pub struct ApplicationPerformance {
     pub io_operations: u64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 #[derive(Default)]
 pub struct ValidationSummary {
     /// Total validations performed
@@ -241,7 +249,7 @@ pub struct ValidationSummary {
     pub critical_issues: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ChangesetMetrics {
     /// Total changeset applications
     pub total_applications: u64,
@@ -653,7 +661,7 @@ impl ChangesetApplicationEngine {
         allowlist: &AllowList,
         budgets: &Budgets,
         workspace_path: &Path,
-        start_time: DateTime<Utc>,
+    start_time: DateTime<Utc>,
     ) -> Result<ChangeSetId> {
         // Phase 1: Comprehensive Validation
         self.update_phase(changeset_id, ApplicationPhase::Validation).await?;
@@ -1289,7 +1297,7 @@ impl ChangesetApplicationEngine {
         &self,
         changeset_id: &ChangeSetId,
         status: ApplicationStatus,
-        start_time: DateTime<Utc>,
+    start_time: DateTime<Utc>,
         details: Option<(ApplicationPerformance, ValidationSummary, PathBuf)>,
     ) -> Result<()> {
         let mut active_apps = self.active_applications.write().await;

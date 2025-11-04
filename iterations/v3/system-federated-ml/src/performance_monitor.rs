@@ -3,6 +3,7 @@
 //! Monitors system performance with SLA validation and regression detection
 //! for the Kokoro-inspired optimization pipeline.
 
+use schemars::JsonSchema;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -11,7 +12,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 
 /// Performance monitoring configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MonitorConfig {
     /// Metrics collection interval (ms)
     pub collection_interval_ms: u64,
@@ -24,7 +25,7 @@ pub struct MonitorConfig {
 }
 
 /// Alert thresholds for performance monitoring
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AlertThresholds {
     /// Maximum latency threshold (ms)
     pub max_latency_ms: f64,
@@ -37,7 +38,7 @@ pub struct AlertThresholds {
 }
 
 /// Performance metrics collected by the monitor
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RuntimeOptimizationMetrics {
     /// Throughput (requests/second)
     pub throughput: f64,
@@ -79,7 +80,7 @@ impl Default for RuntimeOptimizationMetrics {
 }
 
 /// SLA metrics and compliance tracking
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SLAMetrics {
     /// Target throughput SLA
     pub target_throughput: f64,
@@ -416,7 +417,7 @@ impl PerformanceMonitor {
 }
 
 /// Performance regression detection
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceRegression {
     /// Metric that regressed
     pub metric: String,
@@ -429,7 +430,7 @@ pub struct PerformanceRegression {
 }
 
 /// Regression severity levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum RegressionSeverity {
     /// Warning - monitor closely
     Warning,
@@ -452,5 +453,4 @@ impl Default for MonitorConfig {
         }
     }
 }
-
 

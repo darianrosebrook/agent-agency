@@ -10,10 +10,9 @@
 //!
 //! @author @darianrosebrook
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use crate::judge_io::{JudgePrompt, JudgeVerdict, RubricItem, WorkingSpecEvidence, VerdictLabel, Violation};
+use schemars::JsonSchema;
+use crate::judge_io::{JudgePrompt, JudgeVerdict};
 
 /// Core trait for judge inference engines
 /// Platform-agnostic interface for LLM inference backends
@@ -27,7 +26,7 @@ pub trait JudgeEngine: Send + Sync + std::fmt::Debug {
 }
 
 /// Request for judge inference
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EngineRequest {
     /// The judge prompt with rubric and evidence
     pub prompt: JudgePrompt,
@@ -43,7 +42,7 @@ pub struct EngineRequest {
 }
 
 /// Response from judge inference
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EngineResponse {
     /// Raw text output from the model
     pub raw_text: String,
@@ -57,7 +56,7 @@ pub struct EngineResponse {
 
 
 /// Engine capabilities and metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EngineCaps {
     /// Model identifier (e.g., "mistral-7b")
     pub model_id: String,
@@ -79,7 +78,7 @@ pub struct EngineCaps {
 }
 
 /// Token usage statistics from inference
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TokenUsage {
     /// Tokens in the prompt
     pub prompt_tokens: u32,
@@ -102,7 +101,7 @@ impl Default for TokenUsage {
 }
 
 /// Engine-specific errors
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum EngineError {
     #[error("Model not available: {model_id}")]
     ModelNotAvailable { model_id: String },
@@ -145,6 +144,7 @@ impl TokenUsage {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use schemars::JsonSchema;
     use crate::judge_io::{JudgeVerdict, VerdictLabel, Violation, Severity};
 
     #[test]

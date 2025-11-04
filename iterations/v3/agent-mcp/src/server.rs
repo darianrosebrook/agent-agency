@@ -2,6 +2,7 @@
 //!
 //! Main MCP server implementation for handling tool requests and responses.
 
+use schemars::JsonSchema;
 use crate::mcp_types::*;
 use crate::{CawsIntegration, ToolDiscovery, ToolRegistry};
 use crate::mcp_caws_integration::McpCawsIntegration;
@@ -21,7 +22,7 @@ use tokio::sync::{Mutex, RwLock, oneshot};
 use tokio::time::timeout;
 // Using council package for security functionality
 // Local circuit breaker implementation to avoid cyclic dependencies
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, JsonSchema)]
 pub struct CircuitBreakerStats {
     pub total_requests: u64,
     pub successful_requests: u64,
@@ -36,7 +37,7 @@ pub struct CircuitBreaker {
     pub config: CircuitBreakerConfig,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct CircuitBreakerConfig {
     pub failure_threshold: u32,
     pub recovery_timeout_ms: u64,
@@ -148,8 +149,8 @@ fn get_circuit_breaker_registry() -> CircuitBreaker {
 // Simple stub implementations for security functions
 
 // Stub implementations for unavailable dependencies
-#[derive(Clone, Debug)]
-pub struct DatabaseClient;
+#[derive(Clone, Debug, JsonSchema)]
+pub struct DatabaseClient ;
 
 impl DatabaseClient {
     pub fn new() -> Self {
@@ -157,8 +158,8 @@ impl DatabaseClient {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct SLOTracker;
+#[derive(Clone, Debug, JsonSchema)]
+pub struct SLOTracker ;
 
 impl SLOTracker {
     pub fn new(_db_client: Arc<DatabaseClient>) -> Arc<Self> {
@@ -185,8 +186,8 @@ pub mod slo {
         vec!["default_slo".to_string()]
     }
 
-    #[derive(Debug, Clone)]
-    pub enum SLOStatus {
+    #[derive(Debug, Clone, JsonSchema)]
+pub enum SLOStatus {
         Compliant,
         AtRisk,
         Violated,
@@ -204,7 +205,7 @@ pub mod security {
     use super::*;
 
     #[derive(Debug)]
-    pub enum CircuitBreakerError {
+pub enum CircuitBreakerError {
         CircuitOpen(String),
         OperationFailed(String),
         Timeout(std::time::Duration),
@@ -222,8 +223,8 @@ pub mod security {
 
     impl std::error::Error for CircuitBreakerError {}
 
-    #[derive(Debug, Clone)]
-    pub struct CircuitBreakerStats {
+    #[derive(Debug, Clone, JsonSchema)]
+pub struct CircuitBreakerStats {
         pub total_requests: u64,
         pub successful_requests: u64,
         pub failed_requests: u64,
@@ -242,7 +243,7 @@ pub mod security {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, JsonSchema)]
 pub struct RateLimitConfig {
     pub max_requests_per_minute: u32,
     pub burst_limit: u32,
@@ -1150,14 +1151,14 @@ impl AuthRateLimiter {
 }
 
 /// Result of authentication rate limit check
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 enum AuthRateLimitResult {
     Allowed,
     Blocked(String),
 }
 
 /// Statistics for authentication rate limiting
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct AuthRateLimitStats {
     pub global_attempts: u32,
     pub global_limit: u32,

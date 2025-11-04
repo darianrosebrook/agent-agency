@@ -3,6 +3,7 @@
 //! Implements explicit, constrained reward functions with scalarization
 //! and constraint checking for safe parameter optimization.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -13,7 +14,7 @@ use crate::bandit_policy::ParameterSet;
 use crate::bandit_stubs::ParameterSet;
 
 /// Objective weights for reward scalarization
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ObjectiveWeights {
     /// Weight for quality component (positive - higher is better)
     pub w_quality: f64,
@@ -34,7 +35,7 @@ impl Default for ObjectiveWeights {
 }
 
 /// Optimization constraints for parameter validation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct OptimizationConstraints {
     pub max_latency_ms: u64,
     pub max_tokens: u32,
@@ -60,7 +61,7 @@ impl Default for OptimizationConstraints {
 }
 
 /// Task outcome from LLM generation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskOutcome {
     pub quality_score: f64,
     pub latency_ms: u64,
@@ -70,7 +71,7 @@ pub struct TaskOutcome {
 }
 
 /// Baseline metrics for normalization
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BaselineMetrics {
     pub avg_quality: f64,
     pub avg_latency: u64,
@@ -80,7 +81,7 @@ pub struct BaselineMetrics {
 }
 
 /// Reward calculation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RewardResult {
     pub reward: f64,
     pub components: RewardComponents,
@@ -88,7 +89,7 @@ pub struct RewardResult {
 }
 
 /// Individual reward components
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RewardComponents {
     pub quality_contrib: f64,
     pub latency_penalty: f64,
@@ -96,14 +97,14 @@ pub struct RewardComponents {
 }
 
 /// Constraint check result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ConstraintCheckResult {
     pub passed: bool,
     pub violations: Vec<String>,
     pub severity: ConstraintSeverity,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ConstraintSeverity {
     Info,
     Warning,
@@ -361,4 +362,3 @@ mod tests {
         let result = reward_fn.check_constraints(&params, &constraints, &baseline);
         assert!(result.passed, "Valid parameters should pass constraint check");
     }
-}

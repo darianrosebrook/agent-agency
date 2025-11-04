@@ -438,19 +438,19 @@ pub async fn get_waiver_audit_trail(
         Ok(rows) => {
             let audit_records: Vec<serde_json::Value> = rows.into_iter().map(|row| {
                 json!({
-                    "id": row.get::<Uuid, _>("id"),
-                    "entity_type": row.get::<String, _>("entity_type"),
-                    "entity_id": row.get::<String, _>("entity_id"),
-                    "action_type": row.get::<String, _>("action_type"),
-                    "action_description": row.get::<String, _>("action_description"),
-                    "actor_id": row.get::<Option<String>, _>("actor_id"),
-                    "actor_type": row.get::<String, _>("actor_type"),
-                    "timestamp": row.get::<DateTime<Utc>, _>("timestamp"),
-                    "metadata": row.get::<Option<serde_json::Value>, _>("metadata"),
-                    "commit_hash": row.get::<Option<String>, _>("commit_hash"),
-                    "parent_provenance_id": row.get::<Option<Uuid>, _>("parent_provenance_id"),
-                    "verification_status": row.get::<String, _>("verification_status"),
-                    "created_at": row.get::<DateTime<Utc>, _>("created_at")
+                    "id": row.get("id"),
+                    "entity_type": row.get("entity_type"),
+                    "entity_id": row.get("entity_id"),
+                    "action_type": row.get("action_type"),
+                    "action_description": row.get("action_description"),
+                    "actor_id": row.get("actor_id"),
+                    "actor_type": row.get("actor_type"),
+                    "timestamp": row.get("timestamp"),
+                    "metadata": row.get("metadata"),
+                    "commit_hash": row.get("commit_hash"),
+                    "parent_provenance_id": row.get("parent_provenance_id"),
+                    "verification_status": row.get("verification_status"),
+                    "created_at": row.get("created_at")
                 })
             }).collect();
 
@@ -1060,7 +1060,7 @@ pub async fn list_slos(
                 let description: String = row.get(1);
                 let service_name: String = row.get(2);
                 let slo_type: String = row.get(3);
-                let target_value: f64 = row.get::<f64, _>(4);
+                let target_value: f64 = row.get(4);
                 let window_minutes: i32 = row.get(5);
                 let current_value: Option<f64> = row.get(6);
                 let error_budget_used: Option<f64> = row.get(7);
@@ -1136,7 +1136,7 @@ pub async fn get_slo_status(
                 let description: String = row.get(1);
                 let service_name: String = row.get(2);
                 let slo_type: String = row.get(3);
-                let target_value: f64 = row.get::<f64, _>(4);
+                let target_value: f64 = row.get(4);
                 let window_minutes: i32 = row.get(5);
                 let current_value: Option<f64> = row.get(6);
                 let error_budget_used: Option<f64> = row.get(7);
@@ -1215,7 +1215,7 @@ pub async fn get_slo_measurements(
         Ok(rows) => {
             let measurements: Vec<serde_json::Value> = rows.into_iter().map(|row| {
                 let timestamp: chrono::DateTime<chrono::Utc> = row.get(0);
-                let value: f64 = row.get::<f64, _>(1);
+                let value: f64 = row.get(1);
                 let is_good: bool = row.get(2);
                 let sample_count: i64 = row.get(3);
                 let good_count: i64 = row.get(4);
@@ -1300,8 +1300,8 @@ pub async fn list_slo_alerts(
                 let severity: String = row.get(3);
                 let message: String = row.get(4);
                 let timestamp: chrono::DateTime<chrono::Utc> = row.get(5);
-                let actual_value: f64 = row.get::<f64, _>(6);
-                let target_value: f64 = row.get::<f64, _>(7);
+                let actual_value: f64 = row.get(6);
+                let target_value: f64 = row.get(7);
                 let triggered_at: chrono::DateTime<chrono::Utc> = row.get(8);
                 let resolved_at: Option<chrono::DateTime<chrono::Utc>> = row.get(9);
                 let acknowledged_at: Option<chrono::DateTime<chrono::Utc>> = row.get(10);
@@ -1442,19 +1442,19 @@ pub async fn list_provenance_records(
         Ok(rows) => {
             let records: Vec<serde_json::Value> = rows.into_iter().map(|row| {
                 json!({
-                    "id": row.get::<Uuid, _>("id"),
-                    "entity_type": row.get::<String, _>("entity_type"),
-                    "entity_id": row.get::<String, _>("entity_id"),
-                    "action_type": row.get::<String, _>("action_type"),
-                    "action_description": row.get::<String, _>("action_description"),
-                    "actor_id": row.get::<Option<String>, _>("actor_id"),
-                    "actor_type": row.get::<String, _>("actor_type"),
-                    "timestamp": row.get::<DateTime<Utc>, _>("timestamp"),
-                    "metadata": row.get::<Option<serde_json::Value>, _>("metadata"),
-                    "commit_hash": row.get::<Option<String>, _>("commit_hash"),
-                    "parent_provenance_id": row.get::<Option<Uuid>, _>("parent_provenance_id"),
-                    "verification_status": row.get::<String, _>("verification_status"),
-                    "created_at": row.get::<DateTime<Utc>, _>("created_at")
+                    "id": row.get("id"),
+                    "entity_type": row.get("entity_type"),
+                    "entity_id": row.get("entity_id"),
+                    "action_type": row.get("action_type"),
+                    "action_description": row.get("action_description"),
+                    "actor_id": row.get("actor_id"),
+                    "actor_type": row.get("actor_type"),
+                    "timestamp": row.get("timestamp"),
+                    "metadata": row.get("metadata"),
+                    "commit_hash": row.get("commit_hash"),
+                    "parent_provenance_id": row.get("parent_provenance_id"),
+                    "verification_status": row.get("verification_status"),
+                    "created_at": row.get("created_at")
                 })
             }).collect();
 
@@ -1481,7 +1481,7 @@ pub async fn list_provenance_records(
             }
 
             let total_count = match state.db_client.query_one(&count_query, &count_params.iter().map(|p| p.as_ref()).collect::<Vec<_>>()).await {
-                Ok(Some(row)) => row.get::<i64, _>("total"),
+                Ok(Some(row)) => row.get("total"),
                 Ok(None) => 0,
                 Err(e) => {
                     error!("Failed to get provenance count: {}", e);
@@ -1571,7 +1571,8 @@ pub async fn link_provenance_to_commit(
                 &now
             ]).await {
                 Ok(Some(link_row)) => {
-                    let created_at: DateTime<Utc> = link_row.get("created_at");
+                    let #[schemars(with = "String")]
+    created_at: DateTime<Utc> = link_row.get("created_at");
                     let updated_at: Option<DateTime<Utc>> = link_row.get("updated_at");
 
                     // Update provenance record with commit hash
@@ -1700,7 +1701,7 @@ pub async fn verify_provenance_trailer(
                 );
                 if let Ok(parent_rows) = state.db_client.query(&parent_check, &[&parent_ids_to_check]).await {
                     for parent_row in parent_rows {
-                        let parent_id = parent_row.get::<Uuid, _>("id");
+                        let parent_id = parent_row.get("id");
                         valid_parents.insert(parent_id);
                     }
                 }
@@ -1714,7 +1715,8 @@ pub async fn verify_provenance_trailer(
                 let action_type: String = row.get("action_type");
                 let actor_id: Option<String> = row.get("actor_id");
                 let actor_type: String = row.get("actor_type");
-                let timestamp: DateTime<Utc> = row.get("timestamp");
+                let #[schemars(with = "String")]
+    timestamp: DateTime<Utc> = row.get("timestamp");
                 let metadata: Option<serde_json::Value> = row.get("metadata");
                 let parent_provenance_id: Option<Uuid> = row.get("parent_provenance_id");
 
@@ -1758,17 +1760,17 @@ pub async fn verify_provenance_trailer(
                     "entity_type": entity_type,
                     "entity_id": entity_id,
                     "action_type": action_type,
-                    "action_description": row.get::<String, _>("action_description"),
+                    "action_description": row.get("action_description"),
                     "actor_id": actor_id,
                     "actor_type": actor_type,
                     "timestamp": timestamp,
                     "metadata": metadata,
-                    "commit_hash": row.get::<Option<String>, _>("commit_hash"),
+                    "commit_hash": row.get("commit_hash"),
                     "parent_provenance_id": parent_provenance_id,
                     "verification_status": verification_status,
-                    "created_at": row.get::<DateTime<Utc>, _>("created_at"),
-                    "link_type": row.get::<Option<String>, _>("link_type"),
-                    "link_description": row.get::<Option<String>, _>("link_description"),
+                    "created_at": row.get("created_at"),
+                    "link_type": row.get("link_type"),
+                    "link_description": row.get("link_description"),
                     "verification_errors": record_errors
                 })
             }).collect();
@@ -1863,11 +1865,13 @@ pub async fn get_provenance_by_commit(
                 let action_description: String = row.get("action_description");
                 let actor_id: Option<String> = row.get("actor_id");
                 let actor_type: String = row.get("actor_type");
-                let timestamp: DateTime<Utc> = row.get("timestamp");
+                let #[schemars(with = "String")]
+    timestamp: DateTime<Utc> = row.get("timestamp");
                 let metadata: Option<serde_json::Value> = row.get("metadata");
                 let parent_provenance_id: Option<Uuid> = row.get("parent_provenance_id");
                 let verification_status: String = row.get("verification_status");
-                let created_at: DateTime<Utc> = row.get("created_at");
+                let #[schemars(with = "String")]
+    created_at: DateTime<Utc> = row.get("created_at");
                 let link_type: Option<String> = row.get("link_type");
                 let link_description: Option<String> = row.get("link_description");
                 let link_created_at: Option<DateTime<Utc>> = row.get("link_created_at");
@@ -1889,7 +1893,7 @@ pub async fn get_provenance_by_commit(
                     "actor_type": actor_type,
                     "timestamp": timestamp,
                     "metadata": metadata,
-                    "commit_hash": row.get::<Option<String>, _>("commit_hash"),
+                    "commit_hash": row.get("commit_hash"),
                     "parent_provenance_id": parent_provenance_id,
                     "verification_status": verification_status,
                     "created_at": created_at,

@@ -1,12 +1,14 @@
 //! Unsupervised learning algorithms for reflexive learning
 
+use schemars::JsonSchema;
 use crate::reflexive_types::*;
 use ndarray::{Array1, Array2, ArrayView2, Axis};
 use rand::prelude::*;
 use std::collections::HashMap;
 
 /// K-means clustering implementation
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct KMeansClustering {
     /// Number of clusters (K)
     k: usize,
@@ -261,7 +263,8 @@ impl KMeansClustering {
 }
 
 /// Gaussian Mixture Model for soft clustering
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct GaussianMixture {
     /// Number of components
     n_components: usize,

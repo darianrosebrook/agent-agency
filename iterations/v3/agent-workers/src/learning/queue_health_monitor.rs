@@ -1,5 +1,6 @@
 //! Queue health monitor for tracking queue performance
 
+use schemars::JsonSchema;
 use std::sync::Arc;
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
@@ -197,8 +198,9 @@ impl Default for QueueHealthMonitor {
 }
 
 /// Queue health thresholds
-#[derive(Debug, Clone)]
-pub struct QueueHealthThresholds {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct QueueHealthThresholds {
     pub max_queue_depth: u64,
     pub max_wait_time_ms: f64,
     pub min_processing_rate: f64,
@@ -217,8 +219,9 @@ impl Default for QueueHealthThresholds {
 }
 
 /// Queue health status
-#[derive(Debug, Clone, PartialEq)]
-pub enum QueueHealthStatus {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum QueueHealthStatus {
     Healthy,
     Degraded,
     Warning,
@@ -226,16 +229,18 @@ pub enum QueueHealthStatus {
 }
 
 /// Trend direction
-#[derive(Debug, Clone, PartialEq)]
-pub enum TrendDirection {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum TrendDirection {
     Increasing,
     Decreasing,
     Stable,
 }
 
 /// Queue trends
-#[derive(Debug, Clone)]
-pub struct QueueTrends {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct QueueTrends {
     pub queue_depth_trend: TrendDirection,
     pub wait_time_trend: TrendDirection,
     pub processing_rate_trend: TrendDirection,

@@ -3,6 +3,7 @@
 /// Manages individual participant lifecycle, model training, and
 /// secure communication within the federated learning system.
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -29,7 +30,7 @@ pub struct FederationParticipant {
 }
 
 /// Configuration for a federation participant
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParticipantConfig {
     /// Maximum training epochs per round
     pub max_epochs: u32,
@@ -48,7 +49,7 @@ pub struct ParticipantConfig {
 }
 
 /// Device capabilities for the participant
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DeviceCapabilities {
     /// Has GPU acceleration
     pub has_gpu: bool,
@@ -61,7 +62,7 @@ pub struct DeviceCapabilities {
 }
 
 /// Current round participation state
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct RoundParticipation {
     round_id: u64,
     start_time: chrono::DateTime<chrono::Utc>,
@@ -70,7 +71,7 @@ struct RoundParticipation {
 }
 
 /// Participation status in current round
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 enum ParticipationStatus {
     Waiting,
     Training,
@@ -79,7 +80,7 @@ enum ParticipationStatus {
 }
 
 /// Local model state
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct ModelState {
     parameters: Vec<Vec<f32>>,
     version: String,
@@ -416,7 +417,7 @@ impl FederationParticipant {
 }
 
 /// Statistics for a participant
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParticipantStatistics {
     pub participant_id: String,
     pub is_active: bool,
@@ -438,5 +439,4 @@ pub trait CommunicationChannel: Send + Sync {
 use crate::model_updates::ModelUpdate;
 use crate::protocol::ProtocolMessage;
 use crate::differential_privacy::{DifferentialPrivacyEngine, PrivacyParameters};
-
 

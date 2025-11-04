@@ -2,6 +2,7 @@
 //!
 //! Supports multiple model providers (Ollama, CoreML, etc.) with unified interface.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::Arc;
 use async_trait::async_trait;
@@ -23,7 +24,7 @@ pub trait ModelProvider: Send + Sync {
 }
 
 /// Generation options
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct GenerationOptions {
     pub max_tokens: Option<usize>,
     pub temperature: Option<f64>,

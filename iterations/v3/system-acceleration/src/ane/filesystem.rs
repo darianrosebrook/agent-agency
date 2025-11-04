@@ -3,11 +3,12 @@
 //! This module provides utilities for managing filesystem resources
 //! needed for ANE model caching and temporary storage.
 
+use schemars::JsonSchema;
 use std::path::Path;
 use anyhow::Result;
 
 /// Filesystem space information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct FilesystemSpace {
     /// Total space in bytes
     pub total_bytes: u64,

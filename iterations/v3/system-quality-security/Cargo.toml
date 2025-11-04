@@ -21,6 +21,9 @@ anyhow.workspace = true
 regex = "1.10"
 clap = { version = "4.0", features = ["derive"] }
 
+# Schema generation for API docs
+schemars = { version = "0.8", features = ["uuid1", "chrono"] }
+
 # Security-specific dependencies (from security)
 ring = { version = "0.17", features = ["std"] }
 rustls = "0.23"

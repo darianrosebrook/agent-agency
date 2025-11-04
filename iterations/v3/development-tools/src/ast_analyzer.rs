@@ -1,11 +1,12 @@
 use crate::evaluator_types::*;
 use anyhow::Result;
+use schemars::JsonSchema;
 use std::collections::HashSet;
 use tracing::debug;
 use uuid::Uuid;
 
 /// Internal structure for diff hunk representation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct DiffHunk {
     additions: Vec<String>,
     deletions: Vec<String>,

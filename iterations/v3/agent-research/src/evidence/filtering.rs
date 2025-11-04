@@ -6,8 +6,9 @@ use crate::evidence::evidence_types::EvidenceCollectorConfig;
 use std::collections::HashMap;
 
 /// Evidence filter and ranking engine
-#[derive(Debug)]
-pub struct EvidenceFilter {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct EvidenceFilterr {
     config: EvidenceCollectorConfig,
 }
 

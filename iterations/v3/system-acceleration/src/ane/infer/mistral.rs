@@ -3,16 +3,14 @@
 //! This module provides Mistral model inference capabilities including
 //! constitutional reasoning, debate generation, and text generation.
 
+use schemars::JsonSchema;
 use crate::ane::ane_errors::{ANEError, Result};
 use crate::ane::models::mistral_model::{MistralModel, reasoning_templates};
 use candle_core::{Tensor, Device, IndexOp};
 use rand::Rng;
-use candle_nn::VarBuilder;
-use candle_transformers::models::mistral::{Config, Model as MistralCandleModel};
-use tokenizers::Tokenizer;
 
 /// Inference options for Mistral models
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct MistralInferenceOptions {
     pub max_tokens: usize,
     pub temperature: Option<f32>, // None = greedy sampling
@@ -34,7 +32,7 @@ impl Default for MistralInferenceOptions {
 }
 
 /// Constitutional reasoning result
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ConstitutionalVerdict {
     pub compliance_level: ComplianceLevel,
     pub risk_assessment: RiskTier,
@@ -46,7 +44,7 @@ pub struct ConstitutionalVerdict {
 }
 
 /// Compliance levels
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, JsonSchema)]
 pub enum ComplianceLevel {
     Full,
     Partial,
@@ -54,7 +52,7 @@ pub enum ComplianceLevel {
 }
 
 /// Risk tiers
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, JsonSchema)]
 pub enum RiskTier {
     Tier1,
     Tier2,
@@ -62,7 +60,7 @@ pub enum RiskTier {
 }
 
 /// Verdict types
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, JsonSchema)]
 pub enum Verdict {
     Approve,
     Modify,
@@ -70,7 +68,7 @@ pub enum Verdict {
 }
 
 /// Debate argument result
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct DebateArgument {
     pub position: DebatePosition,
     pub argument: String,
@@ -79,14 +77,14 @@ pub struct DebateArgument {
 }
 
 /// Debate positions
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, JsonSchema)]
 pub enum DebatePosition {
     Support,
     Challenge,
 }
 
 /// Confidence levels
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, JsonSchema)]
 pub enum ConfidenceLevel {
     High,
     Medium,
@@ -170,7 +168,7 @@ pub async fn generate_text(
     let device = Device::Cpu; // Use CPU for now, ANE integration will come later
     // Convert i32 tokens to f32 for tensor creation
     let input_tokens_f32: Vec<f32> = input_tokens.iter().map(|&x| x as f32).collect();
-    let input_tensor = Tensor::from_slice(&input_tokens_f32, (input_tokens_f32.len(),), &device)?
+    let _input_tensor = Tensor::from_slice(&input_tokens_f32, (input_tokens_f32.len(),), &device)?
         .unsqueeze(0)?; // Add batch dimension
 
     // Generate tokens
@@ -219,7 +217,7 @@ async fn run_mistral_inference(
     input_tensor: &Tensor,
 ) -> Result<Tensor> {
     // Use the model's Core ML handle for inference
-    let result = model.handle.with_handle(|handle| -> Result<Tensor> {
+    let result = model.handle.with_handle(|_handle| -> Result<Tensor> {
         // This would call the actual Core ML inference
         // For now, return a placeholder tensor
         let device = Device::Cpu;

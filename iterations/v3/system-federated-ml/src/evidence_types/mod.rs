@@ -2,4 +2,3 @@
 
 pub mod evidence_types;
 
-pub use evidence_types::*;

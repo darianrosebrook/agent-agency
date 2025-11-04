@@ -6,6 +6,7 @@
 //! @author @darianrosebrook
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use uuid::Uuid;
@@ -13,11 +14,12 @@ use chrono::Utc;
 use serde::{Serialize, Deserialize};
 use schemars::JsonSchema;
 use agent_agency_contracts::{
-    planning_io::ExecutionPlan,
+    planning_io::ExecutionPlan as ContractExecutionPlan,
     types::prelude::*,
     *,
 };
 use crate::planning::DatabaseOperations;
+use crate::planning::plan_types::ExecutionPlan;
 
 // Use real Council and related types
 use crate::council::Council;
@@ -26,8 +28,9 @@ use crate::council_errors::CouncilResult;
 use crate::judge_backup::types::ReviewContext as JudgeReviewContext;
 use crate::decision_making::FinalDecision;
 
-#[derive(Debug, Clone)]
-pub enum ReviewPriority {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum ReviewPriority {
     Low,
     Normal,
     High,
@@ -84,8 +87,9 @@ pub struct CouncilReviewResult {
 }
 
 /// Scope validation result
-#[derive(Debug, Clone)]
-pub struct ScopeValidationResult {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+struct ScopeValidationResult {
     /// Scope is valid
     pub is_valid: bool,
 
@@ -100,8 +104,9 @@ pub struct ScopeValidationResult {
 }
 
 /// Scope violation details
-#[derive(Debug, Clone)]
-pub struct ScopeViolation {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+struct ScopeViolation {
     /// Violation type
     pub violation_type: ScopeViolationType,
 
@@ -119,8 +124,9 @@ pub struct ScopeViolation {
 }
 
 /// Scope violation types
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ScopeViolationType {
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+enum ScopeViolationType {
     /// Exceeds file budget
     FileBudgetExceeded,
 
@@ -141,8 +147,9 @@ pub enum ScopeViolationType {
 }
 
 /// Violation severity levels
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ViolationSeverity {
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+enum ViolationSeverity {
     Low,
     Medium,
     High,
@@ -150,8 +157,9 @@ pub enum ViolationSeverity {
 }
 
 /// Scope risk levels
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ScopeRiskLevel {
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+enum ScopeRiskLevel {
     Low,
     Medium,
     High,
@@ -159,8 +167,9 @@ pub enum ScopeRiskLevel {
 }
 
 /// Ethical assessment result
-#[derive(Debug, Clone)]
-pub struct EthicalAssessmentResult {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+struct EthicalAssessmentResult {
     /// Assessment passed
     pub passed: bool,
 
@@ -175,8 +184,9 @@ pub struct EthicalAssessmentResult {
 }
 
 /// Ethical concern details
-#[derive(Debug, Clone)]
-pub struct EthicalConcern {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+struct EthicalConcern {
     /// Concern category
     pub category: EthicalCategory,
 
@@ -191,8 +201,9 @@ pub struct EthicalConcern {
 }
 
 /// Ethical concern categories
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum EthicalCategory {
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+enum EthicalCategory {
     Privacy,
     Security,
     Fairness,
@@ -204,8 +215,9 @@ pub enum EthicalCategory {
 }
 
 /// Ethical risk levels
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum EthicalRiskLevel {
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+enum EthicalRiskLevel {
     Low,
     Medium,
     High,
@@ -213,8 +225,9 @@ pub enum EthicalRiskLevel {
 }
 
 /// Quality requirements for plan execution
-#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
-pub struct QualityRequirements {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+struct QualityRequirements {
     /// Minimum test coverage required
     pub min_test_coverage: f64,
 
@@ -235,8 +248,9 @@ pub struct QualityRequirements {
 }
 
 /// Council decision details
-#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
-pub struct CouncilDecision {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+struct CouncilDecision {
     /// Final verdict
     pub verdict: CouncilVerdict,
 
@@ -255,8 +269,9 @@ pub struct CouncilDecision {
 }
 
 /// Judge verdict details
-#[derive(Debug, Clone)]
-pub struct JudgeVerdict {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+struct JudgeVerdict {
     /// Judge identifier
     pub judge_id: String,
 
@@ -271,8 +286,9 @@ pub struct JudgeVerdict {
 }
 
 /// Judge verdict types
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum JudgeVerdictType {
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+enum JudgeVerdictType {
     Approve,
     Reject,
     ConditionalApproval,
@@ -301,8 +317,9 @@ pub struct CouncilPlanReview {
 }
 
 /// Review configuration
-#[derive(Debug, Clone)]
-pub struct ReviewConfig {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ReviewConfig {
     /// Enable scope validation
     pub enable_scope_validation: bool,
 
@@ -323,8 +340,9 @@ pub struct ReviewConfig {
 }
 
 /// Council verdict types (simplified for planning)
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum CouncilVerdict {
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+enum CouncilVerdict {
     Approved,
     Rejected,
     ConditionalApproval,
@@ -419,7 +437,7 @@ impl CouncilPlanReview {
         let review_duration = Utc::now().signed_duration_since(review_start).num_milliseconds() as u64;
 
         let result = CouncilReviewResult {
-            plan_id: Uuid::parse_str(&plan.contract_plan.id).unwrap_or_else(|_| Uuid::new_v4()),
+            plan_id: plan.contract_plan.id,
             approved,
             risk_tier,
             scope_validation,
@@ -580,7 +598,7 @@ impl CouncilPlanReview {
         // Extract judge verdicts from council session (if accessible)
         // Note: contributions field may be private, so we use an empty vec for now
         // In a production system, this would be extracted from session metadata
-        let judge_verdicts: Vec<String> = vec![];
+        let judge_verdicts: Vec<JudgeVerdict> = vec![];
 
         let council_decision = CouncilDecision {
             verdict,
@@ -689,9 +707,10 @@ impl CouncilPlanReview {
     /// Determine review priority for council
     fn determine_review_priority(&self, plan: &ExecutionPlan) -> ReviewPriority {
         // High priority for plans with high risk or many milestones
+        let qg = &plan.contract_plan.quality_gates;
         if plan.contract_plan.milestones.len() > 5 ||
-           plan.contract_plan.quality_gates.as_ref().map(|qg| qg.requires_manual_review).unwrap_or(false) ||
-           plan.contract_plan.quality_gates.as_ref().map(|qg| qg.requires_council_approval).unwrap_or(false) {
+           qg.requires_manual_review ||
+           qg.requires_council_approval {
             ReviewPriority::High
         } else {
             ReviewPriority::Normal
@@ -796,26 +815,39 @@ impl CouncilPlanReview {
         // Filter for plan_review entries and deserialize them
         let review_results: Vec<CouncilReviewResult> = audit_entries
             .into_iter()
-            .filter(|entry| entry.entity_type == "plan_review" && entry.entity_id == plan_id)
+            .filter(|entry| {
+                entry.event_type == "plan_review" && 
+                entry.metadata.get("plan_id")
+                    .and_then(|v| v.as_str())
+                    .and_then(|s| Uuid::parse_str(s).ok())
+                    .map(|id| id == plan_id)
+                    .unwrap_or(false)
+            })
             .filter_map(|entry| {
-                // Deserialize CouncilReviewResult from audit entry details
-                serde_json::from_value::<CouncilReviewResult>(entry.details.clone())
+                // Deserialize CouncilReviewResult from audit entry metadata
+                serde_json::from_value::<CouncilReviewResult>(serde_json::json!(entry.metadata))
                     .ok()
                     .or_else(|| {
                         // Fallback: reconstruct from audit entry metadata
                         // This handles cases where details format differs
-                        let approved = entry.details.get("approved")
+                        let approved = entry.metadata.get("approved")
                             .and_then(|v| v.as_bool())
                             .unwrap_or(false);
+                        
+                        // Extract plan_id from metadata
+                        let plan_id_from_meta = entry.metadata.get("plan_id")
+                            .and_then(|v| v.as_str())
+                            .and_then(|s| Uuid::parse_str(s).ok())
+                            .unwrap_or(plan_id);
                         
                         // Extract other fields similarly if needed
                         // For now, return minimal result
                         Some(CouncilReviewResult {
-                            plan_id: entry.entity_id,
+                            plan_id: plan_id_from_meta,
                             approved,
                             risk_tier: 2, // Default
                             scope_validation: ScopeValidationResult {
-                                is_valid: entry.details.get("scope_valid")
+                                is_valid: entry.metadata.get("scope_valid")
                                     .and_then(|v| v.as_bool())
                                     .unwrap_or(true),
                                 violations: vec![],
@@ -825,7 +857,7 @@ impl CouncilPlanReview {
                             ethical_assessment: EthicalAssessmentResult {
                                 passed: true,
                                 concerns: vec![],
-                                constitutional_score: entry.details.get("constitutional_score")
+                                constitutional_score: entry.metadata.get("constitutional_score")
                                     .and_then(|v| v.as_f64())
                                     .unwrap_or(1.0),
                                 recommendations: vec![],
@@ -844,23 +876,16 @@ impl CouncilPlanReview {
                                 } else {
                                     CouncilVerdict::Rejected
                                 },
-                                confidence_score: entry.details.get("constitutional_score")
+                                confidence_score: entry.metadata.get("constitutional_score")
                                     .and_then(|v| v.as_f64())
                                     .unwrap_or(0.5),
-                                rationale: entry.details.get("description")
-                                    .and_then(|v| v.as_str())
-                                    .unwrap_or("Review completed")
-                                    .to_string(),
+                                rationale: entry.description.clone(),
                                 judge_verdicts: vec![],
-                                decided_at: entry.created_at,
+                                decided_at: entry.timestamp,
                             },
-                            reviewed_at: entry.created_at,
+                            reviewed_at: entry.timestamp,
                             review_duration_ms: 0,
-                            metadata: entry.details.as_object()
-                                .map(|m| m.iter()
-                                    .map(|(k, v)| (k.clone(), v.clone()))
-                                    .collect())
-                                .unwrap_or_default(),
+                            metadata: entry.metadata,
                         })
                     })
             })
@@ -902,8 +927,9 @@ impl ScopeValidator {
         // Check for scope boundary violations
         for milestone in &plan.contract_plan.milestones {
             for file_path in &milestone.scope.files {
-                if file_path.is_absolute() {
-                    let path_str = file_path.to_string_lossy();
+                let path_buf = PathBuf::from(file_path);
+                if path_buf.is_absolute() {
+                    let path_str = path_buf.to_string_lossy();
 
                     // Check for system file access
                     if path_str.starts_with("/etc") ||
@@ -974,9 +1000,11 @@ impl EthicalAssessor {
 
         // Check for privacy concerns
         for milestone in &plan.contract_plan.milestones {
-            if milestone.scope.files.iter().any(|f| f.to_string_lossy().contains("password") ||
-                                                    f.to_string_lossy().contains("secret") ||
-                                                    f.to_string_lossy().contains("private")) {
+            if milestone.scope.files.iter().any(|f| {
+                let path_buf = PathBuf::from(f);
+                let path_str = path_buf.to_string_lossy();
+                path_str.contains("password") || path_str.contains("secret") || path_str.contains("private")
+            }) {
                 concerns.push(EthicalConcern {
                     category: EthicalCategory::Privacy,
                     description: format!("Milestone '{}' accesses potentially sensitive files", milestone.objective),
@@ -1003,11 +1031,12 @@ impl EthicalAssessor {
                     "Notify stakeholders of breaking changes".to_string(),
                 ],
             });
-            constitutional_score -= 0.1;
+            constitutional_score -= 0.1f64;
         }
 
         // Check for fairness and transparency
-        if !plan.contract_plan.quality_gates.as_ref().map(|qg| qg.requires_manual_review).unwrap_or(false) && plan.contract_plan.milestones.len() > 3 {
+        let qg = &plan.contract_plan.quality_gates;
+        if !qg.requires_manual_review && plan.contract_plan.milestones.len() > 3 {
             concerns.push(EthicalConcern {
                 category: EthicalCategory::Transparency,
                 description: "Complex plan without manual review may lack transparency".to_string(),
@@ -1032,7 +1061,7 @@ impl EthicalAssessor {
         Ok(EthicalAssessmentResult {
             passed: constitutional_score >= 0.8, // Require 80% constitutional compliance
             concerns,
-            constitutional_score: constitutional_score.max(0.0),
+            constitutional_score: constitutional_score.max(0.0f64),
             recommendations,
         })
     }
@@ -1106,17 +1135,17 @@ impl QualityRequirementsAssessor {
         // Require council approval for plans with high impact
         plan.contract_plan.change_budget.allow_breaking_changes ||
         plan.contract_plan.milestones.len() > 8 ||
-        plan.contract_plan.quality_gates.as_ref().map(|qg| qg.requires_manual_review).unwrap_or(false)
+        plan.contract_plan.quality_gates.requires_manual_review
     }
 
     fn determine_evidence_requirements(&self, plan: &ExecutionPlan) -> Vec<String> {
         let mut requirements = vec!["execution_result".to_string()];
 
-        if plan.contract_plan.quality_gates.as_ref().and_then(|qg| qg.coverage_requirements.get("line")).unwrap_or(&0.0) > &0.0 {
+        if plan.contract_plan.quality_gates.coverage_requirements.get("line").unwrap_or(&0.0) > &0.0 {
             requirements.push("test_coverage_report".to_string());
         }
 
-        if plan.contract_plan.quality_gates.as_ref().map(|qg| qg.security_requirements.scan_required).unwrap_or(false) {
+        if plan.contract_plan.quality_gates.security_requirements.scan_required {
             requirements.push("security_scan_report".to_string());
         }
 

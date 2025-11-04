@@ -27,7 +27,7 @@ members = [
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-authors = ["Darian Rosebrook <darian@example.com>"]
+authors = ["Darian Rosebrook <hello@darianrosebrook.com>"]
 license = "MIT"
 
 [workspace.dependencies]

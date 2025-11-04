@@ -3,13 +3,14 @@
 //! Provides rate limiting functionality for API endpoints to prevent
 //! abuse and ensure fair resource usage.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 
 /// Rate limiter configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct RateLimiterConfig {
     pub requests_per_minute: u32,
     pub burst_size: u32,
@@ -27,9 +28,11 @@ impl Default for RateLimiterConfig {
 }
 
 /// Client rate limit tracking
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct ClientLimits {
+    #[schemars(with = "String")]
     requests: Vec<Instant>,
+    #[schemars(with = "String")]
     last_reset: Instant,
 }
 
@@ -58,9 +61,10 @@ impl ClientLimits {
 }
 
 /// Rate limiter implementation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct RateLimiter {
     config: RateLimiterConfig,
+    #[schemars(skip)]
     clients: Arc<RwLock<HashMap<String, ClientLimits>>>,
 }
 

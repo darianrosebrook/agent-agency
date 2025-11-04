@@ -1,10 +1,11 @@
 //! Buffer pool management for efficient memory allocation
 
+use schemars::JsonSchema;
 use system_configuration::types::DeviceKind;
 use anyhow::Result;
 
 /// Buffer pool configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct BufferPoolConfig {
     pub max_buffers: usize,
     pub buffer_size_mb: usize,
@@ -12,7 +13,7 @@ pub struct BufferPoolConfig {
 }
 
 /// Buffer pool statistics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct BufferPoolStats {
     pub total_buffers: usize,
     pub allocated_buffers: usize,
@@ -53,7 +54,7 @@ impl BufferPool {
     }
 
     /// Deallocate a buffer
-    pub fn deallocate(&mut self, handle: BufferHandle) -> Result<()> {
+    pub fn deallocate(&mut self, _handle: BufferHandle) -> Result<()> {
         // Placeholder implementation
         Ok(())
     }
@@ -65,9 +66,10 @@ impl BufferPool {
 }
 
 /// Buffer handle
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct BufferHandle {
     pub id: u64,
     pub size_mb: usize,
+    #[schemars(with = "String")]
     pub device: DeviceKind,
 }

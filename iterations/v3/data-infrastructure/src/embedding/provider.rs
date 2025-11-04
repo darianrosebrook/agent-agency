@@ -4,12 +4,13 @@
 //! Uses embeddinggemma (768-dim) as the standard CoreML embedding model.
 //! Decision: Selected embeddinggemma over e5-small-v2 due to better quality and availability.
 
+use schemars::JsonSchema;
 use crate::embedding::embedding_types::*;
 use crate::embedding::model_loading::EmbeddingModel;
-use crate::embedding::tokenization::{Tokenizer, HfTokenizer};
+use crate::embedding::tokenization::Tokenizer;
 use anyhow::Result;
 use async_trait::async_trait;
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 use std::hash::Hasher;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -41,10 +42,10 @@ extern "C" {
 // use tokenizers::Tokenizer; // Commented out to avoid conflicts
 
 /// Placeholder types for disabled CLIP functionality
-#[derive(Debug, Clone)]
-pub struct ClipModelPlaceholder;
+#[derive(Debug, Clone, JsonSchema)]
+pub struct ClipModelPlaceholder ;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum DevicePlaceholder {
     Cpu,
     Cuda(usize),
@@ -780,7 +781,7 @@ impl EmbeddingProvider for OnnxEmbeddingProvider {
 // Using existing placeholder types for CLIP functionality
 
 /// CLIP model variants
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, JsonSchema)]
 pub enum ClipModelVariant {
     /// CLIP ViT-B/32 - 512 dimensions
     VitB32,

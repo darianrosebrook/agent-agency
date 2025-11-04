@@ -3,6 +3,7 @@
 //! Provides standardized error types for API operations with proper
 //! HTTP status code mapping and error serialization.
 
+use schemars::JsonSchema;
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -11,7 +12,7 @@ use axum::{
 use serde::Serialize;
 
 /// Standardized API error types
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, JsonSchema)]
 pub enum ApiError {
     /// Database operation failed
     DatabaseError(String),

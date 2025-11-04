@@ -3,6 +3,7 @@
 //! This module aggregates verdicts from multiple judges into a unified
 //! council decision, handling conflicting opinions and consensus algorithms.
 
+use schemars::JsonSchema;
 use futures_util::TryFutureExt;
 use std::collections::HashMap;
 use std::time::Duration;
@@ -52,39 +53,44 @@ fn string_to_judge_verdict(s: &str) -> Result<JudgeVerdict, CouncilError> {
 }
 
 // Missing enum definitions
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub enum RiskSeverity {
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize, JsonSchema)]
+enum RiskSeverity {
     Low,
     Medium,
     High,
     Critical,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct RiskFactor {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+struct RiskFactor {
     pub factor_type: String,
     pub severity: RiskSeverity,
     pub description: String,
     pub impact: f64,
 }
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum ConsensusStrength {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, Copy)]
+enum ConsensusStrength {
     Weak = 1,
     Moderate = 2,
     Strong = 3,
     Unanimous = 4,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum EffortComplexity {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum EffortComplexity {
     Low,
     Medium,
     High,
 }
 
 /// Result of aggregating multiple judge verdicts
-#[derive(Debug, Clone)]
-pub struct AggregationResult {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct AggregationResult {
     /// Overall council decision
     pub council_decision: CouncilDecision,
 
@@ -111,7 +117,8 @@ pub struct AggregationResult {
 }
 
 /// Council decision after aggregation
-#[derive(Debug, Clone, PartialEq)]
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum CouncilDecision {
     /// Approve for execution
     Approve {
@@ -143,8 +150,9 @@ pub enum CouncilDecision {
 }
 
 /// Agreement level among judges
-#[derive(Debug, Clone, PartialEq)]
-pub enum AgreementLevel {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum AgreementLevel {
     Unanimous,
     StrongMajority,
     Majority,
@@ -154,8 +162,9 @@ pub enum AgreementLevel {
 }
 
 /// Weighted contribution from a judge
-#[derive(Debug, Clone)]
-pub struct WeightedContribution {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct WeightedContribution {
     pub judge_id: String,
     pub judge_type: JudgeType,
     pub verdict: JudgeVerdict,
@@ -165,8 +174,9 @@ pub struct WeightedContribution {
 }
 
 /// Dissenting opinion
-#[derive(Debug, Clone)]
-pub struct DissentingOpinion {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct DissentingOpinion {
     pub judge_id: String,
     pub dissenting_verdict: JudgeVerdict,
     pub rationale: String,
@@ -174,8 +184,9 @@ pub struct DissentingOpinion {
 }
 
 /// Aggregated changes from multiple judges
-#[derive(Debug, Clone)]
-pub struct AggregatedChanges {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct AggregatedChanges {
     pub changes: Vec<RequiredChange>,
     pub change_categories: HashMap<String, usize>,
     pub priority_distribution: HashMap<ChangePriority, usize>,
@@ -183,8 +194,9 @@ pub struct AggregatedChanges {
 }
 
 /// Aggregated effort estimate
-#[derive(Debug, Clone, PartialEq)]
-pub struct AggregatedEffort {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+struct AggregatedEffort {
     pub min_person_hours: f64,
     pub max_person_hours: f64,
     pub average_person_hours: f64,
@@ -193,8 +205,9 @@ pub struct AggregatedEffort {
 }
 
 /// Aggregated risk assessment
-#[derive(Debug, Clone, PartialEq)]
-pub struct AggregatedRiskAssessment {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+struct AggregatedRiskAssessment {
     pub overall_risk: RiskLevel,
     pub risk_factors: Vec<String>,
     pub mitigation_suggestions: Vec<String>,
@@ -202,8 +215,9 @@ pub struct AggregatedRiskAssessment {
 }
 
 /// Issue summary for reporting
-#[derive(Debug, Clone)]
-pub struct IssueSummary {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct IssueSummary {
     pub category: String,
     pub severity: IssueSeverity,
     pub frequency: usize,
@@ -211,8 +225,9 @@ pub struct IssueSummary {
 }
 
 /// Metadata about the aggregation process
-#[derive(Debug, Clone)]
-pub struct AggregationMetadata {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct AggregationMetadata {
     pub total_judges: usize,
     pub participating_judges: usize,
     pub aggregation_algorithm: String,
@@ -221,8 +236,9 @@ pub struct AggregationMetadata {
 }
 
 /// Verdict aggregator that combines judge opinions
-#[derive(Debug)]
-pub struct VerdictAggregator {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct VerdictAggregator {
     config: AggregationConfig,
 }
 
@@ -233,8 +249,9 @@ impl Default for VerdictAggregator {
 }
 
 /// Configuration for verdict aggregation
-#[derive(Debug, Clone)]
-pub struct AggregationConfig {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct AggregationConfig {
     /// Minimum consensus threshold (0.0-1.0)
     pub consensus_threshold: f64,
 
@@ -252,8 +269,9 @@ pub struct AggregationConfig {
 }
 
 /// How to handle dissenting opinions
-#[derive(Debug, Clone)]
-pub enum DissentHandling {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum DissentHandling {
     /// Strict - any dissent requires human review
     Strict,
 
@@ -265,8 +283,9 @@ pub enum DissentHandling {
 }
 
 /// Risk aggregation strategy
-#[derive(Debug, Clone)]
-pub enum RiskAggregationStrategy {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum RiskAggregationStrategy {
     /// Most conservative risk level wins
     MostConservative,
 
@@ -1101,8 +1120,9 @@ impl VerdictAggregator {
 }
 
 /// Comprehensive duplicate change detection and merging system
-#[derive(Debug)]
-pub struct ChangeDeduplicationEngine {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct ChangeDeduplicationEngine {
     /// Semantic similarity threshold for duplicate detection (0.0-1.0)
     semantic_similarity_threshold: f64,
     /// Text similarity threshold for content-based deduplication
@@ -1118,8 +1138,9 @@ pub struct ChangeDeduplicationEngine {
 }
 
 /// Result of duplicate change detection and merging
-#[derive(Debug, Clone)]
-pub struct DeduplicationResult {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct DeduplicationResult {
     /// Unique changes after deduplication
     pub unique_changes: Vec<RequiredChange>,
     /// Duplicate groups that were merged
@@ -1131,8 +1152,9 @@ pub struct DeduplicationResult {
 }
 
 /// Group of duplicate changes that were identified and merged
-#[derive(Debug, Clone)]
-pub struct DuplicateGroup {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct DuplicateGroup {
     /// Representative change (after merging)
     pub representative_change: RequiredChange,
     /// Original duplicate changes that were merged
@@ -1144,8 +1166,9 @@ pub struct DuplicateGroup {
 }
 
 /// Conflict between changes that cannot be automatically resolved
-#[derive(Debug, Clone)]
-pub struct ChangeConflict {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ChangeConflict {
     /// Conflicting changes
     pub changes: Vec<RequiredChange>,
     /// Type of conflict
@@ -1157,8 +1180,9 @@ pub struct ChangeConflict {
 }
 
 /// Types of conflicts that can occur between changes
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum ConflictType {
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+enum ConflictType {
     /// Changes modify the same code with different approaches
     FunctionalConflict,
     /// Changes have different priorities but similar scope
@@ -1172,8 +1196,9 @@ pub enum ConflictType {
 }
 
 /// Strategies for resolving conflicts
-#[derive(Debug, Clone)]
-pub enum ConflictResolution {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum ConflictResolution {
     /// Prefer higher priority change
     PreferHigherPriority,
     /// Combine both changes into one
@@ -1185,8 +1210,9 @@ pub enum ConflictResolution {
 }
 
 /// Strategies for merging duplicate changes
-#[derive(Debug, Clone)]
-pub enum MergeStrategy {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum MergeStrategy {
     /// Keep the highest priority change
     KeepHighestPriority,
     /// Combine descriptions and requirements
@@ -1198,8 +1224,9 @@ pub enum MergeStrategy {
 }
 
 /// Conflict resolution strategy configuration
-#[derive(Debug, Clone)]
-pub struct ConflictResolutionStrategy {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ConflictResolutionStrategy {
     /// Automatic resolution enabled
     pub auto_resolve: bool,
     /// Default resolution method
@@ -1209,8 +1236,9 @@ pub struct ConflictResolutionStrategy {
 }
 
 /// Performance metrics for deduplication operations
-#[derive(Debug, Clone)]
-pub struct DeduplicationPerformance {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct DeduplicationPerformance {
     /// Total processing time
     pub total_time_ms: u64,
     /// Number of similarity computations performed
@@ -1224,8 +1252,9 @@ pub struct DeduplicationPerformance {
 }
 
 /// Overall deduplication system metrics
-#[derive(Debug, Clone)]
-pub struct DeduplicationMetrics {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct DeduplicationMetrics {
     /// Total deduplication operations performed
     pub total_operations: u64,
     /// Average processing time per operation
@@ -1239,8 +1268,9 @@ pub struct DeduplicationMetrics {
 }
 
 /// Configuration for semantic analysis of changes
-#[derive(Debug, Clone)]
-pub struct SemanticAnalysisConfig {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct SemanticAnalysisConfig {
     /// Weight for category similarity in overall score
     pub category_weight: f64,
     /// Weight for description similarity in overall score
@@ -1254,8 +1284,9 @@ pub struct SemanticAnalysisConfig {
 }
 
 /// Extracted semantic features from a change for comparison
-#[derive(Debug, Clone)]
-pub struct ChangeSemanticFeatures {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ChangeSemanticFeatures {
     /// Normalized category
     pub category: String,
     /// Key terms extracted from description
@@ -1271,8 +1302,9 @@ pub struct ChangeSemanticFeatures {
 }
 
 /// Classification of change intent
-#[derive(Debug, Clone, PartialEq)]
-pub enum ChangeIntent {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum ChangeIntent {
     BugFix,
     FeatureAddition,
     PerformanceImprovement,
@@ -1314,7 +1346,8 @@ static SEMANTIC_PATTERNS: Lazy<HashMap<&'static str, Regex>> = Lazy::new(|| {
 });
 
 /// Internal struct for verdict distribution analysis
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 struct VerdictDistribution {
     approve_weight: f64,
     refine_weight: f64,

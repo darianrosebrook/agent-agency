@@ -3,6 +3,7 @@
 //! Handles the execution of MCP tools with proper error handling,
 //! timeout management, and result processing.
 
+use schemars::JsonSchema;
 use crate::worker_types::*;
 use agent_mcp::ToolRegistry;
 use std::sync::Arc;
@@ -493,7 +494,8 @@ impl ToolExecutor {
 }
 
 /// Result of tool execution
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionResult {
     pub success: bool,
     pub output: Option<serde_json::Value>,
@@ -503,8 +505,9 @@ pub struct ExecutionResult {
 }
 
 /// Errors from tool execution
-#[derive(Debug, thiserror::Error)]
-pub enum ExecutionError {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
+enum ExecutionError {
     #[error("Tool not found: {0}")]
     ToolNotFound(String),
 

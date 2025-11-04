@@ -3,6 +3,7 @@
 //! Manages registration, discovery, and metadata for all CAWS tools
 //! in the ecosystem, providing unified access and governance.
 
+use schemars::JsonSchema;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -36,7 +37,7 @@ pub struct RegisteredTool {
 }
 
 /// Tool metadata for discovery and documentation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolMetadata {
     /// Tool ID (unique identifier)
     pub id: String,
@@ -67,7 +68,7 @@ pub struct ToolMetadata {
 }
 
 /// Tool categories for organization
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, JsonSchema)]
 pub enum ToolCategory {
     /// Policy enforcement and compliance
     Policy,
@@ -122,7 +123,7 @@ impl ToolCategory {
 }
 
 /// Tool registration information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolRegistration {
     /// Tool metadata
     pub metadata: ToolMetadata,
@@ -131,7 +132,7 @@ pub struct ToolRegistration {
 }
 
 /// Registration options
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RegistrationOptions {
     /// Enable health monitoring
     pub enable_health_monitoring: bool,
@@ -144,7 +145,7 @@ pub struct RegistrationOptions {
 }
 
 /// Tool health status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolHealth {
     /// Tool is healthy
     pub healthy: bool,
@@ -437,7 +438,7 @@ impl ToolRegistry {
 }
 
 /// Registry statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RegistryStatistics {
     /// Total number of registered tools
     pub total_tools: usize,
@@ -452,7 +453,7 @@ pub struct RegistryStatistics {
 }
 
 /// Registry export format
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RegistryExport {
     /// Tool metadata by name
     pub tools: HashMap<String, ToolMetadata>,

@@ -7,6 +7,8 @@
 
 use std::sync::Arc;
 use anyhow::Result;
+use uuid::Uuid;
+use async_trait::async_trait;
 use crate::planning::DatabaseOperations;
 
 // Real types from contracts (feature-gated where necessary)
@@ -28,16 +30,16 @@ struct StubCouncilCoordinator;
 
 #[async_trait::async_trait]
 impl agent_agency_contracts::CouncilCoordinator for StubCouncilCoordinator {
-    async fn start_session(&self, _task: &agent_agency_contracts::TaskDescriptor) -> agent_agency_contracts::CouncilResult<agent_agency_contracts::SessionId> {
-        Ok(agent_agency_contracts::SessionId(uuid::Uuid::new_v4()))
+    async fn start_session(&self, _task: &agent_agency_contracts::types::planning::TaskDescriptor) -> agent_agency_contracts::errors::CouncilResult<agent_agency_contracts::ports::council_coordinator::SessionId> {
+        Ok(agent_agency_contracts::ports::council_coordinator::SessionId(uuid::Uuid::new_v4()))
     }
-    async fn review_task(&self, _session_id: &agent_agency_contracts::SessionId, _task: &agent_agency_contracts::TaskDescriptor) -> agent_agency_contracts::CouncilResult<agent_agency_contracts::CouncilVerdict> {
-        Ok(agent_agency_contracts::CouncilVerdict::Approved)
+    async fn review_task(&self, _session_id: &agent_agency_contracts::ports::council_coordinator::SessionId, _task: &agent_agency_contracts::types::planning::TaskDescriptor) -> agent_agency_contracts::errors::CouncilResult<agent_agency_contracts::types::council::CouncilVerdict> {
+        Ok(agent_agency_contracts::types::council::CouncilVerdict::Approved)
     }
-    async fn get_session_status(&self, _session_id: &agent_agency_contracts::SessionId) -> agent_agency_contracts::CouncilResult<agent_agency_contracts::SessionStatus> {
-        Ok(agent_agency_contracts::SessionStatus {
-            session_id: _session_id.clone(),
-            status: agent_agency_contracts::SessionStatusType::Completed,
+    async fn get_session_status(&self, _session_id: &agent_agency_contracts::ports::council_coordinator::SessionId) -> agent_agency_contracts::errors::CouncilResult<agent_agency_contracts::ports::council_coordinator::SessionStatus> {
+        Ok(agent_agency_contracts::ports::council_coordinator::SessionStatus {
+            session_id: *_session_id,
+            status: agent_agency_contracts::ports::council_coordinator::SessionStatusType::Completed,
             progress: 1.0,
             pending_requirements: vec![],
             estimated_completion: None,
@@ -133,32 +135,25 @@ impl PlanningSystemFactory {
         db_ops: Arc<dyn DatabaseOperations>,
     ) -> Result<PlanningSystemComponents> {
         // Create plan generator with tool chain integration
-        let plan_generator = Arc::new(PlanGenerator::new());
+        let plan_generator = Arc::new(PlanGenerator::new(
+            crate::planning::plan_types::PlanningConstraints::default(),
+            None, // tool_chain_bridge
+            None, // legacy_adapter
+        ));
 
         // Create planning storage
-        let planning_storage = Arc::new(PlanningStorage::new(db_ops.clone()));
+        let planning_storage = Arc::new(PlanningStorage::new(
+            db_ops.clone(),
+            std::path::PathBuf::from("/tmp/plans"),
+            std::path::PathBuf::from("/tmp/specs"),
+            crate::planning::storage::StorageConfig::default(),
+        ));
 
-        // Create parallel coordinator
-        let parallel_coordinator = Arc::new(ParallelCoordinator::new());
-
-        // Create worker assignment strategy
+        // Create shared components first (no dependencies)
         let worker_assigner = Arc::new(WorkerAssignmentStrategy::new(db_ops.clone()));
-
-        // Create evidence collector with research integration
-        // Wrap real evidence collector in adapter to match contract trait
-        #[cfg(feature = "research")]
-        let research_adapter = Arc::new(ResearchEvidenceCollectorAdapter::new(research_evidence_collector.clone()));
-        #[cfg(feature = "research")]
-        let evidence_collector = Arc::new(EvidenceCollector::new(research_adapter));
-        #[cfg(not(feature = "research"))]
-        let evidence_collector = Arc::new(EvidenceCollector::new(Arc::new(crate::planning::evidence::NoOpResearchEvidenceCollector)));
-
-        // Create scope guard for file locking
         let scope_guard = Arc::new(ScopeGuard::new());
-
+        
         // Create council monitor
-        // CouncilMonitor uses local stub CouncilCoordinator type, so we need to create a wrapper
-        // For now, we'll create a stub coordinator that wraps the real one via the adapter
         #[cfg(feature = "council")]
         let council_coordinator_stub = Arc::new(StubCouncilCoordinator);
         #[cfg(feature = "council")]
@@ -169,11 +164,85 @@ impl PlanningSystemFactory {
             db_ops.clone(),
         ));
 
+        // Create evidence collector with research integration
+        #[cfg(feature = "research")]
+        let research_adapter = Arc::new(ResearchEvidenceCollectorAdapter::new(research_evidence_collector.clone()));
+        #[cfg(feature = "research")]
+        let evidence_collector = Arc::new(EvidenceCollector::new(research_adapter));
+        #[cfg(not(feature = "research"))]
+        let evidence_collector = Arc::new(EvidenceCollector::new(Arc::new(crate::planning::evidence::NoOpResearchEvidenceCollector)));
+
         // Create TODO integration
         let todo_integration = Arc::new(TodoIntegration::new(
             Arc::new(crate::planning::todo_template::TodoTemplateSystem::new()),
             db_ops.clone(),
         ));
+
+        // Create audit trail stub for PlanExecutor
+        struct StubAuditTrail;
+        #[async_trait]
+        impl crate::planning::plan_executor::AuditTrail for StubAuditTrail {
+            async fn log_event(&self, _event: crate::planning::plan_executor::AuditEvent) -> Result<()> {
+                // Stub implementation - no-op
+                Ok(())
+            }
+        }
+        let audit_trail = Arc::new(StubAuditTrail) as Arc<dyn crate::planning::plan_executor::AuditTrail>;
+
+        // Create worker pool stub (needed for PlanExecutor)
+        struct StubWorkerPool;
+        #[async_trait::async_trait]
+        impl crate::planning::plan_executor::WorkerPool for StubWorkerPool {
+            async fn available_workers(&self) -> Result<Vec<crate::planning::plan_executor::WorkerInfo>> {
+                Ok(vec![])
+            }
+            async fn assign_worker(&self, _worker_id: Uuid, _milestone_id: String) -> Result<()> {
+                Ok(())
+            }
+            async fn release_worker(&self, _worker_id: Uuid) -> Result<()> {
+                Ok(())
+            }
+            async fn worker_status(&self, _worker_id: Uuid) -> Result<crate::planning::plan_executor::WorkerStatus> {
+                Ok(crate::planning::plan_executor::WorkerStatus {
+                    current_assignment: None,
+                    health: crate::planning::plan_executor::WorkerHealth::Healthy,
+                    performance: crate::planning::plan_executor::WorkerPerformance {
+                        avg_execution_time_ms: 0.0,
+                        success_rate: 1.0,
+                        quality_score: 1.0,
+                    },
+                })
+            }
+        }
+        let worker_pool = Arc::new(StubWorkerPool);
+
+        // Break circular dependency using Arc::new_cyclic
+        // PlanExecutor needs ParallelCoordinator, and ParallelCoordinator needs PlanExecutor
+        // We'll create them using a cyclic reference pattern
+        let parallel_coordinator = Arc::new_cyclic(|coordinator_ref| {
+            // Create PlanExecutor that references the coordinator
+            let plan_executor = Arc::new(crate::planning::plan_executor::PlanExecutor::new(
+                crate::planning::plan_types::ExecutionPlan::default(),
+                worker_pool.clone(),
+                evidence_collector.clone(),
+                worker_assigner.clone(),
+                scope_guard.clone(),
+                council_monitor.clone(),
+                coordinator_ref.clone(), // Reference to the coordinator being created
+                audit_trail.clone(),
+                Arc::new(std::sync::Mutex::new(todo_integration.clone())), // Wrap Arc<TodoIntegration> in Arc<Mutex<Arc<TodoIntegration>>>
+                crate::planning::plan_executor::ExecutionConfig::default(),
+            ));
+            
+            // Create ParallelCoordinator with the PlanExecutor
+            ParallelCoordinator::new(
+                plan_executor,
+                scope_guard.clone(),
+                council_monitor.clone(),
+                worker_assigner.clone(),
+                crate::planning::parallel_coordinator::ParallelConfig::default(),
+            )
+        });
 
         // Create council plan review with real Council instance
         let council_review = Arc::new(CouncilPlanReview::new(
@@ -253,8 +322,9 @@ impl PlanningSystemComponents {
 }
 
 /// Planning system configuration
-#[derive(Debug, Clone)]
-pub struct PlanningSystemConfig {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct PlanningSystemConfig {
     /// Enable planning system integration
     pub enable_planning_integration: bool,
 
@@ -281,8 +351,9 @@ pub struct PlanningSystemConfig {
 }
 
 /// Planning storage configuration
-#[derive(Debug, Clone)]
-pub struct PlanningStorageConfig {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct PlanningStorageConfig {
     /// Enable file-based storage
     pub enable_file_storage: bool,
 
@@ -297,8 +368,9 @@ pub struct PlanningStorageConfig {
 }
 
 /// Evidence collection configuration
-#[derive(Debug, Clone)]
-pub struct EvidenceCollectionConfig {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct EvidenceCollectionConfig {
     /// Evidence retention period (days)
     pub retention_days: u32,
 

@@ -3,6 +3,7 @@
 //! Standalone HTTP API server providing REST endpoints for task management,
 //! health checks, and metrics streaming.
 
+use schemars::JsonSchema;
 use std::sync::Arc;
 use clap::Parser;
 use tokio::sync::RwLock;
@@ -42,7 +43,7 @@ struct Args {
     config_file: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct ServerConfig {
     /// API keys for authentication
     api_keys: Option<Vec<String>>,

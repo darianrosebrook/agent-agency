@@ -92,37 +92,37 @@ impl AuthorityValidator {
         }
         
         // Check for HTTPS (more secure)
-        let https_bonus = if source_lower.starts_with("https://") { 0.1 } else { 0.0 };
-        
+        let https_bonus: f64 = if source_lower.starts_with("https://") { 0.1 } else { 0.0 };
+
         // Check for official documentation patterns
-        let official_bonus = if source_lower.contains("/docs/") || 
+        let official_bonus: f64 = if source_lower.contains("/docs/") ||
                                source_lower.contains("/documentation/") ||
                                source_lower.contains("/api/") {
             0.2
         } else {
             0.0
         };
-        
+
         // Check for academic/research patterns
-        let academic_bonus = if source_lower.contains(".edu") || 
+        let academic_bonus: f64 = if source_lower.contains(".edu") ||
                                source_lower.contains("/research/") ||
                                source_lower.contains("/papers/") {
             0.15
         } else {
             0.0
         };
-        
+
         // Check for version control patterns (GitHub, GitLab, etc.)
-        let vcs_bonus = if source_lower.contains("github.com") || 
+        let vcs_bonus: f64 = if source_lower.contains("github.com") ||
                           source_lower.contains("gitlab.com") ||
                           source_lower.contains("bitbucket.org") {
             0.1
         } else {
             0.0
         };
-        
+
         // Base score for unknown sources
-        let base_score = 0.5;
+        let base_score: f64 = 0.5;
         
         // Combine all factors
         (base_score + https_bonus + official_bonus + academic_bonus + vcs_bonus)

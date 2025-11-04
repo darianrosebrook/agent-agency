@@ -3,14 +3,16 @@
 //! CLIP and SSIM-based visual embeddings with HNSW indexing
 //! for efficient visual similarity search.
 
+use schemars::JsonSchema;
 use crate::embedding::embedding_types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Visual document representation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct VisualDocument {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub image_data: Vec<u8>,
     pub format: ImageFormat,
@@ -19,7 +21,7 @@ pub struct VisualDocument {
 }
 
 /// Image format enumeration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum ImageFormat {
     Jpeg,
     Png,
@@ -29,7 +31,7 @@ pub enum ImageFormat {
 }
 
 /// Visual features extracted from images
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct VisualFeatures {
     pub color_histogram: Vec<f32>,
     pub edge_features: Vec<f32>,
@@ -38,7 +40,7 @@ pub struct VisualFeatures {
 }
 
 /// HNSW index metadata for visual search
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct VisualHnswMetadata {
     pub dimensions: usize,
     pub max_connections: usize,
@@ -184,15 +186,16 @@ impl VisualIndexer {
 }
 
 /// Visual search result
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct VisualSearchResult {
+    #[schemars(with = "String")]
     pub document_id: Uuid,
     pub similarity_score: f64,
     pub metadata: HashMap<String, String>,
 }
 
 /// Visual index statistics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct VisualIndexStatistics {
     pub total_images: usize,
     pub models_indexed: usize,

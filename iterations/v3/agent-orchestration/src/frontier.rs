@@ -5,6 +5,8 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use agent_agency_contracts::{types::planning::TaskDescriptor, TaskPriority};
 use anyhow::{Context, Result};
 use std::collections::{BinaryHeap, HashMap};
@@ -14,7 +16,8 @@ use tracing::{debug, info, warn};
 use thiserror::Error;
 
 /// Frontier task queue for orchestration
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Frontier {
     /// Task queue with priority ordering
     queue: Arc<RwLock<BinaryHeap<TaskEntry>>>,
@@ -27,7 +30,8 @@ pub struct Frontier {
 }
 
 /// Configuration for frontier
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FrontierConfig {
     /// Maximum queue size
     pub max_queue_size: usize,
@@ -51,15 +55,18 @@ impl Default for FrontierConfig {
 }
 
 /// Task entry in the frontier queue
-#[derive(Debug, Clone)]
-pub struct TaskEntry {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct TaskEntry {
     /// Task descriptor
     pub descriptor: TaskDescriptor,
     /// Priority score (higher = more priority)
     pub priority_score: u32,
     /// Time when task was added
+    #[schemars(with = "String")]
     pub added_at: Instant,
     /// Time when task was last processed
+    #[schemars(with = "String")]
     pub last_processed_at: Option<Instant>,
     /// Number of processing attempts
     pub attempts: u32,
@@ -68,7 +75,7 @@ pub struct TaskEntry {
 }
 
 /// Task status in frontier
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, JsonSchema, Serialize, Deserialize)]
 pub enum TaskStatus {
     Pending,
     Processing,
@@ -79,7 +86,8 @@ pub enum TaskStatus {
 }
 
 /// Frontier statistics
-#[derive(Debug, Clone, Default)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
 pub struct FrontierStats {
     /// Total tasks added
     pub total_added: u64,
@@ -139,7 +147,7 @@ impl Frontier {
             let mut registry = self.registry.write().unwrap();
             
             queue.push(task_entry.clone());
-            registry.insert(task_entry.descriptor.task_id.clone(), task_entry);
+            registry.insert(task_entry.descriptor.task_id.to_string(), task_entry);
         }
 
         // Update statistics
@@ -185,7 +193,7 @@ impl Frontier {
             task.attempts += 1;
 
             // Update registry
-            registry.insert(task.descriptor.task_id.clone(), task.clone());
+            registry.insert(task.descriptor.task_id.to_string(), task.clone());
 
             // Put back in queue
             queue.push(task.clone());
@@ -398,8 +406,9 @@ impl PartialEq for TaskEntry {
 impl Eq for TaskEntry {}
 
 /// Errors that can occur in frontier operations
-#[derive(Error, Debug)]
-pub enum FrontierError {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Error)]
+enum FrontierError {
     #[error("Task queue is full")]
     QueueFull,
     #[error("Task not found: {task_id}")]

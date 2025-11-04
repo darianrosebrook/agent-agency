@@ -15,7 +15,10 @@ pub mod spec_generation;
 
 pub use planning_errors::{PlanningError, PlanningResult};
 pub use planner::PlanningAgent;
-pub use types::{PlanningConfig, PlanningRequest, PlanningResponse};
-pub use planning_caws_integration::{CawsValidator, ValidationContext};
+pub use types::{
+    PlanningConfig, PlanningRequest, PlanningResponse, PlanningMetadata,
+    ValidationResults, RefinementRecord, RiskAssessment, ValidationStatus, ValidationIssue, IssueSeverity,
+};
+pub use planning_caws_integration::{CawsValidator, ValidationContext, ValidationOptions};
 pub use validation_pipeline::{ValidationPipeline, ValidationStage};
 pub use refinement_engine::{RefinementEngine, RefinementSuggestion};

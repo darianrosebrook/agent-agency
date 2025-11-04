@@ -2,7 +2,6 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-
 /// ML Model representation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MLModel {
@@ -21,6 +20,7 @@ pub struct MLModel {
     /// Model size in bytes
     pub size_bytes: usize,
     /// When the model was loaded
+    #[schemars(with = "String")]
     pub loaded_at: DateTime<Utc>,
 }
 
@@ -54,5 +54,6 @@ pub struct InferenceResult {
     pub confidence: f64,
     pub inference_time_ms: u64,
     pub model_name: String,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 }

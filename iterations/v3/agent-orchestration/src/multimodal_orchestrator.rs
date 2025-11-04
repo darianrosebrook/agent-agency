@@ -25,8 +25,9 @@ pub struct KimiK2MultimodalOrchestrator {
 }
 
 /// Pipeline stage for multimodal processing
-#[derive(Debug, Clone)]
-pub struct PipelineStage {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct PipelineStage {
     pub name: String,
     pub stage_type: StageType,
     pub enabled: bool,
@@ -34,8 +35,9 @@ pub struct PipelineStage {
 }
 
 /// Types of pipeline stages
-#[derive(Debug, Clone)]
-pub enum StageType {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum StageType {
     Ingestion,
     Enrichment,
     Indexing,
@@ -188,7 +190,7 @@ impl KimiK2MultimodalOrchestrator {
         
         Ok(MultimodalProcessingResult {
             task_id,
-            status: if overall_success { crate::types::ExecutionStatus::Completed } else { crate::types::ExecutionStatus::Failed },
+            status: if overall_success { agent_agency_contracts::ExecutionStatus::Completed } else { agent_agency_contracts::ExecutionStatus::Failed },
             processed_content: Some(task.data.clone()),
             features: serde_json::json!({
                 "stage_results": stage_results,
@@ -281,8 +283,9 @@ impl KimiK2MultimodalOrchestrator {
 }
 
 /// Configuration for multimodal orchestrator
-#[derive(Debug, Clone)]
-pub struct OrchestratorConfig {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct OrchestratorConfig {
     pub max_concurrent_tasks: usize,
     pub enable_pipeline_stages: Vec<String>,
     pub default_timeout_ms: u64,

@@ -10,7 +10,8 @@ use tokio::sync::RwLock;
 use tracing::info;
 
 /// Content processor for cleaning and extracting text
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ContentProcessor {
     config: ContentProcessingConfig,
     cache: Arc<RwLock<std::collections::HashMap<String, ContentProcessingResult>>>,

@@ -11,10 +11,9 @@ use super::data::{AnalyticsDashboardData, AnalyticsInsight};
 use super::metrics::CachePerformanceMetrics;
 use crate::errors::ObservabilityError;
 use agent_agency_database::DatabaseClient;
-
 // Temporary placeholder types
 #[derive(Debug, Clone)]
-pub struct AnalyticsEngine;
+pub struct AnalyticsEngine ;
 #[derive(Debug, Clone)]
 pub struct AnalyticsDashboardConfig {
     pub enable_real_time_updates: bool,
@@ -28,7 +27,7 @@ impl Default for AnalyticsDashboardConfig {
     }
 }
 #[derive(Debug, Clone)]
-pub struct AnalyticsSession;
+pub struct AnalyticsSession ;
 pub trait RedisClient: std::fmt::Debug {}
 
 /// Advanced analytics dashboard service

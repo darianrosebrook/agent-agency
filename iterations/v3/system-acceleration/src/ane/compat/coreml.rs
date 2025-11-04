@@ -3,22 +3,23 @@
 //! This module provides a safe interface to Core ML framework functionality
 //! for Apple Neural Engine operations, avoiding direct private framework usage.
 
+use schemars::JsonSchema;
 use crate::ane::ane_errors::{ANEError, Result};
 use crate::ane::TensorSpec;
-use candle_core::{DType, Tensor, Device};
+use candle_core::Device;
 use cocoa_foundation::base::nil;
 use std::marker::PhantomData;
 use std::ptr::NonNull;
-use std::ffi::{CString, CStr};
-use std::path::{Path, PathBuf};
+use std::ffi::CString;
+use std::path::Path;
 use std::collections::HashMap;
 
 /// Opaque handle to a Core ML model managed by the BridgesFFI framework
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct MLModel(u64);
+#[derive(Debug, Clone, PartialEq, Eq, Hash, JsonSchema)]
+pub struct MLModel (u64);
 
 /// Core ML model configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct MLModelConfiguration {
     /// Whether to allow low precision accumulation on GPU
     pub allow_low_precision_accumulation_on_gpu: bool,
@@ -27,7 +28,7 @@ pub struct MLModelConfiguration {
 }
 
 /// Compute units for Core ML inference
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, JsonSchema)]
 pub enum MLComputeUnits {
     /// Use CPU only
     CpuOnly,
@@ -117,7 +118,7 @@ impl Drop for MLDictionaryFeatureProvider {
 }
 
 /// Data types supported by Core ML multi-arrays
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, JsonSchema)]
 pub enum MLMultiArrayDataType {
     /// 32-bit floating point
     Float32,
@@ -126,7 +127,7 @@ pub enum MLMultiArrayDataType {
 }
 
 /// Feature types supported by Core ML
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, JsonSchema)]
 pub enum MLFeatureType {
     /// Invalid feature type
     Invalid,
@@ -287,7 +288,7 @@ impl MLModel {
     }
 
     /// Run prediction on the model with the given features
-    pub fn prediction_from_features(&self, features: &MLFeatureProvider) -> std::result::Result<MLFeatureProvider, String> {
+    pub fn prediction_from_features(&self, _features: &MLFeatureProvider) -> std::result::Result<MLFeatureProvider, String> {
         // This is a complex operation that would need to be implemented
         // through the FFI interface. For now, return an error indicating
         // this needs to be implemented through a more specific inference API.
@@ -684,7 +685,7 @@ pub fn mistral_tokenizer_encode(
     }
 
     if text.is_null() {
-        unsafe { *error_out = std::ffi::CString::new("Null text pointer").unwrap().into_raw(); }
+        *error_out = std::ffi::CString::new("Null text pointer").unwrap().into_raw();
         return -1;
     }
 
@@ -692,7 +693,7 @@ pub fn mistral_tokenizer_encode(
     let text_str = match cstr.to_str() {
         Ok(s) => s,
         Err(_) => {
-            unsafe { *error_out = std::ffi::CString::new("Invalid UTF-8 text").unwrap().into_raw(); }
+            *error_out = std::ffi::CString::new("Invalid UTF-8 text").unwrap().into_raw();
             return -1;
         }
     };
@@ -700,16 +701,14 @@ pub fn mistral_tokenizer_encode(
     match mistral_encode(text_str) {
         Ok(tokens) => {
             let token_count = tokens.len() as i32;
-    unsafe {
-                *tokens_out = Box::into_raw(tokens.into_boxed_slice()) as *mut i32;
-                *token_count_out = token_count;
-        *error_out = std::ptr::null_mut();
-    }
-    0 // Success
+            *tokens_out = Box::into_raw(tokens.into_boxed_slice()) as *mut i32;
+            *token_count_out = token_count;
+            *error_out = std::ptr::null_mut();
+            0 // Success
         }
         Err(e) => {
             let error_msg = format!("Encoding failed: {}", e);
-            unsafe { *error_out = std::ffi::CString::new(error_msg).unwrap().into_raw(); }
+            *error_out = std::ffi::CString::new(error_msg).unwrap().into_raw();
             -1 // Error
         }
     }
@@ -778,8 +777,8 @@ pub mod coreml {
     /// Opaque model reference that replaces raw pointers in public APIs.
     /// This can be safely sent across threads and mapped back to raw handles
     /// in thread-local registries.
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    pub struct ModelRef(u64);
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, JsonSchema)]
+pub struct ModelRef (u64);
 
     impl ModelRef {
         /// Create a new unique model reference
@@ -833,7 +832,6 @@ pub mod coreml {
         {
             use cocoa_foundation::foundation::NSString;
             use cocoa_foundation::foundation::NSURL;
-            use core_foundation::url::CFURL;
             use std::ffi::c_void;
 
             // Convert source path to NSString
@@ -974,18 +972,12 @@ pub mod coreml {
     impl Drop for CoreMlHandle {
         fn drop(&mut self) {
             // Implement proper CoreML model release through objc2 bindings
-            unsafe {
-                // Release the CoreML model handle
-                if !self.ptr.as_ptr().is_null() {
-                    // For now, we just set the pointer to null since we don't have
-                    // a specific CoreML release function available in the current bindings
-                    // In a production implementation, this would call the appropriate
-                    // CoreML cleanup function
-                    tracing::debug!("Releasing CoreML model handle");
-                    // Note: We can't actually set ptr to null_mut() since it's NonNull
-                    // The pointer will be automatically cleaned up when the struct is dropped
-                }
-            }
+            // Release the CoreML model handle
+            // Note: Since ptr is NonNull, it's guaranteed to be non-null
+            // For now, we just log since we don't have a specific CoreML release function
+            // In a production implementation, this would call the appropriate CoreML cleanup function
+            tracing::debug!("Releasing CoreML model handle");
+            // The pointer will be automatically cleaned up when the struct is dropped
             
             // Add cleanup logging for debugging
             tracing::debug!("CoreMlHandle dropped successfully");
@@ -1025,7 +1017,7 @@ pub mod coreml {
         }
     }
 
-    /// Thread-local storage for model registries
+    // Thread-local storage for model registries
     thread_local! {
         static MODEL_REGISTRY: std::cell::RefCell<ModelRegistry> = std::cell::RefCell::new(ModelRegistry::new());
     }
@@ -1264,14 +1256,14 @@ pub mod coreml {
 
     /// Core ML model type with opaque reference
     #[derive(Debug)]
-    pub struct CoreMLModel {
+pub struct CoreMLModel {
         pub model_ref: ModelRef,
         pub metadata: ModelMetadata,
     }
 
     /// Model metadata
     #[derive(Debug)]
-    pub struct ModelMetadata {
+pub struct ModelMetadata {
         pub name: String,
         pub version: String,
         pub description: String,
@@ -1304,7 +1296,7 @@ pub mod coreml {
         #[cfg(target_os = "macos")]
         {
             // Create MLFeatureProvider using agentbridge framework
-            let mut provider_ptr: *mut u64 = std::ptr::null_mut();
+            let provider_ptr: *mut u64 = std::ptr::null_mut();
             let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
             
             // Convert input data to JSON format for Core ML
@@ -1316,7 +1308,7 @@ pub mod coreml {
             });
             
             let input_json_str = input_json.to_string();
-            let input_cstr = std::ffi::CString::new(input_json_str)
+            let _input_cstr = std::ffi::CString::new(input_json_str)
                 .map_err(|e| ANEError::InvalidInput(format!("Invalid input data: {}", e)))?;
             
             let result = unsafe {
@@ -1356,8 +1348,8 @@ pub mod coreml {
         #[cfg(target_os = "macos")]
         {
             // Extract output tensor from MLFeatureProvider using agentbridge framework
-            let mut output_json_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
-            let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+            let output_json_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+            let error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
             
             let result = unsafe {
                 agentbridge_dict_provider_destroy(
@@ -1399,7 +1391,7 @@ pub mod coreml {
                 .map(|v| v.as_f64().unwrap_or(0.0) as f32)
                 .collect::<Vec<f32>>();
             
-            let shape = output_data["shape"].as_array()
+            let _shape = output_data["shape"].as_array()
                 .ok_or_else(|| ANEError::Internal("Invalid output shape format".to_string()))?
                 .iter()
                 .map(|v| v.as_i64().unwrap_or(1) as usize)
@@ -1800,8 +1792,8 @@ pub mod coreml {
     }
     
     /// Model input/output specification
-    #[derive(Debug, Clone)]
-    pub struct ModelIOSpec {
+    #[derive(Debug, Clone, JsonSchema)]
+pub struct ModelIOSpec {
         pub name: String,
         pub dtype: String,
         pub shape: Vec<i32>,
@@ -1809,7 +1801,7 @@ pub mod coreml {
     }
     
     /// Query model inputs
-    pub fn query_model_inputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
+    pub fn query_model_inputs(_model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
         if !TARGET_APPLE_SILICON {
             return Err(ANEError::Internal("Core ML not available on this platform".to_string()));
         }
@@ -1825,7 +1817,7 @@ pub mod coreml {
     }
     
     /// Query model outputs
-    pub fn query_model_outputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
+    pub fn query_model_outputs(_model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
         if !TARGET_APPLE_SILICON {
             return Err(ANEError::Internal("Core ML not available on this platform".to_string()));
         }
@@ -1842,7 +1834,7 @@ pub mod coreml {
 }
 
 /// Phase 3B inference testing results
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct InferenceTestResults {
     /// Total number of iterations
     pub total_iterations: usize,
@@ -2007,9 +1999,9 @@ impl MLModel {
     }
     
     /// Run single inference
-    async fn run_single_inference(model: &MLModel, input: &MLMultiArray) -> Result<MLMultiArray> {
+    async fn run_single_inference(_model: &MLModel, input: &MLMultiArray) -> Result<MLMultiArray> {
         // Create input provider
-        let input_provider = Self::create_input_provider(input)?;
+        let _input_provider = Self::create_input_provider(input)?;
         
         // Run prediction
         // Note: Core ML prediction would be implemented here
@@ -2025,7 +2017,7 @@ impl MLModel {
     }
     
     /// Create input provider for inference
-    fn create_input_provider(input: &MLMultiArray) -> Result<MLFeatureProvider> {
+    fn create_input_provider(_input: &MLMultiArray) -> Result<MLFeatureProvider> {
         // In a real implementation, this would create a proper MLFeatureProvider
         // For now, return a stub
         Ok(MLFeatureProvider {

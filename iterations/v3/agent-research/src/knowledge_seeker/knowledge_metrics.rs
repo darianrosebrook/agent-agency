@@ -7,8 +7,9 @@ use chrono::{DateTime, Utc};
 use crate::ResearchMetrics;
 
 /// Metrics collector for research operations
-#[derive(Debug)]
-pub struct MetricsCollector {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct MetricsCollectorr {
     metrics: Arc<RwLock<ResearchMetrics>>,
 }
 

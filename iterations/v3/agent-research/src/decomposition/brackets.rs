@@ -1,5 +1,6 @@
 //! Contextual bracket extraction and application
 
+use schemars::JsonSchema;
 use crate::extraction_types::*;
 use anyhow::Result;
 use regex::Regex;
@@ -7,10 +8,14 @@ use std::collections::HashMap;
 use tracing::debug;
 
 /// Context bracket adder for adding contextual scope to claims
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ContextBracketAdder {
+    #[schemars(with = "Vec<String>")]
     temporal_patterns: Vec<Regex>,
+    #[schemars(with = "Vec<String>")]
     scope_patterns: Vec<Regex>,
+    #[schemars(with = "Vec<String>")]
     condition_patterns: Vec<Regex>,
 }
 
@@ -204,8 +209,9 @@ impl ContextBracketAdder {
 }
 
 /// Verification requirements derived from contextual brackets
-#[derive(Debug, Clone)]
-pub struct VerificationRequirements {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct VerificationRequirementss {
     /// Types of tests needed for verification
     pub test_types: Vec<String>,
     /// Data sources required for verification

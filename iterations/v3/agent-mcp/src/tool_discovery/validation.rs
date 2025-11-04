@@ -1,11 +1,13 @@
 //! Tool validation functionality
 
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use crate::mcp_types::*;
 use anyhow::Result;
 use std::time::Duration;
 
 /// Tool validation result
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema, Serialize, Deserialize)]
 pub struct ValidationResult {
     /// Whether the tool is valid
     pub is_valid: bool,

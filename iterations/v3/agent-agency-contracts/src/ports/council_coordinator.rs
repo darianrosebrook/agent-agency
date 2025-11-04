@@ -6,14 +6,15 @@
 //! @author @darianrosebrook
 
 use uuid::Uuid;
+use schemars::JsonSchema;
 use crate::types::planning::TaskDescriptor;
 use crate::types::council::CouncilVerdict;
 use crate::errors::CouncilResult;
 
 /// Session identifier for council review sessions
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(transparent)]
-pub struct SessionId(#[serde(with = "uuid::serde::simple")] pub Uuid);
+pub struct SessionId(#[schemars(with = "String")] pub Uuid);
 
 /// Core council coordinator interface
 /// Implementations provide constitutional oversight and decision making
@@ -49,9 +50,10 @@ pub trait CouncilCoordinator: Send + Sync {
 }
 
 /// Status of a council review session
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct SessionStatus {
     /// Session identifier
+    #[schemars(with = "String")]
     pub session_id: SessionId,
     /// Current status
     pub status: SessionStatusType,
@@ -60,11 +62,12 @@ pub struct SessionStatus {
     /// Any pending requirements or issues
     pub pending_requirements: Vec<String>,
     /// Estimated completion time
+    #[schemars(with = "String")]
     pub estimated_completion: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 /// Session status types
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub enum SessionStatusType {
     /// Session is initializing
     Initializing,

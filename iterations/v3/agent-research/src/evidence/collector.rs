@@ -10,12 +10,14 @@ use super::constitutional::ConstitutionalCollector;
 use super::filtering::EvidenceFilter;
 use crate::evidence::evidence_types::EvidenceCollectorConfig;
 use crate::extraction_types::{AtomicClaim, ClaimType, Evidence, EvidenceType, EvidenceSource, ProcessingContext};
+use crate::VerificationMethod;
 use anyhow::Result;
 use tracing::{debug, info, warn};
 
 /// Main evidence collector that orchestrates evidence collection from multiple sources
-#[derive(Debug)]
-pub struct EvidenceCollector {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct EvidenceCollectorr {
     config: EvidenceCollectorConfig,
     code_analyzer: CodeAnalysisCollector,
     test_executor: TestExecutionCollector,

@@ -69,8 +69,9 @@ pub struct ModelMetadata {
 }
 
 /// Core ML model instance
-#[derive(Debug)]
-pub struct CoreMLModel {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct CoreMLModel {
     /// Model metadata
     pub metadata: ModelMetadata,
     /// Path to compiled model file
@@ -82,9 +83,11 @@ pub struct CoreMLModel {
 }
 
 /// Core ML manager for loading and managing models
-#[derive(Debug)]
-pub struct CoreMLManager {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct CoreMLManager {
     /// Loaded models by type and name
+    #[schemars(skip)]
     models: RwLock<HashMap<(CoreMLModelType, String), Arc<CoreMLModel>>>,
     /// Base path for Core ML models
     model_base_path: PathBuf,

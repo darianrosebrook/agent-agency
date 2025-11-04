@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -6,7 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::recovery_types::{Digest, ChangeSource, ConflictClass};
 
 /// Optimistic concurrency control for file changes
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ConcurrencyControl {
     /// Precondition digest for optimistic concurrency
     pub precondition: Option<Digest>,
@@ -21,7 +22,7 @@ pub struct ConcurrencyControl {
 }
 
 /// Conflict information when precondition fails
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ConflictInfo {
     /// Conflict class
     pub class: ConflictClass,
@@ -38,7 +39,7 @@ pub struct ConflictInfo {
 }
 
 /// Conflict resolution strategies
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ConflictResolution {
     /// Automatically resolve using merge
     AutoMerge,
@@ -67,7 +68,7 @@ pub struct ConcurrencyManager {
 }
 
 /// Concurrency configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ConcurrencyConfig {
     /// Maximum number of pending changes
     pub max_pending_changes: usize,
@@ -341,7 +342,7 @@ impl ConcurrencyManager {
 }
 
 /// Result of a concurrency operation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ConcurrencyResult {
     /// Operation succeeded
     Success,
@@ -354,7 +355,7 @@ pub enum ConcurrencyResult {
 }
 
 /// Concurrency statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ConcurrencyStats {
     /// Total number of tracked files
     pub total_files: usize,
@@ -373,7 +374,7 @@ pub struct ConflictDetector {
 }
 
 /// Conflict pattern for detection
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ConflictPattern {
     /// Pattern name
     pub name: String,

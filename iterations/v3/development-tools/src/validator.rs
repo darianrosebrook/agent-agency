@@ -2,6 +2,7 @@
 //!
 //! Consolidated validation logic extracted from orchestration, workers, and MCP integration.
 
+use schemars::JsonSchema;
 use crate::policy::{CawsPolicy, ViolationSeverity, RuleCategory};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -9,18 +10,20 @@ use chrono::{DateTime, Utc};
 use async_trait::async_trait;
 
 /// Validation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationResult {
     pub task_id: String,
     pub violations: Vec<Violation>,
     pub compliance_score: f32,
     pub passed: bool,
+
+    #[schemars(with = "String")]
     pub validated_at: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
 
 /// Violation details
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Violation {
     pub rule_id: String,
     pub severity: ViolationSeverity,
@@ -31,7 +34,7 @@ pub struct Violation {
 }
 
 /// Location of violation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ViolationLocation {
     pub file: Option<String>,
     pub line: Option<u32>,
@@ -39,7 +42,7 @@ pub struct ViolationLocation {
 }
 
 /// Validation context
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ValidationContext {
     pub task_id: String,
     pub risk_tier: String,
@@ -50,7 +53,7 @@ pub struct ValidationContext {
 }
 
 /// Diff statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DiffStats {
     pub files_changed: u32,
     pub lines_added: u32,
@@ -59,7 +62,7 @@ pub struct DiffStats {
 }
 
 /// Test results
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TestResults {
     pub total_tests: u32,
     pub passed_tests: u32,
@@ -68,7 +71,7 @@ pub struct TestResults {
 }
 
 /// Security scan results
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SecurityScanResults {
     pub vulnerabilities_found: u32,
     pub critical_vulnerabilities: u32,

@@ -2,6 +2,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
@@ -16,7 +17,7 @@ pub struct TamperingDetector {
 }
 
 /// Configuration for tampering detection
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct TamperingDetectionConfig {
     pub enable_content_analysis: bool,
     pub enable_metadata_analysis: bool,
@@ -51,7 +52,7 @@ impl Default for TamperingDetectionConfig {
 }
 
 /// Result of tampering detection analysis
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct TamperingDetectionResult {
     pub indicators: Vec<TamperingIndicator>,
     pub confidence_score: f64,
@@ -60,7 +61,7 @@ pub struct TamperingDetectionResult {
 }
 
 /// Detected file types for analysis
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
 enum FileType {
     Executable,
     Archive,
@@ -632,14 +633,14 @@ impl TamperingDetector {
 }
 
 /// Internal structure for detection analysis results
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct DetectionAnalysis {
     confidence: f64,
     details: serde_json::Value,
 }
 
 /// Internal structure for source-specific analysis results
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct SourceSpecificAnalysis {
     indicators: Vec<TamperingIndicator>,
     confidence: f64,

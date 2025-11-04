@@ -4,8 +4,9 @@ use std::sync::Arc;
 use crate::{ConfigurationUpdate, ContentProcessingConfig, ContentProcessor};
 
 /// Content processor manager
-#[derive(Debug)]
-pub struct ContentProcessorManager {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct ContentProcessorManagerr {
     processor: Arc<ContentProcessor>,
     config: ResearchAgentConfig,
 }

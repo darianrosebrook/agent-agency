@@ -6,6 +6,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::Arc;
 use anyhow::{anyhow, Result};
@@ -32,8 +33,9 @@ pub struct WaiverIntegration {
 }
 
 /// Waiver validation configuration
-#[derive(Debug, Clone)]
-pub struct WaiverValidationConfig {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct WaiverValidationConfig {
     /// Require explicit approval for waivers
     pub require_explicit_approval: bool,
 
@@ -48,8 +50,9 @@ pub struct WaiverValidationConfig {
 }
 
 /// Emergency waiver configuration
-#[derive(Debug, Clone)]
-pub struct EmergencyWaiverConfig {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct EmergencyWaiverConfig {
     /// Emergency waiver duration in hours
     pub emergency_duration_hours: u32,
 
@@ -204,7 +207,7 @@ impl WaiverIntegration {
             waiver_id: stored_waiver.id.to_string(),
             reason: stored_waiver.reason.clone(),
             waived_gates: stored_waiver.gates.clone(),
-            expires_at: stored_waiver.expires_at,
+            expires_at: stored_waiver.expires_at.unwrap_or_else(|| Utc::now() + chrono::Duration::hours(24)),
             approved_by: stored_waiver.approved_by.clone(),
         };
 
@@ -226,7 +229,7 @@ impl WaiverIntegration {
 
         for constraint in exceeded_constraints {
             let waiver = self.create_emergency_waiver(
-                plan.contract_plan.id,
+                plan.id,
                 "infrastructure_limitation",
                 vec![constraint.clone()],
                 &format!("Scope blowout on constraint: {}", constraint),
@@ -251,8 +254,10 @@ impl WaiverIntegration {
             .ok_or_else(|| anyhow!("Waiver {} not found or inactive", waiver_ref.waiver_id))?;
 
         // Check expiration
-        if waiver.expires_at < Utc::now() {
-            return Err(anyhow!("Waiver {} has expired", waiver_ref.waiver_id));
+        if let Some(expires_at) = waiver.expires_at {
+            if expires_at < Utc::now() {
+                return Err(anyhow!("Waiver {} has expired", waiver_ref.waiver_id));
+            }
         }
 
         // Check reason validity
@@ -263,7 +268,7 @@ impl WaiverIntegration {
         // Check high-impact waivers have mitigation plans
         if self.validation_config.require_mitigation_for_high_impact &&
            waiver.impact_level == "critical" &&
-           waiver.mitigation_plan.trim().is_empty() {
+           waiver.mitigation_plan.as_ref().map(|s| s.trim().is_empty()).unwrap_or(true) {
             return Err(anyhow!("Critical waiver {} requires mitigation plan", waiver_ref.waiver_id));
         }
 
@@ -275,11 +280,11 @@ impl WaiverIntegration {
         let all_waivers = self.db_ops.get_waivers(None).await?;
 
         let active_waivers = all_waivers.iter()
-            .filter(|w| w.status == "active" && w.expires_at > Utc::now())
+            .filter(|w| w.status == "active" && w.expires_at.map(|exp| exp > Utc::now()).unwrap_or(true))
             .count();
 
         let expired_waivers = all_waivers.iter()
-            .filter(|w| w.expires_at <= Utc::now())
+            .filter(|w| w.expires_at.map(|exp| exp <= Utc::now()).unwrap_or(false))
             .count();
 
         let emergency_waivers = all_waivers.iter()
@@ -314,7 +319,7 @@ impl WaiverIntegration {
     pub async fn cleanup_expired_waivers(&self) -> Result<usize> {
         let all_waivers = self.db_ops.get_waivers(None).await?;
         let expired_ids: Vec<Uuid> = all_waivers.iter()
-            .filter(|w| w.expires_at <= Utc::now() && w.status == "active")
+            .filter(|w| w.expires_at.map(|exp| exp <= Utc::now()).unwrap_or(false) && w.status == "active")
             .map(|w| w.id)
             .collect();
 
@@ -324,12 +329,8 @@ impl WaiverIntegration {
             match self.db_ops.update_waiver(
                 id,
                 crate::planning::UpdateWaiver {
-                    title: None,
-                    description: None,
-                    mitigation_plan: None,
-                    expires_at: None,
-                    status: Some("expired".to_string()),
-                    metadata: None,
+                    id,
+                    status: "expired".to_string(),
                 }
             ).await {
                 Ok(_) => updated_count += 1,
@@ -355,12 +356,12 @@ impl WaiverIntegration {
             if let Some(plan_id) = waiver.metadata.get("plan_id")
                 .and_then(|v| v.as_str())
                 .and_then(|s| Uuid::parse_str(s).ok()) {
-                if plan_id == plan.contract_plan.id {
+                if plan_id.to_string() == plan.contract_plan.id {
                     let waiver_ref = WaiverReference {
                         waiver_id: waiver.id.to_string(),
                         reason: waiver.reason,
                         waived_gates: waiver.gates,
-                        expires_at: waiver.expires_at,
+                        expires_at: waiver.expires_at.unwrap_or_else(|| Utc::now() + chrono::Duration::hours(24)),
                         approved_by: waiver.approved_by,
                     };
                     active_waivers.push(waiver_ref);
@@ -422,9 +423,9 @@ impl WaiverIntegration {
         // Log the emergency waiver
         tracing::warn!(
             "Emergency waiver created: {} - {} (expires: {})",
-            waiver.title,
+            waiver.waiver_type.clone(),
             waiver.reason,
-            waiver.expires_at
+            waiver.expires_at.map(|dt| dt.to_rfc3339()).unwrap_or_else(|| "never".to_string())
         );
 
         // Notify council if monitor is available
@@ -436,10 +437,9 @@ impl WaiverIntegration {
             
             if let Some(plan_id) = plan_id {
                 let reason = format!(
-                    "Emergency waiver created: {} - {}. Reason: {}. Expires: {}",
-                    waiver.title,
+                    "Emergency waiver created: {} - {}. Expires: {:?}",
+                    waiver.waiver_type,
                     waiver.reason,
-                    waiver.description,
                     waiver.expires_at
                 );
                 
@@ -465,8 +465,9 @@ impl WaiverIntegration {
 }
 
 /// Waiver statistics for telemetry
-#[derive(Debug, Clone)]
-pub struct WaiverStats {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct WaiverStats {
     /// Total number of waivers
     pub total_waivers: usize,
 
@@ -615,6 +616,5 @@ mod tests {
         assert!(waiver_ref.waived_gates.contains(&"quality_gates".to_string()));
     }
 }
-
 
 

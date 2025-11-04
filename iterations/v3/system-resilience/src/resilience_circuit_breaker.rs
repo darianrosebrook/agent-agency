@@ -10,6 +10,7 @@
 //!
 //! Ported from V2 CircuitBreaker.ts with Rust optimizations.
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU64, AtomicU8, Ordering};
@@ -32,7 +33,7 @@ pub struct CircuitBreakerOpenError {
 }
 
 /// Circuit breaker states
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum CircuitState {
     /// Normal operation
     Closed,
@@ -43,7 +44,7 @@ pub enum CircuitState {
 }
 
 /// Circuit breaker configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CircuitBreakerConfig {
     /// Optional circuit breaker name
     pub name: Option<String>,
@@ -73,7 +74,7 @@ impl Default for CircuitBreakerConfig {
 }
 
 /// Circuit breaker statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CircuitBreakerStats {
     pub state: CircuitState,
     pub failure_count: u64,

@@ -19,8 +19,9 @@ use super::metrics::MetricsCollector;
 use super::events::{EventEmitter, ResearchEvent};
 
 /// Query orchestrator for coordinating research execution
-#[derive(Debug)]
-pub struct QueryOrchestrator {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct QueryOrchestratorr {
     config: ResearchAgentConfig,
     search_coordinator: Arc<SearchCoordinator>,
     scraping_coordinator: Arc<ScrapingCoordinator>,

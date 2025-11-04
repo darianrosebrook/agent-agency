@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::io::{Read, Write};
@@ -16,7 +17,7 @@ pub struct AtomicRestore {
 }
 
 /// Configuration for restore operations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RestoreConfig {
     /// Enable atomic restore (temp write → fsync → rename → fsync parent)
     pub atomic: bool,
@@ -383,7 +384,7 @@ impl AtomicRestore {
 }
 
 /// Restored file information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RestoredFile {
     /// File path
     pub path: PathBuf,
@@ -398,7 +399,7 @@ pub struct RestoredFile {
 }
 
 /// Failed restore information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FailedRestore {
     /// File path
     pub path: PathBuf,

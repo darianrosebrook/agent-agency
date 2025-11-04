@@ -2,11 +2,12 @@
 //!
 //! This module contains handlers for waiver and provenance commands.
 
+use schemars::JsonSchema;
 use clap::Parser;
 use reqwest::Client;
 
 /// Waiver management commands
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Subcommand, JsonSchema)]
 pub enum WaiverCommand {
     /// List all active waivers
     List,
@@ -60,7 +61,7 @@ pub enum WaiverCommand {
 }
 
 /// Provenance trailer management commands
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Subcommand, JsonSchema)]
 pub enum ProvenanceCommand {
     /// Install git hooks for provenance enforcement
     InstallHooks,

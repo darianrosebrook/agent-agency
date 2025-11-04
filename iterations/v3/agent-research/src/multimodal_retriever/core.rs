@@ -1,5 +1,6 @@
 //! Core multimodal retriever functionality and configuration
 
+use schemars::JsonSchema;
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use anyhow::Result;
@@ -14,7 +15,8 @@ use super::query_processing::QueryProcessor;
 use data_infrastructure::embedding::embedding_types::{SearchResultFeature, ContentType};
 
 /// Configuration for multimodal retrieval
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct MultimodalRetrieverConfig {
     /// Maximum number of results per modality
     pub k_per_modality: usize,
@@ -50,7 +52,7 @@ impl Default for MultimodalRetrieverConfig {
 }
 
 /// Main multimodal retriever coordinating search across multiple modalities
-#[derive(Debug)]
+
 pub struct MultimodalRetriever {
     config: MultimodalRetrieverConfig,
     search_coordinator: Arc<SearchCoordinator>,
@@ -59,7 +61,7 @@ pub struct MultimodalRetriever {
 }
 
 /// Search query with optional multimodal content
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MultimodalQuery {
     pub text: Option<String>,
     pub image_path: Option<std::path::PathBuf>,
@@ -72,7 +74,7 @@ pub struct MultimodalQuery {
     pub time_window_seconds: Option<u64>,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema)]
 pub enum QueryType {
     Text,
     Visual,
@@ -83,7 +85,8 @@ pub enum QueryType {
 }
 
 /// Advanced fusion strategies for multimodal results
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum FusionStrategy {
     /// Simple weighted combination
     Weighted,
@@ -96,16 +99,36 @@ pub enum FusionStrategy {
 }
 
 /// Search result combining multiple modalities
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MultimodalSearchResult {
     pub id: String,
     pub content: String,
     pub modality_scores: HashMap<String, f32>,
     pub combined_score: f32,
     pub metadata: HashMap<String, serde_json::Value>,
+    ##[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub source_modality: String,
     pub project_scope: Option<String>,
+}
+
+/// Visual search result for image-based queries
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct VisualSearchResult {
+    pub image_id: String,
+    pub similarity_score: f32,
+    pub image_path: std::path::PathBuf,
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+/// Configuration for visual search operations
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct VisualSearchConfig {
+    pub similarity_threshold: f32,
+    pub max_results: usize,
+    pub feature_dimensions: usize,
 }
 
 use std::collections::HashMap;

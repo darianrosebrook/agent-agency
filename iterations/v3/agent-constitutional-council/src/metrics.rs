@@ -12,6 +12,7 @@
 //! - **Performance**: Latency percentiles, throughput
 //! - **Health**: Error rates, cache effectiveness
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
@@ -191,7 +192,7 @@ impl CouncilMetrics {
 }
 
 /// Health report for council monitoring
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct CouncilHealthReport {
     /// Total sessions processed
     pub sessions_total: u64,

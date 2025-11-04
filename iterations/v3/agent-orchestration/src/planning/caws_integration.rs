@@ -5,6 +5,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use anyhow::{anyhow, Result};
 use agent_agency_contracts::{
@@ -283,7 +284,7 @@ impl CawsPlanBridge {
         // Analyze criterion to determine affected files
         // Simplified - would use NLP to analyze the criterion text
         let files = working_spec.file_changes.iter()
-            .filter(|change| self.is_change_relevant_to_criterion(change, criterion))
+            .filter(|change| self.is_change_relevant_to_criterion(*change, criterion))
             .map(|change| change.file.clone())
             .collect::<Vec<_>>();
 
@@ -300,7 +301,7 @@ impl CawsPlanBridge {
     }
 
     /// Check if file change is relevant to criterion
-    fn is_change_relevant_to_criterion(&self, change: &agent_agency_contracts::FileChange, criterion: &agent_agency_contracts::AcceptanceCriterion) -> bool {
+    fn is_change_relevant_to_criterion(&self, change: &agent_agency_contracts::working_spec::FileChange, criterion: &agent_agency_contracts::AcceptanceCriterion) -> bool {
         // Simplified relevance check - would use semantic analysis
         let change_text = format!("{} {}", change.change_type, change.file);
         let criterion_text = format!("{} {} {}", criterion.given, criterion.when, criterion.then);
@@ -384,7 +385,7 @@ impl CawsPlanBridge {
     fn create_infrastructure_milestone(&self, working_spec: &WorkingSpec) -> ContractMilestone {
         ContractMilestone {
             estimated_duration: None,
-            quality_gates: None,
+            quality_gates: vec![],
             id: "M0-INFRA".to_string(),
             objective: "Set up infrastructure and prerequisites".to_string(),
             scope: agent_agency_contracts::planning_io::MilestoneScope {
@@ -549,8 +550,8 @@ impl CawsPlanBridge {
         use agent_agency_contracts::planning_io::{ChangeBudget, BudgetEnforcement};
 
         ChangeBudget {
-            max_files: working_spec.constraints.budget_limits.as_ref().and_then(|b| b.max_files).unwrap_or(25),
-            max_loc: working_spec.constraints.budget_limits.as_ref().and_then(|b| b.max_loc).unwrap_or(1000),
+            max_files: working_spec.constraints.budget_limits.as_ref().and_then(|b| b.max_files).unwrap_or(25) as usize,
+            max_loc: working_spec.constraints.budget_limits.as_ref().and_then(|b| b.max_loc).unwrap_or(1000) as usize,
             max_migrations: 5,
             allow_breaking_changes: working_spec.risk_tier > 1,
             allow_new_dependencies: working_spec.risk_tier > 1,
@@ -564,8 +565,9 @@ impl CawsPlanBridge {
 }
 
 /// Validation rules for working specs
-#[derive(Debug, Clone)]
-pub struct ValidationRules {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ValidationRules {
     /// Minimum acceptance criteria length
     pub min_criterion_length: usize,
 
@@ -745,7 +747,7 @@ mod tests {
             },
             non_functional_requirements: None,
             validation_results: None,
-            quality_gates: None,
+            quality_gates: vec![],
             scope: vec![ScopeRestrictions {
                 allowed_paths: vec!["src/".to_string()],
                 blocked_paths: vec!["node_modules/".to_string()],

@@ -5,6 +5,9 @@
 use regex::Regex;
 use std::collections::HashMap;
 use crate::verification::types::*;
+use crate::verification::verification_types::{
+    DocumentationStructure, UsageExample,
+};
 use crate::extraction_types::{AtomicClaim, VerifiabilityLevel, ClaimScope, DataImpact};
 use anyhow::Result;
 

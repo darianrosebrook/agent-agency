@@ -3,6 +3,7 @@
 //! Comprehensive metrics collection for database performance monitoring,
 //! query execution tracking, connection pool usage, and health indicators.
 
+use schemars::JsonSchema;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration as StdDuration;
 
@@ -189,7 +190,7 @@ impl DatabaseMetrics {
 }
 
 /// Snapshot of database metrics for reporting
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct DatabaseMetricsSnapshot {
     pub total_queries: u64,
     pub successful_queries: u64,

@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use tracing::{Level, Value};
+use tracing::Level;
 
 use crate::{Result, HealthStatus};
 

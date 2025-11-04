@@ -98,4 +98,3 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("💡 Ready for Phase 3B: Actual inference testing and ANE speedup measurement");
 
     Ok(())
-}

@@ -51,6 +51,7 @@
 //! - Orchestration compliance (handled by caws-runtime-validator)
 //! - Worker output validation (handled by caws-runtime-validator)
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -63,7 +64,7 @@ use crate::recovery_types::Codec;
 /// This struct defines policies specific to the recovery domain and is separate
 /// from the general CAWS validation policies in `caws-runtime-validator`.
 /// See module documentation for rationale on domain separation.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CawsPolicy {
     /// Storage budget configuration
     pub storage: StoragePolicy,
@@ -87,7 +88,7 @@ pub struct CawsPolicy {
 /// for the recovery system. It is separate from the general CAWS budget policies
 /// in `caws-runtime-validator` because it operates at the storage layer rather
 /// than the task execution layer.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StoragePolicy {
     /// Maximum storage size in bytes
     pub max_size_bytes: u64,
@@ -106,7 +107,7 @@ pub struct StoragePolicy {
 /// This policy manages data retention for recovery operations, including protected
 /// labels and patterns. It is domain-specific to recovery and separate from
 /// general CAWS retention policies.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RetentionPolicy {
     /// Minimum retention period in days
     pub min_days: u32,
@@ -123,7 +124,7 @@ pub struct RetentionPolicy {
 /// This policy manages compression settings for stored recovery data, including
 /// codec selection and file-type specific overrides. It is separate from any
 /// compression policies in the main CAWS runtime validator.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CompressionPolicy {
     /// Default compression codec
     pub default_codec: Codec,
@@ -134,7 +135,7 @@ pub struct CompressionPolicy {
 }
 
 /// Compression override for specific file types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CompressionOverride {
     /// File pattern to match
     pub pattern: String,
@@ -145,7 +146,7 @@ pub struct CompressionOverride {
 }
 
 /// Chunking policy
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ChunkingPolicy {
     /// Chunking mode
     pub mode: ChunkingMode,
@@ -160,7 +161,7 @@ pub struct ChunkingPolicy {
 }
 
 /// Chunking mode
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ChunkingMode {
     /// Fixed-size chunks
     Fixed,
@@ -175,7 +176,7 @@ pub enum ChunkingMode {
 /// This policy manages secret scanning, PII detection, and custom redaction rules
 /// for data stored in the recovery system. It is domain-specific to recovery
 /// operations and separate from general CAWS validation policies.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RedactionPolicy {
     /// Enable secret scanning
     pub enable_secret_scanning: bool,
@@ -190,7 +191,7 @@ pub struct RedactionPolicy {
 }
 
 /// Redaction rule
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RedactionRule {
     /// Rule name
     pub name: String,
@@ -207,7 +208,7 @@ pub struct RedactionRule {
 }
 
 /// Redaction rule type
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum RedactionRuleType {
     /// Secret patterns (API keys, tokens, etc.)
     Secret,
@@ -223,7 +224,7 @@ pub enum RedactionRuleType {
 /// change attribution and recovery capability tracking. It is separate from
 /// the general CAWS provenance policies in `caws-runtime-validator` because
 /// it focuses on recovery-specific provenance requirements.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProvenancePolicy {
     /// Enable file tracking
     pub enable_file_tracking: bool,
@@ -244,7 +245,7 @@ pub struct ProvenancePolicy {
 /// This policy manages recovery-specific operations including checkpointing,
 /// restore verification, and conflict resolution. It is domain-specific to
 /// the recovery system and separate from general CAWS validation policies.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RecoveryPolicy {
     /// Enable automatic checkpointing
     pub auto_checkpoint: bool,
@@ -259,7 +260,7 @@ pub struct RecoveryPolicy {
 }
 
 /// Checkpoint frequency
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum CheckpointFrequency {
     /// Every agent iteration
     EveryIteration,

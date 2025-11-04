@@ -4,6 +4,7 @@
 //! for the planning agent.
 
 use crate::planning_agent::planning_errors::{PlanningError, PlanningResult};
+use crate::planning_agent::types::RiskAssessment;
 use system_configuration::types::*;
 
 /// Validate a task request for basic requirements

@@ -3,12 +3,13 @@
 //! Consolidated waiver generation and approval logic
 //! extracted from self-prompting-agent implementations.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc, Duration};
 use std::collections::HashMap;
 
 /// Waiver request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Waiver {
     pub id: String,
     pub task_id: String,
@@ -17,7 +18,11 @@ pub struct Waiver {
     pub justification: String,
     pub risk_assessment: String,
     pub mitigation_plan: String,
+    #[schemars(with = "String")]
+
     pub requested_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub expires_at: DateTime<Utc>,
     pub status: WaiverStatus,
     pub approver: Option<String>,
@@ -26,7 +31,7 @@ pub struct Waiver {
 }
 
 /// Waiver status
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum WaiverStatus {
     Pending,
     Approved,
@@ -35,7 +40,7 @@ pub enum WaiverStatus {
 }
 
 /// Risk tier for waiver assessment
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum RiskTier {
     Low,
     Medium,
@@ -44,7 +49,7 @@ pub enum RiskTier {
 }
 
 /// Waiver approval request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WaiverApprovalRequest {
     pub waiver_id: String,
     pub approver: String,
@@ -53,14 +58,14 @@ pub struct WaiverApprovalRequest {
 }
 
 /// Waiver decision
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum WaiverDecision {
     Approve,
     Reject(String), // rejection reason
 }
 
 /// Waiver generation context
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct WaiverContext {
     pub task_id: String,
     pub violations: Vec<String>,
@@ -70,7 +75,7 @@ pub struct WaiverContext {
 }
 
 /// Budget overrun details
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BudgetOverrunDetails {
     pub resource_type: String,
     pub requested_amount: u64,

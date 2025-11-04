@@ -3,11 +3,12 @@
 //! This module provides comprehensive error handling for Apple Neural Engine operations,
 //! including model lifecycle, inference, capability detection, and resource management.
 
+use schemars::JsonSchema;
 use thiserror::Error;
 use crate::ane::ane_circuit_breaker::CircuitBreakerError;
 
 /// Comprehensive error types for ANE operations
-#[derive(Debug, Error)]
+#[derive(Debug, Error, JsonSchema)]
 pub enum ANEError {
     /// ANE is not available on this target platform
     #[error("ANE unavailable on this target")]
@@ -160,7 +161,7 @@ impl IntoANEError for &str {
 }
 
 /// Error severity levels for logging and monitoring
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
 pub enum ErrorSeverity {
     /// Low severity - informational
     Low,

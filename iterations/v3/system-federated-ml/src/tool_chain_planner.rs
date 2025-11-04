@@ -4,6 +4,7 @@
 //! for fan-out/fan-in support, joins, and retries. Includes schema validation
 //! and cost-aware planning.
 
+use schemars::JsonSchema;
 use petgraph::graph::{Graph, NodeIndex};
 use petgraph::visit::Topo;
 use serde::{Deserialize, Serialize};
@@ -29,21 +30,21 @@ pub type ToolId = String;
 pub type PortName = String;
 
 /// Port schema reference for type safety
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct PortSchemaRef {
     pub registry_key: String,      // e.g. "web.search.Query@v1"
     pub optional: bool,
 }
 
 /// Tool port definition with schema
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ToolPort {
     pub name: PortName,
     pub schema: PortSchemaRef,
 }
 
 /// Tool node in the DAG with I/O ports
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ToolNode {
     pub tool_id: ToolId,
     pub inputs: Vec<ToolPort>,
@@ -56,7 +57,7 @@ pub struct ToolNode {
 }
 
 /// Tool edge connecting ports between nodes
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ToolEdge {
     pub from_port: PortName,
     pub to_port: PortName,
@@ -64,7 +65,7 @@ pub struct ToolEdge {
 }
 
 /// Complete tool chain as a DAG
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, JsonSchema)]
 pub struct ToolChain {
     pub dag: Graph<ToolNode, ToolEdge>,
     pub roots: Vec<NodeIndex>,
@@ -77,7 +78,7 @@ pub struct ToolChain {
 }
 
 /// Chain metadata for observability
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ChainMetadata {
     pub name: String,
     pub description: String,
@@ -87,7 +88,7 @@ pub struct ChainMetadata {
 }
 
 /// Retry policy for individual steps
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct RetryPolicy {
     pub max_attempts: u32,
     pub base_delay_ms: u64,
@@ -96,7 +97,7 @@ pub struct RetryPolicy {
 }
 
 /// Chain execution result
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, JsonSchema)]
 pub struct ChainResult {
     pub chain_hash: u64,
     pub success: bool,
@@ -106,7 +107,7 @@ pub struct ChainResult {
 }
 
 /// Planning context with task analysis
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, JsonSchema)]
 pub struct PlanningContext {
     pub task_description: String,
     pub task_type: String,
@@ -118,7 +119,7 @@ pub struct PlanningContext {
 }
 
 /// Task complexity levels
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub enum TaskComplexity {
     Simple,
     Moderate,
@@ -127,7 +128,7 @@ pub enum TaskComplexity {
 }
 
 /// Risk tolerance levels
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub enum RiskLevel {
     Conservative,
     Balanced,
@@ -135,7 +136,7 @@ pub enum RiskLevel {
 }
 
 /// Planning constraints
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, JsonSchema)]
 pub struct PlanningConstraints {
     pub max_chain_length: usize,
     pub max_parallelism: usize,

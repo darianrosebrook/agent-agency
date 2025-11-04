@@ -15,7 +15,7 @@ use crate::errors::ObservabilityError;
 
 // Temporary placeholder types
 #[derive(Debug, Clone)]
-pub struct AnalyticsEngine;
+pub struct AnalyticsEngine ;
 
 /// Advanced analytics dashboard service
 pub struct AnalyticsDashboard {

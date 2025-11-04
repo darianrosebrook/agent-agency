@@ -5,6 +5,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use async_trait::async_trait;
 use ring::aead::{Aad, LessSafeKey, Nonce, NonceSequence, UnboundKey, AES_256_GCM};
 use ring::rand::{SecureRandom, SystemRandom};
@@ -17,9 +18,10 @@ use chrono::{DateTime, Utc};
 use base64::{Engine as _, engine::general_purpose};
 
 /// Data encryption service
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct DataEncryptionService {
     /// Key manager for encryption keys
+    #[schemars(with = "String")]
     key_manager: Arc<RwLock<KeyManager>>,
     /// Field-level encryption configuration
     field_config: HashMap<String, FieldEncryptionConfig>,
@@ -37,7 +39,7 @@ struct KeyManager {
 }
 
 /// Encryption key metadata
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct EncryptionKey {
     /// Key ID
     id: Uuid,
@@ -46,6 +48,7 @@ struct EncryptionKey {
     /// Algorithm
     algorithm: EncryptionAlgorithm,
     /// Created timestamp
+    #[schemars(with = "String")]
     created_at: DateTime<Utc>,
     /// Expiration timestamp
     expires_at: Option<DateTime<Utc>>,
@@ -56,7 +59,7 @@ struct EncryptionKey {
 }
 
 /// Encryption algorithm
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum EncryptionAlgorithm {
     /// AES-256-GCM
     Aes256Gcm,
@@ -65,7 +68,7 @@ pub enum EncryptionAlgorithm {
 }
 
 /// Field-level encryption configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FieldEncryptionConfig {
     /// Field name
     pub field_name: String,
@@ -80,11 +83,12 @@ pub struct FieldEncryptionConfig {
 }
 
 /// Encryption at rest configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EncryptionAtRestConfig {
     /// Default encryption algorithm
     pub algorithm: EncryptionAlgorithm,
     /// Default key ID
+    #[schemars(with = "String")]
     pub default_key_id: Uuid,
     /// Enable automatic key rotation
     pub enable_rotation: bool,
@@ -93,18 +97,19 @@ pub struct EncryptionAtRestConfig {
 }
 
 /// Key rotation event
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct KeyRotationEvent {
     /// Key ID to rotate
     key_id: Uuid,
     /// Rotation timestamp
+    #[schemars(with = "String")]
     rotation_at: DateTime<Utc>,
     /// Status
     status: RotationStatus,
 }
 
 /// Rotation status
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, JsonSchema)]
 enum RotationStatus {
     Pending,
     InProgress,
@@ -113,22 +118,25 @@ enum RotationStatus {
 }
 
 /// Encrypted data structure
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EncryptedData {
     /// Encrypted data (base64 encoded)
     pub encrypted: String,
     /// Key ID used for encryption
+    #[schemars(with = "String")]
     pub key_id: Uuid,
     /// Nonce (base64 encoded)
     pub nonce: String,
     /// Algorithm used
     pub algorithm: EncryptionAlgorithm,
     /// Timestamp
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
 }
 
 /// Encryption result
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EncryptionResult {
     /// Encrypted data
     pub encrypted_data: EncryptedData,
@@ -459,7 +467,7 @@ impl NonceSequence for SimpleNonceSequence {
 }
 
 /// Encryption errors
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum EncryptionError {
     #[error("Key not found: {key_id}")]
     KeyNotFound { key_id: Uuid },

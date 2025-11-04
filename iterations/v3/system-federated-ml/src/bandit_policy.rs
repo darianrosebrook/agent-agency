@@ -3,12 +3,13 @@
 //! Implements contextual bandit policies for safe, interpretable parameter tuning
 //! with counterfactual logging and offline evaluation support.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 
 /// Parameter set for LLM generation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParameterSet {
     pub temperature: f32,
     pub max_tokens: u32,
@@ -19,11 +20,13 @@ pub struct ParameterSet {
     pub seed: Option<u64>,
     pub origin: String,          // e.g., "bandit:thompson@0.1.0"
     pub policy_version: String,  // semver of learner
+
+    #[schemars(with = "String")]
     pub created_at: DateTime<Utc>,
 }
 
 /// Task features for contextual bandit learning
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskFeatures {
     pub risk_tier: u32,
     pub title_length: u32,
@@ -88,7 +91,7 @@ pub trait BanditPolicy: Send + Sync {
 }
 
 /// Result of bandit selection
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SelectionResult {
     pub arm_index: usize,
     pub parameters: ParameterSet,
@@ -108,7 +111,7 @@ pub struct ThompsonGaussian {
 }
 
 /// Gaussian posterior parameters
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct GaussianPosterior {
     mean: f64,
     precision: f64,  // 1/variance
@@ -427,4 +430,3 @@ impl BanditPolicy for LinUCB {
     fn version(&self) -> String {
         "linucb@1.0.0".to_string()
     }
-}

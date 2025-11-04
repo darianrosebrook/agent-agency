@@ -3,6 +3,8 @@
 //! This module contains bridge implementations that connect the orchestration
 //! system with quality gates and monitoring systems.
 
+use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use crate::parallel_types::TaskId;
 use crate::worker_types::{QualityRequirements, Progress};
 use agent_agency_contracts::task_executor::ExecutionStatus;
@@ -13,7 +15,8 @@ use serde_json;
 use tracing::{info, error};
 
 /// Real implementation of orchestration quality bridge
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct OrchestrationQualityBridge {
     /// Quality gate thresholds
     quality_thresholds: QualityRequirements,
@@ -95,13 +98,15 @@ impl OrchestrationQualityBridge {
 }
 
 /// Real implementation of orchestration monitoring bridge
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct OrchestrationMonitoringBridge {
     /// Event storage for monitoring
     events: std::sync::Arc<std::sync::RwLock<Vec<MonitoringEvent>>>,
 }
 
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct MonitoringEvent {
     task_id: TaskId,
     event_type: String,
@@ -196,13 +201,15 @@ impl OrchestrationMonitoringBridge {
 }
 
 /// Real implementation of council learning bridge
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct CouncilLearningBridge {
     /// Learning events storage
     learning_events: std::sync::Arc<std::sync::RwLock<Vec<LearningEvent>>>,
 }
 
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct LearningEvent {
     event_type: String,
     timestamp: chrono::DateTime<chrono::Utc>,

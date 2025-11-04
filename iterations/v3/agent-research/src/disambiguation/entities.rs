@@ -119,10 +119,10 @@ impl NamedEntityRecognizer {
 
                 if confidence > 0.5 {
                     entities.push(NamedEntity {
-                        text: entity_text.to_string(),
+                        name: entity_text.to_string(),
                         entity_type: EntityType::Person,
-                        start: mat.start(),
-                        end: mat.end(),
+                        start_pos: mat.start(),
+                        end_pos: mat.end(),
                         confidence,
                         context: Some(format!("Person entity in context: {}", context.input_text)),
                     });
@@ -148,10 +148,10 @@ impl NamedEntityRecognizer {
 
                 if confidence > 0.5 {
                     entities.push(NamedEntity {
-                        text: entity_text.to_string(),
+                        name: entity_text.to_string(),
                         entity_type: EntityType::Organization,
-                        start: mat.start(),
-                        end: mat.end(),
+                        start_pos: mat.start(),
+                        end_pos: mat.end(),
                         confidence,
                         context: Some(format!("Organization entity in context: {}", context.input_text)),
                     });
@@ -176,10 +176,10 @@ impl NamedEntityRecognizer {
                 let confidence = 0.75; // Location patterns are generally reliable
 
                 entities.push(NamedEntity {
-                    text: entity_text.to_string(),
+                    name: entity_text.to_string(),
                     entity_type: EntityType::Location,
-                    start: mat.start(),
-                    end: mat.end(),
+                    start_pos: mat.start(),
+                    end_pos: mat.end(),
                     confidence,
                     context: None,
                 });
@@ -201,10 +201,10 @@ impl NamedEntityRecognizer {
         for pattern in &self.entity_patterns.date_patterns {
             for mat in pattern.find_iter(text) {
                 entities.push(NamedEntity {
-                    text: mat.as_str().to_string(),
+                    name: mat.as_str().to_string(),
                     entity_type: EntityType::Date,
-                    start: mat.start(),
-                    end: mat.end(),
+                    start_pos: mat.start(),
+                    end_pos: mat.end(),
                     confidence: 0.85,
                     context: None,
                 });
@@ -215,10 +215,10 @@ impl NamedEntityRecognizer {
         for pattern in &self.entity_patterns.time_patterns {
             for mat in pattern.find_iter(text) {
                 entities.push(NamedEntity {
-                    text: mat.as_str().to_string(),
+                    name: mat.as_str().to_string(),
                     entity_type: EntityType::Date, // Time is also temporal
-                    start: mat.start(),
-                    end: mat.end(),
+                    start_pos: mat.start(),
+                    end_pos: mat.end(),
                     confidence: 0.8,
                     context: None,
                 });
@@ -240,10 +240,10 @@ impl NamedEntityRecognizer {
         for pattern in &self.entity_patterns.money_patterns {
             for mat in pattern.find_iter(text) {
                 entities.push(NamedEntity {
-                    text: mat.as_str().to_string(),
+                    name: mat.as_str().to_string(),
                     entity_type: EntityType::Money,
-                    start: mat.start(),
-                    end: mat.end(),
+                    start_pos: mat.start(),
+                    end_pos: mat.end(),
                     confidence: 0.9,
                     context: None,
                 });
@@ -254,10 +254,10 @@ impl NamedEntityRecognizer {
         for pattern in &self.entity_patterns.percent_patterns {
             for mat in pattern.find_iter(text) {
                 entities.push(NamedEntity {
-                    text: mat.as_str().to_string(),
+                    name: mat.as_str().to_string(),
                     entity_type: EntityType::Percent,
-                    start: mat.start(),
-                    end: mat.end(),
+                    start_pos: mat.start(),
+                    end_pos: mat.end(),
                     confidence: 0.9,
                     context: None,
                 });
@@ -306,7 +306,7 @@ impl NamedEntityRecognizer {
         let mut deduplicated = Vec::new();
 
         for entity in entities {
-            let key = (entity.text.clone(), entity.entity_type.clone());
+            let key = (entity.name.clone(), entity.entity_type.clone());
             if let Some(existing) = seen.get(&key) {
                 // Keep the one with higher confidence
                 if entity.confidence > existing.confidence {

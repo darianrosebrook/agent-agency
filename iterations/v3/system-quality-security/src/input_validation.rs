@@ -1,5 +1,7 @@
 //! Input validation utilities for external data
 
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use anyhow::{anyhow, Result};
 use regex::Regex;
 use std::collections::HashSet;
@@ -31,7 +33,7 @@ pub const ALLOWED_DOCUMENT_TYPES: &[&str] = &[
 ];
 
 /// Input validation result
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema, Serialize, Deserialize)]
 pub struct ValidationResult {
     pub is_valid: bool,
     pub errors: Vec<String>,
@@ -447,7 +449,7 @@ pub fn validate_batch(inputs: Vec<(&str, &str, ValidationType)>) -> Vec<Validati
 }
 
 /// Types of validation available
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum ValidationType {
     String(usize),              // max_length
     Identifier,

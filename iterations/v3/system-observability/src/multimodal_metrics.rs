@@ -26,6 +26,7 @@ pub struct MultimodalProcessingMetrics {
     pub quality_score: f32,
     pub error_rate: f32,
     pub success: bool,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -42,6 +43,7 @@ pub struct VectorSearchMetrics {
     pub total_time_ms: u64,
     pub success: bool,
     pub average_similarity: f32,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -57,6 +59,7 @@ pub struct EmbeddingMetrics {
     pub generation_time_ms: u64,
     pub success: bool,
     pub quality_score: f32,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -71,6 +74,7 @@ pub struct CrossModalValidationMetrics {
     pub success: bool,
     pub conflicts_detected: u32,
     pub conflicts_resolved: u32,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -87,6 +91,7 @@ pub struct ContextRetrievalMetrics {
     pub retrieval_time_ms: u64,
     pub success: bool,
     pub relevance_score: f32,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -102,6 +107,7 @@ pub struct DeduplicationMetrics {
     pub deduplication_time_ms: u64,
     pub deduplication_rate: f32,
     pub success: bool,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -109,6 +115,7 @@ pub struct DeduplicationMetrics {
 /// System health metrics for multimodal operations
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MultimodalSystemHealth {
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub total_jobs_processed: u64,
     pub total_jobs_failed: u64,
@@ -453,8 +460,10 @@ impl MultimodalMetricsCollector {
     /// Get performance summary for a time range
     pub async fn get_performance_summary(
         &self,
-        start_time: DateTime<Utc>,
-        end_time: DateTime<Utc>,
+        #[schemars(with = "String")]
+    start_time: DateTime<Utc>,
+        #[schemars(with = "String")]
+    end_time: DateTime<Utc>,
     ) -> PerformanceSummary {
         let processing_metrics = self.processing_metrics.read().await;
         let search_metrics = self.search_metrics.read().await;
@@ -547,7 +556,6 @@ pub struct PerformanceSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[tokio::test]
     async fn test_multimodal_metrics_collection() {
         let base_collector = Arc::new(MetricsCollector::new());

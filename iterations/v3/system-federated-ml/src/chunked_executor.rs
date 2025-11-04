@@ -3,6 +3,7 @@
 //! Implements task decomposition and parallel execution for
 //! improved throughput and resource utilization.
 
+use schemars::JsonSchema;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -12,7 +13,7 @@ use tracing::{debug, info, warn, error};
 use futures::future::join_all;
 
 /// Chunked execution configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ChunkConfig {
     /// Maximum chunk size
     pub max_chunk_size: usize,
@@ -29,7 +30,7 @@ pub struct ChunkConfig {
 }
 
 /// Execution chunk definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionChunk {
     /// Unique chunk ID
     pub id: String,
@@ -48,7 +49,7 @@ pub struct ExecutionChunk {
 }
 
 /// Chunk execution result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ChunkResult {
     /// Chunk ID
     pub chunk_id: String,
@@ -65,7 +66,7 @@ pub struct ChunkResult {
 }
 
 /// Resource utilization metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResourceUtilization {
     /// CPU utilization (0.0-1.0)
     pub cpu_utilization: f64,
@@ -87,7 +88,7 @@ pub struct ChunkedExecutor {
 }
 
 /// Execution statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionStats {
     /// Total chunks processed
     pub total_chunks_processed: u64,

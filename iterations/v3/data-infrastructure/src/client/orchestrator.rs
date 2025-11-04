@@ -3,21 +3,17 @@
 //! Production-hardened database client with connection pooling,
 //! circuit breaker pattern, monitoring, and resilience features.
 
-use super::super::pooling::DeadpoolSqlxBridge;
-use crate::database_circuit_breaker::{CircuitBreaker, CircuitState};
+use crate::database_circuit_breaker::CircuitBreaker;
 use super::super::database_metrics::DatabaseMetrics;
-use super::super::health::{DatabaseHealthMonitor, DatabaseHealthStatus, DatabaseStats};
+use super::super::health::DatabaseHealthMonitor;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::{PgPool, Row};
 use serde_json;
 use std::collections::HashMap;
-use std::str::FromStr;
 use std::sync::Arc;
-use std::time::Instant;
 use tokio::sync::{RwLock, Semaphore};
-use tracing::info;
 use uuid::Uuid;
 
 use super::super::database_operations::{
@@ -29,7 +25,7 @@ use super::super::database_operations::{
     CreatePlanningAuditEvent, CreateExecutionPlan, UpdateExecutionPlan,
     CreateWaiver, UpdateWaiver
 };
-use super::super::database_audit::{DatabaseAuditLogger, DatabaseAuditEvent, AuditEventType};
+use super::super::database_audit::DatabaseAuditLogger;
 use super::super::models::{
     Judge, Worker, Task, TaskExecution, CouncilVerdict, JudgeEvaluation, AuditTrailEntry,
     PlanningTelemetry, Milestone, PlanningSession, EvidenceArtifact, PlanningAuditEvent,

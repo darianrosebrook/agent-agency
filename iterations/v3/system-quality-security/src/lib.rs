@@ -45,6 +45,9 @@ pub mod provenance_types;
 pub mod signer;
 pub mod storage_new;
 
+// Schema generation for API docs
+use schemars::JsonSchema;
+
 // Re-exports from security modules
 pub use authentication::*;
 pub use checks::*;
@@ -83,7 +86,7 @@ pub use provenance_types::*;
 pub use signer::{JwsSigner, LocalKeySigner, SignerTrait, SigningAlgorithm};
 
 /// Provenance service configuration
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct ProvenanceConfig {
     /// Database connection configuration
     pub database: DatabaseConfig,
@@ -98,7 +101,7 @@ pub struct ProvenanceConfig {
     pub storage: StorageConfig,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct DatabaseConfig {
     pub connection_url: String,
     pub max_connections: u32,
@@ -115,7 +118,7 @@ impl Default for DatabaseConfig {
     }
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct GitConfig {
     pub repository_path: String,
     pub branch: String,
@@ -123,14 +126,14 @@ pub struct GitConfig {
     pub commit_message_template: String,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct SigningConfig {
     pub key_path: String,
     pub algorithm: SigningAlgorithm,
     pub key_id: String,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct StorageConfig {
     pub enable_immutable_logs: bool,
     pub compression_enabled: bool,

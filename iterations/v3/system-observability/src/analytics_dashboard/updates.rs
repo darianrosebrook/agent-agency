@@ -11,6 +11,7 @@ use super::data::{
 /// Analytics real-time update
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalyticsRealTimeUpdate {
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub trend_updates: Option<TrendUpdates>,
     pub anomaly_updates: Option<AnomalyUpdates>,

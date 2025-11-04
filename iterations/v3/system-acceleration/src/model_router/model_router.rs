@@ -1,5 +1,6 @@
 //! Model routing and load balancing
 
+use schemars::JsonSchema;
 use crate::DeviceId;
 use system_configuration::types::{DeviceKind, Precision};
 use anyhow::Result;
@@ -11,15 +12,17 @@ pub struct ModelRouter {
 }
 
 /// Model variant
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ModelVariant {
     pub name: String,
+    #[schemars(with = "String")]
     pub precision: Precision,
+    #[schemars(with = "String")]
     pub device: DeviceKind,
 }
 
 /// Routing mode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum RoutingMode {
     Performance,
     Efficiency,
@@ -27,14 +30,14 @@ pub enum RoutingMode {
 }
 
 /// Routing policy
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum RoutingPolicy {
     LoadBalanced,
     DeviceSpecific(DeviceId),
 }
 
 /// Routing statistics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct RoutingStats {
     pub total_requests: u64,
     pub successful_routes: u64,
@@ -42,7 +45,7 @@ pub struct RoutingStats {
 }
 
 /// Variant performance metrics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct VariantPerformance {
     pub latency_ms: u64,
     pub throughput: f32,

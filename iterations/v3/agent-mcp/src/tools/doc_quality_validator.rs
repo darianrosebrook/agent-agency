@@ -4,6 +4,7 @@
 //! Integrates with the V3 Rust architecture to provide documentation quality
 //! validation capabilities to AI models and agents.
 
+use schemars::JsonSchema;
 use crate::mcp_types::*;
 use anyhow::{Context, Result};
 use chrono::Utc;
@@ -15,7 +16,7 @@ use tracing::{info, warn};
 use uuid::Uuid;
 
 /// Documentation quality validation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DocQualityResult {
     pub validation_id: String,
     pub quality_score: f64,
@@ -25,7 +26,7 @@ pub struct DocQualityResult {
 }
 
 /// Quality issue found in documentation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityIssue {
     pub severity: QualitySeverity,
     pub rule_id: String,
@@ -35,7 +36,7 @@ pub struct QualityIssue {
 }
 
 /// Quality severity levels
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum QualitySeverity {
     Error,
     Warning,
@@ -43,7 +44,7 @@ pub enum QualitySeverity {
 }
 
 /// Quality metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityMetrics {
     pub superiority_claims: u32,
     pub unfounded_achievements: u32,

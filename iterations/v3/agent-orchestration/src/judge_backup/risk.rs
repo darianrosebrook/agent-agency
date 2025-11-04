@@ -4,9 +4,12 @@
 //! ethical, operational, and business risk assessments with
 //! multi-dimensional analysis and mitigation strategies.
 
+use schemars::JsonSchema;
+
 /// Risk assessment from a judge
-#[derive(Debug, Clone, PartialEq)]
-pub struct RiskAssessment {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+struct RiskAssessment {
     pub overall_risk: RiskLevel,
     pub risk_factors: Vec<String>,
     pub mitigation_suggestions: Vec<String>,
@@ -14,8 +17,9 @@ pub struct RiskAssessment {
 }
 
 /// Risk level classification
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum RiskLevel {
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema, Copy)]
+enum RiskLevel {
     Low,
     Medium,
     High,
@@ -24,8 +28,9 @@ pub enum RiskLevel {
 
 /// Multi-dimensional risk assessment
 /// Enhanced with comprehensive risk scoring from integration testing insights
-#[derive(Debug, Clone)]
-pub struct MultiDimensionalRiskAssessment {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct MultiDimensionalRiskAssessment {
     /// Overall risk score (0.0-1.0, higher = more risky)
     pub overall_risk_score: f32,
 
@@ -55,8 +60,9 @@ pub struct MultiDimensionalRiskAssessment {
 }
 
 /// Technical risk assessment
-#[derive(Debug, Clone)]
-pub struct TechnicalRiskAssessment {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct TechnicalRiskAssessment {
     /// Technical feasibility score (0.0-1.0, lower = higher risk)
     pub feasibility_score: f32,
 
@@ -77,8 +83,9 @@ pub struct TechnicalRiskAssessment {
 }
 
 /// Ethical risk assessment
-#[derive(Debug, Clone)]
-pub struct EthicalRiskAssessment {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct EthicalRiskAssessment {
     /// Ethical acceptability score (0.0-1.0, lower = higher ethical risk)
     pub ethical_score: f32,
 
@@ -99,8 +106,9 @@ pub struct EthicalRiskAssessment {
 }
 
 /// Operational risk assessment
-#[derive(Debug, Clone)]
-pub struct OperationalRiskAssessment {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct OperationalRiskAssessment {
     /// Operational feasibility score (0.0-1.0, lower = higher operational risk)
     pub feasibility_score: f32,
 
@@ -121,8 +129,9 @@ pub struct OperationalRiskAssessment {
 }
 
 /// Business risk assessment
-#[derive(Debug, Clone)]
-pub struct BusinessRiskAssessment {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct BusinessRiskAssessment {
     /// Business viability score (0.0-1.0, lower = higher business risk)
     pub viability_score: f32,
 
@@ -143,8 +152,9 @@ pub struct BusinessRiskAssessment {
 }
 
 /// Risk interaction between different dimensions
-#[derive(Debug, Clone)]
-pub struct RiskInteraction {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct RiskInteraction {
     /// Primary risk dimension
     pub primary_dimension: RiskDimension,
 
@@ -165,8 +175,9 @@ pub struct RiskInteraction {
 }
 
 /// Risk dimension types
-#[derive(Debug, Clone, PartialEq)]
-pub enum RiskDimension {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum RiskDimension {
     Technical,
     Ethical,
     Operational,
@@ -174,8 +185,9 @@ pub enum RiskDimension {
 }
 
 /// Type of risk interaction
-#[derive(Debug, Clone)]
-pub enum InteractionType {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum InteractionType {
     /// Risks reinforce each other
     Amplifying,
     /// Risks cancel each other out
@@ -187,8 +199,9 @@ pub enum InteractionType {
 }
 
 /// Mitigation strategy with priority
-#[derive(Debug, Clone)]
-pub struct MitigationPriority {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct MitigationPriority {
     /// Mitigation strategy description
     pub strategy: String,
 
@@ -209,8 +222,9 @@ pub struct MitigationPriority {
 }
 
 /// Mitigation priority levels
-#[derive(Debug, Clone)]
-pub enum MitigationPriorityLevel {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum MitigationPriorityLevel {
     Low,
     Medium,
     High,
@@ -218,8 +232,9 @@ pub enum MitigationPriorityLevel {
 }
 
 /// Complexity level
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ComplexityLevel {
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema, Copy)]
+enum ComplexityLevel {
     Simple,
     Moderate,
     Complex,
@@ -227,8 +242,9 @@ pub enum ComplexityLevel {
 }
 
 /// Risk trend projections
-#[derive(Debug, Clone)]
-pub struct RiskProjections {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct RiskProjections {
     /// Short-term risk trend (next 3 months)
     pub short_term_trend: RiskTrend,
 
@@ -246,8 +262,9 @@ pub struct RiskProjections {
 }
 
 /// Risk trend direction
-#[derive(Debug, Clone)]
-pub enum RiskTrend {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum RiskTrend {
     /// Risk decreasing over time
     Decreasing,
     /// Risk increasing over time
@@ -259,8 +276,9 @@ pub enum RiskTrend {
 }
 
 /// Risk inflection point
-#[derive(Debug, Clone)]
-pub struct RiskInflectionPoint {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct RiskInflectionPoint {
     /// Timeline in months
     pub timeline_months: u8,
 
@@ -275,8 +293,9 @@ pub struct RiskInflectionPoint {
 }
 
 /// Type of risk inflection
-#[derive(Debug, Clone)]
-pub enum InflectionType {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum InflectionType {
     /// Risk increases significantly
     RiskSpike,
     /// Risk decreases significantly
@@ -288,8 +307,9 @@ pub enum InflectionType {
 }
 
 /// Complexity assessment for technical risk
-#[derive(Debug, Clone)]
-pub struct ComplexityAssessment {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ComplexityAssessment {
     // pub algorithmic_complexity: crate::risk_scorer::ComputationalComplexity, // TEMPORARILY DISABLED
     pub integration_points: u32,
     pub external_dependencies: u32,
@@ -298,8 +318,9 @@ pub struct ComplexityAssessment {
 }
 
 /// Resource risk factors
-#[derive(Debug, Clone)]
-pub struct ResourceRisk {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ResourceRisk {
     pub resource_type: String,
     pub availability_risk: f32, // 0.0-1.0
     pub cost_volatility: f32, // 0.0-1.0
@@ -308,8 +329,9 @@ pub struct ResourceRisk {
 }
 
 /// Technology maturity assessment
-#[derive(Debug, Clone)]
-pub struct TechnologyMaturity {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct TechnologyMaturity {
     pub maturity_level: TechnologyMaturityLevel,
     pub adoption_rate: f32, // 0.0-1.0
     pub stability_score: f32, // 0.0-1.0
@@ -318,8 +340,9 @@ pub struct TechnologyMaturity {
 }
 
 /// Technology maturity levels
-#[derive(Debug, Clone, PartialEq)]
-pub enum TechnologyMaturityLevel {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum TechnologyMaturityLevel {
     Experimental,
     EarlyAdopter,
     Mature,
@@ -328,8 +351,9 @@ pub enum TechnologyMaturityLevel {
 }
 
 /// Integration complexity assessment
-#[derive(Debug, Clone)]
-pub struct IntegrationComplexity {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct IntegrationComplexity {
     pub api_integrations: u32,
     pub data_format_complexity: f32, // 0.0-1.0
     pub protocol_diversity: u32,
@@ -338,8 +362,9 @@ pub struct IntegrationComplexity {
 }
 
 /// Performance risk factors
-#[derive(Debug, Clone)]
-pub struct PerformanceRisk {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct PerformanceRisk {
     pub risk_type: PerformanceRiskType,
     pub severity: f32, // 0.0-1.0
     pub likelihood: f32, // 0.0-1.0
@@ -347,8 +372,9 @@ pub struct PerformanceRisk {
 }
 
 /// Types of performance risks
-#[derive(Debug, Clone, PartialEq)]
-pub enum PerformanceRiskType {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum PerformanceRiskType {
     LatencyViolation,
     ThroughputLimitation,
     MemoryLeak,
@@ -358,8 +384,10 @@ pub enum PerformanceRiskType {
 }
 
 /// Ethical concern category with severity
-#[derive(Debug, Clone)]
-pub struct EthicalConcernCategory {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct EthicalConcernCategory {
     pub category: EthicalCategory,
     pub severity_score: f32, // 0.0-1.0
     pub affected_population_size: PopulationSize,
@@ -367,8 +395,9 @@ pub struct EthicalConcernCategory {
 }
 
 /// Population size affected by ethical concern
-#[derive(Debug, Clone, PartialEq)]
-pub enum PopulationSize {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum PopulationSize {
     Individual,
     SmallGroup,
     LargeGroup,
@@ -377,8 +406,9 @@ pub enum PopulationSize {
 }
 
 /// Regulatory compliance risks
-#[derive(Debug, Clone)]
-pub struct RegulatoryRisk {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct RegulatoryRisk {
     pub jurisdiction: String,
     pub regulation_type: RegulationType,
     pub compliance_complexity: f32, // 0.0-1.0
@@ -387,8 +417,9 @@ pub struct RegulatoryRisk {
 }
 
 /// Types of regulations
-#[derive(Debug, Clone, PartialEq)]
-pub enum RegulationType {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum RegulationType {
     DataPrivacy,
     ConsumerProtection,
     LaborLaw,
@@ -400,8 +431,9 @@ pub enum RegulationType {
 }
 
 /// Audit frequency expectations
-#[derive(Debug, Clone, PartialEq)]
-pub enum AuditFrequency {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum AuditFrequency {
     Rare,
     Annual,
     Quarterly,
@@ -410,8 +442,9 @@ pub enum AuditFrequency {
 }
 
 /// Societal impact assessment
-#[derive(Debug, Clone)]
-pub struct SocietalImpact {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct SocietalImpact {
     pub impact_type: SocietalImpactType,
     pub time_horizon: TimeHorizon,
     pub magnitude: f32, // -1.0 to 1.0, negative = positive impact
@@ -420,8 +453,9 @@ pub struct SocietalImpact {
 }
 
 /// Types of societal impact
-#[derive(Debug, Clone, PartialEq)]
-pub enum SocietalImpactType {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum SocietalImpactType {
     Economic,
     Social,
     Environmental,
@@ -431,8 +465,9 @@ pub enum SocietalImpactType {
 }
 
 /// Time horizon for impact assessment
-#[derive(Debug, Clone, PartialEq)]
-pub enum TimeHorizon {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum TimeHorizon {
     Immediate,
     ShortTerm,
     MediumTerm,
@@ -440,8 +475,9 @@ pub enum TimeHorizon {
 }
 
 /// Reversibility of societal impact
-#[derive(Debug, Clone, PartialEq)]
-pub enum Reversibility {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum Reversibility {
     Irreversible,
     LongTerm,
     MediumTerm,
@@ -449,8 +485,9 @@ pub enum Reversibility {
 }
 
 /// Ethical category types
-#[derive(Debug, Clone, PartialEq)]
-pub enum EthicalCategory {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum EthicalCategory {
     Harm,
     Privacy,
     Discrimination,
@@ -477,8 +514,9 @@ impl std::fmt::Display for EthicalCategory {
 }
 
 /// Stakeholder impact analysis
-#[derive(Debug, Clone)]
-pub struct StakeholderImpact {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct StakeholderImpact {
     pub stakeholder_type: StakeholderType,
     pub impact_magnitude: f32, // -1.0 to 1.0, negative = positive impact
     pub impact_description: String,
@@ -486,8 +524,9 @@ pub struct StakeholderImpact {
 }
 
 /// Types of stakeholders
-#[derive(Debug, Clone, PartialEq)]
-pub enum StakeholderType {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum StakeholderType {
     Users,
     Employees,
     Communities,
@@ -499,8 +538,9 @@ pub enum StakeholderType {
 }
 
 /// Deployment complexity assessment
-#[derive(Debug, Clone)]
-pub struct DeploymentComplexity {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct DeploymentComplexity {
     pub environment_count: u32,
     pub manual_steps: u32,
     pub automation_level: f32, // 0.0-1.0
@@ -509,8 +549,9 @@ pub struct DeploymentComplexity {
 }
 
 /// Maintenance requirements assessment
-#[derive(Debug, Clone)]
-pub struct MaintenanceRequirements {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct MaintenanceRequirements {
     pub update_frequency: MaintenanceFrequency,
     pub monitoring_intensity: MonitoringIntensity,
     pub support_team_size: u8,
@@ -519,8 +560,9 @@ pub struct MaintenanceRequirements {
 }
 
 /// Maintenance frequency
-#[derive(Debug, Clone, PartialEq)]
-pub enum MaintenanceFrequency {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum MaintenanceFrequency {
     Daily,
     Weekly,
     Monthly,
@@ -530,8 +572,9 @@ pub enum MaintenanceFrequency {
 }
 
 /// Monitoring intensity levels
-#[derive(Debug, Clone, PartialEq)]
-pub enum MonitoringIntensity {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum MonitoringIntensity {
     Low,
     Medium,
     High,
@@ -539,8 +582,9 @@ pub enum MonitoringIntensity {
 }
 
 /// Training level requirements
-#[derive(Debug, Clone, PartialEq)]
-pub enum TrainingLevel {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum TrainingLevel {
     Basic,
     Intermediate,
     Advanced,
@@ -548,8 +592,9 @@ pub enum TrainingLevel {
 }
 
 /// Documentation complexity
-#[derive(Debug, Clone, PartialEq)]
-pub enum DocumentationComplexity {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum DocumentationComplexity {
     Minimal,
     Standard,
     Comprehensive,
@@ -557,8 +602,9 @@ pub enum DocumentationComplexity {
 }
 
 /// Scalability concern
-#[derive(Debug, Clone)]
-pub struct ScalabilityConcern {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ScalabilityConcern {
     pub concern_type: ScalabilityConcernType,
     pub current_limitations: Vec<String>,
     pub projected_growth: f32, // Growth factor over time
@@ -566,8 +612,9 @@ pub struct ScalabilityConcern {
 }
 
 /// Types of scalability concerns
-#[derive(Debug, Clone, PartialEq)]
-pub enum ScalabilityConcernType {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum ScalabilityConcernType {
     UserLoad,
     DataVolume,
     ProcessingCapacity,
@@ -577,8 +624,9 @@ pub enum ScalabilityConcernType {
 }
 
 /// Monitoring and observability requirements
-#[derive(Debug, Clone)]
-pub struct MonitoringRequirements {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct MonitoringRequirements {
     pub metrics_count: u32,
     pub alert_count: u32,
     pub dashboard_complexity: DashboardComplexity,
@@ -587,8 +635,9 @@ pub struct MonitoringRequirements {
 }
 
 /// Dashboard complexity levels
-#[derive(Debug, Clone, PartialEq)]
-pub enum DashboardComplexity {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum DashboardComplexity {
     Basic,
     Intermediate,
     Advanced,
@@ -596,8 +645,9 @@ pub enum DashboardComplexity {
 }
 
 /// Log volume expectations
-#[derive(Debug, Clone, PartialEq)]
-pub enum LogVolume {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum LogVolume {
     Low,
     Medium,
     High,
@@ -605,8 +655,9 @@ pub enum LogVolume {
 }
 
 /// Incident response time requirements
-#[derive(Debug, Clone, PartialEq)]
-pub enum IncidentResponseTime {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum IncidentResponseTime {
     Immediate,
     Hours,
     Days,
@@ -614,8 +665,9 @@ pub enum IncidentResponseTime {
 }
 
 /// Incident response planning assessment
-#[derive(Debug, Clone)]
-pub struct IncidentResponseAssessment {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct IncidentResponseAssessment {
     pub response_team_size: u8,
     pub backup_systems: bool,
     pub recovery_time_objective: RecoveryTime,
@@ -623,8 +675,9 @@ pub struct IncidentResponseAssessment {
 }
 
 /// Recovery time objectives
-#[derive(Debug, Clone, PartialEq)]
-pub enum RecoveryTime {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum RecoveryTime {
     Minutes,
     Hours,
     Days,
@@ -632,8 +685,9 @@ pub enum RecoveryTime {
 }
 
 /// Communication plan quality
-#[derive(Debug, Clone, PartialEq)]
-pub enum CommunicationPlanQuality {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum CommunicationPlanQuality {
     Basic,
     Standard,
     Comprehensive,
@@ -641,8 +695,9 @@ pub enum CommunicationPlanQuality {
 }
 
 /// Market impact assessment
-#[derive(Debug, Clone)]
-pub struct MarketImpact {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct MarketImpact {
     pub market_size: f64, // Market size in dollars
     pub market_share: f32, // 0.0-1.0
     pub competitive_advantage: f32, // 0.0-1.0
@@ -651,8 +706,9 @@ pub struct MarketImpact {
 }
 
 /// Adoption curve types
-#[derive(Debug, Clone, PartialEq)]
-pub enum AdoptionCurve {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum AdoptionCurve {
     Slow,
     Linear,
     Exponential,
@@ -660,8 +716,9 @@ pub enum AdoptionCurve {
 }
 
 /// Financial risk factors
-#[derive(Debug, Clone)]
-pub struct FinancialRisk {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct FinancialRisk {
     pub risk_type: FinancialRiskType,
     pub potential_impact: f64, // Impact in dollars
     pub probability: f32, // 0.0-1.0
@@ -669,8 +726,9 @@ pub struct FinancialRisk {
 }
 
 /// Types of financial risks
-#[derive(Debug, Clone, PartialEq)]
-pub enum FinancialRiskType {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum FinancialRiskType {
     RevenueLoss,
     CostOverrun,
     InvestmentLoss,
@@ -680,8 +738,9 @@ pub enum FinancialRiskType {
 }
 
 /// Stakeholder management complexity
-#[derive(Debug, Clone)]
-pub struct StakeholderComplexity {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct StakeholderComplexity {
     pub stakeholder_count: u32,
     pub relationship_complexity: RelationshipComplexity,
     pub communication_channels: u32,
@@ -689,8 +748,9 @@ pub struct StakeholderComplexity {
 }
 
 /// Relationship complexity levels
-#[derive(Debug, Clone, PartialEq)]
-pub enum RelationshipComplexity {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum RelationshipComplexity {
     Simple,
     Moderate,
     Complex,
@@ -698,8 +758,9 @@ pub enum RelationshipComplexity {
 }
 
 /// Competitive positioning
-#[derive(Debug, Clone)]
-pub struct CompetitivePositioning {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct CompetitivePositioning {
     pub market_position: MarketPosition,
     pub differentiation_factors: Vec<String>,
     pub barrier_to_entry: BarrierStrength,
@@ -707,8 +768,9 @@ pub struct CompetitivePositioning {
 }
 
 /// Market position types
-#[derive(Debug, Clone, PartialEq)]
-pub enum MarketPosition {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum MarketPosition {
     MarketLeader,
     StrongCompetitor,
     NichePlayer,
@@ -717,8 +779,9 @@ pub enum MarketPosition {
 }
 
 /// Barrier to entry strength
-#[derive(Debug, Clone, PartialEq)]
-pub enum BarrierStrength {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum BarrierStrength {
     Weak,
     Moderate,
     Strong,
@@ -726,8 +789,9 @@ pub enum BarrierStrength {
 }
 
 /// Exit strategy feasibility
-#[derive(Debug, Clone)]
-pub struct ExitStrategy {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ExitStrategy {
     pub strategy_type: ExitStrategyType,
     pub feasibility_score: f32, // 0.0-1.0
     pub timeline_months: u8,
@@ -735,8 +799,9 @@ pub struct ExitStrategy {
 }
 
 /// Types of exit strategies
-#[derive(Debug, Clone, PartialEq)]
-pub enum ExitStrategyType {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum ExitStrategyType {
     Acquisition,
     IPO,
     Liquidation,
@@ -745,8 +810,9 @@ pub enum ExitStrategyType {
 }
 
 /// Advanced ethical assessment result
-#[derive(Debug, Clone)]
-pub struct EthicalAssessment {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct EthicalAssessment {
     /// Overall ethical acceptability (0.0 = highly unethical, 1.0 = highly ethical)
     pub ethical_score: f32,
     /// Specific ethical concerns identified
@@ -768,7 +834,7 @@ pub struct EthicalAssessment {
 }
 
 /// Specific ethical concern identified
-#[derive(Debug, Clone)]
+
 pub struct EthicalConcern {
     /// Category of ethical concern
     pub category: EthicalCategory,
@@ -783,8 +849,9 @@ pub struct EthicalConcern {
 }
 
 /// Ethical severity levels
-#[derive(Debug, Clone, PartialEq)]
-pub enum EthicalSeverity {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum EthicalSeverity {
     Low,
     Medium,
     High,
@@ -792,8 +859,9 @@ pub enum EthicalSeverity {
 }
 
 /// Ethical trade-off analysis
-#[derive(Debug, Clone)]
-pub struct EthicalTradeoff {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct EthicalTradeoff {
     pub benefit_description: String,
     pub cost_description: String,
     pub affected_values: Vec<String>,
@@ -801,8 +869,9 @@ pub struct EthicalTradeoff {
 }
 
 /// Long-term consequence assessment
-#[derive(Debug, Clone)]
-pub struct ConsequenceAssessment {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ConsequenceAssessment {
     pub consequence_type: ConsequenceType,
     pub time_horizon: TimeHorizon,
     pub probability: f32, // 0.0-1.0
@@ -811,8 +880,9 @@ pub struct ConsequenceAssessment {
 }
 
 /// Types of consequences
-#[derive(Debug, Clone, PartialEq)]
-pub enum ConsequenceType {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum ConsequenceType {
     Positive,
     Negative,
     Neutral,
@@ -820,12 +890,12 @@ pub enum ConsequenceType {
 }
 
 /// Cultural consideration in ethical assessment
-#[derive(Debug, Clone)]
-pub struct CulturalConsideration {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct CulturalConsideration {
     pub cultural_context: String,
     pub ethical_norms: Vec<String>,
     pub potential_conflicts: Vec<String>,
     pub adaptation_recommendations: Vec<String>,
 }
-
 

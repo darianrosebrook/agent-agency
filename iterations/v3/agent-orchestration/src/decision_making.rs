@@ -3,6 +3,7 @@
 //! This module implements various algorithms for reaching consensus
 //! decisions from aggregated judge verdicts.
 
+use schemars::JsonSchema;
 use async_trait::async_trait;
 use crate::council_errors::CouncilResult;
 use crate::verdict_aggregation::AggregationResult;
@@ -20,8 +21,9 @@ pub trait DecisionEngine: Send + Sync + std::fmt::Debug {
 }
 
 /// Context for decision making
-#[derive(Debug, Clone)]
-pub struct DecisionContext {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct DecisionContext {
     /// Risk tier of the task
     pub risk_tier: agent_agency_contracts::task_request::RiskTier,
 
@@ -39,8 +41,9 @@ pub struct DecisionContext {
 }
 
 /// Organizational constraints and policies
-#[derive(Debug, Clone)]
-pub struct OrganizationalConstraints {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct OrganizationalConstraints {
     /// Maximum allowed risk for this tier
     pub max_risk_level: crate::judge_backup::risk::RiskLevel,
 
@@ -55,8 +58,9 @@ pub struct OrganizationalConstraints {
 }
 
 /// Resource constraints
-#[derive(Debug, Clone)]
-pub struct ResourceConstraints {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ResourceConstraints {
     /// Available development time (hours)
     pub available_development_hours: Option<f64>,
 
@@ -68,23 +72,26 @@ pub struct ResourceConstraints {
 }
 
 /// Budget limits
-#[derive(Debug, Clone)]
-pub struct BudgetLimits {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct BudgetLimits {
     pub max_cost: f64,
     pub currency: String,
 }
 
 /// Team capacity factors
-#[derive(Debug, Clone)]
-pub struct TeamCapacity {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct TeamCapacity {
     pub available_engineers: usize,
     pub average_productivity: f64, // tasks per engineer per week
     pub skill_level: SkillLevel,
 }
 
 /// Skill level assessment
-#[derive(Debug, Clone)]
-pub enum SkillLevel {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum SkillLevel {
     Junior,
     MidLevel,
     Senior,
@@ -92,8 +99,9 @@ pub enum SkillLevel {
 }
 
 /// Human review triggers
-#[derive(Debug, Clone)]
-pub enum HumanReviewTrigger {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum HumanReviewTrigger {
     HighRiskDecisions,
     UnresolvedDissent,
     ComplexRefinements,
@@ -102,8 +110,9 @@ pub enum HumanReviewTrigger {
 }
 
 /// Historical decision for learning
-#[derive(Debug, Clone)]
-pub struct HistoricalDecision {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct HistoricalDecision {
     pub decision_id: String,
     pub similar_task_features: Vec<String>,
     pub outcome: DecisionOutcome,
@@ -111,16 +120,18 @@ pub struct HistoricalDecision {
 }
 
 /// Decision outcome
-#[derive(Debug, Clone)]
-pub enum DecisionOutcome {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum DecisionOutcome {
     Success { quality_score: f64, time_to_completion: u64 },
     Failure { reason: String, recovery_cost: f64 },
     PartialSuccess { achieved_percentage: f64 },
 }
 
 /// Emergency override flags
-#[derive(Debug, Clone)]
-pub struct EmergencyFlags {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct EmergencyFlags {
     pub business_critical: bool,
     pub security_incident: bool,
     pub compliance_deadline: bool,
@@ -128,8 +139,9 @@ pub struct EmergencyFlags {
 }
 
 /// Impact level
-#[derive(Debug, Clone)]
-pub enum ImpactLevel {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum ImpactLevel {
     None,
     Low,
     Medium,
@@ -138,7 +150,8 @@ pub enum ImpactLevel {
 }
 
 /// Final decision from the decision engine
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum FinalDecision {
     /// Proceed with execution
     Proceed {
@@ -166,14 +179,16 @@ pub enum FinalDecision {
     Escalate {
         reason: String,
         required_stakeholders: Vec<String>,
+        #[schemars(with = "Option<String>")]
         decision_deadline: Option<chrono::DateTime<chrono::Utc>>,
         supporting_data: Vec<String>,
     },
 }
 
 /// Execution plan for approved tasks
-#[derive(Debug, Clone)]
-pub struct ExecutionPlan {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ExecutionPlan {
     pub priority: TaskPriority,
     pub estimated_duration_hours: f64,
     pub resource_requirements: ResourceRequirements,
@@ -183,16 +198,18 @@ pub struct ExecutionPlan {
 
 
 /// Resource requirements
-#[derive(Debug, Clone)]
-pub struct ResourceRequirements {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ResourceRequirements {
     pub engineer_count: usize,
     pub specialized_skills: Vec<String>,
     pub infrastructure_needs: Vec<String>,
 }
 
 /// Quality gate
-#[derive(Debug, Clone)]
-pub struct QualityGate {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct QualityGate {
     pub name: String,
     pub criteria: String,
     pub responsible_party: String,
@@ -200,8 +217,9 @@ pub struct QualityGate {
 }
 
 /// Refinement directive
-#[derive(Debug, Clone)]
-pub struct RefinementDirective {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct RefinementDirective {
     pub required_changes: Vec<RefinementChange>,
     pub change_priority: crate::judge_backup::verdicts::ChangePriority,
     pub estimated_effort: crate::verdict_aggregation::AggregatedEffort,
@@ -210,8 +228,9 @@ pub struct RefinementDirective {
 }
 
 /// Required change specification
-#[derive(Debug, Clone)]
-pub struct RefinementChange {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct RefinementChange {
     pub category: crate::judge_backup::verdicts::ChangeCategory,
     pub description: String,
     pub rationale: String,
@@ -219,16 +238,18 @@ pub struct RefinementChange {
 }
 
 /// Resource allocation for refinements
-#[derive(Debug, Clone)]
-pub struct ResourceAllocation {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ResourceAllocation {
     pub additional_engineers: usize,
     pub budget_increase: Option<f64>,
     pub timeline_extension_hours: u64,
 }
 
 /// Escalation path for rejections
-#[derive(Debug, Clone)]
-pub enum EscalationPath {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum EscalationPath {
     ProductManager,
     EngineeringLead,
     ArchitectureReviewBoard,
@@ -236,8 +257,9 @@ pub enum EscalationPath {
 }
 
 /// Consensus strategy for decision making
-#[derive(Debug, Clone)]
-pub enum ConsensusStrategy {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum ConsensusStrategy {
     /// Strict majority required
     Majority,
 
@@ -255,15 +277,17 @@ pub enum ConsensusStrategy {
 }
 
 /// Decision algorithm implementation
-#[derive(Debug)]
-pub struct AlgorithmicDecisionEngine {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct AlgorithmicDecisionEngine {
     strategy: ConsensusStrategy,
     risk_thresholds: RiskThresholds,
     learning_enabled: bool,
 }
 
-#[derive(Debug, Clone)]
-pub struct RiskThresholds {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct RiskThresholds {
     pub low_risk_threshold: f64,
     pub medium_risk_threshold: f64,
     pub high_risk_threshold: f64,

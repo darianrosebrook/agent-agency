@@ -3,6 +3,7 @@
 //! Provides integration with git repositories for linking provenance records
 //! to git commits via CAWS-VERDICT-ID trailers.
 
+use schemars::JsonSchema;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -16,11 +17,13 @@ use uuid::Uuid;
 use crate::provenance_types::ProvenanceRecord;
 
 /// Git commit information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CommitInfo {
     pub hash: String,
     pub message: String,
     pub author: String,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub trailer: String,
 }
@@ -339,7 +342,7 @@ impl GitIntegration for GitTrailerManager {
 }
 
 /// Git repository status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RepositoryStatus {
     pub is_clean: bool,
     pub current_branch: String,

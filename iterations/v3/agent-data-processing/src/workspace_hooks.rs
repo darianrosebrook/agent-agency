@@ -3,13 +3,14 @@
 //! Provides hooks to track workspace changes during processing and enable
 //! rollback capabilities for failed or incorrect processing operations.
 
+use schemars::JsonSchema;
 use system_resilience::workspace_state::{WorkspaceStateManager, WorkspaceViewManager, StateId};
 use crate::{DataProcessingResult, DataProcessingError};
 use std::sync::Arc;
 use std::path::PathBuf;
 
 /// Configuration for workspace integration
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct WorkspaceConfig {
     pub enable_change_tracking: bool,
     pub enable_rollback: bool,
@@ -284,7 +285,7 @@ impl WorkspaceIntegrationHooks {
 }
 
 /// Workspace statistics
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct WorkspaceStats {
     pub total_states: usize,
     pub total_views: usize,

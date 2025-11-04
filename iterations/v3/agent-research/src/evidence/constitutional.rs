@@ -6,8 +6,9 @@ use crate::evidence::evidence_types::EvidenceCollectorConfig;
 use anyhow::Result;
 
 /// Constitutional collector
-#[derive(Debug)]
-pub struct ConstitutionalCollector {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct ConstitutionalCollectorr {
     config: EvidenceCollectorConfig,
 }
 

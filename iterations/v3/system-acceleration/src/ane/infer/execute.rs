@@ -3,14 +3,14 @@
 //! This module provides async inference execution with proper timeout handling,
 //! performance monitoring, and error recovery for Apple Neural Engine operations.
 
+use schemars::JsonSchema;
 use crate::ane::ane_errors::{ANEError, Result};
-use crate::ane::compat::coreml::coreml as coreml;
 use crate::ane::models::coreml_model::LoadedCoreMLModel;
 use crate::ane::metrics::ewma::Ewma;
 use std::time::{Duration, Instant};
 
 /// Inference execution options
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct InferenceOptions {
     /// Timeout in milliseconds
     pub timeout_ms: u64,
@@ -37,7 +37,7 @@ impl Default for InferenceOptions {
 }
 
 /// Inference execution result
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct InferenceResult {
     /// Output tensor data
     pub output: Vec<f32>,
@@ -50,7 +50,7 @@ pub struct InferenceResult {
 }
 
 /// Inference performance metrics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct InferenceMetrics {
     /// Total inference time
     pub total_time_ms: u64,
@@ -237,7 +237,7 @@ async fn execute_with_timeout(
     
     let inference_future = async {
         // Prepare input tensor
-        let prepared_input = prepare_input(model, input, options)?;
+        let _prepared_input = prepare_input(model, input, options)?;
         
         // Execute Core ML inference - TEMPORARILY DISABLED due to run_inference function being commented out
         /*

@@ -3,6 +3,7 @@
 //! Validates task results against CAWS standards and ensures
 //! quality gates are met before task completion.
 
+use schemars::JsonSchema;
 use crate::worker_types::*;
 use crate::execution::ExecutionResult;
 use agent_agency_council::CAWSValidator;
@@ -258,7 +259,7 @@ impl QualityValidator {
 }
 
 /// Result of a validation check
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema, Serialize, Deserialize)]
 pub struct ValidationResult {
     pub score: f64,
     pub violations: Vec<String>,
@@ -266,8 +267,9 @@ pub struct ValidationResult {
 }
 
 /// Errors from quality validation
-#[derive(Debug, thiserror::Error)]
-pub enum QualityError {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
+enum QualityError {
     #[error("Content validation failed: {0}")]
     ContentValidationError(String),
 

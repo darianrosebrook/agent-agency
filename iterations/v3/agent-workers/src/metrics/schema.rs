@@ -1,14 +1,17 @@
 //! Metric schema validation to prevent unit confusion and enable evolution
 
+use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 /// Versioned metric envelope to prevent unit confusion and enable evolution
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct MetricEnvelope<V> {
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+pub struct MetricEnvelope <V> {
     pub schema_version: u16,
     pub unit: &'static str,  // "ms", "tokens", "bytes", "score"
     pub value: V,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
 }
 
@@ -40,7 +43,8 @@ impl<V> MetricEnvelope<V> {
 }
 
 /// Metric schema registry to validate units and prevent bugs
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MetricSchema {
     pub name: &'static str,
     pub unit: &'static str,

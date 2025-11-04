@@ -1,5 +1,6 @@
 //! Parallel worker metrics collector
 
+use schemars::JsonSchema;
 use std::sync::Arc;
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
@@ -174,13 +175,16 @@ impl ParallelWorkerMetricsCollector {
 }
 
 /// Performance statistics
-#[derive(Debug, Clone)]
-pub struct PerformanceStats {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct PerformanceStats {
     pub total_executions: usize,
     pub successful_executions: usize,
     pub success_rate: f64,
     pub average_execution_time_ms: f64,
     pub average_quality_score: f64,
     pub active_workers: usize,
+    #[schemars(with = "String")]
+
     pub last_updated: DateTime<Utc>,
 }

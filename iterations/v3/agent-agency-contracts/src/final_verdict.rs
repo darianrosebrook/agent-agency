@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use schemars::JsonSchema;
 
 use crate::contract_errors::{ContractError, ContractKind, ValidationIssue};
 use crate::schema::FINAL_VERDICT_SCHEMA;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub struct FinalVerdictContract {
     pub decision: FinalDecision,
     pub votes: Vec<VoteEntry>,
@@ -16,7 +17,7 @@ pub struct FinalVerdictContract {
     pub verification_summary: VerificationSummary,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum FinalDecision {
     Accept,
@@ -24,14 +25,14 @@ pub enum FinalDecision {
     Modify,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub struct VoteEntry {
     pub judge_id: String,
     pub weight: f32,
     pub verdict: VoteVerdict,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum VoteVerdict {
     Pass,
@@ -39,7 +40,7 @@ pub enum VoteVerdict {
     Uncertain,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub struct VerificationSummary {
     pub claims_total: u32,
     pub claims_verified: u32,
@@ -82,6 +83,7 @@ pub fn validate_final_verdict_value(value: &Value) -> Result<(), ContractError> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use schemars::JsonSchema;
 
     #[test]
     fn final_verdict_validation() {

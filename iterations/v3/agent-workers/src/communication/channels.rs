@@ -1,11 +1,13 @@
 //! Channel-based communication infrastructure
 
+use schemars::JsonSchema;
 use crate::parallel_types::*;
 use crate::WorkerMessage;
 use crate::error::*;
 
 /// Channel configuration for communication
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ChannelConfig {
     pub buffer_size: usize,
     pub timeout_ms: u64,
@@ -25,8 +27,9 @@ impl Default for ChannelConfig {
 }
 
 /// Reliable channel sender with retry logic
-#[derive(Clone)]
-pub struct ReliableSender {
+
+#[derive(Clone, Serialize, Deserialize, JsonSchema)]
+struct ReliableSender {
     sender: tokio::sync::mpsc::UnboundedSender<WorkerMessage>,
     config: ChannelConfig,
 }
@@ -272,8 +275,9 @@ impl Default for ChannelRegistry {
 }
 
 /// Statistics for channel health monitoring
-#[derive(Debug, Clone)]
-pub struct ChannelStats {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ChannelStats {
     pub total_channels: usize,
     pub healthy_channels: usize,
     pub pending_messages: usize,

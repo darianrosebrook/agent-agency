@@ -21,13 +21,13 @@ use uuid::Uuid;
 
 // Mock implementations for missing dependencies
 #[derive(Debug)]
-pub struct DatabaseClient;
+pub struct DatabaseClient ;
 #[derive(Debug)]
-pub struct DatabaseConfig;
+pub struct DatabaseConfig ;
 #[derive(Debug)]
-pub struct ModelRegistry;
+pub struct ModelRegistry ;
 #[derive(Debug)]
-pub struct MockRow;
+pub struct MockRow ;
 
 impl DatabaseConfig {
     pub fn default() -> Self {

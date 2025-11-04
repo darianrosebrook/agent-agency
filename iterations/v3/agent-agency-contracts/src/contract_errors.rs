@@ -1,7 +1,8 @@
 use std::fmt;
+use schemars::JsonSchema;
 
 /// Contract artifact categories handled by the interoperability layer.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, JsonSchema)]
 pub enum ContractKind {
     TaskRequest,
     TaskResponse,
@@ -34,7 +35,7 @@ impl fmt::Display for ContractKind {
 }
 
 /// Detailed validation failure emitted by the contract validator.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, JsonSchema)]
 pub struct ValidationIssue {
     pub instance_path: String,
     pub schema_path: String,

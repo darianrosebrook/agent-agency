@@ -1,6 +1,7 @@
 /// Chunked execution for breaking large workloads into manageable pieces
 /// with adaptive batch sizing and resource allocation.
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -8,7 +9,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, info};
 
 /// Configuration for chunked execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ChunkConfig {
     /// Maximum chunk size in tokens/operations
     pub max_chunk_size: usize,
@@ -23,7 +24,7 @@ pub struct ChunkConfig {
 }
 
 /// Represents a single execution chunk
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ExecutionChunk {
     /// Unique chunk identifier
     pub id: String,
@@ -167,7 +168,7 @@ impl ChunkedExecutor {
 }
 
 /// Execution context with system state
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ExecutionContext {
     pub memory_usage_mb: usize,
     pub cpu_utilization_percent: f32,
@@ -175,7 +176,7 @@ pub struct ExecutionContext {
 }
 
 /// Result of executing a single chunk
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ExecutionResult {
     pub chunk_id: String,
     pub success: bool,
@@ -184,5 +185,4 @@ pub struct ExecutionResult {
 }
 
 use std::collections::HashMap;
-
 

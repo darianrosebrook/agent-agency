@@ -22,7 +22,7 @@ use crate::reward::{RewardResult, BaselineMetrics};
 use crate::caws_integration::CAWSBudgetTracker;
 
 /// Dashboard data structures for LLM Parameter Feedback Loop observability
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParameterDashboard {
     /// Current optimization status across all task types
     pub optimization_status: HashMap<String, OptimizationStatus>,
@@ -43,7 +43,7 @@ pub struct ParameterDashboard {
     pub metadata: DashboardMetadata,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct OptimizationStatus {
     pub task_type: String,
     pub current_phase: RolloutPhase,
@@ -57,7 +57,7 @@ pub struct OptimizationStatus {
     pub policy_version: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceDelta {
     pub quality_delta: f64,
     pub latency_delta: i64,
@@ -65,7 +65,7 @@ pub struct PerformanceDelta {
     pub reward_delta: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParameterDashboardMetrics {
     pub overall_quality: f64,
     pub overall_latency: u64,
@@ -76,32 +76,40 @@ pub struct ParameterDashboardMetrics {
     pub reward_trend: Vec<RewardDataPoint>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityDataPoint {
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub quality_score: f64,
     pub task_type: String,
     pub model_name: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LatencyDataPoint {
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub latency_ms: u64,
     pub task_type: String,
     pub model_name: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TokenDataPoint {
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub tokens_used: u32,
     pub task_type: String,
     pub model_name: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RewardDataPoint {
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub reward: f64,
     pub quality_contrib: f64,
@@ -110,7 +118,7 @@ pub struct RewardDataPoint {
     pub task_type: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RolloutStatus {
     pub task_type: String,
     pub current_phase: RolloutPhase,
@@ -118,11 +126,13 @@ pub struct RolloutStatus {
     pub slo_status: SLOStatus,
     pub rollback_count: u32,
     pub last_rollback_reason: Option<String>,
+    #[schemars(with = "String")]
+
     pub phase_start_time: DateTime<Utc>,
     pub estimated_completion: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SLOStatus {
     pub latency_p99: u64,
     pub latency_sla: u64,
@@ -132,7 +142,7 @@ pub struct SLOStatus {
     pub last_breach: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BudgetStatus {
     pub total_tokens_used: u64,
     pub total_tokens_budget: u64,
@@ -145,27 +155,32 @@ pub struct BudgetStatus {
     pub active_waivers: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DashboardAlert {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub severity: AlertSeverity,
     pub title: String,
     pub description: String,
     pub task_type: Option<String>,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub resolved: bool,
     pub resolution_time: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum AlertSeverity {
     Info,
     Warning,
     Critical,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DashboardMetadata {
+    #[schemars(with = "String")]
+
     pub last_updated: DateTime<Utc>,
     pub data_retention_days: u32,
     pub refresh_interval_seconds: u64,
@@ -173,7 +188,7 @@ pub struct DashboardMetadata {
 }
 
 /// Pareto front analysis for multi-objective optimization
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParetoFront {
     pub task_type: String,
     pub points: Vec<ParetoPoint>,
@@ -182,7 +197,7 @@ pub struct ParetoFront {
     pub hypervolume: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParetoPoint {
     pub parameters: ParameterSet,
     pub quality: f64,
@@ -193,7 +208,7 @@ pub struct ParetoPoint {
 }
 
 /// Attribution analysis for parameter impact
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AttributionAnalysis {
     pub task_type: String,
     pub parameter_importance: HashMap<String, f64>,
@@ -202,7 +217,7 @@ pub struct AttributionAnalysis {
     pub model_attribution: HashMap<String, f64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParameterInteraction {
     pub parameter1: String,
     pub parameter2: String,
@@ -211,18 +226,20 @@ pub struct ParameterInteraction {
 }
 
 /// Drift detection for parameter performance
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DriftDetection {
     pub task_type: String,
     pub drift_score: f64,
     pub drift_direction: DriftDirection,
     pub affected_parameters: Vec<String>,
+    #[schemars(with = "String")]
+
     pub detection_time: DateTime<Utc>,
     pub confidence: f64,
     pub recommended_action: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum DriftDirection {
     Improving,
     Degrading,
@@ -589,4 +606,3 @@ impl Default for DashboardMetadata {
             version: "1.0.0".to_string(),
         }
     }
-}

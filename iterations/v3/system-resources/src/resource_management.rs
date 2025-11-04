@@ -2,6 +2,7 @@
 //!
 //! Adaptive resource allocation, lifecycle management, and optimization.
 
+use schemars::JsonSchema;
 use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -167,7 +168,7 @@ impl AdaptiveResourceManager {
 }
 
 /// Resource allocation strategy
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum AllocationStrategy {
     /// First-fit: Use first available pool
     FirstFit,
@@ -180,7 +181,7 @@ pub enum AllocationStrategy {
 }
 
 /// Resource lifecycle state
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
 pub enum ResourceState {
     Available,
     Allocated,

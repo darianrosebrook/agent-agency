@@ -3,13 +3,14 @@
 //! This module contains structures and utilities for tracking and analyzing
 //! execution statistics and performance metrics.
 
+use schemars::JsonSchema;
 use crate::parallel_types::{TaskId, SubTaskId, WorkerId};
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 
 /// Statistics for parallel execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParallelExecutionStats {
     /// Total number of tasks executed
     pub total_tasks: u32,
@@ -36,6 +37,8 @@ pub struct ParallelExecutionStats {
     /// Resource utilization (0.0 to 1.0)
     pub resource_utilization: f64,
     /// Timestamp when stats were calculated
+    #[schemars(with = "String")]
+
     pub calculated_at: DateTime<Utc>,
 }
 
@@ -161,7 +164,7 @@ impl ParallelExecutionStats {
 }
 
 /// Performance summary for quick analysis
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceSummary {
     pub success_rate: f64,
     pub avg_execution_time_ms: f64,
@@ -172,7 +175,7 @@ pub struct PerformanceSummary {
 }
 
 /// Worker performance metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerPerformanceMetrics {
     pub worker_id: WorkerId,
     pub tasks_completed: u32,
@@ -180,6 +183,8 @@ pub struct WorkerPerformanceMetrics {
     pub avg_execution_time_ms: f64,
     pub success_rate: f64,
     pub quality_score: f64,
+    #[schemars(with = "String")]
+
     pub last_active: DateTime<Utc>,
     pub utilization_percentage: f64,
 }
@@ -217,7 +222,7 @@ impl WorkerPerformanceMetrics {
 }
 
 /// Task complexity analysis
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskComplexityAnalysis {
     pub task_id: TaskId,
     pub complexity_score: f64,
@@ -225,6 +230,8 @@ pub struct TaskComplexityAnalysis {
     pub required_workers: u32,
     pub difficulty_factors: Vec<String>,
     pub optimization_suggestions: Vec<String>,
+    #[schemars(with = "String")]
+
     pub analyzed_at: DateTime<Utc>,
 }
 
@@ -245,7 +252,7 @@ impl TaskComplexityAnalysis {
         self.difficulty_factors = factors.clone();
         
         // Calculate complexity score based on factors
-        let mut score = 0.5; // Base score
+        let mut score: f32 = 0.5; // Base score
         
         for factor in &factors {
             match factor.as_str() {
@@ -295,18 +302,22 @@ impl TaskComplexityAnalysis {
 }
 
 /// Execution timeline for tracking task progress
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionTimeline {
     pub task_id: TaskId,
     pub events: Vec<TimelineEvent>,
+    #[schemars(with = "String")]
+
     pub start_time: DateTime<Utc>,
     pub end_time: Option<DateTime<Utc>>,
     pub total_duration_ms: Option<u64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TimelineEvent {
     pub event_type: String,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub description: String,
     pub metadata: HashMap<String, serde_json::Value>,

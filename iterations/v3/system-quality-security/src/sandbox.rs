@@ -5,6 +5,7 @@
  * Provides containerized/sandboxed environments to prevent security risks.
  */
 
+use schemars::JsonSchema;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -18,7 +19,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 /// Sandbox execution modes
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum SandboxMode {
     /// Docker container isolation
     Docker,
@@ -33,7 +34,7 @@ pub enum SandboxMode {
 }
 
 /// Sandbox resource limits
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResourceLimits {
     pub cpu_cores: Option<f64>,
     pub memory_mb: Option<u64>,
@@ -43,8 +44,9 @@ pub struct ResourceLimits {
 }
 
 /// Sandbox execution context
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SandboxContext {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub mode: SandboxMode,
     pub limits: ResourceLimits,
@@ -55,7 +57,7 @@ pub struct SandboxContext {
 }
 
 /// Sandbox execution result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionResult {
     pub exit_code: Option<i32>,
     pub stdout: String,
@@ -66,7 +68,7 @@ pub struct ExecutionResult {
 }
 
 /// Sandbox execution request
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ExecutionRequest {
     pub command: Vec<String>,
     pub context: SandboxContext,
@@ -77,7 +79,7 @@ pub struct ExecutionRequest {
 pub type SandboxResult<T> = Result<T, SandboxError>;
 
 /// Sandbox operation errors
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum SandboxError {
     #[error("Sandbox creation failed: {reason}")]
     CreationFailed { reason: String },
@@ -118,7 +120,7 @@ pub trait Sandbox: Send + Sync {
 }
 
 /// Sandbox status information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SandboxStatus {
     pub available_modes: Vec<SandboxMode>,
     pub active_sandboxes: u32,
@@ -126,7 +128,7 @@ pub struct SandboxStatus {
 }
 
 /// Resource usage statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResourceUsage {
     pub cpu_percent: f64,
     pub memory_mb: u64,
@@ -138,9 +140,10 @@ pub struct ProductionSandbox {
     active_sandboxes: Arc<RwLock<HashMap<Uuid, SandboxInstance>>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, JsonSchema)]
 struct SandboxInstance {
     context: SandboxContext,
+    #[schemars(with = "String")]
     start_time: DateTime<Utc>,
     process_id: Option<u32>,
 }

@@ -28,12 +28,13 @@ pub trait TimedResult {
 
 /// Generic validation result that can be used across domains
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CommonValidationResult<T = String> {
+pub struct CommonValidationResult <T = String> {
     pub is_valid: bool,
     pub score: Option<f32>,
     pub errors: Vec<T>,
     pub warnings: Vec<T>,
     pub metadata: HashMap<String, serde_json::Value>,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 }
 
@@ -61,13 +62,14 @@ impl<T> TimedResult for CommonValidationResult<T> {
 
 /// Generic test result abstraction
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CommonTestResult<T = String> {
+pub struct CommonTestResult <T = String> {
     pub passed: bool,
     pub score: Option<f32>,
     pub errors: Vec<T>,
     pub warnings: Vec<T>,
     pub execution_time_ms: u64,
     pub metadata: HashMap<String, serde_json::Value>,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 }
 
@@ -95,12 +97,13 @@ impl<T> TimedResult for CommonTestResult<T> {
 
 /// Operation result for tracking outcomes of operations
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OperationResult<T = serde_json::Value, E = String> {
+pub struct OperationResult <T = serde_json::Value, E = String> {
     pub success: bool,
     pub data: Option<T>,
     pub error: Option<E>,
     pub execution_time_ms: u64,
     pub metadata: HashMap<String, serde_json::Value>,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 }
 

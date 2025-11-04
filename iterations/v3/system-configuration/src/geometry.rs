@@ -3,13 +3,14 @@
 //! These types are shared across multiple crates for consistency
 //! in computer vision and image processing operations.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// A rectangular bounding box with floating-point coordinates
 ///
 /// Used for object detection, OCR regions, and other spatial operations
 /// in computer vision and image processing.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct BoundingBox {
     /// X coordinate of the top-left corner
     pub x: f32,

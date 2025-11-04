@@ -14,6 +14,8 @@ scope:
     - "iterations/v3/api-server/src/main.rs"
     - "iterations/v3/orchestration/src/audit_trail.rs"
     - "iterations/v3/workers/src/executor.rs"
+    - "iterations/v3/agent-workers/src/"
+    - "iterations/v3/agent-workers/tests/"
     - "iterations/v3/interfaces/websocket.rs"
     - "iterations/v3/interfaces/mcp.rs"
     - "iterations/v3/src/bin/api-server.rs"

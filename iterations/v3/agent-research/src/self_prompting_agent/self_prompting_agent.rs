@@ -1,5 +1,7 @@
 //! Main self-prompting agent coordinator
 
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::info;
@@ -11,7 +13,8 @@ use crate::self_prompting_agent::sandbox::SandboxEnvironment;
 use crate::self_prompting_agent::prompting_types::{Task, SelfPromptingAgentError, ExecutionMode, SafetyMode};
 
 /// Configuration for the self-prompting agent
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SelfPromptingAgentConfig {
     pub max_iterations: usize,
     pub enable_sandbox: bool,

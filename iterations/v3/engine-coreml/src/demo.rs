@@ -8,8 +8,8 @@ use std::time::Instant;
 use tracing::{info, error};
 use tracing_subscriber;
 
-use crate::{CoreMLEngine, EngineCaps};
-use agent_agency_contracts::{JudgePrompt, JudgeType, WorkingSpecEvidence};
+use crate::CoreMLEngine;
+use agent_agency_contracts::{JudgePrompt, JudgeType, WorkingSpecEvidence, EngineCaps};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -91,7 +91,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 "Invalid tokens are rejected".to_string(),
             ],
             risk_tier: "medium".to_string(),
-            context: std::collections::HashMap::new(),
+            context: serde_json::Value::Object(serde_json::Map::new()),
         },
         output_schema: "{}".to_string(), // Use default schema
     };
@@ -140,7 +140,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             spec_text: "Simple code review".to_string(),
             acceptance_criteria: vec![],
             risk_tier: "low".to_string(),
-            context: std::collections::HashMap::new(),
+            context: serde_json::Value::Object(serde_json::Map::new()),
         },
         output_schema: "{}".to_string(),
     };
@@ -198,7 +198,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             spec_text: "Cache effectiveness test".to_string(),
             acceptance_criteria: vec![],
             risk_tier: "low".to_string(),
-            context: std::collections::HashMap::new(),
+            context: serde_json::Value::Object(serde_json::Map::new()),
         },
         output_schema: "{}".to_string(),
     };

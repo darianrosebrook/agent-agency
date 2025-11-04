@@ -12,15 +12,17 @@ use chrono::{DateTime, Utc, Duration};
 use serde_json;
 use std::sync::Arc;
 use tracing::{debug, info, warn};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-
 // ContextConfig is defined in memory_types.rs
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ContextData {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub content: String,
     pub metadata: serde_json::Value,
+    #[schemars(with = "String")]
     pub created_at: DateTime<Utc>,
 }
 

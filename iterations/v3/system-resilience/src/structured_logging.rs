@@ -5,6 +5,7 @@
 //!
 //! Ported from V2 structured logging patterns with Rust optimizations.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -13,7 +14,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn, Level};
 
 /// Log level configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum LogLevel {
     Trace,
     Debug,
@@ -35,7 +36,7 @@ impl From<LogLevel> for Level {
 }
 
 /// Structured log entry
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StructuredLogEntry {
     pub timestamp: SystemTime,
     pub level: LogLevel,
@@ -52,7 +53,7 @@ pub struct StructuredLogEntry {
 }
 
 /// Error details for structured logging
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ErrorDetails {
     pub error_type: String,
     pub error_message: String,
@@ -62,7 +63,7 @@ pub struct ErrorDetails {
 }
 
 /// Logging configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LoggingConfig {
     pub service_name: String,
     pub component_name: String,

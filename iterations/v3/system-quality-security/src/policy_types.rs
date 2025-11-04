@@ -1,10 +1,11 @@
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Security policy configuration
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct SecurityPolicyConfig {
     /// File access policies
     pub file_access: FileAccessPolicy,
@@ -21,7 +22,7 @@ pub struct SecurityPolicyConfig {
 }
 
 /// File access control policy
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct FileAccessPolicy {
     /// Allowed file patterns (glob patterns)
     pub allowed_patterns: Vec<String>,
@@ -40,7 +41,7 @@ pub struct FileAccessPolicy {
 }
 
 /// Command execution control policy
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct CommandExecutionPolicy {
     /// Allowed command patterns
     pub allowed_commands: Vec<String>,
@@ -59,7 +60,7 @@ pub struct CommandExecutionPolicy {
 }
 
 /// Secrets detection policy
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct SecretsDetectionPolicy {
     /// Enable secrets detection
     pub enabled: bool,
@@ -74,7 +75,7 @@ pub struct SecretsDetectionPolicy {
 }
 
 /// Secret detection pattern
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct SecretPattern {
     /// Pattern name
     pub name: String,
@@ -87,7 +88,7 @@ pub struct SecretPattern {
 }
 
 /// Secret severity levels
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub enum SecretSeverity {
     Low,
     Medium,
@@ -96,7 +97,7 @@ pub enum SecretSeverity {
 }
 
 /// Rate limiting policy configuration
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct RateLimitingPolicy {
     /// Enable rate limiting
     pub enabled: bool,
@@ -111,31 +112,35 @@ pub struct RateLimitingPolicy {
 }
 
 /// Rate limiting request context
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RateLimitRequest {
     /// Client identifier (IP, user ID, etc.)
     pub client_id: String,
     /// Request path or operation
     pub operation: String,
     /// Request timestamp
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
 }
 
 /// Rate limiting result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RateLimitResult {
     /// Whether the request is allowed
     pub allowed: bool,
     /// Current request count in window
     pub current_count: u32,
     /// Window reset time
+    #[schemars(with = "String")]
+
     pub reset_time: DateTime<Utc>,
     /// Retry after seconds (if denied)
     pub retry_after_seconds: Option<u64>,
 }
 
 /// Audit policy configuration
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct AuditPolicy {
     /// Enable audit logging
     pub enabled: bool,
@@ -152,7 +157,7 @@ pub struct AuditPolicy {
 }
 
 /// Council integration configuration
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct CouncilIntegrationConfig {
     /// Enable council integration for security decisions
     pub enabled: bool,
@@ -165,7 +170,7 @@ pub struct CouncilIntegrationConfig {
 }
 
 /// Security violation types
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub enum SecurityViolationType {
     FileAccessDenied,
     CommandExecutionDenied,
@@ -177,9 +182,10 @@ pub enum SecurityViolationType {
 }
 
 /// Security violation details
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct SecurityViolation {
     /// Unique violation ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Violation type
     pub violation_type: SecurityViolationType,
@@ -192,6 +198,8 @@ pub struct SecurityViolation {
     /// User/process that triggered the violation
     pub actor: String,
     /// Timestamp of the violation
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     /// Additional context
     pub context: HashMap<String, String>,
@@ -202,9 +210,10 @@ pub struct SecurityViolation {
 }
 
 /// Council decision for security violations
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct CouncilDecision {
     /// Decision ID
+    #[schemars(with = "String")]
     pub decision_id: Uuid,
     /// Whether the operation was approved
     pub approved: bool,
@@ -213,13 +222,16 @@ pub struct CouncilDecision {
     /// Conditions for approval
     pub conditions: Vec<String>,
     /// Timestamp of the decision
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
 }
 
 /// Security audit event
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct SecurityAuditEvent {
     /// Event ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Event type
     pub event_type: AuditEventType,
@@ -232,13 +244,15 @@ pub struct SecurityAuditEvent {
     /// Result of the action
     pub result: AuditResult,
     /// Timestamp
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     /// Additional metadata
     pub metadata: HashMap<String, String>,
 }
 
 /// Audit event types
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub enum AuditEventType {
     FileAccess,
     CommandExecution,
@@ -249,7 +263,7 @@ pub enum AuditEventType {
 }
 
 /// Audit result
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub enum AuditResult {
     Allowed,
     Denied,
@@ -260,7 +274,7 @@ pub enum AuditResult {
 }
 
 /// Source metadata for audit log ingestion
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq, JsonSchema)]
 pub struct AuditEventSource {
     /// Originating subsystem or service name
     pub system: String,
@@ -271,7 +285,7 @@ pub struct AuditEventSource {
 }
 
 /// Structured audit log entry used for ingestion/analysis pipelines
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct AuditLogEntry {
     /// Schema version for forward compatibility
     pub schema_version: String,
@@ -296,7 +310,7 @@ impl AuditLogEntry {
 }
 
 /// Normalized severity level used by the analysis engine
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
 pub enum SeverityLevel {
     Informational,
     Low,
@@ -318,7 +332,7 @@ impl SeverityLevel {
 }
 
 /// Quantitative severity score produced by the analysis engine
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub struct SeverityScore {
     /// Normalized severity band
     pub level: SeverityLevel,
@@ -331,7 +345,7 @@ pub struct SeverityScore {
 }
 
 /// Aggregated analysis derived from a batch of audit events
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub struct SecurityAnalysis {
     /// Total number of processed events
     pub total_events: usize,
@@ -346,7 +360,7 @@ pub struct SecurityAnalysis {
 }
 
 /// Security policy enforcement result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SecurityEnforcementResult {
     /// Whether the operation was allowed
     pub allowed: bool,
@@ -361,9 +375,10 @@ pub struct SecurityEnforcementResult {
 }
 
 /// File access request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FileAccessRequest {
     /// Request ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// File path
     pub file_path: String,
@@ -374,11 +389,13 @@ pub struct FileAccessRequest {
     /// Context of the access
     pub context: HashMap<String, String>,
     /// Timestamp
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
 }
 
 /// File access types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum FileAccessType {
     Read,
     Write,
@@ -389,9 +406,10 @@ pub enum FileAccessType {
 }
 
 /// Command execution request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CommandExecutionRequest {
     /// Request ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Command to execute
     pub command: String,
@@ -406,13 +424,16 @@ pub struct CommandExecutionRequest {
     /// Context of the execution
     pub context: HashMap<String, String>,
     /// Timestamp
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
 }
 
 /// Secrets scan result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SecretsScanResult {
     /// Scan ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// File or content scanned
     pub target: String,
@@ -421,13 +442,16 @@ pub struct SecretsScanResult {
     /// Scan time (milliseconds)
     pub scan_time_ms: u64,
     /// Timestamp
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
 }
 
 /// Detected secret
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DetectedSecret {
     /// Secret ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Pattern that matched
     pub pattern: String,
@@ -442,7 +466,7 @@ pub struct DetectedSecret {
 }
 
 /// Secret location information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SecretLocation {
     /// File path
     pub file_path: Option<String>,
@@ -455,7 +479,7 @@ pub struct SecretLocation {
 }
 
 /// Security policy enforcement statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SecurityStats {
     /// Total operations checked
     pub total_operations: u64,
@@ -476,11 +500,13 @@ pub struct SecurityStats {
     /// Average enforcement time (milliseconds)
     pub avg_enforcement_time_ms: f64,
     /// Last updated
+    #[schemars(with = "String")]
+
     pub last_updated: DateTime<Utc>,
 }
 
 /// Security event types for audit logging
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub enum SecurityEventType {
     /// Policy update event
     PolicyUpdate,

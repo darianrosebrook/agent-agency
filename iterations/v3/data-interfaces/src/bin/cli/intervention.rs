@@ -2,11 +2,12 @@
 //!
 //! This module provides functions for intervening in running tasks.
 
+use schemars::JsonSchema;
 use clap::Parser;
 use reqwest::Client;
 
 /// Intervention commands for active tasks
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Subcommand, JsonSchema)]
 pub enum InterventionCommand {
     /// Pause task execution
     Pause,

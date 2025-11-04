@@ -236,7 +236,6 @@ impl InferenceBackend for CpuInferenceBackend {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[tokio::test]
     async fn test_inference_manager() {
         let manager = InferenceManager::new();

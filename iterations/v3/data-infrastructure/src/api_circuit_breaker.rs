@@ -3,6 +3,7 @@
 //! Provides resilience against cascading failures by monitoring external service calls
 //! and temporarily stopping requests to services that are failing.
 
+use schemars::JsonSchema;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -12,7 +13,7 @@ use tokio::sync::RwLock;
 use system_quality_security::CircuitBreakerConfig;
 
 /// Circuit breaker states
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, JsonSchema)]
 pub enum CircuitState {
     /// Normal operation - requests pass through
     Closed,
@@ -24,7 +25,7 @@ pub enum CircuitState {
 
 /// Legacy circuit breaker configuration for backward compatibility
 /// TODO: Remove this once all usage is migrated to common types
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct LegacyCircuitBreakerConfig {
     /// Number of failures before opening the circuit
     pub failure_threshold: u64,
@@ -61,26 +62,29 @@ impl From<LegacyCircuitBreakerConfig> for CircuitBreakerConfig {
 }
 
 /// Metrics for circuit breaker monitoring
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct CircuitBreakerMetrics {
     pub total_requests: u64,
     pub successful_requests: u64,
     pub failed_requests: u64,
     pub rejected_requests: u64,
     pub current_state: CircuitState,
+    #[schemars(with = "String")]
     pub last_failure_time: Option<Instant>,
 }
 
 /// Circuit breaker for external service calls
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct CircuitBreaker {
     config: CircuitBreakerConfig,
+    #[schemars(skip)]
     state: Arc<RwLock<CircuitState>>,
     failures: Arc<AtomicU64>,
     successes: Arc<AtomicU64>,
     total_requests: Arc<AtomicU64>,
     successful_requests: Arc<AtomicU64>,
     rejected_requests: Arc<AtomicU64>,
+    #[schemars(skip)]
     last_failure_time: Arc<RwLock<Option<Instant>>>,
 }
 
@@ -261,15 +265,17 @@ impl ResilientHttpClient {
 }
 
 /// Errors from resilient HTTP client
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum ResilientHttpError {
     #[error("Circuit breaker is open")]
     CircuitOpen,
 
     #[error("HTTP error: {0}")]
+    #[schemars(with = "String")]
     Http(reqwest::StatusCode),
 
     #[error("Network error: {0}")]
+    #[schemars(with = "String")]
     Network(#[from] reqwest::Error),
 }
 

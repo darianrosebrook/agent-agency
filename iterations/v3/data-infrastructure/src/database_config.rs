@@ -1,9 +1,10 @@
 //! Database configuration types
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Database connection configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DatabaseConfig {
     /// Database connection URL
     pub database_url: String,

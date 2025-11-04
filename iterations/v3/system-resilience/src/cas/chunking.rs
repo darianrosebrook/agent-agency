@@ -1,12 +1,13 @@
 use anyhow::{anyhow, Result};
 use fastcdc::v2020::FastCDC;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::recovery_types::{Digest, StreamingHasher, ChunkRef};
 
 /// Content-Defined Chunking configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ChunkingConfig {
     /// Minimum chunk size in bytes
     pub min_size: usize,
@@ -36,7 +37,7 @@ impl Default for ChunkingConfig {
 }
 
 /// Chunk information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Chunk {
     /// Chunk digest
     pub digest: Digest,
@@ -49,7 +50,7 @@ pub struct Chunk {
 }
 
 /// Chunk list for a file
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ChunkList {
     /// List of chunks
     pub chunks: Vec<Chunk>,
@@ -279,7 +280,7 @@ impl CdcChunker {
 }
 
 /// Chunk statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ChunkStats {
     /// Total number of chunks
     pub total_chunks: usize,

@@ -3,6 +3,7 @@
 //! Authentication, authorization, input validation, and security controls
 //! for production deployment of the autonomous system.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -13,7 +14,7 @@ use sha2::{Sha256, Digest};
 use rand::Rng;
 
 /// Security configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SecurityConfig {
     pub enable_authentication: bool,
     pub enable_authorization: bool,
@@ -30,7 +31,7 @@ pub struct SecurityConfig {
 }
 
 /// User authentication data
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct User {
     pub id: String,
     pub username: String,
@@ -38,13 +39,15 @@ pub struct User {
     pub password_hash: String, // SHA-256 hash of password
     pub role: UserRole,
     pub permissions: Vec<String>,
+    ##[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
     pub last_login: Option<DateTime<Utc>>,
     pub is_active: bool,
 }
 
 /// User roles
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, JsonSchema)]
 pub enum UserRole {
     Admin,
     Developer,
@@ -53,7 +56,7 @@ pub enum UserRole {
 }
 
 /// JWT claims
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Claims {
     pub sub: String,  // User ID
     pub username: String,
@@ -71,11 +74,13 @@ pub struct AuthManager {
     active_sessions: Arc<RwLock<HashMap<String, Session>>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct Session {
     user_id: String,
     token: String,
+    #[schemars(with = "String")]
     created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
     expires_at: DateTime<Utc>,
     is_active: bool,
 }
@@ -684,7 +689,7 @@ impl SecurityManager {
 
 pub type Result<T> = std::result::Result<T, SecurityError>;
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum SecurityError {
     #[error("Authentication is disabled")]
     AuthenticationDisabled,

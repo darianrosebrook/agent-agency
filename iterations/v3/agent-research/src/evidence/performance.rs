@@ -6,8 +6,9 @@ use crate::evidence::evidence_types::EvidenceCollectorConfig;
 use anyhow::Result;
 
 /// Performance collector
-#[derive(Debug)]
-pub struct PerformanceCollector {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct PerformanceCollectorr {
     config: EvidenceCollectorConfig,
 }
 

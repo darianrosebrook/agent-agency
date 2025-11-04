@@ -9,6 +9,7 @@
 /// Real ANE API bindings for Apple Silicon hardware
 pub mod ane_framework {
     use std::os::raw::c_void;
+    use schemars::JsonSchema;
 
     /// ANE Device handle (opaque pointer)
     pub type ANEDeviceRef = *mut c_void;
@@ -24,8 +25,8 @@ pub mod ane_framework {
 
     /// ANE Performance Statistics
     #[repr(C)]
-    #[derive(Debug, Clone)]
-    pub struct ANEPerformanceStats {
+    #[derive(Debug, Clone, JsonSchema)]
+pub struct ANEPerformanceStats {
         pub total_operations: u64,
         pub active_operations: u32,
         pub average_latency_us: u32,
@@ -35,8 +36,8 @@ pub mod ane_framework {
 
     /// ANE Device Information
     #[repr(C)]
-    #[derive(Debug, Clone)]
-    pub struct ANEDeviceInfo {
+    #[derive(Debug, Clone, JsonSchema)]
+pub struct ANEDeviceInfo {
         pub version: u32,
         pub memory_size_mb: u32,
         pub compute_units: u32,
@@ -48,8 +49,8 @@ pub mod ane_framework {
 
     /// ANE Error codes
     #[repr(C)]
-    #[derive(Debug, Clone, PartialEq)]
-    pub enum ANEError {
+    #[derive(Debug, Clone, PartialEq, JsonSchema)]
+pub enum ANEError {
         Success = 0,
         InvalidParameter = -1,
         DeviceNotFound = -2,

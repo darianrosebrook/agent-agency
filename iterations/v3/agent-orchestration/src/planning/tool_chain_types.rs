@@ -11,9 +11,11 @@
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 use std::collections::HashMap;
+use anyhow::Result;
 
 /// Tool chain planner interface (local implementation)
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolChainPlanner {
     /// Placeholder for planner state
     pub name: String,
@@ -24,6 +26,25 @@ impl Default for ToolChainPlanner {
         Self {
             name: "local-planner".to_string(),
         }
+    }
+}
+
+#[cfg(not(feature = "tool-chain"))]
+impl ToolChainPlanner {
+    /// Plan a tool chain (local stub implementation)
+    pub async fn plan_chain(
+        &self,
+        _context: &PlanningContext,
+        _constraints: &PlanningConstraints,
+    ) -> Result<ToolChain, anyhow::Error> {
+        // Local stub implementation - returns minimal tool chain
+        Ok(ToolChain {
+            id: format!("local-chain-{}", uuid::Uuid::new_v4()),
+            nodes: vec![],
+            estimated_duration_secs: 0,
+            roots: vec![],
+            sinks: vec![],
+        })
     }
 }
 
@@ -99,6 +120,12 @@ pub struct ToolChain {
     pub nodes: Vec<ToolNode>,
     /// Expected total execution time
     pub estimated_duration_secs: u64,
+    /// Root node indices (for DAG structure)
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub roots: Vec<usize>,
+    /// Sink node indices (for DAG structure)
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub sinks: Vec<usize>,
 }
 
 /// Individual tool node in a chain
@@ -119,7 +146,7 @@ pub struct ToolNode {
 }
 
 /// Task complexity assessment
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum TaskComplexity {
     /// Very simple task
     VerySimple,
@@ -134,7 +161,7 @@ pub enum TaskComplexity {
 }
 
 /// Risk tolerance levels
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum RiskLevel {
     /// Conservative - prefer safe, proven tools
     Conservative,
@@ -145,7 +172,8 @@ pub enum RiskLevel {
 }
 
 /// Schema registry interface (local implementation)
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SchemaRegistry {
     /// Placeholder for registry state
     pub name: String,
@@ -160,7 +188,8 @@ impl Default for SchemaRegistry {
 }
 
 /// Tool registry interface (local implementation)
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolRegistry {
     /// Placeholder for registry state
     pub name: String,
@@ -202,4 +231,3 @@ pub use self::{
     SchemaRegistry as ExternalSchemaRegistry,
     ToolRegistry as ExternalToolRegistry,
 };
-

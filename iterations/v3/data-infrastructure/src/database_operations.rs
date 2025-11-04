@@ -4,6 +4,7 @@
 //! for all database operations across the system. It provides a unified interface
 //! for database clients to implement consistent CRUD operations.
 
+use schemars::JsonSchema;
 use crate::models::*;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -88,7 +89,7 @@ pub trait DatabaseOperations {
 
 /// Input types for database operations
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateJudge {
     pub name: String,
     pub model_name: String,
@@ -99,7 +100,7 @@ pub struct CreateJudge {
     pub is_active: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UpdateJudge {
     pub name: Option<String>,
     pub model_name: Option<String>,
@@ -110,7 +111,7 @@ pub struct UpdateJudge {
     pub is_active: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateWorker {
     pub name: String,
     pub worker_type: String,
@@ -122,7 +123,7 @@ pub struct CreateWorker {
     pub is_active: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UpdateWorker {
     pub name: Option<String>,
     pub worker_type: Option<String>,
@@ -134,7 +135,7 @@ pub struct UpdateWorker {
     pub is_active: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateTask {
     pub title: String,
     pub description: String,
@@ -150,7 +151,7 @@ pub struct CreateTask {
     pub metadata: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UpdateTask {
     pub title: Option<String>,
     pub description: Option<String>,
@@ -167,10 +168,14 @@ pub struct UpdateTask {
     pub completed_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateTaskExecution {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
+    #[schemars(with = "String")]
     pub worker_id: Uuid,
+    #[schemars(with = "String")]
+
     pub execution_started_at: DateTime<Utc>,
     pub status: String,
     pub worker_output: serde_json::Value,
@@ -182,7 +187,7 @@ pub struct CreateTaskExecution {
     pub result_data: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UpdateTaskExecution {
     pub execution_completed_at: Option<DateTime<Utc>>,
     pub execution_time_ms: Option<i32>,
@@ -196,9 +201,10 @@ pub struct UpdateTaskExecution {
     pub result_data: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateAuditTrailEntry {
     pub entity_type: String,
+    #[schemars(with = "String")]
     pub entity_id: Uuid,
     pub action: String,
     pub details: serde_json::Value,
@@ -207,9 +213,11 @@ pub struct CreateAuditTrailEntry {
     pub timestamp: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateCouncilVerdict {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
+    #[schemars(with = "String")]
     pub verdict_id: Uuid,
     pub consensus_score: f32,
     pub final_verdict: serde_json::Value,
@@ -220,20 +228,25 @@ pub struct CreateCouncilVerdict {
     pub verdict_details: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateJudgeEvaluation {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
+    #[schemars(with = "String")]
     pub judge_id: Uuid,
     pub evaluation_score: f32,
     pub evaluation_reasoning: String,
     pub evaluation_metadata: serde_json::Value,
     pub evaluation_time_ms: i32,
+    #[schemars(with = "String")]
+
     pub evaluation_timestamp: DateTime<Utc>,
 }
 
 /// Planning telemetry input types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreatePlanningTelemetry {
+    #[schemars(with = "String")]
     pub plan_id: Uuid,
     pub metric_type: String,
     pub metric_value: serde_json::Value,
@@ -242,9 +255,10 @@ pub struct CreatePlanningTelemetry {
 }
 
 /// Milestone input types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateMilestone {
     pub id: String,
+    #[schemars(with = "String")]
     pub plan_id: Uuid,
     pub objective: String,
     pub scope: Option<serde_json::Value>,
@@ -263,7 +277,7 @@ pub struct CreateMilestone {
     pub metrics: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UpdateMilestone {
     pub objective: Option<String>,
     pub scope: Option<serde_json::Value>,
@@ -285,18 +299,20 @@ pub struct UpdateMilestone {
 }
 
 /// Planning session input types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreatePlanningSession {
+    #[schemars(with = "String")]
     pub plan_id: Uuid,
     pub orchestrator_id: String,
     pub worker_pool_id: String,
     pub council_session_id: Option<Uuid>,
+    #[schemars(with = "String")]
     pub audit_correlation_id: Uuid,
     pub status: Option<String>,
     pub execution_state: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UpdatePlanningSession {
     pub status: Option<String>,
     pub execution_state: Option<serde_json::Value>,
@@ -304,9 +320,10 @@ pub struct UpdatePlanningSession {
 }
 
 /// Evidence artifact input types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateEvidenceArtifact {
     pub milestone_id: String,
+    #[schemars(with = "String")]
     pub plan_id: Uuid,
     pub artifact_type: String,
     pub artifact_data: serde_json::Value,
@@ -314,7 +331,7 @@ pub struct CreateEvidenceArtifact {
     pub metadata: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UpdateEvidenceArtifact {
     pub artifact_type: Option<String>,
     pub artifact_data: Option<serde_json::Value>,
@@ -324,8 +341,9 @@ pub struct UpdateEvidenceArtifact {
 }
 
 /// Planning audit event input types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreatePlanningAuditEvent {
+    #[schemars(with = "String")]
     pub plan_id: Uuid,
     pub milestone_id: Option<String>,
     pub worker_id: Option<Uuid>,
@@ -335,9 +353,11 @@ pub struct CreatePlanningAuditEvent {
 }
 
 /// Execution plan input types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateExecutionPlan {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub session_id: Uuid,
     pub working_spec_id: String,
     pub title: String,
@@ -352,7 +372,7 @@ pub struct CreateExecutionPlan {
     pub metadata: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UpdateExecutionPlan {
     pub title: Option<String>,
     pub overview: Option<String>,
@@ -369,7 +389,7 @@ pub struct UpdateExecutionPlan {
 }
 
 /// Waiver input types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateWaiver {
     pub title: String,
     pub reason: String,
@@ -378,11 +398,13 @@ pub struct CreateWaiver {
     pub approved_by: String,
     pub impact_level: String,
     pub mitigation_plan: String,
+    #[schemars(with = "String")]
+
     pub expires_at: DateTime<Utc>,
     pub metadata: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UpdateWaiver {
     pub title: Option<String>,
     pub description: Option<String>,

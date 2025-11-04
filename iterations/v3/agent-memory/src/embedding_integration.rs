@@ -11,16 +11,17 @@ use tracing::{debug, info, warn, error};
 use reqwest::Client;
 use anyhow::{Context, Result};
 use std::collections::HashMap;
-
 /// Memory embedding with decay information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct MemoryEmbedding {
     pub memory_id: MemoryId,
     pub embedding: Vec<f32>,
     pub importance_score: f32,
     pub decay_factor: f32,
+    #[schemars(with = "String")]
     pub last_accessed: DateTime<Utc>,
     pub access_count: u32,
+    #[schemars(with = "String")]
     pub created_at: DateTime<Utc>,
 }
 

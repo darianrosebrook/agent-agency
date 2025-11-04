@@ -15,6 +15,7 @@ pub struct AuditTrailEntry {
     pub event_type: String,
     pub description: String,
     #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -24,13 +25,22 @@ pub struct AuditTrailEntry {
 pub trait DatabaseOperations: Send + Sync {
     async fn create_execution_plan(&self, plan: CreateExecutionPlan) -> Result<models::ExecutionPlan, anyhow::Error>;
     async fn get_execution_plan(&self, id: Uuid) -> Result<Option<models::ExecutionPlan>, anyhow::Error>;
-    async fn create_audit_trail_entry(&self, entry: AuditTrailEntry) -> Result<(), anyhow::Error>;
+    async fn get_execution_plans(&self) -> Result<Vec<models::ExecutionPlan>, anyhow::Error>;
+    async fn update_execution_plan(&self, id: Uuid, update: UpdateExecutionPlan) -> Result<models::ExecutionPlan, anyhow::Error>;
+    async fn create_audit_trail_entry(&self, entry: CreateAuditTrailEntry) -> Result<models::AuditTrailEntry, anyhow::Error>;
+    async fn get_audit_trail_entries(&self, task_id: Uuid) -> Result<Vec<models::AuditTrailEntry>, anyhow::Error>;
+    async fn get_audit_trail_entry(&self, id: Uuid) -> Result<Option<models::AuditTrailEntry>, anyhow::Error>;
     async fn create_planning_session(&self, session: CreatePlanningSession) -> Result<models::PlanningSession, anyhow::Error>;
     async fn get_planning_session(&self, id: Uuid) -> Result<Option<models::PlanningSession>, anyhow::Error>;
     async fn update_planning_session(&self, id: Uuid, session: UpdatePlanningSession) -> Result<(), anyhow::Error>;
-    async fn create_planning_telemetry(&self, telemetry: CreatePlanningTelemetry) -> Result<(), anyhow::Error>;
+    async fn create_planning_telemetry(&self, telemetry: CreatePlanningTelemetry) -> Result<models::PlanningTelemetry, anyhow::Error>;
+    async fn get_planning_telemetry(&self, plan_id: Uuid, metric_type: Option<String>) -> Result<Vec<models::PlanningTelemetry>, anyhow::Error>;
     async fn create_planning_audit_event(&self, event: CreatePlanningAuditEvent) -> Result<(), anyhow::Error>;
-    // Add other methods as needed
+    async fn get_planning_audit_events(&self, plan_id: Uuid) -> Result<Vec<models::PlanningAuditEvent>, anyhow::Error>;
+    async fn get_workers(&self) -> Result<Vec<models::Worker>, anyhow::Error>;
+    async fn get_waivers(&self, status: Option<String>) -> Result<Vec<models::Waiver>, anyhow::Error>;
+    async fn create_waiver(&self, waiver: CreateWaiver) -> Result<models::Waiver, anyhow::Error>;
+    async fn update_waiver(&self, id: Uuid, update: UpdateWaiver) -> Result<models::Waiver, anyhow::Error>;
 }
 
 /// Create execution plan request
@@ -74,12 +84,14 @@ pub mod models {
         #[schemars(with = "String")]
     pub id: Uuid,
         #[schemars(with = "String")]
-        pub plan_id: Uuid,
+    pub plan_id: Uuid,
         pub status: String,
         #[schemars(with = "String")]
-        pub created_at: DateTime<Utc>,
+
+    pub created_at: DateTime<Utc>,
         #[schemars(with = "String")]
-        pub updated_at: DateTime<Utc>,
+
+    pub updated_at: DateTime<Utc>,
         pub metadata: HashMap<String, serde_json::Value>,
     }
 
@@ -89,14 +101,16 @@ pub mod models {
         #[schemars(with = "String")]
     pub id: Uuid,
         #[schemars(with = "String")]
-        pub plan_id: Uuid,
+    pub plan_id: Uuid,
         pub title: String,
         pub description: String,
         pub status: String,
         #[schemars(with = "String")]
-        pub created_at: DateTime<Utc>,
+
+    pub created_at: DateTime<Utc>,
         #[schemars(with = "String")]
-        pub updated_at: DateTime<Utc>,
+
+    pub updated_at: DateTime<Utc>,
     }
 
     /// Planning audit event model
@@ -105,11 +119,12 @@ pub mod models {
         #[schemars(with = "String")]
     pub id: Uuid,
         #[schemars(with = "String")]
-        pub session_id: Uuid,
+    pub session_id: Uuid,
         pub event_type: String,
         pub description: String,
         #[schemars(with = "String")]
-        pub timestamp: DateTime<Utc>,
+
+    pub timestamp: DateTime<Utc>,
         pub metadata: HashMap<String, serde_json::Value>,
     }
 
@@ -119,9 +134,22 @@ pub mod models {
         #[schemars(with = "String")]
     pub id: Uuid,
         #[schemars(with = "String")]
-        pub session_id: Uuid,
+    pub session_id: Uuid,
         pub metric_name: String,
         pub metric_value: f64,
+        #[schemars(with = "String")]
+
+    pub timestamp: DateTime<Utc>,
+        pub metadata: HashMap<String, serde_json::Value>,
+    }
+
+    /// Audit trail entry model
+    #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+    pub struct AuditTrailEntry {
+        #[schemars(with = "String")]
+        pub id: Uuid,
+        pub event_type: String,
+        pub description: String,
         #[schemars(with = "String")]
         pub timestamp: DateTime<Utc>,
         pub metadata: HashMap<String, serde_json::Value>,
@@ -131,13 +159,20 @@ pub mod models {
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct Worker {
         #[schemars(with = "String")]
-    pub id: Uuid,
+        pub id: Uuid,
+        pub name: String,
         pub worker_type: String,
-        pub status: String,
-        pub capabilities: Vec<String>,
-        #[schemars(with = "String")]
-        pub last_seen: DateTime<Utc>,
+        pub specialty: Option<String>,
+        pub model_name: String,
+        pub endpoint: String,
+        pub capabilities: serde_json::Value,
+        pub performance_history: serde_json::Value,
+        pub is_active: bool,
         pub metadata: HashMap<String, serde_json::Value>,
+        #[schemars(with = "String")]
+        pub created_at: DateTime<Utc>,
+        #[schemars(with = "String")]
+        pub updated_at: DateTime<Utc>,
     }
 
     /// Waiver model
@@ -146,14 +181,25 @@ pub mod models {
         #[schemars(with = "String")]
     pub id: Uuid,
         #[schemars(with = "String")]
-        pub plan_id: Uuid,
+    pub plan_id: Uuid,
         pub waiver_type: String,
         pub reason: String,
         pub approved_by: String,
+        pub status: String,
+        /// Waived gates
+        #[serde(skip_serializing_if = "Vec::is_empty", default)]
+        pub gates: Vec<String>,
+        /// Impact level (low, medium, high, critical)
+        pub impact_level: String,
+        /// Mitigation plan (if required)
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub mitigation_plan: Option<String>,
         #[schemars(with = "String")]
-        pub created_at: DateTime<Utc>,
+
+    pub created_at: DateTime<Utc>,
         #[schemars(with = "Option<String>")]
         pub expires_at: Option<DateTime<Utc>>,
+        pub metadata: HashMap<String, serde_json::Value>,
     }
 }
 

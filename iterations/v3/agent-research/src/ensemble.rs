@@ -1,11 +1,13 @@
 //! Ensemble learning algorithms for reflexive learning
 
+use schemars::JsonSchema;
 use crate::reflexive_types::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Ensemble learning orchestrator
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct LearningAlgorithms {
     algorithms: HashMap<LearningAlgorithmType, Box<dyn LearningAlgorithm>>,
 }
@@ -62,7 +64,7 @@ pub trait LearningAlgorithm: Send + Sync {
 }
 
 /// Learning data point
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LearningDataPoint {
     pub input: LearningInput,
     pub expected_output: LearningOutput,
@@ -70,7 +72,7 @@ pub struct LearningDataPoint {
 }
 
 /// Learning input
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum LearningInput {
     TaskPrediction {
         task_type: TaskType,
@@ -89,7 +91,7 @@ pub enum LearningInput {
 }
 
 /// Learning output
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum LearningOutput {
     TaskPrediction {
         success_probability: f64,
@@ -110,7 +112,7 @@ pub enum LearningOutput {
 }
 
 /// Learning context
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LearningContext {
     pub domain: String,
     pub technology_stack: Vec<String>,
@@ -119,7 +121,7 @@ pub struct LearningContext {
 }
 
 /// Learning feedback for algorithm improvement
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LearningFeedback {
     pub input: LearningInput,
     pub predicted_output: LearningOutput,
@@ -129,7 +131,8 @@ pub struct LearningFeedback {
 }
 
 /// Ensemble analytics and component tracking
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct EnsembleAnalytics {
     component_stats: Vec<EnsembleComponentStatistics>,
     overall_performance: HashMap<String, f64>,
@@ -216,7 +219,8 @@ impl EnsembleAnalytics {
 }
 
 /// Problem characteristics analysis
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ProblemCharacteristicsAnalyzer {
     characteristics_cache: HashMap<String, ProblemCharacteristics>,
 }
@@ -275,7 +279,8 @@ impl ProblemCharacteristicsAnalyzer {
 }
 
 /// Algorithm performance tracker
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct AlgorithmPerformanceTracker {
     performance_history: HashMap<LearningAlgorithmType, Vec<AlgorithmPerformance>>,
 }

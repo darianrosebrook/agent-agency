@@ -5,13 +5,14 @@
 //! - agent-memory (working memory folding)
 //! - reflexive-learning (context-aware learning)
 
+use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Context preservation configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContextConfig {
     /// Context storage configuration
     pub storage: ContextStorageConfig,
@@ -24,7 +25,7 @@ pub struct ContextConfig {
 }
 
 /// Context storage configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContextStorageConfig {
     /// Maximum context size (bytes)
     pub max_context_size: u64,
@@ -66,7 +67,7 @@ impl Default for ContextStorageConfig {
 }
 
 /// Context folding configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContextFoldingConfig {
     /// Folding strategy
     pub strategy: FoldingStrategy,
@@ -93,7 +94,7 @@ impl Default for ContextFoldingConfig {
 }
 
 /// Folding strategy for context compression
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub enum FoldingStrategy {
     /// Compress context using gzip
     Compress,
@@ -106,7 +107,7 @@ pub enum FoldingStrategy {
 }
 
 /// Working memory configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkingMemoryConfig {
     /// Maximum working memory size (contexts)
     pub max_size: usize,
@@ -127,7 +128,7 @@ impl Default for WorkingMemoryConfig {
 }
 
 /// Performance configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceConfig {
     /// Maximum preservation time (ms)
     pub max_preservation_time_ms: u64,
@@ -151,9 +152,10 @@ impl Default for PerformanceConfig {
 }
 
 /// Context data structure
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContextData {
     /// Unique context ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Context type/category
     pub context_type: String,
@@ -162,8 +164,11 @@ pub struct ContextData {
     /// Context metadata
     pub metadata: ContextMetadata,
     /// Creation timestamp
+    #[schemars(with = "String")]
     pub created_at: DateTime<Utc>,
     /// Last access timestamp
+    #[schemars(with = "String")]
+
     pub last_accessed_at: DateTime<Utc>,
     /// Access count
     pub access_count: u64,
@@ -172,7 +177,7 @@ pub struct ContextData {
 }
 
 /// Context metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContextMetadata {
     /// Human-readable title
     pub title: Option<String>,
@@ -189,7 +194,7 @@ pub struct ContextMetadata {
 }
 
 /// Context preservation request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContextPreservationRequest {
     /// Context data to preserve
     pub context_data: ContextData,
@@ -198,7 +203,7 @@ pub struct ContextPreservationRequest {
 }
 
 /// Preservation options
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PreservationOptions {
     /// Force preservation (ignore limits)
     pub force: bool,
@@ -211,7 +216,7 @@ pub struct PreservationOptions {
 }
 
 /// Preservation priority
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
 pub enum PreservationPriority {
     /// Low priority
     Low,
@@ -224,7 +229,7 @@ pub enum PreservationPriority {
 }
 
 /// Context preservation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContextPreservationResult {
     /// Success status
     pub success: bool,
@@ -239,16 +244,17 @@ pub struct ContextPreservationResult {
 }
 
 /// Context retrieval request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContextRetrievalRequest {
     /// Context ID to retrieve
+    #[schemars(with = "String")]
     pub context_id: Uuid,
     /// Retrieval options
     pub options: RetrievalOptions,
 }
 
 /// Retrieval options
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RetrievalOptions {
     /// Include metadata
     pub include_metadata: bool,
@@ -259,7 +265,7 @@ pub struct RetrievalOptions {
 }
 
 /// Context retrieval result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContextRetrievalResult {
     /// Success status
     pub success: bool,
@@ -272,7 +278,7 @@ pub struct ContextRetrievalResult {
 }
 
 /// Folded context result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum FoldedContext {
     /// Context was compressed
     Compressed(Vec<u8>),
@@ -285,7 +291,7 @@ pub enum FoldedContext {
 }
 
 /// Archive statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ArchiveStats {
     /// Total number of archived contexts
     pub total_archived: u64,
@@ -309,9 +315,10 @@ impl Default for ArchiveStats {
 }
 
 /// Context folding request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContextFoldingRequest {
     /// Context ID to fold
+    #[schemars(with = "String")]
     pub context_id: Uuid,
     /// Folding strategy to use
     pub strategy: FoldingStrategy,
@@ -320,7 +327,7 @@ pub struct ContextFoldingRequest {
 }
 
 /// Folding options
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FoldingOptions {
     /// Compression level (if compressing)
     pub compression_level: Option<u32>,
@@ -331,7 +338,7 @@ pub struct FoldingOptions {
 }
 
 /// Context statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContextStats {
     /// Total contexts stored
     pub total_contexts: u64,
@@ -391,7 +398,7 @@ impl Default for RetrievalOptions {
 }
 
 /// Enhanced context lifecycle metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContextLifecycleMetrics {
     /// Folding frequency by strategy
     pub folding_frequency: HashMap<String, u64>,
@@ -406,7 +413,7 @@ pub struct ContextLifecycleMetrics {
 }
 
 /// Storage efficiency metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StorageEfficiencyMetrics {
     /// Average compression ratio
     pub avg_compression_ratio: f64,
@@ -417,7 +424,7 @@ pub struct StorageEfficiencyMetrics {
 }
 
 /// Retrieval latency metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RetrievalLatencyMetrics {
     /// Working memory retrieval latency (ms)
     pub working_memory_latency_ms: f64,
@@ -430,7 +437,7 @@ pub struct RetrievalLatencyMetrics {
 }
 
 /// Access pattern metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AccessPatternMetrics {
     /// Hot contexts (frequently accessed)
     pub hot_contexts: Vec<Uuid>,
@@ -443,7 +450,7 @@ pub struct AccessPatternMetrics {
 }
 
 /// Context health metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContextHealthMetrics {
     /// Orphaned contexts count
     pub orphaned_contexts: u64,
@@ -456,7 +463,7 @@ pub struct ContextHealthMetrics {
 }
 
 /// Health alert
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct HealthAlert {
     /// Alert type
     pub alert_type: HealthAlertType,
@@ -465,11 +472,12 @@ pub struct HealthAlert {
     /// Alert severity
     pub severity: AlertSeverity,
     /// Alert timestamp
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 }
 
 /// Health alert types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum HealthAlertType {
     /// Storage limit approaching
     StorageLimitApproaching,
@@ -482,7 +490,7 @@ pub enum HealthAlertType {
 }
 
 /// Alert severity levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum AlertSeverity {
     /// Low severity
     Low,

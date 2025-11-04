@@ -2,6 +2,7 @@
 //!
 //! Provides isolated execution environment for testing and validation.
 
+use schemars::JsonSchema;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -175,7 +176,8 @@ impl SandboxEnvironment {
 }
 
 /// Sandbox status information
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SandboxStatus {
     pub active: bool,
     pub root_path: Option<PathBuf>,
@@ -184,7 +186,8 @@ pub struct SandboxStatus {
 }
 
 /// Security levels for sandbox
-#[derive(Debug, Clone, PartialEq)]
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum SecurityLevel {
     Low,
     Medium,
@@ -193,7 +196,8 @@ pub enum SecurityLevel {
 }
 
 /// Sandbox configuration
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SandboxConfig {
     pub max_memory_mb: usize,
     pub max_cpu_percent: f64,
@@ -307,7 +311,8 @@ impl ResourceMonitor {
 }
 
 /// Resource usage information
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResourceUsage {
     pub memory_mb: usize,
     pub cpu_percent: f64,

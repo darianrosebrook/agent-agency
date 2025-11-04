@@ -3,6 +3,7 @@
 //! Provides parallel task decomposition and coordination capabilities
 //! consolidated from the parallel-workers/ crate.
 
+use schemars::JsonSchema;
 use crate::worker_types::*;
 use crate::parallel_types::{TaskDependency, ParallelExecutionPlan, CoordinationStrategy, DependencyType, SubTask, TaskResult, WorkerId, SubTaskId, SubTaskStatus, Priority as ParallelPriority};
 use crate::decomposition::TaskDecomposer;
@@ -14,8 +15,9 @@ use tokio::sync::RwLock;
 use tracing::{info, warn};
 
 /// Configuration for parallel execution
-#[derive(Debug, Clone)]
-pub struct ParallelExecutionConfig {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ParallelExecutionConfig {
     pub max_parallel_tasks: usize,
     pub decomposition_depth: usize,
     pub enable_dependency_tracking: bool,
@@ -661,8 +663,9 @@ impl ParallelCoordinator {
 }
 
 /// Errors from parallel execution
-#[derive(Debug, thiserror::Error)]
-pub enum ParallelError {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
+enum ParallelError {
     #[error("Task decomposition failed: {0}")]
     DecompositionFailed(String),
 

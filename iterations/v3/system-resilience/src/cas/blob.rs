@@ -2,6 +2,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
@@ -199,7 +200,7 @@ impl BlobStore {
 }
 
 /// Blob with header and data
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct Blob {
     pub header: PayloadHeader,
     pub data: Vec<u8>,
@@ -242,7 +243,7 @@ impl Blob {
 }
 
 /// Blob storage statistics
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct BlobStats {
     pub total_size: u64,
     pub blob_count: u64,

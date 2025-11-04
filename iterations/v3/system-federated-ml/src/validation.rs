@@ -3,6 +3,7 @@
 /// Validates model updates for quality, consistency, and security
 /// before inclusion in federated aggregation.
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
@@ -14,7 +15,7 @@ pub struct UpdateValidator {
 }
 
 /// Quality thresholds for validation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityThresholds {
     /// Minimum gradient norm
     pub min_gradient_norm: f32,
@@ -29,7 +30,7 @@ pub struct QualityThresholds {
 }
 
 /// Validation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Serialize, Deserialize)]
 pub struct ValidationResult {
     /// Whether the update passed validation
     pub is_valid: bool,
@@ -42,7 +43,7 @@ pub struct ValidationResult {
 }
 
 /// Individual validation issue
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationIssue {
     /// Issue type
     pub issue_type: String,
@@ -55,7 +56,7 @@ pub struct ValidationIssue {
 }
 
 /// Severity levels
-#[derive(Debug, Clone, Serialize, Deserialize, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialOrd, Ord, PartialEq, Eq, JsonSchema)]
 pub enum Severity {
     Low,
     Medium,
@@ -345,7 +346,7 @@ impl UpdateValidator {
 }
 
 /// Validation statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationStatistics {
     pub total_validations: usize,
     pub pass_rate: f32,

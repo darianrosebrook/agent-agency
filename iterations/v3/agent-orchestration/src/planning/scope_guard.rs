@@ -5,6 +5,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -17,15 +18,18 @@ use chrono::{DateTime, Utc, Duration};
 use agent_agency_contracts::planning_io::MilestoneScope;
 
 /// File lock information
-#[derive(Debug, Clone)]
-pub struct FileLock {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct FileLock {
     /// Milestone holding the lock
+    #[schemars(with = "String")]
     milestone_id: Uuid,
 
     /// Lock mode (read/write)
     mode: LockMode,
 
     /// When lock was acquired
+    #[schemars(with = "String")]
     acquired_at: DateTime<Utc>,
 
     /// Lock file path (for advisory locking)
@@ -33,8 +37,9 @@ pub struct FileLock {
 }
 
 /// Lock mode for file access
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LockMode {
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Copy)]
+enum LockMode {
     /// Multiple readers allowed, no writers
     Read,
 
@@ -65,8 +70,8 @@ impl ScopeGuard {
     pub fn new() -> Self {
         Self::with_config(
             PathBuf::from("/tmp/scope-locks"),
-            Duration::from_std(std::time::Duration::from_secs(300)).expect("Duration should be valid"), // 5 minutes max wait
-            Duration::from_std(std::time::Duration::from_secs(60)).expect("Duration should be valid"),  // 1 minute cleanup
+            Duration::milliseconds(300_000), // 5 minutes max wait
+            Duration::milliseconds(60_000),  // 1 minute cleanup
         )
     }
 
@@ -123,18 +128,23 @@ impl ScopeGuard {
 
         // Handle conflicts
         if !conflicts.is_empty() {
+            // Convert conflicts to PathBufs for waiting logic
+            let conflicts_with_paths: Vec<(std::path::PathBuf, _)> = conflicts.into_iter()
+                .map(|(s, l)| (std::path::PathBuf::from(s), l))
+                .collect();
+
             // Try to wait for locks to be released
-            if self.can_wait_for_locks(&conflicts).await {
+            if self.can_wait_for_locks(&conflicts_with_paths).await {
                 // Wait and retry
-                for (file_path, _) in conflicts {
-                    self.wait_for_lock_release(&file_path).await?;
+                for (file_path, _) in &conflicts_with_paths {
+                    self.wait_for_lock_release(file_path).await?;
                 }
 
                 // Retry acquisition
                 return self.acquire_locks(milestone_id, scope).await;
             } else {
                 // Cannot resolve conflicts
-                let conflict_details = conflicts.into_iter()
+                let conflict_details = conflicts_with_paths.into_iter()
                     .map(|(path, lock)| format!("{} (held by {})", path.display(), lock.milestone_id))
                     .collect::<Vec<_>>()
                     .join(", ");
@@ -158,7 +168,7 @@ impl ScopeGuard {
                 };
 
                 // Create lock file for advisory locking
-                let lock_file_path = self.create_lock_file_path(file_path);
+                let lock_file_path = self.create_lock_file_path(std::path::Path::new(&file_path));
                 self.create_lock_file(&lock_file_path, &milestone_id).await?;
 
                 let file_lock = FileLock {
@@ -169,7 +179,7 @@ impl ScopeGuard {
                 };
 
                 locks.insert(PathBuf::from(file_path.clone()), file_lock);
-                acquired_locks.push(file_path.clone());
+                acquired_locks.push(file_path.clone().into());
             }
         }
 
@@ -219,8 +229,9 @@ impl ScopeGuard {
 
         for file_path in &scope.files {
             // Check if path is safe (not trying to access system files)
-            if file_path.is_absolute() {
-                let path_str = file_path.to_string_lossy();
+            let path_buf = PathBuf::from(file_path);
+            if path_buf.is_absolute() {
+                let path_str = path_buf.to_string_lossy();
 
                 // Block access to system directories
                 if path_str.starts_with("/etc") ||
@@ -338,8 +349,9 @@ impl ScopeGuard {
 
     /// Wait for a specific lock to be released
     async fn wait_for_lock_release(&self, file_path: &Path) -> Result<()> {
-        let check_interval = Duration::from_std(std::time::Duration::from_millis(100)).expect("Duration should be valid");
-        let mut waited = Duration::from_std(std::time::Duration::from_millis(0)).expect("Duration should be valid");
+        let check_interval_ms = 100u64;
+        let mut waited_ms = 0u64;
+        let max_wait_ms = self.max_wait_duration.num_milliseconds() as u64;
 
         loop {
             {
@@ -349,19 +361,19 @@ impl ScopeGuard {
                 }
             }
 
-            if waited >= self.max_wait_duration {
+            if waited_ms >= max_wait_ms {
                 return Err(anyhow!("Timeout waiting for lock release on {}", file_path.display()));
             }
 
-            tokio::time::sleep(check_interval).await;
-            waited = waited + check_interval;
+            tokio::time::sleep(tokio::time::Duration::from_millis(check_interval_ms)).await;
+            waited_ms += check_interval_ms;
         }
     }
 
     /// Clean up expired locks
     async fn cleanup_expired_locks(&self) {
         let now = Utc::now();
-        let max_age = Duration::from_std(std::time::Duration::from_secs(3600)).expect("Duration should be valid"); // 1 hour max lock age
+        let max_age = Duration::seconds(3600); // 1 hour max lock age
 
         let mut locks = self.active_locks.write().await;
         let expired_paths: Vec<PathBuf> = locks.iter()
@@ -402,8 +414,9 @@ impl ScopeGuard {
 }
 
 /// Statistics about current lock state
-#[derive(Debug, Clone)]
-pub struct LockStatistics {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct LockStatistics {
     /// Total number of active locks
     pub total_locks: usize,
 

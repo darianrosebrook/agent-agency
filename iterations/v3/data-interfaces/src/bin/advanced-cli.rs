@@ -3,6 +3,7 @@
 //! Provides command-line interface for controlling autonomous task execution
 //! with different safety guardrails and intervention levels.
 
+use schemars::JsonSchema;
 use std::io::{self, Write};
 use std::sync::Arc;
 use clap::{Parser, Subcommand};
@@ -18,7 +19,7 @@ lazy_static::lazy_static! {
 }
 
 /// Task execution state
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 enum TaskState {
     Running,
     Paused,
@@ -46,7 +47,7 @@ use tower_http::cors::CorsLayer;
 use std::sync::Arc;
 
 /// Execution modes with different intervention levels
-#[derive(Debug, Clone, clap::ValueEnum)]
+#[derive(Debug, Clone, clap::ValueEnum, JsonSchema)]
 pub enum ExecutionMode {
     /// Manual approval required for each changeset before application
     Strict,
@@ -194,7 +195,7 @@ async fn get_execution_events(
 }
 
 /// CLI configuration
-#[derive(Debug, Clone, Parser)]
+#[derive(Debug, Clone, Parser, JsonSchema)]
 pub struct CliConfig {
     /// Server host
     #[arg(long, default_value = "localhost")]
@@ -223,7 +224,7 @@ pub struct Cli {
 }
 
 /// Available CLI commands
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Subcommand, JsonSchema)]
 pub enum Commands {
     /// Execute autonomous task with intervention controls
     Execute {
@@ -273,7 +274,7 @@ pub enum Commands {
 }
 
 /// Intervention commands for active tasks
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Subcommand, JsonSchema)]
 pub enum InterventionCommand {
     /// Pause task execution
     Pause,

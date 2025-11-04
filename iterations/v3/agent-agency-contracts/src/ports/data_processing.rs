@@ -6,10 +6,12 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use crate::errors::DataProcessingResult;
 
 /// Supported data formats for processing
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub enum DataFormat {
     /// Plain text documents
     Text,
@@ -34,9 +36,10 @@ pub enum DataFormat {
 }
 
 /// Processing context for data operations
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct ProcessingContext {
     /// Unique processing request ID
+    #[schemars(with = "String")]
     pub request_id: uuid::Uuid,
     /// Source of the data
     pub source: String,
@@ -49,7 +52,7 @@ pub struct ProcessingContext {
 }
 
 /// Processing priority levels
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProcessingPriority {
     Low,
@@ -59,9 +62,10 @@ pub enum ProcessingPriority {
 }
 
 /// Processed data result
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct ProcessedData {
     /// Unique ID for the processed data
+    #[schemars(with = "String")]
     pub id: uuid::Uuid,
     /// Original source identifier
     pub source_id: String,
@@ -72,14 +76,14 @@ pub struct ProcessedData {
     /// Processing metadata
     pub metadata: std::collections::HashMap<String, serde_json::Value>,
     /// Processing timestamp
-    #[serde(with = "chrono::serde::ts_seconds")]
+    #[schemars(with = "String")]
     pub processed_at: chrono::DateTime<chrono::Utc>,
     /// Processing duration in milliseconds
     pub processing_time_ms: u64,
 }
 
 /// Content types that can be extracted
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 #[serde(untagged)]
 pub enum ProcessingContent {
     /// Plain text content
@@ -96,7 +100,7 @@ pub enum ProcessingContent {
 }
 
 /// Processing statistics
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct ProcessingStats {
     /// Total requests processed
     pub total_processed: u64,
@@ -113,7 +117,7 @@ pub struct ProcessingStats {
 }
 
 /// File operation result
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct FileOperationResult {
     /// Operation success
     pub success: bool,
@@ -198,7 +202,7 @@ pub trait DataProcessingService: Send + Sync {
 }
 
 /// File operation types
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub enum FileOperation {
     /// Read file content
     Read { path: String },
@@ -221,7 +225,7 @@ pub enum FileOperation {
 }
 
 /// Validation result for data processing
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationResult {
     /// Whether the data is valid for processing
     pub is_valid: bool,

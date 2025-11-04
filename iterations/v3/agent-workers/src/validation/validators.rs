@@ -13,7 +13,7 @@ impl super::gates::QualityValidatorTrait for CompilationValidator {
         // Get package name and workspace root, using defaults if not provided
         let package_name = context.package_name.as_deref().unwrap_or("agent-workers");
         let workspace_root = context.workspace_root.as_deref().unwrap_or_else(|| {
-            std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
+            std::path::Path::new(".")
         });
         
         // Run cargo check on the package
@@ -71,7 +71,7 @@ impl super::gates::QualityValidatorTrait for TestValidator {
         // Get package name and workspace root, using defaults if not provided
         let package_name = context.package_name.as_deref().unwrap_or("agent-workers");
         let workspace_root = context.workspace_root.as_deref().unwrap_or_else(|| {
-            std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
+            std::path::Path::new(".")
         });
         
         // Run tests
@@ -143,7 +143,7 @@ impl super::gates::QualityValidatorTrait for LintValidator {
         // Get package name and workspace root, using defaults if not provided
         let package_name = context.package_name.as_deref().unwrap_or("agent-workers");
         let workspace_root = context.workspace_root.as_deref().unwrap_or_else(|| {
-            std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
+            std::path::Path::new(".")
         });
         
         // Run clippy
@@ -195,7 +195,7 @@ impl super::gates::QualityValidatorTrait for SecurityValidator {
     async fn validate(&self, context: &ValidationContext) -> ValidationResult {
         // Get workspace root, using default if not provided
         let workspace_root = context.workspace_root.as_deref().unwrap_or_else(|| {
-            std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
+            &*Box::leak(std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")).into_boxed_path())
         });
         
         // Run cargo audit if available
@@ -297,7 +297,7 @@ impl super::gates::QualityValidatorTrait for DocumentationValidator {
         // Get package name and workspace root, using defaults if not provided
         let package_name = context.package_name.as_deref().unwrap_or("agent-workers");
         let workspace_root = context.workspace_root.as_deref().unwrap_or_else(|| {
-            std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
+            std::path::Path::new(".")
         });
         
         // Run cargo doc to check documentation

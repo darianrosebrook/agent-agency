@@ -52,7 +52,8 @@
 // /// Processing block
 // #[derive(Debug, Clone, Serialize, Deserialize)]
 // pub struct Block {
-//     pub id: Uuid,
+//     #[schemars(with = "String")]
+    pub id: Uuid,
 //     pub content_type: ContentType,
 //     pub data: BlockData,
 //     pub metadata: HashMap<String, serde_json::Value>,
@@ -127,7 +128,8 @@
 //     pub total_processed: u64,
 //     pub average_processing_time_ms: f64,
 //     pub success_rate: f64,
-//     pub last_updated: DateTime<Utc>,
+    #[schemars(with = "String")]
+    pub last_updated: DateTime<Utc>,
 // }
 
 // /// Data processing error types
@@ -260,5 +262,6 @@
 //     pub line: Option<usize>,
 //     pub column: Option<usize>,
 // }
+
 
 

@@ -4,6 +4,7 @@
 //! with the planning agent for adaptive parameter tuning.
 
 #[cfg(feature = "bandit_policy")]
+use schemars::JsonSchema;
 use crate::bandit_policy::{TaskFeatures, ThompsonGaussian};
 
 #[cfg(not(feature = "bandit_policy"))]
@@ -279,8 +280,9 @@ impl LLMParameterFeedbackExample {
 }
 
 /// Mock response structure for the example
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct GenerationResponse {
+    #[schemars(with = "String")]
     pub request_id: Uuid,
     pub content: String,
     pub usage: TokenUsage,
@@ -288,7 +290,7 @@ pub struct GenerationResponse {
     pub parameters_used: crate::orchestration::planning::llm_client::UsedParameters,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct TokenUsage {
     pub prompt_tokens: u32,
     pub completion_tokens: u32,

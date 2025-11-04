@@ -36,7 +36,7 @@ pub enum FileOpsError {
 
 /// Unique identifier for a changeset
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct ChangesetId(pub String);
+pub struct ChangesetId (pub String);
 
 /// File operation patch
 #[derive(Debug, Clone, Serialize, Deserialize)]

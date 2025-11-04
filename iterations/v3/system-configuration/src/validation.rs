@@ -388,7 +388,7 @@ mod tests {
 
     // Mock validation stage
     #[derive(Debug)]
-    struct MockValidationStage {
+struct MockValidationStage {
         name: String,
         results: Vec<ValidationResult>,
         should_fail: bool,

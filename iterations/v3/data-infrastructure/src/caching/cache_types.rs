@@ -1,5 +1,6 @@
 //! Core types and traits for the caching system
 
+use schemars::JsonSchema;
 use async_trait::async_trait;
 use flate2::{write::GzEncoder, read::GzDecoder, Compression};
 use serde::{Deserialize, Serialize};
@@ -31,7 +32,7 @@ pub trait TypeErasedCache: Send + Sync + std::fmt::Debug {
 }
 
 /// Type registry entry for runtime type management
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct TypeRegistryEntry {
     pub type_name: String,
     pub type_id: TypeId,
@@ -216,8 +217,8 @@ impl Default for TypeSafeCacheManager {
 }
 
 /// Cache entry with metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CacheEntry<T> {
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CacheEntry <T> {
     pub value: T,
     pub metadata: CacheMetadata,
 }
@@ -226,7 +227,7 @@ pub struct CacheEntry<T> {
 pub type CacheResult<T> = Result<T, CacheError>;
 
 /// Cache error types
-#[derive(Debug, Clone, thiserror::Error)]
+#[derive(Debug, Clone, thiserror::Error, JsonSchema)]
 pub enum CacheError {
     #[error("Key not found: {0}")]
     KeyNotFound(String),
@@ -263,7 +264,7 @@ pub enum CacheError {
 }
 
 /// Cache invalidation strategies
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum InvalidationStrategy {
     /// Never invalidate
     Never,
@@ -278,14 +279,14 @@ pub enum InvalidationStrategy {
 }
 
 /// Typed cache key with type safety
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub struct TypedCacheKey {
     pub key: String,
     pub type_name: String,
 }
 
 /// Cached value with type information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum CachedValue {
     String(String),
     Number(i64),
@@ -297,7 +298,7 @@ pub enum CachedValue {
 }
 
 /// Typed cache entry
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TypedCacheEntry {
     pub key: TypedCacheKey,
     pub value: CachedValue,
@@ -306,7 +307,7 @@ pub struct TypedCacheEntry {
 }
 
 /// Type information for cached values
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TypeInfo {
     pub name: String,
     pub version: u32,
@@ -314,7 +315,7 @@ pub struct TypeInfo {
 }
 
 /// Cache metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CacheMetadata {
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub last_accessed: chrono::DateTime<chrono::Utc>,
@@ -341,7 +342,7 @@ impl Default for CacheMetadata {
 }
 
 /// Cache invalidation rule
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct InvalidationRule {
     pub pattern: String,
     pub strategy: InvalidationStrategy,
@@ -349,7 +350,7 @@ pub struct InvalidationRule {
 }
 
 /// Cache warming strategies
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum CacheWarmingStrategy {
     /// No warming
     None,
@@ -362,7 +363,7 @@ pub enum CacheWarmingStrategy {
 }
 
 /// Cache statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CacheStats {
     pub entries: usize,
     pub total_size_bytes: u64,
@@ -376,7 +377,7 @@ pub struct CacheStats {
 }
 
 /// Cache configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CacheConfig {
     pub name: String,
     pub max_size_bytes: Option<u64>,
@@ -404,7 +405,7 @@ impl Default for CacheConfig {
 }
 
 /// Cache eviction policies
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum EvictionPolicy {
     /// Least Recently Used
     Lru,

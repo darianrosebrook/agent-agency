@@ -3,11 +3,13 @@
 //! This module contains all the core data structures used by the planning agent
 //! including configuration, requests, responses, and validation types.
 
+use schemars::JsonSchema;
 use std::time::Duration;
 use serde::{Deserialize, Serialize};
 
 /// Configuration for the planning agent
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PlanningConfig {
     /// Maximum time allowed for planning (in seconds)
     pub max_planning_time_seconds: u64,
@@ -34,7 +36,8 @@ impl Default for PlanningConfig {
 }
 
 /// Risk escalation thresholds
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RiskEscalationThresholds {
     /// Maximum files for T1 tasks before escalation
     pub t1_max_files: u32,
@@ -57,7 +60,8 @@ impl Default for RiskEscalationThresholds {
 }
 
 /// Request to the planning agent
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PlanningRequest {
     /// The task request to plan
     pub task_request: agent_agency_contracts::task_request::TaskRequest,
@@ -67,7 +71,8 @@ pub struct PlanningRequest {
 }
 
 /// Response from the planning agent
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PlanningResponse {
     /// Generated working specification
     pub working_spec: agent_agency_contracts::working_spec::WorkingSpec,
@@ -83,7 +88,8 @@ pub struct PlanningResponse {
 }
 
 /// Planning operation metadata
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PlanningMetadata {
     /// Total planning time
     pub planning_duration: Duration,
@@ -99,7 +105,8 @@ pub struct PlanningMetadata {
 }
 
 /// Risk assessment result
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RiskAssessment {
     /// Assessed risk tier
     pub assessed_tier: agent_agency_contracts::task_request::RiskTier,
@@ -112,7 +119,8 @@ pub struct RiskAssessment {
 }
 
 /// Validation results summary
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationResults {
     /// Overall validation status
     pub overall_status: ValidationStatus,
@@ -128,7 +136,8 @@ pub struct ValidationResults {
 }
 
 /// Validation status
-#[derive(Debug, Clone, PartialEq)]
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum ValidationStatus {
     Passed,
     PassedWithRefinements,
@@ -137,7 +146,8 @@ pub enum ValidationStatus {
 }
 
 /// Individual validation issue
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationIssue {
     /// Issue severity
     pub severity: IssueSeverity,
@@ -153,7 +163,8 @@ pub struct ValidationIssue {
 }
 
 /// Issue severity levels
-#[derive(Debug, Clone, PartialEq)]
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum IssueSeverity {
     Error,
     Warning,
@@ -161,7 +172,8 @@ pub enum IssueSeverity {
 }
 
 /// Refinement record
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RefinementRecord {
     /// Refinement iteration number
     pub iteration: u32,

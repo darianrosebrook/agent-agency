@@ -9,17 +9,20 @@ use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use system_common_interfaces::{
-    LearningService, LearningResult, LearningError, LearningContext, TaskPerformance,
-    SystemMetrics, ResourceUsage, LearningInsights, Pattern, Improvement, OptimizationRecommendation,
-    LearningStatistics, ReinforcementLearningAlgorithm, AlgorithmStatistics,
+// Import types from learning_bridge
+use crate::self_prompting_agent::learning_bridge::{
+    LearningService as LearningServiceTrait, LearningContext, TaskPerformance, SystemMetrics,
+    LearningInsights, Pattern, Improvement, OptimizationRecommendation, LearningStatistics,
     OptimizationGoal, RecommendationType, Priority, PatternType, ImprovementType, Difficulty,
+    Experience,
 };
-use crate::reinforcement::{QLearning, AlgorithmConfig, QLearningStats};
+use crate::reinforcement::QLearning;
+use crate::reflexive_types::AlgorithmConfig;
 use crate::reflexive_types::*;
 
 /// Learning service implementation using reinforcement learning
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ReflexiveLearningService {
     /// Q-learning algorithm for task optimization
     q_learning: Arc<RwLock<QLearning>>,
@@ -36,9 +39,11 @@ impl ReflexiveLearningService {
             learning_rate: 0.1,
             discount_factor: 0.9,
             exploration_rate: 0.1,
-            min_exploration_rate: 0.01,
-            exploration_decay: 0.995,
-            max_episodes: 1000,
+            min_exploration_rate: Some(0.01),
+            exploration_decay: Some(0.995),
+            max_iterations: 1000,
+            max_episodes: Some(1000),
+            convergence_threshold: 0.001,
         };
 
         Self {
@@ -202,12 +207,12 @@ impl ReflexiveLearningService {
 }
 
 #[async_trait]
-impl LearningService for ReflexiveLearningService {
+impl LearningServiceTrait for ReflexiveLearningService {
     async fn learn_from_execution(
         &self,
         context: &LearningContext,
         performance: &TaskPerformance,
-    ) -> LearningResult<LearningInsights> {
+    ) -> Result<LearningInsights, String> {
         // Get state representation
         let state = self.get_state_representation(context);
 
@@ -270,7 +275,7 @@ impl LearningService for ReflexiveLearningService {
         &self,
         context: &LearningContext,
         goal: OptimizationGoal,
-    ) -> LearningResult<Vec<OptimizationRecommendation>> {
+    ) -> Result<Vec<OptimizationRecommendation>, String> {
         // Get patterns from historical data
         let pattern_engine = self.pattern_engine.read().await;
         let patterns = pattern_engine.get_recent_patterns().await;
@@ -281,7 +286,7 @@ impl LearningService for ReflexiveLearningService {
         Ok(recommendations)
     }
 
-    async fn update_model(&self, experiences: Vec<system_common_interfaces::learning::Experience>) -> LearningResult<()> {
+    async fn update_model(&self, experiences: Vec<Experience>) -> Result<(), String> {
         // Process each experience to update the Q-learning model
         let mut q_learning = self.q_learning.write().await;
         
@@ -302,14 +307,15 @@ impl LearningService for ReflexiveLearningService {
         Ok(())
     }
 
-    async fn get_statistics(&self) -> LearningResult<LearningStatistics> {
+    async fn get_statistics(&self) -> Result<LearningStatistics, String> {
         let stats = self.statistics.read().await;
         Ok(stats.clone())
     }
 }
 
 /// Pattern recognition engine for identifying performance patterns
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct PatternRecognitionEngine {
     /// Recent patterns identified (stored in LRU-like fashion, keeping most recent)
     recent_patterns: Vec<Pattern>,
@@ -351,73 +357,10 @@ impl PatternRecognitionEngine {
 }
 
 /// Create a learning service instance
-pub fn create_learning_service() -> Arc<dyn LearningService> {
+pub fn create_learning_service() -> Arc<dyn LearningServiceTrait> {
     Arc::new(ReflexiveLearningService::new())
 }
 
-/// Helper to create Q-learning algorithm implementing the shared trait
-pub struct SharedQLearningAdapter {
-    inner: QLearning,
-}
-
-impl SharedQLearningAdapter {
-    pub fn new(config: AlgorithmConfig) -> Self {
-        Self {
-            inner: QLearning::new(config),
-        }
-    }
-}
-
-#[async_trait]
-impl ReinforcementLearningAlgorithm for SharedQLearningAdapter {
-    async fn update(
-        &mut self,
-        state: &str,
-        action: &str,
-        reward: f64,
-        next_state: &str,
-    ) -> LearningResult<()> {
-        // Q-learning update: Q(s,a) = Q(s,a) + α[r + γ * max(Q(s',a')) - Q(s,a)]
-        // For Q-learning, we don't need the next_action, just the max Q-value of next state
-        // However, we need to know available actions for next_state to compute max
-        
-        // TODO: Get available actions for next_state from context
-        // Dependency: Need access to LearningContext or action provider for next_state
-        // Currently using a default set of actions for next state
-        // In a full implementation, this would:
-        // 1. Query action provider for available actions in next_state
-        // 2. Compute max Q-value across those actions
-        // 3. Use that in the Q-learning update formula
-        
-        // For now, use standard Q-learning update without next_state max
-        // This is still valid Q-learning but may converge slower
-        self.inner.update(state, action, reward);
-
-        Ok(())
-    }
-
-    async fn select_action(
-        &mut self,
-        state: &str,
-        available_actions: &[String],
-    ) -> LearningResult<String> {
-        Ok(self.inner.select_action(state, available_actions))
-    }
-
-    fn config(&self) -> &AlgorithmConfig {
-        self.inner.config()
-    }
-
-    fn statistics(&self) -> AlgorithmStatistics {
-        let stats = self.inner.get_stats();
-        AlgorithmStatistics {
-            total_updates: stats.total_updates,
-            current_exploration_rate: stats.current_exploration_rate,
-            average_reward: stats.average_reward,
-            best_q_value: stats.best_q_value,
-            states_learned: stats.states_learned,
-            actions_learned: stats.actions_learned,
-            converged: stats.converged,
-        }
-    }
-}
+// PLACEHOLDER: SharedQLearningAdapter removed - trait ReinforcementLearningAlgorithm doesn't exist
+// TODO: Define ReinforcementLearningAlgorithm trait locally or use QLearning directly
+// This adapter was meant to bridge QLearning to a shared trait interface that doesn't exist yet

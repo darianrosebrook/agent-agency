@@ -1,4 +1,5 @@
 use anyhow::Result;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -19,7 +20,7 @@ pub struct PolicyEnforcer {
 }
 
 /// Current storage usage information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StorageUsage {
     /// Total storage used in bytes
     pub total_bytes: u64,
@@ -36,7 +37,7 @@ pub struct StorageUsage {
 }
 
 /// Session information for tracking
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SessionInfo {
     /// Session ID
     pub session_id: String,
@@ -55,7 +56,7 @@ pub struct SessionInfo {
 }
 
 /// Enforcement statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EnforcementStats {
     /// Number of policy violations
     pub violations: usize,
@@ -222,7 +223,7 @@ impl PolicyEnforcer {
 }
 
 /// Result of a storage check
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum StorageCheckResult {
     /// Operation is allowed
     Allowed,
@@ -233,7 +234,7 @@ pub enum StorageCheckResult {
 }
 
 /// Storage warning reasons
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum StorageWarningReason {
     /// Soft limit exceeded
     SoftLimitExceeded,
@@ -244,7 +245,7 @@ pub enum StorageWarningReason {
 }
 
 /// Storage rejection reasons
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum StorageRejectionReason {
     /// Hard limit exceeded
     HardLimitExceeded,
@@ -255,7 +256,7 @@ pub enum StorageRejectionReason {
 }
 
 /// Result of a session check
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum SessionCheckResult {
     /// Session creation is allowed
     Allowed,
@@ -264,7 +265,7 @@ pub enum SessionCheckResult {
 }
 
 /// Session rejection reasons
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum SessionRejectionReason {
     /// Maximum sessions exceeded
     MaxSessionsExceeded,
@@ -275,7 +276,7 @@ pub enum SessionRejectionReason {
 }
 
 /// Result of a session deletion check
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum SessionDeletionCheckResult {
     /// Session deletion is allowed
     Allowed,
@@ -284,7 +285,7 @@ pub enum SessionDeletionCheckResult {
 }
 
 /// Session deletion rejection reasons
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum SessionDeletionRejectionReason {
     /// Session is protected
     ProtectedSession,
@@ -297,7 +298,7 @@ pub enum SessionDeletionRejectionReason {
 }
 
 /// Policy enforcement actions
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum EnforcementAction {
     /// Allow the operation
     Allow,
@@ -320,7 +321,7 @@ pub struct OperationEnforcer {
 }
 
 /// Operation-specific configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct OperationConfig {
     /// Enable automatic remediation
     pub auto_remediate: bool,
@@ -415,7 +416,7 @@ impl OperationEnforcer {
 }
 
 /// Session operations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum SessionOperation {
     /// Create a new session
     Create,

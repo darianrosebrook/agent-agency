@@ -3,10 +3,10 @@
 //! This module provides the core inference logic for Whisper models,
 //! including audio preprocessing, model execution, and result decoding.
 
-use crate::ane::ane_errors::{ANEError, Result};
+use crate::ane::ane_errors::Result;
 use crate::ane::models::whisper_model::{
     LoadedWhisperModel, WhisperTranscription, TranscriptionSegment,
-    WordTimestamp, WhisperInferenceOptions, PreprocessedAudio,
+    WhisperInferenceOptions, PreprocessedAudio,
     AudioPreprocessingConfig,
 };
 use std::time::Instant;
@@ -219,8 +219,8 @@ impl WhisperInferenceExecutor {
         {
             // Reshape mel spectrogram for CoreML input
             // Whisper encoder expects [1, 80, 3000] shape
-            let mel_data = &input.mel_spectrogram;
-            let input_shape = [1usize, input.n_mels as usize, input.n_time_steps as usize];
+            let _mel_data = &input.mel_spectrogram;
+            let _input_shape = [1usize, input.n_mels as usize, input.n_time_steps as usize];
 
             // Run inference on the encoder - TEMPORARILY DISABLED due to run_inference function being commented out
             /*

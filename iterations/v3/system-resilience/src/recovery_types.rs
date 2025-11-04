@@ -1,5 +1,6 @@
 //! Recovery and resilience types for system-resilience crate
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -10,8 +11,8 @@ use uuid::Uuid;
 use crate::merkle::AuthorInfo;
 
 /// Content-addressable storage digest (BLAKE3 hash)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct Digest([u8; 32]);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+pub struct Digest ([u8; 32]);
 
 impl Digest {
     /// Create a digest from raw bytes
@@ -55,7 +56,7 @@ impl std::fmt::Display for Digest {
 }
 
 /// Object reference for content-addressable storage
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ObjectRef {
     /// Content digest
     pub digest: Digest,
@@ -64,7 +65,7 @@ pub struct ObjectRef {
 }
 
 /// Session metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SessionMeta {
     /// Task ID associated with this session
     pub task_id: String,
@@ -77,18 +78,19 @@ pub struct SessionMeta {
 }
 
 /// Session reference
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SessionRef {
     /// Session ID
     pub id: String,
     /// Session metadata
     pub meta: SessionMeta,
     /// Creation timestamp
+    #[schemars(with = "String")]
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// File mode for recovery operations
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum FileMode {
     /// Regular file
     Regular,
@@ -143,7 +145,7 @@ impl FileMode {
 }
 
 /// Restore action types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum RestoreAction {
     /// Write a file
     WriteFile {
@@ -208,7 +210,7 @@ impl RestoreAction {
 }
 
 /// Restore plan
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RestorePlan {
     /// Actions to perform
     pub actions: Vec<RestoreAction>,
@@ -221,7 +223,7 @@ pub struct RestorePlan {
 }
 
 /// Restore result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RestoreResult {
     /// Number of files restored
     pub files_restored: u32,
@@ -234,7 +236,7 @@ pub struct RestoreResult {
 }
 
 /// Restore filters
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RestoreFilters {
     /// Include patterns
     pub include_patterns: Vec<String>,
@@ -249,7 +251,7 @@ pub struct RestoreFilters {
 }
 
 /// Payload kinds for blob storage
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum PayloadKind {
     /// Full content
     Full,
@@ -260,7 +262,7 @@ pub enum PayloadKind {
 }
 
 /// Chunk reference
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ChunkRef {
     /// Chunk digest
     pub digest: Digest,
@@ -280,7 +282,7 @@ impl ChunkRef {
 }
 
 /// Blob storage entry
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct Blob {
     /// Blob header
     pub header: PayloadHeader,
@@ -306,7 +308,7 @@ impl Blob {
 }
 
 /// Recovery configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RecoveryConfig {
     /// Enable recovery
     pub enabled: bool,
@@ -333,7 +335,7 @@ impl Default for RecoveryConfig {
 }
 
 /// Recovery statistics
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, JsonSchema)]
 pub struct RecoveryStats {
     /// Total recoveries performed
     pub total_recoveries: u64,
@@ -350,7 +352,7 @@ pub struct RecoveryStats {
 }
 
 /// Recovery error types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum RecoveryError {
     /// Object not found
     ObjectNotFound(Digest),
@@ -404,8 +406,8 @@ impl std::fmt::Display for RecoveryError {
 impl std::error::Error for RecoveryError {}
 
 /// Change identifier for tracking modifications
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct ChangeId(pub String);
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+pub struct ChangeId (pub String);
 
 impl ChangeId {
     /// Create a new change ID
@@ -437,7 +439,7 @@ impl Default for ChangeId {
 }
 
 /// Change statistics
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct ChangeStats {
     /// Number of files added
     pub files_added: u64,
@@ -476,7 +478,7 @@ impl Default for ChangeStats {
 }
 
 /// Compression codec types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum Codec {
     /// No compression
     None,
@@ -493,7 +495,7 @@ impl Default for Codec {
 }
 
 /// End of line types
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum Eol {
     /// Unix line ending (LF)
     Lf,
@@ -546,7 +548,7 @@ impl Default for StreamingHasher {
 }
 
 /// Change payload types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ChangePayload {
     /// Full content
     Full(Vec<u8>),
@@ -560,7 +562,7 @@ pub enum ChangePayload {
 }
 
 /// Chunk list for chunk maps
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ChunkList {
     /// Chunks in this list
     pub chunks: Vec<ChunkRef>,
@@ -569,7 +571,7 @@ pub struct ChunkList {
 }
 
 /// Diff hunk for unified diffs
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DiffHunk {
     /// Old start line
     pub old_start: u32,
@@ -586,7 +588,7 @@ pub struct DiffHunk {
 }
 
 /// File change information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FileChange {
     /// File path
     pub path: PathBuf,
@@ -603,7 +605,7 @@ pub struct FileChange {
 }
 
 /// Type of change
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ChangeType {
     /// File added
     Added,
@@ -614,7 +616,7 @@ pub enum ChangeType {
 }
 
 /// Change source types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ChangeSource {
     /// User-initiated change
     User,
@@ -641,7 +643,7 @@ pub enum ChangeSource {
 }
 
 /// Conflict classification
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ConflictClass {
     /// User vs User conflict
     UserVsUser,
@@ -662,7 +664,7 @@ pub enum ConflictClass {
 }
 
 /// Payload header for blob storage
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct PayloadHeader {
     /// Version of the payload format
     pub version: u32,
@@ -701,7 +703,7 @@ impl Default for PayloadHeader {
 }
 
 /// File restore action types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum FileRestoreAction {
     /// Write a file
     WriteFile {
@@ -785,18 +787,20 @@ impl FileRestoreAction {
 pub type CommitId = Digest;
 
 /// Journal record types for write-ahead logging
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum JournalRecord {
     /// Begin change operation
     Begin {
         change_id: ChangeId,
         path: PathBuf,
+        #[schemars(with = "String")]
         timestamp: chrono::DateTime<chrono::Utc>,
     },
     /// Commit change operation
     Commit {
         change_id: ChangeId,
         digest: Digest,
+        #[schemars(with = "String")]
         timestamp: chrono::DateTime<chrono::Utc>,
     },
     /// Deny change operation
@@ -804,12 +808,13 @@ pub enum JournalRecord {
         change_id: ChangeId,
         reason: DenialReason,
         fingerprint: Digest,
+        #[schemars(with = "String")]
         timestamp: chrono::DateTime<chrono::Utc>,
     },
 }
 
 /// Reason for denying a change
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum DenialReason {
     /// File too large
     FileTooLarge,
@@ -824,7 +829,7 @@ pub enum DenialReason {
 }
 
 /// Recovery metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RecoveryMetrics {
     /// Total recoveries performed
     pub total_recoveries: u64,
@@ -881,7 +886,7 @@ impl Default for RecoveryMetrics {
 }
 
 /// Recovery result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RecoveryResult {
     /// Whether recovery was successful
     pub success: bool,
@@ -972,7 +977,7 @@ mod tests {
 }
 
 /// Represents a commit in the recovery system
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Commit {
     pub id: Digest,
     pub parent: Option<Digest>,
@@ -981,6 +986,8 @@ pub struct Commit {
     pub caws_verdict_id: Option<String>,
     pub message: Option<String>,
     pub stats: ChangeStats,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub author: AuthorInfo,
 }

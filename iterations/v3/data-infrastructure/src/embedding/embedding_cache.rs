@@ -1,5 +1,6 @@
 //! Embedding cache for performance optimization
 
+use schemars::JsonSchema;
 use super::embedding_types::*;
 use super::provider::EmbeddingProvider;
 use dashmap::DashMap;
@@ -76,7 +77,7 @@ impl EmbeddingCache {
 }
 
 /// Cache statistics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct CacheStats {
     pub size: usize,
     pub max_size: usize,
@@ -225,7 +226,7 @@ impl EmbeddingIndex {
 }
 
 /// Summary statistics for the embedding index
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct EmbeddingIndexStats {
     pub total_embeddings: usize,
     pub content_type_counts: HashMap<ContentType, usize>,
@@ -597,7 +598,7 @@ impl ModelCachePersistence {
 }
 
 /// Persistent metadata for a cached model
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct PersistentModelMetadata {
     pub model_path: PathBuf,
     pub model_name: String,
@@ -606,18 +607,20 @@ pub struct PersistentModelMetadata {
 }
 
 /// Information about a cached model
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ModelCacheInfo {
     pub cache_key: String,
     pub model_path: PathBuf,
     pub model_name: String,
+    #[schemars(with = "String")]
     pub loaded_at: Instant,
+    #[schemars(with = "String")]
     pub last_accessed: Instant,
     pub memory_usage_bytes: usize,
 }
 
 /// Statistics for model cache performance
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ModelCacheStats {
     pub model_count: usize,
     pub max_models: usize,
@@ -663,7 +666,7 @@ impl ModelCacheStats {
 }
 
 /// Errors that can occur during model caching operations
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum ModelCacheError {
     #[error("Insufficient memory: required {required} bytes, available {available} bytes")]
     InsufficientMemory { required: usize, available: usize },

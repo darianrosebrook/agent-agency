@@ -3,13 +3,16 @@
 //! Determines which content can be verified and rewrites unverifiable
 //! content to make it verifiable. Based on V2 qualification logic.
 
+use schemars::JsonSchema;
 use crate::extraction_types::*;
+use crate::VerificationMethod;
 use anyhow::Result;
 use regex::Regex;
 use tracing::debug;
 
 /// Stage 2: Qualification of verifiable content
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct QualificationStage {
     verifiability_detector: VerifiabilityDetector,
     content_rewriter: ContentRewriter,
@@ -126,8 +129,9 @@ impl QualificationStage {
 }
 
 /// Detects what content can be verified
-#[derive(Debug)]
-struct VerifiabilityDetector {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct VerifiabilityDetector {
     factual_patterns: Vec<Regex>,
     technical_patterns: Vec<Regex>,
     measurable_patterns: Vec<Regex>,
@@ -627,8 +631,9 @@ impl VerifiabilityDetector {
 }
 
 /// Rewrites content to make it verifiable
-#[derive(Debug)]
-struct ContentRewriter {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct ContentRewriter {
     subjective_terms: Vec<(&'static str, &'static str)>,
     vague_quantifiers: Vec<&'static str>,
     improvement_terms: Vec<&'static str>,
@@ -891,7 +896,8 @@ impl ContentRewriter {
 }
 
 /// Assessment of content verifiability
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct VerifiabilityAssessment {
     pub overall_verifiability: VerifiabilityLevel,
     pub verifiable_parts: Vec<VerifiableContent>,

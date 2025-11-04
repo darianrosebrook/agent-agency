@@ -4,7 +4,6 @@
 
 use crate::long_term_management::*;
 use serde::{Deserialize, Serialize};
-
 /// Memory reinforcement configuration
 #[derive(Debug, Clone)]
 pub struct ReinforcementConfig {

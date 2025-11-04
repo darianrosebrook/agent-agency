@@ -36,6 +36,7 @@ regex.workspace = true
 
 # JSON schema validation
 jsonschema = "0.17"
+schemars = { version = "0.8", features = ["derive"] }
 
 # HTTP client for external tool communication
 reqwest = { workspace = true, features = ["json"] }

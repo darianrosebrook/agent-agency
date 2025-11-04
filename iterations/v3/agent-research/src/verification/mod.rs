@@ -41,8 +41,14 @@ mod data_extractor;
 mod spec_analysis;
 mod historical;
 mod fs_utils;
+mod verification_types;
 
 // --- Public re-exports (crate-facing API surface) ---
+
+// Re-export Entity types from verification_types
+pub use verification_types::{
+    Entity, EntityType, EntityDisambiguation, EntityCandidate, DisambiguationMethod,
+};
 
 // Engine / primary entrypoints
 pub use verifier::MultiModalVerificationEngine;
@@ -50,9 +56,9 @@ pub use verifier::MultiModalVerificationEngine;
 // Internal verification models used by callers (stable API)
 pub use types::{
     // Entity & coref
-    Entity, EntityType, CoreferenceChain, CoreferenceResolution, CoreferenceType,
+    CoreferenceChain, CoreferenceResolution, CoreferenceType,
     // Disambiguation
-    EntityDisambiguation, EntityCandidate, DisambiguationMethod,
+    DisambiguationMethod,
     // Code/doc/data outputs & specs
     CodeOutput, CodeSpecification, DocumentationOutput, DocumentationStandards,
     DataAnalysisOutput, DataSchema,
@@ -62,6 +68,13 @@ pub use types::{
     KeywordMatch, MatchType,
     // Helpers
     CheckResult,
+};
+
+// Re-export verification_types
+pub use verification_types::{
+    TestOutput, FunctionDefinition, CodeStructure, TypeDefinition,
+    ImplementationBlock, DocumentationStructure, UsageExample,
+    TestConsistency, TestCoverage, TestRelevance, TestQuality,
 };
 
 // Frequently-used utilities optionally exposed (keep narrow)

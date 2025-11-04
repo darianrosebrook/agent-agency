@@ -15,6 +15,7 @@ serde_json.workspace = true
 tracing.workspace = true
 thiserror.workspace = true
 chrono = { version = "0.4", features = ["serde"] }
+schemars = { version = "0.8", features = ["derive"] }
 
 # Contracts (stable interface)
 agent-agency-contracts = { path = "../agent-agency-contracts" }
@@ -34,6 +35,9 @@ enum-map = "2.7"
 # JSON schema validation
 jsonschema = { version = "0.17", default-features = false, features = ["draft202012"] }
 
+# Logging subscriber for demo
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
 [features]
 default = []
 test-mock = []
@@ -41,6 +45,6 @@ test-mock = []
 [dev-dependencies]
 tokio-test = "0.4"
 
-[[bin]]
-name = "engine-coreml-demo"
-path = "src/demo.rs"
+# [[bin]]
+# name = "engine-coreml-demo"
+# path = "src/demo.rs"

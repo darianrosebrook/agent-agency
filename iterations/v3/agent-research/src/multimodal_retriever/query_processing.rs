@@ -1,11 +1,13 @@
 //! Query processing and validation
 
+use schemars::JsonSchema;
 use anyhow::Result;
 
 use super::core::{MultimodalQuery, QueryType};
 
 /// Processed query with validated and normalized parameters
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProcessedQuery {
     pub text: Option<String>,
     pub image_path: Option<std::path::PathBuf>,
@@ -17,7 +19,8 @@ pub struct ProcessedQuery {
 }
 
 /// Query processor for parsing and validating search queries
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct QueryProcessor {
     config: super::core::MultimodalRetrieverConfig,
 }

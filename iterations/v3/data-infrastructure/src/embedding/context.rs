@@ -1,5 +1,6 @@
 //! Semantic context generation for tasks and content
 
+use schemars::JsonSchema;
 use super::similarity::*;
 use super::embedding_types::*;
 use anyhow::Result;
@@ -146,7 +147,7 @@ impl ContextBuilder {
 }
 
 /// Context statistics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ContextStats {
     pub total_embeddings: usize,
     pub content_type_counts: HashMap<String, usize>,

@@ -6,6 +6,7 @@
 //! - Database persistence with connection pooling
 //! - Job scheduler with concurrency governance
 
+use schemars::JsonSchema;
 use crate::data_processing_types::*;
 use crate::{DataProcessingResult, DataProcessingError};
 use async_trait::async_trait;
@@ -38,7 +39,7 @@ pub trait IndexingStage: Send + Sync {
 }
 
 /// Types of indexes supported
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, JsonSchema)]
 pub enum IndexType {
     FullText,
     Vector,
@@ -47,7 +48,7 @@ pub enum IndexType {
 }
 
 /// Query for searching indexes
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct IndexQuery {
     pub query_type: IndexQueryType,
     pub text_query: Option<String>,
@@ -58,7 +59,7 @@ pub struct IndexQuery {
 }
 
 /// Types of index queries
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub enum IndexQueryType {
     Text,
     Semantic,
@@ -67,7 +68,7 @@ pub enum IndexQueryType {
 }
 
 /// Result from index search
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct IndexResult {
     pub total_matches: usize,
     pub results: Vec<IndexMatch>,
@@ -76,7 +77,7 @@ pub struct IndexResult {
 }
 
 /// Individual search result match
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct IndexMatch {
     pub id: ProcessingId,
     pub score: f64,
@@ -375,7 +376,7 @@ pub struct FullTextIndexer {
 }
 
 /// Document record for BM25 indexing
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct DocumentRecord {
     text: String,
     term_freqs: HashMap<String, u32>,
@@ -384,7 +385,7 @@ struct DocumentRecord {
 }
 
 /// Term statistics for BM25
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct TermStats {
     document_frequency: u32,
     total_frequency: u32,
@@ -575,7 +576,7 @@ pub struct VectorIndexer {
 }
 
 /// Vector record for HNSW indexing
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct VectorRecord {
     vector: Vec<f32>,
     norm: f32,
@@ -738,7 +739,7 @@ impl VectorIndexer {
 }
 
 /// Relationship record for indexing
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct RelationshipRecord {
     source_entity: String,
     target_entity: String,
@@ -987,7 +988,7 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f64 {
 /// Consolidated indexer implementations from indexers crate
 
 /// Full-text search query
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SearchQuery {
     pub text: String,
     pub project_scope: Option<String>,
@@ -996,8 +997,9 @@ pub struct SearchQuery {
 }
 
 /// Full-text search result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SearchResult {
+    #[schemars(with = "String")]
     pub block_id: Uuid,
     pub score: f32,
     pub text_snippet: String,
@@ -1005,7 +1007,7 @@ pub struct SearchResult {
 }
 
 /// Vector search query
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct VectorQuery {
     pub vector: Vec<f32>,
     pub model_id: String,
@@ -1014,15 +1016,16 @@ pub struct VectorQuery {
 }
 
 /// Vector search result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct VectorSearchResult {
+    #[schemars(with = "String")]
     pub block_id: Uuid,
     pub similarity: f32,
     pub modality: String,
 }
 
 /// BM25 statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Bm25Stats {
     pub total_documents: u64,
     pub total_terms: u64,
@@ -1044,7 +1047,7 @@ impl Default for Bm25Stats {
 }
 
 /// HNSW metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct HnswMetadata {
     pub total_vectors: usize,
     pub dimension: usize,
@@ -1054,7 +1057,7 @@ pub struct HnswMetadata {
 }
 
 /// Job types for indexing operations
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, JsonSchema)]
 pub enum JobType {
     VideoIngest,
     SlidesIngest,
@@ -1100,7 +1103,7 @@ impl JobType {
 }
 
 /// Job priority levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
 pub enum JobPriority {
     Low = 0,
     Normal = 1,
@@ -1109,7 +1112,7 @@ pub enum JobPriority {
 }
 
 /// Job status
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
 pub enum JobStatus {
     Pending,
     Running,
@@ -1474,8 +1477,9 @@ impl VectorStore {
 }
 
 /// Vector record for database storage
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BlockVectorRecord {
+    #[schemars(with = "String")]
     pub block_id: Uuid,
     pub vector: Vec<f32>,
     pub model_id: String,
@@ -1484,7 +1488,7 @@ pub struct BlockVectorRecord {
 }
 
 /// Search audit entry for logging
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SearchAuditEntry {
     pub query: String,
     pub query_type: String,
@@ -1501,8 +1505,9 @@ pub struct JobScheduler {
     concurrency_limits: HashMap<JobType, usize>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct IngestionJob {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub job_type: JobType,
     pub priority: JobPriority,
@@ -1644,7 +1649,7 @@ impl JobScheduler {
 }
 
 /// Job scheduler statistics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct JobSchedulerStats {
     pub pending_jobs: usize,
     pub active_jobs: usize,
@@ -1788,8 +1793,9 @@ impl UnifiedIndexer {
 }
 
 /// Hybrid search result combining text and vector scores
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct HybridSearchResult {
+    #[schemars(with = "String")]
     pub block_id: Uuid,
     pub text_score: f32,
     pub vector_score: f32,
@@ -1799,7 +1805,7 @@ pub struct HybridSearchResult {
 }
 
 /// Unified indexer statistics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct UnifiedIndexerStats {
     pub bm25_stats: Bm25Stats,
     pub hnsw_metadata: HnswMetadata,

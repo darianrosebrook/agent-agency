@@ -137,7 +137,7 @@ where
 
 /// Cache entry with expiration
 #[derive(Debug, Clone)]
-struct CacheEntry<V> {
+struct CacheEntry <V> {
     value: V,
     expires_at: Option<chrono::DateTime<chrono::Utc>>,
 }

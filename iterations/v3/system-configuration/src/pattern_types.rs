@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 
 /// Health status for components
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 pub enum HealthStatus {
     /// Component is healthy and fully operational
     Healthy,
@@ -24,31 +24,33 @@ impl Default for HealthStatus {
 }
 
 /// Component status information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ComponentStatus {
     /// Component name
     pub name: String,
     /// Current health status
     pub health: HealthStatus,
     /// Timestamp of last status check
+    #[schemars(with = "String")]
     pub last_checked: DateTime<Utc>,
     /// Additional status information
     pub details: HashMap<String, serde_json::Value>,
 }
 
 /// Metrics snapshot for reporting
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct MetricsSnapshot {
     /// Component name
     pub component: String,
     /// Timestamp of snapshot
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     /// Metrics data
     pub metrics: HashMap<String, serde_json::Value>,
 }
 
 /// Validation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ValidationResult {
     /// Whether validation passed
     pub is_valid: bool,
@@ -57,6 +59,7 @@ pub struct ValidationResult {
     /// Validation warnings (if any)
     pub warnings: Vec<String>,
     /// Timestamp of validation
+    #[schemars(with = "String")]
     pub validated_at: DateTime<Utc>,
 }
 
@@ -117,8 +120,8 @@ pub struct ConfigError {
 }
 
 /// Operation result with detailed information
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OperationResult<T> {
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct OperationResult <T> {
     /// Whether the operation succeeded
     pub success: bool,
     /// Result data (if successful)
@@ -128,6 +131,7 @@ pub struct OperationResult<T> {
     /// Operation duration in milliseconds
     pub duration_ms: u64,
     /// Timestamp of operation
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     /// Additional metadata
     pub metadata: HashMap<String, serde_json::Value>,
@@ -212,7 +216,7 @@ pub enum SortDirection {
 
 /// Paginated response
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PaginatedResponse<T> {
+pub struct PaginatedResponse <T> {
     /// Items for this page
     pub items: Vec<T>,
     /// Total number of items across all pages
@@ -228,7 +232,7 @@ pub struct PaginatedResponse<T> {
 }
 
 /// Rate limit information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct RateLimitInfo {
     /// Current request count
     pub current_count: u32,
@@ -237,6 +241,7 @@ pub struct RateLimitInfo {
     /// Time window in seconds
     pub window_seconds: u64,
     /// Reset time
+    #[schemars(with = "String")]
     pub reset_at: DateTime<Utc>,
 }
 
@@ -254,22 +259,25 @@ impl RateLimitInfo {
     /// Get time until reset in seconds
     pub fn seconds_until_reset(&self) -> i64 {
         let now = Utc::now();
-        (self.reset_at - now).num_seconds().max(0)
+        now.signed_duration_since(self.reset_at).num_seconds().max(0)
     }
 }
 
 /// Cache entry with metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CacheEntry<T> {
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct CacheEntry <T> {
     /// Cached data
     pub data: T,
     /// When this entry was created
+    #[schemars(with = "String")]
     pub created_at: DateTime<Utc>,
     /// When this entry expires
+    #[schemars(with = "String")]
     pub expires_at: DateTime<Utc>,
     /// Cache hit count
     pub hit_count: u64,
     /// Last accessed time
+    #[schemars(with = "String")]
     pub last_accessed: DateTime<Utc>,
 }
 
@@ -299,6 +307,7 @@ impl<T> CacheEntry<T> {
 
     /// Get age in seconds
     pub fn age_seconds(&self) -> i64 {
-        (Utc::now() - self.created_at).num_seconds()
+        let duration = Utc::now().signed_duration_since(self.created_at);
+        duration.num_seconds()
     }
 }

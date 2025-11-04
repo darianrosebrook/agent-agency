@@ -2,6 +2,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use async_trait::async_trait;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -45,7 +46,7 @@ pub trait RecoveryStore {
 }
 
 /// Restore filters for selective restoration
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct RestoreFilters {
     pub globs: Vec<String>,
     pub since: Option<CommitId>,
@@ -54,7 +55,7 @@ pub struct RestoreFilters {
 }
 
 /// Filesystem check scope
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum FsckScope {
     Quick,      // Basic integrity check
     Full,       // Complete verification
@@ -62,7 +63,7 @@ pub enum FsckScope {
 }
 
 /// Filesystem check report
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct FsckReport {
     pub status: FsckStatus,
     pub issues: Vec<FsckIssue>,
@@ -73,7 +74,7 @@ pub struct FsckReport {
 }
 
 /// Filesystem check status
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum FsckStatus {
     Ok,
     Issues,
@@ -81,7 +82,7 @@ pub enum FsckStatus {
 }
 
 /// Filesystem check issue
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct FsckIssue {
     pub severity: IssueSeverity,
     pub message: String,
@@ -90,7 +91,7 @@ pub struct FsckIssue {
 }
 
 /// Issue severity levels
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum IssueSeverity {
     Info,
     Warning,
@@ -99,7 +100,7 @@ pub enum IssueSeverity {
 }
 
 /// Garbage collection report
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct GcReport {
     pub objects_marked: u64,
     pub objects_swept: u64,
@@ -109,7 +110,7 @@ pub struct GcReport {
 }
 
 /// Content policy for strategy decisions
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct ContentPolicy {
     pub small_full_max: usize,      // 2 KiB default
     pub diff_ratio_max: f64,        // 0.45 default
@@ -120,14 +121,14 @@ pub struct ContentPolicy {
 }
 
 /// Content strategy override for specific file patterns
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct ContentOverride {
     pub glob: String,
     pub strategy: OverrideStrategy,
 }
 
 /// Override strategy for content handling
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum OverrideStrategy {
     Full,       // Always store as full content
     Diff,       // Always use unified diff
@@ -135,7 +136,7 @@ pub enum OverrideStrategy {
 }
 
 /// Secret redaction result
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum CheckResult {
     Allowed,
     Denied {
@@ -146,7 +147,7 @@ pub enum CheckResult {
 }
 
 /// Denial reason for blocked content
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum DenialReason {
     Secret,
     Pii,

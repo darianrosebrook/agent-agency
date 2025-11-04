@@ -6,17 +6,17 @@
 //! - Delta thresholds for diminishing returns detection
 //! - Evaluation hooks for integration with autonomous executor
 
+use schemars::JsonSchema;
 use std::sync::Arc;
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 use tracing::{info, warn};
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 use agent_agency_contracts::final_verdict::FinalVerdictContract;
 
 /// Evaluation configuration for iteration limits and quality thresholds
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct EvaluationConfig {
     /// Maximum number of refinement iterations allowed
     pub max_iterations: u32,
@@ -55,9 +55,10 @@ impl Default for EvaluationConfig {
 }
 
 /// Evaluation result for a single iteration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct IterationEvaluation {
     pub iteration: u32,
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub quality_score: f64,
     pub improvement_delta: f64,
@@ -67,7 +68,7 @@ pub struct IterationEvaluation {
 }
 
 /// Reasons for stopping iteration refinement
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub enum StopReason {
     /// Maximum iterations reached
     MaxIterationsReached,
@@ -92,7 +93,7 @@ pub enum StopReason {
 }
 
 /// Evaluation orchestrator for autonomous task execution
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct EvaluationOrchestrator {
     config: EvaluationConfig,
 }
@@ -339,8 +340,8 @@ pub trait EvaluationHook: Send + Sync {
 }
 
 /// No-op evaluation hook for default behavior
-#[derive(Debug, Default)]
-pub struct NoOpEvaluationHook;
+#[derive(Debug, Default, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct NoOpEvaluationHook ;
 
 #[async_trait]
 impl EvaluationHook for NoOpEvaluationHook {

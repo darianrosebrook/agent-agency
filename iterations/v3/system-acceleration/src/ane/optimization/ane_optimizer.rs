@@ -3,15 +3,12 @@
 //! Provides intelligent optimization for Apple Neural Engine performance,
 //! including model compilation, memory management, and inference tuning.
 
-use crate::ane::ane_errors::{ANEError, Result};
-use crate::ane::monitoring::yolo_monitor::{YOLOPerformanceMonitor, YOLOPerformanceStats, YOLOPerformanceThresholds};
-use crate::telemetry::TelemetryCollector;
+use schemars::JsonSchema;
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
-use tracing::{info, warn, debug};
+use tracing::{info, debug};
 
 /// ANE optimization strategies
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum ANEOptimizationStrategy {
     /// Maximize performance (may use more memory)
     Performance,
@@ -24,7 +21,7 @@ pub enum ANEOptimizationStrategy {
 }
 
 /// Custom optimization parameters
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ANEOptimizationParams {
     /// Batch size for inference
     pub batch_size: usize,
@@ -37,7 +34,7 @@ pub struct ANEOptimizationParams {
 }
 
 /// Precision modes for CoreML
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum PrecisionMode {
     /// Full precision (highest accuracy)
     Full,
@@ -48,7 +45,7 @@ pub enum PrecisionMode {
 }
 
 /// Memory allocation strategies
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum MemoryStrategy {
     /// Pre-allocate all memory
     Preallocate,
@@ -59,7 +56,7 @@ pub enum MemoryStrategy {
 }
 
 /// Compute unit preferences
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum ComputeUnitPreference {
     /// Prefer ANE (Apple Neural Engine)
     ANE,
@@ -164,7 +161,7 @@ impl ANEOptimizer {
     }
 
     /// Optimize parameters for a specific model based on performance
-    fn optimize_for_model(&mut self, model_name: &str, avg_time: f64, recent_avg: f64) {
+    fn optimize_for_model(&mut self, model_name: &str, avg_time: f64, _recent_avg: f64) {
         let current_params = match self.current_params.get_mut(model_name) {
             Some(p) => p,
             None => return,
@@ -236,7 +233,7 @@ impl ANEOptimizer {
 }
 
 /// Performance statistics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct PerformanceStats {
     pub count: usize,
     pub average_ms: f64,

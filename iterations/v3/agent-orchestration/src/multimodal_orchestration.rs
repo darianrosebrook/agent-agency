@@ -32,6 +32,9 @@ use crate::consensus_coordinator::ConsensusCoordinator;
 // Import types from contracts
 use agent_agency_contracts::types::prelude::*;
 
+// Import local types for council integration
+use crate::council_types::RiskTier;
+
 // KnowledgeSeeker trait for research integration
 // PLACEHOLDER: Proper implementation needed when research integration is functional
 pub trait KnowledgeSeeker: Send + Sync {
@@ -39,11 +42,13 @@ pub trait KnowledgeSeeker: Send + Sync {
 }
 
 /// Context for tracking active operations
-#[derive(Debug, Clone)]
-pub struct OperationContext {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct OperationContext {
     /// Operation ID for correlation
     pub operation_id: String,
     /// Start time
+    #[schemars(with = "String")]
     pub start_time: Instant,
     /// Operation type
     pub operation_type: String,
@@ -55,17 +60,22 @@ pub struct OperationContext {
 
 // Local type definitions to avoid circular dependency with agent-data-processing
 // These mirror types from agent-data-processing crate
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ProcessingId(pub Uuid);
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+struct ProcessingId {
+    #[schemars(with = "String")]
+    pub id: Uuid,
+}
 
 impl ProcessingId {
     pub fn new() -> Self {
-        Self(Uuid::new_v4())
+        Self { id: Uuid::new_v4() }
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum ContentType {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+enum ContentType {
     Text,
     Image,
     Video,
@@ -75,48 +85,61 @@ pub enum ContentType {
     Unknown,
 }
 
-#[derive(Debug, Clone)]
-pub struct FileSource {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct FileSource {
     pub path: PathBuf,
     pub content_type: ContentType,
+    pub size_bytes: u64,
+    #[schemars(with = "String")]
+    pub last_modified: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Clone)]
-pub enum DataSource {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum DataSource {
     File(FileSource),
     Url(String),
     Stream(Vec<u8>),
 }
 
-#[derive(Debug, Clone)]
-pub struct DataInput {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct DataInput {
     pub id: ProcessingId,
     pub source: DataSource,
     pub content_type: ContentType,
+    pub content: DataContent,
+    pub metadata: HashMap<String, serde_json::Value>,
+    pub processing_context: ProcessingContext,
 }
 
-#[derive(Debug, Clone)]
-pub struct ProcessingContext {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ProcessingContext {
     pub priority: ProcessingPriority,
     pub timeout: Option<Duration>,
 }
 
-#[derive(Debug, Clone)]
-pub struct DataContent {
-    pub content_type: ContentType,
-    pub data: Vec<u8>,
-    pub metadata: HashMap<String, serde_json::Value>,
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum DataContent {
+    File(PathBuf),
+    Text(String),
+    Binary(Vec<u8>),
 }
 
-#[derive(Debug, Clone)]
-pub enum ProcessedContentData {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum ProcessedContentData {
     Text(String),
     Binary(Vec<u8>),
     Structured(serde_json::Value),
 }
 
-#[derive(Debug, Clone)]
-pub struct ProcessedContent {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ProcessedContent {
     pub id: ProcessingId,
     pub data: DataContent,
     pub relationships: Vec<ExtractedEntity>,
@@ -124,14 +147,16 @@ pub struct ProcessedContent {
     pub audio_transcript: Option<String>,
 }
 
-#[derive(Debug, Clone)]
-pub struct ProcessingOutput {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ProcessingOutput {
     pub processed_content: Vec<ProcessedContent>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
 
-#[derive(Debug, Clone)]
-pub struct ExtractedEntity {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ExtractedEntity {
     pub entity_type: String,
     pub text: String,
     pub confidence: f64,
@@ -139,16 +164,18 @@ pub struct ExtractedEntity {
     pub end_offset: usize,
 }
 
-#[derive(Debug, Clone)]
-pub struct VisualElement {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct VisualElement {
     pub element_type: VisualElementType,
     pub bounding_box: Option<(f32, f32, f32, f32)>,
     pub confidence: f64,
     pub text: Option<String>,
 }
 
-#[derive(Debug, Clone)]
-pub enum VisualElementType {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum VisualElementType {
     Text,
     Image,
     Chart,
@@ -156,39 +183,105 @@ pub enum VisualElementType {
     Diagram,
 }
 
-#[derive(Debug, Clone)]
-pub struct ExtractedTopic {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ExtractedTopic {
     pub topic: String,
     pub confidence: f64,
     pub keywords: Vec<String>,
 }
 
 // Placeholder types for data processing stages (would be implemented by agent-data-processing)
-#[derive(Debug, Clone)]
-pub struct IngestionStage;
-#[derive(Debug, Clone)]
-pub struct EnrichmentStage;
-#[derive(Debug, Clone)]
-pub struct IndexingStage;
 
-#[derive(Debug, Clone, Default)]
-pub struct UnifiedIngestor;
-#[derive(Debug, Clone, Default)]
-pub struct UnifiedEnrichmentStage;
-#[derive(Debug, Clone, Default)]
-pub struct UnifiedIndexer;
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct IngestionStage ;
 
-#[derive(Debug, Clone, Default)]
-pub struct FileWatcher;
-#[derive(Debug, Clone, Default)]
-pub struct JobScheduler;
-#[derive(Debug, Clone, Default)]
-pub struct EnrichmentCircuitBreakerConfig;
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct EnrichmentStage ;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct IndexingStage ;
+
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
+struct UnifiedIngestor ;
+
+impl UnifiedIngestor {
+    pub fn new() -> Self {
+        Self
+    }
+
+    pub async fn ingest(&self, _input: DataInput) -> Result<BlockData> {
+        // PLACEHOLDER: Real ingestion implementation needed when agent-data-processing is integrated
+        Err(anyhow::anyhow!("PLACEHOLDER: UnifiedIngestor.ingest not implemented - requires agent-data-processing integration"))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
+struct UnifiedEnrichmentStage ;
+
+impl UnifiedEnrichmentStage {
+    pub fn new(_config: EnrichmentCircuitBreakerConfig) -> Self {
+        Self
+    }
+
+    pub async fn enrich_blocks(&self, _blocks: Vec<Block>) -> Result<Vec<EnrichedBlock>> {
+        // PLACEHOLDER: Real enrichment implementation needed when agent-data-processing is integrated
+        Err(anyhow::anyhow!("PLACEHOLDER: UnifiedEnrichmentStage.enrich_blocks not implemented - requires agent-data-processing integration"))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
+struct UnifiedIndexer ;
+
+impl UnifiedIndexer {
+    pub fn new(_dimensions: usize, _neighbors: usize) -> Self {
+        Self
+    }
+
+    pub async fn index_blocks(&self, _blocks: Vec<Block>) -> Result<()> {
+        // PLACEHOLDER: Real indexing implementation needed when agent-data-processing is integrated
+        Err(anyhow::anyhow!("PLACEHOLDER: UnifiedIndexer.index_blocks not implemented - requires agent-data-processing integration"))
+    }
+}
+
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
+struct FileWatcher ;
+
+impl FileWatcher {
+    pub fn new(_include_patterns: Vec<String>, _exclude_patterns: Vec<String>) -> Self {
+        Self
+    }
+
+    pub async fn watch(&self, _directory_path: &std::path::Path) -> Result<()> {
+        // PLACEHOLDER: Real file watching implementation needed when agent-data-processing is integrated
+        Err(anyhow::anyhow!("PLACEHOLDER: FileWatcher.watch not implemented - requires agent-data-processing integration"))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
+struct JobScheduler ;
+
+impl JobScheduler {
+    pub fn new() -> Self {
+        Self
+    }
+
+    pub fn get_active_job_count(&self) -> usize {
+        // PLACEHOLDER: Real job scheduling implementation needed when agent-data-processing is integrated
+        0
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
+struct EnrichmentCircuitBreakerConfig ;
 
 // Local type definitions to avoid circular dependency with agent-workers
 // These mirror types from agent-workers crate
-#[derive(Debug, Clone)]
-pub struct MCPWorkerPool;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct MCPWorkerPool ;
 
 impl MCPWorkerPool {
     pub async fn new(_config: WorkerPoolConfig) -> Result<Self, String> {
@@ -197,8 +290,9 @@ impl MCPWorkerPool {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct WorkerPoolConfig;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct WorkerPoolConfig ;
 
 impl Default for WorkerPoolConfig {
     fn default() -> Self {
@@ -206,19 +300,22 @@ impl Default for WorkerPoolConfig {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct WorkerHandle;
 
-#[derive(Debug, Clone)]
-pub enum WorkerSpecialty {
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct WorkerHandle ;
+
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum WorkerSpecialty {
     General,
     CodeAnalysis,
     Documentation,
     Testing,
 }
 
-#[derive(Debug, Clone)]
-pub struct WorkerCapabilities;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct WorkerCapabilities ;
 
 impl Default for WorkerCapabilities {
     fn default() -> Self {
@@ -226,35 +323,43 @@ impl Default for WorkerCapabilities {
     }
 }
 
-#[derive(Debug, Clone)]
-pub enum WorkerHealth {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum WorkerHealth {
     Healthy,
     Degraded,
     Unhealthy,
     Offline,
 }
 
-#[derive(Debug, Clone)]
-pub struct Block {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct Block {
     pub id: String,
     pub content: String,
     pub block_type: String,
+    pub content_type: ContentType,
+    pub metadata: HashMap<String, serde_json::Value>,
 }
 
-#[derive(Debug, Clone)]
-pub struct EnrichedBlock {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct EnrichedBlock {
     pub block: Block,
     pub entities: Vec<ExtractedEntity>,
     pub topics: Vec<ExtractedTopic>,
 }
 
-#[derive(Debug, Clone)]
-pub struct BlockData {
-    pub blocks: Vec<Block>,
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+enum BlockData {
+    Text(String),
+    Blocks(Vec<Block>),
 }
 
-#[derive(Debug, Clone)]
-pub struct EnrichedContent {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct EnrichedContent {
     pub content: String,
     pub entities: Vec<ExtractedEntity>,
     pub topics: Vec<ExtractedTopic>,
@@ -298,9 +403,11 @@ pub struct MultimodalOrchestrator {
 }
 
 /// Processing result for document pipeline
-#[derive(Debug, Clone)]
-pub struct ProcessingResult {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ProcessingResult {
     /// Document identifier
+    #[schemars(with = "String")]
     pub document_id: Uuid,
     /// Processing status
     pub status: ProcessingStatus,
@@ -603,6 +710,7 @@ impl MultimodalOrchestrator {
                     })
                     .unwrap_or_else(|| chrono::Utc::now()),
             }),
+            content_type,
             content: DataContent::File(file_path.to_path_buf()),
             metadata: HashMap::new(),
             processing_context: ProcessingContext {
@@ -722,19 +830,38 @@ impl MultimodalOrchestrator {
                     let path = Path::new(&file_path_str);
                     let content = tokio::fs::read_to_string(path).await?;
                     let blocks = unified_ingestor.ingest(DataInput {
-                        id: file_path_str.clone(),
-                        source: DataSource::File(file_path_str.clone()),
-                        content,
+                        id: ProcessingId::new(),
+                        source: DataSource::File(FileSource {
+                            path: PathBuf::from(&file_path_str),
+                            content_type: ContentType::Document,
+                            size_bytes: 0, // TODO: Get actual file size
+                            last_modified: chrono::Utc::now(),
+                        }),
+                        content_type: ContentType::Document,
+                        content: DataContent::Text(content),
+                        metadata: HashMap::new(),
                         processing_context: ProcessingContext {
                             priority: ProcessingPriority::Normal,
                             timeout: None,
                         },
                     }).await?;
-                    let enriched = unified_enricher.enrich_blocks(blocks.blocks).await?;
+                    let blocks_vec = match &blocks {
+                        BlockData::Text(content) => vec![Block {
+                            id: Uuid::new_v4().to_string(),
+                            content: content.clone(),
+                            block_type: "text".to_string(),
+                            content_type: ContentType::Text,
+                            metadata: HashMap::new(),
+                        }],
+                        BlockData::Blocks(existing_blocks) => existing_blocks.clone(),
+                    };
+                    let enriched = unified_enricher.enrich_blocks(blocks_vec).await?;
                     unified_indexer.index_blocks(enriched.into_iter().map(|eb| Block {
-                        id: eb.id,
-                        content: eb.content,
-                        metadata: eb.metadata,
+                        id: eb.block.id,
+                        content: eb.block.content,
+                        block_type: eb.block.block_type,
+                        content_type: eb.block.content_type,
+                        metadata: eb.block.metadata,
                     }).collect()).await?;
                     Ok(ProcessingResult {
                         document_id: Uuid::new_v4(),
@@ -829,8 +956,16 @@ impl MultimodalOrchestrator {
     async fn index_blocks(&self, blocks: &[EnrichedBlock]) -> Result<usize> {
         // Use unified indexer to handle indexing
         // UnifiedIndexer.index_blocks() takes Vec<EnrichedBlock>, not Vec<Block>
+        let raw_blocks: Vec<Block> = blocks.iter().map(|eb| Block {
+            id: eb.block.id.clone(),
+            content: eb.block.content.clone(),
+            block_type: eb.block.block_type.clone(),
+            content_type: eb.block.content_type.clone(),
+            metadata: eb.block.metadata.clone(),
+        }).collect();
+
         self.unified_indexer
-            .index_blocks(blocks.to_vec())
+            .index_blocks(raw_blocks)
             .await
             .context("Failed to index blocks")?;
 
@@ -903,7 +1038,7 @@ impl MultimodalOrchestrator {
                 },
                 priority: agent_agency_contracts::TaskPriority::Medium,
                 execution_mode: agent_agency_contracts::ExecutionMode::Auto,
-                risk_tier: Some(agent_agency_contracts::RiskTier::Tier2),
+                risk_tier: Some(RiskTier::Tier2),
                 acceptance: Some("Multimodal orchestration task".to_string()),
             };
 
@@ -1046,36 +1181,32 @@ fn detect_content_type_from_path(path: &Path) -> ContentType {
 }
 
 /// Convert ingestion output to blocks
-fn convert_ingestion_output_to_blocks(output: ProcessingOutput) -> Result<Vec<Block>> {
+fn convert_ingestion_output_to_blocks(output: BlockData) -> Result<Vec<Block>> {
     // Using local type definitions
     use std::collections::HashMap;
-    
-    // Create blocks from ProcessedContent
-    // ProcessingOutput doesn't have a blocks field - we need to create them from processed_content
-    let mut blocks = Vec::new();
-    
-    // Extract text content for the block
-    let block_data = match &output.processed_content {
-        _ => crate::multimodal_orchestration::BlockData::Text("processed content".to_string()),
-        // ProcessedContentData::Binary(data) => BlockData::Binary(data.clone()),
-        // ProcessedContentData::Structured(data) => BlockData::Structured(data.clone()),
-    };
-    
-    // Create a single block from the processed content
-    let block = Block {
-        id: Uuid::new_v4().to_string(),
-        content_type: "text".to_string(),
-        content: block_data,
-        block_type: "text".to_string(),
-    };
-    
-    blocks.push(block);
-    
-    Ok(blocks)
+
+    match output {
+        BlockData::Text(content) => {
+            // Create a single text block
+            let block = Block {
+                id: Uuid::new_v4().to_string(),
+                content_type: ContentType::Text,
+                content,
+                block_type: "text".to_string(),
+                metadata: HashMap::new(),
+            };
+            Ok(vec![block])
+        }
+        BlockData::Blocks(existing_blocks) => {
+            // Blocks are already created, just return them
+            Ok(existing_blocks)
+        }
+    }
 }
 
 /// File type enumeration
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 enum FileType {
     Video,
     Slides,
@@ -1085,8 +1216,9 @@ enum FileType {
 }
 
 /// Processing statistics
-#[derive(Debug, Clone)]
-pub struct ProcessingStats {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ProcessingStats {
     /// Total documents processed
     pub total_documents_processed: u64,
     /// Total blocks processed

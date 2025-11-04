@@ -3,6 +3,7 @@
 //! Demonstrates how to integrate the LLM parameter feedback loop into the
 //! PlanningAgent for optimized parameter selection and outcome tracking.
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -305,11 +306,13 @@ impl OptimizedPlanningAgent {
 }
 
 /// Optimization status information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct OptimizationStatus {
     pub task_type: String,
     pub rollout_phase: RolloutPhase,
     pub optimization_enabled: bool,
+    #[schemars(with = "String")]
+
     pub last_optimization: DateTime<Utc>,
 }
 
@@ -401,4 +404,3 @@ mod tests {
         let fingerprint = features.fingerprint();
         assert!(fingerprint > 0);
     }
-}

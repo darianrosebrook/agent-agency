@@ -28,7 +28,7 @@ pub trait MetricsBackend: Send + Sync {
 
 /// No-op metrics backend that drops all metrics (for testing/development)
 #[derive(Debug, Clone)]
-pub struct NoOpMetricsBackend;
+pub struct NoOpMetricsBackend ;
 
 #[async_trait::async_trait]
 impl MetricsBackend for NoOpMetricsBackend {
@@ -568,7 +568,6 @@ impl MetricsCollector {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[tokio::test]
     async fn test_metrics_collection() {
         let collector = MetricsCollector::new();

@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-
 /// System health monitor configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SystemHealthMonitorConfig {
@@ -171,7 +170,7 @@ impl Default for HealthThresholds {
 }
 
 /// System metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct SystemMetrics {
     /// CPU usage percentage
     pub cpu_usage: f64,
@@ -190,11 +189,12 @@ pub struct SystemMetrics {
     /// Comprehensive disk usage metrics
     pub disk_usage_metrics: DiskUsageMetrics,
     /// Timestamp
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 }
 
 /// Detailed disk I/O metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct DiskIOMetrics {
     /// Total read operations per second
     pub read_iops: u64,
@@ -233,7 +233,7 @@ impl Default for DiskIOMetrics {
 }
 
 /// Per-disk I/O metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct PerDiskMetrics {
     /// Disk name/identifier
     pub disk_name: String,
@@ -258,7 +258,7 @@ pub struct PerDiskMetrics {
 }
 
 /// Disk health status
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, schemars::JsonSchema)]
 pub enum DiskHealthStatus {
     /// Disk is healthy
     Healthy,
@@ -271,7 +271,7 @@ pub enum DiskHealthStatus {
 }
 
 /// Comprehensive disk usage metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct DiskUsageMetrics {
     /// Per-filesystem disk usage
     pub filesystem_usage: HashMap<String, FilesystemUsage>,
@@ -307,7 +307,7 @@ impl Default for DiskUsageMetrics {
 }
 
 /// Per-filesystem usage information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct FilesystemUsage {
     /// Filesystem mount point
     pub mount_point: String,
@@ -328,7 +328,7 @@ pub struct FilesystemUsage {
 }
 
 /// Disk usage trends and predictions
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct DiskUsageTrends {
     /// Current usage percentage
     pub current_usage_percentage: f64,
@@ -367,9 +367,10 @@ impl Default for DiskUsageTrends {
 }
 
 /// Historical disk usage data point
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct DiskUsageDataPoint {
     /// Timestamp
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     /// Usage percentage at this time
     pub usage_percentage: f64,
@@ -378,7 +379,7 @@ pub struct DiskUsageDataPoint {
 }
 
 /// Filesystem health information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct FilesystemHealth {
     /// Filesystem mount point
     pub mount_point: String,
@@ -387,6 +388,7 @@ pub struct FilesystemHealth {
     /// Error count
     pub error_count: u32,
     /// Last filesystem check timestamp
+    #[schemars(with = "Option<String>")]
     pub last_check: Option<DateTime<Utc>>,
     /// Fragmentation level (0.0 to 1.0)
     pub fragmentation_level: f64,
@@ -397,7 +399,7 @@ pub struct FilesystemHealth {
 }
 
 /// Filesystem health status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub enum FilesystemHealthStatus {
     /// Filesystem is healthy
     Healthy,
@@ -410,7 +412,7 @@ pub enum FilesystemHealthStatus {
 }
 
 /// Mount status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub enum MountStatus {
     /// Filesystem is mounted
     Mounted,
@@ -421,20 +423,21 @@ pub enum MountStatus {
 }
 
 /// Filesystem error information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct FilesystemError {
     /// Error type
     pub error_type: String,
     /// Error message
     pub error_message: String,
     /// Error timestamp
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     /// Error severity
     pub severity: ErrorSeverity,
 }
 
 /// Error severity levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub enum ErrorSeverity {
     /// Low severity
     Low,
@@ -447,7 +450,7 @@ pub enum ErrorSeverity {
 }
 
 /// Inode usage statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct InodeUsage {
     /// Filesystem mount point
     pub mount_point: String,
@@ -462,7 +465,7 @@ pub struct InodeUsage {
 }
 
 /// Agent health metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct AgentHealthMetrics {
     /// Agent ID
     pub agent_id: String,
@@ -482,13 +485,14 @@ pub struct AgentHealthMetrics {
     #[serde(skip)]
     pub response_time_percentiles: Option<crate::ResponseTimePercentiles>,
     /// Last activity timestamp
+    #[schemars(with = "String")]
     pub last_activity: DateTime<Utc>,
     /// Tasks completed in last hour
     pub tasks_completed_hour: u32,
 }
 
 /// Database health metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct DatabaseHealthMetrics {
     /// Database connection status
     pub connection_ok: bool,
@@ -502,11 +506,12 @@ pub struct DatabaseHealthMetrics {
     // Note: agent-agency-database feature removed - diagnostics field not available
     // pub diagnostics: Option<agent_agency_database::health::DatabaseDiagnostics>,
     /// Last database health check timestamp
+    #[schemars(with = "String")]
     pub last_check: chrono::DateTime<chrono::Utc>,
 }
 
 /// Health alert
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct HealthAlert {
     /// Alert ID
     pub id: String,
@@ -521,19 +526,21 @@ pub struct HealthAlert {
     /// Component that generated the alert
     pub component: String,
     /// Timestamp
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     /// Acknowledged flag
     pub acknowledged: bool,
     /// Resolved flag
     pub resolved: bool,
     /// Resolution timestamp
+    #[schemars(with = "Option<String>")]
     pub resolved_at: Option<DateTime<Utc>>,
     /// Additional metadata
     pub metadata: HashMap<String, String>,
 }
 
 /// Alert severity levels
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, schemars::JsonSchema)]
 pub enum AlertSeverity {
     /// Informational
     Info,
@@ -550,7 +557,7 @@ pub enum AlertSeverity {
 }
 
 /// Alert types
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, schemars::JsonSchema)]
 pub enum AlertType {
     /// System resource alert
     SystemResource,
@@ -571,7 +578,7 @@ pub enum AlertType {
 }
 
 /// Overall health metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct HealthMetrics {
     /// Overall health score (0-1)
     pub overall_health: f64,
@@ -592,11 +599,12 @@ pub struct HealthMetrics {
     /// Embedding metrics (if available)
     pub embedding_metrics: Option<EmbeddingMetrics>,
     /// Timestamp
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 }
 
 /// Circuit breaker states
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, schemars::JsonSchema)]
 pub enum CircuitBreakerState {
     /// Circuit is closed (normal operation)
     Closed,
@@ -607,7 +615,7 @@ pub enum CircuitBreakerState {
 }
 
 /// Embedding metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct EmbeddingMetrics {
     /// Total embedding requests
     pub total_requests: u64,
@@ -729,7 +737,7 @@ pub struct AgentHealthSummary {
 }
 
 /// Health monitor statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct HealthMonitorStats {
     /// Uptime in seconds
     pub uptime_seconds: u64,
@@ -742,6 +750,7 @@ pub struct HealthMonitorStats {
     /// Circuit breaker trips
     pub circuit_breaker_trips: u32,
     /// Last collection timestamp
+    #[schemars(with = "String")]
     pub last_collection_timestamp: DateTime<Utc>,
 }
 
@@ -759,7 +768,7 @@ impl Default for HealthMonitorStats {
 }
 
 /// Component health status
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, schemars::JsonSchema)]
 pub enum ComponentHealthStatus {
     /// Component is healthy
     Healthy,
@@ -772,7 +781,7 @@ pub enum ComponentHealthStatus {
 }
 
 /// Component health report
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ComponentHealthReport {
     /// Component name
     pub component_name: String,
@@ -783,6 +792,7 @@ pub struct ComponentHealthReport {
     /// Status message
     pub message: String,
     /// Last checked timestamp
+    #[schemars(with = "String")]
     pub last_checked: DateTime<Utc>,
     /// Additional details
     pub details: HashMap<String, String>,

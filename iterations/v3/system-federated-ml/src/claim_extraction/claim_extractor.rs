@@ -3,6 +3,7 @@
 //! Extracts atomic claims from content that can be verified
 //! through fact-checking and source validation.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
@@ -11,7 +12,7 @@ use chrono::{DateTime, Utc};
 use crate::evidence_types::*;
 
 /// Extraction pattern for different content types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExtractionPattern {
     /// Type of pattern
     pub pattern_type: PatternType,
@@ -22,7 +23,7 @@ pub struct ExtractionPattern {
 }
 
 /// Types of extraction patterns
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum PatternType {
     /// Code-related claims
     Code,
@@ -35,7 +36,7 @@ pub enum PatternType {
 }
 
 /// Rules for decomposing content into atomic claims
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum DecompositionRule {
     /// Split by logical operators (and, or, but)
     SplitByLogicalOperators,
@@ -221,4 +222,3 @@ impl ClaimExtractor {
 
         Ok(requirements)
     }
-}

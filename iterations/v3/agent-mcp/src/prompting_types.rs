@@ -2,11 +2,12 @@
 //!
 //! This module contains types and structures used for prompting and MCP tool interactions.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// MCP Tool definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MCPTool {
     pub name: String,
     pub description: String,
@@ -19,7 +20,7 @@ pub struct MCPTool {
 }
 
 /// Tool input specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolInput {
     pub name: String,
     pub description: String,
@@ -29,7 +30,7 @@ pub struct ToolInput {
 }
 
 /// Tool output specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolOutput {
     pub name: String,
     pub description: String,
@@ -37,7 +38,7 @@ pub struct ToolOutput {
 }
 
 /// Input type enumeration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum InputType {
     String,
     Number,
@@ -49,7 +50,7 @@ pub enum InputType {
 }
 
 /// Output type enumeration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum OutputType {
     String,
     Number,
@@ -62,7 +63,7 @@ pub enum OutputType {
 }
 
 /// Tool execution request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolExecutionRequest {
     pub tool_name: String,
     pub parameters: HashMap<String, serde_json::Value>,
@@ -71,7 +72,7 @@ pub struct ToolExecutionRequest {
 }
 
 /// Execution context
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionContext {
     pub user_id: Option<String>,
     pub session_id: Option<String>,
@@ -80,7 +81,7 @@ pub struct ExecutionContext {
 }
 
 /// Tool execution result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolExecutionResult {
     pub success: bool,
     pub output: Option<serde_json::Value>,
@@ -90,7 +91,7 @@ pub struct ToolExecutionResult {
 }
 
 /// Tool discovery result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolDiscoveryResult {
     pub tools: Vec<MCPTool>,
     pub discovery_time_ms: u64,
@@ -99,7 +100,7 @@ pub struct ToolDiscoveryResult {
 }
 
 /// Tool registry statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolRegistryStats {
     pub total_tools: u32,
     pub active_tools: u32,
@@ -109,7 +110,7 @@ pub struct ToolRegistryStats {
 }
 
 /// Performance metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceMetrics {
     pub average_execution_time_ms: f64,
     pub success_rate: f64,
@@ -118,7 +119,7 @@ pub struct PerformanceMetrics {
 }
 
 /// CAWS compliance result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CawsComplianceResult {
     pub compliant: bool,
     pub violations: Vec<ComplianceViolation>,
@@ -127,7 +128,7 @@ pub struct CawsComplianceResult {
 }
 
 /// Compliance violation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ComplianceViolation {
     pub rule_id: String,
     pub severity: ViolationSeverity,
@@ -137,7 +138,7 @@ pub struct ComplianceViolation {
 }
 
 /// Violation severity
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ViolationSeverity {
     Critical,
     High,
@@ -147,7 +148,7 @@ pub enum ViolationSeverity {
 }
 
 /// MCP connection information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MCPConnection {
     pub connection_id: String,
     pub client_id: Option<String>,
@@ -158,7 +159,7 @@ pub struct MCPConnection {
 }
 
 /// Connection type
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ConnectionType {
     WebSocket,
     HTTP,
@@ -166,7 +167,7 @@ pub enum ConnectionType {
 }
 
 /// MCP server status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MCPServerStatus {
     pub server_name: String,
     pub version: String,
@@ -180,7 +181,7 @@ pub struct MCPServerStatus {
 }
 
 /// Server status enumeration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ServerStatus {
     Running,
     Starting,

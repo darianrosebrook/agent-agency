@@ -1,13 +1,15 @@
 //! MCP integration types and data structures
 
+use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
 /// MCP tool definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MCPTool {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub name: String,
     pub description: String,
@@ -20,14 +22,16 @@ pub struct MCPTool {
     pub endpoint: String,
     pub manifest: ToolManifest,
     pub caws_compliance: CawsComplianceStatus,
+    #[schemars(with = "String")]
     pub registration_time: DateTime<Utc>,
+    #[schemars(with = "String")]
     pub last_updated: DateTime<Utc>,
     pub usage_count: u64,
     pub metadata: HashMap<String, serde_json::Value>,
 }
 
 /// Tool types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ToolType {
     /// Code generation tool
     CodeGeneration,
@@ -50,7 +54,7 @@ pub enum ToolType {
 }
 
 /// Risk tier for tool execution
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum RiskTier {
     Low,
     Medium,
@@ -59,7 +63,7 @@ pub enum RiskTier {
 }
 
 /// Tool capabilities
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ToolCapability {
     /// Can read files
     FileRead,
@@ -88,7 +92,7 @@ pub enum ToolCapability {
 }
 
 /// Tool parameters schema
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolParameters {
     pub required: Vec<ParameterDefinition>,
     pub optional: Vec<ParameterDefinition>,
@@ -103,7 +107,7 @@ impl ToolParameters {
 }
 
 /// Parameter definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParameterDefinition {
     pub name: String,
     pub parameter_type: ParameterType,
@@ -113,7 +117,7 @@ pub struct ParameterDefinition {
 }
 
 /// Parameter types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ParameterType {
     String,
     Integer,
@@ -128,7 +132,7 @@ pub enum ParameterType {
 }
 
 /// Parameter constraints
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParameterConstraint {
     pub parameter_name: String,
     pub constraint_type: ConstraintType,
@@ -137,7 +141,7 @@ pub struct ParameterConstraint {
 }
 
 /// Constraint types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ConstraintType {
     MinLength,
     MaxLength,
@@ -150,7 +154,7 @@ pub enum ConstraintType {
 }
 
 /// Validation rules
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationRule {
     pub rule_type: ValidationRuleType,
     pub parameters: HashMap<String, serde_json::Value>,
@@ -158,7 +162,7 @@ pub struct ValidationRule {
 }
 
 /// Validation rule types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ValidationRuleType {
     NotEmpty,
     RegexMatch,
@@ -168,7 +172,7 @@ pub enum ValidationRuleType {
 }
 
 /// CAWS compliance status
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum CawsComplianceStatus {
     /// Tool is CAWS compliant
     Compliant,
@@ -183,7 +187,7 @@ pub enum CawsComplianceStatus {
 }
 
 /// CAWS violation details
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct CawsViolation {
     pub rule_id: String,
     pub rule_name: String,
@@ -196,7 +200,7 @@ pub struct CawsViolation {
 }
 
 /// Violation severity levels
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
 pub enum ViolationSeverity {
     Info = 1,
     Warning = 2,
@@ -205,20 +209,23 @@ pub enum ViolationSeverity {
 }
 
 /// Tool execution request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolExecutionRequest {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub tool_id: Uuid,
     pub parameters: HashMap<String, serde_json::Value>,
     pub context: Option<ExecutionContext>,
     pub priority: ExecutionPriority,
     pub timeout_seconds: Option<u64>,
+    #[schemars(with = "String")]
     pub created_at: DateTime<Utc>,
     pub requested_by: Option<String>,
 }
 
 /// Execution context
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionContext {
     pub working_directory: Option<String>,
     pub environment_variables: HashMap<String, String>,
@@ -228,7 +235,7 @@ pub struct ExecutionContext {
 }
 
 /// Execution priority
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
 pub enum ExecutionPriority {
     Low = 1,
     Normal = 2,
@@ -237,9 +244,11 @@ pub enum ExecutionPriority {
 }
 
 /// Tool execution result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolExecutionResult {
+    #[schemars(with = "String")]
     pub request_id: Uuid,
+    #[schemars(with = "String")]
     pub tool_id: Uuid,
     pub status: ExecutionStatus,
     pub output: Option<serde_json::Value>,
@@ -247,13 +256,14 @@ pub struct ToolExecutionResult {
     pub logs: Vec<LogEntry>,
     pub performance_metrics: AgentMcpResourceMetrics,
     pub caws_compliance_result: Option<CawsComplianceResult>,
+    #[schemars(with = "String")]
     pub started_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
     pub duration_ms: Option<u64>,
 }
 
 /// Execution status
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ExecutionStatus {
     Pending,
     Running,
@@ -264,8 +274,9 @@ pub enum ExecutionStatus {
 }
 
 /// Log entry
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LogEntry {
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub level: LogLevel,
     pub message: String,
@@ -274,7 +285,7 @@ pub struct LogEntry {
 }
 
 /// Log levels
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
 pub enum LogLevel {
     Debug = 1,
     Info = 2,
@@ -284,7 +295,7 @@ pub enum LogLevel {
 }
 
 /// Performance metrics - now using common types with compatibility layer
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AgentMcpResourceMetrics {
     pub cpu_usage_percent: f32,
     pub memory_usage_mb: u64,
@@ -295,14 +306,14 @@ pub struct AgentMcpResourceMetrics {
 }
 
 /// Tool schema definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolSchema {
     pub input_schema: serde_json::Value,
     pub output_schema: serde_json::Value,
 }
 
 /// Performance metrics for tools
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceMetrics {
     pub average_execution_time_ms: u64,
     pub success_rate: f64,
@@ -345,17 +356,18 @@ impl ToolCapability {
 }
 
 /// CAWS compliance result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CawsComplianceResult {
     pub is_compliant: bool,
     pub violations: Vec<CawsViolation>,
     pub compliance_score: f32,
+    #[schemars(with = "String")]
     pub checked_at: DateTime<Utc>,
     pub rulebook_version: String,
 }
 
 /// Tool manifest
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolManifest {
     pub name: String,
     pub version: String,
@@ -374,7 +386,7 @@ pub struct ToolManifest {
 }
 
 /// Dependency definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Dependency {
     pub name: String,
     pub version: String,
@@ -383,7 +395,7 @@ pub struct Dependency {
 }
 
 /// Dependency types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum DependencyType {
     Runtime,
     Build,
@@ -392,7 +404,7 @@ pub enum DependencyType {
 }
 
 /// CAWS compliance configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CawsComplianceConfig {
     pub required_rules: Vec<String>,
     pub optional_rules: Vec<String>,
@@ -401,7 +413,7 @@ pub struct CawsComplianceConfig {
 }
 
 /// Custom validation rule
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CustomValidation {
     pub name: String,
     pub description: String,
@@ -410,7 +422,7 @@ pub struct CustomValidation {
 }
 
 /// MCP server status
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum MCPServerStatus {
     Starting,
     Running,
@@ -420,19 +432,22 @@ pub enum MCPServerStatus {
 }
 
 /// MCP connection
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MCPConnection {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub client_id: Option<String>,
     pub connection_type: ConnectionType,
+    #[schemars(with = "String")]
     pub connected_at: DateTime<Utc>,
+    #[schemars(with = "String")]
     pub last_activity: DateTime<Utc>,
     pub status: ConnectionStatus,
     pub metadata: HashMap<String, serde_json::Value>,
 }
 
 /// Connection types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ConnectionType {
     WebSocket,
     HTTP,
@@ -440,7 +455,7 @@ pub enum ConnectionType {
 }
 
 /// Connection status
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ConnectionStatus {
     Connected,
     Disconnected,
@@ -448,16 +463,17 @@ pub enum ConnectionStatus {
 }
 
 /// Tool discovery result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolDiscoveryResult {
     pub discovered_tools: Vec<MCPTool>,
     pub errors: Vec<DiscoveryError>,
     pub discovery_time_ms: u64,
+    #[schemars(with = "String")]
     pub discovered_at: DateTime<Utc>,
 }
 
 /// Discovery error
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DiscoveryError {
     pub path: String,
     pub error_type: DiscoveryErrorType,
@@ -466,7 +482,7 @@ pub struct DiscoveryError {
 }
 
 /// Discovery error types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum DiscoveryErrorType {
     FileNotFound,
     InvalidManifest,
@@ -478,7 +494,7 @@ pub enum DiscoveryErrorType {
 }
 
 /// Tool registry statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolRegistryStats {
     pub total_tools: u64,
     pub active_tools: u64,
@@ -487,12 +503,14 @@ pub struct ToolRegistryStats {
     pub failed_executions: u64,
     pub average_execution_time_ms: f64,
     pub most_used_tools: Vec<ToolUsageStats>,
+    #[schemars(with = "String")]
     pub last_updated: DateTime<Utc>,
 }
 
 /// Tool usage statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolUsageStats {
+    #[schemars(with = "String")]
     pub tool_id: Uuid,
     pub tool_name: String,
     pub usage_count: u64,
@@ -502,7 +520,7 @@ pub struct ToolUsageStats {
 }
 
 /// MCP server configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MCPConfig {
     pub server: ServerConfig,
     pub tool_discovery: ToolDiscoveryConfig,
@@ -510,7 +528,7 @@ pub struct MCPConfig {
 }
 
 /// Server configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ServerConfig {
     pub server_name: String,
     pub version: String,
@@ -528,7 +546,7 @@ pub struct ServerConfig {
 }
 
 /// Tool discovery configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ToolDiscoveryConfig {
     pub enable_auto_discovery: bool,
     pub discovery_paths: Vec<String>,
@@ -540,7 +558,7 @@ pub struct ToolDiscoveryConfig {
 }
 
 /// CAWS integration configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CawsIntegrationConfig {
     pub enable_caws_checking: bool,
     pub caws_rulebook_path: String,
@@ -550,7 +568,7 @@ pub struct CawsIntegrationConfig {
 }
 
 /// Validation strictness levels
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ValidationStrictness {
     /// Strict validation - fail on any violation
     Strict,
@@ -561,7 +579,7 @@ pub enum ValidationStrictness {
 }
 
 /// Circuit breaker statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CircuitBreakerStats {
     pub total_requests: u64,
     pub successful_requests: u64,

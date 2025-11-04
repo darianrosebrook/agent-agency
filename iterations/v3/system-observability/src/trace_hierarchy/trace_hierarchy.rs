@@ -7,7 +7,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use serde::{Deserialize, Serialize};
-
 use crate::trace_types::*;
 
 /// Hierarchical representation of a complete trace

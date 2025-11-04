@@ -4,7 +4,8 @@ use std::sync::Arc;
 use data_infrastructure::DatabaseClient;
 
 /// Database manager for research operations
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct DatabaseManager {
     client: Arc<DatabaseClient>,
 }

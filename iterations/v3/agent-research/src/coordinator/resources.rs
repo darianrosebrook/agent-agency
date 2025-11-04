@@ -3,11 +3,13 @@
 //! Resource utilization tracking, efficiency analysis, and
 //! resource optimization for learning coordination.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 
 /// Resource utilization metrics
-#[derive(Debug, Clone)]
-pub struct ResourceMetrics {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ResourceMetricss {
     pub cpu_seconds: f64,
     pub memory_bytes: u64,
     pub tokens_used: u64,
@@ -15,8 +17,9 @@ pub struct ResourceMetrics {
 }
 
 /// Resource utilization levels
-#[derive(Debug, Clone, PartialEq)]
-pub enum ResourceLevel {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub enum ResourceLevell {
     Low,
     Moderate,
     High,
@@ -24,8 +27,9 @@ pub enum ResourceLevel {
 }
 
 /// Heuristic mapping for resource utilization
-#[derive(Debug, Clone)]
-pub struct ResourceHeuristics {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ResourceHeuristicss {
     pub cpu_thresholds: ResourceThresholds,
     pub memory_thresholds: ResourceThresholds,
     pub token_thresholds: ResourceThresholds,
@@ -122,8 +126,9 @@ impl ResourceHeuristics {
 }
 
 /// Resource usage thresholds
-#[derive(Debug, Clone)]
-pub struct ResourceThresholds {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ResourceThresholdss {
     pub low_max: f64,
     pub moderate_max: f64,
     pub high_max: f64,
@@ -131,8 +136,9 @@ pub struct ResourceThresholds {
 }
 
 /// Efficiency calculation weights
-#[derive(Debug, Clone)]
-pub struct EfficiencyWeights {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct EfficiencyWeightss {
     pub cpu_efficiency: f64,
     pub memory_efficiency: f64,
     pub token_efficiency: f64,
@@ -151,8 +157,9 @@ impl Default for EfficiencyWeights {
 }
 
 /// Resource status assessment
-#[derive(Debug, Clone)]
-pub struct ResourceStatus {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ResourceStatuss {
     pub cpu_level: ResourceLevel,
     pub memory_level: ResourceLevel,
     pub token_level: ResourceLevel,
@@ -194,24 +201,27 @@ impl ResourceStatus {
 }
 
 /// Resource usage trend analysis
-#[derive(Debug, Clone)]
-pub struct ResourceTrend {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ResourceTrendd {
     pub metric: ResourceMetric,
     pub trend: Trend,
     pub change_percentage: f64,
     pub period_seconds: u64,
 }
 
-#[derive(Debug, Clone)]
-pub enum ResourceMetric {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub enum ResourceMetricc {
     CpuUsage,
     MemoryUsage,
     TokenUsage,
     Efficiency,
 }
 
-#[derive(Debug, Clone)]
-pub enum Trend {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub enum Trendd {
     Improving,
     Stable,
     Degrading,

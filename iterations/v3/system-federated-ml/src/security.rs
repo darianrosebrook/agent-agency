@@ -3,6 +3,7 @@
 /// Implements zero-knowledge proofs, secure validation, and
 /// cryptographic primitives for federation security.
 
+use schemars::JsonSchema;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -13,10 +14,10 @@ use crate::ParticipantContribution;
 
 /// Security validator for federation operations
 #[derive(Debug)]
-pub struct SecurityValidator;
+pub struct SecurityValidator ;
 
 /// Zero-knowledge proof implementation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ZeroKnowledgeProof {
     /// Proof data (serialized cryptographic proof)
     pub proof_data: Vec<u8>,
@@ -117,7 +118,7 @@ impl SecurityValidator {
 }
 
 /// Security violation detected
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SecurityViolation {
     pub violation_type: String,
     pub severity: Severity,
@@ -125,7 +126,7 @@ pub struct SecurityViolation {
 }
 
 /// Severity levels for security issues
-#[derive(Debug, Clone, Serialize, Deserialize, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialOrd, Ord, PartialEq, Eq, JsonSchema)]
 pub enum Severity {
     Low,
     Medium,
@@ -165,7 +166,7 @@ impl KeyManager {
 }
 
 /// Cryptographic key pair
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct KeyPair {
     pub public_key: Vec<u8>,
     pub private_key: Vec<u8>,

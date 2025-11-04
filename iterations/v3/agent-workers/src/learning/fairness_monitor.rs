@@ -3,6 +3,7 @@
 use std::sync::Arc;
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
+use anyhow::Result;
 
 use crate::parallel_types::{WorkerId, TaskId};
 use crate::learning::types::*;
@@ -23,7 +24,7 @@ impl FairnessMonitor {
     }
 
     /// Record a task assignment to a worker
-    pub async fn record_task_assignment(&self, worker_id: WorkerId, task_id: TaskId) -> Result<()> {
+    pub async fn record_task_assignment(&self, worker_id: WorkerId, task_id: TaskId) -> anyhow::Result<()> {
         let mut assignments = self.task_assignments.write().await;
         assignments.entry(worker_id).or_default().push(task_id);
         
@@ -133,7 +134,7 @@ impl FairnessMonitor {
     }
 
     /// Reset fairness tracking
-    pub async fn reset(&self) -> Result<()> {
+    pub async fn reset(&self) -> anyhow::Result<()> {
         let mut assignments = self.task_assignments.write().await;
         assignments.clear();
         

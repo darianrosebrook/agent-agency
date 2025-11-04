@@ -15,8 +15,9 @@ use crate::judge_backup::risk::{RiskAssessment, RiskLevel};
 use std::time::{Duration, Instant};
 
 /// Quality Assurance Judge for code quality analysis
-#[derive(Debug)]
-pub struct QualityAssuranceJudge {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct QualityAssuranceJudge {
     config: JudgeConfig,
     health_metrics: JudgeHealthMetrics,
     last_review_time: Option<Instant>,

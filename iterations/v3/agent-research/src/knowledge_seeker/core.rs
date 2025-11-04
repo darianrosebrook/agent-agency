@@ -1,5 +1,6 @@
 //! Core knowledge seeker functionality and configuration
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
@@ -27,7 +28,8 @@ use super::sessions::SessionManager;
 use super::events::{EventEmitter, ResearchEvent};
 
 /// Main knowledge seeker for research coordination
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct KnowledgeSeeker {
     config: ResearchAgentConfig,
 
@@ -47,7 +49,7 @@ pub struct KnowledgeSeeker {
 }
 
 /// Research events for monitoring and debugging
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ResearchEvent {
     QueryStarted(Uuid),
     QueryCompleted(Uuid, usize), // query_id, result_count

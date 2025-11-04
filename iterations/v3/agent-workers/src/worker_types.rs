@@ -1,12 +1,21 @@
 //! Worker pool types and data structures
 
+use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
 // Use shared types from contracts
-use agent_agency_contracts::{WorkerHealthStatus, WorkerHealthMetrics, RiskTier, WorkerType, WorkerRegistration, TaskPriority as ContractTaskPriority};
+use agent_agency_contracts::{
+    task_executor::{ExecutionStatus, TaskExecutionResult},
+    WorkerHealthMetrics,
+    WorkerHealthStatus,
+    WorkerRegistration,
+    WorkerType,
+    RiskTier,
+    TaskPriority as ContractTaskPriority,
+};
 
 // Define our own TaskPriority to avoid conflicts
 pub type TaskPriority = ContractTaskPriority;
@@ -22,7 +31,8 @@ pub trait IdGenerator {
 }
 
 /// Default clock implementation using system time
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SystemClock;
 
 impl Clock for SystemClock {
@@ -32,8 +42,9 @@ impl Clock for SystemClock {
 }
 
 /// Default ID generator implementation using UUID v4
-#[derive(Debug, Clone)]
-pub struct UuidGenerator;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UuidGenerator ;
 
 impl IdGenerator for UuidGenerator {
     fn generate(&self) -> Uuid {
@@ -43,7 +54,7 @@ impl IdGenerator for UuidGenerator {
 
 
 /// Worker status
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum WorkerStatus {
     Available,
     Busy,
@@ -53,8 +64,9 @@ pub enum WorkerStatus {
 }
 
 /// Worker in the pool
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Worker {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub name: String,
     pub worker_type: WorkerType,
@@ -66,13 +78,17 @@ pub struct Worker {
     pub health_status: WorkerHealthStatus,
     pub health_metrics: Option<WorkerHealthMetrics>,
     pub last_health_check: Option<DateTime<Utc>>,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub last_heartbeat: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
 
 /// Worker capabilities
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerCapabilities {
     pub languages: Vec<String>,
     pub frameworks: Vec<String>,
@@ -86,7 +102,7 @@ pub struct WorkerCapabilities {
 }
 
 /// Worker performance metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerPerformanceMetrics {
     pub total_tasks: u64,
     pub completed_tasks: u64,
@@ -101,11 +117,17 @@ pub struct WorkerPerformanceMetrics {
 }
 
 /// Task assignment to worker
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskAssignment {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
+    #[schemars(with = "String")]
     pub worker_id: Uuid,
+    #[schemars(with = "String")]
+
     pub assigned_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub estimated_completion: DateTime<Utc>,
     pub priority: TaskPriority,
     pub requirements: TaskRequirements,
@@ -113,8 +135,7 @@ pub struct TaskAssignment {
 
 
 /// Task requirements for routing
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
 pub struct TaskRequirements {
     pub required_languages: Vec<String>,
     pub required_frameworks: Vec<String>,
@@ -126,46 +147,8 @@ pub struct TaskRequirements {
     pub context_length_estimate: u32,
 }
 
-/// Task execution result
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskExecutionResult {
-    pub task_id: Uuid,
-    pub worker_id: Uuid,
-    pub status: ExecutionStatus,
-    pub output: Option<WorkerOutput>,
-    pub error_message: Option<String>,
-    pub execution_time_ms: u64,
-    pub tokens_used: Option<u32>,
-    pub quality_metrics: QualityMetrics,
-    pub caws_compliance: CawsComplianceResult,
-    pub started_at: DateTime<Utc>,
-    pub completed_at: DateTime<Utc>,
-}
-
-/// Execution status
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum ExecutionStatus {
-    Completed,
-    Failed,
-    Timeout,
-    Cancelled,
-    Partial, // Partially completed but needs more work
-}
-
-impl std::fmt::Display for ExecutionStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ExecutionStatus::Completed => write!(f, "Completed"),
-            ExecutionStatus::Failed => write!(f, "Failed"),
-            ExecutionStatus::Timeout => write!(f, "Timeout"),
-            ExecutionStatus::Cancelled => write!(f, "Cancelled"),
-            ExecutionStatus::Partial => write!(f, "Partial"),
-        }
-    }
-}
-
 /// Worker output
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerOutput {
     pub content: String,
     pub files_modified: Vec<FileModification>,
@@ -175,7 +158,7 @@ pub struct WorkerOutput {
 }
 
 /// File modification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FileModification {
     pub path: String,
     pub operation: FileOperation,
@@ -185,7 +168,7 @@ pub struct FileModification {
 }
 
 /// File operation types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum FileOperation {
     Create,
     Modify,
@@ -194,7 +177,7 @@ pub enum FileOperation {
 }
 
 /// Self-assessment by worker
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SelfAssessment {
     pub caws_compliance: f32,
     pub quality_score: f32,
@@ -204,8 +187,86 @@ pub struct SelfAssessment {
     pub estimated_effort: Option<String>,
 }
 
+/// Metadata keys used to enrich `TaskExecutionResult`.
+pub const META_EXECUTION_STATUS: &str = "execution_status";
+pub const META_QUALITY_METRICS: &str = "quality_metrics";
+pub const META_CAWS_COMPLIANCE: &str = "caws_compliance";
+pub const META_WORKER_OUTPUT: &str = "worker_output";
+pub const META_TOKENS_USED: &str = "tokens_used";
+
+/// Extract the execution status from a contract result, defaulting by success flag.
+pub fn get_execution_status(result: &TaskExecutionResult) -> ExecutionStatus {
+    if let Some(value) = result.metadata.get(META_EXECUTION_STATUS).and_then(|v| v.as_str()) {
+        match value {
+            "Pending" => ExecutionStatus::Pending,
+            "Running" => ExecutionStatus::Running,
+            "Completed" => ExecutionStatus::Completed,
+            "Failed" => ExecutionStatus::Failed,
+            "Cancelled" | "Canceled" => ExecutionStatus::Cancelled,
+            "Timeout" => ExecutionStatus::Timeout,
+            "Partial" => ExecutionStatus::Failed,
+            _ => {
+                if result.success {
+                    ExecutionStatus::Completed
+                } else {
+                    ExecutionStatus::Failed
+                }
+            }
+        }
+    } else if result.success {
+        ExecutionStatus::Completed
+    } else {
+        ExecutionStatus::Failed
+    }
+}
+
+/// Attempt to deserialize worker output from result metadata or output string.
+pub fn get_worker_output(result: &TaskExecutionResult) -> Option<WorkerOutput> {
+    if let Some(value) = result.metadata.get(META_WORKER_OUTPUT) {
+        if let Ok(parsed) = serde_json::from_value::<WorkerOutput>(value.clone()) {
+            return Some(parsed);
+        }
+    }
+
+    if result.output.trim().is_empty() {
+        return None;
+    }
+
+    serde_json::from_str::<WorkerOutput>(&result.output).ok()
+}
+
+/// Retrieve quality metrics if present.
+pub fn get_quality_metrics(result: &TaskExecutionResult) -> Option<QualityMetrics> {
+    result
+        .metadata
+        .get(META_QUALITY_METRICS)
+        .and_then(|value| serde_json::from_value::<QualityMetrics>(value.clone()).ok())
+}
+
+/// Retrieve CAWS compliance summary if present.
+pub fn get_caws_compliance(result: &TaskExecutionResult) -> Option<CawsComplianceResult> {
+    result
+        .metadata
+        .get(META_CAWS_COMPLIANCE)
+        .and_then(|value| serde_json::from_value::<CawsComplianceResult>(value.clone()).ok())
+}
+
+/// Retrieve token usage information if available.
+pub fn get_tokens_used(result: &TaskExecutionResult) -> Option<u32> {
+    result
+        .metadata
+        .get(META_TOKENS_USED)
+        .and_then(|value| {
+            if let Some(num) = value.as_u64() {
+                Some(num as u32)
+            } else {
+                value.as_str().and_then(|s| s.parse::<u32>().ok())
+            }
+        })
+}
+
 /// Quality metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityMetrics {
     pub completeness_score: f32,
     pub correctness_score: f32,
@@ -216,7 +277,7 @@ pub struct QualityMetrics {
 }
 
 /// CAWS compliance result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CawsComplianceResult {
     pub is_compliant: bool,
     pub compliance_score: f32,
@@ -226,7 +287,7 @@ pub struct CawsComplianceResult {
 }
 
 /// CAWS violation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CawsViolation {
     pub rule: String,
     pub severity: ViolationSeverity,
@@ -237,7 +298,7 @@ pub struct CawsViolation {
 }
 
 /// Violation severity
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
 pub enum ViolationSeverity {
     Low = 1,
     Medium = 2,
@@ -246,7 +307,7 @@ pub enum ViolationSeverity {
 }
 
 /// Budget adherence tracking
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BudgetAdherence {
     pub files_used: u32,
     pub files_limit: u32,
@@ -258,26 +319,34 @@ pub struct BudgetAdherence {
 }
 
 /// Worker pool statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerPoolStats {
     pub total_workers: u32,
     pub available_workers: u32,
     pub busy_workers: u32,
     pub unavailable_workers: u32,
+    pub active_workers: u32,
+    pub idle_workers: u32,
+    pub unhealthy_workers: u32,
+    pub tasks_in_progress: u32,
     pub total_tasks_completed: u64,
     pub total_tasks_failed: u64,
     pub average_execution_time_ms: f64,
     pub average_quality_score: f32,
     pub average_caws_compliance: f32,
+    pub average_queue_time_ms: f64,
     pub pool_uptime_seconds: u64,
+    #[schemars(with = "String")]
+
     pub last_updated: DateTime<Utc>,
 }
 
 // WorkerHealthStatus and WorkerHealthMetrics are now imported from agent_agency_contracts
 
 /// Worker metrics collection from /metrics endpoint
-#[derive(Debug, Clone, Default)]
-pub struct WorkerMetricsCollection {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
+struct WorkerMetricsCollection {
     pub cpu_usage: Option<f64>,
     pub memory_usage: Option<f64>,
     pub active_tasks: Option<u32>,
@@ -285,28 +354,35 @@ pub struct WorkerMetricsCollection {
 }
 
 /// Worker health check result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerHealthCheck {
+    #[schemars(with = "String")]
     pub worker_id: Uuid,
     pub is_healthy: bool,
     pub response_time_ms: u64,
     pub error_message: Option<String>,
+    #[schemars(with = "String")]
+
     pub checked_at: DateTime<Utc>,
 }
 
 /// Task routing result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskRoutingResult {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub selected_workers: Vec<WorkerAssignmentDetails>,
     pub routing_reasoning: String,
+    #[schemars(with = "String")]
+
     pub estimated_completion_time: DateTime<Utc>,
     pub confidence_score: f32,
 }
 
 /// Worker assignment with reasoning (workers-specific)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerAssignmentDetails {
+    #[schemars(with = "String")]
     pub worker_id: Uuid,
     pub worker_name: String,
     pub capability_match_score: f32,
@@ -316,7 +392,7 @@ pub struct WorkerAssignmentDetails {
 }
 
 /// Worker pool events for monitoring
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum WorkerPoolEvent {
     WorkerRegistered {
         worker: Worker,
@@ -347,7 +423,8 @@ pub enum WorkerPoolEvent {
         worker_id: Uuid,
         is_healthy: bool,
         response_time_ms: u64,
-        checked_at: DateTime<Utc>,
+        #[schemars(with = "String")]
+    checked_at: DateTime<Utc>,
     },
     HealthCheckFailed {
         worker_id: Uuid,
@@ -363,7 +440,7 @@ pub enum WorkerPoolEvent {
 
 
 /// Worker update request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerUpdate {
     pub capabilities: Option<WorkerCapabilities>,
     pub status: Option<WorkerStatus>,
@@ -511,27 +588,23 @@ impl Worker {
     pub fn update_performance_metrics(&mut self, result: &TaskExecutionResult) {
         self.performance_metrics.total_tasks += 1;
 
-        match result.status {
-            ExecutionStatus::Completed => {
-                self.performance_metrics.completed_tasks += 1;
-            }
+        match get_execution_status(result) {
+            ExecutionStatus::Completed => self.performance_metrics.completed_tasks += 1,
             ExecutionStatus::Failed | ExecutionStatus::Timeout | ExecutionStatus::Cancelled => {
                 self.performance_metrics.failed_tasks += 1;
             }
-            ExecutionStatus::Partial => {
-                self.performance_metrics.completed_tasks += 1; // Count as completed
-            }
+            _ => {}
         }
 
         // Update average execution time
         let total_time = self.performance_metrics.average_execution_time_ms
             * (self.performance_metrics.total_tasks - 1) as f64;
         self.performance_metrics.average_execution_time_ms = (total_time
-            + result.execution_time_ms as f64)
+            + result.duration_ms as f64)
             / self.performance_metrics.total_tasks as f64;
 
         // Update average quality score
-        if let Some(output) = &result.output {
+        if let Some(output) = get_worker_output(result) {
             let total_quality = self.performance_metrics.average_quality_score
                 * (self.performance_metrics.total_tasks - 1) as f32;
             self.performance_metrics.average_quality_score = (total_quality
@@ -540,11 +613,13 @@ impl Worker {
         }
 
         // Update average CAWS compliance
-        let total_compliance = self.performance_metrics.average_caws_compliance
-            * (self.performance_metrics.total_tasks - 1) as f32;
-        self.performance_metrics.average_caws_compliance = (total_compliance
-            + result.caws_compliance.compliance_score)
-            / self.performance_metrics.total_tasks as f32;
+        if let Some(compliance) = get_caws_compliance(result) {
+            let total_compliance = self.performance_metrics.average_caws_compliance
+                * (self.performance_metrics.total_tasks - 1) as f32;
+            self.performance_metrics.average_caws_compliance = (total_compliance
+                + compliance.compliance_score)
+                / self.performance_metrics.total_tasks as f32;
+        }
 
         self.performance_metrics.last_task_at = Some(result.completed_at);
     }
@@ -686,34 +761,59 @@ mod tests {
             WorkerCapabilities::default(),
         );
 
-        let result = TaskExecutionResult {
-            task_id: Uuid::new_v4(),
-            worker_id: worker.id,
-            status: ExecutionStatus::Completed,
-            output: Some(WorkerOutput {
-                content: "test output".to_string(),
-                files_modified: vec![],
-                rationale: "test rationale".to_string(),
-                self_assessment: SelfAssessment {
-                    caws_compliance: 0.9,
-                    quality_score: 0.85,
-                    confidence: 0.8,
-                    concerns: vec![],
-                    improvements: vec![],
-                    estimated_effort: None,
-                },
-                metadata: HashMap::new(),
-            }),
-            error_message: None,
-            execution_time_ms: 2000,
-            tokens_used: Some(1500),
-            quality_metrics: QualityMetrics::default(),
-            caws_compliance: CawsComplianceResult {
+        let now = Utc::now();
+        let worker_output = WorkerOutput {
+            content: "test output".to_string(),
+            files_modified: vec![],
+            rationale: "test rationale".to_string(),
+            self_assessment: SelfAssessment {
+                caws_compliance: 0.9,
+                quality_score: 0.85,
+                confidence: 0.8,
+                concerns: vec![],
+                improvements: vec![],
+                estimated_effort: None,
+            },
+            metadata: HashMap::new(),
+        };
+
+        let mut metadata = HashMap::new();
+        metadata.insert(
+            META_EXECUTION_STATUS.to_string(),
+            serde_json::json!("Completed"),
+        );
+        metadata.insert(
+            META_QUALITY_METRICS.to_string(),
+            serde_json::to_value(QualityMetrics::default()).unwrap(),
+        );
+        metadata.insert(
+            META_CAWS_COMPLIANCE.to_string(),
+            serde_json::to_value(CawsComplianceResult {
                 compliance_score: 0.9,
                 ..Default::default()
-            },
-            started_at: Utc::now(),
-            completed_at: Utc::now(),
+            })
+            .unwrap(),
+        );
+        metadata.insert(
+            META_WORKER_OUTPUT.to_string(),
+            serde_json::to_value(&worker_output).unwrap(),
+        );
+        metadata.insert(
+            META_TOKENS_USED.to_string(),
+            serde_json::json!(1500),
+        );
+
+        let result = TaskExecutionResult {
+            execution_id: Uuid::new_v4(),
+            task_id: Uuid::new_v4(),
+            success: true,
+            output: serde_json::to_string(&worker_output).unwrap(),
+            errors: vec![],
+            metadata,
+            started_at: now,
+            completed_at: now,
+            duration_ms: 2000,
+            worker_id: Some(worker.id),
         };
 
         worker.update_performance_metrics(&result);
@@ -743,7 +843,7 @@ impl Default for WorkerCapabilities {
 }
 
 /// Task execution context for workers
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskContext {
     pub task_id: uuid::Uuid,
     pub worker_id: uuid::Uuid,
@@ -762,7 +862,7 @@ pub struct TaskContext {
 
 
 /// Task scope definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskScope {
     pub domains: Vec<String>,
     pub files_affected: Vec<String>,
@@ -770,13 +870,16 @@ pub struct TaskScope {
 }
 
 /// Task specification for workers
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskSpec {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub title: String,
     pub description: String,
     pub requirements: TaskRequirements,
     pub context: TaskContext,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
     pub deadline: Option<DateTime<Utc>>,
     pub risk_tier: RiskTier,
@@ -784,8 +887,9 @@ pub struct TaskSpec {
 }
 
 /// Execution input for worker tasks
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionInput {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub prompt: String,
     pub context: String,
@@ -794,9 +898,11 @@ pub struct ExecutionInput {
 }
 
 /// Raw execution result from worker
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RawExecutionResult {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
+    #[schemars(with = "String")]
     pub worker_id: Uuid,
     pub raw_output: String,
     pub execution_time_ms: u64,
@@ -807,7 +913,7 @@ pub struct RawExecutionResult {
 }
 
 /// CAWS specification for task execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CawsSpec {
     pub version: String,
     pub metadata: CawsMetadata,
@@ -819,8 +925,10 @@ pub struct CawsSpec {
 }
 
 /// CAWS metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CawsMetadata {
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
     pub created_by: String,
     pub description: String,
@@ -828,7 +936,7 @@ pub struct CawsMetadata {
 }
 
 /// Quality gate definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityGate {
     pub name: String,
     pub required: bool,
@@ -836,7 +944,7 @@ pub struct QualityGate {
 }
 
 /// Compliance requirements
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ComplianceRequirements {
     pub test_coverage_min: f32,
     pub mutation_score_min: f32,
@@ -844,15 +952,19 @@ pub struct ComplianceRequirements {
 }
 
 /// Validation rule
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationRule {
+    #[schemars(with = "String")]
+    pub id: Uuid,
     pub name: String,
     pub description: String,
     pub severity: ViolationSeverity,
+    pub rule_type: ValidationRuleType,
+    pub config: HashMap<String, serde_json::Value>,
 }
 
 /// Performance benchmarks
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceBenchmarks {
     pub response_time_ms: u64,
     pub throughput_rps: u32,
@@ -860,7 +972,7 @@ pub struct PerformanceBenchmarks {
 }
 
 /// Security requirements
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SecurityRequirements {
     pub authentication_required: bool,
     pub authorization_required: bool,
@@ -880,54 +992,76 @@ impl Default for SecurityRequirements {
 // Missing types that are referenced throughout the codebase
 
 /// Worker communication messages
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum WorkerMessage {
     Started {
         worker_id: Uuid,
         subtask_id: Uuid,
-        timestamp: DateTime<Utc>,
+        #[schemars(with = "String")]
+    timestamp: DateTime<Utc>,
     },
     Progress {
         worker_id: Uuid,
         subtask_id: Uuid,
         progress_percentage: f32,
         message: String,
-        timestamp: DateTime<Utc>,
+        #[schemars(with = "String")]
+    timestamp: DateTime<Utc>,
     },
     Blocked {
         worker_id: Uuid,
         subtask_id: Uuid,
         reason: String,
-        timestamp: DateTime<Utc>,
+        #[schemars(with = "String")]
+    timestamp: DateTime<Utc>,
     },
     Completed {
         worker_id: Uuid,
         subtask_id: Uuid,
         result: WorkerOutput,
-        timestamp: DateTime<Utc>,
+        #[schemars(with = "String")]
+    timestamp: DateTime<Utc>,
     },
     Failed {
         worker_id: Uuid,
         subtask_id: Uuid,
         error: String,
-        timestamp: DateTime<Utc>,
+        #[schemars(with = "String")]
+    timestamp: DateTime<Utc>,
     },
 }
 
+/// Worker progress state during execution
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub enum WorkerProgressStatus {
+    Pending,
+    Running,
+    Completed,
+    Failed,
+    Blocked,
+}
+
 /// Worker progress tracking
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerProgress {
+    #[schemars(with = "String")]
     pub worker_id: Uuid,
+    #[schemars(with = "String")]
     pub subtask_id: Uuid,
     pub progress_percentage: f32,
-    pub status: WorkerStatus,
+    pub status: WorkerProgressStatus,
     pub current_step: String,
     pub estimated_completion: Option<DateTime<Utc>>,
+    #[schemars(with = "String")]
     pub last_updated: DateTime<Utc>,
+    // Additional fields for tracker compatibility
+    pub completed: u32,
+    pub total: u32,
+    pub task_weight: f32,
 }
 
 /// Overall progress tracking
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Progress {
     pub total_tasks: u32,
     pub completed_tasks: u32,
@@ -935,35 +1069,44 @@ pub struct Progress {
     pub in_progress_tasks: u32,
     pub overall_percentage: f32,
     pub estimated_completion: Option<DateTime<Utc>>,
+    #[schemars(with = "String")]
+
     pub last_updated: DateTime<Utc>,
 }
 
-/// Validation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Validation result for quality gates
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ValidationResult {
     Pass {
+        /// Normalized score for the gate (0.0 - 1.0)
         score: f32,
-        message: String,
-        details: HashMap<String, serde_json::Value>,
+        /// Human-readable details about the validation outcome
+        details: String,
     },
     Fail {
+        /// Normalized score for the gate (0.0 - 1.0)
         score: f32,
-        message: String,
-        errors: Vec<String>,
-        details: HashMap<String, serde_json::Value>,
+        /// Human-readable details about the failure
+        details: String,
+        /// Actionable suggestions for remediation
+        suggestions: Vec<String>,
     },
     Warning {
+        /// Normalized score for the gate (0.0 - 1.0)
         score: f32,
-        message: String,
-        warnings: Vec<String>,
-        details: HashMap<String, serde_json::Value>,
+        /// Human-readable details about the warning
+        details: String,
+        /// Non-blocking recommendations to improve quality
+        suggestions: Vec<String>,
     },
 }
 
 /// Validation context
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationContext {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
+    #[schemars(with = "String")]
     pub worker_id: Uuid,
     pub validation_type: String,
     pub requirements: HashMap<String, serde_json::Value>,
@@ -980,7 +1123,7 @@ pub struct ValidationContext {
 }
 
 /// Artifact types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ArtifactType {
     SourceCode,
     Documentation,
@@ -992,19 +1135,25 @@ pub enum ArtifactType {
 }
 
 /// Artifact representation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Artifact {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub name: String,
+    pub path: String,
     pub artifact_type: ArtifactType,
     pub content: String,
     pub metadata: HashMap<String, serde_json::Value>,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub modified_at: DateTime<Utc>,
 }
 
 /// Worker health status (different from WorkerHealthStatus)
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum WorkerHealth {
     Healthy,
     Degraded,
@@ -1013,7 +1162,7 @@ pub enum WorkerHealth {
 }
 
 /// Severity levels for various operations
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum SeverityLevel {
     Low,
     Medium,
@@ -1024,7 +1173,7 @@ pub enum SeverityLevel {
 // Additional missing types
 
 /// Worker specialties for task routing
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum WorkerSpecialty {
     General,
     ReactComponent,
@@ -1040,8 +1189,9 @@ pub enum WorkerSpecialty {
 }
 
 /// Task definition for execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskDefinition {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub name: String,
     pub description: String,
@@ -1054,7 +1204,7 @@ pub struct TaskDefinition {
 }
 
 /// Task status for tracking execution
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum TaskStatus {
     Pending,
     InProgress,
@@ -1064,7 +1214,7 @@ pub enum TaskStatus {
 }
 
 /// Execution outcome for learning system
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ExecutionOutcome {
     Success,
     Failure,
@@ -1073,7 +1223,7 @@ pub enum ExecutionOutcome {
 }
 
 /// Learning mode for adaptive systems
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum LearningMode {
     Learn,
     Apply,
@@ -1082,7 +1232,7 @@ pub enum LearningMode {
 }
 
 /// Task priority levels
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum Priority {
     Low,
     Medium,
@@ -1091,8 +1241,9 @@ pub enum Priority {
 }
 
 /// Worker breakdown for task analysis
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerBreakdown {
+    #[schemars(with = "String")]
     pub worker_id: Uuid,
     pub specialty: WorkerSpecialty,
     pub estimated_time_ms: u64,
@@ -1100,7 +1251,7 @@ pub struct WorkerBreakdown {
 }
 
 /// Quality requirements for tasks
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityRequirements {
     pub min_coverage: f32,
     pub max_complexity: u32,
@@ -1110,14 +1261,14 @@ pub struct QualityRequirements {
 }
 
 /// Tool identifier
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct ToolId {
     pub name: String,
     pub version: String,
 }
 
 /// Validation rule types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ValidationRuleType {
     Custom,
     Builtin,
@@ -1165,10 +1316,13 @@ impl Default for WorkerProgress {
             worker_id: Uuid::new_v4(),
             subtask_id: Uuid::new_v4(),
             progress_percentage: 0.0,
-            status: WorkerStatus::Available,
+            status: WorkerProgressStatus::Pending,
             current_step: String::new(),
             estimated_completion: None,
             last_updated: Utc::now(),
+            completed: 0,
+            total: 0,
+            task_weight: 1.0,
         }
     }
 }

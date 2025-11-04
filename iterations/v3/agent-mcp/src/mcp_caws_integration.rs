@@ -12,6 +12,7 @@
 //     ToolExecutionContext, ToolExecutionRecord, McpIntegrationError, McpCawsIntegration
 // };
 
+use schemars::JsonSchema;
 use crate::mcp_types::*;
 use anyhow::Result;
 use std::fs;
@@ -20,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Placeholder CAWS integration implementation
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, JsonSchema)]
 pub struct McpCawsIntegration {
     // Placeholder fields
 }
@@ -58,14 +59,14 @@ pub struct CawsIntegration {
     pub(crate) compliance_cache: Arc<RwLock<std::collections::HashMap<Uuid, CawsComplianceResult>>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct CawsRulebook {
     pub version: String,
     pub rules: Vec<CawsRule>,
     pub last_updated: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct CawsRule {
     pub id: String,
     pub name: String,
@@ -75,7 +76,7 @@ pub struct CawsRule {
     pub validation_function: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, JsonSchema)]
 pub enum RuleCategory {
     CodeQuality,
     Security,
@@ -292,12 +293,12 @@ impl CawsIntegration {
         let content = fs::read_to_string(p)?;
         // Try JSON first, then YAML
         #[derive(serde::Deserialize)]
-        struct RawRulebook {
+struct RawRulebook {
             version: String,
             rules: Vec<RawRule>,
         }
         #[derive(serde::Deserialize)]
-        struct RawRule {
+struct RawRule {
             id: String,
             name: String,
             description: String,

@@ -4,6 +4,7 @@
 //! including CAWS validation, task decomposition algorithms, quality gates, reasoning engines,
 //! and workflow logging capabilities.
 
+use schemars::JsonSchema;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -14,7 +15,7 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 /// Policy enforcement tools for CAWS validation and task management
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct PolicyEnforcementTools {
     /// CAWS validation configuration
     pub caws_config: CawsValidationConfig,
@@ -33,7 +34,7 @@ pub struct PolicyEnforcementTools {
 }
 
 /// CAWS validation configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CawsValidationConfig {
     /// Risk tier rules
     pub risk_tier_rules: HashMap<String, RiskTierRule>,
@@ -46,7 +47,7 @@ pub struct CawsValidationConfig {
 }
 
 /// Risk tier rule configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RiskTierRule {
     /// Tier number (1-3)
     pub tier: u8,
@@ -63,7 +64,7 @@ pub struct RiskTierRule {
 }
 
 /// Change budget rules
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ChangeBudgetRules {
     /// Default max files
     pub default_max_files: u32,
@@ -74,7 +75,7 @@ pub struct ChangeBudgetRules {
 }
 
 /// Review level requirements
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ReviewLevel {
     /// No review required
     None,
@@ -273,7 +274,7 @@ impl TaskDecompositionAlgorithm for AdaptiveDecompositionAlgorithm {
 }
 
 /// Quality gate registry
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct QualityGateRegistry {
     /// Registered quality gates
     pub gates: HashMap<String, Box<dyn QualityGate + Send + Sync>>,
@@ -290,7 +291,7 @@ pub trait QualityGate: Send + Sync {
 }
 
 /// Quality gate context
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct QualityGateContext {
     /// Task being validated
     pub task: TaskDescriptor,
@@ -301,7 +302,7 @@ pub struct QualityGateContext {
 }
 
 /// Quality gate result
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct QualityGateResult {
     /// Gate name
     pub gate_name: String,
@@ -463,7 +464,7 @@ impl QualityGate for MutationTestingGate {
 }
 
 /// Reasoning engine
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ReasoningEngine {
     /// Available reasoning algorithms
     pub algorithms: HashMap<String, Box<dyn ReasoningAlgorithm + Send + Sync>>,
@@ -480,7 +481,7 @@ pub trait ReasoningAlgorithm: Send + Sync {
 }
 
 /// Knowledge base
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct KnowledgeBase {
     /// Facts and rules
     pub facts: HashMap<String, serde_json::Value>,
@@ -489,7 +490,7 @@ pub struct KnowledgeBase {
 }
 
 /// Inference rule
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct InferenceRule {
     /// Rule name
     pub name: String,
@@ -572,7 +573,7 @@ impl ReasoningAlgorithm for MachineLearningReasoningAlgorithm {
 }
 
 /// Evidence synthesizer
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct EvidenceSynthesizer {
     /// Synthesis algorithms
     pub algorithms: HashMap<String, Box<dyn SynthesisAlgorithm + Send + Sync>>,
@@ -587,9 +588,10 @@ pub trait SynthesisAlgorithm: Send + Sync {
 }
 
 /// Evidence
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct Evidence {
     /// Evidence ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Evidence type
     pub evidence_type: String,
@@ -602,7 +604,7 @@ pub struct Evidence {
 }
 
 /// Synthesized evidence
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct SynthesizedEvidence {
     /// Synthesis result
     pub result: String,
@@ -615,7 +617,7 @@ pub struct SynthesizedEvidence {
 }
 
 /// Evidence validation rule
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct EvidenceValidationRule {
     /// Rule name
     pub name: String,
@@ -624,7 +626,7 @@ pub struct EvidenceValidationRule {
 }
 
 /// Validation action
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum ValidationAction {
     /// Accept evidence
     Accept,
@@ -715,7 +717,7 @@ impl SynthesisAlgorithm for BayesianEvidenceSynthesisAlgorithm {
 }
 
 /// Workflow logger
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct WorkflowLogger {
     /// Log storage
     pub storage: Arc<dyn LogStorage + Send + Sync>,
@@ -732,11 +734,14 @@ pub trait LogStorage: Send + Sync {
 }
 
 /// Log entry
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct LogEntry {
     /// Entry ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Timestamp
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     /// Log level
     pub level: LogLevel,
@@ -747,7 +752,7 @@ pub struct LogEntry {
 }
 
 /// Log level
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
 pub enum LogLevel {
     /// Debug level
     Debug,
@@ -760,7 +765,7 @@ pub enum LogLevel {
 }
 
 /// Log query
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct LogQuery {
     /// Time range
     pub time_range: Option<(DateTime<Utc>, DateTime<Utc>)>,
@@ -773,7 +778,7 @@ pub struct LogQuery {
 }
 
 /// Log filter
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct LogFilter {
     /// Field name
     pub field: String,
@@ -784,7 +789,7 @@ pub struct LogFilter {
 }
 
 /// Filter operator
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum FilterOperator {
     /// Equals
     Equals,
@@ -799,7 +804,7 @@ pub enum FilterOperator {
 }
 
 /// Log formatting
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct LogFormatting {
     /// Format type
     pub format: LogFormat,
@@ -810,7 +815,7 @@ pub struct LogFormatting {
 }
 
 /// Log format
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum LogFormat {
     /// JSON format
     Json,
@@ -821,7 +826,7 @@ pub enum LogFormat {
 }
 
 /// Retention policy
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct RetentionPolicy {
     /// Retention period (days)
     pub retention_days: u32,
@@ -832,7 +837,7 @@ pub struct RetentionPolicy {
 }
 
 /// Chain logger for execution tracking
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ChainLogger {
     /// Chain storage
     pub storage: Arc<dyn ChainStorage + Send + Sync>,
@@ -849,13 +854,16 @@ pub trait ChainStorage: Send + Sync {
 }
 
 /// Chain execution
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ChainExecution {
     /// Execution ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Chain name
     pub chain_name: String,
     /// Start time
+    #[schemars(with = "String")]
+
     pub start_time: DateTime<Utc>,
     /// End time
     pub end_time: Option<DateTime<Utc>>,
@@ -868,13 +876,16 @@ pub struct ChainExecution {
 }
 
 /// Chain step
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ChainStep {
     /// Step ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Step name
     pub step_name: String,
     /// Start time
+    #[schemars(with = "String")]
+
     pub start_time: DateTime<Utc>,
     /// End time
     pub end_time: Option<DateTime<Utc>>,
@@ -889,7 +900,7 @@ pub struct ChainStep {
 }
 
 /// Chain status
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum ChainStatus {
     /// Running
     Running,
@@ -902,7 +913,7 @@ pub enum ChainStatus {
 }
 
 /// Step status
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum StepStatus {
     /// Pending
     Pending,
@@ -917,7 +928,7 @@ pub enum StepStatus {
 }
 
 /// Chain query
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ChainQuery {
     /// Chain name filter
     pub chain_name: Option<String>,
@@ -930,7 +941,7 @@ pub struct ChainQuery {
 }
 
 /// Chain filter
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ChainFilter {
     /// Field name
     pub field: String,
@@ -941,7 +952,7 @@ pub struct ChainFilter {
 }
 
 /// Chain analyzer
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ChainAnalyzer {
     /// Analysis algorithms
     pub algorithms: HashMap<String, Box<dyn ChainAnalysisAlgorithm + Send + Sync>>,
@@ -956,7 +967,7 @@ pub trait ChainAnalysisAlgorithm: Send + Sync {
 }
 
 /// Chain analysis result
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ChainAnalysis {
     /// Analysis type
     pub analysis_type: String,
@@ -1087,7 +1098,7 @@ impl ChainAnalysisAlgorithm for ReliabilityAnalysisAlgorithm {
 }
 
 /// Compliance metrics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ComplianceMetrics {
     /// Metrics storage
     pub storage: Arc<dyn MetricsStorage + Send + Sync>,
@@ -1104,22 +1115,25 @@ pub trait MetricsStorage: Send + Sync {
 }
 
 /// Metric
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct Metric {
     /// Metric ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Metric name
     pub name: String,
     /// Metric value
     pub value: f64,
     /// Timestamp
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     /// Tags
     pub tags: HashMap<String, String>,
 }
 
 /// Metrics query
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct MetricsQuery {
     /// Metric name filter
     pub name_filter: Option<String>,
@@ -1132,7 +1146,7 @@ pub struct MetricsQuery {
 }
 
 /// Metrics filter
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct MetricsFilter {
     /// Field name
     pub field: String,
@@ -1143,7 +1157,7 @@ pub struct MetricsFilter {
 }
 
 /// Metrics aggregator
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct MetricsAggregator {
     /// Aggregation algorithms
     pub algorithms: HashMap<String, Box<dyn AggregationAlgorithm + Send + Sync>>,
@@ -1158,7 +1172,7 @@ pub trait AggregationAlgorithm: Send + Sync {
 }
 
 /// Aggregation type
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum AggregationType {
     /// Average
     Average,
@@ -1173,7 +1187,7 @@ pub enum AggregationType {
 }
 
 /// Aggregated metric
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct AggregatedMetric {
     /// Aggregation type
     pub aggregation_type: AggregationType,
@@ -1283,7 +1297,7 @@ impl AggregationAlgorithm for CountAggregationAlgorithm {
 // Additional types needed for the implementation
 
 /// Policy validation result
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct PolicyValidationResult {
     /// Validation passed
     pub passed: bool,
@@ -1294,7 +1308,7 @@ pub struct PolicyValidationResult {
 }
 
 /// Change budget
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ChangeBudget {
     /// Maximum files
     pub max_files: u32,
@@ -1307,7 +1321,7 @@ pub struct ChangeBudget {
 }
 
 /// Scope
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct Scope {
     /// Included paths
     pub included_paths: Vec<String>,
@@ -1316,9 +1330,10 @@ pub struct Scope {
 }
 
 /// Task descriptor
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct TaskDescriptor {
     /// Task ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Task title
     pub title: String,
@@ -1327,13 +1342,16 @@ pub struct TaskDescriptor {
     /// Estimated effort
     pub estimated_effort: u32,
     /// Created at
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
 }
 
 /// SubTask
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct SubTask {
     /// SubTask ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// SubTask title
     pub title: String,
@@ -1348,11 +1366,13 @@ pub struct SubTask {
     /// Worker specialty
     pub worker_specialty: String,
     /// Created at
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
 }
 
 /// Reasoning input
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ReasoningInput {
     /// Input context
     pub context: HashMap<String, serde_json::Value>,
@@ -1361,7 +1381,7 @@ pub struct ReasoningInput {
 }
 
 /// Reasoning output
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ReasoningOutput {
     /// Conclusion
     pub conclusion: String,
@@ -1374,13 +1394,16 @@ pub struct ReasoningOutput {
 }
 
 /// Workflow execution
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct WorkflowExecution {
     /// Execution ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Workflow name
     pub workflow_name: String,
     /// Start time
+    #[schemars(with = "String")]
+
     pub start_time: DateTime<Utc>,
     /// End time
     pub end_time: Option<DateTime<Utc>>,
@@ -1391,13 +1414,16 @@ pub struct WorkflowExecution {
 }
 
 /// Workflow step
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct WorkflowStep {
     /// Step ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Step name
     pub step_name: String,
     /// Start time
+    #[schemars(with = "String")]
+
     pub start_time: DateTime<Utc>,
     /// End time
     pub end_time: Option<DateTime<Utc>>,
@@ -1410,7 +1436,7 @@ pub struct WorkflowStep {
 }
 
 /// Workflow status
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum WorkflowStatus {
     /// Running
     Running,
@@ -1423,11 +1449,14 @@ pub enum WorkflowStatus {
 }
 
 /// Compliance report
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct ComplianceReport {
     /// Report ID
+    #[schemars(with = "String")]
     pub id: Uuid,
     /// Report timestamp
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     /// Compliance score
     pub compliance_score: f64,
@@ -1438,7 +1467,7 @@ pub struct ComplianceReport {
 }
 
 /// Working specification
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct WorkingSpec {
     /// Risk tier
     pub risk_tier: u8,
@@ -1447,7 +1476,7 @@ pub struct WorkingSpec {
 }
 
 /// Acceptance criterion
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct AcceptanceCriterion {
     /// Criterion ID
     pub id: String,

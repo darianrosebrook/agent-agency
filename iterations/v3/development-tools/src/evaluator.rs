@@ -6,6 +6,7 @@ use crate::evaluator_types::*;
 
 use anyhow::Result;
 use chrono::Utc;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -602,7 +603,7 @@ impl MinimalDiffEvaluator {
 }
 
 /// Evaluation context
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EvaluationContext {
     /// Project root path
     pub project_root: String,

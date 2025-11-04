@@ -69,6 +69,7 @@ pub struct OrchestrationMetadata {
 pub struct ExecutionContext {
     /// Session start time
     #[schemars(with = "String")]
+
     pub session_start: DateTime<Utc>,
 
     /// Current working directory
@@ -121,6 +122,7 @@ pub struct WorkerAssignment {
 
     /// Assigned at timestamp
     #[schemars(with = "String")]
+
     pub assigned_at: DateTime<Utc>,
 
     /// Assignment status
@@ -323,6 +325,7 @@ pub struct EvidenceStatus {
 
     /// Collection start time
     #[schemars(with = "String")]
+
     pub started_at: DateTime<Utc>,
 
     /// Collection completion time
@@ -369,6 +372,7 @@ pub struct EvidenceFailure {
 
     /// Failure timestamp
     #[schemars(with = "String")]
+
     pub failed_at: DateTime<Utc>,
 
     /// Retry count
@@ -390,6 +394,7 @@ pub struct EvidenceBundle {
 
     /// Collection timestamp
     #[schemars(with = "String")]
+
     pub collected_at: DateTime<Utc>,
 
     /// Evidence artifacts
@@ -423,6 +428,7 @@ pub struct EvidenceArtifact {
 
     /// Collection timestamp
     #[schemars(with = "String")]
+
     pub collected_at: DateTime<Utc>,
 
     /// Artifact metadata
@@ -449,8 +455,9 @@ pub enum EvidenceContent {
 }
 
 /// Planning strategy options
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PlanGenerationStrategy {
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+enum PlanGenerationStrategy {
     /// Use AI-assisted planning with human oversight
     AIAssisted,
     /// Use fully automated planning
@@ -993,6 +1000,7 @@ pub struct PlanningSession {
 
     /// Planning start time
     #[schemars(with = "String")]
+
     pub started_at: DateTime<Utc>,
 
     /// Current planning phase
@@ -1070,7 +1078,7 @@ pub struct TodoIntegration {
 }
 
 /// Todo system types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum TodoSystemType {
     /// GitHub Issues
     GitHub,
@@ -1122,7 +1130,7 @@ pub struct TodoSyncSettings {
 }
 
 /// Sync direction
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum SyncDirection {
     /// Bidirectional sync
     Bidirectional,
@@ -1153,7 +1161,7 @@ pub struct TodoSyncState {
 }
 
 /// Synchronization status
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum SyncStatus {
     /// Never synchronized
     NeverSynced,
@@ -1187,6 +1195,7 @@ pub struct ResourceUtilization {
 
     /// Timestamp of measurement
     #[schemars(with = "String")]
+
     pub measured_at: DateTime<Utc>,
 
     /// Associated milestone or task
@@ -1194,4 +1203,3 @@ pub struct ResourceUtilization {
 }
 
 // Quality metrics types are now imported from agent_agency_contracts
-// PerformanceMetrics is also imported from agent_agency_contracts

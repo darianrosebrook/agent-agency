@@ -223,7 +223,6 @@ impl StructuredLogger {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[test]
     fn test_log_context_creation() {
         let context = StructuredLogger::create_context(

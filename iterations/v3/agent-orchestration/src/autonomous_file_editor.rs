@@ -5,6 +5,7 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use async_trait::async_trait;
 use std::path::Path;
 use std::sync::Arc;
@@ -15,8 +16,9 @@ use system_common_interfaces::{
 use tracing::{info, warn, error, instrument};
 
 /// Autonomous file editor that integrates with agent orchestration
-#[derive(Debug)]
-pub struct AutonomousFileEditor {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct AutonomousFileEditor {
     /// File operations service
     file_ops: Arc<dyn FileOperationsService>,
     /// Default repository path
@@ -171,8 +173,9 @@ impl AutonomousFileEditor {
 }
 
 /// File change specification
-#[derive(Debug, Clone)]
-pub struct FileChange {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct FileChange {
     /// Path to the file to change
     pub path: String,
     /// Type of change
@@ -283,8 +286,9 @@ impl FileChange {
 }
 
 /// Type of file change
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum ChangeType {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, Copy)]
+enum ChangeType {
     /// Create a new file
     Create,
     /// Replace content (requires old_content)
@@ -296,8 +300,9 @@ pub enum ChangeType {
 }
 
 /// Risk assessment for a changeset
-#[derive(Debug, Clone)]
-pub struct RiskAssessment {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct RiskAssessment {
     /// Risk score (0.0-1.0, higher is riskier)
     pub score: f64,
     /// Risk level
@@ -307,17 +312,20 @@ pub struct RiskAssessment {
 }
 
 /// Risk levels
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum RiskLevel {
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, Copy)]
+enum RiskLevel {
     Low,
     Medium,
     High,
 }
 
 /// Preview of changes before application
-#[derive(Debug, Clone)]
-pub struct ChangesetPreview {
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct ChangesetPreview {
     /// The changeset that would be applied
+    #[schemars(skip)]
     pub changeset: Changeset,
     /// Risk assessment
     pub risk_assessment: RiskAssessment,
@@ -326,8 +334,9 @@ pub struct ChangesetPreview {
 }
 
 /// Errors that can occur during autonomous file editing
-#[derive(thiserror::Error, Debug)]
-pub enum AutonomousFileEditError {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
+enum AutonomousFileEditError {
     #[error("Validation error: {0}")]
     Validation(String),
 

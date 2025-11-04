@@ -2,6 +2,7 @@
 //!
 //! Tracks resource utilization, performance metrics, and allocation patterns.
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -185,7 +186,7 @@ impl ResourceMonitor {
 }
 
 /// Allocation event for tracking
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct AllocationEvent {
     pub event_type: AllocationEventType,
     pub allocation_id: String,
@@ -195,7 +196,7 @@ pub struct AllocationEvent {
 }
 
 /// Type of allocation event
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub enum AllocationEventType {
     Allocated,
     Released,
@@ -203,14 +204,14 @@ pub enum AllocationEventType {
 }
 
 /// Utilization snapshot for historical tracking
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct UtilizationSnapshot {
     pub timestamp: chrono::DateTime<chrono::Utc>,
     pub utilization: ResourceUtilization,
 }
 
 /// Efficiency metrics for resource allocation
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct EfficiencyMetrics {
     pub total_allocations: usize,
     pub failed_allocations: usize,

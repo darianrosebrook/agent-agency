@@ -2,9 +2,11 @@
 //!
 //! @author @darianrosebrook
 
+use serde::{Deserialize, Serialize};
+
 /// Device identifier
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct DeviceId(pub u32);
+pub struct DeviceId (pub u32);
 
 /// Device kinds for resource management
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -47,7 +49,7 @@ pub struct ComponentStatus {
 }
 
 /// Validation result
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ValidationResult {
     /// Whether validation passed
     pub is_valid: bool,
@@ -80,6 +82,8 @@ pub enum ValidationStatus {
     Warnings,
     /// Validation failed
     Invalid,
+    /// Validation requires human escalation
+    EscalationRequired,
 }
 
 /// Issue severity levels

@@ -16,7 +16,7 @@ use agent_agency_contracts::{
         QualityGates, MutationRequirements, SecurityRequirements, PerformanceRequirements,
     },
     types::planning::RiskTier,
-    working_spec::{TestPlan, CoverageTargets},
+    working_spec::{TestPlan, CoverageTargets, UnitTestSpec, IntegrationTestSpec, E2eScenario},
 };
 
 use crate::planning::{
@@ -78,9 +78,11 @@ impl PlanningEngineImpl {
         use crate::planning::plan_types::*;
 
         Ok(PlanGenerationContext {
-            working_spec: Box::new(RealWorkingSpecProvider::new(task_descriptor.clone(), self.db_ops.clone())),
+            working_spec_provider: Box::new(RealWorkingSpecProvider::new(task_descriptor.clone(), self.db_ops.clone())),
             task_descriptor: Box::new(RealTaskDescriptorProvider::new(task_descriptor.clone(), self.db_ops.clone())),
             resource_inventory: ResourceInventory::default(),
+            constraints: PlanningConstraints::default(),
+            historical_data: None,
             planning_constraints: PlanningConstraints::default(),
             execution_mode: agent_agency_contracts::types::planning::ExecutionMode::Auto,
             planning_strategy: PlanGenerationStrategy::AIAssisted,
@@ -165,7 +167,7 @@ impl RealWorkingSpecProvider {
                 given: "Task is submitted and validated".to_string(),
                 when: "Planning engine processes the task".to_string(),
                 then: acceptance,
-                priority: Some(working_spec::CriterionPriority::High),
+                priority: Some(working_spec::CriterionPriority::Must),
             }])
             .unwrap_or_default();
 
@@ -188,8 +190,8 @@ impl RealWorkingSpecProvider {
                 max_duration_minutes: Some(120),
                 max_iterations: Some(5),
                 budget_limits: Some(working_spec::BudgetLimits {
-                    max_files: self.task_descriptor.change_budget.max_files,
-                    max_loc: self.task_descriptor.change_budget.max_loc,
+                    max_files: Some(self.task_descriptor.change_budget.max_files as u32),
+                    max_loc: Some(self.task_descriptor.change_budget.max_loc as u32),
                 }),
                 scope_restrictions: Some(working_spec::ScopeRestrictions {
                     allowed_paths: self.task_descriptor.scope_in.allowed_paths.clone(),
@@ -247,7 +249,7 @@ impl RealWorkingSpecProvider {
                     architecture_docs_required: false,
                     required_formats: vec!["markdown".to_string()],
                     required_types: vec!["api".to_string(), "code".to_string()],
-                    min_coverage: None,
+                    min_coverage: 0.0,
                     quality_checks: vec![],
                 },
                 requires_manual_review: true,
@@ -318,14 +320,47 @@ impl RealWorkingSpecProvider {
 
     /// Generate a test plan based on task characteristics
     fn generate_test_plan(&self) -> TestPlan {
-        let risk_tier = self.task_descriptor.risk_tier
+        let risk_tier = self.task_descriptor.risk_tier.clone()
             .unwrap_or(RiskTier::Tier2);
 
         match risk_tier {
             RiskTier::Tier1 => TestPlan {
-                unit_tests: vec!["critical-path-tests".to_string(), "error-handling-tests".to_string()],
-                integration_tests: vec!["end-to-end-workflow".to_string(), "external-service-integration".to_string()],
-                e2e_scenarios: vec!["complete-user-journey".to_string(), "failure-recovery".to_string()],
+                unit_tests: vec![
+                    UnitTestSpec {
+                        description: "critical-path-tests".to_string(),
+                        target_function: None,
+                        test_cases: vec![],
+                    },
+                    UnitTestSpec {
+                        description: "error-handling-tests".to_string(),
+                        target_function: None,
+                        test_cases: vec![],
+                    },
+                ],
+                integration_tests: vec![
+                    IntegrationTestSpec {
+                        description: "end-to-end-workflow".to_string(),
+                        components: vec![],
+                        test_cases: vec![],
+                    },
+                    IntegrationTestSpec {
+                        description: "external-service-integration".to_string(),
+                        components: vec![],
+                        test_cases: vec![],
+                    },
+                ],
+                e2e_scenarios: vec![
+                    E2eScenario {
+                        description: "complete-user-journey".to_string(),
+                        user_journey: "Complete user journey from registration to task completion".to_string(),
+                        expected_outcomes: vec![],
+                    },
+                    E2eScenario {
+                        description: "failure-recovery".to_string(),
+                        user_journey: "User journey with failure scenarios and recovery".to_string(),
+                        expected_outcomes: vec![],
+                    },
+                ],
                 coverage_targets: Some(CoverageTargets {
                     line_coverage: Some(0.9),
                     branch_coverage: Some(0.95),
@@ -333,9 +368,32 @@ impl RealWorkingSpecProvider {
                 }),
             },
             RiskTier::Tier2 => TestPlan {
-                unit_tests: vec!["core-logic-tests".to_string(), "validation-tests".to_string()],
-                integration_tests: vec!["api-integration-tests".to_string()],
-                e2e_scenarios: vec!["happy-path-scenario".to_string()],
+                unit_tests: vec![
+                    UnitTestSpec {
+                        description: "core-logic-tests".to_string(),
+                        target_function: None,
+                        test_cases: vec![],
+                    },
+                    UnitTestSpec {
+                        description: "validation-tests".to_string(),
+                        target_function: None,
+                        test_cases: vec![],
+                    },
+                ],
+                integration_tests: vec![
+                    IntegrationTestSpec {
+                        description: "api-integration-tests".to_string(),
+                        components: vec![],
+                        test_cases: vec![],
+                    },
+                ],
+                e2e_scenarios: vec![
+                    E2eScenario {
+                        description: "happy-path-scenario".to_string(),
+                        user_journey: "Happy path user journey".to_string(),
+                        expected_outcomes: vec![],
+                    },
+                ],
                 coverage_targets: Some(CoverageTargets {
                     line_coverage: Some(0.8),
                     branch_coverage: Some(0.9),
@@ -343,7 +401,13 @@ impl RealWorkingSpecProvider {
                 }),
             },
             RiskTier::Tier3 => TestPlan {
-                unit_tests: vec!["basic-functionality-tests".to_string()],
+                unit_tests: vec![
+                    UnitTestSpec {
+                        description: "basic-functionality-tests".to_string(),
+                        target_function: None,
+                        test_cases: vec![],
+                    },
+                ],
                 integration_tests: vec![],
                 e2e_scenarios: vec![],
                 coverage_targets: Some(CoverageTargets {

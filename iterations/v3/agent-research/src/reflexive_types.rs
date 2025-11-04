@@ -1,12 +1,35 @@
 //! Types for reflexive learning system
 
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
+use chrono::{DateTime, Utc, Duration};
+use serde::{Deserialize, Serialize, Deserializer, Serializer};
 use std::collections::HashMap;
 use uuid::Uuid;
 
+/// Serialization helper for chrono::Duration as i64 (seconds)
+mod duration_serde {
+    use super::*;
+    
+    pub fn serialize<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let seconds = duration.num_seconds();
+        serializer.serialize_i64(seconds)
+    }
+    
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Duration, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let seconds = i64::deserialize(deserializer)?;
+        Ok(Duration::seconds(seconds))
+    }
+}
+
+
 /// Types of learning algorithms supported
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub enum LearningAlgorithmType {
     ReinforcementLearning,
     SupervisedLearning,
@@ -19,12 +42,15 @@ pub enum LearningAlgorithmType {
 }
 
 /// Configuration for learning algorithms
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AlgorithmConfig {
     pub learning_rate: f64,
     pub discount_factor: f64,
     pub exploration_rate: f64,
+    pub min_exploration_rate: Option<f64>,
+    pub exploration_decay: Option<f64>,
     pub max_iterations: usize,
+    pub max_episodes: Option<usize>,
     pub convergence_threshold: f64,
 }
 
@@ -34,14 +60,18 @@ impl Default for AlgorithmConfig {
             learning_rate: 0.1,
             discount_factor: 0.9,
             exploration_rate: 0.1,
+            min_exploration_rate: Some(0.01),
+            exploration_decay: Some(0.995),
             max_iterations: 1000,
+            max_episodes: Some(1000),
             convergence_threshold: 0.001,
         }
     }
 }
 
 /// Q-learning table for reinforcement learning
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QTable {
     q_values: HashMap<String, HashMap<String, f64>>,
 }
@@ -91,7 +121,7 @@ impl Default for QTable {
 }
 
 /// Statistics for ensemble learning components
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EnsembleComponentStatistics {
     pub component_id: String,
     pub accuracy: f64,
@@ -100,11 +130,13 @@ pub struct EnsembleComponentStatistics {
     pub f1_score: f64,
     pub training_time_ms: u64,
     pub prediction_time_ms: u64,
+    ##[schemars(with = "String")]
+
     pub last_updated: DateTime<Utc>,
 }
 
 /// Contribution of a component to ensemble predictions
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ComponentContribution {
     pub component_id: String,
     pub weight: f64,
@@ -113,17 +145,19 @@ pub struct ComponentContribution {
 }
 
 /// Analytics for ensemble learning performance
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EnsembleAnalytics {
     pub overall_accuracy: f64,
     pub component_contributions: Vec<ComponentContribution>,
     pub diversity_score: f64,
     pub stability_score: f64,
+    ##[schemars(with = "String")]
+
     pub generated_at: DateTime<Utc>,
 }
 
 /// Characteristics of a learning problem
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProblemCharacteristics {
     pub feature_count: usize,
     pub sample_count: usize,
@@ -134,7 +168,7 @@ pub struct ProblemCharacteristics {
 }
 
 /// Performance metrics for learning algorithms
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AlgorithmPerformance {
     pub algorithm_type: LearningAlgorithmType,
     pub accuracy: f64,
@@ -142,11 +176,13 @@ pub struct AlgorithmPerformance {
     pub prediction_time_ms: u64,
     pub memory_usage_mb: f64,
     pub convergence_iterations: usize,
+    ##[schemars(with = "String")]
+
     pub measured_at: DateTime<Utc>,
 }
 
 /// Learning data point
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LearningDataPoint {
     pub input: LearningInput,
     pub expected_output: LearningOutput,
@@ -154,7 +190,7 @@ pub struct LearningDataPoint {
 }
 
 /// Learning input
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum LearningInput {
     TaskPrediction {
         task_type: TaskType,
@@ -173,7 +209,7 @@ pub enum LearningInput {
 }
 
 /// Learning output
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum LearningOutput {
     TaskPrediction {
         success_probability: f64,
@@ -194,16 +230,17 @@ pub enum LearningOutput {
 }
 
 /// Learning context
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LearningContext {
     pub domain: String,
     pub technology_stack: Vec<String>,
     pub time_pressure: bool,
     pub quality_requirements: Vec<String>,
+    pub system_metrics: Option<HashMap<String, serde_json::Value>>,
 }
 
 /// Learning feedback for algorithm improvement
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LearningFeedback {
     pub input: LearningInput,
     pub predicted_output: LearningOutput,
@@ -213,13 +250,16 @@ pub struct LearningFeedback {
 }
 
 /// Learning system health monitor
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LearningSystemHealth {
     pub algorithm_count: usize,
     pub total_training_sessions: u64,
     pub average_performance: f64,
     pub system_uptime_seconds: u64,
     pub memory_usage_mb: f64,
+    ##[schemars(with = "String")]
+
     pub last_health_check: DateTime<Utc>,
 }
 
@@ -244,7 +284,7 @@ impl LearningSystemHealth {
 
     /// Get health score (0.0 to 1.0)
     pub fn health_score(&self) -> f64 {
-        let mut score = 0.0;
+        let mut score: f64 = 0.0;
 
         // Algorithm availability (30%)
         if self.algorithm_count > 0 {
@@ -300,7 +340,8 @@ impl LearningSystemHealth {
 }
 
 /// Algorithm performance tracker
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct AlgorithmPerformanceTracker {
     performance_history: HashMap<LearningAlgorithmType, Vec<AlgorithmPerformance>>,
 }
@@ -353,17 +394,20 @@ impl AlgorithmPerformanceTracker {
 }
 
 /// Learning task for the system
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LearningTask {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub task_type: TaskType,
     pub complexity: TaskComplexity,
+    #[serde(with = "duration_serde")]
+    #[schemars(with = "i64")]
     pub expected_duration: chrono::Duration,
     pub success_criteria: Vec<SuccessCriterion>,
     pub context: TaskContext,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, JsonSchema)]
 pub enum TaskType {
     CodeGeneration,
     CodeReview,
@@ -375,7 +419,7 @@ pub enum TaskType {
     Integration,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq, JsonSchema)]
 pub enum TaskComplexity {
     Simple,
     Moderate,
@@ -383,7 +427,7 @@ pub enum TaskComplexity {
     Critical,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SuccessCriterion {
     pub criterion_type: CriterionType,
     pub description: String,
@@ -391,7 +435,7 @@ pub struct SuccessCriterion {
     pub weight: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum CriterionType {
     Functional,
     Performance,
@@ -400,7 +444,7 @@ pub enum CriterionType {
     Compliance, // CAWS compliance
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskContext {
     pub domain: String,
     pub technology_stack: Vec<String>,
@@ -408,14 +452,14 @@ pub struct TaskContext {
     pub historical_performance: Option<HistoricalPerformance>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Constraint {
     pub constraint_type: ConstraintType,
     pub description: String,
     pub severity: ConstraintSeverity,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ConstraintType {
     Time,
     Resource,
@@ -424,7 +468,7 @@ pub enum ConstraintType {
     Compliance,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ConstraintSeverity {
     Soft,
     Hard,
@@ -432,7 +476,7 @@ pub enum ConstraintSeverity {
 }
 
 /// Quality indicators captured from council evaluations
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, JsonSchema)]
 pub enum QualityIndicator {
     HighConfidence,
     ComprehensiveEvidence,
@@ -443,7 +487,7 @@ pub enum QualityIndicator {
 }
 
 /// Categories for failure analysis
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, JsonSchema)]
 pub enum FailureCategory {
     ConsensusFailure,
     ResourceExhaustion,
@@ -454,7 +498,7 @@ pub enum FailureCategory {
 }
 
 /// Partial results captured when a task times out
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PartialResults {
     pub completed_judges: Vec<Uuid>,
     pub partial_consensus: f32,
@@ -462,7 +506,7 @@ pub struct PartialResults {
 }
 
 /// Outcome classification for predictive learning
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum TaskOutcome {
     Success {
         confidence: f32,
@@ -485,11 +529,15 @@ pub enum TaskOutcome {
 }
 
 /// Learning session tracking progress
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LearningSession {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub task_type: TaskType,
+    ##[schemars(with = "String")]
+
     pub start_time: DateTime<Utc>,
     pub current_turn: u32,
     pub progress: ProgressMetrics,
@@ -497,7 +545,7 @@ pub struct LearningSession {
     pub context_preservation: ContextPreservationState,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProgressMetrics {
     pub completion_percentage: f64,
     pub quality_score: f64,
@@ -506,7 +554,7 @@ pub struct ProgressMetrics {
     pub learning_velocity: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LearningState {
     pub current_strategy: LearningStrategy,
     pub adaptation_history: Vec<AdaptationEvent>,
@@ -514,7 +562,7 @@ pub struct LearningState {
     pub resource_utilization: ResourceUtilization,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub enum LearningStrategy {
     Conservative,
     Balanced,
@@ -522,7 +570,7 @@ pub enum LearningStrategy {
     Adaptive,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AdaptationEvent {
     pub timestamp: DateTime<Utc>,
     pub adaptation_type: AdaptationType,
@@ -530,7 +578,7 @@ pub struct AdaptationEvent {
     pub impact: AdaptationImpact,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum AdaptationType {
     StrategyChange,
     ResourceReallocation,
@@ -538,7 +586,7 @@ pub enum AdaptationType {
     LearningRateAdjustment,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum AdaptationTrigger {
     PerformanceDegradation,
     QualityIssue,
@@ -547,7 +595,7 @@ pub enum AdaptationTrigger {
     ErrorPattern,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AdaptationImpact {
     pub performance_change: f64,
     pub quality_change: f64,
@@ -555,14 +603,14 @@ pub struct AdaptationImpact {
     pub confidence_change: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceTrends {
     pub short_term: TrendData,
     pub medium_term: TrendData,
     pub long_term: TrendData,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TrendData {
     pub direction: TrendDirection,
     pub magnitude: f64,
@@ -570,7 +618,7 @@ pub struct TrendData {
     pub data_points: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum TrendDirection {
     Improving,
     Declining,
@@ -578,7 +626,7 @@ pub enum TrendDirection {
     Volatile,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResourceUtilization {
     pub cpu_usage: f64,
     pub memory_usage: f64,
@@ -587,23 +635,26 @@ pub struct ResourceUtilization {
     pub efficiency_ratio: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContextPreservationState {
     pub preserved_contexts: Vec<PreservedContext>,
     pub context_freshness: HashMap<String, DateTime<Utc>>,
     pub context_usage: HashMap<String, u32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PreservedContext {
+    #[schemars(with = "String")]
     pub context_id: Uuid,
     pub context_type: ContextType,
     pub content: String,
     pub relevance_score: f64,
+    ##[schemars(with = "String")]
+
     pub last_accessed: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ContextType {
     CodeContext,
     DocumentationContext,
@@ -613,15 +664,16 @@ pub enum ContextType {
 }
 
 /// Credit assignment for learning
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreditAssignment {
+    #[schemars(with = "String")]
     pub session_id: Uuid,
     pub turn_credits: Vec<TurnCredit>,
     pub total_credit: f64,
     pub credit_distribution: CreditDistribution,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TurnCredit {
     pub turn_number: u32,
     pub credit_amount: f64,
@@ -629,7 +681,7 @@ pub struct TurnCredit {
     pub contributing_factors: Vec<ContributingFactor>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum CreditType {
     Positive,
     Negative,
@@ -637,14 +689,14 @@ pub enum CreditType {
     Corrective,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContributingFactor {
     pub factor_type: FactorType,
     pub impact: f64,
     pub description: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum FactorType {
     Quality,
     Efficiency,
@@ -653,7 +705,7 @@ pub enum FactorType {
     ErrorReduction,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreditDistribution {
     pub strategy_credit: f64,
     pub resource_credit: f64,
@@ -662,17 +714,20 @@ pub struct CreditDistribution {
 }
 
 /// Learning signals from council
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CouncilLearningSignal {
+    #[schemars(with = "String")]
     pub signal_id: Uuid,
     pub council_judge: CouncilJudge,
     pub signal_type: LearningSignalType,
     pub content: String,
     pub confidence: f64,
+    ##[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum CouncilJudge {
     Constitutional,
     Technical,
@@ -680,7 +735,7 @@ pub enum CouncilJudge {
     Integration,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum LearningSignalType {
     PerformanceFeedback,
     QualityAssessment,
@@ -690,16 +745,18 @@ pub enum LearningSignalType {
 }
 
 /// Learning update from processing signals
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LearningUpdate {
+    #[schemars(with = "String")]
     pub update_id: Uuid,
+    #[schemars(with = "String")]
     pub session_id: Uuid,
     pub update_type: LearningUpdateType,
     pub changes: Vec<LearningChange>,
     pub impact_assessment: ImpactAssessment,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum LearningUpdateType {
     StrategyAdjustment,
     ResourceReallocation,
@@ -708,7 +765,7 @@ pub enum LearningUpdateType {
     SelfPromptingOptimization,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LearningChange {
     pub change_type: ChangeType,
     pub description: String,
@@ -716,7 +773,7 @@ pub struct LearningChange {
     pub expected_impact: ExpectedImpact,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ChangeType {
     LearningRate,
     StrategyWeight,
@@ -725,7 +782,7 @@ pub enum ChangeType {
     QualityThreshold,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExpectedImpact {
     pub performance_impact: f64,
     pub quality_impact: f64,
@@ -733,7 +790,7 @@ pub struct ExpectedImpact {
     pub confidence: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ImpactAssessment {
     pub overall_impact: f64,
     pub risk_level: RiskLevel,
@@ -741,7 +798,7 @@ pub struct ImpactAssessment {
     pub rollback_plan: Option<RollbackPlan>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub enum RiskLevel {
     Low,
     Medium,
@@ -749,29 +806,33 @@ pub enum RiskLevel {
     Critical,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ImplementationEffort {
     Low,
     Medium,
     High,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RollbackPlan {
     pub rollback_steps: Vec<RollbackStep>,
+    #[serde(with = "duration_serde")]
+    #[schemars(with = "i64")]
     pub rollback_time_estimate: chrono::Duration,
     pub rollback_risk: RiskLevel,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RollbackStep {
     pub step_number: u32,
     pub description: String,
+    #[serde(with = "duration_serde")]
+    #[schemars(with = "i64")]
     pub estimated_time: chrono::Duration,
 }
 
 /// Snapshot of the learning context for predictive analytics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskLearningSnapshot {
     pub outcome: TaskOutcome,
     pub progress_metrics: Option<ProgressMetrics>,
@@ -815,7 +876,7 @@ impl TaskLearningSnapshot {
 }
 
 /// Prediction of future task performance
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PerformancePrediction {
     pub expected_quality_score: f64,
     pub success_probability: f64,
@@ -826,7 +887,7 @@ pub struct PerformancePrediction {
 }
 
 /// Recommendation for strategy adjustments
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StrategyOptimizationPlan {
     pub recommended_strategy: LearningStrategy,
     pub adjustments: Vec<StrategyAdjustmentSuggestion>,
@@ -837,14 +898,14 @@ pub struct StrategyOptimizationPlan {
 }
 
 /// Suggested adjustment with focus area and magnitude
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StrategyAdjustmentSuggestion {
     pub focus: StrategyAdjustmentFocus,
     pub magnitude: f64,
     pub description: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, JsonSchema)]
 pub enum StrategyAdjustmentFocus {
     Quality,
     Efficiency,
@@ -854,7 +915,7 @@ pub enum StrategyAdjustmentFocus {
 }
 
 /// Prediction of future resource requirements
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResourcePrediction {
     pub expected_cpu_usage: f64,
     pub expected_memory_mb: f64,
@@ -865,7 +926,7 @@ pub struct ResourcePrediction {
     pub bottlenecks: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub enum ResourcePressureLevel {
     Low,
     Moderate,
@@ -874,7 +935,7 @@ pub enum ResourcePressureLevel {
 }
 
 /// Aggregated predictive learning insights
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PredictiveLearningInsights {
     pub performance: PerformancePrediction,
     pub strategy: StrategyOptimizationPlan,
@@ -882,16 +943,18 @@ pub struct PredictiveLearningInsights {
 }
 
 /// Historical performance data
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct HistoricalPerformance {
     pub task_type: TaskType,
+    #[serde(with = "duration_serde")]
+    #[schemars(with = "i64")]
     pub average_completion_time: chrono::Duration,
     pub average_quality_score: f64,
     pub success_rate: f64,
     pub common_failure_patterns: Vec<FailurePattern>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FailurePattern {
     pub pattern_type: FailureType,
     pub frequency: f64,
@@ -899,7 +962,7 @@ pub struct FailurePattern {
     pub mitigation_strategy: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub enum FailureType {
     QualityFailure,
     PerformanceFailure,
@@ -909,7 +972,8 @@ pub enum FailureType {
 }
 
 /// Errors for the learning system
-#[derive(Debug, thiserror::Error)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
 pub enum LearningSystemError {
     #[error("Session management failed: {0}")]
     SessionManagementFailed(String),
@@ -949,7 +1013,7 @@ impl From<String> for LearningSystemError {
 }
 
 /// Learning signals from self-prompting agent execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum SelfPromptingSignal {
     /// Iteration efficiency patterns
     IterationEfficiency {

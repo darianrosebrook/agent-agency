@@ -3,6 +3,7 @@
 //! Handles database schema migrations with rollback capabilities,
 //! migration tracking, and production-safe deployment strategies.
 
+use schemars::JsonSchema;
 use crate::simple_client::DatabaseClient;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
@@ -13,7 +14,7 @@ use tokio::fs;
 use tracing::{debug, error, info, warn};
 
 /// Rollback policy options
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
 enum RollbackPolicy {
     /// Always attempt rollback
     Always,
@@ -28,7 +29,7 @@ enum RollbackPolicy {
 }
 
 /// Rollback risk levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
 enum RollbackRisk {
     /// Low risk rollback
     Low,
@@ -39,7 +40,7 @@ enum RollbackRisk {
 }
 
 /// Database complexity levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
 enum DatabaseComplexity {
     /// Simple database
     Simple,
@@ -62,7 +63,7 @@ pub struct MigrationManager {
 }
 
 /// Migration configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MigrationConfig {
     /// Enable migration tracking
     pub track_migrations: bool,
@@ -77,13 +78,15 @@ pub struct MigrationConfig {
 }
 
 /// Migration result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MigrationResult {
     /// Migration ID
     pub migration_id: String,
     /// Migration name
     pub name: String,
     /// Applied timestamp
+    #[schemars(with = "String")]
+
     pub applied_at: DateTime<Utc>,
     /// Execution time (milliseconds)
     pub execution_time_ms: u64,
@@ -96,13 +99,15 @@ pub struct MigrationResult {
 }
 
 /// Applied migration record
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AppliedMigration {
     /// Migration ID
     pub migration_id: String,
     /// Migration name
     pub name: String,
     /// Applied timestamp
+    #[schemars(with = "String")]
+
     pub applied_at: DateTime<Utc>,
     /// Checksum for integrity verification
     pub checksum: String,
@@ -300,11 +305,11 @@ impl MigrationManager {
         let mut applied = Vec::new();
         for row in rows {
             let migration = AppliedMigration {
-                migration_id: row.get::<String, _>("migration_id"),
-                name: row.get::<String, _>("name"),
-                applied_at: row.get::<DateTime<Utc>, _>("applied_at"),
-                checksum: row.get::<String, _>("checksum"),
-                success: row.get::<bool, _>("success"),
+                migration_id: row.get("migration_id"),
+                name: row.get("name"),
+                applied_at: row.get("applied_at"),
+                checksum: row.get("checksum"),
+                success: row.get("success"),
             };
             applied.push(migration);
         }
@@ -673,7 +678,7 @@ impl MigrationManager {
 }
 
 /// Migration information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 struct MigrationInfo {
     /// Migration ID (numeric)
     id: u32,

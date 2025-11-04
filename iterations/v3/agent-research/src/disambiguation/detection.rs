@@ -7,11 +7,16 @@ use crate::disambiguation::types::*;
 use crate::ProcessingContext;
 
 /// Detects various types of ambiguities in text
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct AmbiguityDetector {
+    #[schemars(with = "String")]
     pronoun_regex: Regex,
+    #[schemars(with = "Vec<String>")]
     technical_term_patterns: Vec<Regex>,
+    #[schemars(with = "Vec<String>")]
     scope_boundary_patterns: Vec<Regex>,
+    #[schemars(with = "Vec<String>")]
     temporal_patterns: Vec<Regex>,
 }
 
@@ -45,7 +50,10 @@ impl AmbiguityDetector {
 
         for mat in self.pronoun_regex.find_iter(sentence) {
             ambiguities.push(Ambiguity {
+                text: mat.as_str().to_string(),
                 ambiguity_type: AmbiguityType::Pronoun,
+                start_pos: mat.start(),
+                end_pos: mat.end(),
                 position: (mat.start(), mat.end()),
                 original_text: mat.as_str().to_string(),
                 possible_resolutions: vec![
@@ -54,6 +62,7 @@ impl AmbiguityDetector {
                     "the function".to_string(),
                 ],
                 confidence: 0.8,
+                context: None,
             });
         }
 
@@ -71,11 +80,15 @@ impl AmbiguityDetector {
         for pattern in &self.technical_term_patterns {
             for mat in pattern.find_iter(sentence) {
                 ambiguities.push(Ambiguity {
+                    text: mat.as_str().to_string(),
                     ambiguity_type: AmbiguityType::TechnicalTerm,
+                    start_pos: mat.start(),
+                    end_pos: mat.end(),
                     position: (mat.start(), mat.end()),
                     original_text: mat.as_str().to_string(),
                     possible_resolutions: self.get_technical_resolutions(mat.as_str(), context),
                     confidence: 0.7,
+                    context: context.map(|s| s.to_string()),
                 });
             }
         }
@@ -90,7 +103,10 @@ impl AmbiguityDetector {
         for pattern in &self.scope_boundary_patterns {
             for mat in pattern.find_iter(sentence) {
                 ambiguities.push(Ambiguity {
+                    text: mat.as_str().to_string(),
                     ambiguity_type: AmbiguityType::ScopeBoundary,
+                    start_pos: mat.start(),
+                    end_pos: mat.end(),
                     position: (mat.start(), mat.end()),
                     original_text: mat.as_str().to_string(),
                     possible_resolutions: vec![
@@ -98,6 +114,7 @@ impl AmbiguityDetector {
                         "within the defined scope".to_string(),
                     ],
                     confidence: 0.6,
+                    context: None,
                 });
             }
         }

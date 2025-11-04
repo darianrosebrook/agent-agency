@@ -27,8 +27,9 @@
 //! }
 //! ```
 
+use schemars::JsonSchema;
 use crate::mcp_integration::{MCPIntegration, create_tool_definition, create_parameter};
-use agent_mcp::{MCPTool, mcp_types::{ToolType, ToolCapability, ParameterDefinition}};
+use agent_mcp::mcp_types::{MCPTool, ToolType, ToolCapability, ParameterDefinition};
 use std::sync::Arc;
 use tracing::{info, warn};
 
@@ -117,8 +118,9 @@ impl WorkerServiceRegistry {
 }
 
 /// Service health status
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ServiceHealth {
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+enum ServiceHealth {
     Healthy,
     Degraded,
     Unhealthy,
@@ -126,8 +128,9 @@ pub enum ServiceHealth {
 }
 
 /// Errors from service operations
-#[derive(Debug, thiserror::Error)]
-pub enum ServiceError {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
+enum ServiceError {
     #[error("Service initialization failed: {0}")]
     InitializationFailed(String),
 

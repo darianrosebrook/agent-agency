@@ -20,10 +20,11 @@ impl EntityDisambiguator {
         // Strategy 1: Exact match within context
         if let Some(exact_match) = self.find_exact_match(entity, context) {
             candidates.push(EntityCandidate {
-                entity: exact_match,
-                similarity_score: 1.0,
-                context_match: true,
-                source: "exact_match".to_string(),
+                id: exact_match.id.clone(),
+                name: exact_match.name.clone(),
+                entity_type: exact_match.entity_type.clone(),
+                confidence: exact_match.confidence,
+                context: exact_match.context.clone(),
             });
         }
 
@@ -38,39 +39,39 @@ impl EntityDisambiguator {
         // Select best match
         let best_match = self.select_best_entity_match(&candidates);
 
-        let method = if candidates.iter().any(|c| c.similarity_score >= 0.9) {
+        let method = if candidates.iter().any(|c| c.confidence >= 0.9) {
             DisambiguationMethod::ExactMatch
-        } else if candidates.iter().any(|c| c.context_match) {
+        } else if candidates.iter().any(|c| c.context.is_some()) {
             DisambiguationMethod::ContextBased
         } else {
             DisambiguationMethod::FuzzyMatch
         };
 
         Ok(EntityDisambiguation {
-            original_entity: entity.clone(),
+            entity: entity.name.clone(),
             candidates,
-            best_match,
-            disambiguation_method: method,
+            selected_candidate: best_match,
+            confidence: best_match.as_ref().map(|c| c.confidence).unwrap_or(0.0),
+            method,
         })
     }
 
     /// Find exact matches for entity in context
     fn find_exact_match(&self, entity: &Entity, context: &str) -> Option<Entity> {
         let context_lower = context.to_lowercase();
-        let entity_text_lower = entity.text.to_lowercase();
+        let entity_name_lower = entity.name.to_lowercase();
 
         // Look for exact matches or close variations
-        if context_lower.contains(&entity_text_lower) {
+        if context_lower.contains(&entity_name_lower) {
             Some(Entity {
                 id: format!("exact_{}", entity.id),
-                text: entity.text.clone(),
+                name: entity.name.clone(),
+                text: entity.name.clone(),  // Alias for name
                 entity_type: entity.entity_type.clone(),
                 confidence: 0.95,
-                position: (0, entity.text.len()), // Placeholder position
-                metadata: HashMap::from([
-                    ("match_type".to_string(), "exact".to_string()),
-                    ("source".to_string(), "context_match".to_string()),
-                ]),
+                context: Some(context.to_string()),
+                position: None,
+                metadata: None,
             })
         } else {
             None
@@ -83,7 +84,7 @@ impl EntityDisambiguator {
         let words: Vec<&str> = context.split_whitespace().collect();
 
         for (i, &word) in words.iter().enumerate() {
-            let similarity = self.calculate_string_similarity(&entity.text, word);
+            let similarity = self.calculate_string_similarity(&entity.name, word);
             if similarity > 0.7 {
                 // Look for context around the word
                 let start = i.saturating_sub(2);
@@ -91,20 +92,11 @@ impl EntityDisambiguator {
                 let context_window = words[start..end].join(" ");
 
                 candidates.push(EntityCandidate {
-                    entity: Entity {
-                        id: format!("fuzzy_{}_{}", entity.id, i),
-                        text: word.to_string(),
-                        entity_type: self.infer_entity_type(word),
-                        confidence: similarity,
-                        position: (0, word.len()),
-                        metadata: HashMap::from([
-                            ("similarity".to_string(), similarity.to_string()),
-                            ("context_window".to_string(), context_window),
-                        ]),
-                    },
-                    similarity_score: similarity,
-                    context_match: false,
-                    source: "fuzzy_match".to_string(),
+                    id: format!("fuzzy_{}_{}", entity.id, i),
+                    name: word.to_string(),
+                    entity_type: self.infer_entity_type(word),
+                    confidence: similarity,
+                    context: Some(context_window),
                 });
             }
         }
@@ -136,24 +128,15 @@ impl EntityDisambiguator {
             if let Ok(regex) = Regex::new(pattern) {
                 for capture in regex.find_iter(&context_lower) {
                     let matched_text = capture.as_str();
-                    let similarity = self.calculate_semantic_similarity(&entity.text, matched_text);
+                    let similarity = self.calculate_semantic_similarity(&entity.name, matched_text);
 
                     if similarity > 0.6 {
                         candidates.push(EntityCandidate {
-                            entity: Entity {
-                                id: format!("context_{}_{}", entity.id, candidates.len()),
-                                text: matched_text.to_string(),
-                                entity_type: entity.entity_type.clone(),
-                                confidence: similarity,
-                                position: (capture.start(), capture.end()),
-                                metadata: HashMap::from([
-                                    ("pattern".to_string(), pattern.to_string()),
-                                    ("context_match".to_string(), "true".to_string()),
-                                ]),
-                            },
-                            similarity_score: similarity,
-                            context_match: true,
-                            source: "context_pattern".to_string(),
+                            id: format!("context_{}_{}", entity.id, candidates.len()),
+                            name: matched_text.to_string(),
+                            entity_type: entity.entity_type.clone(),
+                            confidence: similarity,
+                            context: Some(context.to_string()),
                         });
                     }
                 }
@@ -173,8 +156,7 @@ impl EntityDisambiguator {
         let mut best_score = 0.0;
 
         for candidate in candidates {
-            let score = candidate.similarity_score * candidate.entity.confidence
-                      * if candidate.context_match { 1.2 } else { 1.0 };
+            let score = candidate.confidence * if candidate.context.is_some() { 1.2 } else { 1.0 };
 
             if score > best_score {
                 best_score = score;

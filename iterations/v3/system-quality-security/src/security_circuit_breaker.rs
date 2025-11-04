@@ -1,12 +1,13 @@
 //! Circuit breaker pattern implementation for resilient external service calls
 
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tracing::{info, warn, error};
 
 /// Circuit breaker states
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, JsonSchema)]
 pub enum CircuitState {
     /// Normal operation - requests are allowed
     Closed,
@@ -17,7 +18,7 @@ pub enum CircuitState {
 }
 
 /// Circuit breaker configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct CircuitBreakerConfig {
     /// Service name/identifier
     pub service_name: String,
@@ -47,12 +48,13 @@ impl Default for CircuitBreakerConfig {
 }
 
 /// Circuit breaker instance
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct CircuitBreaker {
     config: CircuitBreakerConfig,
     state: CircuitState,
     failure_count: u32,
     success_count: u32,
+    #[schemars(with = "String")]
     last_failure_time: Option<Instant>,
     half_open_requests: u32,
 }
@@ -171,11 +173,12 @@ impl CircuitBreaker {
 }
 
 /// Circuit breaker statistics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct CircuitBreakerStats {
     pub state: CircuitState,
     pub failure_count: u32,
     pub success_count: u32,
+    #[schemars(with = "String")]
     pub last_failure_time: Option<Instant>,
     pub half_open_requests: u32,
 }
@@ -280,8 +283,8 @@ impl CircuitBreakerRegistry {
 }
 
 /// Circuit breaker error types
-#[derive(Debug, thiserror::Error)]
-pub enum CircuitBreakerError<E> {
+#[derive(Debug, thiserror::Error, JsonSchema)]
+pub enum CircuitBreakerError <E> {
     #[error("Circuit breaker is open for service: {0}")]
     CircuitOpen(String),
     #[error("Operation failed: {0}")]

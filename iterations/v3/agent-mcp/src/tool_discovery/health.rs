@@ -1,5 +1,6 @@
 //! Health monitoring for tool discovery
 
+use schemars::JsonSchema;
 use super::core::{HealthStatus, HealthCheckResult};
 use crate::mcp_types::*;
 use anyhow::Result;
@@ -80,7 +81,7 @@ impl ToolDiscoveryHealthMonitor {
 }
 
 /// Endpoint type enumeration
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, JsonSchema)]
 pub enum EndpointType {
     /// HTTP REST endpoint
     Http,
@@ -107,7 +108,7 @@ impl std::fmt::Display for EndpointType {
 }
 
 /// Health check result structure
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct EndpointHealthCheckResult {
     /// Endpoint URL or path
     pub endpoint: String,
@@ -118,6 +119,7 @@ pub struct EndpointHealthCheckResult {
     /// Response time in milliseconds
     pub response_time_ms: u64,
     /// Timestamp of check
+    #[schemars(with = "String")]
     pub checked_at: DateTime<Utc>,
     /// Error message if unhealthy
     pub error_message: Option<String>,
@@ -126,7 +128,7 @@ pub struct EndpointHealthCheckResult {
 }
 
 /// Internal health check result for processing
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct InternalHealthCheckResult {
     /// Component name
     pub component: String,

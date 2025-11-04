@@ -212,7 +212,7 @@ impl CachingService for DefaultCachingService {
         }
     }
 
-    async fn invalidate_model_cache(&self, model_id: &str) -> Result<usize, CachingServiceError> {
+    async fn invalidate_model_cache(&self, _model_id: &str) -> Result<usize, CachingServiceError> {
         // PLACEHOLDER: In a real implementation, this would:
         // 1. List all keys matching pattern "inference:{model_id}:*"
         // 2. Delete each matching key
@@ -258,5 +258,6 @@ pub enum CachingServiceError {
     #[error("Invalid cache key: {0}")]
     InvalidKey(String),
 }
+
 
 

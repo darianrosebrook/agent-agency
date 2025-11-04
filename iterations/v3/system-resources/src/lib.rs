@@ -10,6 +10,7 @@ pub mod monitoring;
 // Re-export common types
 pub use system_configuration::*;
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use async_trait::async_trait;
 
@@ -52,7 +53,7 @@ pub trait ResourceManagementService: Send + Sync + std::fmt::Debug {
 impl ResourceManagementService for ResourceManagerService {
     async fn allocate_resources_for_task(
         &self,
-        task_id: &str,
+        _task_id: &str,
         requirements: ResourceRequirements,
     ) -> Result<ResourceAllocation, ResourceError> {
         // Select best pool for requirements
@@ -182,7 +183,7 @@ impl ResourceManagerService {
             // Check if pool can satisfy requirements
             let can_satisfy = requirements.memory_mb.map_or(true, |mem| pool.total_memory_mb() >= mem)
                 && requirements.cpu_cores.map_or(true, |cpu| pool.total_cpu_cores() >= cpu)
-                && requirements.gpu_memory_mb.map_or(true, |gpu| true); // GPU check would need pool method
+                && requirements.gpu_memory_mb.map_or(true, |_gpu| true); // GPU check would need pool method
 
             if can_satisfy && utilization < best_utilization {
                 best_utilization = utilization;
@@ -199,7 +200,7 @@ impl ResourceManagerService {
     /// Find pool for an allocation ID
     async fn find_pool_for_allocation(&self, allocation_id: &str) -> Result<String, ResourceError> {
         // Search through pools to find which one has this allocation
-        for (name, pool) in &self.pools {
+        for (name, _pool) in &self.pools {
             // In a real implementation, we'd check if pool contains allocation
             // For now, return first pool (would need allocation tracking)
             return Ok(name.clone());
@@ -212,7 +213,7 @@ impl ResourceManagerService {
 }
 
 /// Resource requirements specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResourceRequirements {
     pub memory_mb: Option<u64>,
     pub cpu_cores: Option<f32>,
@@ -222,7 +223,7 @@ pub struct ResourceRequirements {
 }
 
 /// Resource allocation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResourceAllocation {
     pub allocation_id: String,
     pub pool_name: String,
@@ -232,7 +233,7 @@ pub struct ResourceAllocation {
 }
 
 /// Resource priority levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ResourcePriority {
     Low,
     Normal,
@@ -241,7 +242,7 @@ pub enum ResourcePriority {
 }
 
 /// Resource utilization metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResourceUtilization {
     pub total_memory_mb: u64,
     pub used_memory_mb: u64,
@@ -252,7 +253,7 @@ pub struct ResourceUtilization {
 }
 
 /// Pool-specific utilization
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PoolUtilization {
     pub pool_name: String,
     pub utilization_percent: f64,
@@ -261,7 +262,7 @@ pub struct PoolUtilization {
 }
 
 /// Resource management errors
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, JsonSchema)]
 pub enum ResourceError {
     #[error("Pool not found: {0}")]
     PoolNotFound(String),

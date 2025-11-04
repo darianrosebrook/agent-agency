@@ -328,7 +328,7 @@ impl EmbeddingServiceFactory {
         config: EmbeddingConfig,
         preferred_model: Option<String>,
     ) -> Box<dyn EmbeddingService> {
-        use crate::embedding::tokenization::SimpleTokenizer;
+        
         use std::sync::Arc;
         use std::path::PathBuf;
 

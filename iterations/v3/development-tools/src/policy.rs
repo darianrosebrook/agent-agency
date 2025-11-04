@@ -3,13 +3,14 @@
 //! Consolidated policy definitions and validation logic
 //! extracted from scattered implementations across the codebase.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use anyhow::Result;
 
 /// Unified CAWS Policy configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CawsPolicy {
     /// Risk tier configuration
     pub risk_tiers: HashMap<String, RiskTierConfig>,
@@ -24,7 +25,7 @@ pub struct CawsPolicy {
 }
 
 /// Risk tier configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RiskTierConfig {
     pub name: String,
     pub level: u8,
@@ -34,7 +35,7 @@ pub struct RiskTierConfig {
 }
 
 /// Budget limits for different resource types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct BudgetLimits {
     pub max_files: u32,
     pub max_loc: u32,
@@ -43,7 +44,7 @@ pub struct BudgetLimits {
 }
 
 /// Validation rules
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationRule {
     pub id: String,
     pub name: String,
@@ -54,7 +55,7 @@ pub struct ValidationRule {
 }
 
 /// Violation severity levels
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ViolationSeverity {
     Info,
     Warning,
@@ -63,7 +64,7 @@ pub enum ViolationSeverity {
 }
 
 /// Rule categories
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum RuleCategory {
     Budget,
     Security,
@@ -73,7 +74,7 @@ pub enum RuleCategory {
 }
 
 /// Waiver policies
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WaiverPolicies {
     pub allow_budget_overruns: bool,
     pub max_waiver_duration_days: u32,
@@ -81,7 +82,7 @@ pub struct WaiverPolicies {
 }
 
 /// Integration settings
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct IntegrationSettings {
     pub mcp_enabled: bool,
     pub orchestration_enabled: bool,

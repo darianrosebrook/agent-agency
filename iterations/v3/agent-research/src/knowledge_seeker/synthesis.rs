@@ -11,8 +11,9 @@ use crate::{ConfigurationUpdate, ContextBuilder};
 use super::events::EventEmitter;
 
 /// Context synthesizer for combining and summarizing research results
-#[derive(Debug)]
-pub struct ContextSynthesizer {
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct ContextSynthesizerr {
     context_builder: Arc<ContextBuilder>,
     config: ResearchAgentConfig,
     event_emitter: Arc<EventEmitter>,

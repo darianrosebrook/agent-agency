@@ -2,6 +2,8 @@
 //!
 //! Manages context allocation, hierarchical organization, and budget enforcement.
 
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use async_trait::async_trait;
 
@@ -106,7 +108,8 @@ impl HierarchicalContextManager {
 }
 
 /// Context bundle with metadata and allocation info
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContextBundle {
     pub id: String,
     pub content: String,
@@ -116,7 +119,8 @@ pub struct ContextBundle {
 }
 
 /// Context allocation budget
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContextBudget {
     pub max_tokens: usize,
     pub priority: f64,
@@ -124,7 +128,8 @@ pub struct ContextBudget {
 }
 
 /// Allocation information
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Allocation {
     pub tokens_used: usize,
     pub priority: f64,
@@ -132,7 +137,8 @@ pub struct Allocation {
 }
 
 /// Context usage statistics
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContextStats {
     pub total_tokens: usize,
     pub active_contexts: usize,

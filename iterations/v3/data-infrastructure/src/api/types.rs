@@ -3,6 +3,7 @@
 //! Contains all request/response structs, configuration types, and data models
 //! used throughout the REST API interface.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
@@ -10,7 +11,7 @@ use chrono::{DateTime, Utc};
 use agent_agency_contracts::{WorkingSpec, ExecutionArtifacts, QualityReport};
 
 /// API configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ApiConfig {
     /// Server host
     pub host: String,
@@ -29,7 +30,7 @@ pub struct ApiConfig {
 }
 
 /// Task submission request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskSubmissionRequest {
     /// Natural language task description
     pub description: String,
@@ -46,8 +47,9 @@ pub struct TaskSubmissionRequest {
 }
 
 /// Task submission response
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskSubmissionResponse {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub status: String,
     pub message: String,
@@ -55,8 +57,9 @@ pub struct TaskSubmissionResponse {
 }
 
 /// Task status response
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskStatusResponse {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub status: String,
     pub progress_percentage: f32,
@@ -67,26 +70,29 @@ pub struct TaskStatusResponse {
 }
 
 /// Task result response
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskResultResponse {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub status: String,
     pub result: Option<serde_json::Value>, // Task execution result summary
     pub working_spec: Option<WorkingSpec>,
     pub artifacts: Option<ExecutionArtifacts>,
+    #[schemars(skip)]
     pub quality_report: Option<QualityReport>,
     pub completed_at: Option<DateTime<Utc>>,
     pub error_message: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct SaveQueryRequest {
     pub name: String,
     pub query_text: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, JsonSchema)]
 pub struct SavedQueryResponse {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub name: String,
     pub query_text: String,
@@ -95,19 +101,22 @@ pub struct SavedQueryResponse {
 }
 
 /// Dashboard iteration summary
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DashboardIterationSummary {
     pub iteration: usize,
     pub score: f64,
     pub stop_reason: String,
     pub file_changes: usize,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub model_used: String,
 }
 
 /// Dashboard task summary
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DashboardTaskSummary {
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub description: String,
     pub status: String,
@@ -115,13 +124,17 @@ pub struct DashboardTaskSummary {
     pub total_iterations: usize,
     pub score: Option<f64>,
     pub execution_mode: String,
+    #[schemars(with = "String")]
+
     pub start_time: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub last_update: DateTime<Utc>,
     pub iterations: Vec<DashboardIterationSummary>,
 }
 
 /// Diff summary for dashboard
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DashboardDiffSummary {
     pub iteration: usize,
     pub file_path: String,
@@ -132,7 +145,7 @@ pub struct DashboardDiffSummary {
 }
 
 /// Waiver request for creating new waivers
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WaiverRequest {
     pub title: String,
     pub reason: String,
@@ -141,12 +154,15 @@ pub struct WaiverRequest {
     pub approved_by: String,
     pub impact_level: String,
     pub mitigation_plan: String,
+    #[schemars(with = "String")]
+
     pub expires_at: DateTime<Utc>,
 }
 
 /// Waiver response
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WaiverResponse {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub title: String,
     pub reason: String,
@@ -155,25 +171,34 @@ pub struct WaiverResponse {
     pub approved_by: String,
     pub impact_level: String,
     pub mitigation_plan: String,
+    #[schemars(with = "String")]
+
     pub expires_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub updated_at: DateTime<Utc>,
     pub status: String,
     pub metadata: serde_json::Value,
 }
 
 /// Waiver approval request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WaiverApprovalRequest {
     pub approver: String,
     pub justification: Option<String>,
 }
 
 /// Provenance response
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProvenanceResponse {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub verdict_id: Uuid,
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub decision: serde_json::Value,
     pub consensus_score: f32,
@@ -181,12 +206,14 @@ pub struct ProvenanceResponse {
     pub git_commit_hash: Option<String>,
     pub git_trailer: String,
     pub signature: String,
+    #[schemars(with = "String")]
+
     pub timestamp: DateTime<Utc>,
     pub metadata: serde_json::Value,
 }
 
 /// Link provenance request
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct LinkProvenanceRequest {
     pub provenance_id: String,
     pub commit_hash: String,

@@ -2,6 +2,8 @@
 //!
 //! Orchestrates the generate → evaluate → refine cycle for autonomous task execution.
 
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::{info, warn};
@@ -16,7 +18,8 @@ pub struct SelfPromptingLoop {
     event_sender: mpsc::UnboundedSender<SelfPromptingEvent>,
 }
 
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum SelfPromptingEvent {
     IterationStarted { iteration: usize, task_id: String },
     PromptGenerated { iteration: usize, prompt: String },
@@ -26,7 +29,8 @@ pub enum SelfPromptingEvent {
     Error { iteration: usize, error: String },
 }
 
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct SelfPromptingResult {
     pub task: Task,
     pub result: TaskResult,

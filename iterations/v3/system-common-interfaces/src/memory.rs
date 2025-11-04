@@ -11,25 +11,27 @@ use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 
-use crate::Result;
 
 /// Unique identifier types
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct MemoryId(pub String);
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct MemoryId (pub String);
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct WorkspaceId(pub String);
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct WorkspaceId (pub String);
 
 /// Memory record stored/retrieved by the memory service
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct MemoryRecord {
     pub id: MemoryId,
     pub workspace_id: WorkspaceId,
     pub embedding: Option<Vec<f32>>, // Optional if not using vector search
     pub content: String,
     pub metadata: HashMap<String, serde_json::Value>,
+    #[schemars(with = "String")]
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
     pub updated_at: DateTime<Utc>,
+    #[schemars(with = "Option<String>")]
     pub last_accessed: Option<DateTime<Utc>>,
     pub importance: f32,
     pub decay_factor: f32,

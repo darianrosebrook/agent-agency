@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use glob::Pattern;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
@@ -7,7 +8,7 @@ use std::path::Path;
 use crate::recovery_types::{Codec, Eol, PayloadKind};
 
 /// Content strategy configuration for determining how to store file changes
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContentStrategy {
     /// Default thresholds for content strategy decisions
     pub defaults: ContentThresholds,
@@ -18,7 +19,7 @@ pub struct ContentStrategy {
 }
 
 /// Default thresholds for content strategy decisions
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContentThresholds {
     /// Maximum size for full content storage (bytes)
     pub max_full_size: u64,
@@ -35,7 +36,7 @@ pub struct ContentThresholds {
 }
 
 /// Override configuration for specific file patterns
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContentOverride {
     /// Glob pattern to match
     pub pattern: String,
@@ -50,7 +51,7 @@ pub struct ContentOverride {
 }
 
 /// Text file detection configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TextDetectionConfig {
     /// File extensions that are always considered text
     pub text_extensions: Vec<String>,
@@ -349,7 +350,7 @@ impl ContentStrategy {
 }
 
 /// Content strategy decision for a file
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ContentDecision {
     /// How to store the content
     pub kind: PayloadKind,

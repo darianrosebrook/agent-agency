@@ -5,13 +5,14 @@ use super::state_manager::WorkspaceStateManager;
  */
 use super::state_types::*;
 use anyhow::Result;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tracing::info;
 
 /// Rollback operation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RollbackResult {
     /// State ID that was rolled back to
     pub target_state: StateId,
@@ -199,13 +200,14 @@ impl WorkspaceViewManager {
 }
 
 /// Metadata for a workspace view
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ViewMetadata {
     /// Name of the view
     pub name: String,
     /// State ID this view represents
     pub state_id: StateId,
     /// When the view was created
+    #[schemars(with = "String")]
     pub created_at: chrono::DateTime<chrono::Utc>,
     /// Source workspace path
     pub source_workspace: PathBuf,

@@ -3,13 +3,15 @@
 //! This module provides integration with CAWS (Code Analysis and Writing Standards)
 //! to validate working specifications before they proceed to execution.
 
+use schemars::JsonSchema;
 use std::sync::Arc;
 use async_trait::async_trait;
 
 use crate::planning_agent::planning_errors::{PlanningError, PlanningResult};
 
 /// CAWS validation error
-#[derive(Debug, thiserror::Error)]
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
 pub enum CawsValidationError {
     #[error("CAWS validation service unavailable: {0}")]
     ServiceUnavailable(String),
@@ -28,7 +30,8 @@ pub enum CawsValidationError {
 }
 
 /// Context for CAWS validation
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationContext {
     /// Risk tier of the task
     pub risk_tier: agent_agency_contracts::task_request::RiskTier,
@@ -41,7 +44,8 @@ pub struct ValidationContext {
 }
 
 /// Validation options
-#[derive(Debug, Clone, Default)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
 pub struct ValidationOptions {
     /// Enable strict mode (fail on warnings)
     pub strict_mode: bool,
@@ -54,7 +58,8 @@ pub struct ValidationOptions {
 }
 
 /// CAWS validation result
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CawsValidationResult {
     /// Whether validation passed
     pub compliant: bool,
@@ -73,7 +78,8 @@ pub struct CawsValidationResult {
 }
 
 /// Validation violation
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationViolation {
     /// Violation code
     pub code: String,
@@ -89,7 +95,8 @@ pub struct ValidationViolation {
 }
 
 /// Violation severity
-#[derive(Debug, Clone, Copy, PartialEq)]
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, Copy)]
 pub enum ViolationSeverity {
     Error,
     Warning,
@@ -97,7 +104,8 @@ pub enum ViolationSeverity {
 }
 
 /// Quality indicator
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityIndicator {
     /// Indicator name
     pub name: String,

@@ -2,13 +2,14 @@
 //!
 //! @author @darianrosebrook
 
+use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Source types that can be verified for integrity
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub enum SourceType {
     File,
     Url,
@@ -44,7 +45,7 @@ impl SourceType {
 }
 
 /// Integrity status of a source
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub enum IntegrityStatus {
     Verified,
     Tampered,
@@ -77,7 +78,7 @@ impl IntegrityStatus {
 }
 
 /// Hash algorithms supported for integrity verification
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub enum HashAlgorithm {
     Sha256,
     Sha512,
@@ -107,7 +108,7 @@ impl HashAlgorithm {
 }
 
 /// Types of verification that can be performed
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub enum VerificationType {
     Initial,
     Periodic,
@@ -143,7 +144,7 @@ impl VerificationType {
 }
 
 /// Results of verification attempts
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub enum VerificationResult {
     Passed,
     Failed,
@@ -176,7 +177,7 @@ impl VerificationResult {
 }
 
 /// Alert types for integrity issues
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub enum AlertType {
     TamperingDetected,
     HashMismatch,
@@ -208,7 +209,7 @@ impl std::fmt::Display for AlertType {
 }
 
 /// Alert severity levels
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub enum AlertSeverity {
     Low,
     Medium,
@@ -240,7 +241,7 @@ impl std::fmt::Display for AlertSeverity {
 }
 
 /// Tampering indicators that can be detected
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub enum TamperingIndicator {
     HashMismatch,
     SizeChange,
@@ -264,8 +265,9 @@ impl std::fmt::Display for TamperingIndicator {
 }
 
 /// Source integrity record containing hash and metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SourceIntegrityRecord {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub source_id: String,
     pub source_type: SourceType,
@@ -275,16 +277,23 @@ pub struct SourceIntegrityRecord {
     pub integrity_status: IntegrityStatus,
     pub tampering_indicators: Vec<TamperingIndicator>,
     pub verification_metadata: HashMap<String, serde_json::Value>,
+    #[schemars(with = "String")]
+
     pub first_seen_at: DateTime<Utc>,
     pub last_verified_at: Option<DateTime<Utc>>,
     pub verification_count: i32,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+
     pub updated_at: DateTime<Utc>,
 }
 
 /// Source integrity verification attempt
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SourceIntegrityVerification {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub source_integrity_id: Uuid,
     pub verification_type: VerificationType,
@@ -296,13 +305,17 @@ pub struct SourceIntegrityVerification {
     pub verification_details: HashMap<String, serde_json::Value>,
     pub verified_by: Option<String>,
     pub verification_duration_ms: Option<i32>,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
 }
 
 /// Source integrity alert
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SourceIntegrityAlert {
+    #[schemars(with = "String")]
     pub id: Uuid,
+    #[schemars(with = "String")]
     pub source_integrity_id: Uuid,
     pub alert_type: AlertType,
     pub severity: AlertSeverity,
@@ -314,11 +327,13 @@ pub struct SourceIntegrityAlert {
     pub resolved: bool,
     pub resolved_by: Option<String>,
     pub resolved_at: Option<DateTime<Utc>>,
+    #[schemars(with = "String")]
+
     pub created_at: DateTime<Utc>,
 }
 
 /// Result of source integrity verification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct IntegrityVerificationResult {
     pub verified: bool,
     pub tampering_detected: bool,
@@ -326,13 +341,15 @@ pub struct IntegrityVerificationResult {
     pub stored_hash: Option<String>,
     pub integrity_status: IntegrityStatus,
     pub tampering_indicators: Vec<TamperingIndicator>,
+    #[schemars(with = "String")]
+
     pub verification_timestamp: DateTime<Utc>,
     pub verification_duration_ms: Option<i32>,
     pub verification_details: HashMap<String, serde_json::Value>,
 }
 
 /// Configuration for source integrity service
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SourceIntegrityConfig {
     pub default_hash_algorithm: HashAlgorithm,
     pub verification_timeout_ms: u64,
@@ -358,7 +375,7 @@ impl Default for SourceIntegrityConfig {
 }
 
 /// Statistics for source integrity verification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SourceIntegrityStats {
     pub total_sources: i64,
     pub verified_sources: i64,
@@ -373,7 +390,7 @@ pub struct SourceIntegrityStats {
 }
 
 /// Input for creating a new source integrity record
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateSourceIntegrityRecord {
     pub source_id: String,
     pub source_type: SourceType,
@@ -386,8 +403,9 @@ pub struct CreateSourceIntegrityRecord {
 }
 
 /// Input for creating a verification record
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateSourceIntegrityVerification {
+    #[schemars(with = "String")]
     pub source_integrity_id: Uuid,
     pub verification_type: VerificationType,
     pub verification_result: VerificationResult,
@@ -401,8 +419,9 @@ pub struct CreateSourceIntegrityVerification {
 }
 
 /// Input for creating an alert
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateSourceIntegrityAlert {
+    #[schemars(with = "String")]
     pub source_integrity_id: Uuid,
     pub alert_type: AlertType,
     pub severity: AlertSeverity,
