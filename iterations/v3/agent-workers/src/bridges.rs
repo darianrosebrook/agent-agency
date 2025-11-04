@@ -128,6 +128,7 @@ impl OrchestrationMonitoringBridge {
         event_type: String,
         data: serde_json::Value,
     ) -> Result<(), ParallelError> {
+        let task_id_clone = task_id.clone();
         let event = MonitoringEvent {
             task_id,
             event_type,
@@ -145,7 +146,7 @@ impl OrchestrationMonitoringBridge {
             }
         }
         
-        tracing::info!("Published monitoring event for task: {}", task_id.0);
+        tracing::info!("Published monitoring event for task: {}", task_id_clone.0);
         Ok(())
     }
     
