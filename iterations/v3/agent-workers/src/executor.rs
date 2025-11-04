@@ -436,11 +436,11 @@ impl TaskExecutor {
             required_languages,
             required_frameworks,
             required_domains: task_spec.scope.as_ref().map(|s| s.domains.clone()).unwrap_or_default(),
-            min_quality_score: match task_spec.risk_tier {
-                RiskTier::Tier1 => 0.9,
-                RiskTier::Tier2 => 0.8,
-                RiskTier::Tier3 => 0.7,
-            },
+            min_quality_score: task_spec.risk_tier.map_or(0.7, |tier| match tier {
+                1 => 0.9,
+                2 => 0.8,
+                _ => 0.7,
+            }),
             min_caws_awareness: 0.8,
             max_execution_time_ms: task_spec.scope.as_ref().and_then(|s| s.max_loc.map(|loc| loc as u64 * 100)),
             preferred_worker_type: None,
@@ -1561,7 +1561,7 @@ impl TaskExecutor {
                         memory_limit_mb: row.try_get::<i32, _>(6).context("Failed to get memory limit")?,
                         cpu_limit_cores: row.try_get::<i32, _>(7).context("Failed to get CPU limit")?,
                         is_active: row.try_get::<bool, _>(8).context("Failed to get active status")?,
-                        last_heartbeat: row.try_get::<DateTime<Utc>, _>(9).context("Failed to get last heartbeat")?,
+                        last_heartbeat: row.try_get::<Option<DateTime<Utc>>, _>(9).context("Failed to get last heartbeat")?,
                         version: row.try_get::<String, _>(10).context("Failed to get version")?,
                         endpoint_url: row.try_get::<Option<String>, _>(11).context("Failed to get endpoint URL")?,
                     })
@@ -1748,12 +1748,7 @@ impl TaskExecutor {
 
                     // Check risk tier restrictions
                     let risk_tier_allowed = max_risk_tier.map_or(true, |max_tier| {
-                        let task_tier_value = match task_spec.risk_tier {
-                            RiskTier::Tier1 => 1,
-                            RiskTier::Tier2 => 2,
-                            RiskTier::Tier3 => 3,
-                        };
-                        task_tier_value <= max_tier
+                        task_spec.risk_tier.map_or(true, |task_tier| task_tier <= max_tier as u32)
                     });
 
                     let is_authorized = domain_allowed && !domain_restricted && risk_tier_allowed;
@@ -1927,14 +1922,16 @@ impl TaskExecutor {
         }
 
         // Add capabilities based on risk tier
-        match task_spec.risk_tier {
-            RiskTier::Tier1 => {
-                capabilities.extend(vec!["security".to_string(), "compliance".to_string()]);
+        if let Some(tier) = task_spec.risk_tier {
+            match tier {
+                1 => {
+                    capabilities.extend(vec!["security".to_string(), "compliance".to_string()]);
+                }
+                2 => {
+                    capabilities.push("quality_gates".to_string());
+                }
+                _ => {}
             }
-            RiskTier::Tier2 => {
-                capabilities.push("quality_gates".to_string());
-            }
-            _ => {}
         }
 
         capabilities
@@ -2009,11 +2006,11 @@ impl TaskExecutor {
     }
 
     fn calculate_timeout(&self, task_spec: &TaskSpec, worker_info: &WorkerCapabilities) -> u64 {
-        let base_timeout = match task_spec.risk_tier {
-            RiskTier::Tier1 => 300, // 5 minutes
-            RiskTier::Tier2 => 180, // 3 minutes
-            RiskTier::Tier3 => 60,  // 1 minute
-        };
+        let base_timeout = task_spec.risk_tier.map_or(60, |tier| match tier {
+            1 => 300, // 5 minutes
+            2 => 180, // 3 minutes
+            _ => 60,  // 1 minute
+        });
 
         let complexity_multiplier = match self.assess_task_complexity(task_spec) {
             TaskComplexity::High => 3.0,
@@ -2025,8 +2022,8 @@ impl TaskExecutor {
     }
 
     fn get_retry_config_for_task(&self, task_spec: &TaskSpec) -> RetryConfig {
-        match task_spec.risk_tier {
-            RiskTier::Tier1 => RetryConfig {
+        match task_spec.risk_tier.unwrap_or(3) {
+            1 => RetryConfig {
                 max_attempts: 5,
                 initial_delay_ms: 1000,
                 max_delay_ms: 10000,
@@ -2035,7 +2032,7 @@ impl TaskExecutor {
                 use_exponential_backoff: true,
                 use_jitter: true,
             },
-            RiskTier::Tier2 => RetryConfig {
+            2 => RetryConfig {
                 max_attempts: 3,
                 initial_delay_ms: 500,
                 max_delay_ms: 5000,
@@ -2044,7 +2041,7 @@ impl TaskExecutor {
                 use_exponential_backoff: true,
                 use_jitter: true,
             },
-            RiskTier::Tier3 => RetryConfig {
+            _ => RetryConfig {
                 max_attempts: 2,
                 initial_delay_ms: 250,
                 max_delay_ms: 2000,
@@ -2057,10 +2054,10 @@ impl TaskExecutor {
     }
 
     fn determine_priority(&self, task_spec: &TaskSpec) -> TaskPriority {
-        match task_spec.risk_tier {
-            RiskTier::Tier1 => TaskPriority::High,
-            RiskTier::Tier2 => TaskPriority::Medium,
-            RiskTier::Tier3 => TaskPriority::Low,
+        match task_spec.risk_tier.unwrap_or(3) {
+            1 => TaskPriority::High,
+            2 => TaskPriority::Medium,
+            _ => TaskPriority::Low,
         }
     }
 
