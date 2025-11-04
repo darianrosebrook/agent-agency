@@ -1957,7 +1957,7 @@ impl TaskExecutor {
         let domain_count = task_spec.scope.as_ref().map(|s| s.domains.len()).unwrap_or(0);
         let criteria_count = task_spec.acceptance_criteria.len();
 
-        let complexity_score = (file_count * 2) + (loc_estimate / 100) + (domain_count * 3) + (criteria_count as usize * 2);
+        let complexity_score = (file_count * 2) + (loc_estimate as usize / 100) + (domain_count * 3) + (criteria_count * 2);
 
         if complexity_score > 50 {
             TaskComplexity::High
@@ -2093,7 +2093,8 @@ impl TaskExecutor {
 
         match self.db_client.query_one(query, &[&worker_id]).await {
             Ok(Some(row)) => {
-                let endpoint: String = row.try_get("endpoint").context("Failed to get endpoint from row")?;
+                let endpoint: String = row.try_get("endpoint")
+                    .map_err(|e| WorkerError::DatabaseError { message: format!("Failed to get endpoint from row: {}", e) })?;
                 Ok(endpoint)
             }
             Ok(None) => {

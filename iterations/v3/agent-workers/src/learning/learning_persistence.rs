@@ -804,7 +804,7 @@ struct OptimalConfigRow {
             .bind(event.id)
             .bind(serde_json::to_string(&event.event_type).unwrap_or_default())
             .bind(event.config_id)
-            .bind(&event.performance_delta)
+            .bind(serde_json::to_value(&event.performance_delta).ok())
             .bind(event.timestamp)
             .bind(serde_json::to_value(&event.metadata).ok())
             .execute(&self.pool)

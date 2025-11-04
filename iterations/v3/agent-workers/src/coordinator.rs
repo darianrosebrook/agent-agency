@@ -325,8 +325,7 @@ impl ParallelCoordinator {
         // Select optimal worker for the subtask
         let worker_id = self.adaptive_selector.select_worker(&subtask, &available_workers).await?
             .ok_or_else(|| ParallelError::Coordination {
-                message: "No suitable worker available".to_string(),
-                source: None
+                message: "No suitable worker available".to_string()
             })?;
 
         // Execute the subtask
@@ -339,7 +338,7 @@ impl ParallelCoordinator {
             subtask_id: result.subtask_id,
             worker_id,
             success: result.success,
-            output: format!("Subtask {} executed successfully", subtask.id.0),
+            output: format!("Subtask {} executed successfully", result.subtask_id.0),
             execution_time,
             quality_score: result.quality_score,
             errors: result.errors.clone(),
