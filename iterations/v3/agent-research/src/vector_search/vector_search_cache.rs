@@ -148,6 +148,13 @@ impl CacheManager {
     }
 
     fn cache_file_path(&self) -> PathBuf {
+        // TODO: Parameterize cache file path for multiple collections
+        // - [ ] Accept collection name as parameter
+        // - [ ] Generate collection-specific cache file paths
+        // - [ ] Support multiple concurrent collections
+        // - [ ] Handle collection name sanitization for file system
+        // - [ ] Add unit tests with various collection names
+        // - [ ] Add integration tests with multiple collections
         // This would need to be parameterized for multiple collections
         // For now, using a generic name
         let file_name = "vector_search_embeddings.json".to_string();

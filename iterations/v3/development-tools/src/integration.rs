@@ -431,6 +431,13 @@ impl McpIntegration for DefaultMcpIntegration {
             "recorded_at": chrono::Utc::now().to_rfc3339(),
         });
         
+        // TODO: Implement store_audit_metadata method in waiver system
+        // - [ ] Add store_audit_metadata method to waiver system API
+        // - [ ] Store audit metadata with execution ID linkage
+        // - [ ] Support querying audit metadata by execution ID
+        // - [ ] Handle storage errors gracefully
+        // - [ ] Add unit tests with mock waiver system
+        // - [ ] Add integration tests with real audit metadata storage
         // Store audit metadata in waiver system for audit trail
         // Note: Using logging for now since store_audit_metadata method is not available
         tracing::debug!("Audit metadata for execution {}: {}", execution.execution_id, audit_metadata);
@@ -880,6 +887,13 @@ impl DefaultOrchestrationIntegration {
             return Ok(None);
         }
 
+        // TODO: Implement real waiver result creation
+        // - [ ] Integrate with waiver system for actual waiver creation
+        // - [ ] Generate proper waiver ID from waiver system
+        // - [ ] Set approved status based on waiver eligibility criteria
+        // - [ ] Calculate expiration date from waiver configuration
+        // - [ ] Add unit tests with mock waiver system
+        // - [ ] Add integration tests with real waiver creation
         // Create a simple waiver result for now
         Ok(Some(WaiverResult {
             waiver_id: Some(Uuid::new_v4().to_string()),

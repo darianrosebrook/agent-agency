@@ -416,6 +416,14 @@ impl WorkerAssignmentStrategy {
 
     /// Calculate worker load factor
     async fn calculate_load_factor(&self, worker: &Worker) -> Result<f64> {
+        // TODO: Implement real worker load calculation
+        // - [ ] Query worker pool for current active task count
+        // - [ ] Calculate CPU and memory usage from worker metrics
+        // - [ ] Factor in task queue depth for worker
+        // - [ ] Combine metrics into load factor score
+        // - [ ] Handle missing metrics gracefully
+        // - [ ] Add unit tests with mock worker load data
+        // - [ ] Add integration tests with real worker load
         // For now, use a simple estimation based on worker model
         // In a real implementation, this would query current task load
 

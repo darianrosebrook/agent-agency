@@ -184,6 +184,13 @@ impl WhisperInferenceExecutor {
             &self.model.config,
         );
 
+        // TODO: Verify CoreML bridge integration is working correctly
+        // - [ ] Ensure CoreML inference is actually executing (not placeholder)
+        // - [ ] Validate output tensor matches expected Whisper format
+        // - [ ] Add telemetry for CoreML inference performance
+        // - [ ] Add error handling for CoreML inference failures
+        // - [ ] Add unit tests with mock CoreML outputs
+        // - [ ] Add integration tests with real CoreML Whisper model
         // Run inference through CoreML
         // Note: This is a placeholder - actual implementation would use the CoreML bridge
         let output_tensor = self.run_coreml_inference(&input_tensor, &inference_options).await?;
@@ -232,6 +239,13 @@ impl WhisperInferenceExecutor {
             )?;
             */
             
+            // TODO: Replace placeholder decoder output with real Whisper decoder
+            // - [ ] Integrate Whisper decoder model loading
+            // - [ ] Run decoder forward pass on encoder output
+            // - [ ] Generate proper token predictions from decoder
+            // - [ ] Handle decoder errors and edge cases
+            // - [ ] Add unit tests with mock decoder outputs
+            // - [ ] Add integration tests with real Whisper decoder
             // Placeholder implementation
             let _output_tensor = candle_core::Tensor::new(&[0.0f32], &candle_core::Device::Cpu)?;
 
@@ -295,6 +309,12 @@ impl WhisperInferenceExecutor {
         // - [ ] Add support for multiple languages and code-switching detection
         // - [ ] Implement subword merging and detokenization logic
         // This would use the actual Whisper tokenizer
+        // TODO: Implement real transcription from decoder output
+        // - [ ] Decode tokens from decoder output tensor
+        // - [ ] Apply Whisper tokenizer to convert tokens to text
+        // - [ ] Handle special tokens and language markers
+        // - [ ] Add unit tests with mock decoder outputs
+        // - [ ] Add integration tests with real transcription
         // For now, return placeholder text
         Ok("This is a placeholder transcription result.".to_string())
     }

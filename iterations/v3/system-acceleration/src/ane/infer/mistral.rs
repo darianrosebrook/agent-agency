@@ -164,6 +164,13 @@ pub async fn generate_text(
         )));
     }
 
+    // TODO: Integrate ANE for Mistral inference
+    // - [ ] Use ANE device instead of CPU for inference
+    // - [ ] Configure ANE execution options for Mistral model
+    // - [ ] Handle ANE inference errors and fallback to CPU
+    // - [ ] Add performance benchmarks for ANE vs CPU
+    // - [ ] Add unit tests with ANE device
+    // - [ ] Add integration tests with real ANE inference
     // Prepare input tensor
     let device = Device::Cpu; // Use CPU for now, ANE integration will come later
     // Convert i32 tokens to f32 for tensor creation
@@ -218,6 +225,13 @@ async fn run_mistral_inference(
 ) -> Result<Tensor> {
     // Use the model's Core ML handle for inference
     let result = model.handle.with_handle(|_handle| -> Result<Tensor> {
+        // TODO: Implement real Core ML inference for Mistral
+        // - [ ] Call actual Core ML inference API with handle
+        // - [ ] Process input tokens through Core ML model
+        // - [ ] Extract output tensor from Core ML results
+        // - [ ] Handle inference errors and timeouts
+        // - [ ] Add unit tests with mock Core ML outputs
+        // - [ ] Add integration tests with real Core ML inference
         // This would call the actual Core ML inference
         // For now, return a placeholder tensor
         let device = Device::Cpu;

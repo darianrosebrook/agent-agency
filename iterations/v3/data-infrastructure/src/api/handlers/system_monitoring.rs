@@ -240,6 +240,13 @@ pub async fn get_diff_summary(
     // 3. Return structured response with all analysis components
     //
     // Real implementation requires:
+    // TODO: Implement AI-powered diff summary generation
+    // - [ ] Integrate AI service client (e.g., OpenAI, Anthropic, or local LLM service)
+    // - [ ] Implement prompt engineering for diff analysis
+    // - [ ] Parse structured output from AI service
+    // - [ ] Add error handling and fallback mechanisms
+    // - [ ] Add unit tests with mock AI service
+    // - [ ] Add integration tests with real AI service
     // - AI service client (e.g., OpenAI, Anthropic, or local LLM service)
     // - Prompt engineering for diff analysis
     // - Structured output parsing

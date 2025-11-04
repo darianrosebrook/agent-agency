@@ -29,6 +29,13 @@ impl CodeModRunner {
 
         println!("Running codemod: {}", self.script_path);
 
+        // TODO: Implement real codemod execution
+        // - [ ] Parse codemod script (e.g., jscodeshift format)
+        // - [ ] Apply codemod transformations to source files
+        // - [ ] Handle transformation errors and rollback
+        // - [ ] Support dry-run mode for preview
+        // - [ ] Add unit tests with mock codemod scripts
+        // - [ ] Add integration tests with real codemod execution
         // For now, just read and validate the script exists
         let content = fs::read_to_string(&script_path)?;
         println!("Codemod script loaded ({} bytes)", content.len());

@@ -62,6 +62,13 @@ impl ModelRouter {
 
     /// Route a model request
     pub fn route(&self, _model_name: &str, _constraints: &RoutingPolicy) -> Result<ModelVariant> {
+        // TODO: Implement real model routing logic
+        // - [ ] Select optimal model variant based on constraints
+        // - [ ] Consider device availability (CPU, ANE, GPU)
+        // - [ ] Consider precision requirements (FP16, FP32)
+        // - [ ] Load balancing across available devices
+        // - [ ] Add unit tests with various routing scenarios
+        // - [ ] Add integration tests with real model routing
         // Placeholder implementation
         Ok(ModelVariant {
             name: "default".to_string(),

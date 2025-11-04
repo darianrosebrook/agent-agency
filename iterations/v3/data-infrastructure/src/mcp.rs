@@ -135,6 +135,13 @@ impl McpServer {
             caws_integration: config.caws_integration.clone(),
         };
 
+        // TODO: Replace stub database client with real implementation
+        // - [ ] Integrate real database client from data-infrastructure
+        // - [ ] Configure database connection pooling
+        // - [ ] Handle database connection errors gracefully
+        // - [ ] Add database health checks
+        // - [ ] Add unit tests with mock database client
+        // - [ ] Add integration tests with real database
         // Create inner MCP server (using stub database client for now)
         let stub_db_client = Arc::new(McpDatabaseClient::new());
         let inner = InnerMCPServer::new(inner_config, stub_db_client);
@@ -231,8 +238,14 @@ impl McpServer {
             }
         }
 
-        // Register with MCP server
         // TODO: Integrate with actual agent-mcp crate when circular dependencies are resolved
+        // - [ ] Resolve circular dependency issues with agent-mcp crate
+        // - [ ] Integrate with MCP server for tool registration
+        // - [ ] Support MCP protocol for tool discovery and invocation
+        // - [ ] Handle MCP server connection errors
+        // - [ ] Add unit tests with mock MCP server
+        // - [ ] Add integration tests with real MCP server
+        // Register with MCP server
         // For now, implement basic tool registration in local registry
 
         // Store tool in local registry for public API access

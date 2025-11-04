@@ -260,6 +260,15 @@ impl PerformanceMonitor {
 
     /// Collect current system metrics
     async fn collect_metrics() -> Result<PerformanceMetrics> {
+        // TODO: Collect actual system metrics
+        // - [ ] Integrate system monitoring library (e.g., sysinfo, prometheus)
+        // - [ ] Collect CPU usage from system
+        // - [ ] Collect memory usage from system
+        // - [ ] Collect network throughput metrics
+        // - [ ] Collect latency metrics from application
+        // - [ ] Collect error rates from logs or metrics
+        // - [ ] Add unit tests with mock system metrics
+        // - [ ] Add integration tests with real system monitoring
         // In a real implementation, this would collect actual system metrics
         // For now, we'll simulate realistic values
 
@@ -316,6 +325,13 @@ impl PerformanceMonitor {
 
     /// Measure current performance metrics
     pub async fn measure_current_performance(&self) -> Result<PerformanceMetrics> {
+        // TODO: Collect actual current performance metrics
+        // - [ ] Integrate system monitoring library for real-time metrics
+        // - [ ] Measure current throughput, latency, CPU, memory
+        // - [ ] Calculate percentiles (P95, P99) from actual measurements
+        // - [ ] Track error rates from application logs
+        // - [ ] Add unit tests with mock metrics
+        // - [ ] Add integration tests with real system monitoring
         // In a real implementation, this would collect actual system metrics
         // For now, simulate measurement with some variance
         use rand::prelude::*;

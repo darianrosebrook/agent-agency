@@ -32,6 +32,14 @@ impl McpCawsIntegration {
     }
 
     pub async fn validate_tool_manifest(&self, _manifest: &serde_json::Value) -> Result<CawsComplianceResult> {
+        // TODO: Implement real CAWS tool manifest validation
+        // - [ ] Integrate with caws-runtime-validator crate
+        // - [ ] Validate tool manifest against CAWS rules
+        // - [ ] Check compliance with change budgets and scope boundaries
+        // - [ ] Generate detailed violation reports
+        // - [ ] Calculate accurate compliance scores
+        // - [ ] Add unit tests with mock tool manifests
+        // - [ ] Add integration tests with real CAWS validation
         // Placeholder implementation
         Ok(CawsComplianceResult {
             is_compliant: true,

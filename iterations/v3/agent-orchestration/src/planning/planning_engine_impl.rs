@@ -73,6 +73,14 @@ impl PlanningEngineImpl {
         execution_ctx: &ExecutionContext,
         task_descriptor: &TaskDescriptor,
     ) -> Result<PlanGenerationContext, PlanningError> {
+        // TODO: Expand plan generation context with full requirements
+        // - [ ] Extract all required context fields from PlanGenerator requirements
+        // - [ ] Include task metadata, dependencies, and constraints
+        // - [ ] Add resource availability and worker capabilities
+        // - [ ] Include historical execution context if available
+        // - [ ] Handle missing context data gracefully
+        // - [ ] Add unit tests with various context configurations
+        // - [ ] Add integration tests with real plan generation
         // For now, create a minimal context - this would need to be expanded
         // based on what PlanGenerator actually needs
         use crate::planning::plan_types::*;
@@ -151,6 +159,14 @@ impl RealWorkingSpecProvider {
 
     /// Try to load an existing working spec from the database, or create a new one
     async fn load_or_create_working_spec(&self) -> Result<agent_agency_contracts::WorkingSpec> {
+        // TODO: Implement working spec database persistence
+        // - [ ] Create working spec database table schema
+        // - [ ] Query database for existing working specs by task ID or spec ID
+        // - [ ] Load and deserialize working spec from database
+        // - [ ] Create new working spec only if none exists
+        // - [ ] Handle database errors and missing data gracefully
+        // - [ ] Add unit tests with mock database
+        // - [ ] Add integration tests with real database persistence
         // For now, create a new working spec since we don't have a working spec table yet
         // In a full implementation, this would query the database for existing specs
         self.create_working_spec_from_task().await

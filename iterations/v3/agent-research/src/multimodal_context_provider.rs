@@ -22,6 +22,14 @@
 // - agent-orchestration/src/lib.rs - EvidenceEnrichmentCoordinator (line 131) references this
 // - Council decision-making needs this for evidence enrichment
 //
+// TODO: Integrate with multimodal RAG system
+// - [ ] Integrate with agent-data-processing ingestors
+// - [ ] Integrate with enrichers for multimodal content
+// - [ ] Integrate with indexers for vector search
+// - [ ] Support multiple content types (text, images, audio, video)
+// - [ ] Add context retrieval from indexed multimodal content
+// - [ ] Add unit tests with mock multimodal content
+// - [ ] Add integration tests with real multimodal RAG system
 // STATUS: Placeholder implementation maintained for future integration with
         the multimodal RAG system (ingestors, enrichers, indexers).
 

@@ -204,6 +204,15 @@ impl SystemTelemetryCollector {
 
     /// Collect system metrics (mock implementation)
     async fn collect_system_metrics(&self) -> Result<serde_json::Value, TelemetryError> {
+        // TODO: Implement real system metrics collection
+        // - [ ] Integrate system monitoring library (sysinfo, prometheus, etc.)
+        // - [ ] Collect actual CPU usage from system
+        // - [ ] Collect actual memory usage from system
+        // - [ ] Collect actual disk usage from system
+        // - [ ] Collect actual network I/O from system
+        // - [ ] Handle metric collection errors gracefully
+        // - [ ] Add unit tests with mock system metrics
+        // - [ ] Add integration tests with real system monitoring
         // In a real implementation, this would collect actual system metrics
         // For now, return mock data
         Ok(serde_json::json!({

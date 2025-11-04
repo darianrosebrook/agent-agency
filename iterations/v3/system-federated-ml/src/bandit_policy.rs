@@ -352,6 +352,12 @@ impl BanditPolicy for LinUCB {
             };
         }
 
+        // TODO: Implement real task type extraction
+        // - [ ] Extract task type from task description or metadata
+        // - [ ] Use NLP or pattern matching to classify task types
+        // - [ ] Support multiple task type categories
+        // - [ ] Add unit tests with various task descriptions
+        // - [ ] Add integration tests with real task classification
         // For now, use a simple task type based on risk tier
         let task_type = format!("tier_{}", ctx.risk_tier);
         let features = Self::features_to_vector(ctx);
@@ -418,6 +424,12 @@ impl BanditPolicy for LinUCB {
         // Get or initialize model parameters
         let (theta, covariance) = self.get_or_init_model(&task_type, feature_dim);
 
+        // TODO: Implement proper LinUCB with ridge regression
+        // - [ ] Implement matrix operations for LinUCB algorithm
+        // - [ ] Use proper ridge regression for parameter updates
+        // - [ ] Handle matrix inversion and numerical stability
+        // - [ ] Add unit tests with various feature dimensions
+        // - [ ] Add integration tests with real LinUCB learning
         // Simplified update (in practice, you'd implement proper ridge regression)
         // This is a placeholder - real LinUCB requires matrix operations
         for (i, feature) in features.iter().enumerate() {

@@ -26,6 +26,13 @@ use crate::audit_trail::{
 // TODO: These modules need to be implemented or moved from other crates
 use crate::types::OrchestratorConfig;
 
+// TODO: Replace placeholder orchestrator with real implementation
+// - [ ] Integrate with main orchestrator implementation
+// - [ ] Implement orchestrator configuration and initialization
+// - [ ] Add orchestrator lifecycle management (start, stop, shutdown)
+// - [ ] Support orchestrator state management
+// - [ ] Add unit tests with mock orchestrator
+// - [ ] Add integration tests with real orchestrator
 // Placeholder orchestrator type until main orchestrator is implemented
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -919,6 +926,13 @@ impl AuditedOrchestrator {
         operation_id: &str,
     ) -> Result<(), AuditError> {
         // TODO: Implement file_ops validation
+        // - [ ] Validate file operations against CAWS rules
+        // - [ ] Check for violations in file operations
+        // - [ ] Generate waiver if violations are acceptable
+        // - [ ] Log validation results for audit trail
+        // - [ ] Handle validation errors gracefully
+        // - [ ] Add unit tests with various file operations
+        // - [ ] Add integration tests with real file operation validation
         // Check for violations and generate waiver if needed
         match Ok(()) { // Placeholder implementation
             Ok(()) => {

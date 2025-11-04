@@ -361,6 +361,11 @@ pub fn create_learning_service() -> Arc<dyn LearningService> {
     Arc::new(ReflexiveLearningService::new())
 }
 
+// TODO: Define ReinforcementLearningAlgorithm trait or implement QLearning adapter
+// - [ ] Define ReinforcementLearningAlgorithm trait locally if needed
+// - [ ] Or use QLearning directly without adapter pattern
+// - [ ] Implement adapter to bridge QLearning to shared trait interface
+// - [ ] Add unit tests for QLearning integration
+// - [ ] Add integration tests with reinforcement learning workflows
 // PLACEHOLDER: SharedQLearningAdapter removed - trait ReinforcementLearningAlgorithm doesn't exist
-// TODO: Define ReinforcementLearningAlgorithm trait locally or use QLearning directly
 // This adapter was meant to bridge QLearning to a shared trait interface that doesn't exist yet

@@ -482,6 +482,12 @@ impl DisasterRecoveryManager {
                 .ok_or("No backup found before target time")?
         };
 
+        // TODO: Implement proper dependency injection for WAL storage
+        // - [ ] Accept WAL storage and replay engine as constructor parameters
+        // - [ ] Remove direct environment variable dependency
+        // - [ ] Support configuration-based WAL storage setup
+        // - [ ] Add unit tests with mock WAL storage
+        // - [ ] Add integration tests with real WAL storage
         // Create WAL storage and replay engine
         // Note: In a real implementation, these would be injected or configured
         // For now, we'll use the database client's connection string

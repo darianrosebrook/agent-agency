@@ -288,6 +288,13 @@ struct AgentOrchestrationService {
 impl AgentOrchestrationService {
     /// Create a new Agent Orchestration Service
     pub async fn new(config: OrchestrationConfig) -> Result<Self, OrchestrationError> {
+        // TODO: Make council components configurable
+        // - [ ] Load judges from configuration or registry
+        // - [ ] Support multiple judge types (technical, ethical, operational)
+        // - [ ] Allow judge selection based on task requirements
+        // - [ ] Add validation for judge configuration
+        // - [ ] Add unit tests with configured judges
+        // - [ ] Add integration tests with real judge panels
         // Create basic council components - TODO: make configurable
         let available_judges: Vec<Arc<dyn crate::judge_backup::Judge>> = vec![]; // Empty for now
         let verdict_aggregator = Arc::new(crate::verdict_aggregation::create_verdict_aggregator());
@@ -308,9 +315,21 @@ impl AgentOrchestrationService {
         let autonomous_executor = autonomous_executor::AutonomousExecutor::new(
             executor_config,
             Some(progress_tracker.clone()), // progress_tracker
+            // TODO: Replace placeholder runtime validator with real implementation
+            // - [ ] Integrate caws-runtime-validator crate
+            // - [ ] Create real CawsRuntimeValidator instance
+            // - [ ] Configure validator with CAWS rules and settings
+            // - [ ] Add unit tests with mock validators
+            // - [ ] Add integration tests with real CAWS validation
             // PLACEHOLDER: runtime_validator - proper implementation needed
             Arc::new(MockCawsRuntimeValidator),
             None, // consensus_coordinator
+            // TODO: Replace placeholder verdict writer with real implementation
+            // - [ ] Integrate verdict storage system (database, file system, etc.)
+            // - [ ] Implement verdict persistence with proper error handling
+            // - [ ] Add verdict retrieval and query capabilities
+            // - [ ] Add unit tests with mock verdict storage
+            // - [ ] Add integration tests with real verdict persistence
             // PLACEHOLDER: verdict_writer - proper implementation needed
             Arc::new(MockVerdictWriter {}),
             Arc::new(OrchestrationProvenanceEmitter::new()), // provenance_emitter
@@ -319,6 +338,13 @@ impl AgentOrchestrationService {
             {
                 // Create a simple factory function for TaskExecutor
                 let factory = || -> Arc<dyn agent_agency_contracts::TaskExecutor> {
+                    // TODO: Implement real TaskExecutor factory
+                    // - [ ] Resolve dependency issues with agent-workers crate
+                    // - [ ] Create TaskExecutor instances from agent-workers
+                    // - [ ] Configure executor with proper settings and capabilities
+                    // - [ ] Handle executor creation errors gracefully
+                    // - [ ] Add unit tests with mock executors
+                    // - [ ] Add integration tests with real TaskExecutor instances
                     // PLACEHOLDER: Real TaskExecutor implementation needed
                     panic!("TaskExecutor factory not implemented - requires agent-workers integration")
                 };

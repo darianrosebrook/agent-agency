@@ -328,6 +328,13 @@ pub struct TestQuality {
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
 pub struct CheckResult {
     pub score: f64,
+    // TODO: Enhance evidence structure with rich metadata
+    // - [ ] Create structured Evidence type with metadata (source, timestamp, confidence)
+    // - [ ] Support multiple evidence types (citation, measurement, logical proof)
+    // - [ ] Include evidence provenance and verification status
+    // - [ ] Add evidence ranking and relevance scoring
+    // - [ ] Add unit tests with various evidence types
+    // - [ ] Add integration tests with real evidence collection
     pub evidence: Vec<String>, // Simple string evidence for now
 }
 

@@ -86,6 +86,13 @@ impl JsonSchemaRegistry {
 #[async_trait::async_trait]
 impl SchemaRegistry for JsonSchemaRegistry {
     fn get(&self, key: &str) -> Option<Value> {
+        // TODO: Implement real schema retrieval
+        // - [ ] Make schema retrieval async for database/remote calls
+        // - [ ] Query schema registry storage (database, cache, etc.)
+        // - [ ] Handle schema versioning and multiple versions
+        // - [ ] Cache frequently accessed schemas
+        // - [ ] Add unit tests with mock schema storage
+        // - [ ] Add integration tests with real schema registry
         // This would be an async call in a real implementation
         // For now, return a basic schema
         Some(serde_json::json!({
@@ -113,6 +120,13 @@ impl SchemaRegistry for JsonSchemaRegistry {
     }
 
     fn convert(&self, from: &str, to: &str, value: Value) -> Result<Value, SchemaError> {
+        // TODO: Implement real schema conversion
+        // - [ ] Make conversion async for complex transformations
+        // - [ ] Load source and target schemas from registry
+        // - [ ] Perform type conversion based on schema definitions
+        // - [ ] Handle conversion errors and incompatible types
+        // - [ ] Add unit tests with various schema types
+        // - [ ] Add integration tests with real schema conversions
         // This is a synchronous wrapper - real implementation would be async
         // For now, return the value unchanged
         Ok(value)
@@ -138,6 +152,13 @@ pub struct HtmlToMarkdownConverter;
 impl Converter for HtmlToMarkdownConverter {
     async fn convert(&self, value: Value) -> Result<Value, SchemaError> {
         if let Some(html_str) = value.as_str() {
+            // TODO: Implement real HTML to Markdown conversion
+            // - [ ] Integrate html2md or similar crate for conversion
+            // - [ ] Parse HTML and convert to proper Markdown format
+            // - [ ] Handle complex HTML structures (tables, lists, etc.)
+            // - [ ] Preserve formatting and structure in conversion
+            // - [ ] Add unit tests with various HTML formats
+            // - [ ] Add integration tests with real HTML conversion
             // Use html2md or similar crate for conversion
             // For now, return a placeholder
             let markdown = format!("# Converted HTML\n\n{}", html_str);

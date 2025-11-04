@@ -271,6 +271,14 @@ impl PlanGenerator {
         let text = format!("{} {} {}", criterion.given, criterion.when, criterion.then);
 
         if text.contains("after") || text.contains("requires") || text.contains("depends on") {
+            // TODO: Implement NLP-based dependency extraction
+            // - [ ] Integrate NLP library for text analysis
+            // - [ ] Parse dependency relationships from natural language
+            // - [ ] Extract milestone references from text
+            // - [ ] Build dependency graph from extracted relationships
+            // - [ ] Handle ambiguous or missing dependencies
+            // - [ ] Add unit tests with various dependency patterns
+            // - [ ] Add integration tests with real plan descriptions
             // Extract dependency references (simplified - would use NLP in real implementation)
             // For now, return empty - real implementation would analyze text
         }
@@ -471,6 +479,12 @@ impl PlanGenerator {
             edges,
             critical_path,
             parallel_groups,
+            // TODO: Detect cycles in dependency graph
+            // - [ ] Implement cycle detection algorithm (DFS-based)
+            // - [ ] Identify all cycles in the dependency graph
+            // - [ ] Report cycles with their paths
+            // - [ ] Add unit tests with cyclic graphs
+            // - [ ] Add integration tests with complex dependency graphs
             has_cycles: false, // Assume no cycles for now
             cycles: vec![],
         })

@@ -50,6 +50,13 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
             risk_tolerance: self.map_risk_level(context.risk_tolerance),
         };
 
+        // TODO: Make planning constraints configurable
+        // - [ ] Load constraints from configuration or context
+        // - [ ] Support dynamic constraint adjustment based on task requirements
+        // - [ ] Allow per-task constraint overrides
+        // - [ ] Validate constraints against system capabilities
+        // - [ ] Add unit tests with various constraint configurations
+        // - [ ] Add integration tests with real constraint-based planning
         // Use default constraints for now - in a full implementation, these would be configurable
         let constraints = system_federated_ml::tool_chain_planner::PlanningConstraints {
             max_chain_length: 10,
@@ -72,6 +79,14 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
     }
 
     async fn validate_tool_chain(&self, plan: &ToolChainPlan) -> ToolChainResult<ValidationResult> {
+        // TODO: Implement comprehensive tool chain validation
+        // - [ ] Validate tool chain structure and dependencies
+        // - [ ] Check for circular dependencies
+        // - [ ] Validate tool availability and capabilities
+        // - [ ] Verify resource constraints are met
+        // - [ ] Check for compatibility between chain steps
+        // - [ ] Add unit tests with various tool chain structures
+        // - [ ] Add integration tests with real tool chain validation
         // For now, return a basic validation result
         // In a full implementation, this would validate the tool chain structure
         let validation_result = ValidationResult {
@@ -94,6 +109,14 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
         plan: &ToolChainPlan,
         optimization_criteria: Vec<String>,
     ) -> ToolChainResult<ToolChainPlan> {
+        // TODO: Implement tool chain optimization
+        // - [ ] Parse optimization criteria (performance, cost, reliability)
+        // - [ ] Apply optimization algorithms based on criteria
+        // - [ ] Reorder tool chain steps for better performance
+        // - [ ] Merge or eliminate redundant steps
+        // - [ ] Optimize resource usage and parallelization
+        // - [ ] Add unit tests with various optimization criteria
+        // - [ ] Add integration tests with real tool chain optimization
         // For now, return the plan as-is
         // In a full implementation, this would apply optimizations based on criteria
         warn!("optimize_tool_chain not fully implemented - returning original plan");
@@ -176,6 +199,13 @@ impl ToolChainPlannerAdapter {
 
     /// Extract tool sequence from ToolChain DAG
     fn extract_tool_sequence(&self, tool_chain: &system_federated_ml::tool_chain_planner::ToolChain) -> Vec<String> {
+        // TODO: Implement proper DAG topological traversal
+        // - [ ] Implement topological sort algorithm for DAG
+        // - [ ] Extract tool sequence respecting dependencies
+        // - [ ] Handle cycles and circular dependencies
+        // - [ ] Preserve execution order requirements
+        // - [ ] Add unit tests with various DAG structures
+        // - [ ] Add integration tests with real tool chain DAGs
         // For now, return a simple sequence
         // In a full implementation, this would traverse the DAG topologically
         tool_chain.nodes.iter()
@@ -185,6 +215,13 @@ impl ToolChainPlannerAdapter {
 
     /// Extract dependencies from ToolChain DAG
     fn extract_dependencies(&self, tool_chain: &system_federated_ml::tool_chain_planner::ToolChain) -> std::collections::HashMap<String, Vec<String>> {
+        // TODO: Extract dependencies from DAG edges
+        // - [ ] Parse DAG edge structure to extract dependencies
+        // - [ ] Map tool IDs to their dependency lists
+        // - [ ] Handle transitive dependencies if needed
+        // - [ ] Validate dependency structure for cycles
+        // - [ ] Add unit tests with various dependency patterns
+        // - [ ] Add integration tests with real tool chain dependencies
         // For now, return empty dependencies
         // In a full implementation, this would extract from the DAG edges
         std::collections::HashMap::new()

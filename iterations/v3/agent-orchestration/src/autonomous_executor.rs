@@ -587,6 +587,12 @@ pub fn orchestrate_task(
     
     info!("Starting orchestration for task: {}", task_descriptor.task_id.to_string());
     
+    // TODO: Validate and handle placeholder working spec IDs properly
+    // - [ ] Define proper working spec ID validation rules
+    // - [ ] Handle placeholder IDs with explicit error or conversion
+    // - [ ] Add validation to ensure working spec IDs are valid UUIDs or meaningful identifiers
+    // - [ ] Add unit tests with various ID formats
+    // - [ ] Add integration tests with real working spec IDs
     // Convert task descriptor to working spec if needed
     let spec = if working_spec.id == "placeholder" {
         to_task_spec(task_descriptor)
@@ -1774,6 +1780,14 @@ impl AutonomousExecutor {
             match planning_integration.execute_planning_task(&task_descriptor).await {
                 Ok(planning_result) => {
                     tracing::info!("Planning integration generated execution plan for task {}", task_request.id);
+                    // TODO: Implement proper working spec generation from execution plan
+                    // - [ ] Extract all relevant metadata from execution plan
+                    // - [ ] Map execution plan milestones to acceptance criteria
+                    // - [ ] Include proper description and goals from plan
+                    // - [ ] Add risk tier and change budget from plan analysis
+                    // - [ ] Handle missing or incomplete plan data gracefully
+                    // - [ ] Add unit tests with various execution plan structures
+                    // - [ ] Add integration tests with real planning results
                     // Convert planning execution plan to working spec
                     // For now, use the contract plan's metadata to build working spec
                     let contract_plan = &planning_result.execution_plan.contract_plan;
@@ -2703,6 +2717,13 @@ impl AutonomousExecutor {
 
             // Get CPU usage from /proc/stat (simplified)
             if let Ok(stat) = fs::read_to_string("/proc/self/stat") {
+                // TODO: Implement real CPU usage calculation
+                // - [ ] Track CPU time readings over time intervals
+                // - [ ] Calculate CPU percentage from two readings (current and previous)
+                // - [ ] Handle multi-core systems correctly
+                // - [ ] Account for system uptime and process start time
+                // - [ ] Add unit tests with mock stat file contents
+                // - [ ] Add integration tests with real CPU monitoring
                 // Parse CPU time from stat file
                 // This is a simplified version - real implementation would track over time
                 cpu_usage = 0.0; // Placeholder - would need two readings to calculate percentage

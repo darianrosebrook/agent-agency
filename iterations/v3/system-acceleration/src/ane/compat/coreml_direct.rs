@@ -36,6 +36,13 @@ impl CoreMLModel {
             return Err(ANEError::NotImplemented("Core ML prediction only supported on macOS".to_string()));
         }
 
+        // TODO: Implement real Core ML API integration
+        // - [ ] Use Core ML framework to load model
+        // - [ ] Create MLFeatureProvider with actual model inputs
+        // - [ ] Convert input data to MLFeatureValue format
+        // - [ ] Handle Core ML API errors
+        // - [ ] Add unit tests with mock Core ML models
+        // - [ ] Add integration tests with real Core ML models
         // Placeholder implementation - would use actual Core ML API
         Ok(MLFeatureProvider {
             features: std::collections::HashMap::new(),
@@ -47,6 +54,13 @@ impl CoreMLModel {
             return Err(ANEError::NotImplemented("Core ML model info only supported on macOS".to_string()));
         }
 
+        // TODO: Get actual Core ML model information
+        // - [ ] Load Core ML model from path
+        // - [ ] Extract model metadata (name, version, description)
+        // - [ ] Get input/output specifications
+        // - [ ] Format model info string
+        // - [ ] Add unit tests with mock models
+        // - [ ] Add integration tests with real Core ML models
         // Placeholder implementation - would use actual Core ML API
         Ok(format!("Core ML Model: {}", self.path))
     }

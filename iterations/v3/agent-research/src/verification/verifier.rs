@@ -91,6 +91,12 @@ pub struct ContextDependencyResolver {
 /// Semantic analyzer for meaning extraction and validation
 
 
+// TODO: Implement real validator components
+// - [ ] Implement ReferenceFinder for finding references and citations
+// - [ ] Implement ConsistencyChecker for logical consistency validation
+// - [ ] Implement other validator components as needed
+// - [ ] Add unit tests for each validator component
+// - [ ] Add integration tests with real validation scenarios
 // Placeholder implementations for all the validator components
 
 #[derive(Debug)]
@@ -563,6 +569,14 @@ impl MultiModalVerificationEngine {
 
     /// Lookup historical claims by search term
     async fn lookup_historical_claims_by_term(&self, term: &str) -> Result<Vec<HistoricalClaim>> {
+        // TODO: Implement real historical claims database query
+        // - [ ] Integrate with historical claims database or storage
+        // - [ ] Query claims by search term with proper indexing
+        // - [ ] Filter and rank results by relevance
+        // - [ ] Support pagination for large result sets
+        // - [ ] Handle query errors and missing data gracefully
+        // - [ ] Add unit tests with mock historical claims
+        // - [ ] Add integration tests with real claims database
         // In a real implementation, this would query a historical claims database
         // For now, simulate with some example historical claims
         

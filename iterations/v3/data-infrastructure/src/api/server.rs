@@ -80,6 +80,13 @@ pub struct Orchestrator {
 
 impl Orchestrator {
     pub async fn orchestrate_task(&self, description: &str, _execution_mode: String) -> Result<ExecutionArtifacts> {
+        // TODO: Integrate with agent-orchestration crate Orchestrator
+        // - [ ] Integrate with agent-orchestration crate's Orchestrator
+        // - [ ] Create task execution requests with proper parameters
+        // - [ ] Handle orchestration errors and timeouts
+        // - [ ] Return execution artifacts from orchestration results
+        // - [ ] Add unit tests with mock orchestrator
+        // - [ ] Add integration tests with real task orchestration
         // PLACEHOLDER: Real task orchestration not implemented
         // Per session rules: throw error instead of returning stub artifacts
         // Dependency: Requires integration with agent-orchestration crate's Orchestrator
@@ -539,6 +546,13 @@ impl RestApi {
         let _progress: ExecutionProgress = self.progress_tracker.get_progress(task_id).await
             .map_err(|e| ApiError::InternalError(format!("Progress retrieval failed: {:?}", e)))
             .unwrap_or(ExecutionProgress { task_id: task_id, status: "completed".to_string(), progress_percentage: 100.0, current_phase: "completed".to_string(), started_at: Utc::now(), updated_at: Utc::now() });
+        // TODO: Build iteration summaries from actual iteration data
+        // - [ ] Query iteration tracking system for task iterations
+        // - [ ] Build iteration summaries with progress and status
+        // - [ ] Include iteration artifacts and results
+        // - [ ] Support pagination for large iteration lists
+        // - [ ] Add unit tests with mock iteration data
+        // - [ ] Add integration tests with real iteration tracking
         // Build iteration summaries (placeholder - would come from actual iteration data)
         let iterations = vec![];
 
@@ -552,6 +566,12 @@ impl RestApi {
             task_id,
             description: task_state.description.clone(),
             status: format!("{:?}", task_state.status).to_lowercase(),
+            // TODO: Get actual iteration tracking data
+            // - [ ] Query iteration tracking system for current iteration
+            // - [ ] Calculate total iterations from iteration history
+            // - [ ] Get execution mode from task configuration
+            // - [ ] Add unit tests with mock iteration data
+            // - [ ] Add integration tests with real iteration tracking
             current_iteration: 1, // Placeholder - would come from actual iteration tracking
             total_iterations: 5, // Placeholder - would come from actual iteration tracking
             score: task_state.quality_report.as_ref().map(|r| r.score),

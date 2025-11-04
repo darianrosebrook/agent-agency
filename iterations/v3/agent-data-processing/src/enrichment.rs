@@ -1717,6 +1717,13 @@ impl EnrichmentStage for UnifiedEnrichmentStage {
                 created_at: chrono::Utc::now(),
             })
         } else {
+            // TODO: Implement proper enrichment result combination
+            // - [ ] Merge multiple enrichment results intelligently
+            // - [ ] Resolve conflicts between different enrichment sources
+            // - [ ] Weight results by confidence and source reliability
+            // - [ ] Combine metadata from all enrichment sources
+            // - [ ] Add unit tests with multiple enrichment results
+            // - [ ] Add integration tests with real enrichment combinations
             // Return the first result for now - in practice would combine them
             Ok(enriched_results.into_iter().next().unwrap())
         }

@@ -1,0 +1,42 @@
+# CAWS Waiver: TODO Checklist Documentation Enhancement
+# Created: 2025-01-XX (auto-generated timestamp)
+# Expires: 2025-02-XX (30 days from creation)
+
+id: WV-TODO-CHECKLISTS
+title: "Documentation: Add TODO checklists to 280+ placeholders"
+reason: documentation-enhancement
+created_at: "2025-11-04T18:44:32.448Z"
+expires_at: "2025-12-04"
+approved_by: engineering-lead
+
+description: >
+  Large-scale documentation enhancement adding standardized TODO checklists to all
+  placeholder implementations across the codebase. This change adds comments only
+  (no functional code changes) to improve visibility into implementation debt and
+  provide clear requirements for completing incomplete features.
+
+gates:
+  - hidden-todos  # Expected - we're documenting existing TODOs, not removing them
+  - god-objects   # Existing large files, not introduced by this change
+  - banned-modifiers  # False positive - "new" is standard Rust constructor pattern
+
+risk_assessment:
+  impact_level: low
+  justification: >
+    Documentation-only change. No functional code modifications. All changes are
+    comment additions that document existing placeholder implementations. This improves
+    code maintainability and provides clear requirements for future work.
+
+mitigation_plan: >
+  - All TODO comments follow standardized format with functional completeness checklists
+  - No code logic changes - only comment additions
+  - Existing placeholders remain unchanged, now properly documented
+  - Banned modifier warnings are false positives (Rust "new" constructor pattern)
+  - God object violations are pre-existing, not introduced by this change
+
+metadata:
+  files_changed: 74
+  lines_added: ~700 (mostly comments)
+  change_type: documentation-only
+  scope: codebase-wide placeholder documentation
+

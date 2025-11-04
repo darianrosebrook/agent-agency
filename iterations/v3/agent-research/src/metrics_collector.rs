@@ -336,6 +336,13 @@ impl MetricsCollector {
         success: bool,
         execution_time_ms: u64,
     ) -> Result<()> {
+        // TODO: Implement agent-specific metrics storage
+        // - [ ] Store agent performance metrics in database or metrics system
+        // - [ ] Track success rates, execution times, and error patterns per agent
+        // - [ ] Aggregate metrics for analysis and reporting
+        // - [ ] Support metrics queries and filtering by agent name
+        // - [ ] Add unit tests with mock metrics storage
+        // - [ ] Add integration tests with real metrics persistence
         // For now, just log the agent task performance
         // In a full implementation, this would store agent-specific metrics
         if success {

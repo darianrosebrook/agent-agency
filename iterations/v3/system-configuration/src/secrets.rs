@@ -125,6 +125,12 @@ impl SecretsManager {
         let secrets = self.secrets.read().await;
         if let Some(encrypted_secret) = secrets.get(name) {
             let value = self.decrypt_secret(encrypted_secret)?;
+            // TODO: Store and retrieve actual secret metadata
+            // - [ ] Store metadata (description, created_at, updated_at, tags) in encrypted format or separate storage
+            // - [ ] Retrieve actual metadata from storage when decrypting secret
+            // - [ ] Handle missing metadata gracefully with defaults
+            // - [ ] Add unit tests with various metadata configurations
+            // - [ ] Add integration tests with real secret metadata storage
             let metadata = SecretMetadata {
                 name: name.to_string(),
                 description: None, // We don't store metadata in the encrypted format

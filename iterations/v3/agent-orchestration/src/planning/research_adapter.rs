@@ -119,6 +119,14 @@ impl ResearchEvidenceCollector for ResearchEvidenceAdapter {
             updated_at: chrono::Utc::now(),
         };
 
+        // TODO: Integrate real research validation pipeline
+        // - [ ] Connect to agent-research validation services
+        // - [ ] Run full validation pipeline on claims and evidence
+        // - [ ] Calculate validation confidence scores
+        // - [ ] Include validation evidence and reasoning
+        // - [ ] Handle validation errors and timeouts
+        // - [ ] Add unit tests with mock validation results
+        // - [ ] Add integration tests with real research validation
         // For now, return a basic validation result
         // In a full implementation, this would use the research validation pipeline
         let validation_result = ValidationResult {

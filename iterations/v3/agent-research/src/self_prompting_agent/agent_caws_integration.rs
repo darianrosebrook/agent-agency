@@ -128,6 +128,14 @@ impl CawsIntegration {
 
     /// Check if current work meets quality gates
     pub async fn check_quality_gates(&self) -> Result<Vec<String>, SelfPromptingAgentError> {
+        // TODO: Integrate with real CAWS validator for quality gate checking
+        // - [ ] Use CAWS runtime validator to check actual quality gates
+        // - [ ] Validate code compilation and test execution
+        // - [ ] Check documentation completeness and accuracy
+        // - [ ] Validate working spec structure (support YAML and JSON)
+        // - [ ] Generate detailed quality gate reports
+        // - [ ] Add unit tests with mock CAWS validation
+        // - [ ] Add integration tests with real quality gate checking
         // Use the real CAWS validator to check quality gates
         // For now, we check basic quality indicators that are always applicable
         let mut gate_results = Vec::new();
@@ -140,6 +148,12 @@ impl CawsIntegration {
         // If we have a working spec, we can validate it properly
         if let Some(ref spec_path) = self.working_spec_path {
             if let Ok(spec_content) = std::fs::read_to_string(spec_path) {
+                // TODO: Support YAML working spec parsing in addition to JSON
+                // - [ ] Parse YAML working specs using serde_yaml
+                // - [ ] Validate YAML spec structure
+                // - [ ] Handle both JSON and YAML formats
+                // - [ ] Add unit tests with YAML specs
+                // - [ ] Add integration tests with real YAML working specs
                 // Parse and validate the spec structure (JSON only for now)
                 if spec_content.trim().starts_with('{') {
                     if let Ok(_spec) = serde_json::from_str::<serde_json::Value>(&spec_content) {

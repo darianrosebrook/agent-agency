@@ -393,6 +393,13 @@ impl ToolChainPlanner {
 
     /// Check if two port schemas are compatible
     fn schemas_compatible(&self, input: &PortSchemaRef, output: &PortSchemaRef) -> Result<bool, anyhow::Error> {
+        // TODO: Implement real schema compatibility checking
+        // - [ ] Load actual schemas from registry using schema keys
+        // - [ ] Compare schema types and structures for compatibility
+        // - [ ] Support type coercion and conversion when needed
+        // - [ ] Handle schema version differences
+        // - [ ] Add unit tests with various schema types
+        // - [ ] Add integration tests with real schema compatibility
         // For now, simple string matching on registry keys
         // In a full implementation, this would check schema compatibility
         Ok(input.registry_key == output.registry_key ||
@@ -421,6 +428,13 @@ impl ToolChainPlanner {
     fn extract_tool_ports(&self, tool: &RegisteredTool, is_input: bool) -> Result<Vec<ToolPort>, anyhow::Error> {
         let mut ports = Vec::new();
 
+        // TODO: Extract ports from tool's JSON schema
+        // - [ ] Parse tool's JSON schema for input/output port definitions
+        // - [ ] Extract port names, types, and schemas from schema
+        // - [ ] Create proper PortSchemaRef with actual schema information
+        // - [ ] Handle missing or invalid schemas gracefully
+        // - [ ] Add unit tests with various schema formats
+        // - [ ] Add integration tests with real tool schemas
         // This would extract from tool's JSON schema
         // For now, create generic ports
         let port_name = if is_input { "input" } else { "output" };

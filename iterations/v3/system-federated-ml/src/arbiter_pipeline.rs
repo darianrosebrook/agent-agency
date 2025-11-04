@@ -162,6 +162,12 @@ impl CommonPipelineStage<DecisionInput, DecisionResult> for DecisionStageAdapter
                 })
             }
             DecisionStage::RiskAssessment => {
+                // TODO: Implement real risk assessment
+                // - [ ] Analyze task characteristics for risk factors
+                // - [ ] Calculate risk tier based on task complexity and requirements
+                // - [ ] Use risk analysis models or heuristics
+                // - [ ] Add unit tests with various task types
+                // - [ ] Add integration tests with real risk assessment
                 // Placeholder risk assessment - would use actual risk analysis
                 Ok(DecisionResult {
                     task_type: input.task_description.clone(),
@@ -172,6 +178,12 @@ impl CommonPipelineStage<DecisionInput, DecisionResult> for DecisionStageAdapter
                 })
             }
             DecisionStage::WorkerSelection => {
+                // TODO: Implement real worker selection
+                // - [ ] Match task requirements with worker capabilities
+                // - [ ] Consider worker load and availability
+                // - [ ] Use worker selection algorithms (round-robin, least-loaded, etc.)
+                // - [ ] Add unit tests with various worker configurations
+                // - [ ] Add integration tests with real worker pools
                 // Placeholder worker selection - would use actual worker matching
                 Ok(DecisionResult {
                     task_type: input.task_description.clone(),
@@ -182,6 +194,13 @@ impl CommonPipelineStage<DecisionInput, DecisionResult> for DecisionStageAdapter
                 })
             }
             DecisionStage::SpeculativeExecution => {
+                // TODO: Implement real speculative execution
+                // - [ ] Determine when to use speculative execution
+                // - [ ] Execute multiple task variants in parallel
+                // - [ ] Select best result based on outcomes
+                // - [ ] Handle speculative execution cancellation
+                // - [ ] Add unit tests with speculative scenarios
+                // - [ ] Add integration tests with real speculative execution
                 // Placeholder speculative execution - would implement actual speculative logic
                 Ok(DecisionResult {
                     task_type: input.task_description.clone(),

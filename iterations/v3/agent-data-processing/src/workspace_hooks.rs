@@ -136,6 +136,13 @@ impl WorkspaceIntegrationHooks {
             return Ok(());
         }
 
+        // TODO: Implement real workspace rollback functionality
+        // - [ ] Integrate with workspace manager API for rollback
+        // - [ ] Restore workspace state from pre_state_id snapshot
+        // - [ ] Handle rollback errors and partial state restoration
+        // - [ ] Add validation to ensure rollback state is valid
+        // - [ ] Add unit tests with mock workspace states
+        // - [ ] Add integration tests with real workspace rollback
         // Note: The actual rollback implementation would depend on the specific
         // workspace manager API. For now, we'll simulate rollback by creating a view
         // of the pre-processing state for manual restoration.
@@ -189,6 +196,13 @@ impl WorkspaceIntegrationHooks {
             (0, 0.0)
         };
 
+        // TODO: Implement accurate state counting
+        // - [ ] Query workspace manager for actual state count
+        // - [ ] Distinguish between active and archived states
+        // - [ ] Calculate total states from actual state registry
+        // - [ ] Handle missing state data gracefully
+        // - [ ] Add unit tests with mock state counts
+        // - [ ] Add integration tests with real workspace state tracking
         // For now, estimate total states based on views (simplified)
         let total_states = total_views + 1; // +1 for current state
 

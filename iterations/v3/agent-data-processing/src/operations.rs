@@ -637,6 +637,14 @@ impl WorkspaceManager {
     /// Restore workspace state (simplified implementation)
     async fn restore_workspace_state(&self, _state: serde_json::Value) -> DataProcessingResult<()> {
         // In a real implementation, this would:
+        // TODO: Implement real workspace state restoration
+        // - [ ] Compare current state with backup state
+        // - [ ] Restore modified/deleted files from backup
+        // - [ ] Remove files that shouldn't exist in target state
+        // - [ ] Update file permissions and timestamps to match backup
+        // - [ ] Handle restoration errors and partial failures
+        // - [ ] Add unit tests with mock workspace states
+        // - [ ] Add integration tests with real workspace restoration
         // 1. Compare current state with backup state
         // 2. Restore modified/deleted files
         // 3. Remove files that shouldn't exist

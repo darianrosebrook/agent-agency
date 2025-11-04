@@ -210,6 +210,13 @@ impl ToolExecutor {
     async fn perform_tool_execution(&self, mut context: ExecutionContext) -> Result<ToolResult> {
         let tool_name = context.invocation.tool_name.clone();
 
+        // TODO: Implement real tool execution dispatch
+        // - [ ] Dispatch to appropriate tool based on tool name and registry
+        // - [ ] Execute tool with proper context and parameters
+        // - [ ] Handle tool execution errors and timeouts
+        // - [ ] Support async tool execution and cancellation
+        // - [ ] Add unit tests with mock tool execution
+        // - [ ] Add integration tests with real tool dispatch
         // In a real implementation, this would dispatch to the appropriate tool
         // For now, we'll simulate execution based on tool name
 
@@ -438,6 +445,12 @@ impl ResourceTracker {
 
 /// Get current memory usage in MB (simplified)
 fn get_current_memory_mb() -> f64 {
+    // TODO: Implement real memory usage monitoring
+    // - [ ] Use system APIs (sysinfo, etc.) to get actual process memory usage
+    // - [ ] Track memory usage over time for trend analysis
+    // - [ ] Handle API errors and platform differences
+    // - [ ] Add unit tests with mock memory data
+    // - [ ] Add integration tests with real memory monitoring
     // In practice, this would use system APIs to get actual memory usage
     // For now, return a simulated value
     100.0 + (rand::random::<f64>() - 0.5) * 20.0 // 80-120 MB

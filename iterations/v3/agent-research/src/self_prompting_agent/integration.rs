@@ -16,6 +16,13 @@ use agent_workers::parallel_types::{ComplexTask, TaskId, TaskScope, Priority, Qu
 use chrono::Utc;
 use system_observability::health_metrics::MetricsCollector;
 
+// TODO: Implement real agent health metrics collection
+// - [ ] Integrate with metrics collection system
+// - [ ] Track agent health score from multiple indicators
+// - [ ] Calculate success rate from execution history
+// - [ ] Monitor agent performance over time
+// - [ ] Add unit tests with mock metrics
+// - [ ] Add integration tests with real health monitoring
 /// Agent health metrics placeholder
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

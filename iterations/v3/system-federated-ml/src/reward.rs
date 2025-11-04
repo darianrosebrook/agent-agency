@@ -226,6 +226,13 @@ impl RewardFunction {
         }
     }
 
+    /// TODO: Implement real expected quality retrieval from historical data
+    /// - [ ] Query historical performance data for parameter sets
+    /// - [ ] Calculate expected quality based on similar parameter configurations
+    /// - [ ] Use ML models or statistical methods for quality prediction
+    /// - [ ] Handle missing historical data gracefully
+    /// - [ ] Add unit tests with mock historical data
+    /// - [ ] Add integration tests with real performance database
     /// Get expected quality for a parameter set (placeholder)
     fn get_expected_quality(&self, _params: &ParameterSet) -> Option<f64> {
         // In a real implementation, this would query historical performance data

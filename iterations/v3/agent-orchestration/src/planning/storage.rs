@@ -313,6 +313,13 @@ impl PlanningStorage {
         metadata.insert("plan_id".to_string(), serde_json::Value::String(plan_id.to_string()));
         metadata.insert("metric_type".to_string(), serde_json::Value::String(metric_type));
 
+        // TODO: Use proper session ID instead of plan_id
+        // - [ ] Generate or retrieve proper session ID for telemetry
+        // - [ ] Track session lifecycle separately from plan lifecycle
+        // - [ ] Link multiple plans to the same session if needed
+        // - [ ] Add session management and tracking
+        // - [ ] Add unit tests with proper session IDs
+        // - [ ] Add integration tests with real telemetry sessions
         let telemetry = CreatePlanningTelemetry {
             session_id: plan_id, // Using plan_id as session_id for now
             metric_name: "planning_metric".to_string(), // Default metric name
@@ -447,6 +454,13 @@ impl PlanningStorage {
 
     /// Reconstruct plan from database (when file is missing)
     fn reconstruct_plan_from_db(&self, db_plan: DbExecutionPlan) -> Result<ExecutionPlan> {
+        // TODO: Implement plan reconstruction from database
+        // - [ ] Reconstruct ExecutionPlan from DbExecutionPlan data
+        // - [ ] Restore plan milestones and dependencies
+        // - [ ] Restore plan metadata and configuration
+        // - [ ] Handle missing or corrupted database data
+        // - [ ] Add unit tests with mock database plans
+        // - [ ] Add integration tests with real database plans
         // This would reconstruct the full plan from database data
         // For now, return a minimal plan
         Err(anyhow!("Plan reconstruction from DB not yet implemented - PLACEHOLDER"))

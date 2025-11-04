@@ -83,6 +83,13 @@ impl MemoryIntegrationHooks {
         let memories = self.memory_manager.search_memories(memory_query).await
             .map_err(|e| DataProcessingError::Other(format!("Failed to search memories: {:?}", e)))?;
 
+        // TODO: Implement relevance scoring for memory search results
+        // - [ ] Calculate relevance scores based on query similarity
+        // - [ ] Rank results by relevance score
+        // - [ ] Apply relevance threshold to filter low-scoring results
+        // - [ ] Add configurable result limit
+        // - [ ] Add unit tests with various query types
+        // - [ ] Add integration tests with real memory search
         // For now, return all results (could implement relevance scoring)
         Ok(memories)
     }

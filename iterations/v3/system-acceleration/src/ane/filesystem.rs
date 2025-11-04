@@ -24,6 +24,13 @@ pub struct FilesystemSpace {
 pub fn get_filesystem_space<P: AsRef<Path>>(path: P) -> Result<FilesystemSpace> {
     use std::fs;
 
+    // TODO: Implement real filesystem space monitoring
+    // - [ ] Use platform-specific APIs (macOS, Linux, Windows) for disk space
+    // - [ ] Integrate with fs2 crate or similar for accurate space reporting
+    // - [ ] Calculate actual total, available, and used bytes from filesystem
+    // - [ ] Handle filesystem errors gracefully
+    // - [ ] Add unit tests with mock filesystem data
+    // - [ ] Add integration tests with real filesystem monitoring
     // For now, return dummy values
     // In a real implementation, use platform-specific APIs or crates like fs2
     let _metadata = fs::metadata(path)?;

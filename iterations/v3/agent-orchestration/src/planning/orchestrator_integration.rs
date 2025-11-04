@@ -469,6 +469,13 @@ impl crate::planning::plan_executor::AuditTrail for AuditTrailAdapter {
                         .record_council_consensus(
                             &event.plan_id.to_string(),
                             "plan_executor",
+                            // TODO: Get actual vote distribution from council consensus
+                            // - [ ] Extract vote counts from council consensus event
+                            // - [ ] Map votes to worker IDs or decision types
+                            // - [ ] Calculate vote percentages
+                            // - [ ] Handle missing vote data
+                            // - [ ] Add unit tests with mock consensus data
+                            // - [ ] Add integration tests with real council consensus
                             std::collections::HashMap::new(), // vote_distribution - empty for now
                             1.0, // consensus_strength - full consensus
                             std::time::Duration::from_secs(0),
@@ -507,6 +514,13 @@ impl WorkerPoolAdapter {
 impl crate::planning::plan_executor::WorkerPool for WorkerPoolAdapter {
     async fn available_workers(&self) -> Result<Vec<crate::planning::plan_executor::WorkerInfo>> {
         // TODO: Integrate with actual MCPWorkerPool when available
+        // - [ ] Query MCPWorkerPool for available workers
+        // - [ ] Convert WorkerHandle to WorkerInfo format
+        // - [ ] Extract worker capabilities from worker metadata
+        // - [ ] Calculate worker load from active tasks
+        // - [ ] Get worker health status
+        // - [ ] Add unit tests with mock worker pool
+        // - [ ] Add integration tests with real worker pool
         // For now, return empty list
         let workers: Vec<crate::planning::plan_executor::WorkerInfo> = Vec::new();
 
@@ -517,12 +531,30 @@ impl crate::planning::plan_executor::WorkerPool for WorkerPoolAdapter {
 
         // Convert WorkerHandle list to WorkerInfo list for planning executor
         let worker_infos = workers.into_iter().enumerate().map(|(i, _worker)| {
+            // TODO: Extract actual worker capabilities
+            // - [ ] Query worker for actual capabilities
+            // - [ ] Map worker capabilities to planning executor format
+            // - [ ] Handle missing capability data
+            // - [ ] Add unit tests with real worker capabilities
+            // - [ ] Add integration tests with worker pool
             // Mock capabilities
             let capabilities = vec!["general".to_string(), "rust".to_string(), "typescript".to_string()];
 
+            // TODO: Calculate actual worker load
+            // - [ ] Query worker for active task count
+            // - [ ] Calculate load percentage from active vs max tasks
+            // - [ ] Consider worker capacity and current utilization
+            // - [ ] Add unit tests with various load scenarios
+            // - [ ] Add integration tests with real worker load
             // Mock load calculation
             let load = (i as f64 * 0.2).min(1.0);
 
+            // TODO: Get actual worker health status
+            // - [ ] Query worker health endpoint or status
+            // - [ ] Determine health based on recent performance
+            // - [ ] Handle worker failures and degraded states
+            // - [ ] Add unit tests with various health states
+            // - [ ] Add integration tests with real worker health
             // Mock health - alternate between healthy and degraded
             let health = if i % 2 == 0 {
                 crate::planning::plan_executor::WorkerHealth::Healthy
@@ -558,6 +590,13 @@ impl crate::planning::plan_executor::WorkerPool for WorkerPoolAdapter {
         let assignments = self.assignments.read().await;
         let current_assignment = assignments.get(&worker_id).cloned();
 
+        // TODO: Get actual worker health and performance
+        // - [ ] Query worker for actual health status
+        // - [ ] Get worker performance metrics (tasks completed, failed, avg time)
+        // - [ ] Calculate success rate from performance data
+        // - [ ] Handle missing performance data gracefully
+        // - [ ] Add unit tests with mock worker data
+        // - [ ] Add integration tests with real worker performance
         // Mock health and performance for now
         let health = crate::planning::plan_executor::WorkerHealth::Healthy;
 
@@ -567,6 +606,12 @@ impl crate::planning::plan_executor::WorkerPool for WorkerPoolAdapter {
             performance: crate::planning::plan_executor::WorkerPerformance {
                 tasks_completed: 0, // TODO: Get from WorkerPool trait
                 tasks_failed: 0,
+                // TODO: Calculate actual average completion time
+                // - [ ] Query worker for task completion history
+                // - [ ] Calculate average from completed tasks
+                // - [ ] Handle missing completion data
+                // - [ ] Add unit tests with mock completion times
+                // - [ ] Add integration tests with real task data
                 avg_completion_time_ms: 1000.0, // PLACEHOLDER
                 success_rate: 1.0,
             },

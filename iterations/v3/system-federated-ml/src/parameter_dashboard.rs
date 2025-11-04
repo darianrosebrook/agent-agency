@@ -458,18 +458,39 @@ impl ParameterDashboardManager {
     }
 
     async fn update_rollout_status(&self, dashboard: &mut ParameterDashboard) -> Result<()> {
+        // TODO: Query rollout manager for current rollout status
+        // - [ ] Query rollout manager for active rollout phases
+        // - [ ] Get rollout progress and state information
+        // - [ ] Update dashboard with rollout metrics
+        // - [ ] Handle rollout manager errors gracefully
+        // - [ ] Add unit tests with mock rollout manager
+        // - [ ] Add integration tests with real rollout tracking
         // Implementation would query rollout manager for current status
         // This is a placeholder for the actual implementation
         Ok(())
     }
 
     async fn update_budget_status(&self, dashboard: &mut ParameterDashboard) -> Result<()> {
+        // TODO: Query budget tracker for current budget status
+        // - [ ] Query budget tracker for current budget utilization
+        // - [ ] Get budget limits and remaining budget
+        // - [ ] Update dashboard with budget metrics
+        // - [ ] Handle budget tracker errors gracefully
+        // - [ ] Add unit tests with mock budget tracker
+        // - [ ] Add integration tests with real budget tracking
         // Implementation would query budget tracker for current status
         // This is a placeholder for the actual implementation
         Ok(())
     }
 
     async fn get_historical_decisions(&self, task_type: &str) -> Result<Vec<LoggedDecision>> {
+        // TODO: Query counterfactual logger for historical decisions
+        // - [ ] Query counterfactual logger by task type
+        // - [ ] Filter decisions by time range if needed
+        // - [ ] Return formatted historical decision data
+        // - [ ] Handle missing data gracefully
+        // - [ ] Add unit tests with mock counterfactual logger
+        // - [ ] Add integration tests with real historical data
         // Implementation would query the counterfactual logger for historical data
         // This is a placeholder for the actual implementation
         Ok(Vec::new())
@@ -514,6 +535,13 @@ impl ParameterDashboardManager {
     }
 
     fn calculate_parameter_importance(&self, _decisions: &[LoggedDecision]) -> HashMap<String, f64> {
+        // TODO: Implement SHAP-like parameter importance analysis
+        // - [ ] Integrate SHAP library or implement similar algorithm
+        // - [ ] Calculate feature importance for each parameter
+        // - [ ] Rank parameters by their impact on outcomes
+        // - [ ] Handle missing or insufficient data
+        // - [ ] Add unit tests with mock decision data
+        // - [ ] Add integration tests with real historical decisions
         // Placeholder for SHAP-like analysis
         let mut importance = HashMap::new();
         importance.insert("temperature".to_string(), 0.3);
@@ -525,6 +553,13 @@ impl ParameterDashboardManager {
     }
 
     fn calculate_interaction_effects(&self, _decisions: &[LoggedDecision]) -> Vec<ParameterInteraction> {
+        // TODO: Implement parameter interaction analysis
+        // - [ ] Analyze pairwise parameter interactions
+        // - [ ] Calculate interaction strength and significance
+        // - [ ] Identify synergistic or antagonistic parameter pairs
+        // - [ ] Add statistical significance testing
+        // - [ ] Add unit tests with mock decision data
+        // - [ ] Add integration tests with real historical decisions
         // Placeholder for interaction analysis
         vec![
             ParameterInteraction {
@@ -537,6 +572,13 @@ impl ParameterDashboardManager {
     }
 
     fn calculate_feature_importance(&self, _decisions: &[LoggedDecision]) -> HashMap<String, f64> {
+        // TODO: Implement feature importance analysis
+        // - [ ] Extract features from logged decisions
+        // - [ ] Calculate importance scores using ML algorithms (e.g., Random Forest, XGBoost)
+        // - [ ] Rank features by their predictive power
+        // - [ ] Handle missing feature data
+        // - [ ] Add unit tests with mock feature data
+        // - [ ] Add integration tests with real historical decisions
         // Placeholder for feature importance analysis
         let mut importance = HashMap::new();
         importance.insert("prompt_length".to_string(), 0.4);
@@ -547,6 +589,13 @@ impl ParameterDashboardManager {
     }
 
     fn calculate_model_attribution(&self, _decisions: &[LoggedDecision]) -> HashMap<String, f64> {
+        // TODO: Implement model attribution analysis
+        // - [ ] Analyze model performance across different models
+        // - [ ] Calculate attribution scores for each model
+        // - [ ] Consider model usage frequency and outcomes
+        // - [ ] Handle missing model data
+        // - [ ] Add unit tests with mock model data
+        // - [ ] Add integration tests with real model decisions
         // Placeholder for model attribution analysis
         let mut attribution = HashMap::new();
         attribution.insert("gpt-4".to_string(), 0.6);
@@ -556,17 +605,38 @@ impl ParameterDashboardManager {
     }
 
     fn calculate_drift_score(&self, _historical: &[LoggedDecision], _recent: &[LoggedDecision]) -> f64 {
+        // TODO: Implement drift detection algorithm
+        // - [ ] Use statistical tests (Kolmogorov-Smirnov, Anderson-Darling, etc.)
+        // - [ ] Compare distributions between historical and recent data
+        // - [ ] Calculate drift score (0.0 = no drift, 1.0 = maximum drift)
+        // - [ ] Handle insufficient data gracefully
+        // - [ ] Add unit tests with known drift scenarios
+        // - [ ] Add integration tests with real historical data
         // Placeholder for drift detection algorithm
         // Would use statistical tests like Kolmogorov-Smirnov or Anderson-Darling
         0.5
     }
 
     fn determine_drift_direction(&self, _historical: &[LoggedDecision], _recent: &[LoggedDecision]) -> DriftDirection {
+        // TODO: Implement drift direction analysis
+        // - [ ] Compare parameter distributions between historical and recent
+        // - [ ] Determine if drift is improving, degrading, or stable
+        // - [ ] Calculate confidence in direction determination
+        // - [ ] Handle edge cases (no drift, ambiguous direction)
+        // - [ ] Add unit tests with various drift scenarios
+        // - [ ] Add integration tests with real data
         // Placeholder for drift direction analysis
         DriftDirection::Stable
     }
 
     fn identify_affected_parameters(&self, _historical: &[LoggedDecision], _recent: &[LoggedDecision]) -> Vec<String> {
+        // TODO: Implement affected parameter identification
+        // - [ ] Compare parameter distributions for each parameter
+        // - [ ] Identify parameters with significant distribution changes
+        // - [ ] Rank parameters by magnitude of change
+        // - [ ] Add statistical significance testing
+        // - [ ] Add unit tests with known affected parameters
+        // - [ ] Add integration tests with real historical data
         // Placeholder for affected parameter identification
         vec!["temperature".to_string(), "max_tokens".to_string()]
     }

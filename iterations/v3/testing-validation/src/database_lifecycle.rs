@@ -77,6 +77,13 @@ impl TestDatabaseManager {
     pub async fn initialize_schema(&self) -> Result<()> {
         info!("Initializing database schema for test database: {}", self.database_name);
         
+        // TODO: Integrate proper migration framework
+        // - [ ] Integrate refinery or sqlx migrations framework
+        // - [ ] Use migration files instead of direct SQL execution
+        // - [ ] Track migration version and rollback capability
+        // - [ ] Handle migration conflicts and errors
+        // - [ ] Add unit tests for migration execution
+        // - [ ] Add integration tests with real database migrations
         // Apply migrations using refinery or sqlx migrations
         // For now, we'll use direct SQL execution
         self.apply_migrations().await?;
@@ -347,6 +354,13 @@ impl TestDatabaseManager {
 
 impl Drop for TestDatabaseManager {
     fn drop(&mut self) {
+        // TODO: Implement automatic test database cleanup
+        // - [ ] Add configuration option for auto-cleanup vs manual cleanup
+        // - [ ] Drop test database on Drop if configured
+        // - [ ] Support database reuse for faster test runs
+        // - [ ] Handle cleanup errors gracefully
+        // - [ ] Add unit tests for cleanup behavior
+        // - [ ] Add integration tests with real database cleanup
         // Note: In production, you might want to drop the test database here
         // For now, we'll leave it for manual cleanup or reuse
         debug!("TestDatabaseManager dropped (database {} remains)", self.database_name);

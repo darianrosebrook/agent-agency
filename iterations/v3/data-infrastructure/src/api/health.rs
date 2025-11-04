@@ -70,9 +70,15 @@ async fn check_database_health(db_client: &crate::DatabaseClient) -> Result<(), 
 
 /// Check orchestrator health by verifying CoreML models are loaded
 async fn check_orchestrator_health() -> Result<(), String> {
+    // TODO: Integrate with agent-orchestration CoreML manager
+    // - [ ] Integrate with agent-orchestration crate for health checks
+    // - [ ] Check CoreML model availability and health
+    // - [ ] Verify orchestrator service is responding
+    // - [ ] Handle health check errors gracefully
+    // - [ ] Add unit tests with mock orchestrator
+    // - [ ] Add integration tests with real orchestrator service
     // Check if CoreML models are available (this would need agent-orchestration integration)
     // For now, return healthy since this requires cross-crate integration
-    // TODO: Integrate with agent-orchestration CoreML manager
     Ok(())
 }
 

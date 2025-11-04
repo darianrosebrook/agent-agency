@@ -87,6 +87,14 @@ pub async fn metrics_stream(
                     Err(_) => (0, 0, 0)
                 };
 
+                // TODO: Implement real business metrics collection
+                // - [ ] Integrate with actual business metrics tracking system
+                // - [ ] Collect active users from user session tracking
+                // - [ ] Calculate requests per second from request logs
+                // - [ ] Calculate throughput tasks per hour from task execution logs
+                // - [ ] Support metrics aggregation and reporting
+                // - [ ] Add unit tests with mock business metrics
+                // - [ ] Add integration tests with real metrics collection
                 // Use fallback business metrics for now
                 let business_metrics = crate::BusinessMetrics {
                     active_users: 0,

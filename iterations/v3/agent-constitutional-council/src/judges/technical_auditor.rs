@@ -199,6 +199,13 @@ impl Judge for TechnicalAuditor {
     async fn review_spec(&self, ctx: &ReviewContext) -> CouncilResult<JudgeVerdict> {
         debug!("🔧 Technical Auditor reviewing spec {}", ctx.working_spec.id);
 
+        // TODO: Enhance deterministic technical checks implementation
+        // - [ ] Expand deterministic checks to cover all CAWS invariants
+        // - [ ] Add more sophisticated pattern matching for violations
+        // - [ ] Integrate with static analysis tools if available
+        // - [ ] Add performance checks for resource-intensive operations
+        // - [ ] Add unit tests for each check type
+        // - [ ] Add integration tests with real working specs
         // STEP 1: Run deterministic technical checks (placeholder for now)
         let technical_violations = self.run_deterministic_checks(ctx);
 

@@ -150,6 +150,13 @@ impl SearchOperations {
 
         self.qdrant_client.delete_knowledge_entry(entry_id).await?;
 
+        // TODO: Implement sophisticated cache invalidation
+        // - [ ] Track deleted entry IDs in cache
+        // - [ ] Remove deleted entries from cache immediately
+        // - [ ] Support cache invalidation by entry ID or pattern
+        // - [ ] Handle cache invalidation for related entries
+        // - [ ] Add unit tests with various invalidation scenarios
+        // - [ ] Add integration tests with real cache invalidation
         // Note: Cache invalidation for deleted entries would need more sophisticated tracking
         // For now, we rely on cache expiration
 

@@ -55,9 +55,11 @@ impl SecurityValidator {
     pub async fn generate_proof(&self, data: &[u8], secret_key: &[u8]) -> Result<ZeroKnowledgeProof> {
         // TODO: Implement real zero-knowledge proof generation
         // - [ ] Integrate ZKP library (e.g., zk-SNARKs, zk-STARKs, Bulletproofs)
+        // - [ ] Generate proof using cryptographic proof generation algorithm
+        // - [ ] Create proof structure with public inputs and witness
         // - [ ] Generate proof for model update computation
         // - [ ] Include proper public inputs and verification key
-        // - [ ] Handle proof generation errors
+        // - [ ] Handle proof generation errors and invalid inputs
         // - [ ] Add unit tests with real ZKP generation
         // - [ ] Add integration tests with proof generation/verification
         // In practice, this would generate a real ZKP

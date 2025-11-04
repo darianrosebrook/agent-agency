@@ -229,8 +229,15 @@ impl LegacyOrchestratorAdapter {
         // Step 2: Evaluate task with council
         // Use start_session which returns a session (simpler API)
         let council_session = self.council.start_session(desc).await?;
-        // For now, approve with medium confidence since start_session doesn't populate final_decision
         // TODO: Use conduct_review for full review with final_decision populated
+        // - [ ] Replace start_session with conduct_review for full council review
+        // - [ ] Extract final_decision from council review result
+        // - [ ] Map council decision to ConsensusResult with accurate approval status
+        // - [ ] Calculate confidence from actual council consensus strength
+        // - [ ] Extract reasoning from council review verdict
+        // - [ ] Add unit tests with mock council reviews
+        // - [ ] Add integration tests with real council review flow
+        // For now, approve with medium confidence since start_session doesn't populate final_decision
         let consensus_result = crate::autonomous_executor::ConsensusResult {
             approved: true,
             confidence: 0.7,
@@ -631,6 +638,16 @@ impl LegacyOrchestratorAdapter {
     /// 
     /// This method is a placeholder for future integration with agent-workers parallel execution.
     /// The agent-workers dependency is currently commented out in Cargo.toml due to circular dependency issues.
+    /// 
+    /// TODO: Implement TaskDescriptor to ComplexTask conversion
+    /// - [ ] Resolve circular dependency with agent-workers crate
+    /// - [ ] Extract domains, scope, and quality requirements from TaskDescriptor
+    /// - [ ] Calculate complexity score based on task characteristics
+    /// - [ ] Map TaskPriority to agent-workers Priority enum
+    /// - [ ] Create ComplexTask with appropriate metadata
+    /// - [ ] Handle conversion errors gracefully
+    /// - [ ] Add unit tests with various TaskDescriptor types
+    /// - [ ] Add integration tests with real ComplexTask creation
     /// 
     /// When agent-workers is available, this should:
     /// 1. Extract domains, scope, and quality requirements from TaskDescriptor

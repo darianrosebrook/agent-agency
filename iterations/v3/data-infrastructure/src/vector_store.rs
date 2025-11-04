@@ -257,6 +257,14 @@ impl VectorStore {
 
         debug!("Searching vectors with query for model {} in pool {}", query.model_id, self.pool.stats().pool_id);
 
+        // TODO: Implement real vector similarity search
+        // - [ ] Execute SQL query for vector similarity search (e.g., pgvector)
+        // - [ ] Use proper distance metrics (cosine, L2, inner product)
+        // - [ ] Support filtering and metadata queries
+        // - [ ] Return ranked results with similarity scores
+        // - [ ] Add pagination support for large result sets
+        // - [ ] Add unit tests with mock vector data
+        // - [ ] Add integration tests with real vector search
         // In a real implementation, this would execute vector similarity search
         // For now, return empty results but validate pool health
         let stats = self.pool.stats();
@@ -276,6 +284,14 @@ impl VectorStore {
 
         debug!("Searching similar vectors for model {} with k={} in pool {}", model_id, k, self.pool.stats().pool_id);
 
+        // TODO: Implement real vector similarity search with query vector
+        // - [ ] Execute SQL query for vector similarity search with query vector
+        // - [ ] Use proper distance metrics (cosine, L2, inner product)
+        // - [ ] Support filtering and metadata queries
+        // - [ ] Return ranked results with similarity scores
+        // - [ ] Add pagination support for large result sets
+        // - [ ] Add unit tests with mock vector data
+        // - [ ] Add integration tests with real vector search
         // In a real implementation, this would execute vector similarity search
         // For now, validate vector dimensions and pool health
         if query_vector.is_empty() {
@@ -299,6 +315,13 @@ impl VectorStore {
 
         debug!("Logging search operation in pool {}", self.pool.stats().pool_id);
 
+        // TODO: Implement real audit log insertion
+        // - [ ] Insert search operation logs into database audit table
+        // - [ ] Include search parameters, results count, execution time
+        // - [ ] Support audit log querying and filtering
+        // - [ ] Handle audit log insertion errors gracefully
+        // - [ ] Add unit tests with mock audit logs
+        // - [ ] Add integration tests with real audit logging
         // In a real implementation, this would insert audit logs into database
         // For now, just validate pool is accessible
         let stats = self.pool.stats();

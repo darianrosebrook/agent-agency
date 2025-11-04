@@ -72,6 +72,15 @@ impl SandboxEnvironment {
         
         // In a full implementation, this would:
         // 1. Spawn a child process with restricted permissions
+        // TODO: Implement real sandbox execution with process isolation
+        // - [ ] Integrate process isolation library (isolate, Docker, or platform-specific APIs)
+        // - [ ] Create isolated execution environment
+        // - [ ] Execute operation in isolated environment
+        // - [ ] Capture stdout/stderr from execution
+        // - [ ] Enforce resource limits (CPU, memory, time)
+        // - [ ] Return execution result with captured output
+        // - [ ] Add unit tests with mock isolation
+        // - [ ] Add integration tests with real sandbox execution
         // 2. Execute the operation in the isolated environment
         // 3. Capture stdout/stderr
         // 4. Enforce resource limits
@@ -258,6 +267,14 @@ impl ResourceMonitor {
 
     /// Get current resource usage
     pub async fn get_usage(&self) -> ResourceUsage {
+        // TODO: Implement real resource usage monitoring
+        // - [ ] Integrate sysinfo crate for system metrics
+        // - [ ] Get actual process memory usage from system
+        // - [ ] Get actual CPU usage from system
+        // - [ ] Track resource usage over time
+        // - [ ] Handle platform-specific differences (macOS, Linux, Windows)
+        // - [ ] Add unit tests with mock system metrics
+        // - [ ] Add integration tests with real resource monitoring
         // Attempt to get real resource usage using platform-specific methods
         // For now, use basic estimation with fallback
         

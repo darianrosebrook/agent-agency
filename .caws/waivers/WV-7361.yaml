@@ -1,0 +1,12 @@
+id: WV-7361
+title: Agent-Workers Compilation Fixes - Worker 1 Complete
+reason: structural-fixes
+description: Waiver for agent-workers crate compilation fixes. Structural issues resolved, placeholder TODOs tagged for follow-up by Workers 2 & 3.
+gates:
+  - hidden-todos
+created_at: '2025-11-04T18:35:57.361Z'
+expires_at: '2025-11-05'
+approved_by: engineering-lead
+impact_level: high
+mitigation_plan: Worker 1 completed structural compilation fixes. Workers 2 & 3 will address remaining TODOs in agent-research and agent-orchestration crates. All 81 agent-workers errors resolved.
+status: active

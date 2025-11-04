@@ -555,10 +555,24 @@ struct CircuitBreakerRegistry;
 
 impl CircuitBreakerRegistry {
     fn register(&self, _service_name: &str, _config: CircuitBreakerConfig) {
+        // TODO: Implement real circuit breaker registry
+        // - [ ] Integrate circuit breaker library (e.g., resilience4rs, tower)
+        // - [ ] Register circuit breakers with service names and configurations
+        // - [ ] Track circuit breaker state (open, closed, half-open)
+        // - [ ] Handle circuit breaker lifecycle (creation, updates, deletion)
+        // - [ ] Add unit tests with mock circuit breakers
+        // - [ ] Add integration tests with real circuit breaker behavior
         // Stub - do nothing
     }
 
     fn get_all_stats(&self) -> HashMap<String, CircuitBreakerStats> {
+        // TODO: Collect actual circuit breaker statistics
+        // - [ ] Query each registered circuit breaker for stats
+        // - [ ] Aggregate statistics (failure count, success count, state)
+        // - [ ] Calculate success rates and failure rates
+        // - [ ] Include timing information for circuit breaker operations
+        // - [ ] Add unit tests with mock circuit breaker stats
+        // - [ ] Add integration tests with real circuit breaker statistics
         HashMap::new() // Stub - return empty stats
     }
 }
@@ -1625,6 +1639,14 @@ impl MCPServer {
                             }
                             AUTH_FAILURES_TOTAL.inc();
 
+                            // TODO: Implement comprehensive authentication failure logging
+                            // - [ ] Log user agent information
+                            // - [ ] Log IP address and request details
+                            // - [ ] Log authentication failure reason
+                            // - [ ] Add rate limiting for failed authentication attempts
+                            // - [ ] Add security event tracking
+                            // - [ ] Add unit tests for authentication failure logging
+                            // - [ ] Add integration tests with real authentication failures
                             // Log failed authentication (simplified for now)
                             let _user_agent = request
                                 .headers()

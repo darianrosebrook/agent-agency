@@ -713,6 +713,14 @@ impl WordNetIntegrator {
             return Ok(Some(cached.clone()));
         }
 
+        // TODO: Implement real WordNet database integration
+        // - [ ] Integrate WordNet database or API access
+        // - [ ] Query WordNet for concept definitions and relationships
+        // - [ ] Parse WordNet data into KnowledgeItem format
+        // - [ ] Handle WordNet query errors and missing concepts
+        // - [ ] Add caching for frequently accessed concepts
+        // - [ ] Add unit tests with mock WordNet data
+        // - [ ] Add integration tests with real WordNet database
         // Placeholder - would query WordNet database
         // For demo purposes, return mock data for known concepts
         let item = match concept.to_lowercase().as_str() {
@@ -756,6 +764,14 @@ impl WordNetIntegrator {
     }
 
     pub async fn search_concepts(&self, _query: &str, _limit: usize) -> DataProcessingResult<Vec<KnowledgeItem>> {
+        // TODO: Implement real WordNet concept search
+        // - [ ] Integrate WordNet search functionality
+        // - [ ] Perform semantic search on WordNet database
+        // - [ ] Return results ranked by relevance
+        // - [ ] Limit results to specified limit parameter
+        // - [ ] Handle search errors and empty results
+        // - [ ] Add unit tests with mock search results
+        // - [ ] Add integration tests with real WordNet search
         // Placeholder - would search WordNet
         Ok(vec![])
     }

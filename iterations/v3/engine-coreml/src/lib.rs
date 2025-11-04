@@ -163,6 +163,13 @@ impl CoreMLEngine {
         system_acceleration::ane::compat::coreml::coreml::is_ane_available()
     }
 
+    /// TODO: Replace mock response with real CoreML inference
+    /// - [ ] Integrate real CoreML model inference
+    /// - [ ] Process judge prompts through CoreML model
+    /// - [ ] Parse CoreML output into judge response format
+    /// - [ ] Handle CoreML inference errors
+    /// - [ ] Add unit tests with mock CoreML outputs
+    /// - [ ] Add integration tests with real CoreML inference
     /// Generate mock response for development (replace with real CoreML)
     fn generate_mock_response(&self, judge_type: JudgeType) -> String {
         match judge_type {
@@ -262,9 +269,14 @@ impl CoreMLEngine {
 
     /// Run inference using real Mistral model or fallback to simulation
     async fn run_inference(&self, prompt: &JudgePrompt, max_tokens: usize) -> Result<String, EngineError> {
+        // TODO: Wrap MistralModel in Arc<Mutex<...>> or similar for shared mutable access
+        // - [ ] Wrap MistralModel in Arc<Mutex<MistralModel>> for thread-safe access
+        // - [ ] Implement proper model sharing across concurrent requests
+        // - [ ] Handle model locking and contention gracefully
+        // - [ ] Add unit tests with shared model instances
+        // - [ ] Add integration tests with concurrent inference requests
         // Use real Mistral inference if model is loaded
         // PLACEHOLDER: MistralModel doesn't implement Clone, so we need to use interior mutability
-        // TODO: Wrap MistralModel in Arc<Mutex<...>> or similar for shared mutable access
         // For now, fallback to simulation until model sharing is properly implemented
         warn!("Real Mistral inference requires model sharing implementation - using simulation");
         return self.run_simulated_inference(prompt, max_tokens).await;

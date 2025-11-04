@@ -502,6 +502,12 @@ impl ToolDiscoveryEngine {
         DiscoveryStats {
             total_discovered: capabilities.len(),
             by_category,
+            // TODO: Calculate real discovery metrics
+            // - [ ] Measure actual discovery time from start to completion
+            // - [ ] Calculate success rate from successful vs failed discoveries
+            // - [ ] Track discovery metrics over time
+            // - [ ] Add unit tests with mock discovery times
+            // - [ ] Add integration tests with real discovery metrics
             avg_discovery_time_ms: 1500.0, // Placeholder
             last_discovery: chrono::Utc::now(),
             success_rate: 0.95, // Placeholder
@@ -583,6 +589,13 @@ impl NetworkSource {
 #[async_trait::async_trait]
 impl DiscoverySource for NetworkSource {
     async fn discover_tools(&self) -> Result<Vec<ToolCapability>> {
+        // TODO: Implement real remote registry tool discovery
+        // - [ ] Query remote tool registries (HTTP APIs, etc.)
+        // - [ ] Parse tool capabilities from registry responses
+        // - [ ] Handle registry connection errors and timeouts
+        // - [ ] Cache discovered tools for performance
+        // - [ ] Add unit tests with mock registries
+        // - [ ] Add integration tests with real remote registries
         // In practice, this would query remote registries
         // For now, return empty list
         Ok(vec![])
@@ -610,6 +623,13 @@ impl PluginSource {
 #[async_trait::async_trait]
 impl DiscoverySource for PluginSource {
     async fn discover_tools(&self) -> Result<Vec<ToolCapability>> {
+        // TODO: Implement real plugin directory scanning
+        // - [ ] Scan plugin directories for tool definitions
+        // - [ ] Parse tool metadata files (JSON, YAML, etc.)
+        // - [ ] Validate tool schemas and capabilities
+        // - [ ] Handle file system errors and invalid plugins
+        // - [ ] Add unit tests with mock plugin directories
+        // - [ ] Add integration tests with real plugin discovery
         // In practice, this would scan plugin directories
         // For now, return empty list
         Ok(vec![])

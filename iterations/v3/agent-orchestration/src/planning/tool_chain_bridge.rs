@@ -417,6 +417,14 @@ impl ToolChainBridge {
 
     /// Convert milestone to tool chain execution
     pub async fn milestone_to_tool_chain(&self, milestone: &ContractMilestone) -> Result<ToolChainExecution> {
+        // TODO: Implement milestone to tool chain conversion
+        // - [ ] Parse milestone specification and requirements
+        // - [ ] Map milestone actions to tool chain steps
+        // - [ ] Create tool chain execution plan with dependencies
+        // - [ ] Validate tool chain configuration
+        // - [ ] Handle conversion errors gracefully
+        // - [ ] Add unit tests with various milestone types
+        // - [ ] Add integration tests with real tool chain conversion
         // Placeholder implementation
         // Would convert milestone specification to tool chain format
 
@@ -425,6 +433,14 @@ impl ToolChainBridge {
 
     /// Execute tool chain and collect results
     pub async fn execute_tool_chain(&self, tool_chain: &ToolChainExecution) -> Result<ExecutionResult> {
+        // TODO: Implement tool chain execution
+        // - [ ] Execute tool chain steps in proper order
+        // - [ ] Handle step dependencies and execution order
+        // - [ ] Collect results from each tool chain step
+        // - [ ] Aggregate results into final execution result
+        // - [ ] Handle execution errors and rollback if needed
+        // - [ ] Add unit tests with mock tool chains
+        // - [ ] Add integration tests with real tool chain execution
         // Placeholder implementation
         // Would execute the tool chain and return results
 

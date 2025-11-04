@@ -175,6 +175,13 @@ where
 
                         warn!("Processing error: {}", e);
 
+                        // TODO: Implement proper error handling and reporting
+                        // - [ ] Send error indicators to monitoring/alerting system
+                        // - [ ] Track error rates and patterns
+                        // - [ ] Implement error recovery strategies
+                        // - [ ] Add circuit breaker for repeated failures
+                        // - [ ] Add unit tests with various error scenarios
+                        // - [ ] Add integration tests with real error handling
                         // Send error indicator if needed
                         // For now, we just log and continue
                     }

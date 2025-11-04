@@ -879,6 +879,12 @@ impl Council {
                         "conduct_single_judge_review_with_error_handling"
                     ))?;
 
+                // TODO: Use proper description field instead of title
+                // - [ ] Extract description from working_spec.description field
+                // - [ ] Use description for judge evaluation instead of title
+                // - [ ] Handle missing description gracefully with fallback
+                // - [ ] Add unit tests with various description formats
+                // - [ ] Add integration tests with real judge evaluations
                 judge.evaluate(
                     spec_id,
                     &working_spec.title,
@@ -909,6 +915,7 @@ impl Council {
                         "conduct_single_judge_review_with_error_handling"
                     ))?;
 
+                // TODO: Use proper description field instead of title (see line 882 for details)
                 judge.evaluate(
                     spec_id,
                     &working_spec.title,
@@ -947,6 +954,7 @@ impl Council {
                                         "conduct_single_judge_review_with_error_handling"
                                     ))?;
                                 
+                                // TODO: Use proper description field instead of title (see line 882 for details)
                                 judge.evaluate(
                                     spec_id,
                                     &working_spec.title,
@@ -998,6 +1006,7 @@ impl Council {
             let working_spec: crate::council_types::WorkingSpec = serde_json::from_str(&context.working_spec)
                 .map_err(|e| CouncilError::InvalidInput { message: format!("Failed to parse working spec: {}", e) })?;
             
+            // TODO: Use proper description field instead of title (see line 882 for details)
             judge.evaluate(
                 spec_id,
                 &working_spec.title,

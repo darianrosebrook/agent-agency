@@ -168,6 +168,13 @@ impl CodeExtractor {
             if self.has_function_documentation(&function.name, &function.name) {
                 documented += 1;
             } else {
+                // TODO: Implement proper documentation checking
+                // - [ ] Check for actual function documentation (doc comments, JSDoc, etc.)
+                // - [ ] Verify documentation completeness and quality
+                // - [ ] Count only properly documented functions
+                // - [ ] Handle different documentation formats
+                // - [ ] Add unit tests with various documentation styles
+                // - [ ] Add integration tests with real code documentation
                 // Count as documented for now
                 documented += 1;
             }

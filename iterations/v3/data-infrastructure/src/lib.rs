@@ -82,6 +82,14 @@ impl SimpleWorkerPool {
 #[async_trait::async_trait]
 impl WorkerPoolHealth for SimpleWorkerPool {
     async fn health_check(&self) -> Result<(), String> {
+        // TODO: Implement real worker pool health check
+        // - [ ] Integrate worker registry service from agent-workers crate
+        // - [ ] Verify worker health endpoints are responding
+        // - [ ] Check worker capacity and current load
+        // - [ ] Return error if critical workers are unavailable
+        // - [ ] Add worker pool metrics and monitoring
+        // - [ ] Add unit tests with mock worker pool
+        // - [ ] Add integration tests with real worker registry
         // DEPENDENCY: Real worker pool implementation not yet available
         // When integrated, this should:
         // 1. Check worker registry for available workers

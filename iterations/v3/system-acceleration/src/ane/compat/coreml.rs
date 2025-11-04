@@ -281,6 +281,12 @@ impl MLModel {
 
     /// Save a compiled model to a file path
     pub fn save_to_path(&self, path: &std::path::Path) -> std::result::Result<(), String> {
+        // TODO: Implement real model saving to disk
+        // - [ ] Use CoreML API to save compiled model to specified path
+        // - [ ] Handle file system errors and permissions
+        // - [ ] Validate model state before saving
+        // - [ ] Add unit tests with mock file system
+        // - [ ] Add integration tests with real model saving
         // For now, this is a no-op as the model is already managed by the FFI layer
         // In a real implementation, this would save the compiled model to disk
         let _ = path; // Suppress unused variable warning
@@ -289,6 +295,13 @@ impl MLModel {
 
     /// Run prediction on the model with the given features
     pub fn prediction_from_features(&self, _features: &MLFeatureProvider) -> std::result::Result<MLFeatureProvider, String> {
+        // TODO: Implement real CoreML prediction from features
+        // - [ ] Convert MLFeatureProvider to CoreML MLFeatureProvider format
+        // - [ ] Execute CoreML prediction through FFI interface
+        // - [ ] Convert CoreML output back to MLFeatureProvider
+        // - [ ] Handle prediction errors and invalid features
+        // - [ ] Add unit tests with mock feature providers
+        // - [ ] Add integration tests with real CoreML predictions
         // This is a complex operation that would need to be implemented
         // through the FFI interface. For now, return an error indicating
         // this needs to be implemented through a more specific inference API.

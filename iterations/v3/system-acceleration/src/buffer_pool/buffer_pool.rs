@@ -45,6 +45,13 @@ impl BufferPool {
 
     /// Allocate a buffer
     pub fn allocate(&mut self, size_mb: usize) -> Result<BufferHandle> {
+        // TODO: Implement real buffer allocation
+        // - [ ] Allocate actual memory buffer of specified size
+        // - [ ] Track buffer handles with unique IDs
+        // - [ ] Support device-specific allocation (CPU, ANE, GPU)
+        // - [ ] Handle allocation failures and memory limits
+        // - [ ] Add unit tests with mock buffer allocation
+        // - [ ] Add integration tests with real buffer management
         // Placeholder implementation
         Ok(BufferHandle {
             id: 0,
@@ -55,6 +62,12 @@ impl BufferPool {
 
     /// Deallocate a buffer
     pub fn deallocate(&mut self, _handle: BufferHandle) -> Result<()> {
+        // TODO: Implement real buffer deallocation
+        // - [ ] Free allocated memory for buffer handle
+        // - [ ] Remove buffer handle from tracking
+        // - [ ] Handle deallocation errors gracefully
+        // - [ ] Add unit tests with mock buffer deallocation
+        // - [ ] Add integration tests with real buffer cleanup
         // Placeholder implementation
         Ok(())
     }

@@ -130,6 +130,14 @@ impl ScopeGuard {
 
         // Handle conflicts
         if !conflicts.is_empty() {
+            // TODO: Implement proper conflict resolution
+            // - [ ] Implement conflict resolution strategies (wait, queue, retry)
+            // - [ ] Support conflict negotiation between milestones
+            // - [ ] Add timeout handling for conflict resolution
+            // - [ ] Log conflict resolution attempts and outcomes
+            // - [ ] Handle deadlock detection and prevention
+            // - [ ] Add unit tests with various conflict scenarios
+            // - [ ] Add integration tests with real conflict resolution
             // For now, fail if there are conflicts (simplified implementation)
             let conflict_details = conflicts.into_iter()
                 .map(|(path, lock)| format!("{} (held by {})", path, lock.milestone_id))

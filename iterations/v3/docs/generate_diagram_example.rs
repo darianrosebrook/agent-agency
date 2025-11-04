@@ -85,6 +85,12 @@ fn create_architecture_prompt(spec: &ArchitectureSpec) -> Result<String, Box<dyn
     Ok(prompt)
 }
 
+/// TODO: Load real CoreML-Anything diffusion model
+/// - [ ] Load actual CoreML-Anything model from file system or URL
+/// - [ ] Initialize model with proper telemetry and circuit breaker
+/// - [ ] Handle model loading errors and fallbacks
+/// - [ ] Add unit tests with mock models
+/// - [ ] Add integration tests with real CoreML model loading
 /// Load diffusion model (placeholder implementation)
 async fn load_diffusion_model(
     telemetry: &TelemetryCollector,
@@ -124,6 +130,12 @@ async fn save_diagram_image(
     let width = generated_image.pixels.dim().3;
     let height = generated_image.pixels.dim().2;
 
+    // TODO: Generate real image from diffusion model output
+    // - [ ] Process diffusion model output tensor into image format
+    // - [ ] Convert model output to RGB pixel values
+    // - [ ] Apply post-processing (normalization, color correction)
+    // - [ ] Add unit tests with mock model outputs
+    // - [ ] Add integration tests with real image generation
     // Create placeholder RGB image
     let img = ImageBuffer::from_fn(width as u32, height as u32, |x, y| {
         // Placeholder: create a gradient pattern

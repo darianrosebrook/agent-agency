@@ -1148,6 +1148,14 @@ impl SystemMetricsCollector {
     async fn collect_cpu_metrics_windows(&self) -> Result<CpuMetrics, Box<dyn std::error::Error>> {
         #[cfg(target_os = "windows")]
         {
+            // TODO: Re-enable sysinfo CPU metrics when API is stabilized
+            // - [ ] Update sysinfo dependency to version with stable CPU API
+            // - [ ] Get actual CPU usage percentage from system
+            // - [ ] Get CPU frequency from system
+            // - [ ] Get per-core CPU usage percentages
+            // - [ ] Handle API changes gracefully
+            // - [ ] Add unit tests with mock CPU data
+            // - [ ] Add integration tests with real CPU monitoring
             // Temporarily disabled sysinfo usage
             // use sysinfo::{System, CpuExt};
             
@@ -2506,6 +2514,13 @@ impl MemoryMonitor {
     
     /// Convert a strong reference to ObjectRef
     fn convert_to_object_ref(&self, strong_ref: &std::sync::Arc<dyn std::any::Any + Send + Sync>) -> Option<ObjectRef> {
+        // TODO: Implement proper type information extraction
+        // - [ ] Extract actual TypeId from the Any trait object
+        // - [ ] Use type information for proper object tracking
+        // - [ ] Implement proper pointer tracking with lifetime management
+        // - [ ] Handle type erasure correctly
+        // - [ ] Add unit tests with various object types
+        // - [ ] Add integration tests with real object references
         // This is a simplified conversion - in a real implementation,
         // we'd need proper type information and pointer tracking
         Some(ObjectRef {

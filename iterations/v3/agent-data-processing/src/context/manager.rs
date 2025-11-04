@@ -72,6 +72,13 @@ impl DatabaseClient {
 
     pub async fn execute(&self, query: &str, params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<(), DataProcessingError> {
         // TODO: Implement proper parameterized queries with sqlx
+        // - [ ] Use sqlx::query! macro for compile-time query validation
+        // - [ ] Or use sqlx::QueryBuilder for dynamic query construction
+        // - [ ] Support multiple parameter types (string, int, float, etc.)
+        // - [ ] Add SQL injection protection through parameterized queries
+        // - [ ] Handle parameter binding errors gracefully
+        // - [ ] Add unit tests with various parameter types
+        // - [ ] Add integration tests with real database parameterized queries
         // For now, only support queries without parameters to avoid trait object issues
         if !params.is_empty() {
             return Err(DataProcessingError::Operation("Parameterized queries not yet supported".to_string()));
@@ -86,6 +93,13 @@ impl DatabaseClient {
 
     pub async fn query(&self, query: &str, _params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<Vec<sqlx::postgres::PgRow>, DataProcessingError> {
         // TODO: Implement proper parameterized queries with sqlx
+        // - [ ] Use sqlx::query! macro for compile-time query validation
+        // - [ ] Or use sqlx::QueryBuilder for dynamic query construction
+        // - [ ] Support multiple parameter types (string, int, float, etc.)
+        // - [ ] Add SQL injection protection through parameterized queries
+        // - [ ] Handle parameter binding errors gracefully
+        // - [ ] Add unit tests with various parameter types
+        // - [ ] Add integration tests with real database parameterized queries
         // For now, only support queries without parameters to avoid trait object issues
         if !_params.is_empty() {
             return Err(DataProcessingError::Operation("Parameterized queries not yet supported".to_string()));
