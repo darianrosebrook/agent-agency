@@ -540,7 +540,7 @@ impl DecompositionEngine {
         _analysis: &TaskAnalysis,
     ) -> Result<Vec<SubTask>, DecompositionError> {
         // PLACEHOLDER: Implement parallel decomposition strategy
-        Err(DecompositionError::NotImplemented("Parallel decomposition not yet implemented".to_string()))
+        Err(DecompositionError::NotImplemented { message: "Parallel decomposition not yet implemented".to_string() })
     }
 
     async fn decompose_sequential(
@@ -549,7 +549,7 @@ impl DecompositionEngine {
         _analysis: &TaskAnalysis,
     ) -> Result<Vec<SubTask>, DecompositionError> {
         // PLACEHOLDER: Implement sequential decomposition strategy
-        Err(DecompositionError::NotImplemented("Sequential decomposition not yet implemented".to_string()))
+        Err(DecompositionError::NotImplemented { message: "Sequential decomposition not yet implemented".to_string() })
     }
 
     async fn decompose_hierarchical(
@@ -558,7 +558,7 @@ impl DecompositionEngine {
         _analysis: &TaskAnalysis,
     ) -> Result<Vec<SubTask>, DecompositionError> {
         // PLACEHOLDER: Implement hierarchical decomposition strategy
-        Err(DecompositionError::NotImplemented("Hierarchical decomposition not yet implemented".to_string()))
+        Err(DecompositionError::NotImplemented { message: "Hierarchical decomposition not yet implemented".to_string() })
     }
 
     async fn decompose_adaptive(
@@ -567,7 +567,7 @@ impl DecompositionEngine {
         _analysis: &TaskAnalysis,
     ) -> Result<Vec<SubTask>, DecompositionError> {
         // PLACEHOLDER: Implement adaptive decomposition strategy
-        Err(DecompositionError::NotImplemented("Adaptive decomposition not yet implemented".to_string()))
+        Err(DecompositionError::NotImplemented { message: "Adaptive decomposition not yet implemented".to_string() })
     }
 }
 

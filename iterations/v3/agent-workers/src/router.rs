@@ -54,7 +54,7 @@ impl TaskRouter {
             }
         }
 
-        Err(WorkerError::NoSuitableWorker("No worker found with required capabilities".to_string()))
+        Err(WorkerError::NoSuitableWorker { message: "No worker found with required capabilities".to_string() })
     }
 
     fn calculate_match_score(&self, required: &[String], available: &[String]) -> f32 {
