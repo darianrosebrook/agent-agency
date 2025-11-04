@@ -8,7 +8,8 @@ use serde::{Serialize, Deserialize};
 use crate::parallel_types::{TaskId, SubTaskId, WorkerId};
 use crate::learning::{
     ExecutionRecord, WorkerPerformanceProfile, SuccessPattern, FailurePattern,
-    OptimalConfig, ConfigurationRecommendations, OptimizationEvent, TaskPattern
+    OptimalConfig, ConfigurationRecommendations, OptimizationEvent, TaskPattern,
+    PatternType
 };
 use data_infrastructure::client::DatabaseClient;
 use std::sync::Arc;

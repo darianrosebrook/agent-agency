@@ -10,7 +10,6 @@
 use schemars::JsonSchema;
 use std::net::IpAddr;
 use sqlx::Row;
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde_json::Value;
 use crate::simple_client::DatabaseClient;

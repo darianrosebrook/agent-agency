@@ -106,7 +106,7 @@ impl Evaluator for CodeQualityEvaluator {
         // Check artifacts
         for artifact in &result.artifacts {
             match artifact.artifact_type {
-                crate::prompting_types::ArtifactType::Code => {
+                ArtifactType::Code => {
                     let content = &artifact.content;
 
                     // Basic code quality checks

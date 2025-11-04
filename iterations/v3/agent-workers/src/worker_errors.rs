@@ -87,6 +87,9 @@ pub enum DecompositionError {
 
     #[error("Decomposition does not provide complete coverage of the original task")]
     IncompleteCoverage,
+
+    #[error("Feature not implemented: {message}")]
+    NotImplemented { message: String },
 }
 
 /// Error type for validation operations
@@ -180,6 +183,9 @@ pub enum WorkerError {
     #[error("No specialized worker available for {specialty:?}")]
     NoSpecializedWorkerAvailable { specialty: WorkerSpecialty },
 
+    #[error("No suitable worker available: {message}")]
+    NoSuitableWorker { message: String },
+
     #[error("Worker initialization failed: {message}")]
     Initialization { message: String },
 
@@ -229,6 +235,9 @@ impl Clone for WorkerError {
             },
             WorkerError::NoSpecializedWorkerAvailable { specialty } => WorkerError::NoSpecializedWorkerAvailable {
                 specialty: specialty.clone(),
+            },
+            WorkerError::NoSuitableWorker { message } => WorkerError::NoSuitableWorker {
+                message: message.clone(),
             },
             WorkerError::Initialization { message } => WorkerError::Initialization {
                 message: message.clone(),

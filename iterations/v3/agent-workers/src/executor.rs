@@ -5,7 +5,7 @@
 use schemars::JsonSchema;
 use crate::worker_types::{TaskContext as WorkerTaskContext, UuidGenerator, TaskPriority, CawsSpec, *};
 use crate::parallel_types::{WorkerId, TaskResult};
-use crate::worker_errors::WorkerExecutionResult;
+use crate::worker_errors::{WorkerExecutionResult, WorkerError};
 use agent_agency_contracts::{IssueSeverity, task_executor::{TaskExecutor as TaskExecutorTrait, TaskExecutionResult, TaskSpec as ContractTaskSpec, TaskContext as CouncilTaskContext, TaskSpec, TaskRequirements}, task_request::RiskTier, AcceptanceCriterion};
 use system_resilience::resilience_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
 use system_resilience::retry::{RetryConfig, RetryPolicy};
@@ -132,7 +132,6 @@ pub struct WorkerLoad {
 
 /// Task executor for running tasks with workers
 
-#[derive(Debug)]
 pub struct TaskExecutor {
     // HTTP client for model communication with robust error handling and performance optimization
     client: reqwest::Client,
@@ -143,6 +142,20 @@ pub struct TaskExecutor {
     db_client: Arc<data_infrastructure::DatabaseClient>,
     // Execution statistics tracking
     execution_stats: Arc<tokio::sync::RwLock<ExecutionStats>>,
+}
+
+impl std::fmt::Debug for TaskExecutor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TaskExecutor")
+            .field("client", &"<reqwest::Client>")
+            .field("execution_timeout", &self.execution_timeout)
+            .field("cancel_timeout", &self.cancel_timeout)
+            .field("clock", &"<dyn Clock>")
+            .field("id_gen", &"<dyn IdGenerator>")
+            .field("db_client", &"<DatabaseClient>")
+            .field("execution_stats", &"<ExecutionStats>")
+            .finish()
+    }
 }
 
 /// Internal execution statistics for tracking performance
@@ -1945,7 +1958,7 @@ impl TaskExecutor {
         let domain_count = task_spec.scope.as_ref().map(|s| s.domains.len()).unwrap_or(0);
         let criteria_count = task_spec.acceptance_criteria.len();
 
-        let complexity_score = (file_count * 2) + (loc_estimate / 100) + (domain_count * 3) + (criteria_count * 2);
+        let complexity_score = (file_count * 2) + (loc_estimate / 100) + (domain_count * 3) + (criteria_count as usize * 2);
 
         if complexity_score > 50 {
             TaskComplexity::High

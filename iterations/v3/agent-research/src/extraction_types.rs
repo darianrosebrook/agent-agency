@@ -422,6 +422,25 @@ pub struct VerifiableContent {
     pub evidence_requirements: Vec<EvidenceRequirement>,
 }
 
+/// Reasons why content cannot be verified
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub enum UnverifiableReason {
+    /// Uses subjective language like "best", "worst", "amazing"
+    SubjectiveLanguage,
+    /// Vague or unclear criteria that can't be measured
+    VagueCriteria,
+    /// Missing necessary context to verify the claim
+    MissingContext,
+    /// Based on personal opinion rather than facts
+    OpinionBased,
+    /// Makes predictions about future events
+    FuturePrediction,
+    /// Contains emotional language rather than facts
+    EmotionalContent,
+    /// Claims improvements without measurable criteria
+    ImprovementClaim,
+}
+
 /// Content that cannot be verified
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

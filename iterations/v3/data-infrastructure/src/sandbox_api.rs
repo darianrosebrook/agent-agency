@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::AppState;
 use crate::audit::extract_audit_context;
-use system_quality_security::{Sandbox, SandboxMode, SandboxContext, ExecutionRequest};
+use system_quality_security::{SandboxMode, SandboxContext, ExecutionRequest};
 use system_quality_security::sandbox::SandboxStatus;
 
 /// Request to create and execute in a sandbox

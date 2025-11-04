@@ -18,7 +18,7 @@ use base64::{Engine as _, engine::general_purpose};
 
 use crate::AppState;
 use crate::audit::extract_audit_context;
-use system_quality_security::{Keystore, KeyType, KeyPermission, KeyMetadata};
+use system_quality_security::{KeyType, KeyPermission, KeyMetadata};
 
 /// Request to store a new key
 #[derive(Debug, Deserialize, JsonSchema)]
