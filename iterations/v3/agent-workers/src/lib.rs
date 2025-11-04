@@ -37,9 +37,18 @@ pub mod worker_types;
 pub use worker_types::{
     WorkerMessage, WorkerProgress, Progress, ValidationResult, ValidationContext,
     Artifact, ArtifactType, WorkerHealth, SeverityLevel, TaskPriority,
-    WorkerSpecialty, TaskDefinition, TaskStatus, ExecutionOutcome, LearningMode,
-    Priority, WorkerBreakdown, QualityRequirements, ToolId, ValidationRuleType,
-    SystemClock, UuidGenerator, Clock, CawsSpec
+    TaskDefinition, TaskStatus, ExecutionOutcome, LearningMode,
+    Priority, QualityRequirements, TaskScope,
+    ToolId, ValidationRuleType,
+    SystemClock, UuidGenerator, Clock, CawsSpec, TaskId, SubTaskId, WorkerId
+};
+
+// Re-export types from parallel_types
+pub use parallel_types::{
+    WorkerSpecialty, WorkerBreakdown, ComplexTask, SubTask, TaskResult,
+    WorkerResult, ParallelResult, ParallelError, Dependency, SubtaskScores, ErrorGroup,
+    RefactoringOperation, SubTaskStatus, WorkerMetrics, DecompositionStrategy,
+    CoordinationStrategy, ParallelExecutionPlan, TaskDependency, TaskAnalysis, TaskPattern
 };
 
 // Consolidated from workers/ crate
@@ -89,7 +98,7 @@ pub use specialized_workers::{CompilationSpecialist, RefactoringSpecialist, Test
 
 // Re-export types from consolidated parallel-workers crate
 pub use coordinator::{ParallelCoordinator, ParallelCoordinatorConfig};
-pub use decomposition::{DecompositionEngine, TaskAnalysis, TaskPattern};
+pub use decomposition::DecompositionEngine;
 pub use communication::hub::CommunicationHub;
 pub use progress::{WorkerProgressTracker};
 pub use validation::{QualityValidatorTrait, QualityGate};
@@ -116,19 +125,20 @@ pub async fn new_worker_pool_with_registry(tool_registry: std::sync::Arc<agent_m
 
 /// Create a parallel coordinator for complex task decomposition
 pub fn new_parallel_coordinator() -> ParallelCoordinator {
-    // TODO: Implement coordinator creation
-    todo!("Implement coordinator creation")
+    let config = ParallelCoordinatorConfig::default();
+    ParallelCoordinator::new(config)
 }
 
 /// Create a parallel coordinator with custom configuration
-pub fn new_parallel_coordinator_with_config(_config: ParallelCoordinatorConfig) -> ParallelCoordinator {
-    // TODO: Implement coordinator creation with config
-    todo!("Implement coordinator creation with config")
+pub fn new_parallel_coordinator_with_config(config: ParallelCoordinatorConfig) -> ParallelCoordinator {
+    ParallelCoordinator::new(config)
 }
 
 /// Create a task executor that implements the TaskExecutor trait
 pub fn create_task_executor() -> std::sync::Arc<dyn TaskExecutorTrait> {
-    std::sync::Arc::new(executor::TaskExecutor::new())
+    // Create default database client for task executor
+    let db_client = std::sync::Arc::new(data_infrastructure::client::DatabaseClient::new());
+    std::sync::Arc::new(executor::TaskExecutor::new(db_client))
 }
 
 /// Create a factory function for TaskExecutorProvider

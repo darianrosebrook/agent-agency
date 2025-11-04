@@ -2,7 +2,8 @@
 
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
-use crate::parallel_types::{ComplexTask, SubTask, TaskId, SubTaskId, WorkerId, TaskResult, WorkerResult, ParallelResult, ParallelError, Priority, WorkerBreakdown};
+use crate::parallel_types::{ComplexTask, SubTask, TaskResult, WorkerResult, ParallelResult, ParallelError, WorkerBreakdown};
+use crate::worker_types::{TaskId, SubTaskId, WorkerId, Priority};
 use crate::error::{CommunicationError, ValidationError, ProgressError};
 use crate::decomposition::{DecompositionEngine};
 use crate::worker::{WorkerManager, DefaultWorkerPool};
@@ -17,7 +18,8 @@ use crate::learning::{
     ExecutionRecord, WorkerPerformanceProfile, SuccessPattern, FailurePattern, 
     OptimalConfig, ConfigurationRecommendations, OptimizationEvent, TaskPattern
 };
-use crate::worker_types::{WorkerSpecialty, TaskDefinition, TaskStatus, ExecutionOutcome, LearningMode, QualityRequirements, Progress, ValidationContext};
+use crate::worker_types::{TaskDefinition, TaskStatus, ExecutionOutcome, LearningMode, QualityRequirements, Progress, ValidationContext};
+use crate::parallel_types::WorkerSpecialty;
 use agent_agency_contracts::task_executor::{TaskExecutor, TaskSpec, ExecutionStatus};
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
 use std::collections::HashMap;

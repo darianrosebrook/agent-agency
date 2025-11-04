@@ -609,7 +609,7 @@ struct MilestoneExecutionResult {
 /// Batch execution result
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct BatchExecutionResult {
+pub struct BatchExecutionResult {
     pub successful: usize,
     pub failed: usize,
     scope_conflicts: usize,

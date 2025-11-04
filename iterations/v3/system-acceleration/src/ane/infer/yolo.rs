@@ -1,9 +1,15 @@
-//! YOLO inference implementation for object detection - TEMPORARILY DISABLED due to candle-core dependency conflicts
+//! YOLO inference implementation for object detection
 //!
 //! This module provides the core inference logic for YOLO models,
 //! including image preprocessing, model execution, and detection decoding.
+//!
+//! CRITICAL: DO NOT REMOVE OR DISABLE THIS MODULE
+//! This is production functionality that was restored after fixing candle-core conflicts.
+//! DO NOT comment out this module or its functionality.
+//! DO NOT disable YOLO object detection.
+//! If you encounter issues, fix them rather than disabling this module.
+//! Last fixed: P0 priority - candle-core dependency alignment (2025-01-XX)
 
-/*
 use crate::ane::ane_errors::{ANEError, Result};
 use crate::ane::models::yolo_model::{
     LoadedYOLOModel, YOLODetectionResult, Detection,
@@ -368,4 +374,3 @@ mod tests {
         assert_eq!(iou, 1.0); // Complete overlap
     }
 }
-*/

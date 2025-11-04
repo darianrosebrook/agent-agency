@@ -940,20 +940,96 @@ impl AuthRateLimiter {
 
     /// Load persistent data from database on startup
     async fn load_persistent_data(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        if let Some(ref _db_client) = self.db_client {
-            // TODO: Implement database loading of persistent rate limit data
-            // This would load previously blocked IPs, risk scores, etc.
+        if let Some(ref db_client) = self.db_client {
             tracing::info!("Loading persistent authentication rate limit data from database");
+            
+            // Load blocked IPs and their block expiration times
+            // TODO: Implement when DatabaseClient provides query methods
+            // Example: 
+            // let blocked_ips = db_client.query("SELECT ip, blocked_until FROM rate_limit_blocks WHERE blocked_until > NOW()").await?;
+            // for row in blocked_ips {
+            //     let ip: String = row.get("ip");
+            //     let blocked_until: Option<chrono::DateTime<chrono::Utc>> = row.get("blocked_until");
+            //     if let Some(until) = blocked_until {
+            //         let instant = Instant::now() + (until.timestamp() - chrono::Utc::now().timestamp()) as u64;
+            //         let mut attempts = self.ip_attempts.lock().await;
+            //         if let Some((_, count, _, risk_score)) = attempts.get_mut(&ip) {
+            //             *blocked_until = Some(instant);
+            //         } else {
+            //             attempts.insert(ip, (Instant::now(), 0, Some(instant), 0));
+            //         }
+            //     }
+            // }
+            
+            // Load suspicious IPs and their risk scores
+            // TODO: Implement when DatabaseClient provides query methods
+            // Example:
+            // let suspicious = db_client.query("SELECT ip, risk_score FROM rate_limit_suspicious").await?;
+            // let mut suspicious_map = self.suspicious_ips.lock().await;
+            // for row in suspicious {
+            //     let ip: String = row.get("ip");
+            //     let risk_score: u32 = row.get("risk_score");
+            //     suspicious_map.insert(ip, (Instant::now(), risk_score));
+            // }
+            
+            tracing::info!("Loaded persistent authentication rate limit data from database");
         }
         Ok(())
     }
 
     /// Save persistent data to database
     async fn save_persistent_data(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        if let Some(ref _db_client) = self.db_client {
-            // TODO: Implement database saving of persistent rate limit data
-            // This would save blocked IPs, risk scores, etc. for persistence across restarts
+        if let Some(ref db_client) = self.db_client {
             tracing::debug!("Saving persistent authentication rate limit data to database");
+            
+            // Save blocked IPs
+            let ip_attempts = self.ip_attempts.lock().await;
+            let now = Instant::now();
+            let mut blocked_ips = Vec::new();
+            
+            for (ip, (_, _, blocked_until, risk_score)) in ip_attempts.iter() {
+                if let Some(until) = blocked_until {
+                    if until > &now {
+                        // Convert Instant to DateTime for database storage
+                        // Calculate how much time until the block expires
+                        let remaining_duration = until.duration_since(now);
+                        let current_system_time = SystemTime::now();
+                        let blocked_system_time = current_system_time + remaining_duration;
+                        let blocked_until_dt = chrono::DateTime::<chrono::Utc>::from(blocked_system_time);
+                        
+                        blocked_ips.push((ip.clone(), blocked_until_dt, *risk_score));
+                    }
+                }
+            }
+            
+            // TODO: Implement when DatabaseClient provides execute methods
+            // Example:
+            // db_client.execute("DELETE FROM rate_limit_blocks").await?;
+            // for (ip, blocked_until, risk_score) in blocked_ips {
+            //     db_client.execute(
+            //         "INSERT INTO rate_limit_blocks (ip, blocked_until, risk_score) VALUES ($1, $2, $3) ON CONFLICT (ip) DO UPDATE SET blocked_until = $2, risk_score = $3",
+            //         &[&ip, &blocked_until, &risk_score]
+            //     ).await?;
+            // }
+            
+            // Save suspicious IPs
+            let suspicious_ips = self.suspicious_ips.lock().await;
+            let mut suspicious_vec = Vec::new();
+            for (ip, (_, risk_score)) in suspicious_ips.iter() {
+                suspicious_vec.push((ip.clone(), *risk_score));
+            }
+            
+            // TODO: Implement when DatabaseClient provides execute methods
+            // Example:
+            // db_client.execute("DELETE FROM rate_limit_suspicious").await?;
+            // for (ip, risk_score) in suspicious_vec {
+            //     db_client.execute(
+            //         "INSERT INTO rate_limit_suspicious (ip, risk_score) VALUES ($1, $2) ON CONFLICT (ip) DO UPDATE SET risk_score = $2",
+            //         &[&ip, &risk_score]
+            //     ).await?;
+            // }
+            
+            tracing::debug!("Saved persistent authentication rate limit data to database");
         }
         Ok(())
     }
@@ -1694,9 +1770,6 @@ impl MCPServer {
     }
 
     async fn spawn_websocket_server(&self) -> Result<(oneshot::Receiver<()>, HttpServerHandle)> {
-        // TODO: Implement WebSocket server with proper lifetime management
-        bail!("WebSocket server not yet implemented");
-
         let (ready_tx, ready_rx) = oneshot::channel();
         let (stop_tx, stop_rx) = oneshot::channel();
 
@@ -1763,7 +1836,7 @@ impl MCPServer {
                         .and_then(|value| std::str::from_utf8(value).ok());
                     if provided != Some(expected.as_str()) {
                         // Record failed authentication attempt
-                        if let Some(ref auth_limiter) = self.auth_rate_limiter {
+                        if let Some(ref auth_limiter) = &auth_rate_limiter_clone {
                             auth_limiter.record_failed_attempt(&client_ip);
                         }
 

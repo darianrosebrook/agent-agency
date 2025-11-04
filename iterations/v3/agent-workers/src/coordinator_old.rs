@@ -16,7 +16,8 @@ use crate::learning::{
     ExecutionRecord, WorkerPerformanceProfile, SuccessPattern, FailurePattern, 
     OptimalConfig, ConfigurationRecommendations, OptimizationEvent, TaskPattern
 };
-use crate::worker_types::{WorkerSpecialty, TaskDefinition, TaskStatus, ExecutionOutcome, LearningMode, Priority, WorkerBreakdown, QualityRequirements, Progress, ValidationContext};
+use crate::worker_types::{TaskDefinition, TaskStatus, ExecutionOutcome, LearningMode, Priority, QualityRequirements, Progress, ValidationContext};
+use crate::parallel_types::{WorkerSpecialty, WorkerBreakdown};
 use agent_agency_contracts::task_executor::{TaskExecutor, TaskSpec, TaskRequirements, TaskContext, TaskScope, ExecutionStatus};
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
 use system_observability::MetricsCollector as SystemMetricsCollector;
@@ -2060,10 +2061,15 @@ impl LearningPersistence for RealLearningPersistence {
         let configs = db_configs.into_iter().map(|db_config| OptimalConfig {
             id: db_config.id,
             config_type: db_config.config_type,
+            worker_type: "general".to_string(), // Default worker type
+            task_type: "general".to_string(), // Default task type
+            config: serde_json::Value::Object(serde_json::Map::new()), // Empty config
             parameters: db_config.parameters,
-            performance_metrics: db_config.performance_metrics,
             conditions: db_config.conditions,
+            performance_metrics: db_config.performance_metrics,
             confidence: db_config.confidence,
+            expires_at: None,
+            metadata: serde_json::Value::Object(serde_json::Map::new()),
             created_at: db_config.created_at,
         }).collect();
         

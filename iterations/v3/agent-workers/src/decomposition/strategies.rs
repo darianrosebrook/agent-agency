@@ -1,6 +1,7 @@
 //! Decomposition strategies for different types of tasks
 
 use crate::parallel_types::*;
+use crate::worker_types::{SubTaskId, Priority, TaskScope};
 use crate::error::*;
 use std::collections::HashMap;
 

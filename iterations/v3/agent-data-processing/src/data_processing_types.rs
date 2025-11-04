@@ -136,7 +136,7 @@ pub struct TextPosition {
 
 /// Unique identifier for data processing operations
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
-pub struct ProcessingId (pub Uuid);
+pub struct ProcessingId(#[schemars(with = "String")] pub Uuid);
 
 impl ProcessingId {
     pub fn new() -> Self {
@@ -297,6 +297,7 @@ pub struct ProcessingContext {
     pub user_id: Option<String>,
     pub project_scope: Option<String>,
     pub priority: ProcessingPriority,
+    #[schemars(with = "Option<String>")]
     pub deadline: Option<DateTime<Utc>>,
     pub tags: Vec<String>,
 }
@@ -453,6 +454,7 @@ impl RetrievedData {
 pub struct ProcessingMetadata {
     pub source_url: Option<String>,
     pub content_hash: String,
+    #[schemars(with = "String")]
     pub ingested_at: chrono::DateTime<chrono::Utc>,
     pub processing_version: String,
     pub quality_score: f64,

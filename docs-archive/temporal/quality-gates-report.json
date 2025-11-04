@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-11-04T14:32:46.671Z",
+  "context": "ci",
+  "files_scoped": 2433,
+  "warnings": [],
+  "violations": [],
+  "performance": {
+    "total_execution_time_ms": 832889,
+    "gate_timings": {
+      "hidden-todo": 832418
+    }
+  }
+}

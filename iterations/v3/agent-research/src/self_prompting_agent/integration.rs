@@ -557,7 +557,7 @@ impl AgentCommunicationHub {
 
     /// Get agent health metrics - basic implementation
     /// TODO: Integrate with system-observability crate for real metrics
-    async fn get_agent_health_metrics(&self, agent_name: &str) -> AgentHealthMetrics {
+    pub async fn get_agent_health_metrics(&self, agent_name: &str) -> AgentHealthMetrics {
         // Basic implementation - return reasonable defaults
         // In a real implementation, this would query actual health metrics
         AgentHealthMetrics {

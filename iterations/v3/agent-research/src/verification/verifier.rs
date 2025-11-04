@@ -10,7 +10,7 @@ use tracing::{info, warn};
 
 use crate::extraction_types::*;
 use crate::verification::types::{
-    CoreferenceResolution as VerificationCoreferenceResolution, 
+    CoreferenceResolution as VerificationCoreferenceResolution,
     VerificationResult as ClaimVerificationResult,
     CheckResult,
     *,
@@ -24,6 +24,7 @@ use crate::verification::verification_types::{
 };
 use crate::verification::keyword_matcher::KeywordMatcher;
 use crate::verification::code_extractor::CodeExtractor;
+use crate::verification::semantic_analyzer::SemanticAnalyzer;
 use anyhow::Result;
 use futures::FutureExt;
 
@@ -89,22 +90,6 @@ pub struct ContextDependencyResolver {
 
 /// Semantic analyzer for meaning extraction and validation
 
-#[derive(Debug)]
-pub struct SemanticAnalyzer {
-    semantic_parser: SemanticParser,
-    meaning_extractor: MeaningExtractor,
-    intent_analyzer: IntentAnalyzer,
-}
-
-impl SemanticAnalyzer {
-    pub fn new() -> Self {
-        Self {
-            semantic_parser: SemanticParser,
-            meaning_extractor: MeaningExtractor,
-            intent_analyzer: IntentAnalyzer,
-        }
-    }
-}
 
 // Placeholder implementations for all the validator components
 
@@ -179,11 +164,7 @@ impl MultiModalVerificationEngine {
                 context_builder: ContextBuilder,
                 scope_resolver: ScopeResolver,
             },
-            semantic_analyzer: SemanticAnalyzer {
-                semantic_parser: SemanticParser,
-                meaning_extractor: MeaningExtractor,
-                intent_analyzer: IntentAnalyzer,
-            },
+            semantic_analyzer: SemanticAnalyzer::new(),
             coreference_cache: LruCache::new(std::num::NonZeroUsize::new(100).unwrap()),
             keyword_matcher: KeywordMatcher,
         }
@@ -213,7 +194,22 @@ impl MultiModalVerificationEngine {
                 } else { 
                     VerificationStatus::Unverified 
                 },
-                evidence: verification_result.checks.iter().flat_map(|c| c.evidence.clone()).collect(),
+                evidence: verification_result.checks.iter().flat_map(|c| c.evidence.clone()).map(|content| {
+                    crate::extraction_types::Evidence {
+                        id: uuid::Uuid::new_v4(),
+                        claim_id: claim.id,
+                        evidence_type: crate::extraction_types::EvidenceType::CodeAnalysis,
+                        content,
+                        source: crate::extraction_types::EvidenceSource::CodeAnalysis {
+                            location: "verification".to_string(),
+                            authority: "system".to_string(),
+                            freshness: chrono::Utc::now(),
+                        },
+                        confidence: c.confidence,
+                        relevance: 0.8,
+                        timestamp: chrono::Utc::now(),
+                    }
+                }).collect(),
                 timestamp: chrono::Utc::now(),
                 original_claim: claim.claim_text.clone(),
                 overall_confidence: verification_result.confidence,
@@ -267,29 +263,27 @@ impl MultiModalVerificationEngine {
         all_evidence_strings.extend(sem.evidence.clone());
 
         Ok(ClaimVerificationResult {
-            evidence: all_evidence_strings.into_iter().map(|e| Evidence {
-                id: uuid::Uuid::new_v4(),
-                claim_id: claim.id,
-                evidence_type: EvidenceType::CodeAnalysis,
-                content: e,
-                source: EvidenceSource::CodeAnalysis {
-                    location: "code_analysis".to_string(),
-                    authority: "system".to_string(),
-                    freshness: chrono::Utc::now(),
-                },
-                confidence: 0.8,
-                relevance: 0.9,
-                timestamp: chrono::Utc::now(),
+            claim_id: claim.id.to_string(),
+            verified: score > 0.7,
+            confidence: score,
+            checks: all_evidence_strings.into_iter().map(|evidence_content| {
+                CheckResult {
+                    check_type: crate::verification::types::CheckType::Other("evidence".to_string()),
+                    passed: true,
+                    confidence: 0.8,
+                    details: evidence_content,
+                    evidence: vec![],
+                    timestamp: chrono::Utc::now(),
+                }
             }).collect(),
-            verification_confidence: score,
-            verified_claims: vec![],
-            council_verification: CouncilVerificationResult {
-                submitted_claims: vec![claim.id],
-                council_verdict: "pending".to_string(),
-                additional_evidence: vec![],
-                verification_timestamp: chrono::Utc::now(),
+            overall_assessment: if score > 0.8 {
+                crate::verification::types::Assessment::Verified
+            } else if score > 0.6 {
+                crate::verification::types::Assessment::PartiallyVerified
+            } else {
+                crate::verification::types::Assessment::Unverified
             },
-            overall_confidence: score,
+            timestamp: chrono::Utc::now(),
         })
     }
 
@@ -1106,7 +1100,22 @@ impl MultiModalVerificationEngine {
                             VerificationStatus::Unverified
                         },
                         confidence: verification_result.confidence,
-                        evidence: verification_result.checks.iter().flat_map(|c| c.evidence.clone()).collect(),
+                        evidence: verification_result.checks.iter().flat_map(|c| c.evidence.clone()).map(|content| {
+                    crate::extraction_types::Evidence {
+                        id: uuid::Uuid::new_v4(),
+                        claim_id: claim.id,
+                        evidence_type: crate::extraction_types::EvidenceType::CodeAnalysis,
+                        content,
+                        source: crate::extraction_types::EvidenceSource::CodeAnalysis {
+                            location: "verification".to_string(),
+                            authority: "system".to_string(),
+                            freshness: chrono::Utc::now(),
+                        },
+                        confidence: c.confidence,
+                        relevance: 0.8,
+                        timestamp: chrono::Utc::now(),
+                    }
+                }).collect(),
                         timestamp: chrono::Utc::now(),
                         original_claim: claim.claim_text.clone(),
                         verification_results: if verification_result.overall_confidence > 0.7 {
@@ -1127,17 +1136,31 @@ impl MultiModalVerificationEngine {
 
         let final_confidence = if claims.is_empty() { 0.0 } else { overall_confidence / claims.len() as f64 };
 
+        // Create a summary claim ID for the batch
+        let batch_claim_id = format!("batch-{}", uuid::Uuid::new_v4());
+
         Ok(ClaimVerificationResult {
-            evidence,
-            verification_confidence: final_confidence,
-            verified_claims,
-            council_verification: CouncilVerificationResult {
-                submitted_claims: claims.iter().map(|c| c.id).collect(),
-                council_verdict: "Verified".to_string(),
-                additional_evidence: vec![],
-                verification_timestamp: chrono::Utc::now(),
+            claim_id: batch_claim_id,
+            verified: final_confidence > 0.7,
+            confidence: final_confidence,
+            checks: evidence.into_iter().map(|evidence_item| {
+                CheckResult {
+                    check_type: crate::verification::types::CheckType::Other("batch_verification".to_string()),
+                    passed: true,
+                    confidence: 0.8,
+                    details: evidence_item.content,
+                    evidence: vec![],
+                    timestamp: chrono::Utc::now(),
+                }
+            }).collect(),
+            overall_assessment: if final_confidence > 0.8 {
+                crate::verification::types::Assessment::Verified
+            } else if final_confidence > 0.6 {
+                crate::verification::types::Assessment::PartiallyVerified
+            } else {
+                crate::verification::types::Assessment::Unverified
             },
-            overall_confidence: final_confidence,
+            timestamp: chrono::Utc::now(),
         })
     }
 

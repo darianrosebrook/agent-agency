@@ -16,7 +16,7 @@ use chrono::Utc;
 /// Quality gate execution result
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct QualityGateResult {
+pub struct QualityGateResult {
     pub gate_name: String,
     pub passed: bool,
     pub score: f64,
@@ -29,7 +29,7 @@ struct QualityGateResult {
 /// Individual issue found by a quality gate
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct QualityGateIssue {
+pub struct QualityGateIssue {
     pub severity: IssueSeverity,
     pub code: String,
     pub message: String,

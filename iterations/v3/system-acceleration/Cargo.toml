@@ -17,15 +17,20 @@ tracing.workspace = true
 thiserror.workspace = true
 anyhow.workspace = true
 
+# CRITICAL: DO NOT CHANGE THESE DEPENDENCIES - CoreML functionality depends on workspace-aligned versions
+# These dependencies use workspace versions to ensure compatibility across the codebase.
+# DO NOT override these with specific versions - they must match workspace versions.
+# DO NOT change tokenizers version - it must be 0.19 for CoreML compatibility.
+# Last fixed: P0 priority - candle-core dependency alignment (2025-01-XX)
 # Acceleration-specific dependencies
-candle-core = "0.9"
-candle-nn = "0.9"
-candle-transformers = "0.9"
+candle-core = { workspace = true }
+candle-nn = { workspace = true }
+candle-transformers = { workspace = true }
 half.workspace = true
-memmap2 = "0.9"
-safetensors = "0.4"
-tokenizers = "0.19"
-hf-hub = "0.3"
+memmap2 = { workspace = true }
+safetensors = { workspace = true }
+tokenizers = { workspace = true }
+hf-hub = { workspace = true }
 
 # Apple Silicon specific (conditional compilation)
 [target.'cfg(target_os = "macos")'.dependencies]

@@ -164,7 +164,7 @@ enum AgreementLevel {
 /// Weighted contribution from a judge
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct WeightedContribution {
+pub struct WeightedContribution {
     pub judge_id: String,
     pub judge_type: JudgeType,
     pub verdict: JudgeVerdict,
@@ -176,7 +176,7 @@ struct WeightedContribution {
 /// Dissenting opinion
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct DissentingOpinion {
+pub struct DissentingOpinion {
     pub judge_id: String,
     pub dissenting_verdict: JudgeVerdict,
     pub rationale: String,
@@ -186,7 +186,7 @@ struct DissentingOpinion {
 /// Aggregated changes from multiple judges
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct AggregatedChanges {
+pub struct AggregatedChanges {
     pub changes: Vec<RequiredChange>,
     pub change_categories: HashMap<String, usize>,
     pub priority_distribution: HashMap<ChangePriority, usize>,
@@ -207,7 +207,7 @@ pub struct AggregatedEffort {
 /// Aggregated risk assessment
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-struct AggregatedRiskAssessment {
+pub struct AggregatedRiskAssessment {
     pub overall_risk: RiskLevel,
     pub risk_factors: Vec<String>,
     pub mitigation_suggestions: Vec<String>,

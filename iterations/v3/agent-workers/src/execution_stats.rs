@@ -4,7 +4,7 @@
 //! execution statistics and performance metrics.
 
 use schemars::JsonSchema;
-use crate::parallel_types::{TaskId, SubTaskId, WorkerId};
+use crate::worker_types::{TaskId, SubTaskId, WorkerId};
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};

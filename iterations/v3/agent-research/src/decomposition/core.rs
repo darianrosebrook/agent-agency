@@ -117,7 +117,7 @@ impl DecompositionResult {
 
 /// Forward declarations for types that will be implemented in other modules
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
 struct ClaimExtractor;
 
 impl ClaimExtractor {
@@ -136,8 +136,8 @@ impl ClaimExtractor {
 }
 
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
-struct ContextBracketAdder ;
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
+struct ContextBracketAdder;
 
 impl ContextBracketAdder {
     pub fn new() -> Self {

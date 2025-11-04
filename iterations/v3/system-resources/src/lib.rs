@@ -95,6 +95,11 @@ impl ResourceManagementService for ResourceManagerService {
     async fn get_task_allocation(&self, task_id: &str) -> Result<Option<ResourceAllocation>, ResourceError> {
         // PLACEHOLDER: In a real implementation, this would track allocations by task_id
         // For now, search through pools to find allocation
+
+        // TODO: Implement this properly with the following acceptance criteria:
+        // - Return the allocation if it exists
+        // - Return None if it does not exist
+        // - Return an error if the allocation cannot be found
         Err(ResourceError::AllocationFailed {
             message: format!("Task allocation lookup not yet implemented for task {}", task_id),
         })

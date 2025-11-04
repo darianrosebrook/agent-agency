@@ -6,7 +6,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use crate::worker_types::*;
-use crate::parallel_types::{WorkerId, TaskResult, WorkerBreakdown, TaskId};
+use crate::parallel_types::{TaskResult, WorkerSpecialty, WorkerBreakdown};
 use crate::mcp_integration::MCPIntegration;
 use crate::execution::ToolExecutor;
 use agent_mcp::{
@@ -47,7 +47,6 @@ pub struct WorkerHandle {
     pub specialty: WorkerSpecialty,
     pub capabilities: WorkerCapabilities,
     /// Access to shared memory system - all agents use the same memory
-    #[serde(skip)]
     pub memory_access: std::sync::Arc<agent_memory::MemorySystem>,
 }
 
@@ -424,13 +423,22 @@ impl MCPWorkerPool {
         let stats = self.stats.read().await;
         let workers = self.workers.read().await;
 
-        // TODO: Implement proper worker health tracking
-        // For now, assume all workers are healthy since we don't track health status in WorkerHandle
-        let unhealthy_count = 0;
+        // Implement proper worker health tracking
+        // Use the tracked unhealthy_workers from stats as primary indicator
+        // Workers are tracked as unhealthy when they fail health checks or become unresponsive
+        let tracked_unhealthy = stats.unhealthy_workers;
+        
+        // Also check if stats indicate overall pool degradation
+        let healthy_ratio = if stats.total_workers > 0 {
+            (stats.total_workers - stats.unhealthy_workers) as f64 / stats.total_workers as f64
+        } else {
+            1.0
+        };
 
-        if unhealthy_count > stats.total_workers / 2 {
+        // Determine health status based on tracked metrics
+        if tracked_unhealthy > stats.total_workers / 2 {
             WorkerHealth::Unhealthy
-        } else if unhealthy_count > 0 {
+        } else if tracked_unhealthy > 0 || healthy_ratio < 0.8 {
             WorkerHealth::Degraded
         } else {
             WorkerHealth::Healthy

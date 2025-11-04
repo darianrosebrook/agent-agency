@@ -5,11 +5,11 @@
 
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
-use crate::parallel_types::{TaskId, SubTaskId, WorkerId};
+use crate::worker_types::{TaskId, SubTaskId, WorkerId};
 use crate::learning::{
     ExecutionRecord, WorkerPerformanceProfile, SuccessPattern, FailurePattern,
     OptimalConfig, ConfigurationRecommendations, OptimizationEvent, TaskPattern,
-    PatternType
+    PatternType, ConfigType
 };
 use data_infrastructure::client::DatabaseClient;
 use std::sync::Arc;
@@ -806,7 +806,7 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
             Ok(Some(row)) => {
                 Ok(Some(WorkerPerformanceProfile {
                     worker_id: worker_id.clone(),
-                    specialty: crate::worker_types::WorkerSpecialty::General, // Default, should be updated
+                    specialty: crate::parallel_types::WorkerSpecialty::General, // Default, should be updated
                     total_executions: 0, // Default
                     successful_executions: 0, // Default
                     average_execution_time_ms: 0.0, // Default
@@ -815,7 +815,7 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
                     capability_scores: HashMap::new(), // Default
                     task_count: row.try_get::<i64, _>("task_count")? as u64,
                     success_rate: row.try_get("success_rate")?,
-                    avg_execution_time_ms: row.try_get("avg_execution_time_ms")?,
+                    average_execution_time_ms: row.try_get("avg_execution_time_ms")?,
                     quality_score: row.try_get("quality_score")?,
                     specialization_score: row.try_get("specialization_score")?,
                     last_updated: row.try_get("last_updated")?,
@@ -980,9 +980,12 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
                 for row in rows {
                     configs.push(OptimalConfig {
                         id: row.get("id"),
+                        config_type: ConfigType::WorkerSelection, // Default for existing configs
                         worker_type: row.get("worker_type"),
                         task_type: row.get("task_type"),
                         config: row.get("config"),
+                        parameters: HashMap::new(), // Default empty parameters
+                        conditions: HashMap::new(), // Default empty conditions
                         performance_metrics: serde_json::from_value(row.get("performance_metrics"))?,
                         confidence: row.get("confidence"),
                         expires_at: row.get("expires_at"),

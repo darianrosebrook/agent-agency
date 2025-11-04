@@ -50,7 +50,7 @@ impl Default for EnrichmentConfig {
 /// Enriched evidence with multimodal context
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct EnrichedEvidence {
+pub struct EnrichedEvidence {
     /// Original evidence ID
     pub evidence_id: String,
     /// Enriched content
@@ -68,7 +68,7 @@ struct EnrichedEvidence {
 /// Multimodal context item
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct MultimodalContext {
+pub struct MultimodalContext {
     /// Context type (image, audio, video, etc.)
     pub context_type: ContextType,
     /// Content path or data
@@ -414,7 +414,7 @@ impl EvidenceEnrichmentCoordinator {
 /// Enrichment statistics
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct EnrichmentStats {
+pub struct EnrichmentStats {
     pub cache_size: usize,
     pub total_enriched: usize,
     pub cache_hit_rate: f32,

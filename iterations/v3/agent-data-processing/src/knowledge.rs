@@ -74,6 +74,7 @@ pub struct KnowledgeItem {
     pub confidence_score: f64,
     pub relationships: Vec<KnowledgeRelationship>,
     pub metadata: HashMap<String, serde_json::Value>,
+    #[schemars(with = "String")]
     pub last_updated: chrono::DateTime<chrono::Utc>,
 }
 

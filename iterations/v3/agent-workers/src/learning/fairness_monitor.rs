@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use anyhow::Result;
 
-use crate::parallel_types::{WorkerId, TaskId};
+use crate::{WorkerId, TaskId};
 use crate::learning::types::*;
 use crate::worker_types::{ExecutionOutcome, LearningMode};
 use data_infrastructure::client::DatabaseClient;
@@ -236,7 +236,7 @@ impl crate::learning::adaptive_selector::FairnessMonitor for RealFairnessMonitor
         }
     }
 
-    async fn record_task_assignment(&self, worker_id: WorkerId, task_id: crate::parallel_types::TaskId) -> Result<()> {
+    async fn record_task_assignment(&self, worker_id: WorkerId, task_id: crate::worker_types::TaskId) -> Result<()> {
         // Record task assignment in database for fairness tracking
         let query = r#"
             INSERT INTO worker_task_assignments (worker_id, task_id, assigned_at)

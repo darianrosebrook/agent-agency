@@ -6,6 +6,8 @@ use crate::extraction_types::VerifiedClaim;
 use crate::extraction_types::*;
 // VerificationStage is not defined in verification module - removing this import
 use anyhow::Result;
+use serde::{Serialize, Deserialize};
+use schemars::JsonSchema;
 use std::time::Instant;
 use tracing::{debug, info};
 
@@ -84,7 +86,15 @@ impl ClaimExtractionProcessor {
                     evidence: Vec::new(),
                 }
             }).collect(),
-            processing_time_ms: 0,
+            evidence: Vec::new(),
+            verification_confidence: 0.5,
+            council_verification: crate::extraction_types::CouncilVerificationResult {
+                submitted_claims: vec![],
+                council_verdict: "placeholder".to_string(),
+                additional_evidence: vec![],
+                verification_timestamp: chrono::Utc::now(),
+            },
+            overall_confidence: 0.5,
         };
 
         let processing_time = start_time.elapsed().as_millis() as u64;

@@ -158,9 +158,10 @@ impl AmbiguityDetector {
         // Simplified implementation - in real code this would use the context map
         match pronoun {
             "it" | "this" | "that" => Some(ReferentInfo {
-                entity: "the system".to_string(),
+                referent: "the system".to_string(),
+                entity_type: EntityType::Organization,
                 confidence: 0.8,
-                source: "system reference".to_string(),
+                context: Some("system reference".to_string()),
             }),
             _ => None,
         }
@@ -224,6 +225,6 @@ mod tests {
         let referent = detector.find_referent_for_pronoun("it", &context_map);
 
         assert!(referent.is_some());
-        assert_eq!(referent.unwrap().entity, "the system");
+        assert_eq!(referent.unwrap().referent, "the system");
     }
 }

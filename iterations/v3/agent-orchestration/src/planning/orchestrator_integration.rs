@@ -76,7 +76,7 @@ impl std::fmt::Debug for OrchestratorPlanningIntegration {
 /// Planning-aware task execution result
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-struct PlanningTaskResult {
+pub struct PlanningTaskResult {
     /// Task ID that was executed
     #[schemars(with = "String")]
     pub task_id: Uuid,

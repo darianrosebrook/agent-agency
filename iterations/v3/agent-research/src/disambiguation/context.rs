@@ -65,9 +65,10 @@ impl ContextResolver {
             referent_map.insert(
                 hint.clone(),
                 ReferentInfo {
-                    entity: hint.clone(),
+                    referent: hint.clone(),
+                    entity_type: EntityType::Person, // Default type
                     confidence: 0.9,
-                    source: "domain_hint".to_string(),
+                    context: Some("domain_hint".to_string()),
                 },
             );
         }
@@ -78,9 +79,10 @@ impl ContextResolver {
             referent_map.insert(
                 entity.clone(),
                 ReferentInfo {
-                    entity,
+                    referent: entity,
+                    entity_type: EntityType::Person, // Default type
                     confidence: 0.8,
-                    source: "surrounding_context".to_string(),
+                    context: Some("surrounding_context".to_string()),
                 },
             );
         }
@@ -161,6 +163,8 @@ impl ContextResolver {
             AmbiguityType::ScopeBoundary => Ok(Some(format!("in {}", context.working_spec_id))),
             AmbiguityType::TemporalReference => Ok(Some("during execution".to_string())),
             AmbiguityType::Quantifier => Ok(Some("all instances".to_string())),
+            AmbiguityType::EntityReference => Ok(ambiguity.possible_resolutions.first().cloned()),
+            AmbiguityType::Other(_) => Ok(ambiguity.possible_resolutions.first().cloned()),
         }
     }
 

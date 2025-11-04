@@ -27,5 +27,5 @@ pub use types::{
     OptimizationEvent, ConfigurationRecommendations, FairnessMetrics, ExecutionRecord,
     WorkerPerformanceProfile, SuccessPattern, FailurePattern, OptimalConfig,
     RewardWeights, Baseline, TaskPattern, PatternMatch, QueueHealthMetrics,
-    FailureCategory, FailureAnalysis, PatternType
+    FailureCategory, FailureAnalysis, PatternType, ConfigType
 };

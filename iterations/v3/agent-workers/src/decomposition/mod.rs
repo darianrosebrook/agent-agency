@@ -13,7 +13,8 @@ pub use dependency_graph::*;
 pub use strategies::*;
 
 // Re-export types from types module that are used in decomposition
-pub use crate::parallel_types::{ComplexTask, TaskAnalysis, TaskPattern, Dependency, SubtaskScores, SubTask, TaskId, SubTaskId, TaskScope, QualityRequirements, WorkerSpecialty, Priority, ErrorGroup, RefactoringOperation, SubTaskStatus, DecompositionStrategy};
+pub use crate::parallel_types::{ComplexTask, Dependency, SubtaskScores, SubTask, ErrorGroup, RefactoringOperation, SubTaskStatus, DecompositionStrategy, WorkerSpecialty, TaskAnalysis, TaskPattern};
+pub use crate::worker_types::{TaskId, SubTaskId, TaskScope, QualityRequirements, Priority};
 
 // Re-export from progress module
 pub use crate::worker_types::WorkerProgressStatus;

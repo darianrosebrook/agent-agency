@@ -3,7 +3,8 @@
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
 use crate::parallel_types::*;
-use crate::{WorkerProgress, Progress};
+use crate::worker_types::{WorkerId, SubTaskId};
+use crate::{WorkerProgress, WorkerProgressStatus, Progress};
 use crate::error::*;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -22,17 +23,20 @@ impl WorkerProgressTracker {
     }
 
     /// Update progress for a specific worker
-    pub fn update_progress(&self, worker_id: WorkerId, completed: u32, total: u32, status: String) -> ProgressResult<()> {
+    pub fn update_progress(&self, worker_id: WorkerId, completed: u32, total: u32, status: WorkerProgressStatus) -> ProgressResult<()> {
         let mut progress_map = self.progress.write();
 
         let worker_progress = progress_map.entry(worker_id).or_insert_with(|| WorkerProgress {
-            worker_id: WorkerId(String::new()), // Will be set below
-            subtask_id: SubTaskId(String::new()), // Will be set when subtask is assigned
+            worker_id: worker_id, // Use the provided worker_id
+            subtask_id: SubTaskId::default(), // Will be set when subtask is assigned
+            progress_percentage: 0.0,
+            status: status.clone(),
+            current_step: String::new(),
+            estimated_completion: None,
+            last_updated: chrono::Utc::now(),
             completed: 0,
             total: 0,
             task_weight: 1.0,
-            status: String::new(),
-            last_updated: chrono::Utc::now(),
         });
 
         worker_progress.completed = completed;
@@ -50,16 +54,19 @@ impl WorkerProgressTracker {
         let worker_progress = progress_map.entry(worker_id.clone()).or_insert_with(|| WorkerProgress {
             worker_id: worker_id.clone(),
             subtask_id: subtask_id.clone(),
+            progress_percentage: 0.0,
+            status: WorkerProgressStatus::Pending,
+            current_step: String::new(),
+            estimated_completion: None,
+            last_updated: chrono::Utc::now(),
             completed: 0,
             total: 0,
             task_weight,
-            status: "assigned".to_string(),
-            last_updated: chrono::Utc::now(),
         });
 
         worker_progress.subtask_id = subtask_id;
         worker_progress.task_weight = task_weight;
-        worker_progress.status = "assigned".to_string();
+        worker_progress.status = WorkerProgressStatus::Running;
         worker_progress.last_updated = chrono::Utc::now();
 
         Ok(())
@@ -70,7 +77,7 @@ impl WorkerProgressTracker {
         let mut progress_map = self.progress.write();
 
         if let Some(worker_progress) = progress_map.get_mut(worker_id) {
-            worker_progress.status = "running".to_string();
+            worker_progress.status = WorkerProgressStatus::Running;
             worker_progress.last_updated = chrono::Utc::now();
         }
 
@@ -83,7 +90,7 @@ impl WorkerProgressTracker {
 
         if let Some(worker_progress) = progress_map.get_mut(worker_id) {
             worker_progress.completed = worker_progress.total;
-            worker_progress.status = "completed".to_string();
+            worker_progress.status = WorkerProgressStatus::Completed;
             worker_progress.last_updated = chrono::Utc::now();
         }
 
@@ -95,7 +102,8 @@ impl WorkerProgressTracker {
         let mut progress_map = self.progress.write();
 
         if let Some(worker_progress) = progress_map.get_mut(worker_id) {
-            worker_progress.status = format!("failed: {}", error);
+            worker_progress.status = WorkerProgressStatus::Failed;
+            worker_progress.current_step = format!("Failed: {}", error);
             worker_progress.last_updated = chrono::Utc::now();
         }
 
@@ -107,7 +115,8 @@ impl WorkerProgressTracker {
         let mut progress_map = self.progress.write();
 
         if let Some(worker_progress) = progress_map.get_mut(worker_id) {
-            worker_progress.status = format!("blocked: {}", reason);
+            worker_progress.status = WorkerProgressStatus::Blocked;
+            worker_progress.current_step = format!("Blocked: {}", reason);
             worker_progress.last_updated = chrono::Utc::now();
         }
 

@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use crate::parallel_types::{TaskId, WorkerId};
+use crate::{TaskId, WorkerId};
 use crate::learning::types::*;
 use crate::worker_types::{ExecutionOutcome, LearningMode};
 

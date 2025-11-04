@@ -18,6 +18,7 @@ pub struct CouncilWorkflow {
     session: CouncilSession,
     workflow_state: WorkflowState,
     state_history: Vec<StateTransition>,
+    #[serde(skip)]
     start_time: DateTime<Utc>,
 }
 

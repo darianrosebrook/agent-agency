@@ -59,26 +59,26 @@ impl HistoricalLookup {
                         id: row.try_get::<String, _>("id").unwrap_or_else(|_| "".to_string()),
                         claim_text: row.try_get::<String, _>("claim_text").unwrap_or_else(|_| "Unknown claim".to_string()),
                         verification_status: row.try_get::<String, _>("verification_status")
-                            .map(|s| match s {
+                            .map(|s| match s.as_str() {
                                 "Verified" => VerificationStatus::Verified,
                                 "Unverified" => VerificationStatus::Unverified,
                                 _ => VerificationStatus::Unverified,
                             })
                             .unwrap_or(VerificationStatus::Unverified),
                         evidence: vec![],
-                        confidence_score: row.try_get::<_, f64>("confidence_score").unwrap_or(0.5),
+                        confidence_score: row.try_get("confidence_score").unwrap_or(0.5),
                         timestamp: chrono::Utc::now(),
                         source_count: row.get("source_count"),
-                        last_verified: row.try_get::<&str, _>("last_verified_at").ok().and_then(|ts| chrono::DateTime::parse_from_rfc3339(ts).ok()).map(|dt| dt.with_timezone(&chrono::Utc)),
+                        last_verified: row.try_get("last_verified_at").ok().and_then(|ts: String| chrono::DateTime::parse_from_rfc3339(&ts).ok()).map(|dt| dt.with_timezone(&chrono::Utc)),
                         related_entities: row.get("related_entities"),
                         claim_type: row.get("claim_type"),
-                        created_at: row.try_get::<&str, _>("created_at").ok().and_then(|ts| chrono::DateTime::parse_from_rfc3339(ts).ok()).map(|dt| dt.with_timezone(&chrono::Utc)),
+                        created_at: row.try_get("created_at").ok().and_then(|ts: String| chrono::DateTime::parse_from_rfc3339(&ts).ok()).map(|dt| dt.with_timezone(&chrono::Utc)),
                         updated_at: None, // Not returned by function
                         metadata: None, // Not returned by function
                         source_references: row.get("source_references"),
                         cross_references: row.get("cross_references"),
                         validation_metadata: None,
-                        validation_confidence: row.try_get::<_, f64>("confidence_score").unwrap_or(0.5),
+                        validation_confidence: row.try_get("confidence_score").unwrap_or(0.5),
                         validation_timestamp: chrono::Utc::now(),
                         validation_outcome: ValidationOutcome::Validated,
                     };
@@ -126,7 +126,7 @@ impl HistoricalLookup {
     async fn record_claim_access_db(&self, db_client: &DatabaseClient, claim_id: Uuid) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let result = db_client.execute_parameterized_query(
             "SELECT record_claim_access($1)",
-            vec![serde_json::Value::from(claim_id.to_string())],
+            &[&claim_id],
         ).await;
 
         match result {

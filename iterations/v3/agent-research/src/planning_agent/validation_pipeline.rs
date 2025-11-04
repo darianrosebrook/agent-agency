@@ -10,7 +10,7 @@ use async_trait::async_trait;
 
 use crate::planning_agent::planning_errors::{PlanningError, PlanningResult};
 use crate::planning_agent::planning_caws_integration::{CawsValidator, ValidationContext};
-use system_configuration::validation::{ValidationPipeline as SystemValidationPipeline, ValidationStage as SystemValidationStage, ValidationResult, ValidationSeverity, ValidationResults};
+use system_configuration::validation::{ValidationPipeline as SystemValidationPipeline, ValidationStage as SystemValidationStage, ValidationResult, ValidationSeverity, ValidationResults, ExecutablePipeline};
 use system_configuration::config::{PipelineConfig, ValidationPipelineConfig as SystemValidationPipelineConfig};
 use system_configuration::types::{ValidationStatus, ValidationIssue, IssueSeverity};
 use system_configuration::error::{PipelineResult, PipelineError};
@@ -29,7 +29,7 @@ pub enum ValidationStage {
 
 /// Adapter to convert domain-specific validation stages to system-configuration validation stages
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationStageAdapter {
     stage_type: ValidationStage,
     #[serde(skip)]
@@ -278,12 +278,12 @@ impl ValidationStageAdapter {
             ));
         }
 
-        // Validate operational rollback SLAs
-        if spec.operational_rollback_slo.is_empty() {
+        // Validate rollback plan exists
+        if spec.rollback_plan.automated_steps.is_empty() && spec.rollback_plan.manual_steps.is_empty() {
             results.push(ValidationResult::fail(
-                ValidationSeverity::Error,
-                "missing_rollback_slo",
-                "Operational rollback SLO must be specified"
+                ValidationSeverity::Warning,
+                "missing_rollback_plan",
+                "Rollback plan should include automated or manual steps"
             ));
         }
 
@@ -325,10 +325,12 @@ impl ValidationStageAdapter {
         let testing_risk = if spec.acceptance_criteria.len() < 3 { 0.2 } else { 0.05 };
         risk_score += testing_risk;
 
-        // Calculate rollback risk
-        let rollback_risk = if spec.operational_rollback_slo.contains("5m") { 0.1 }
-                           else if spec.operational_rollback_slo.contains("1h") { 0.2 }
-                           else { 0.3 };
+        // Calculate rollback risk based on rollback window
+        let rollback_risk = match spec.rollback_plan.rollback_window_minutes {
+            Some(minutes) if minutes <= 5 => 0.1, // 5 minutes or less
+            Some(minutes) if minutes <= 60 => 0.2, // 1 hour or less
+            _ => 0.3, // Longer or unspecified
+        };
         risk_score += rollback_risk;
 
         // Assess risk level

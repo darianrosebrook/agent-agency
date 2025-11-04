@@ -3,6 +3,7 @@
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
 use crate::parallel_types::*;
+use crate::worker_types::{TaskId, WorkerId, SubTaskId};
 use crate::WorkerMessage;
 use chrono::{DateTime, Utc};
 
@@ -177,13 +178,13 @@ impl MessageFilter {
         // Check worker ID filter
         if let Some(ref worker_ids) = self.worker_ids {
             let message_worker_id = match message {
-                WorkerMessage::Started { worker_id, .. } => worker_id,
-                WorkerMessage::Progress { worker_id, .. } => worker_id,
-                WorkerMessage::Blocked { worker_id, .. } => worker_id,
-                WorkerMessage::Completed { worker_id, .. } => worker_id,
-                WorkerMessage::Failed { worker_id, .. } => worker_id,
+                WorkerMessage::Started { worker_id, .. } => WorkerId(*worker_id),
+                WorkerMessage::Progress { worker_id, .. } => WorkerId(*worker_id),
+                WorkerMessage::Blocked { worker_id, .. } => WorkerId(*worker_id),
+                WorkerMessage::Completed { worker_id, .. } => WorkerId(*worker_id),
+                WorkerMessage::Failed { worker_id, .. } => WorkerId(*worker_id),
             };
-            if !worker_ids.contains(message_worker_id) {
+            if !worker_ids.contains(&message_worker_id) {
                 return false;
             }
         }
@@ -191,13 +192,13 @@ impl MessageFilter {
         // Check subtask ID filter
         if let Some(ref subtask_ids) = self.subtask_ids {
             let message_subtask_id = match message {
-                WorkerMessage::Started { subtask_id, .. } => subtask_id,
-                WorkerMessage::Progress { subtask_id, .. } => subtask_id,
-                WorkerMessage::Blocked { subtask_id, .. } => subtask_id,
-                WorkerMessage::Completed { subtask_id, .. } => subtask_id,
-                WorkerMessage::Failed { subtask_id, .. } => subtask_id,
+                WorkerMessage::Started { subtask_id, .. } => SubTaskId(*subtask_id),
+                WorkerMessage::Progress { subtask_id, .. } => SubTaskId(*subtask_id),
+                WorkerMessage::Blocked { subtask_id, .. } => SubTaskId(*subtask_id),
+                WorkerMessage::Completed { subtask_id, .. } => SubTaskId(*subtask_id),
+                WorkerMessage::Failed { subtask_id, .. } => SubTaskId(*subtask_id),
             };
-            if !subtask_ids.contains(message_subtask_id) {
+            if !subtask_ids.contains(&message_subtask_id) {
                 return false;
             }
         }
@@ -267,24 +268,24 @@ pub mod helpers {
     use super::*;
 
     /// Extract worker ID from any message
-    pub fn get_worker_id(message: &WorkerMessage) -> &WorkerId {
+    pub fn get_worker_id(message: &WorkerMessage) -> WorkerId {
         match message {
-            WorkerMessage::Started { worker_id, .. } => worker_id,
-            WorkerMessage::Progress { worker_id, .. } => worker_id,
-            WorkerMessage::Blocked { worker_id, .. } => worker_id,
-            WorkerMessage::Completed { worker_id, .. } => worker_id,
-            WorkerMessage::Failed { worker_id, .. } => worker_id,
+            WorkerMessage::Started { worker_id, .. } => WorkerId(*worker_id),
+            WorkerMessage::Progress { worker_id, .. } => WorkerId(*worker_id),
+            WorkerMessage::Blocked { worker_id, .. } => WorkerId(*worker_id),
+            WorkerMessage::Completed { worker_id, .. } => WorkerId(*worker_id),
+            WorkerMessage::Failed { worker_id, .. } => WorkerId(*worker_id),
         }
     }
 
     /// Extract subtask ID from any message
-    pub fn get_subtask_id(message: &WorkerMessage) -> &SubTaskId {
+    pub fn get_subtask_id(message: &WorkerMessage) -> SubTaskId {
         match message {
-            WorkerMessage::Started { subtask_id, .. } => subtask_id,
-            WorkerMessage::Progress { subtask_id, .. } => subtask_id,
-            WorkerMessage::Blocked { subtask_id, .. } => subtask_id,
-            WorkerMessage::Completed { subtask_id, .. } => subtask_id,
-            WorkerMessage::Failed { subtask_id, .. } => subtask_id,
+            WorkerMessage::Started { subtask_id, .. } => SubTaskId(*subtask_id),
+            WorkerMessage::Progress { subtask_id, .. } => SubTaskId(*subtask_id),
+            WorkerMessage::Blocked { subtask_id, .. } => SubTaskId(*subtask_id),
+            WorkerMessage::Completed { subtask_id, .. } => SubTaskId(*subtask_id),
+            WorkerMessage::Failed { subtask_id, .. } => SubTaskId(*subtask_id),
         }
     }
 

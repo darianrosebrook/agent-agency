@@ -4,7 +4,7 @@
 
 use schemars::JsonSchema;
 use crate::worker_types::{TaskContext as WorkerTaskContext, UuidGenerator, TaskPriority, CawsSpec, *};
-use crate::parallel_types::{WorkerId, TaskResult};
+use crate::parallel_types::TaskResult;
 use crate::worker_errors::{WorkerExecutionResult, WorkerError};
 use agent_agency_contracts::{IssueSeverity, task_executor::{TaskExecutor as TaskExecutorTrait, TaskExecutionResult, TaskSpec as ContractTaskSpec, TaskContext as CouncilTaskContext, TaskSpec, TaskRequirements}, task_request::RiskTier, AcceptanceCriterion};
 use system_resilience::resilience_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
@@ -316,12 +316,13 @@ impl TaskExecutor {
         Ok(ExecutionInput {
             prompt,
             task_id: task_spec.id,
-            context: self.convert_task_context(&task_spec.context),
-            requirements: self.extract_requirements(task_spec),
+            context: format!("{:?}", self.convert_task_context(&task_spec.context)),
+            requirements: format!("{:?}", self.extract_requirements(task_spec)),
             caws_spec: task_spec
                 .caws_spec
                 .as_ref()
-                .map(|spec| self.convert_caws_spec(spec, Some(task_spec))),
+                .and_then(|spec| serde_json::from_value(spec.clone()).ok())
+                .map(|spec: CawsSpec| self.convert_caws_spec(&spec, Some(task_spec))),
         })
     }
 
@@ -342,9 +343,6 @@ impl TaskExecutor {
             task_spec.scope.as_ref().map(|s| s.files_affected.join(", ")).unwrap_or_default()
         ));
         if let Some(scope) = &task_spec.scope {
-            if let Some(max_files) = scope.max_files {
-                prompt.push_str(&format!("- Max files: {}\n", max_files));
-            }
             if let Some(max_loc) = scope.max_loc {
                 prompt.push_str(&format!("- Max lines of code: {}\n", max_loc));
             }
@@ -355,12 +353,15 @@ impl TaskExecutor {
         ));
 
         // Add acceptance criteria
-        if !task_spec.acceptance_criteria.is_empty() {
-            prompt.push_str("**ACCEPTANCE CRITERIA**:\n");
-            for criterion in &task_spec.acceptance_criteria {
-                prompt.push_str(&format!("- {}: {}\n", criterion.id, criterion.description));
+        if let Some(criteria) = &task_spec.acceptance_criteria {
+            if !criteria.is_empty() {
+                prompt.push_str("**ACCEPTANCE CRITERIA**:\n");
+                for criterion in criteria {
+                    prompt.push_str(&format!("- {}: Given {}, When {}, Then {}\n",
+                        criterion.id, criterion.given, criterion.when, criterion.then));
+                }
+                prompt.push('\n');
             }
-            prompt.push('\n');
         }
 
         // Add CAWS compliance requirements
@@ -373,20 +374,26 @@ impl TaskExecutor {
 
         // Add context information
         prompt.push_str("**CONTEXT**:\n");
-        prompt.push_str(&format!(
-            "- Workspace: {}\n",
-            task_spec.context.workspace_root
-        ));
-        prompt.push_str(&format!("- Git branch: {}\n", task_spec.context.git_branch));
-        prompt.push_str(&format!(
-            "- Environment: {:?}\n",
-            task_spec.context.environment
-        ));
-        if !task_spec.context.recent_changes.is_empty() {
-            prompt.push_str(&format!(
-                "- Recent changes: {}\n",
-                task_spec.context.recent_changes.join(", ")
-            ));
+        if let Some(serde_json::Value::String(workspace)) = task_spec.context.get("workspace_root") {
+            prompt.push_str(&format!("- Workspace: {}\n", workspace));
+        }
+        if let Some(serde_json::Value::String(branch)) = task_spec.context.get("git_branch") {
+            prompt.push_str(&format!("- Git branch: {}\n", branch));
+        }
+        if let Some(env) = task_spec.context.get("environment") {
+            prompt.push_str(&format!("- Environment: {}\n", env));
+        }
+        if let Some(serde_json::Value::Array(changes)) = task_spec.context.get("recent_changes") {
+            let change_strings: Vec<String> = changes.iter()
+                .filter_map(|v| v.as_str())
+                .map(|s| s.to_string())
+                .collect();
+            if !change_strings.is_empty() {
+                prompt.push_str(&format!(
+                    "- Recent changes: {}\n",
+                    change_strings.join(", ")
+                ));
+            }
         }
         prompt.push('\n');
 
@@ -451,7 +458,7 @@ impl TaskExecutor {
     /// Convert council TaskContext to workers TaskContext
     fn convert_task_context(
         &self,
-        _council_context: &CouncilTaskContext,
+        _context_map: &std::collections::HashMap<String, serde_json::Value>,
     ) -> WorkerTaskContext {
         // Create execution context with defaults - would map actual fields in real implementation
         WorkerTaskContext {
@@ -462,6 +469,8 @@ impl TaskExecutor {
             retry_count: 0,
             max_retries: 3,
             metadata: std::collections::HashMap::new(),
+            tool_id: None,
+            parameters: std::collections::HashMap::new(),
         }
     }
 
@@ -534,16 +543,16 @@ impl TaskExecutor {
     ) -> Vec<ValidationRule> {
         let mut rules = Vec::new();
         
-        // Extract validation rules from waivers
-        for (i, waiver) in council_spec.waivers.iter().enumerate() {
+        // Extract validation rules from quality gates
+        for (i, gate) in council_spec.quality_gates.iter().enumerate() {
             rules.push(ValidationRule {
-                id: format!("validation-waiver-{}", i),
-                name: format!("Waiver Validation {}", i),
-                description: format!("Validate waiver: {}", waiver.reason),
+                id: format!("validation-gate-{}", i),
+                name: format!("Quality Gate Validation {}", i),
+                description: format!("Validate quality gate: {}", gate.name),
                 rule_type: ValidationRuleType::Custom,
                 config: serde_json::json!({
-                    "waiver_id": waiver.id,
-                    "reason": waiver.reason
+                    "gate_name": gate.name,
+                    "threshold": gate.threshold
                 }),
                 severity: SeverityLevel::Medium,
                 file_patterns: vec!["**/*".to_string()],
@@ -642,37 +651,20 @@ impl TaskExecutor {
         council_spec: &CawsSpec,
         task_spec: Option<&TaskSpec>,
     ) -> CawsSpec {
-        // Map council CawsSpec rules to worker quality gates
-        let quality_gates = council_spec.rules.iter()
+        // Map council CawsSpec validation rules to worker quality gates
+        let quality_gates = council_spec.validation_rules.iter()
             .enumerate()
             .map(|(i, rule)| {
-                // Parse rule string into criteria
-                let criteria = Self::parse_rule_criteria(rule);
                 QualityGate {
-                    id: format!("gate-{}", i),
-                    name: format!("Rule {}", i),
-                    description: rule.clone(),
-                    criteria,
-                    severity: Self::determine_rule_severity(rule),
-                    enabled: true,
-                    timeout_ms: Some(30000), // 30 second timeout
+                    name: rule.name.clone(),
+                    required: true, // All validation rules are required
+                    threshold: 1.0, // Default threshold
                 }
             })
             .collect();
 
-        // Map council waivers to worker compliance requirements
-        let compliance_requirements = if council_spec.waivers.is_empty() {
-            ComplianceRequirements::default()
-        } else {
-            ComplianceRequirements {
-                standards: vec!["ISO27001".to_string()], // Placeholder
-                certifications: council_spec.waivers.iter()
-                    .map(|w| w.id.clone())
-                    .collect(),
-                audit_requirements: vec![],
-                reporting_frequency: "monthly".to_string(),
-            }
-        };
+        // Use default compliance requirements
+        let compliance_requirements = ComplianceRequirements::default();
 
         CawsSpec {
             version: "1.0".to_string(),
@@ -1223,12 +1215,16 @@ impl TaskExecutor {
     }
 
     /// Calculate context length estimate based on task content
-    fn calculate_context_length(&self, task_text: &str, context: &CouncilTaskContext) -> u32 {
+    fn calculate_context_length(&self, task_text: &str, context: &std::collections::HashMap<String, serde_json::Value>) -> u32 {
         let mut estimate = task_text.len() as u32;
 
         // Add context length from dependencies and recent changes
-        estimate += context.dependencies.len() as u32 * 100;
-        estimate += context.recent_changes.len() as u32 * 50;
+        if let Some(serde_json::Value::Array(deps)) = context.get("dependencies") {
+            estimate += deps.len() as u32 * 100;
+        }
+        if let Some(serde_json::Value::Array(changes)) = context.get("recent_changes") {
+            estimate += changes.len() as u32 * 50;
+        }
 
         // Add some padding for system prompts and responses
         estimate += 2000;
@@ -1955,7 +1951,7 @@ impl TaskExecutor {
         let file_count = task_spec.scope.as_ref().map(|s| s.files_affected.len()).unwrap_or(0);
         let loc_estimate = task_spec.scope.as_ref().and_then(|s| s.max_loc).unwrap_or(100);
         let domain_count = task_spec.scope.as_ref().map(|s| s.domains.len()).unwrap_or(0);
-        let criteria_count = task_spec.acceptance_criteria.len();
+        let criteria_count = task_spec.acceptance_criteria.as_ref().map(|c| c.len()).unwrap_or(0);
 
         let complexity_score = (file_count * 2) + (loc_estimate as usize / 100) + (domain_count * 3) + (criteria_count * 2);
 

@@ -18,7 +18,7 @@ tracing.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 thiserror.workspace = true
 uuid.workspace = true
-chrono.workspace = true
+chrono = { workspace = true, features = ["serde"] }
 anyhow.workspace = true
 schemars.workspace = true
 futures = "0.3"
@@ -100,6 +100,7 @@ with_bert = ["dep:rust-bert"]
 development = ["development-tools"]
 memory = ["agent-memory"]  # Gate memory functionality behind feature flag
 research = ["agent-research"]  # Gate research functionality behind feature flag
+data-processing = ["dep:agent-data-processing"]  # Gate data processing integration behind feature flag
 
 [[bin]]
 name = "agent-orchestration-server"

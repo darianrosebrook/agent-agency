@@ -7,7 +7,8 @@ use std::collections::HashMap;
 use anyhow::Result;
 use tracing::error;
 
-use crate::parallel_types::{WorkerId, WorkerSpecialty, SubTask};
+use crate::worker_types::TaskId;
+use crate::{WorkerId, WorkerSpecialty, SubTask};
 use crate::learning::types::*;
 use crate::learning::PatternAnalyzer;
 use crate::worker_types::{ExecutionOutcome, LearningMode};
@@ -224,7 +225,7 @@ impl AdaptiveWorkerSelector {
 #[async_trait::async_trait]
 pub trait FairnessMonitor: Send + Sync {
     async fn get_fairness_metrics(&self) -> Result<FairnessMetrics, Box<dyn std::error::Error + Send + Sync>>;
-    async fn record_task_assignment(&self, worker_id: WorkerId, task_id: crate::parallel_types::TaskId) -> Result<()>;
+    async fn record_task_assignment(&self, worker_id: WorkerId, task_id: crate::worker_types::TaskId) -> Result<()>;
 }
 
 // RealFairnessMonitor implementation moved to fairness_monitor.rs

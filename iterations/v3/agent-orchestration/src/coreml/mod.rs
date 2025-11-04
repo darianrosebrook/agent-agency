@@ -71,7 +71,7 @@ pub struct ModelMetadata {
 /// Core ML model instance
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-struct CoreMLModel {
+pub struct CoreMLModel {
     /// Model metadata
     pub metadata: ModelMetadata,
     /// Path to compiled model file

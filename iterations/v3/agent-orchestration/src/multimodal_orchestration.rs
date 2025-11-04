@@ -191,19 +191,30 @@ struct ExtractedTopic {
 
 // Placeholder types for data processing stages (would be implemented by agent-data-processing)
 
+#[cfg(feature = "data-processing")]
+use agent_data_processing::{
+    UnifiedIngestor, UnifiedEnrichmentStage, UnifiedIndexer, FileWatcher, JobScheduler,
+    EnrichmentCircuitBreakerConfig, DataInput, BlockData, Block, EnrichedBlock,
+};
+
+#[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct IngestionStage ;
 
+#[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct EnrichmentStage ;
 
+#[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct IndexingStage ;
 
 
+#[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
 struct UnifiedIngestor ;
 
+#[cfg(not(feature = "data-processing"))]
 impl UnifiedIngestor {
     pub fn new() -> Self {
         Self
@@ -211,13 +222,15 @@ impl UnifiedIngestor {
 
     pub async fn ingest(&self, _input: DataInput) -> Result<BlockData> {
         // PLACEHOLDER: Real ingestion implementation needed when agent-data-processing is integrated
-        Err(anyhow::anyhow!("PLACEHOLDER: UnifiedIngestor.ingest not implemented - requires agent-data-processing integration"))
+        Err(anyhow::anyhow!("PLACEHOLDER: UnifiedIngestor.ingest not implemented - requires agent-data-processing integration. Enable 'data-processing' feature to use real implementation."))
     }
 }
 
+#[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
 struct UnifiedEnrichmentStage ;
 
+#[cfg(not(feature = "data-processing"))]
 impl UnifiedEnrichmentStage {
     pub fn new(_config: EnrichmentCircuitBreakerConfig) -> Self {
         Self
@@ -225,13 +238,15 @@ impl UnifiedEnrichmentStage {
 
     pub async fn enrich_blocks(&self, _blocks: Vec<Block>) -> Result<Vec<EnrichedBlock>> {
         // PLACEHOLDER: Real enrichment implementation needed when agent-data-processing is integrated
-        Err(anyhow::anyhow!("PLACEHOLDER: UnifiedEnrichmentStage.enrich_blocks not implemented - requires agent-data-processing integration"))
+        Err(anyhow::anyhow!("PLACEHOLDER: UnifiedEnrichmentStage.enrich_blocks not implemented - requires agent-data-processing integration. Enable 'data-processing' feature to use real implementation."))
     }
 }
 
+#[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
 struct UnifiedIndexer ;
 
+#[cfg(not(feature = "data-processing"))]
 impl UnifiedIndexer {
     pub fn new(_dimensions: usize, _neighbors: usize) -> Self {
         Self
@@ -239,14 +254,16 @@ impl UnifiedIndexer {
 
     pub async fn index_blocks(&self, _blocks: Vec<Block>) -> Result<()> {
         // PLACEHOLDER: Real indexing implementation needed when agent-data-processing is integrated
-        Err(anyhow::anyhow!("PLACEHOLDER: UnifiedIndexer.index_blocks not implemented - requires agent-data-processing integration"))
+        Err(anyhow::anyhow!("PLACEHOLDER: UnifiedIndexer.index_blocks not implemented - requires agent-data-processing integration. Enable 'data-processing' feature to use real implementation."))
     }
 }
 
 
+#[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
 struct FileWatcher ;
 
+#[cfg(not(feature = "data-processing"))]
 impl FileWatcher {
     pub fn new(_include_patterns: Vec<String>, _exclude_patterns: Vec<String>) -> Self {
         Self
@@ -254,13 +271,15 @@ impl FileWatcher {
 
     pub async fn watch(&self, _directory_path: &std::path::Path) -> Result<()> {
         // PLACEHOLDER: Real file watching implementation needed when agent-data-processing is integrated
-        Err(anyhow::anyhow!("PLACEHOLDER: FileWatcher.watch not implemented - requires agent-data-processing integration"))
+        Err(anyhow::anyhow!("PLACEHOLDER: FileWatcher.watch not implemented - requires agent-data-processing integration. Enable 'data-processing' feature to use real implementation."))
     }
 }
 
+#[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
 struct JobScheduler ;
 
+#[cfg(not(feature = "data-processing"))]
 impl JobScheduler {
     pub fn new() -> Self {
         Self
@@ -272,6 +291,7 @@ impl JobScheduler {
     }
 }
 
+#[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
 struct EnrichmentCircuitBreakerConfig ;
 
@@ -1070,16 +1090,16 @@ impl MultimodalOrchestrator {
         } else if let Some(circuit_breaker) = self.circuit_breakers.get("llm_service") {
             // Protect LLM/planning calls with circuit breaker (fallback when planning integration not available)
             match circuit_breaker.execute(|| async {
-                // PLACEHOLDER: Planning integration not available, using fallback stub
-                // Dependency: OrchestratorPlanningIntegration should be set via set_planning_integration()
+                // Planning integration not configured - return error result indicating configuration needed
+                // To enable planning: call orchestrator.set_planning_integration(Arc::new(OrchestratorPlanningIntegration::new(...)))
                 Ok(ProcessingResult {
                     document_id: Uuid::new_v4(),
-                    status: ProcessingStatus::Completed,
+                    status: ProcessingStatus::Failed,
                     blocks_processed: 0,
                     blocks_enriched: 0,
                     blocks_indexed: 0,
                     processing_time_ms: planning_start.elapsed().as_millis() as u64,
-                    error_message: Some("Planning integration not configured".to_string()),
+                    error_message: Some("Planning integration not configured. Call set_planning_integration() to enable planning-aware task execution.".to_string()),
                 })
             }).await {
                 Ok(result) => result,
@@ -1105,16 +1125,16 @@ impl MultimodalOrchestrator {
             }
         } else {
             // No circuit breaker - direct execution (fallback when planning integration not available)
-            // PLACEHOLDER: Planning integration not available, using fallback stub
-            // Dependency: OrchestratorPlanningIntegration should be set via set_planning_integration()
+            // Planning integration not configured - return error result indicating configuration needed
+            // To enable planning: call orchestrator.set_planning_integration(Arc::new(OrchestratorPlanningIntegration::new(...)))
             ProcessingResult {
                 document_id: Uuid::new_v4(),
-                status: ProcessingStatus::Completed,
+                status: ProcessingStatus::Failed,
                 blocks_processed: 0,
                 blocks_enriched: 0,
                 blocks_indexed: 0,
                 processing_time_ms: planning_start.elapsed().as_millis() as u64,
-                error_message: Some("Planning integration not configured".to_string()),
+                error_message: Some("Planning integration not configured. Call set_planning_integration() to enable planning-aware task execution.".to_string()),
             }
         };
 

@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use crate::parallel_types::{TaskId, WorkerId, WorkerSpecialty};
+use crate::{TaskId, WorkerId, WorkerSpecialty};
 
 /// Execution record for learning analysis
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -126,14 +126,31 @@ pub enum PatternType {
     DependencyIssue,
 }
 
+impl std::fmt::Display for PatternType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            PatternType::TaskComplexity => "task_complexity",
+            PatternType::WorkerCapability => "worker_capability",
+            PatternType::ResourceConstraint => "resource_constraint",
+            PatternType::TimeConstraint => "time_constraint",
+            PatternType::QualityRequirement => "quality_requirement",
+            PatternType::DependencyIssue => "dependency_issue",
+        };
+        write!(f, "{}", s)
+    }
+}
+
 /// Optimal configuration discovered through learning
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct OptimalConfig {
     #[schemars(with = "String")]
     pub id: Uuid,
+    pub config_type: ConfigType,
     pub worker_type: String,
     pub task_type: String,
     pub config: serde_json::Value,
+    pub parameters: HashMap<String, serde_json::Value>,
+    pub conditions: HashMap<String, serde_json::Value>,
     pub performance_metrics: PerformanceMetrics,
     pub confidence: f64,
     pub expires_at: Option<DateTime<Utc>>,

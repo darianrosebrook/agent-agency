@@ -48,13 +48,19 @@ rand.workspace = true
 indicatif = "0.17"
 console = { version = "0.16", features = ["std"] }
 
+# CRITICAL: DO NOT CHANGE THESE DEPENDENCIES - CoreML compatibility requires workspace-aligned versions
+# These dependencies use workspace versions to ensure compatibility with CoreML functionality.
+# DO NOT override with specific versions - they must match workspace versions for CoreML to work.
+# DO NOT change tokenizers - must use workspace version (0.19) for CoreML compatibility.
+# Last fixed: P0 priority - candle-core dependency alignment (2025-01-XX)
 # Benchmarking and metrics (from model-benchmarking)
 criterion = "0.5"
 prometheus = "0.13"
 statistical = "0.1"
-candle-core = "0.9"
-candle-nn = "0.9"
-candle-transformers = "0.9"
+candle-core = { workspace = true }
+candle-nn = { workspace = true }
+candle-transformers = { workspace = true }
+tokenizers = { workspace = true }
 tracing-subscriber = "0.3"
 
 # Claim extraction specific (from claim-extraction)

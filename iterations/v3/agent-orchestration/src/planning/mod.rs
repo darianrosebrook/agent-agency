@@ -8,6 +8,7 @@ pub mod plan_generator;
 pub mod storage;
 pub mod parallel_coordinator;
 pub mod worker_assignment;
+pub mod assignment_storage;
 pub mod evidence;
 pub mod scope_guard;
 pub mod council_monitor;

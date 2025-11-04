@@ -112,6 +112,11 @@ impl PolicyAdjuster {
             learning_rate: 0.1,
             discount_factor: 0.9,
             exploration_rate: 0.1,
+            min_exploration_rate: Some(0.01),
+            exploration_decay: Some(0.995),
+            max_iterations: 1000,
+            max_episodes: Some(10000),
+            convergence_threshold: 0.001,
         };
         let mut default_policy = HashMap::new();
         default_policy.insert("temperature".to_string(), 0.7);

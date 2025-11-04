@@ -24,6 +24,8 @@ pub mod optimization;
 pub mod pooling;
 pub mod queries;
 pub mod vector_store;
+pub mod wal_storage;
+pub mod wal_replay;
 
 // API and interface modules (from consolidated interfaces and api-server crates)
 pub mod api;

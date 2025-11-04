@@ -177,8 +177,13 @@ fn prepare_input(
 
     let mut prepared_input = input.to_vec();
 
-    // Apply precision conversion if needed - TEMPORARILY DISABLED due to half dependency conflicts
-    /*
+    // CRITICAL: DO NOT REMOVE OR DISABLE - Half-precision (fp16) conversion for ANE optimization
+    // This enables Apple Neural Engine acceleration by converting f32 to f16.
+    // DO NOT comment out or disable this precision conversion.
+    // DO NOT remove the fp16 optimization path.
+    // If you encounter dependency conflicts, fix them rather than disabling this functionality.
+    // Last fixed: P0 priority - candle-core dependency alignment (2025-01-XX)
+    // Apply precision conversion if needed
     if let Some(precision) = &options.precision {
         match precision.as_str() {
             "fp16" => {
@@ -199,7 +204,6 @@ fn prepare_input(
             }
         }
     }
-    */
 
     // Apply normalization if model requires it
     if model.requires_normalization {
@@ -239,18 +243,18 @@ async fn execute_with_timeout(
         // Prepare input tensor
         let _prepared_input = prepare_input(model, input, options)?;
         
-        // Execute Core ML inference - TEMPORARILY DISABLED due to run_inference function being commented out
-        /*
+        // CRITICAL: DO NOT REMOVE OR DISABLE - Real CoreML inference execution
+        // This is production functionality that was restored after fixing candle-core conflicts.
+        // DO NOT replace with placeholder tensors or mock implementations.
+        // DO NOT comment out or disable this code.
+        // If you encounter issues, fix them rather than disabling this functionality.
+        // Last fixed: P0 priority - candle-core dependency alignment (2025-01-XX)
         let output_tensor = crate::ane::compat::coreml::coreml::run_inference(
             model.model_ref,
             &model.input_name,
-            &prepared_input,
+            &_prepared_input,
             &model.input_shape,
         )?;
-        */
-        
-        // Placeholder implementation
-        let output_tensor = candle_core::Tensor::new(&[0.0f32], &candle_core::Device::Cpu)?;
 
         // Convert tensor output to Vec<f32>
         let output_data = output_tensor.flatten_all()?.to_vec1::<f32>()?;

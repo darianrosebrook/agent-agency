@@ -233,8 +233,11 @@ impl MultimodalRetriever {
                 snippet: result.content,
                 citation: None, // Could be populated from metadata if needed
                 feature: SearchResultFeature {
-                    score: result.combined_score,
-                    metadata: serde_json::json!({
+                    score_text: Some(result.combined_score),
+                    score_image: None,
+                    score_graph: None,
+                    fused_score: result.combined_score,
+                    features_json: serde_json::json!({
                         "modality_scores": result.modality_scores,
                         "metadata": result.metadata
                     }),
@@ -268,8 +271,11 @@ impl MultimodalRetriever {
                 snippet: result.content,
                 citation: None, // Could be populated from metadata if needed
                 feature: SearchResultFeature {
-                    score: result.combined_score,
-                    metadata: serde_json::json!({
+                    score_text: Some(result.combined_score),
+                    score_image: None,
+                    score_graph: None,
+                    fused_score: result.combined_score,
+                    features_json: serde_json::json!({
                         "modality_scores": result.modality_scores,
                         "metadata": result.metadata
                     }),

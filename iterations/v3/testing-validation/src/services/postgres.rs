@@ -18,11 +18,11 @@ embed_migrations!("migrations");
 
 /// PostgreSQL service for real database operations with connection pooling and migrations
 pub struct PostgresService {
-    host: String,
-    port: u16,
-    database: String,
-    username: String,
-    password: String,
+    pub host: String,
+    pub port: u16,
+    pub database: String,
+    pub username: String,
+    pub password: String,
     process_handle: Option<std::process::Child>,
     pool: Option<Pool<PostgresConnectionManager<NoTls>>>,
     migrations_applied: bool,
@@ -330,6 +330,20 @@ impl PostgresService {
     /// Manually apply migrations (useful for testing)
     pub async fn apply_migrations_manual(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         self.apply_migrations().await
+    }
+
+    /// Create a test database manager with lifecycle management
+    /// 
+    /// This creates an isolated test database for better test isolation and parallel execution.
+    pub async fn create_lifecycle_manager(&self, test_id: Option<String>) -> Result<crate::database_lifecycle::TestDatabaseManager, Box<dyn std::error::Error + Send + Sync>> {
+        let base_url = format!(
+            "postgres://{}:{}@{}:{}/postgres",
+            self.username, self.password, self.host, self.port
+        );
+        
+        crate::database_lifecycle::TestDatabaseManager::new(&base_url, test_id)
+            .await
+            .map_err(|e| format!("Failed to create test database manager: {}", e).into())
     }
 }
 

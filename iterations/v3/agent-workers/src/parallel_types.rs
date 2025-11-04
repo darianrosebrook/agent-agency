@@ -8,9 +8,33 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use crate::worker_types::{TaskId, Priority, TaskScope, QualityRequirements, TaskStatus, WorkerId, SubTaskId};
 
-/// Re-export TaskStatus so parallel modules can depend on a single definition.
-pub type TaskStatus = crate::worker_types::TaskStatus;
+// WorkerSpecialty is defined locally below
+
+// /// Re-export TaskStatus so parallel modules can depend on a single definition.
+// pub type TaskStatus = crate::worker_types::TaskStatus;
+
+// TaskStatus, TaskId, SubTaskId, WorkerId, Priority are now defined in worker_types.rs
+
+/// Worker specialty types
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+pub enum WorkerSpecialty {
+    General,
+    ReactComponent,
+    FileEditing,
+    Research,
+    CodeGeneration,
+    Compilation,
+    CompilationErrors { error_codes: Vec<String> },
+    Testing { frameworks: Vec<String> },
+    Documentation { formats: Vec<String> },
+    Refactoring { patterns: Vec<String> },
+    Security,
+    Performance,
+}
+
+// TaskScope and QualityRequirements are now defined in worker_types.rs
 
 /// A complex task that can be decomposed into parallel subtasks
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -22,91 +46,15 @@ pub struct ComplexTask {
     pub priority: Priority,
     pub scope: TaskScope,
     pub quality_requirements: QualityRequirements,
-    #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     pub deadline: Option<DateTime<Utc>>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
 
-/// Task identifier
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
-pub struct TaskId (pub Uuid);
+// TaskId is now defined in worker_types.rs
 
-impl TaskId {
-    pub fn new() -> Self {
-        Self(Uuid::new_v4())
-    }
-}
+// SubTaskId is now defined in worker_types.rs
 
-impl Default for TaskId {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// Sub-task identifier
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
-pub struct SubTaskId (pub Uuid);
-
-impl SubTaskId {
-    pub fn new() -> Self {
-        Self(Uuid::new_v4())
-    }
-}
-
-impl Default for SubTaskId {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// Task scope definition
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct TaskScope {
-    pub domains: Vec<String>,
-    pub files_affected: Vec<String>,
-    pub files: Vec<String>,
-    pub directories: Vec<String>,
-    pub patterns: Vec<String>,
-    pub max_files: Option<usize>,
-    pub max_loc: Option<usize>,
-}
-
-/// Quality requirements for task execution
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct QualityRequirements {
-    pub min_coverage: Option<f64>,
-    pub max_complexity: Option<f64>,
-    pub required_tests: bool,
-    pub documentation_required: bool,
-}
-
-impl Default for QualityRequirements {
-    fn default() -> Self {
-        Self {
-            min_coverage: Some(0.8),
-            max_complexity: Some(10.0),
-            required_tests: true,
-            documentation_required: false,
-        }
-    }
-}
-
-/// Task priority levels
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
-pub enum Priority {
-    Low = 1,
-    Medium = 2,
-    High = 3,
-    Critical = 4,
-}
-
-impl Default for Priority {
-    fn default() -> Self {
-        Self::Medium
-    }
-}
 
 /// Result of task execution
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -138,27 +86,7 @@ pub struct WorkerBreakdown {
     pub errors: Vec<String>,
 }
 
-/// Worker identifier
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
-pub struct WorkerId (pub Uuid);
-
-impl WorkerId {
-    pub fn new() -> Self {
-        Self(Uuid::new_v4())
-    }
-}
-
-impl Default for WorkerId {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl std::fmt::Display for WorkerId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
+// WorkerId is now defined in worker_types.rs
 
 /// A subtask that can be executed by a worker
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -310,24 +238,7 @@ pub enum DependencyType {
     Resource,
 }
 
-/// Worker specialty for task assignment
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub enum WorkerSpecialty {
-    Compilation,
-    CompilationErrors {
-        error_codes: Vec<String>,
-    },
-    Refactoring {
-        strategies: Vec<String>,
-    },
-    Testing {
-        frameworks: Vec<String>,
-    },
-    Documentation {
-        formats: Vec<String>,
-    },
-    General,
-}
+// WorkerSpecialty is now imported from worker_types.rs
 
 /// Dependency between tasks (used in parallel execution)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

@@ -4,6 +4,7 @@
 //! Extracted from apple-silicon monolith to provide focused observability services.
 
 pub mod telemetry;
+pub mod telemetry_storage;
 pub mod monitoring;
 pub mod metrics;
 pub mod tracing;
@@ -23,6 +24,7 @@ pub use system_configuration::{
 use serde::{Deserialize, Serialize};
 // Re-export key functionality
 pub use telemetry::*;
+pub use telemetry_storage::TelemetryDatabaseStorage;
 pub use monitoring::*;
 pub use metrics::*;
 pub use tracing::*;

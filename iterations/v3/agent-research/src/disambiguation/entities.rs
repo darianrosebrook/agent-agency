@@ -348,10 +348,12 @@ impl NamedEntityRecognizer {
         let matches: Vec<EntityMatch> = entities
             .iter()
             .map(|entity| EntityMatch {
-                entity: entity.clone(),
+                entity: entity.name.clone(),
+                entity_type: entity.entity_type,
                 confidence: entity.confidence,
-                match_type: "regex".to_string(),
-                source: "pattern_matching".to_string(),
+                start_pos: entity.start_pos,
+                end_pos: entity.end_pos,
+                context: entity.context,
             })
             .collect();
 

@@ -6,6 +6,65 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
+// All core types are now defined in this module
+
+/// Task status enumeration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub enum TaskStatus {
+    Pending,
+    InProgress,
+    Completed,
+    Failed,
+    Cancelled,
+}
+
+/// Task priority levels
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
+pub enum Priority {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+impl Default for Priority {
+    fn default() -> Self {
+        Self::Medium
+    }
+}
+
+/// Task scope - what the task affects
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct TaskScope {
+    pub domains: Vec<String>,
+    pub files_affected: Vec<String>,
+    pub files: Vec<String>,
+    pub directories: Vec<String>,
+    pub patterns: Vec<String>,
+    pub max_files: Option<usize>,
+    pub max_loc: Option<usize>,
+}
+
+/// Quality requirements for task execution
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct QualityRequirements {
+    pub min_coverage: Option<f64>,
+    pub max_complexity: Option<f64>,
+    pub required_tests: bool,
+    pub documentation_required: bool,
+}
+
+impl Default for QualityRequirements {
+    fn default() -> Self {
+        Self {
+            min_coverage: Some(0.8),
+            max_complexity: Some(10.0),
+            required_tests: true,
+            documentation_required: false,
+        }
+    }
+}
+
 // Use shared types from contracts
 use agent_agency_contracts::{
     task_executor::{ExecutionStatus, TaskExecutionResult},
@@ -19,6 +78,60 @@ use agent_agency_contracts::{
 
 // Define our own TaskPriority to avoid conflicts
 pub type TaskPriority = ContractTaskPriority;
+
+/// Task ID wrapper around UUID
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+pub struct TaskId(#[schemars(with = "String")] pub Uuid);
+
+/// Subtask ID wrapper around UUID
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+pub struct SubTaskId(#[schemars(with = "String")] pub Uuid);
+
+/// Worker ID wrapper around UUID
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+pub struct WorkerId(#[schemars(with = "String")] pub Uuid);
+
+impl std::fmt::Display for WorkerId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl TaskId {
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+impl SubTaskId {
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+impl WorkerId {
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+impl Default for TaskId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Default for SubTaskId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Default for WorkerId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 /// Clock trait for time operations
 pub trait Clock {
@@ -861,14 +974,6 @@ pub struct TaskContext {
 }
 
 
-/// Task scope definition
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct TaskScope {
-    pub domains: Vec<String>,
-    pub files_affected: Vec<String>,
-    pub max_loc: Option<usize>,
-}
-
 /// Task specification for workers
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskSpec {
@@ -928,7 +1033,6 @@ pub struct CawsSpec {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CawsMetadata {
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     pub created_by: String,
     pub description: String,
@@ -1041,13 +1145,29 @@ pub enum WorkerProgressStatus {
     Blocked,
 }
 
+impl WorkerProgressStatus {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            WorkerProgressStatus::Pending => "pending",
+            WorkerProgressStatus::Running => "running",
+            WorkerProgressStatus::Completed => "completed",
+            WorkerProgressStatus::Failed => "failed",
+            WorkerProgressStatus::Blocked => "blocked",
+        }
+    }
+}
+
+impl std::fmt::Display for WorkerProgressStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
 /// Worker progress tracking
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerProgress {
-    #[schemars(with = "String")]
-    pub worker_id: Uuid,
-    #[schemars(with = "String")]
-    pub subtask_id: Uuid,
+    pub worker_id: WorkerId,
+    pub subtask_id: SubTaskId,
     pub progress_percentage: f32,
     pub status: WorkerProgressStatus,
     pub current_step: String,
@@ -1170,23 +1290,7 @@ pub enum SeverityLevel {
     Critical,
 }
 
-// Additional missing types
-
-/// Worker specialties for task routing
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-pub enum WorkerSpecialty {
-    General,
-    ReactComponent,
-    FileEditing,
-    Research,
-    CodeGeneration,
-    CompilationErrors { error_codes: Vec<String> },
-    Testing,
-    Documentation,
-    Refactoring,
-    Security,
-    Performance,
-}
+// WorkerSpecialty is now imported from parallel_types
 
 /// Task definition for execution
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -1204,17 +1308,8 @@ pub struct TaskDefinition {
 }
 
 /// Task status for tracking execution
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-pub enum TaskStatus {
-    Pending,
-    InProgress,
-    Completed,
-    Failed,
-    Cancelled,
-}
-
 /// Execution outcome for learning system
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ExecutionOutcome {
     Success,
     Failure,
@@ -1229,35 +1324,6 @@ pub enum LearningMode {
     Apply,
     Optimize,
     Disabled,
-}
-
-/// Task priority levels
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-pub enum Priority {
-    Low,
-    Medium,
-    High,
-    Critical,
-}
-
-/// Worker breakdown for task analysis
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct WorkerBreakdown {
-    #[schemars(with = "String")]
-    pub worker_id: Uuid,
-    pub specialty: WorkerSpecialty,
-    pub estimated_time_ms: u64,
-    pub confidence: f32,
-}
-
-/// Quality requirements for tasks
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct QualityRequirements {
-    pub min_coverage: f32,
-    pub max_complexity: u32,
-    pub require_tests: bool,
-    pub require_documentation: bool,
-    pub security_level: SeverityLevel,
 }
 
 /// Tool identifier
@@ -1284,6 +1350,8 @@ impl Default for TaskDefinition {
             name: String::new(),
             description: String::new(),
             required_tools: Vec::new(),
+            parameters: HashMap::new(),
+            timeout_seconds: None,
             priority: TaskPriority::Medium,
             deadline: None,
             metadata: HashMap::new(),
@@ -1291,17 +1359,7 @@ impl Default for TaskDefinition {
     }
 }
 
-impl Default for QualityRequirements {
-    fn default() -> Self {
-        Self {
-            min_coverage: 0.8,
-            max_complexity: 10,
-            require_tests: true,
-            require_documentation: false,
-            security_level: SeverityLevel::Medium,
-        }
-    }
-}
+// Duplicate Default impl removed - using the one defined earlier
 
 impl Default for ToolId {
     fn default() -> Self {
@@ -1351,6 +1409,10 @@ impl Default for ValidationContext {
             validation_type: String::new(),
             requirements: HashMap::new(),
             metadata: HashMap::new(),
+            package_name: None,
+            workspace_root: None,
+            execution_time: None,
+            results: None,
         }
     }
 }
@@ -1360,6 +1422,7 @@ impl Default for Artifact {
         Self {
             id: Uuid::new_v4(),
             name: String::new(),
+            path: String::new(),
             artifact_type: ArtifactType::Other("unknown".to_string()),
             content: String::new(),
             metadata: HashMap::new(),
@@ -1474,6 +1537,8 @@ impl Default for TaskContext {
             retry_count: 0,
             max_retries: 3,
             metadata: HashMap::new(),
+            tool_id: None,
+            parameters: HashMap::new(),
         }
     }
 }

@@ -57,8 +57,9 @@ impl QueueHealthMonitor {
             historical.push(metrics);
             
             // Keep only last 1000 entries to prevent memory growth
-            if historical.len() > 1000 {
-                historical.drain(0..historical.len() - 1000);
+            let current_len = historical.len();
+            if current_len > 1000 {
+                historical.drain(0..current_len - 1000);
             }
         }
 

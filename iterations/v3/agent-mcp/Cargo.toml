@@ -27,6 +27,8 @@ schemars = { version = "0.8", features = ["derive"] }
 # Note: Cannot directly depend on data-infrastructure due to circular dependency
 # (data-infrastructure optionally depends on agent-mcp). Users should inject the
 # real FileOperationsService via ToolRegistry::with_file_ops().
+# However, when both crates are available, use the 'file-ops' feature to enable
+# the helper function that creates real implementations.
 system-common-interfaces = { path = "../system-common-interfaces" }
 
 # Memory system for memory MCP tools - removed to avoid cyclic dependency

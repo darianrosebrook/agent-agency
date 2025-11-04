@@ -25,10 +25,42 @@ use system_common_interfaces::{
     Workspace, WorkspaceStatus,
 };
 
+/// Helper module for creating real FileOperationsService instances
+/// 
+/// This module provides documentation and examples for creating real FileOperationsService
+/// implementations when data-infrastructure is available. Since there's a circular
+/// dependency between agent-mcp and data-infrastructure, this must be called
+/// from code that has access to both crates.
+pub mod file_ops_helpers {
+    /// Documentation helper: Shows how to create real FileOperationsService
+    /// 
+    /// When both `agent-mcp` and `data-infrastructure` are available in your
+    /// project, you can create a real file operations service like this:
+    /// 
+    /// ```rust,ignore
+    /// use data_infrastructure::file_operations_service::create_file_operations_service;
+    /// use agent_mcp::tool_registry::ToolRegistry;
+    /// use std::env;
+    /// 
+    /// let repo_path = env::current_dir().unwrap();
+    /// let file_ops = create_file_operations_service(repo_path);
+    /// let registry = ToolRegistry::with_file_ops(file_ops);
+    /// ```
+    /// 
+    /// This avoids the circular dependency by calling the function from code
+    /// that has both crates available (e.g., your application's main binary).
+    pub fn _documentation_helper() {}
+}
+
 /// Placeholder file operations service that requires real implementation injection
 /// 
 /// This placeholder returns errors for all operations, encouraging users to inject
 /// a real implementation via `ToolRegistry::with_file_ops()`.
+/// 
+/// To use real file operations:
+/// 1. Ensure `data-infrastructure` crate is available in your project
+/// 2. Create a real FileOperationsService: `data_infrastructure::create_file_operations_service(path)`
+/// 3. Pass it to `ToolRegistry::with_file_ops(file_ops)`
 #[derive(Debug)]
 struct PlaceholderFileOperationsService ;
 
@@ -41,23 +73,29 @@ impl FileOperationsService for PlaceholderFileOperationsService {
         _budgets: &Budgets,
     ) -> FileResult<()> {
         Err(FileOpsError::Validation(
-            "Placeholder service: Inject a real FileOperationsService via ToolRegistry::with_file_ops()".to_string()
+            "FileOperationsService not configured: Inject a real implementation via ToolRegistry::with_file_ops(). \
+            Example: use data_infrastructure::create_file_operations_service(repo_path); \
+            ToolRegistry::with_file_ops(file_ops)".to_string()
         ))
     }
 
     async fn create_workspace(
         &self,
-        _task_id: &str,
+        task_id: &str,
         _repo_path: &std::path::Path,
     ) -> FileResult<Box<dyn Workspace>> {
         Err(FileOpsError::WorkspaceNotFound(
-            "Placeholder service: Inject a real FileOperationsService via ToolRegistry::with_file_ops()".to_string()
+            format!("FileOperationsService not configured for task '{}': Inject a real implementation via ToolRegistry::with_file_ops(). \
+            Example: use data_infrastructure::create_file_operations_service(repo_path); \
+            ToolRegistry::with_file_ops(file_ops)", task_id)
         ))
     }
 
-    async fn get_workspace_status(&self, _task_id: &str) -> FileResult<WorkspaceStatus> {
+    async fn get_workspace_status(&self, task_id: &str) -> FileResult<WorkspaceStatus> {
         Err(FileOpsError::WorkspaceNotFound(
-            "Placeholder service: Inject a real FileOperationsService via ToolRegistry::with_file_ops()".to_string()
+            format!("FileOperationsService not configured for task '{}': Inject a real implementation via ToolRegistry::with_file_ops(). \
+            Example: use data_infrastructure::create_file_operations_service(repo_path); \
+            ToolRegistry::with_file_ops(file_ops)", task_id)
         ))
     }
 }

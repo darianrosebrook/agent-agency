@@ -74,7 +74,7 @@ pub struct ResourceConstraints {
 /// Budget limits
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct BudgetLimits {
+pub struct BudgetLimits {
     pub max_cost: f64,
     pub currency: String,
 }
@@ -219,7 +219,7 @@ struct QualityGate {
 /// Refinement directive
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct RefinementDirective {
+pub struct RefinementDirective {
     pub required_changes: Vec<RefinementChange>,
     pub change_priority: crate::judge_backup::verdicts::ChangePriority,
     pub estimated_effort: crate::verdict_aggregation::AggregatedEffort,
@@ -230,7 +230,7 @@ struct RefinementDirective {
 /// Required change specification
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct RefinementChange {
+pub struct RefinementChange {
     pub category: crate::judge_backup::verdicts::ChangeCategory,
     pub description: String,
     pub rationale: String,

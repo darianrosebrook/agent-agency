@@ -4,6 +4,7 @@
 //! - OrchestratorService: CoreML Mistral model instance for task orchestration (REAL COREM L)
 //! - OllamaService: Local Ollama instance for model inference (REAL HTTP CALLS)
 //! - PostgresService: PostgreSQL database for persistence (REAL DATABASE CONNECTIONS)
+//! - Database lifecycle management for test isolation and fixture management
 
 pub mod orchestrator;
 pub mod ollama;
@@ -12,3 +13,4 @@ pub mod postgres;
 pub use orchestrator::OrchestratorService;
 pub use ollama::OllamaService;
 pub use postgres::PostgresService;
+pub use crate::database_lifecycle::{TestDatabaseManager, TestFixtures, DatabaseSnapshot};

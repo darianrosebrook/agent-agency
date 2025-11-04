@@ -9,7 +9,7 @@ pub struct ConfidenceCalculator;
 impl ConfidenceCalculator {
     /// Calculate confidence based on claim characteristics
     pub fn calculate_claim_confidence(claim_text: &str) -> f32 {
-        let mut confidence = 0.5; // Base confidence
+        let mut confidence: f32 = 0.5; // Base confidence
 
         // Increase confidence for longer, more specific claims
         if claim_text.len() > 20 {

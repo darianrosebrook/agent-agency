@@ -3,7 +3,8 @@
 use std::sync::Arc;
 use anyhow::Result;
 use tracing::debug;
-use crate::disambiguation::types::*;
+use crate::disambiguation::types::{EntityMatch, Ambiguity};
+use crate::disambiguation::disambiguation_types::*;
 use crate::ProcessingContext;
 use crate::disambiguation::detection::AmbiguityDetector;
 use crate::disambiguation::context::ContextResolver;
@@ -139,7 +140,9 @@ impl DisambiguationStage {
                 AmbiguityType::TechnicalTerm |
                 AmbiguityType::ScopeBoundary |
                 AmbiguityType::TemporalReference |
-                AmbiguityType::Quantifier => {
+                AmbiguityType::Quantifier |
+                AmbiguityType::EntityReference |
+                AmbiguityType::Other(_) => {
                     // For now, these are handled by the resolver but not replaced in text
                     // This could be extended to replace them as well
                 }
@@ -160,12 +163,19 @@ impl DisambiguationStage {
             .filter_map(|ambiguity| {
                 if let Some(reason) = self.resolver.detect_unresolvable_ambiguity(ambiguity, context) {
                     Some(UnresolvableAmbiguity {
-                        ambiguity: ambiguity.clone(),
+                        text: ambiguity.original_text.clone(),
                         reason,
-                        suggested_context: self.resolver.get_pronoun_resolutions(
-                            &ambiguity.original_text,
-                            context,
-                        ),
+                        context: Some({
+                            let resolutions = self.resolver.get_pronoun_resolutions(
+                                &ambiguity.original_text,
+                                context,
+                            );
+                            if resolutions.is_empty() {
+                                "no resolution available".to_string()
+                            } else {
+                                format!("{:?}", resolutions)
+                            }
+                        }),
                     })
                 } else {
                     None

@@ -194,7 +194,7 @@ impl TextSearchBridge {
         // Add to vector index if embedding service is available
         if let Some(service) = &self.embedding_service {
             let embedding = service.generate_embedding(&content).await?;
-            self.vector_index.add_vector(doc_id, embedding);
+            self.vector_index.add_vector(doc_id, embedding.vector.values);
         }
 
         Ok(())
@@ -219,14 +219,18 @@ impl TextSearchBridge {
                 // Combine results with reciprocal rank fusion
                 let combined = self.reciprocal_rank_fusion(bm25_results, vector_results, k);
                 results = combined.into_iter().map(|(doc_id, score)| {
+                    let doc_id_clone = doc_id.clone();
                     DataInfraSearchResult {
                         ref_id: doc_id,
                         kind: data_infrastructure::embedding::embedding_types::ContentType::Text,
-                        snippet: self.bm25_index.documents.get(&doc_id).unwrap_or(&String::new()).clone(),
+                        snippet: self.bm25_index.documents.get(&doc_id_clone).unwrap_or(&String::new()).clone(),
                         citation: None,
                         feature: data_infrastructure::embedding::embedding_types::SearchResultFeature {
-                            score,
-                            metadata: serde_json::json!({"search_type": "hybrid_bm25_vector"}),
+                            score_text: Some(score),
+                            score_image: None,
+                            score_graph: None,
+                            fused_score: score,
+                            features_json: serde_json::json!({"search_type": "hybrid_bm25_vector"}),
                         },
                         project_scope: None,
                     }
@@ -237,14 +241,18 @@ impl TextSearchBridge {
         // Fallback to BM25 only
         if results.is_empty() {
             results = bm25_results.into_iter().map(|(doc_id, score)| {
+                let doc_id_clone = doc_id.clone();
                 DataInfraSearchResult {
                     ref_id: doc_id,
                     kind: data_infrastructure::embedding::embedding_types::ContentType::Text,
-                    snippet: self.bm25_index.documents.get(&doc_id).unwrap_or(&String::new()).clone(),
+                    snippet: self.bm25_index.documents.get(&doc_id_clone).unwrap_or(&String::new()).clone(),
                     citation: None,
                     feature: data_infrastructure::embedding::embedding_types::SearchResultFeature {
-                        score,
-                        metadata: serde_json::json!({"search_type": "bm25_only"}),
+                        score_text: Some(score),
+                        score_image: None,
+                        score_graph: None,
+                        fused_score: score,
+                        features_json: serde_json::json!({"search_type": "bm25_only"}),
                     },
                     project_scope: None,
                 }
@@ -331,9 +339,9 @@ impl TextSearchEngine {
                 MultimodalSearchResult {
                     id: result.ref_id,
                     content: result.snippet,
-                    modality_scores: HashMap::from([("text".to_string(), result.feature.score)]),
-                    combined_score: result.feature.score,
-                    metadata: result.feature.metadata.as_object().unwrap_or(&serde_json::Map::new()).iter()
+                    modality_scores: HashMap::from([("text".to_string(), result.feature.fused_score)]),
+                    combined_score: result.feature.fused_score,
+                    metadata: result.feature.features_json.as_object().unwrap_or(&serde_json::Map::new()).iter()
                         .map(|(k, v)| (k.clone(), v.clone()))
                         .collect(),
                     timestamp: Utc::now(),

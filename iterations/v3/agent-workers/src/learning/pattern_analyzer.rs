@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use crate::parallel_types::{TaskId, WorkerId};
+use crate::{TaskId, WorkerId};
 use crate::learning::types::*;
 use crate::worker_types::{ExecutionOutcome, LearningMode};
 
@@ -153,8 +153,14 @@ impl PatternAnalyzer {
                     let config = OptimalConfig {
                         id: Uuid::new_v4(),
                         config_type: ConfigType::WorkerSelection,
+                        worker_type: "general".to_string(), // Default worker type
+                        task_type: "general".to_string(), // Default task type
+                        config: serde_json::Value::Object(serde_json::Map::new()), // Empty config
                         parameters: HashMap::from([
                             ("config_key".to_string(), serde_json::Value::String(config_key)),
+                        ]),
+                        conditions: HashMap::from([
+                            ("min_executions".to_string(), serde_json::Value::Number(self.min_pattern_frequency.into())),
                         ]),
                         performance_metrics: PerformanceMetrics {
                             execution_time_ms: avg_execution_time,
@@ -163,10 +169,9 @@ impl PatternAnalyzer {
                             resource_utilization: 0.8, // Default value
                             cost_score: 0.7, // Default value
                         },
-                        conditions: HashMap::from([
-                            ("min_executions".to_string(), serde_json::Value::Number(self.min_pattern_frequency.into())),
-                        ]),
                         confidence: success_rate,
+                        expires_at: None,
+                        metadata: serde_json::Value::Object(serde_json::Map::new()),
                         created_at: Utc::now(),
                     };
 

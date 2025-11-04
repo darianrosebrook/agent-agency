@@ -8,6 +8,7 @@ use tokio::sync::RwLock;
 
 use crate::{
     TelemetryCollector, TelemetryData, TelemetryDataType, TelemetryError,
+    TelemetryDatabaseStorage,
 };
 
 /// Enhanced telemetry collector with advanced features
@@ -16,6 +17,7 @@ pub struct EnhancedTelemetryCollector {
     collection_interval: std::time::Duration,
     metrics_buffer: Arc<RwLock<Vec<TelemetryData>>>,
     max_buffer_size: usize,
+    database_storage: Option<Arc<TelemetryDatabaseStorage>>,
 }
 
 impl EnhancedTelemetryCollector {
@@ -25,7 +27,36 @@ impl EnhancedTelemetryCollector {
             collection_interval,
             metrics_buffer: Arc::new(RwLock::new(Vec::new())),
             max_buffer_size,
+            database_storage: None,
         }
+    }
+
+    /// Create with database storage enabled
+    pub async fn with_database(
+        name: String,
+        collection_interval: std::time::Duration,
+        max_buffer_size: usize,
+        database_url: &str,
+        max_connections: u32,
+    ) -> Result<Self, TelemetryError> {
+        let database_storage = TelemetryDatabaseStorage::new(database_url, max_connections)
+            .await
+            .map_err(|e| TelemetryError::ConnectionError {
+                message: format!("Failed to initialize database storage: {}", e),
+            })?;
+
+        Ok(Self {
+            name,
+            collection_interval,
+            metrics_buffer: Arc::new(RwLock::new(Vec::new())),
+            max_buffer_size,
+            database_storage: Some(Arc::new(database_storage)),
+        })
+    }
+
+    /// Set database storage (for dependency injection)
+    pub fn set_database_storage(&mut self, storage: Arc<TelemetryDatabaseStorage>) {
+        self.database_storage = Some(storage);
     }
 
     /// Record a metric
@@ -43,7 +74,14 @@ impl EnhancedTelemetryCollector {
         };
 
         let mut buffer = self.metrics_buffer.write().await;
-        buffer.push(data);
+        buffer.push(data.clone());
+
+        // Store to database if available
+        if let Some(ref db_storage) = self.database_storage {
+            if let Err(e) = db_storage.store_data(&data).await {
+                tracing::warn!("Failed to store telemetry metric to database: {}", e);
+            }
+        }
 
         // Maintain buffer size limit
         if buffer.len() > self.max_buffer_size {
@@ -66,7 +104,14 @@ impl EnhancedTelemetryCollector {
         };
 
         let mut buffer = self.metrics_buffer.write().await;
-        buffer.push(data);
+        buffer.push(data.clone());
+
+        // Store to database if available
+        if let Some(ref db_storage) = self.database_storage {
+            if let Err(e) = db_storage.store_data(&data).await {
+                tracing::warn!("Failed to store telemetry event to database: {}", e);
+            }
+        }
 
         // Maintain buffer size limit
         if buffer.len() > self.max_buffer_size {
@@ -90,7 +135,14 @@ impl EnhancedTelemetryCollector {
         };
 
         let mut buffer = self.metrics_buffer.write().await;
-        buffer.push(data);
+        buffer.push(data.clone());
+
+        // Store to database if available
+        if let Some(ref db_storage) = self.database_storage {
+            if let Err(e) = db_storage.store_data(&data).await {
+                tracing::warn!("Failed to store telemetry log to database: {}", e);
+            }
+        }
 
         // Maintain buffer size limit
         if buffer.len() > self.max_buffer_size {

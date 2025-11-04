@@ -3,7 +3,7 @@
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
 use crate::parallel_types::*;
-use crate::worker_types::TaskStatus;
+use crate::TaskStatus;
 use crate::{Artifact, ArtifactType};
 use crate::error::*;
 use crate::worker_errors::{SynthesisResult, SynthesisError};

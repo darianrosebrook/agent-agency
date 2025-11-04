@@ -3,6 +3,7 @@
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
 use crate::parallel_types::*;
+use crate::worker_types::{WorkerId, SubTaskId};
 use crate::WorkerMessage;
 use crate::error::*;
 use crate::communication::{MessageBroker, ChannelRegistry, ChannelConfig};
@@ -251,7 +252,7 @@ impl MessageFilter {
         // Check worker ID filter
         if let Some(ref worker_ids) = self.worker_ids {
             let message_worker_id = super::messages::helpers::get_worker_id(message);
-            if !worker_ids.contains(message_worker_id) {
+            if !worker_ids.contains(&message_worker_id) {
                 return false;
             }
         }
@@ -259,7 +260,7 @@ impl MessageFilter {
         // Check subtask ID filter
         if let Some(ref subtask_ids) = self.subtask_ids {
             let message_subtask_id = super::messages::helpers::get_subtask_id(message);
-            if !subtask_ids.contains(message_subtask_id) {
+            if !subtask_ids.contains(&message_subtask_id) {
                 return false;
             }
         }

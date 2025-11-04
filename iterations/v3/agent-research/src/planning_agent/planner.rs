@@ -85,7 +85,7 @@ impl PlanningAgent {
         let metadata = PlanningMetadata {
             planning_duration: start_time.elapsed(),
             refinement_iterations: refinement_history.len() as u32,
-            human_intervention_required: validation_results.overall_status == ValidationStatus::EscalationRequired,
+            human_intervention_required: validation_results.overall_status == crate::planning_agent::types::planning_types::ValidationStatus::EscalationRequired,
             risk_assessment,
         };
 
@@ -114,21 +114,21 @@ impl PlanningAgent {
             let validation_result = self.validation_pipeline.validate_working_spec(working_spec).await?;
 
             // Check if validation passed
-            if validation_result.overall_status == ValidationStatus::Passed {
+            if validation_result.overall_status == crate::planning_agent::types::planning_types::ValidationStatus::Passed {
                 return Ok((validation_result, refinement_history));
             }
 
             // Check if we've exceeded max iterations
             if iteration >= config.max_refinement_iterations {
                 let mut validation_results = validation_result;
-                validation_results.overall_status = ValidationStatus::EscalationRequired;
+                validation_results.overall_status = crate::planning_agent::types::planning_types::ValidationStatus::EscalationRequired;
                 return Ok((validation_results, refinement_history));
             }
 
             // Check if refinement is disabled
             if !config.enable_auto_refinement {
                 let mut validation_results = validation_result;
-                validation_results.overall_status = ValidationStatus::EscalationRequired;
+                validation_results.overall_status = crate::planning_agent::types::planning_types::ValidationStatus::EscalationRequired;
                 return Ok((validation_results, refinement_history));
             }
 
@@ -150,7 +150,7 @@ impl PlanningAgent {
             if !refinement_result.successful {
                 // Refinement failed, require escalation
                 let mut validation_results = validation_result;
-                validation_results.overall_status = ValidationStatus::EscalationRequired;
+                validation_results.overall_status = crate::planning_agent::types::planning_types::ValidationStatus::EscalationRequired;
                 return Ok((validation_results, refinement_history));
             }
         }
@@ -790,7 +790,7 @@ pub struct GoalPrioritizationEngine {
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct GoalDependencyAnalyzer {
     /// Dependency patterns
-    dependency_patterns: Vec<Regex>,
+    dependency_patterns: Vec<String>,
 }
 
 /// Goal validation engine
@@ -1429,9 +1429,9 @@ impl GoalDependencyAnalyzer {
     /// Create new dependency analyzer
     fn new() -> Self {
         let dependency_patterns = vec![
-            Regex::new(r"(?i)\b(?:after|before|following|preceding|subsequent|prior to)\b").unwrap(),
-            Regex::new(r"(?i)\b(?:depend|require|need)\b").unwrap(),
-            Regex::new(r"(?i)\b(?:must|shall|should)\b.*\b(?:first|initially|before)\b").unwrap(),
+            r"(?i)\b(?:after|before|following|preceding|subsequent|prior to)\b".to_string(),
+            r"(?i)\b(?:depend|require|need)\b".to_string(),
+            r"(?i)\b(?:must|shall|should)\b.*\b(?:first|initially|before)\b".to_string(),
         ];
 
         Self { dependency_patterns }
@@ -1548,7 +1548,13 @@ impl GoalDependencyAnalyzer {
         // Check for explicit dependency patterns in context
         let combined_text = format!("{} {}", goal_a.text, goal_b.text);
         let has_dependency_pattern = self.dependency_patterns.iter()
-            .any(|pattern| pattern.is_match(&combined_text) || pattern.is_match(context));
+            .any(|pattern_str| {
+                if let Ok(pattern) = Regex::new(pattern_str) {
+                    pattern.is_match(&combined_text) || pattern.is_match(context)
+                } else {
+                    false
+                }
+            });
 
         text_similarity > 0.6 || has_dependency_pattern
     }

@@ -150,7 +150,7 @@ impl ClaimExtractor {
                 component_boundaries: vec!["system".to_string()], // Basic scope
                 data_impact: DataImpact::None,
             },
-            confidence,
+            confidence: confidence.into(),
             evidence_links: Vec::new(),
             temporal_context: None,
             verification_status: VerificationStatus::Unverified,
@@ -202,7 +202,7 @@ impl ClaimExtractor {
 
     /// Calculate claim confidence score
     fn calculate_claim_confidence(&self, clause: &str) -> f32 {
-        let mut confidence = 0.5; // Base confidence
+        let mut confidence: f32 = 0.5; // Base confidence
 
         // Increase confidence for longer, more specific claims
         if clause.len() > 20 {

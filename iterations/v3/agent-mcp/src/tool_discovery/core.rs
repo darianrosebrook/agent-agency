@@ -11,6 +11,8 @@ use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use glob::glob;
+use uuid::Uuid;
 
 /// Tool discovery service - core functionality
 #[derive(Debug)]
@@ -217,11 +219,221 @@ impl ToolDiscovery {
     async fn discover_tools_in_path(path: &str, config: &ToolDiscoveryConfig) -> Result<Vec<MCPTool>> {
         let mut tools = Vec::new();
         
-        // For now, return empty vector as placeholder
-        // TODO: Implement actual tool discovery logic
         tracing::debug!("Discovering tools in path: {}", path);
         
+        // Check if path exists
+        let path_buf = std::path::PathBuf::from(path);
+        if !path_buf.exists() {
+            tracing::warn!("Discovery path does not exist: {}", path);
+            return Ok(tools);
+        }
+        
+        // Search for manifest files matching patterns
+        for pattern in &config.manifest_patterns {
+            let glob_pattern = if config.recursive_discovery {
+                format!("{}/**/{}", path, pattern.trim_start_matches("**/"))
+            } else {
+                format!("{}/{}", path, pattern.trim_start_matches("**/"))
+            };
+            
+            tracing::debug!("Searching for tools with pattern: {}", glob_pattern);
+            
+            // Use glob to find matching files
+            match glob::glob(&glob_pattern) {
+                Ok(paths) => {
+                    for entry in paths {
+                        match entry {
+                            Ok(manifest_path) => {
+                                if let Some(tool) = Self::load_tool_from_manifest(&manifest_path, config).await {
+                                    tools.push(tool);
+                                    
+                                    // Check max_tools limit
+                                    if let Some(max) = config.max_tools {
+                                        if tools.len() >= max {
+                                            tracing::info!("Reached max_tools limit ({})", max);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                tracing::warn!("Error reading glob entry: {}", e);
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("Invalid glob pattern {}: {}", glob_pattern, e);
+                }
+            }
+        }
+        
+        tracing::info!("Discovered {} tools in path: {}", tools.len(), path);
         Ok(tools)
+    }
+    
+    /// Load a tool from a manifest file
+    async fn load_tool_from_manifest(manifest_path: &std::path::Path, config: &ToolDiscoveryConfig) -> Option<MCPTool> {
+        tracing::debug!("Loading tool from manifest: {}", manifest_path.display());
+        
+        // Read manifest file
+        let contents = match tokio::fs::read_to_string(manifest_path).await {
+            Ok(contents) => contents,
+            Err(e) => {
+                tracing::warn!("Failed to read manifest file {}: {}", manifest_path.display(), e);
+                return None;
+            }
+        };
+        
+        // Parse JSON manifest
+        let manifest: serde_json::Value = match serde_json::from_str(&contents) {
+            Ok(value) => value,
+            Err(e) => {
+                tracing::warn!("Failed to parse manifest JSON {}: {}", manifest_path.display(), e);
+                return None;
+            }
+        };
+        
+        // Extract tool information from manifest
+        let tool_name = manifest.get("name")
+            .or_else(|| manifest.get("tool_name"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| {
+                manifest_path.file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("unknown_tool")
+                    .to_string()
+            });
+        
+        let tool_description = manifest.get("description")
+            .or_else(|| manifest.get("tool_description"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| format!("Tool discovered from {}", manifest_path.display()));
+        
+        let tool_version = manifest.get("version")
+            .or_else(|| manifest.get("tool_version"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "1.0.0".to_string());
+        
+        let tool_author = manifest.get("author")
+            .or_else(|| manifest.get("tool_author"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "Unknown".to_string());
+        
+        // Extract tool type
+        let tool_type = manifest.get("type")
+            .or_else(|| manifest.get("tool_type"))
+            .and_then(|v| v.as_str())
+            .and_then(|s| match s.to_lowercase().as_str() {
+                "code_generation" | "codegeneration" => Some(ToolType::CodeGeneration),
+                "code_analysis" | "codeanalysis" => Some(ToolType::CodeAnalysis),
+                "testing" => Some(ToolType::Testing),
+                "documentation" => Some(ToolType::Documentation),
+                "build" => Some(ToolType::Build),
+                "deployment" => Some(ToolType::Deployment),
+                "monitoring" => Some(ToolType::Monitoring),
+                "utility" => Some(ToolType::Utility),
+                custom => Some(ToolType::Custom(custom.to_string())),
+            })
+            .unwrap_or(ToolType::Utility);
+        
+        // Extract capabilities
+        let capabilities: Vec<ToolCapability> = manifest.get("capabilities")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| {
+                        v.as_str().and_then(|s| {
+                            // Try to parse as ToolCapability
+                            Some(ToolCapability::from_str(s))
+                        })
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        
+        // Extract parameters schema
+        let parameters = manifest.get("parameters")
+            .or_else(|| manifest.get("schema"))
+            .or_else(|| manifest.get("input_schema"))
+            .and_then(|v| {
+                serde_json::from_value::<ToolParameters>(v.clone()).ok()
+            })
+            .unwrap_or_else(|| ToolParameters {
+                required: vec![],
+                optional: vec![],
+                constraints: vec![],
+            });
+        
+        // Extract output schema
+        let output_schema = manifest.get("output_schema")
+            .or_else(|| manifest.get("output"))
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!({
+                "type": "object"
+            }));
+        
+        // Extract metadata
+        let metadata = manifest.get("metadata")
+            .and_then(|v| serde_json::from_value::<HashMap<String, serde_json::Value>>(v.clone()).ok())
+            .unwrap_or_default();
+
+        // Extract endpoint
+        let endpoint = manifest.get("endpoint")
+            .or_else(|| manifest.get("url"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| format!("local://{}", tool_name));
+
+        // Create tool manifest
+        let tool_manifest = ToolManifest {
+            name: tool_name.clone(),
+            version: tool_version.clone(),
+            description: tool_description.clone(),
+            author: tool_author.clone(),
+            tool_type: tool_type.clone(),
+            entry_point: endpoint.clone(),
+            dependencies: vec![], // TODO: parse dependencies
+            capabilities: capabilities.clone(),
+            parameters: parameters.clone(),
+            output_schema: output_schema.clone(),
+            endpoint: Some(endpoint.clone()),
+            caws_compliance: None, // TODO: parse caws compliance
+            metadata: metadata.clone(),
+            configuration_schema: serde_json::json!({}), // TODO: parse config schema
+        };
+        
+        // Create MCPTool instance
+        let tool = MCPTool {
+            id: uuid::Uuid::new_v4(),
+            name: tool_name.clone(),
+            description: tool_description.clone(),
+            version: tool_version.clone(),
+            author: tool_author.clone(),
+            tool_type: tool_type.clone(),
+            capabilities,
+            parameters,
+            output_schema,
+            endpoint,
+            manifest: tool_manifest,
+            caws_compliance: CawsComplianceStatus::Unknown, // Will be validated later
+            registration_time: Utc::now(),
+            last_updated: Utc::now(),
+            usage_count: 0,
+            metadata,
+        };
+        
+        // Validate tool if configured
+        if config.validate_tools {
+            // TODO: Integrate with validation module when available
+            tracing::debug!("Tool validation requested for: {}", tool_name);
+        }
+        
+        Some(tool)
     }
 }
 

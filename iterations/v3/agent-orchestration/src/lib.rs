@@ -304,9 +304,10 @@ impl AgentOrchestrationService {
             .map_err(|e| OrchestrationError::ExecutionError(Box::new(e)))?;
         
         let executor_config = config.executor_config;
+        let progress_tracker = Arc::new(progress_tracker::RealTimeProgressTracker::new(None));
         let autonomous_executor = autonomous_executor::AutonomousExecutor::new(
             executor_config,
-            None, // progress_tracker
+            Some(progress_tracker.clone()), // progress_tracker
             // PLACEHOLDER: runtime_validator - proper implementation needed
             Arc::new(MockCawsRuntimeValidator),
             None, // consensus_coordinator

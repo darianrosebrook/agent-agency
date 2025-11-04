@@ -234,6 +234,7 @@ pub struct ContextPreservationResult {
     /// Success status
     pub success: bool,
     /// Context ID (if preserved)
+    #[schemars(with = "Option<String>")]
     pub context_id: Option<Uuid>,
     /// Processing time (ms)
     pub processing_time_ms: u64,
@@ -440,8 +441,10 @@ pub struct RetrievalLatencyMetrics {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AccessPatternMetrics {
     /// Hot contexts (frequently accessed)
+    #[schemars(with = "Vec<String>")]
     pub hot_contexts: Vec<Uuid>,
     /// Cold contexts (rarely accessed)
+    #[schemars(with = "Vec<String>")]
     pub cold_contexts: Vec<Uuid>,
     /// Access frequency distribution
     pub access_frequency_distribution: HashMap<String, u64>,

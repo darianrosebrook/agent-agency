@@ -133,36 +133,33 @@ impl QualificationStage {
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct VerifiabilityDetector {
-    factual_patterns: Vec<Regex>,
-    technical_patterns: Vec<Regex>,
-    measurable_patterns: Vec<Regex>,
-    unverifiable_patterns: Vec<Regex>,
+    factual_patterns: Vec<String>,
+    technical_patterns: Vec<String>,
+    measurable_patterns: Vec<String>,
+    unverifiable_patterns: Vec<String>,
 }
 
 impl VerifiabilityDetector {
     fn new() -> Self {
         Self {
             factual_patterns: vec![
-                Regex::new(r"\b(is|are|was|were|has|have|had|will|should|must|can|cannot)\b")
-                    .unwrap(),
-                Regex::new(r"\b(contains|includes|excludes|equals|matches|differs)\b").unwrap(),
+                r"\b(is|are|was|were|has|have|had|will|should|must|can|cannot)\b".to_string(),
+                r"\b(contains|includes|excludes|equals|matches|differs)\b".to_string(),
             ],
             technical_patterns: vec![
-                Regex::new(r"\b(function|method|class|interface|type|API|endpoint)\b").unwrap(),
-                Regex::new(r"\b(implements|extends|inherits|overrides|calls|returns)\b").unwrap(),
-                Regex::new(r"\b(validates|processes|handles|manages|creates|updates|deletes)\b")
-                    .unwrap(),
+                r"\b(function|method|class|interface|type|API|endpoint)\b".to_string(),
+                r"\b(implements|extends|inherits|overrides|calls|returns)\b".to_string(),
+                r"\b(validates|processes|handles|manages|creates|updates|deletes)\b".to_string(),
             ],
             measurable_patterns: vec![
-                Regex::new(r"\b(\d+)\s*(ms|seconds?|minutes?|hours?|bytes?|KB|MB|GB)\b").unwrap(),
-                Regex::new(r"\b(performance|speed|latency|throughput|memory|CPU|bandwidth)\b")
-                    .unwrap(),
-                Regex::new(r"\b(response time|execution time|processing time)\b").unwrap(),
+                r"\b(\d+)\s*(ms|seconds?|minutes?|hours?|bytes?|KB|MB|GB)\b".to_string(),
+                r"\b(performance|speed|latency|throughput|memory|CPU|bandwidth)\b".to_string(),
+                r"\b(response time|execution time|processing time)\b".to_string(),
             ],
             unverifiable_patterns: vec![
-                Regex::new(r"\b(good|bad|better|worse|best|worst|excellent|poor)\b").unwrap(),
-                Regex::new(r"\b(beautiful|ugly|nice|annoying|user-friendly|intuitive)\b").unwrap(),
-                Regex::new(r"\b(probably|maybe|perhaps|likely|unlikely|possibly)\b").unwrap(),
+                r"\b(good|bad|better|worse|best|worst|excellent|poor)\b".to_string(),
+                r"\b(beautiful|ugly|nice|annoying|user-friendly|intuitive)\b".to_string(),
+                r"\b(probably|maybe|perhaps|likely|unlikely|possibly)\b".to_string(),
             ],
         }
     }
@@ -170,7 +167,8 @@ impl VerifiabilityDetector {
     fn detect_factual_claims(&self, sentence: &str) -> Result<Vec<VerifiableContent>> {
         let mut claims = Vec::new();
 
-        for pattern in &self.factual_patterns {
+        for pattern_str in &self.factual_patterns {
+            let pattern = Regex::new(pattern_str)?;
             for mat in pattern.find_iter(sentence) {
                 claims.push(VerifiableContent {
                     position: (mat.start(), mat.end()),
@@ -199,7 +197,8 @@ impl VerifiabilityDetector {
     ) -> Result<Vec<VerifiableContent>> {
         let mut assertions = Vec::new();
 
-        for pattern in &self.technical_patterns {
+        for pattern_str in &self.technical_patterns {
+            let pattern = Regex::new(pattern_str)?;
             for mat in pattern.find_iter(sentence) {
                 assertions.push(VerifiableContent {
                     position: (mat.start(), mat.end()),
@@ -224,7 +223,8 @@ impl VerifiabilityDetector {
     fn detect_measurable_outcomes(&self, sentence: &str) -> Result<Vec<VerifiableContent>> {
         let mut outcomes = Vec::new();
 
-        for pattern in &self.measurable_patterns {
+        for pattern_str in &self.measurable_patterns {
+            let pattern = Regex::new(pattern_str)?;
             for mat in pattern.find_iter(sentence) {
                 outcomes.push(VerifiableContent {
                     position: (mat.start(), mat.end()),
@@ -249,7 +249,8 @@ impl VerifiabilityDetector {
     fn detect_unverifiable_content(&self, sentence: &str) -> Result<Vec<UnverifiableContent>> {
         let mut unverifiable = Vec::new();
 
-        for pattern in &self.unverifiable_patterns {
+        for pattern_str in &self.unverifiable_patterns {
+            let pattern = Regex::new(pattern_str)?;
             for mat in pattern.find_iter(sentence) {
                 unverifiable.push(UnverifiableContent {
                     position: (mat.start(), mat.end()),
@@ -635,9 +636,9 @@ impl VerifiabilityDetector {
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ContentRewriter {
-    subjective_terms: Vec<(&'static str, &'static str)>,
-    vague_quantifiers: Vec<&'static str>,
-    improvement_terms: Vec<&'static str>,
+    subjective_terms: Vec<(String, String)>,
+    vague_quantifiers: Vec<String>,
+    improvement_terms: Vec<String>,
 }
 
 impl ContentRewriter {
@@ -645,73 +646,73 @@ impl ContentRewriter {
         Self {
             subjective_terms: vec![
                 (
-                    "user-friendly",
-                    "achieves System Usability Scale ≥ 80 and meets WCAG 2.1 AA success criteria",
+                    "user-friendly".to_string(),
+                    "achieves System Usability Scale ≥ 80 and meets WCAG 2.1 AA success criteria".to_string(),
                 ),
                 (
-                    "intuitive",
-                    "passes moderated usability testing with ≥ 90% task completion within the target workflow",
+                    "intuitive".to_string(),
+                    "passes moderated usability testing with ≥ 90% task completion within the target workflow".to_string(),
                 ),
                 (
-                    "easy",
-                    "documents a guided workflow requiring ≤ 2 user decisions with onboarding support",
+                    "easy".to_string(),
+                    "documents a guided workflow requiring ≤ 2 user decisions with onboarding support".to_string(),
                 ),
                 (
-                    "simple",
-                    "limits the number of configuration options to an approved checklist with automated validation",
+                    "simple".to_string(),
+                    "limits the number of configuration options to an approved checklist with automated validation".to_string(),
                 ),
                 (
-                    "fast",
-                    "maintains p95 service latency ≤ 200ms under 1k requests per second",
+                    "fast".to_string(),
+                    "maintains p95 service latency ≤ 200ms under 1k requests per second".to_string(),
                 ),
                 (
-                    "quick",
-                    "maintains p95 service latency ≤ 200ms under 1k requests per second",
+                    "quick".to_string(),
+                    "maintains p95 service latency ≤ 200ms under 1k requests per second".to_string(),
                 ),
                 (
-                    "secure",
-                    "satisfies OWASP ASVS Level 2 with zero critical findings in the latest scan",
+                    "secure".to_string(),
+                    "satisfies OWASP ASVS Level 2 with zero critical findings in the latest scan".to_string(),
                 ),
                 (
-                    "reliable",
-                    "achieves ≥ 99.9% availability with automated recovery playbooks",
+                    "reliable".to_string(),
+                    "achieves ≥ 99.9% availability with automated recovery playbooks".to_string(),
                 ),
                 (
-                    "robust",
-                    "passes chaos testing across 1,000 failure simulations without critical outages",
+                    "robust".to_string(),
+                    "passes chaos testing across 1,000 failure simulations without critical outages".to_string(),
                 ),
                 (
-                    "scalable",
-                    "supports ≥ 1,000 concurrent sessions while CPU utilisation stays below 70%",
+                    "scalable".to_string(),
+                    "supports ≥ 1,000 concurrent sessions while CPU utilisation stays below 70%".to_string(),
                 ),
             ],
             vague_quantifiers: vec![
-                "some",
-                "many",
-                "few",
-                "better",
-                "improved",
-                "sufficient",
-                "quickly",
-                "significant",
-                "eventually",
-                "easily",
+                "some".to_string(),
+                "many".to_string(),
+                "few".to_string(),
+                "better".to_string(),
+                "improved".to_string(),
+                "sufficient".to_string(),
+                "quickly".to_string(),
+                "significant".to_string(),
+                "eventually".to_string(),
+                "easily".to_string(),
             ],
             improvement_terms: vec![
-                "improve",
-                "improves",
-                "improvement",
-                "increase",
-                "increases",
-                "decrease",
-                "decreases",
-                "optimize",
-                "optimise",
-                "optimum",
-                "enhance",
-                "enhances",
-                "boost",
-                "stabilise",
+                "improve".to_string(),
+                "improves".to_string(),
+                "improvement".to_string(),
+                "increase".to_string(),
+                "increases".to_string(),
+                "decrease".to_string(),
+                "decreases".to_string(),
+                "optimize".to_string(),
+                "optimise".to_string(),
+                "optimum".to_string(),
+                "enhance".to_string(),
+                "enhances".to_string(),
+                "boost".to_string(),
+                "stabilise".to_string(),
             ],
         }
     }

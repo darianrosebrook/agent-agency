@@ -51,6 +51,7 @@ cadence = "1.4"   # StatsD client
 # ONNX protobuf parsing (from observability)
 protobuf = "3.4"
 lru = "0.12"  # LRU cache for metadata
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
 
 # macOS system calls (from system-health-monitor)
 [target.'cfg(target_os = "macos")'.dependencies]
@@ -64,7 +65,7 @@ winapi = { version = "0.3", features = ["pdh", "winbase", "handleapi", "processt
 windows = { version = "0.52", features = ["Win32_System_Performance", "Win32_System_Wmi", "Win32_Storage_FileSystem"] }
 
 # Database integration (from system-health-monitor)
-sqlx = { workspace = true, features = ["postgres", "chrono", "uuid"] }
+# sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }  # Moved to top level
 
 # Optional integrations (from system-health-monitor)
 # agent-workers = { path = "../agent-workers", optional = true }  # Removed to avoid circular dependency

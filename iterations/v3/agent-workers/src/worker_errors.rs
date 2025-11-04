@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
 use std::path::PathBuf;
 use thiserror::Error;
-use crate::parallel_types::{TaskId, SubTaskId, WorkerId, WorkerSpecialty};
+use crate::{TaskId, SubTaskId, WorkerId, WorkerSpecialty};
 use crate::WorkerMessage;
 
 /// Main error type for the parallel worker system

@@ -23,6 +23,7 @@ pub mod harness;
 pub mod services;
 pub mod scenarios;
 pub mod test_helpers;
+pub mod database_lifecycle;
 
 use std::sync::Arc;
 use tokio::sync::Mutex;

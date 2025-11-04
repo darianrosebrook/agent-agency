@@ -470,27 +470,68 @@ impl DisasterRecoveryManager {
 
     /// Apply WAL logs for point-in-time recovery
     async fn apply_wal_logs(&self, target_time: DateTime<Utc>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        
-        // TODO: Implement comprehensive WAL log replay and point-in-time recovery
-        // - Integrate with PostgreSQL WAL archiving and replay mechanisms
-        // - Support WAL-G (WAL shipping) and streaming replication
-        // - Implement incremental WAL application with conflict resolution
-        // - Add WAL corruption detection and recovery procedures
-        // - Support parallel WAL replay for large databases
-        // - Implement WAL retention policies and cleanup
-        // - Add WAL performance monitoring and bottleneck identification
-        // - Support database-specific WAL formats and optimizations
+        info!("Applying WAL logs for point-in-time recovery up to: {}", target_time);
 
-        info!("NOT IMPLEMENTED: Applying WAL logs up to: {}", target_time);
-        // TODO: Implement actual WAL log application logic
-        // - Parse WAL records and apply changes in correct order
-        // - Handle different WAL record types (INSERT, UPDATE, DELETE, DDL)
-        // - Implement transaction consistency during replay
-        // - Add WAL replay progress tracking and resumability
-        // - Support selective table recovery from WAL logs
-        // - Implement WAL-based incremental backup capabilities
-        // - Add WAL replay validation and integrity checking
-        Ok(())
+        // Get backup timestamp (most recent backup before target_time)
+        let backup_time = {
+            let history = self.backup_history.read().await;
+            history.iter()
+                .filter(|b| b.timestamp <= target_time)
+                .max_by_key(|b| b.timestamp)
+                .map(|b| b.timestamp)
+                .ok_or("No backup found before target time")?
+        };
+
+        // Create WAL storage and replay engine
+        // Note: In a real implementation, these would be injected or configured
+        // For now, we'll use the database client's connection string
+        let database_url = std::env::var("DATABASE_URL")
+            .map_err(|_| "DATABASE_URL environment variable not set")?;
+
+        let wal_storage = Arc::new(
+            crate::wal_storage::WalStorage::new(&database_url, 5)
+                .await
+                .map_err(|e| format!("Failed to create WAL storage: {}", e))?
+        );
+
+        let target_pool = Arc::new(
+            sqlx::PgPool::connect(&database_url)
+                .await
+                .map_err(|e| format!("Failed to connect to target database: {}", e))?
+        );
+
+        let replay_engine = crate::wal_replay::WalReplayEngine::new(
+            wal_storage.clone(),
+            target_pool.clone(),
+        );
+
+        // Configure replay
+        let replay_config = crate::wal_replay::WalReplayConfig {
+            target_time,
+            table_filter: None, // Replay all tables
+            batch_size: 1000,
+            enable_parallel: false,
+            stop_on_error: false, // Continue on errors, log them
+            validate_checksums: true,
+        };
+
+        // Execute WAL replay
+        match replay_engine.replay_wal_logs(backup_time, replay_config).await {
+            Ok(status) => {
+                info!("WAL replay completed successfully: {} records applied, {} failed",
+                      status.records_applied, status.records_failed);
+                
+                if status.records_failed > 0 {
+                    warn!("WAL replay completed with {} failed records", status.records_failed);
+                }
+                
+                Ok(())
+            }
+            Err(e) => {
+                error!("WAL replay failed: {}", e);
+                Err(format!("WAL replay failed: {}", e).into())
+            }
+        }
     }
 
     /// Verify recovery integrity

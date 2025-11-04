@@ -328,6 +328,23 @@ impl MetricsCollector {
             }
         }
     }
+
+    /// Record agent task performance metrics
+    pub async fn record_agent_task(
+        &self,
+        agent_name: &str,
+        success: bool,
+        execution_time_ms: u64,
+    ) -> Result<()> {
+        // For now, just log the agent task performance
+        // In a full implementation, this would store agent-specific metrics
+        if success {
+            info!("Agent {} completed task successfully in {}ms", agent_name, execution_time_ms);
+        } else {
+            warn!("Agent {} failed task after {}ms", agent_name, execution_time_ms);
+        }
+        Ok(())
+    }
 }
 
 

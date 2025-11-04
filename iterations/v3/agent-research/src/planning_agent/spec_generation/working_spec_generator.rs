@@ -41,7 +41,10 @@ pub async fn generate_working_spec(
         change_budget: agent_agency_contracts::planning_io::ChangeBudget {
             max_files: 25,
             max_loc: 1000,
-            max_days: 3,
+            max_migrations: 0,
+            allow_breaking_changes: false,
+            allow_new_dependencies: false,
+            enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
         },
         file_changes: Vec::new(),
         coverage_targets: None,
@@ -117,6 +120,7 @@ fn generate_acceptance_criteria(description: &str) -> PlanningResult<Vec<agent_a
             given: "API is called".to_string(),
             when: "Valid request is made".to_string(),
             then: "API endpoints return correct responses".to_string(),
+            priority: Some(agent_agency_contracts::working_spec::MoSCoWPriority::Should),
         });
     }
 
@@ -126,6 +130,7 @@ fn generate_acceptance_criteria(description: &str) -> PlanningResult<Vec<agent_a
             given: "Database operations are performed".to_string(),
             when: "Valid data is provided".to_string(),
             then: "Database operations complete successfully".to_string(),
+            priority: Some(agent_agency_contracts::working_spec::MoSCoWPriority::Should),
         });
     }
 
@@ -191,30 +196,29 @@ fn create_working_spec_constraints(task_request: &agent_agency_contracts::task_r
 fn generate_test_plan(task_request: &agent_agency_contracts::task_request::TaskRequest) -> PlanningResult<agent_agency_contracts::working_spec::TestPlan> {
     let unit_tests = vec![
         agent_agency_contracts::working_spec::UnitTestSpec {
-            name: "basic_functionality".to_string(),
             description: "Basic functionality test".to_string(),
-            test_code: "// TODO: Implement basic functionality test".to_string(),
+            target_function: Some("main_function".to_string()),
+            test_cases: vec!["// TODO: Implement basic functionality test".to_string()],
         },
         agent_agency_contracts::working_spec::UnitTestSpec {
-            name: "error_handling".to_string(),
             description: "Error handling test".to_string(),
-            test_code: "// TODO: Implement error handling test".to_string(),
+            target_function: Some("error_handler".to_string()),
+            test_cases: vec!["// TODO: Implement error handling test".to_string()],
         },
     ];
 
     let integration_tests = vec![
         agent_agency_contracts::working_spec::IntegrationTestSpec {
-            name: "component_integration".to_string(),
             description: "Component integration test".to_string(),
             components: vec!["component_a".to_string(), "component_b".to_string()],
-            test_scenario: "Test component interaction".to_string(),
+            test_cases: vec!["Test component interaction".to_string()],
         },
     ];
 
     let coverage_targets = agent_agency_contracts::working_spec::CoverageTargets {
-        line_coverage_percent: 80,
-        branch_coverage_percent: 70,
-        function_coverage_percent: 90,
+        line_coverage: Some(0.8),
+        branch_coverage: Some(0.7),
+        mutation_score: Some(0.6),
     };
 
     Ok(agent_agency_contracts::working_spec::TestPlan {
@@ -250,7 +254,6 @@ fn create_working_spec_context(task_request: &agent_agency_contracts::task_reque
         git_branch: "main".to_string(),
         recent_changes: vec![], // No recent changes by default
         dependencies: std::collections::HashMap::new(), // Empty dependencies map
-        existing_issues: vec![], // No existing issues
-        team_capabilities: vec![], // No team capabilities specified
+        environment: agent_agency_contracts::working_spec::Environment::Development,
     })
 }

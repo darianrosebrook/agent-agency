@@ -2,13 +2,14 @@
 
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
+use schemars::JsonSchema;
 use std::collections::{HashMap, HashSet};
 use anyhow::{Context, Result};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use tracing::{info, warn, error, debug};
 
-use crate::parallel_types::{TaskId, WorkerId, WorkerSpecialty};
+use crate::{TaskId, WorkerId, WorkerSpecialty};
 use crate::learning::types::*;
 
 /// Trait for persisting learning data
@@ -706,9 +707,9 @@ struct FailurePatternRow {
             )
             .bind(config.id)
             .bind(serde_json::to_string(&config.config_type).unwrap_or_default())
-            .bind(&config.parameters)
+            .bind(serde_json::to_value(&config.parameters).ok())
             .bind(serde_json::to_value(&config.performance_metrics).ok())
-            .bind(&config.conditions)
+            .bind(serde_json::to_value(&config.conditions).ok())
             .bind(config.confidence)
             .bind(config.created_at)
             .execute(&self.pool)
@@ -775,10 +776,15 @@ struct OptimalConfigRow {
             Some(OptimalConfig {
                 id: row.id,
                 config_type,
+                worker_type: "general".to_string(), // Default worker type
+                task_type: "general".to_string(), // Default task type
+                config: serde_json::Value::Object(serde_json::Map::new()), // Empty config
                 parameters,
-                performance_metrics,
                 conditions,
+                performance_metrics,
                 confidence: row.confidence,
+                expires_at: None,
+                metadata: serde_json::Value::Object(serde_json::Map::new()),
                 created_at: row.created_at,
             })
         }).collect();

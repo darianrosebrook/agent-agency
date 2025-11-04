@@ -3,6 +3,7 @@
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
 use crate::parallel_types::*;
+use crate::worker_types::SubTaskId;
 use crate::error::*;
 use std::collections::{HashMap, HashSet};
 

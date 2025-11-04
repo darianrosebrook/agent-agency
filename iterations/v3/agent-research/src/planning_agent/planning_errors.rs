@@ -67,6 +67,7 @@ impl PlanningError {
             PlanningError::ConstraintViolation(_) => "constraints",
             PlanningError::Timeout(_) => "timeout",
             PlanningError::Serialization(_) => "serialization",
+            PlanningError::ValidationError(_) => "validation",
             PlanningError::RiskEscalation { .. } => "escalation",
         }
     }

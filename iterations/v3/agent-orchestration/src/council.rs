@@ -4,7 +4,9 @@
 //! through verdict aggregation to final decision making.
 
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use std::sync::Arc;
+use serde::{Serialize, Deserialize};
+use chrono::{DateTime, Utc};
+use std::sync::Arc;
 use tokio::time::{timeout, Duration};
 use uuid::Uuid;
 // use rand::seq::SliceRandom;
@@ -186,8 +188,10 @@ pub struct CouncilSession {
     pub contributions: Vec<JudgeContribution>,
     aggregation_result: Option<AggregationResult>,
     pub final_decision: Option<FinalDecision>,
-    start_time: chrono::DateTime<chrono::Utc>,
-    pub end_time: Option<chrono::DateTime<chrono::Utc>>,
+    #[serde(skip)]
+    start_time: DateTime<Utc>,
+    #[serde(skip)]
+    pub end_time: Option<DateTime<Utc>>,
     status: SessionStatus,
 }
 

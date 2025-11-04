@@ -34,7 +34,7 @@ impl EvidenceCollector {
         Self {
             config: EvidenceCollectorConfig::default(),
             code_analyzer: CodeAnalysisCollector::new(),
-            test_executor: TestExecutionCollector::new(),
+            test_executor: TestExecutionCollector::new(Default::default()),
             doc_reviewer: DocumentationCollector::new(),
             performance_analyzer: PerformanceCollector::new(),
             security_scanner: SecurityCollector::new(),
@@ -132,7 +132,11 @@ impl EvidenceCollector {
             ClaimType::Behavioral |
             ClaimType::Functional |
             ClaimType::Structural |
-            ClaimType::Informational => {
+            ClaimType::Informational |
+            ClaimType::Causal |
+            ClaimType::Conditional |
+            ClaimType::Quantitative |
+            ClaimType::Requirement => {
                 // Default verification methods for other claim types
                 methods.push(VerificationMethod::CodeAnalysis);
                 methods.push(VerificationMethod::DocumentationReview);

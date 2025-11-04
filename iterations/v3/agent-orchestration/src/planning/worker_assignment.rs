@@ -12,11 +12,15 @@ use uuid::Uuid;
 use rand::prelude::*;
 use agent_agency_contracts::planning_io::Milestone;
 use crate::planning::{DatabaseOperations, models::Worker};
+use crate::planning::assignment_storage::{AssignmentDatabaseStorage, ResourceAllocation};
 
 /// Worker assignment strategy with real implementation
 pub struct WorkerAssignmentStrategy {
     /// Database operations for worker access
     db_ops: std::sync::Arc<dyn DatabaseOperations>,
+
+    /// Assignment database storage
+    assignment_storage: Option<std::sync::Arc<AssignmentDatabaseStorage>>,
 
     /// Assignment configuration
     config: AssignmentConfig,
@@ -215,10 +219,32 @@ impl WorkerAssignmentStrategy {
         let load_balancing_config = config.load_balancing.clone(); // Clone before moving config
         Self {
             db_ops,
+            assignment_storage: None,
             config,
             performance_cache: std::sync::Arc::new(tokio::sync::RwLock::new(HashMap::new())),
             load_balancer: LoadBalancingStrategy::new(load_balancing_config),
         }
+    }
+
+    /// Create with assignment database storage
+    pub fn with_assignment_storage(
+        db_ops: std::sync::Arc<dyn DatabaseOperations>,
+        config: AssignmentConfig,
+        assignment_storage: std::sync::Arc<AssignmentDatabaseStorage>,
+    ) -> Self {
+        let load_balancing_config = config.load_balancing.clone();
+        Self {
+            db_ops,
+            assignment_storage: Some(assignment_storage),
+            config,
+            performance_cache: std::sync::Arc::new(tokio::sync::RwLock::new(HashMap::new())),
+            load_balancer: LoadBalancingStrategy::new(load_balancing_config),
+        }
+    }
+
+    /// Set assignment storage (for dependency injection)
+    pub fn set_assignment_storage(&mut self, storage: std::sync::Arc<AssignmentDatabaseStorage>) {
+        self.assignment_storage = Some(storage);
     }
 
     /// Assign worker to milestone using real logic
@@ -303,8 +329,19 @@ impl WorkerAssignmentStrategy {
 
         performance.last_updated = chrono::Utc::now();
 
-        // TODO: Persist to database
-        // For now, just update cache
+        // Persist to database if storage is available
+        if let Some(ref storage) = self.assignment_storage {
+            if let Err(e) = storage.store_performance_metrics(
+                worker_id,
+                performance.tasks_completed,
+                performance.tasks_failed,
+                performance.avg_execution_time_ms,
+                performance.success_rate,
+                performance.performance_score,
+            ).await {
+                tracing::warn!("Failed to persist performance metrics to database: {}", e);
+            }
+        }
 
         Ok(())
     }
@@ -413,14 +450,19 @@ impl WorkerAssignmentStrategy {
 
     /// Record assignment in database
     async fn record_assignment(&self, worker_id: Uuid, milestone_id: &str) -> Result<()> {
-        // TODO: Implement assignment tracking in database
-        // For now, this is a placeholder
-
-        // In real implementation, this would:
-        // 1. Update worker status to assigned
-        // 2. Record assignment timestamp
-        // 3. Update milestone assigned_worker_id
-        // 4. Log assignment event
+        // Persist to database if storage is available
+        if let Some(ref storage) = self.assignment_storage {
+            let priority = "Normal"; // Default priority, could be extracted from milestone if available
+            match storage.record_assignment(worker_id, milestone_id, None, priority, None).await {
+                Ok(_) => {
+                    tracing::debug!("Recorded assignment: worker {} -> milestone {}", worker_id, milestone_id);
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to record assignment to database: {}", e);
+                    // Don't fail the assignment if database persistence fails
+                }
+            }
+        }
 
         Ok(())
     }

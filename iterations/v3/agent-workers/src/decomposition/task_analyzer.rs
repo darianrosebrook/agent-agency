@@ -1,6 +1,7 @@
 //! Problem pattern analysis for task decomposition
 
 use crate::parallel_types::*;
+use crate::worker_types::{SubTaskId, Priority, TaskScope};
 use crate::error::*;
 use std::collections::HashMap;
 

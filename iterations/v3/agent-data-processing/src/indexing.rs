@@ -580,6 +580,7 @@ pub struct VectorIndexer {
 struct VectorRecord {
     vector: Vec<f32>,
     norm: f32,
+    #[schemars(with = "String")]
     indexed_at: chrono::DateTime<chrono::Utc>,
 }
 
@@ -1484,6 +1485,7 @@ pub struct BlockVectorRecord {
     pub vector: Vec<f32>,
     pub model_id: String,
     pub modality: String,
+    #[schemars(with = "String")]
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
@@ -1494,6 +1496,7 @@ pub struct SearchAuditEntry {
     pub query_type: String,
     pub results_count: usize,
     pub search_time_ms: u64,
+    #[schemars(with = "String")]
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
@@ -1513,8 +1516,11 @@ pub struct IngestionJob {
     pub priority: JobPriority,
     pub status: JobStatus,
     pub payload: serde_json::Value,
+    #[schemars(with = "String")]
     pub created_at: chrono::DateTime<chrono::Utc>,
+    #[schemars(with = "String")]
     pub started_at: Option<chrono::DateTime<chrono::Utc>>,
+    #[schemars(with = "String")]
     pub completed_at: Option<chrono::DateTime<chrono::Utc>>,
     pub timeout_ms: u64,
 }

@@ -2,11 +2,9 @@
 //!
 //! This module provides worker management functionality for the coordinator.
 
-use crate::parallel_types::{WorkerId, WorkerSpecialty, SubTask, TaskId, SubTaskId};
+use crate::{WorkerId, WorkerSpecialty, SubTask, TaskId, SubTaskId, ParallelError, ParallelResult};
 use crate::WorkerCapabilities;
 use crate::worker_types::{Worker, WorkerStatus, WorkerPerformanceMetrics, Artifact};
-use crate::error::ParallelError;
-use crate::parallel_types::ParallelResult;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -74,7 +72,6 @@ impl WorkerManager {
         let worker = self.get_worker(&worker_id).await
             .ok_or_else(|| ParallelError::Coordination {
                 message: format!("Worker {} not found", worker_id),
-                source: None,
             })?;
 
         // Assign the worker to the subtask

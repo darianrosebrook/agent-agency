@@ -2,7 +2,7 @@
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use crate::parallel_types::{SubTaskId, WorkerId};
+use crate::{SubTaskId, WorkerId};
 use crate::{Progress, WorkerProgress, WorkerProgressStatus};
 use crate::error::*;
 use parking_lot::RwLock;
