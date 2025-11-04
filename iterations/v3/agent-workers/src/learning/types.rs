@@ -275,7 +275,7 @@ pub struct QueueHealthMetrics {
 }
 
 /// Failure category
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub enum FailureCategory {
     WorkerFailure,
     TaskFailure,

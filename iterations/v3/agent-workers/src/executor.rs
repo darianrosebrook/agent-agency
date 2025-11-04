@@ -2101,10 +2101,10 @@ impl TaskExecutor {
                 Ok(endpoint)
             }
             Err(sqlx::Error::RowNotFound) => {
-                Err(WorkerError::WorkerNotFound(worker_id))
+                Err(WorkerError::WorkerNotFound { worker_id: WorkerId(worker_id) })
             }
             Err(e) => {
-                Err(WorkerError::DatabaseError(format!("Failed to get worker endpoint: {}", e)))
+                Err(WorkerError::DatabaseError { message: format!("Failed to get worker endpoint: {}", e) })
             }
         }
     }

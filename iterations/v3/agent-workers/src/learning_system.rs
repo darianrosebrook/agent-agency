@@ -713,7 +713,7 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
                 &record.id,
                 &record.task_id.0,
                 &record.worker_id.0,
-                &record.execution_time_ms,
+                &(record.execution_time_ms as i64),
                 &success_rate,
                 &record.quality_score,
                 &record.created_at,
@@ -745,7 +745,7 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
                         id: row.try_get("id")?,
                         task_id: TaskId(task_id_uuid),
                         worker_id: WorkerId(worker_id_uuid),
-                        execution_time_ms: row.try_get("execution_time_ms")?,
+                        execution_time_ms: row.try_get::<i64, _>("execution_time_ms")? as u64,
                         success: success_rate > 0.5, // Convert rate back to bool
                         quality_score: row.try_get("quality_score")?,
                         error_message: None, // Not stored in database
@@ -781,9 +781,9 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
         for (worker_id, profile) in profiles {
             self.db_client.execute(query, &[
                 &worker_id.0.to_string(),
-                &profile.task_count,
+                &(profile.task_count as i64),
                 &profile.success_rate,
-                &profile.average_execution_time_ms,
+                &(profile.average_execution_time_ms as i64),
                 &profile.quality_score,
                 &profile.specialization_score,
                 &profile.last_updated,
@@ -813,7 +813,7 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
                     average_quality_score: 0.0, // Default
                     performance_trend: crate::learning::types::PerformanceTrend::Unknown,
                     capability_scores: HashMap::new(), // Default
-                    task_count: row.try_get("task_count")?,
+                    task_count: row.try_get::<i64, _>("task_count")? as u64,
                     success_rate: row.try_get("success_rate")?,
                     avg_execution_time_ms: row.try_get("avg_execution_time_ms")?,
                     quality_score: row.try_get("quality_score")?,

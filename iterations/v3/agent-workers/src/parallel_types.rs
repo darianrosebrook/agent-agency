@@ -368,7 +368,7 @@ pub type ParallelResult<T> = Result<T, ParallelError>;
 
 /// Errors that can occur during parallel execution
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
+#[derive(Debug, Serialize, JsonSchema, thiserror::Error)]
 enum ParallelError {
     #[error("Decomposition error: {message}")]
     Decomposition { message: String, source: Option<Box<dyn std::error::Error + Send + Sync>> },
@@ -393,4 +393,13 @@ enum ParallelError {
     
     #[error("Resource error: {0}")]
     Resource(String),
+}
+
+impl From<crate::worker_errors::DecompositionError> for ParallelError {
+    fn from(error: crate::worker_errors::DecompositionError) -> Self {
+        ParallelError::Decomposition {
+            message: error.to_string(),
+            source: Some(Box::new(error)),
+        }
+    }
 }

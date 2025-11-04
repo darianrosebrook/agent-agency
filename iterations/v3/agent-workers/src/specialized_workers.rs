@@ -840,10 +840,10 @@ impl CustomSpecialist {
         // Simple custom metrics generation
         let metrics = vec![
             format!("Task type: {}", params.task_type),
-            "Execution time: 2.5 seconds",
-            "Success rate: 100%",
-            "Resource usage: Low",
-            "Error count: 0",
+            "Execution time: 2.5 seconds".to_string(),
+            "Success rate: 100%".to_string(),
+            "Resource usage: Low".to_string(),
+            "Error count: 0".to_string(),
         ];
 
         Ok(metrics.join("\n"))

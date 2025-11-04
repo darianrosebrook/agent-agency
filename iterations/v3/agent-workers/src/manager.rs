@@ -26,9 +26,9 @@ impl WorkerPoolManager {
         Ok(())
     }
 
-    pub async fn get_worker(&self, name: &str) -> Option<Box<dyn SpecializedWorker + Send + Sync>> {
+    pub async fn get_worker(&self, name: &str) -> Option<&Box<dyn SpecializedWorker + Send + Sync>> {
         let workers = self.workers.read().await;
-        workers.get(name).map(|w| w.as_ref().clone())
+        workers.get(name)
     }
 
     pub async fn list_workers(&self) -> Vec<String> {

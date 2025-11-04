@@ -373,6 +373,7 @@ impl ParallelCoordinator {
         } else {
             Err(ParallelError::Coordination {
                 message: "No orchestrator handle available for sequential execution".to_string(),
+                source: None,
             })
         }
     }
