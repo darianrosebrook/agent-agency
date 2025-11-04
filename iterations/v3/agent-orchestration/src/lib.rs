@@ -21,6 +21,7 @@
 extern crate tracing;
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use std::sync::Arc;
 use uuid::Uuid;
 use crate::autonomous_executor::{OrchestrationProvenanceEmitter, MockCawsRuntimeValidator, MockVerdictWriter};

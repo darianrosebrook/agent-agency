@@ -4,7 +4,7 @@
 //! for council review sessions.
 
 use schemars::JsonSchema;
-use std::collections::HashMap;
+use serde::{Serialize, Deserialize};use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 
 use crate::council_errors::{CouncilError, CouncilResult};
@@ -14,7 +14,7 @@ use crate::decision_making::FinalDecision;
 /// Workflow orchestrator for council sessions
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-struct CouncilWorkflow {
+pub struct CouncilWorkflow {
     session: CouncilSession,
     workflow_state: WorkflowState,
     state_history: Vec<StateTransition>,
@@ -24,7 +24,7 @@ struct CouncilWorkflow {
 /// Current workflow state
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-enum WorkflowState {
+pub enum WorkflowState {
     /// Session initialized
     Initialized,
 

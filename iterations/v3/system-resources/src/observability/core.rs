@@ -70,7 +70,7 @@ pub struct HealthCheckResult {
     /// Health status
     pub status: HealthStatus,
     /// Timestamp of the check
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
     /// Optional error message
@@ -144,7 +144,7 @@ pub struct LogEntry {
     /// Component that generated the log
     pub component: String,
     /// Timestamp
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
     /// Additional fields

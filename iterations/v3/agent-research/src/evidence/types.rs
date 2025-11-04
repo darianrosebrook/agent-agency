@@ -10,8 +10,7 @@ use chrono::{DateTime, Utc};
 pub struct EvidenceCollectionResult {
     pub evidence: Vec<EvidenceItem>,
     pub total_items: usize,
-    ##[schemars(with = "String")]
-
+    #[schemars(with = "String")]
     pub collection_time: DateTime<Utc>,
     pub confidence: f64,
 }
@@ -25,8 +24,7 @@ pub struct EvidenceItem {
     pub content: String,
     pub metadata: HashMap<String, String>,
     pub confidence: f64,
-    ##[schemars(with = "String")]
-
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 }
 
@@ -91,8 +89,7 @@ pub struct EvidenceAnalysisResult {
     pub findings: Vec<Finding>,
     pub summary: String,
     pub confidence: f64,
-    ##[schemars(with = "String")]
-
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 }
 

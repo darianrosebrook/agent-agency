@@ -143,7 +143,7 @@ impl SearchCoordinator {
 /// Inverted index for keyword-based search
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct InvertedIndexx {
+pub struct InvertedIndex {
     index: std::collections::HashMap<String, Vec<Posting>>,
 }
 

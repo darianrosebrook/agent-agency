@@ -1,6 +1,7 @@
 //! Learning persistence trait and implementations
 
 use async_trait::async_trait;
+use serde::{Serialize, Deserialize};
 use std::collections::{HashMap, HashSet};
 use anyhow::{Context, Result};
 use uuid::Uuid;
@@ -367,7 +368,7 @@ impl LearningPersistence for DatabaseLearningPersistence {
     }
 
     async fn get_execution_records(&self, pattern: &TaskPattern, limit: Option<usize>) -> Result<Vec<ExecutionRecord>> {
-        debug!("Retrieving execution records for pattern: {}", pattern.pattern_name);
+        debug!("Retrieving execution records for pattern: {:?}", pattern.pattern_type);
 
         let query = if let Some(limit) = limit {
             sqlx::query_as::<_, ExecutionRecord>(

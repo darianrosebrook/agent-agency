@@ -17,9 +17,12 @@ use std::time::Instant;
 use tracing::{info, error};
 use uuid::Uuid;
 
-use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceManager}, test_helpers::create_test_autonomous_executor};
-use agent_orchestration::types::{TaskDescriptor, TaskScope, ChangeBudget, BlastRadius, ExecutionStatus};
+use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceManager}};
+#[cfg(feature = "full")]
+use crate::test_helpers::create_test_autonomous_executor;
+#[cfg(feature = "full")]
 use agent_orchestration::autonomous_executor::{AutonomousExecutor, ExecutionMode};
+use agent_agency_contracts::{TaskDescriptor, TaskScope, ChangeBudget, BlastRadius, ExecutionStatus, TaskPriority};
 use std::sync::Arc;
 
 /// Run the human intervention E2E test
@@ -141,159 +144,19 @@ pub async fn run_human_intervention_test(
 }
 
 /// Test task pause and resume functionality using real AutonomousExecutor
-async fn test_task_pause_resume(_env: &TestEnvironment, services: &LocalServiceManager) -> Result<InterventionSubResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_task_pause_resume(_env: &TestEnvironment, _services: &LocalServiceManager) -> Result<InterventionSubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing task pause and resume with real AutonomousExecutor");
 
-    let mut task_pauses = 0;
-    let mut task_resumes = 0;
-    let mut api_calls = 0;
-
-    // Create real AutonomousExecutor instance
-    let executor = create_test_autonomous_executor().await?;
-    api_calls += 1;
-
-    // Create a test task descriptor
-    let task_id = uuid::Uuid::new_v4();
-    let task_descriptor = TaskDescriptor {
-        task_id: task_id.to_string(),
-        description: "Test task for pause/resume".to_string(),
-        priority: agent_orchestration::types::TaskPriority::Normal,
-        scope_in: TaskScope {
-            in_scope: vec!["src/".to_string()],
-            out_scope: vec!["node_modules/".to_string()],
-        },
-        scope_out: None,
-        change_budget: ChangeBudget {
-            max_files: 10,
-            max_loc: 500,
-        },
-        blast_radius: BlastRadius {
-            modules: vec!["test".to_string()],
-            data_migration: false,
-            external_deps: vec![],
-        },
-        execution_mode: ExecutionMode::Auto,
-        task_type: "test".to_string(),
-        risk_tier: None,
-        acceptance: None,
-    };
-
-    // Submit the task
-    let submitted_task_id = executor.submit_task(task_descriptor).await?;
-    api_calls += 1;
-
-    // Verify task is submitted
-    if let Some(task_status) = executor.get_task_status(submitted_task_id).await {
-        if task_status.status != ExecutionStatus::Pending && task_status.status != ExecutionStatus::Starting {
-            return Ok(InterventionSubResult {
-                passed: false,
-                error: Some(format!("Expected task to be Pending or Starting, got: {:?}", task_status.status)),
-                task_pauses: 0,
-                task_resumes: 0,
-                task_cancellations: 0,
-                human_overrides: 0,
-                api_calls,
-            });
-        }
-    }
-
-    // Wait a bit for task to start running
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-
-    // Pause the task
-    match executor.pause_task(submitted_task_id).await {
-        Ok(paused) => {
-            if paused {
-                task_pauses += 1;
-                api_calls += 1;
-            } else {
-                return Ok(InterventionSubResult {
-                    passed: false,
-                    error: Some("Failed to pause task (pause returned false)".to_string()),
-                    task_pauses,
-                    task_resumes: 0,
-                    task_cancellations: 0,
-                    human_overrides: 0,
-                    api_calls,
-                });
-            }
-        }
-        Err(e) => {
-            return Ok(InterventionSubResult {
-                passed: false,
-                error: Some(format!("Failed to pause task: {}", e)),
-                task_pauses,
-                task_resumes: 0,
-                task_cancellations: 0,
-                human_overrides: 0,
-                api_calls,
-            });
-        }
-    }
-
-    // Verify task is paused
-    if let Some(task_status) = executor.get_task_status(submitted_task_id).await {
-        if task_status.status != ExecutionStatus::Paused {
-            return Ok(InterventionSubResult {
-                passed: false,
-                error: Some(format!("Expected task to be Paused, got: {:?}", task_status.status)),
-                task_pauses,
-                task_resumes: 0,
-                task_cancellations: 0,
-                human_overrides: 0,
-                api_calls,
-            });
-        }
-    }
-
-    // Resume the task
-    match executor.resume_task(submitted_task_id).await {
-        Ok(resumed) => {
-            if resumed {
-                task_resumes += 1;
-                api_calls += 1;
-            } else {
-                return Ok(InterventionSubResult {
-                    passed: false,
-                    error: Some("Failed to resume task (resume returned false)".to_string()),
-                    task_pauses,
-                    task_resumes,
-                    task_cancellations: 0,
-                    human_overrides: 0,
-                    api_calls,
-                });
-            }
-        }
-        Err(e) => {
-            return Ok(InterventionSubResult {
-                passed: false,
-                error: Some(format!("Failed to resume task: {}", e)),
-                task_pauses,
-                task_resumes,
-                task_cancellations: 0,
-                human_overrides: 0,
-                api_calls,
-            });
-        }
-    }
-
-    // Verify task is running again
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-    if let Some(task_status) = executor.get_task_status(submitted_task_id).await {
-        if task_status.status != ExecutionStatus::Running && task_status.status != ExecutionStatus::Paused {
-            // Task might have completed or be in another state, which is fine
-            info!("Task resumed successfully, current status: {:?}", task_status.status);
-        }
-    }
-
+    // For now, skip autonomous executor tests until agent-orchestration is fixed
+    info!("Skipping autonomous executor test (agent-orchestration has compilation errors)");
     Ok(InterventionSubResult {
-        passed: true,
-        error: None,
-        task_pauses,
-        task_resumes,
+        passed: false,
+        error: Some("Human intervention test requires working agent-orchestration (currently has compilation errors)".to_string()),
+        task_pauses: 0,
+        task_resumes: 0,
         task_cancellations: 0,
         human_overrides: 0,
-        api_calls,
+        api_calls: 0,
     })
 }
 
@@ -389,100 +252,16 @@ enum TaskStatus {
 async fn test_task_cancellation(_env: &TestEnvironment, _services: &LocalServiceManager) -> Result<InterventionSubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing task cancellation with real AutonomousExecutor");
 
-    let mut task_cancellations = 0;
-    let mut api_calls = 0;
-
-    // Create real AutonomousExecutor instance
-    let executor = create_test_autonomous_executor().await?;
-    api_calls += 1;
-
-    // Create a test task descriptor
-    let task_id = uuid::Uuid::new_v4();
-    let task_descriptor = TaskDescriptor {
-        task_id: task_id.to_string(),
-        description: "Test task for cancellation".to_string(),
-        priority: agent_orchestration::types::TaskPriority::Normal,
-        scope_in: TaskScope {
-            in_scope: vec!["src/".to_string()],
-            out_scope: vec!["node_modules/".to_string()],
-        },
-        scope_out: None,
-        change_budget: ChangeBudget {
-            max_files: 10,
-            max_loc: 500,
-        },
-        blast_radius: BlastRadius {
-            modules: vec!["test".to_string()],
-            data_migration: false,
-            external_deps: vec![],
-        },
-        execution_mode: ExecutionMode::Auto,
-        task_type: "test".to_string(),
-        risk_tier: None,
-        acceptance: None,
-    };
-
-    // Submit the task
-    let submitted_task_id = executor.submit_task(task_descriptor).await?;
-    api_calls += 1;
-
-    // Wait a bit for task to start
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-
-    // Cancel the task
-    match executor.cancel_task(submitted_task_id).await {
-        Ok(cancelled) => {
-            if cancelled {
-                task_cancellations += 1;
-                api_calls += 1;
-            } else {
-                return Ok(InterventionSubResult {
-                    passed: false,
-                    error: Some("Failed to cancel task (cancel returned false)".to_string()),
-                    task_pauses: 0,
-                    task_resumes: 0,
-                    task_cancellations,
-                    human_overrides: 0,
-                    api_calls,
-                });
-            }
-        }
-        Err(e) => {
-            return Ok(InterventionSubResult {
-                passed: false,
-                error: Some(format!("Failed to cancel task: {}", e)),
-                task_pauses: 0,
-                task_resumes: 0,
-                task_cancellations,
-                human_overrides: 0,
-                api_calls,
-            });
-        }
-    }
-
-    // Verify task is cancelled
-    if let Some(task_status) = executor.get_task_status(submitted_task_id).await {
-        if task_status.status != ExecutionStatus::Cancelled {
-            return Ok(InterventionSubResult {
-                passed: false,
-                error: Some(format!("Expected task to be Cancelled, got: {:?}", task_status.status)),
-                task_pauses: 0,
-                task_resumes: 0,
-                task_cancellations,
-                human_overrides: 0,
-                api_calls,
-            });
-        }
-    }
-
+    // For now, skip autonomous executor tests until agent-orchestration is fixed
+    info!("Skipping autonomous executor test (agent-orchestration has compilation errors)");
     Ok(InterventionSubResult {
-        passed: true,
-        error: None,
+        passed: false,
+        error: Some("Task cancellation test requires working agent-orchestration (currently has compilation errors)".to_string()),
         task_pauses: 0,
         task_resumes: 0,
-        task_cancellations,
+        task_cancellations: 0,
         human_overrides: 0,
-        api_calls,
+        api_calls: 0,
     })
 }
 

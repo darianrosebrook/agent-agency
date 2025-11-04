@@ -1,6 +1,7 @@
 //! Individual worker progress tracking
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use crate::parallel_types::*;
 use crate::{WorkerProgress, Progress};
 use crate::error::*;

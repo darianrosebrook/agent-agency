@@ -8,7 +8,7 @@ use anyhow::Result;
 /// Performance collector
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct PerformanceCollectorr {
+pub struct PerformanceCollector {
     config: EvidenceCollectorConfig,
 }
 

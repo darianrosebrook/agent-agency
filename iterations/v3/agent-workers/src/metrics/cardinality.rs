@@ -1,6 +1,7 @@
 //! Cardinality estimation using HyperLogLog for unique task/pattern counting
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use std::collections::HashSet;
 
 /// Cardinality estimation using HyperLogLog for unique task/pattern counting

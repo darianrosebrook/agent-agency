@@ -87,7 +87,7 @@ pub struct MetricDataPoint {
     /// Label dimensions
     pub labels: HashMap<String, String>,
     /// Timestamp when the metric was recorded
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
 }

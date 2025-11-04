@@ -124,7 +124,7 @@ pub struct RetrievalMetadata {
 /// Context budget for controlling evidence volume
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct ContextBudgett {
+pub struct ContextBudget {
     /// Maximum tokens to use for evidence
     pub max_tokens: usize,
 

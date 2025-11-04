@@ -1,7 +1,7 @@
 //! Council error types and results
 
 use schemars::JsonSchema;
-use std::fmt;
+use serde::{Serialize, Deserialize};use std::fmt;
 
 /// Result type for council operations
 pub type CouncilResult<T> = Result<T, CouncilError>;
@@ -32,10 +32,10 @@ pub enum CouncilError {
     SessionTimeout { session_id: String, timeout_seconds: u64 },
 
     #[error("Database operation failed: {0}")]
-    Database(#[from] anyhow::Error),
+    Database(String),
 
     #[error("Serialization error: {0}")]
-    Serialization(#[from] serde_json::Error),
+    Serialization(String),
 
     #[error("Council quorum not met: {available}/{required} judges")]
     QuorumFailure { available: usize, required: usize },

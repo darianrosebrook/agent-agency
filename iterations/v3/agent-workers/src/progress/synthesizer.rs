@@ -1,6 +1,7 @@
 //! Progress synthesis and result combination
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use crate::parallel_types::*;
 use crate::worker_types::TaskStatus;
 use crate::{Artifact, ArtifactType};

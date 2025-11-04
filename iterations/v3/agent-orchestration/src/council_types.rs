@@ -1,7 +1,7 @@
 //! Council types - Re-export types from contracts for backward compatibility
 
 use schemars::JsonSchema;
-use std::collections::HashMap;
+use serde::{Serialize, Deserialize};use std::collections::HashMap;
 
 // Re-export types for backward compatibility
 pub use agent_agency_contracts::types::prelude::*;  // Includes TaskPriority and RiskTier
@@ -14,7 +14,7 @@ pub use agent_agency_contracts::final_verdict::FinalVerdictContract;
 /// Final verdict from council decision making
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct FinalVerdict {
+pub struct FinalVerdict {
     pub decision: String,
     pub confidence: f64,
     pub summary: String,
@@ -24,7 +24,7 @@ struct FinalVerdict {
 /// Task structure for planning
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct Task {
+pub struct Task {
     pub id: String,
     pub description: String,
     pub scope: Vec<String>,
@@ -36,7 +36,7 @@ struct Task {
 /// Change budget for task execution
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct ChangeBudget {
+pub struct ChangeBudget {
     pub max_files: u32,
     pub max_loc: u32,
 }

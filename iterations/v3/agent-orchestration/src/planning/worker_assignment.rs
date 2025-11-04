@@ -6,7 +6,7 @@
 //! @author @darianrosebrook
 
 use schemars::JsonSchema;
-use std::collections::{HashMap, HashSet};
+use serde::{Serialize, Deserialize};use std::collections::{HashMap, HashSet};
 use anyhow::{anyhow, Result};
 use uuid::Uuid;
 use rand::prelude::*;
@@ -14,6 +14,7 @@ use agent_agency_contracts::planning_io::Milestone;
 use crate::planning::{DatabaseOperations, models::Worker};
 
 /// Worker assignment strategy with real implementation
+#[derive(Debug)]
 pub struct WorkerAssignmentStrategy {
     /// Database operations for worker access
     db_ops: std::sync::Arc<dyn DatabaseOperations>,

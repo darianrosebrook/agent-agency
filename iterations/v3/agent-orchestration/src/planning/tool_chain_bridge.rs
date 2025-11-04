@@ -6,7 +6,7 @@
 //! @author @darianrosebrook
 
 use schemars::JsonSchema;
-use std::collections::HashMap;
+use serde::{Serialize, Deserialize};use std::collections::HashMap;
 use anyhow::{anyhow, Result};
 use uuid::Uuid;
 use agent_agency_contracts::{
@@ -161,12 +161,12 @@ impl ToolChainBridge {
 
         // Determine root and sink milestones
         let roots = tool_chain.roots.iter()
-            .filter_map(|idx| node_indices.get(idx))
+            .filter_map(|&idx| node_indices.get(&idx))
             .cloned()
             .collect();
 
         let sinks = tool_chain.sinks.iter()
-            .filter_map(|idx| node_indices.get(idx))
+            .filter_map(|&idx| node_indices.get(&idx))
             .cloned()
             .collect();
 

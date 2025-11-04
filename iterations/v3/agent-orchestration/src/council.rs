@@ -4,7 +4,7 @@
 //! through verdict aggregation to final decision making.
 
 use schemars::JsonSchema;
-use std::sync::Arc;
+use serde::{Serialize, Deserialize};use std::sync::Arc;
 use tokio::time::{timeout, Duration};
 use uuid::Uuid;
 use rand::seq::SliceRandom;
@@ -120,7 +120,6 @@ struct JudgePerformanceMetrics {
 /// Configuration for the council
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct CouncilConfig {
     /// Maximum time for a council session (seconds)
     pub session_timeout_seconds: u64,
@@ -159,7 +158,7 @@ pub struct CouncilConfig {
 /// Judge selection strategy
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-enum JudgeSelectionStrategy {
+pub enum JudgeSelectionStrategy {
     /// All available judges
     AllAvailable,
 
@@ -182,6 +181,7 @@ enum JudgeSelectionStrategy {
 pub struct CouncilSession {
     pub session_id: String,
     working_spec: agent_agency_contracts::WorkingSpec,
+    #[serde(skip)]
     pub selected_judges: Vec<Arc<dyn Judge>>,
     pub contributions: Vec<JudgeContribution>,
     aggregation_result: Option<AggregationResult>,
@@ -194,7 +194,7 @@ pub struct CouncilSession {
 /// Session status
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-enum SessionStatus {
+pub enum SessionStatus {
     Initialized,
     JudgeSelection,
     ReviewInProgress,
@@ -207,6 +207,7 @@ enum SessionStatus {
 
 /// The main Council that coordinates reviews
 
+#[derive(Debug)]
 pub struct Council {
     config: CouncilConfig,
     available_judges: Vec<Arc<dyn Judge>>,

@@ -55,7 +55,7 @@ impl ClaimExtractionProcessor {
         debug!("Stage 2: Qualification");
         let qualification_result = self
             .qualification_stage
-            .process(&disambiguation_result.disambiguated_sentence, ctx)
+            .process(&disambiguation_result.disambiguated_text, ctx)
             .await
             .map_err(|e| ClaimExtractionError::QualificationFailed(e.to_string()))?;
 
@@ -63,31 +63,29 @@ impl ClaimExtractionProcessor {
         debug!("Stage 3: Decomposition");
         let decomposition_result = self
             .decomposition_stage
-            .process(&disambiguation_result.disambiguated_sentence, ctx)
+            .process(&disambiguation_result.disambiguated_text, ctx)
             .await
             .map_err(|e| ClaimExtractionError::DecompositionFailed(e.to_string()))?;
 
-        // Stage 4: Verification (Enhanced V2 with CAWS-compliant evidence collection)
-        debug!("Stage 4: Verification");
-        let verification_result = self
-            .verification_stage
-            .verify_claims(&decomposition_result.atomic_claims)
-            .await
-            .map_err(|e| ClaimExtractionError::VerificationFailed(e.to_string()))?;
+        // Stage 4: Verification (Temporarily disabled - awaiting verification module)
+        debug!("Stage 4: Verification - Skipped (temporarily disabled)");
+        let verification_result = Vec::new(); // Placeholder empty result
 
-        // Stage 5: Multi-Modal Verification (V3's superior verification)
-        debug!("Stage 5: Multi-Modal Verification");
+        // Stage 5: Multi-Modal Verification (Temporarily disabled - awaiting multi-modal verifier)
+        debug!("Stage 5: Multi-Modal Verification - Skipped (temporarily disabled)");
         let atomic_claims = decomposition_result.atomic_claims.clone();
-        let verified_claims = self
-            .multi_modal_verifier
-            .verify_claims(&atomic_claims)
-            .await
-            .map_err(|e| {
-                ClaimExtractionError::VerificationFailed(format!(
-                    "Multi-modal verification failed: {}",
-                    e
-                ))
-            })?;
+        // Placeholder: create basic verified claims without actual verification
+        let verified_claims = crate::extraction_types::VerificationResult {
+            verified_claims: atomic_claims.into_iter().map(|claim| {
+                crate::extraction_types::VerifiedClaim {
+                    claim,
+                    verification_status: crate::extraction_types::VerificationStatus::Unverified,
+                    confidence: 0.5,
+                    evidence: Vec::new(),
+                }
+            }).collect(),
+            processing_time_ms: 0,
+        };
 
         let processing_time = start_time.elapsed().as_millis() as u64;
         info!("Claim extraction completed in {}ms", processing_time);

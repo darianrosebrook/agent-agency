@@ -7,7 +7,7 @@
 //! @author @darianrosebrook
 
 use schemars::JsonSchema;
-use std::collections::HashMap;
+use serde::{Serialize, Deserialize};use std::collections::HashMap;
 use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc, Duration};
@@ -374,7 +374,7 @@ impl WaiverIntegration {
 
     /// Check if waiver reference is valid
     async fn is_waiver_valid(&self, waiver_ref: &WaiverReference) -> Result<bool> {
-        self.validate_waiver(waiver_ref).is_ok()
+        Ok(self.validate_waiver(waiver_ref).await.is_ok())
     }
 
     /// Apply single waiver to planning constraints

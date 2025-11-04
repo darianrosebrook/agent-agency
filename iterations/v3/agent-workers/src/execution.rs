@@ -4,6 +4,7 @@
 //! timeout management, and result processing.
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use crate::worker_types::*;
 use agent_mcp::ToolRegistry;
 use std::sync::Arc;

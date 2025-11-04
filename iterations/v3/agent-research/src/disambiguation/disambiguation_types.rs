@@ -29,7 +29,7 @@ pub struct DisambiguationResult {
 
 /// Represents an ambiguity found in text
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Ambiguity {
     pub text: String,
     pub ambiguity_type: AmbiguityType,
@@ -43,7 +43,7 @@ pub struct Ambiguity {
 }
 
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum AmbiguityType {
     Pronoun,
     TechnicalTerm,
@@ -54,7 +54,7 @@ pub enum AmbiguityType {
 
 /// Ambiguity that cannot be resolved with available context
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UnresolvableAmbiguity {
     pub ambiguity: Ambiguity,
     pub reason: UnresolvableReason,
@@ -62,7 +62,7 @@ pub struct UnresolvableAmbiguity {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum UnresolvableReason {
     InsufficientContext,
     MultipleValidInterpretations,
@@ -157,7 +157,7 @@ pub struct HistoricalEntityAnalysis {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct EntityRelationshipp {
+pub struct EntityRelationship {
     pub source_entity: String,
     pub target_entity: String,
     pub relationship: String,
@@ -175,7 +175,7 @@ pub struct ResolvedEntity {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct ContextAwareDisambiguationn {
+pub struct ContextAwareDisambiguation {
     pub original_text: String,
     pub resolved_text: String,
     pub context_used: Vec<String>,
@@ -184,7 +184,7 @@ pub struct ContextAwareDisambiguationn {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct DomainIntegrationn {
+pub struct DomainIntegration {
     pub domain: String,
     pub entities: Vec<String>,
     pub relationships: Vec<EntityRelationship>,
@@ -261,7 +261,7 @@ impl IngestionChannel {
 /// Ingestion candidate
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct IngestionCandidatee {
+pub struct IngestionCandidate {
     pub channel: IngestionChannel,
     pub label: String,
     pub priority: i32,
@@ -280,7 +280,7 @@ pub struct ScheduledSource {
 /// Ingestion cache entry
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct IngestionCacheEntryy {
+pub struct IngestionCacheEntry {
     pub key: String,
     pub data: Vec<u8>,
     pub timestamp: chrono::DateTime<chrono::Utc>,
@@ -290,7 +290,7 @@ pub struct IngestionCacheEntryy {
 /// Pipeline statistics for ingestion
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct IngestionPipelineStatss {
+pub struct IngestionPipelineStats {
     pub total_candidates: usize,
     pub processed: usize,
     pub failed: usize,

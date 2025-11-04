@@ -20,12 +20,15 @@ use thiserror::Error;
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Frontier {
     /// Task queue with priority ordering
+    #[serde(skip)]
     queue: Arc<RwLock<BinaryHeap<TaskEntry>>>,
     /// Task registry for tracking
+    #[serde(skip)]
     registry: Arc<RwLock<HashMap<String, TaskEntry>>>,
     /// Configuration
     config: FrontierConfig,
     /// Statistics
+    #[serde(skip)]
     stats: Arc<RwLock<FrontierStats>>,
 }
 
@@ -56,17 +59,15 @@ impl Default for FrontierConfig {
 
 /// Task entry in the frontier queue
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct TaskEntry {
+#[derive(Debug, Clone)]
+pub struct TaskEntry {
     /// Task descriptor
     pub descriptor: TaskDescriptor,
     /// Priority score (higher = more priority)
     pub priority_score: u32,
     /// Time when task was added
-    #[schemars(with = "String")]
     pub added_at: Instant,
     /// Time when task was last processed
-    #[schemars(with = "String")]
     pub last_processed_at: Option<Instant>,
     /// Number of processing attempts
     pub attempts: u32,

@@ -9,7 +9,7 @@ use crate::ResearchMetrics;
 /// Metrics collector for research operations
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct MetricsCollectorr {
+pub struct MetricsCollector {
     metrics: Arc<RwLock<ResearchMetrics>>,
 }
 

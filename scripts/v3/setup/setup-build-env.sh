@@ -81,8 +81,8 @@ export SCCACHE_NAMESPACE="agent-agency"
 # Fast linker configuration
 export RUSTFLAGS="-Clink-arg=-fuse-ld=/usr/local/bin/ld64.lld"
 
-# Parallel compilation
-export CARGO_BUILD_JOBS=0
+# Parallel compilation - let .cargo/config.toml handle it
+# Don't set CARGO_BUILD_JOBS here
 
 # Network optimization
 export CARGO_NET_RETRY=2

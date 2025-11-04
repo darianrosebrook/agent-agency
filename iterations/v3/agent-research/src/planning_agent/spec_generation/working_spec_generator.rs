@@ -4,6 +4,7 @@
 //! including goal extraction, acceptance criteria generation, and constraint creation.
 
 use crate::planning_agent::planning_errors::{PlanningError, PlanningResult};
+use chrono;
 
 /// Generate a working specification from a task request
 pub async fn generate_working_spec(
@@ -16,6 +17,8 @@ pub async fn generate_working_spec(
     let test_plan = generate_test_plan(task_request)?;
     let rollback_plan = generate_rollback_plan(task_request)?;
     let context = create_working_spec_context(task_request)?;
+
+    let now = chrono::Utc::now();
 
     Ok(agent_agency_contracts::working_spec::WorkingSpec {
         version: "1.0".to_string(),
@@ -31,7 +34,20 @@ pub async fn generate_working_spec(
         context,
         non_functional_requirements: None,
         validation_results: None,
+        quality_gates: None,
+        scope: Vec::new(),
         metadata: None,
+        milestones: Vec::new(),
+        change_budget: agent_agency_contracts::planning_io::ChangeBudget {
+            max_files: 25,
+            max_loc: 1000,
+            max_days: 3,
+        },
+        file_changes: Vec::new(),
+        coverage_targets: None,
+        overview: String::new(),
+        created_at: now,
+        updated_at: now,
     })
 }
 

@@ -1,6 +1,7 @@
 //! Quality validation runner with parallel execution
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use crate::{ValidationResult, ValidationContext};
 use crate::error::*;
 use super::gates::*;

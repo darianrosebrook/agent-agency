@@ -4,7 +4,7 @@
 //! decisions from aggregated judge verdicts.
 
 use schemars::JsonSchema;
-use async_trait::async_trait;
+use serde::{Serialize, Deserialize};use async_trait::async_trait;
 use crate::council_errors::CouncilResult;
 use crate::verdict_aggregation::AggregationResult;
 use agent_agency_contracts::TaskPriority;
@@ -23,7 +23,7 @@ pub trait DecisionEngine: Send + Sync + std::fmt::Debug {
 /// Context for decision making
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct DecisionContext {
+pub struct DecisionContext {
     /// Risk tier of the task
     pub risk_tier: agent_agency_contracts::task_request::RiskTier,
 
@@ -43,7 +43,7 @@ struct DecisionContext {
 /// Organizational constraints and policies
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct OrganizationalConstraints {
+pub struct OrganizationalConstraints {
     /// Maximum allowed risk for this tier
     pub max_risk_level: crate::judge_backup::risk::RiskLevel,
 
@@ -60,7 +60,7 @@ struct OrganizationalConstraints {
 /// Resource constraints
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct ResourceConstraints {
+pub struct ResourceConstraints {
     /// Available development time (hours)
     pub available_development_hours: Option<f64>,
 
@@ -82,7 +82,7 @@ struct BudgetLimits {
 /// Team capacity factors
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct TeamCapacity {
+pub struct TeamCapacity {
     pub available_engineers: usize,
     pub average_productivity: f64, // tasks per engineer per week
     pub skill_level: SkillLevel,
@@ -91,7 +91,7 @@ struct TeamCapacity {
 /// Skill level assessment
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-enum SkillLevel {
+pub enum SkillLevel {
     Junior,
     MidLevel,
     Senior,
@@ -101,7 +101,7 @@ enum SkillLevel {
 /// Human review triggers
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-enum HumanReviewTrigger {
+pub enum HumanReviewTrigger {
     HighRiskDecisions,
     UnresolvedDissent,
     ComplexRefinements,
@@ -112,7 +112,7 @@ enum HumanReviewTrigger {
 /// Historical decision for learning
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct HistoricalDecision {
+pub struct HistoricalDecision {
     pub decision_id: String,
     pub similar_task_features: Vec<String>,
     pub outcome: DecisionOutcome,
@@ -122,7 +122,7 @@ struct HistoricalDecision {
 /// Decision outcome
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-enum DecisionOutcome {
+pub enum DecisionOutcome {
     Success { quality_score: f64, time_to_completion: u64 },
     Failure { reason: String, recovery_cost: f64 },
     PartialSuccess { achieved_percentage: f64 },
@@ -131,7 +131,7 @@ enum DecisionOutcome {
 /// Emergency override flags
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct EmergencyFlags {
+pub struct EmergencyFlags {
     pub business_critical: bool,
     pub security_incident: bool,
     pub compliance_deadline: bool,
@@ -141,7 +141,7 @@ struct EmergencyFlags {
 /// Impact level
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-enum ImpactLevel {
+pub enum ImpactLevel {
     None,
     Low,
     Medium,
@@ -259,7 +259,7 @@ enum EscalationPath {
 /// Consensus strategy for decision making
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-enum ConsensusStrategy {
+pub enum ConsensusStrategy {
     /// Strict majority required
     Majority,
 
@@ -279,7 +279,7 @@ enum ConsensusStrategy {
 /// Decision algorithm implementation
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-struct AlgorithmicDecisionEngine {
+pub struct AlgorithmicDecisionEngine {
     strategy: ConsensusStrategy,
     risk_thresholds: RiskThresholds,
     learning_enabled: bool,
@@ -287,7 +287,7 @@ struct AlgorithmicDecisionEngine {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct RiskThresholds {
+pub struct RiskThresholds {
     pub low_risk_threshold: f64,
     pub medium_risk_threshold: f64,
     pub high_risk_threshold: f64,

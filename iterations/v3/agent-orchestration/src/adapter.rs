@@ -47,7 +47,7 @@ use tracing::{debug, info, warn};
 
 /// Legacy orchestrator adapter that bridges old and new architectures
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug)]
 pub struct LegacyOrchestratorAdapter {
     /// Council for decision making
     pub council: Arc<Council>,

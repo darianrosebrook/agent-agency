@@ -317,7 +317,7 @@ impl Default for BenchmarkConfig {
 
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct MicroTaskResult   {
+pub struct MicroTaskResult {
     execution_time: Duration,
     memory_usage_mb: f64,
     success: bool,

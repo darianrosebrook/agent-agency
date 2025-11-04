@@ -225,7 +225,7 @@ const IMPROVEMENT_TARGET: f64 = 0.85;
 
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
-pub struct ModelAggregatee {
+pub struct ModelAggregate {
     count: usize,
     total_score: f64,
     total_accuracy: f64,
@@ -264,7 +264,7 @@ impl ModelAggregate {
 
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
-pub struct MetricAveragess {
+pub struct MetricAverages {
     accuracy: f64,
     speed: f64,
     efficiency: f64,
@@ -274,7 +274,7 @@ pub struct MetricAveragess {
 
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
-pub struct MetricTotalss {
+pub struct MetricTotals {
     accuracy: f64,
     speed: f64,
     efficiency: f64,
@@ -306,7 +306,7 @@ impl MetricTotals {
     }
 }
 
-pub struct MetricWeightss {
+pub struct MetricWeights {
     accuracy: f64,
     speed: f64,
     efficiency: f64,
@@ -339,7 +339,7 @@ const METRIC_WEIGHTS: MetricWeights = MetricWeights::new();
 // Supporting types for the scoring system
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub enum ScoringAlgorithmm {
+pub enum ScoringAlgorithm {
     WeightedAverage,
     NormalizedSum,
     GeometricMean,
@@ -347,7 +347,7 @@ pub enum ScoringAlgorithmm {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct NormalizationSettingss {
+pub struct NormalizationSettings {
     pub min_score: f64,
     pub max_score: f64,
     pub normalization_method: NormalizationMethod,

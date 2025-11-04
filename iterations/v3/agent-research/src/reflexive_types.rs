@@ -130,7 +130,7 @@ pub struct EnsembleComponentStatistics {
     pub f1_score: f64,
     pub training_time_ms: u64,
     pub prediction_time_ms: u64,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub last_updated: DateTime<Utc>,
 }
@@ -151,7 +151,7 @@ pub struct EnsembleAnalytics {
     pub component_contributions: Vec<ComponentContribution>,
     pub diversity_score: f64,
     pub stability_score: f64,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub generated_at: DateTime<Utc>,
 }
@@ -176,7 +176,7 @@ pub struct AlgorithmPerformance {
     pub prediction_time_ms: u64,
     pub memory_usage_mb: f64,
     pub convergence_iterations: usize,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub measured_at: DateTime<Utc>,
 }
@@ -258,7 +258,7 @@ pub struct LearningSystemHealth {
     pub average_performance: f64,
     pub system_uptime_seconds: u64,
     pub memory_usage_mb: f64,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub last_health_check: DateTime<Utc>,
 }
@@ -536,7 +536,7 @@ pub struct LearningSession {
     #[schemars(with = "String")]
     pub task_id: Uuid,
     pub task_type: TaskType,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub start_time: DateTime<Utc>,
     pub current_turn: u32,
@@ -649,7 +649,7 @@ pub struct PreservedContext {
     pub context_type: ContextType,
     pub content: String,
     pub relevance_score: f64,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub last_accessed: DateTime<Utc>,
 }
@@ -722,7 +722,7 @@ pub struct CouncilLearningSignal {
     pub signal_type: LearningSignalType,
     pub content: String,
     pub confidence: f64,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
 }

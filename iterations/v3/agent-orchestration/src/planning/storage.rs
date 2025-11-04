@@ -23,6 +23,7 @@ use agent_agency_contracts::*;
 use crate::planning::plan_types::{ExecutionPlan, PlanGenerationContext};
 
 /// Planning storage with dual persistence strategy
+#[derive(Debug)]
 pub struct PlanningStorage {
     /// Database operations for state storage
     db_ops: Arc<dyn DatabaseOperations>,
@@ -64,7 +65,7 @@ struct CachedSession {
 /// Storage configuration
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct StorageConfig {
+pub struct StorageConfig {
     /// Maximum cache size for sessions
     max_cache_size: usize,
 
@@ -484,7 +485,7 @@ use crate::planning::{
 /// Audit event for storage operations
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct AuditEvent {
+pub struct AuditEvent {
     #[schemars(with = "String")]
     pub plan_id: Uuid,
     pub milestone_id: Option<String>,

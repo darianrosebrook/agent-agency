@@ -8,9 +8,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use serde::{Serialize, Deserialize};
 use schemars::JsonSchema;
-use uuid::Uuid;
+use serde::{Serialize, Deserialize};use uuid::Uuid;
 use chrono::Utc;
 
 use agent_agency_contracts::{TaskDescriptor, TaskPriority};
@@ -655,7 +654,7 @@ struct CodeChange {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-enum ChangeType {
+pub enum ChangeType {
     Addition,
     Modification,
     Deletion,

@@ -6,7 +6,7 @@
 //! @author @darianrosebrook
 
 use schemars::JsonSchema;
-use async_trait::async_trait;
+use serde::{Serialize, Deserialize};use async_trait::async_trait;
 use std::path::Path;
 use std::sync::Arc;
 use system_common_interfaces::{
@@ -17,8 +17,8 @@ use tracing::{info, warn, error, instrument};
 
 /// Autonomous file editor that integrates with agent orchestration
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
-struct AutonomousFileEditor {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AutonomousFileEditor {
     /// File operations service
     file_ops: Arc<dyn FileOperationsService>,
     /// Default repository path
@@ -175,7 +175,7 @@ impl AutonomousFileEditor {
 /// File change specification
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct FileChange {
+pub struct FileChange {
     /// Path to the file to change
     pub path: String,
     /// Type of change
@@ -288,7 +288,7 @@ impl FileChange {
 /// Type of file change
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, Copy)]
-enum ChangeType {
+pub enum ChangeType {
     /// Create a new file
     Create,
     /// Replace content (requires old_content)
@@ -302,7 +302,7 @@ enum ChangeType {
 /// Risk assessment for a changeset
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct RiskAssessment {
+pub struct RiskAssessment {
     /// Risk score (0.0-1.0, higher is riskier)
     pub score: f64,
     /// Risk level
@@ -314,7 +314,7 @@ struct RiskAssessment {
 /// Risk levels
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, Copy)]
-enum RiskLevel {
+pub enum RiskLevel {
     Low,
     Medium,
     High,
@@ -323,7 +323,7 @@ enum RiskLevel {
 /// Preview of changes before application
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct ChangesetPreview {
+pub struct ChangesetPreview {
     /// The changeset that would be applied
     #[schemars(skip)]
     pub changeset: Changeset,
@@ -336,7 +336,7 @@ struct ChangesetPreview {
 /// Errors that can occur during autonomous file editing
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
-enum AutonomousFileEditError {
+pub enum AutonomousFileEditError {
     #[error("Validation error: {0}")]
     Validation(String),
 

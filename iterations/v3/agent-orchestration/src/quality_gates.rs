@@ -6,7 +6,7 @@
 //! @author @darianrosebrook
 
 use schemars::JsonSchema;
-use std::process::Command;
+use serde::{Serialize, Deserialize};use std::process::Command;
 use std::path::Path;
 use anyhow::{Result, Context};
 use tracing::{debug, warn, error, info};
@@ -122,7 +122,7 @@ impl QualityGateExecutor {
     }
 
     /// Check if type checking should be enforced based on quality gates
-    fn should_check_type_checking(&self, quality_gates: &QualityGates) -> bool {
+    fn should_check_type_checking(&self, _quality_gates: &QualityGates) -> bool {
         // Type checking is generally always good to check
         // This could be enhanced with explicit type checking requirements
         true

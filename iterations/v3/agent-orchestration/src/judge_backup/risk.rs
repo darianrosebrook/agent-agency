@@ -5,11 +5,11 @@
 //! multi-dimensional analysis and mitigation strategies.
 
 use schemars::JsonSchema;
-
+use serde::{Serialize, Deserialize};
 /// Risk assessment from a judge
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-struct RiskAssessment {
+pub struct RiskAssessment {
     pub overall_risk: RiskLevel,
     pub risk_factors: Vec<String>,
     pub mitigation_suggestions: Vec<String>,
@@ -19,7 +19,7 @@ struct RiskAssessment {
 /// Risk level classification
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema, Copy)]
-enum RiskLevel {
+pub enum RiskLevel {
     Low,
     Medium,
     High,
@@ -30,7 +30,7 @@ enum RiskLevel {
 /// Enhanced with comprehensive risk scoring from integration testing insights
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct MultiDimensionalRiskAssessment {
+pub struct MultiDimensionalRiskAssessment {
     /// Overall risk score (0.0-1.0, higher = more risky)
     pub overall_risk_score: f32,
 
@@ -62,7 +62,7 @@ struct MultiDimensionalRiskAssessment {
 /// Technical risk assessment
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct TechnicalRiskAssessment {
+pub struct TechnicalRiskAssessment {
     /// Technical feasibility score (0.0-1.0, lower = higher risk)
     pub feasibility_score: f32,
 
@@ -85,7 +85,7 @@ struct TechnicalRiskAssessment {
 /// Ethical risk assessment
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct EthicalRiskAssessment {
+pub struct EthicalRiskAssessment {
     /// Ethical acceptability score (0.0-1.0, lower = higher ethical risk)
     pub ethical_score: f32,
 
@@ -108,7 +108,7 @@ struct EthicalRiskAssessment {
 /// Operational risk assessment
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct OperationalRiskAssessment {
+pub struct OperationalRiskAssessment {
     /// Operational feasibility score (0.0-1.0, lower = higher operational risk)
     pub feasibility_score: f32,
 
@@ -131,7 +131,7 @@ struct OperationalRiskAssessment {
 /// Business risk assessment
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct BusinessRiskAssessment {
+pub struct BusinessRiskAssessment {
     /// Business viability score (0.0-1.0, lower = higher business risk)
     pub viability_score: f32,
 
@@ -386,7 +386,6 @@ enum PerformanceRiskType {
 /// Ethical concern category with severity
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct EthicalConcernCategory {
     pub category: EthicalCategory,
     pub severity_score: f32, // 0.0-1.0
@@ -467,7 +466,7 @@ enum SocietalImpactType {
 /// Time horizon for impact assessment
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-enum TimeHorizon {
+pub enum TimeHorizon {
     Immediate,
     ShortTerm,
     MediumTerm,
@@ -477,7 +476,7 @@ enum TimeHorizon {
 /// Reversibility of societal impact
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-enum Reversibility {
+pub enum Reversibility {
     Irreversible,
     LongTerm,
     MediumTerm,
@@ -487,7 +486,7 @@ enum Reversibility {
 /// Ethical category types
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-enum EthicalCategory {
+pub enum EthicalCategory {
     Harm,
     Privacy,
     Discrimination,
@@ -516,7 +515,7 @@ impl std::fmt::Display for EthicalCategory {
 /// Stakeholder impact analysis
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct StakeholderImpact {
+pub struct StakeholderImpact {
     pub stakeholder_type: StakeholderType,
     pub impact_magnitude: f32, // -1.0 to 1.0, negative = positive impact
     pub impact_description: String,
@@ -526,7 +525,7 @@ struct StakeholderImpact {
 /// Types of stakeholders
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-enum StakeholderType {
+pub enum StakeholderType {
     Users,
     Employees,
     Communities,
@@ -812,7 +811,7 @@ enum ExitStrategyType {
 /// Advanced ethical assessment result
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct EthicalAssessment {
+pub struct EthicalAssessment {
     /// Overall ethical acceptability (0.0 = highly unethical, 1.0 = highly ethical)
     pub ethical_score: f32,
     /// Specific ethical concerns identified
@@ -835,6 +834,7 @@ struct EthicalAssessment {
 
 /// Specific ethical concern identified
 
+#[derive(Debug, Clone, JsonSchema)]
 pub struct EthicalConcern {
     /// Category of ethical concern
     pub category: EthicalCategory,
@@ -851,7 +851,7 @@ pub struct EthicalConcern {
 /// Ethical severity levels
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-enum EthicalSeverity {
+pub enum EthicalSeverity {
     Low,
     Medium,
     High,
@@ -861,7 +861,7 @@ enum EthicalSeverity {
 /// Ethical trade-off analysis
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct EthicalTradeoff {
+pub struct EthicalTradeoff {
     pub benefit_description: String,
     pub cost_description: String,
     pub affected_values: Vec<String>,
@@ -871,7 +871,7 @@ struct EthicalTradeoff {
 /// Long-term consequence assessment
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct ConsequenceAssessment {
+pub struct ConsequenceAssessment {
     pub consequence_type: ConsequenceType,
     pub time_horizon: TimeHorizon,
     pub probability: f32, // 0.0-1.0
@@ -882,7 +882,7 @@ struct ConsequenceAssessment {
 /// Types of consequences
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-enum ConsequenceType {
+pub enum ConsequenceType {
     Positive,
     Negative,
     Neutral,
@@ -892,7 +892,7 @@ enum ConsequenceType {
 /// Cultural consideration in ethical assessment
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct CulturalConsideration {
+pub struct CulturalConsideration {
     pub cultural_context: String,
     pub ethical_norms: Vec<String>,
     pub potential_conflicts: Vec<String>,

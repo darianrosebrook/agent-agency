@@ -7,7 +7,7 @@ use std::collections::HashMap;
 /// Ensemble learning orchestrator
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct LearningAlgorithmss {
+pub struct LearningAlgorithms {
     algorithms: HashMap<LearningAlgorithmType, Box<dyn LearningAlgorithm>>,
 }
 
@@ -154,7 +154,7 @@ impl EnsembleAnalytics {
 /// Problem characteristics analysis
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct ProblemCharacteristicsAnalyzerr {
+pub struct ProblemCharacteristicsAnalyzer {
     characteristics_cache: HashMap<String, ProblemCharacteristics>,
 }
 

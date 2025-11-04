@@ -6,7 +6,7 @@
 //! @author @darianrosebrook
 
 use schemars::JsonSchema;
-use std::collections::{HashMap, HashSet};
+use serde::{Serialize, Deserialize};use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 use chrono::Utc;
 use anyhow::{anyhow, Result};
@@ -26,6 +26,7 @@ use crate::planning::{
 };
 
 /// AI-assisted plan generator
+#[derive(Debug)]
 pub struct PlanGenerator {
     /// CAWS integration bridge
     caws_bridge: CawsPlanBridge,
@@ -43,7 +44,7 @@ pub struct PlanGenerator {
 /// Plan generation strategy
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-enum PlanGenerationStrategy {
+pub enum PlanGenerationStrategy {
     /// Pure AI-assisted generation
     AIAssisted,
 

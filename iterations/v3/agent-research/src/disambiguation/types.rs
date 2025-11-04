@@ -77,6 +77,7 @@ pub enum AmbiguityType {
     ScopeBoundary,
     TemporalReference,
     EntityReference,
+    Quantifier,
     Other(String),
 }
 

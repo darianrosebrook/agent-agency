@@ -8,7 +8,7 @@ use anyhow::Result;
 /// Security collector
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct SecurityCollectorr {
+pub struct SecurityCollector {
     config: EvidenceCollectorConfig,
 }
 

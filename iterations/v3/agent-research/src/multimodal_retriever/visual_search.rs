@@ -2,7 +2,8 @@
 
 use std::path::Path;
 use anyhow::Result;
-use image::DynamicImage;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 use super::core::MultimodalSearchResult;
 use super::core::{VisualSearchResult, VisualSearchConfig};
@@ -10,7 +11,7 @@ use super::core::{VisualSearchResult, VisualSearchConfig};
 /// Visual search bridge for image processing and similarity
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct VisualSearchBridgee {
+pub struct VisualSearchBridge {
     config: VisualSearchConfig,
 }
 
@@ -38,7 +39,7 @@ impl VisualSearchBridge {
 /// Visual search engine
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct VisualSearchEnginee {
+pub struct VisualSearchEngine {
     config: super::core::MultimodalRetrieverConfig,
     search_bridge: VisualSearchBridge,
 }
@@ -62,6 +63,20 @@ impl VisualSearchEngine {
     ) -> Result<Vec<MultimodalSearchResult>> {
         // Placeholder implementation
         Ok(Vec::new())
+    }
+
+    /// Index an image for visual search
+    pub async fn index_image(&mut self, image_path: &std::path::Path, metadata: super::core::VisualSearchResult) -> Result<()> {
+        // TODO: Implement image indexing using VisualSearchBridge
+        // For now, this is a placeholder
+        Ok(())
+    }
+
+    /// Remove an image from the visual index
+    pub async fn remove_image(&mut self, image_id: &str) -> Result<()> {
+        // TODO: Implement image removal from VisualSearchBridge
+        // For now, this is a placeholder
+        Ok(())
     }
 
     /// Get search statistics

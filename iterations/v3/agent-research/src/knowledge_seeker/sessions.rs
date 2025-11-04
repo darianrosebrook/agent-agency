@@ -11,7 +11,7 @@ use crate::{ResearchSession, ResearchQuery};
 /// Session manager for research sessions
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct SessionManagerr {
+pub struct SessionManager {
     sessions: Arc<RwLock<HashMap<Uuid, ResearchSession>>>,
 }
 

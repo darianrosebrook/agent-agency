@@ -141,7 +141,7 @@ pub struct LearningSystemHealth {
     pub average_performance: f64,
     pub system_uptime_seconds: u64,
     pub memory_usage_mb: f64,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub last_health_check: DateTime<Utc>,
 }

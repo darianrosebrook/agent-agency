@@ -220,6 +220,11 @@ async fn test_evidence_verification(
             verification_requirements: vec![],
             position: (0, 50),
             sentence_fragment: "system uses PostgreSQL".to_string(),
+            evidence_links: vec![],
+            temporal_context: None,
+            verification_status: agent_research::VerificationStatus::Unverified,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
         },
     ];
 
@@ -274,6 +279,11 @@ async fn test_hallucination_detection(
         verification_requirements: vec![],
         position: (0, 70),
         sentence_fragment: "system uses MongoDB".to_string(),
+        evidence_links: vec![],
+        temporal_context: None,
+        verification_status: agent_research::VerificationStatus::Unverified,
+        created_at: chrono::Utc::now(),
+        updated_at: chrono::Utc::now(),
     };
 
     let verification_result = verifier.verify_claims(&vec![hallucination_claim.clone()]).await

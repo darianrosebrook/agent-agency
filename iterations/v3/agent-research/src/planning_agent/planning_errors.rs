@@ -39,6 +39,9 @@ pub enum PlanningError {
 
     #[error("Risk tier escalation required: {reason}")]
     RiskEscalation { reason: String },
+
+    #[error("Validation error: {0}")]
+    ValidationError(String),
 }
 
 impl PlanningError {

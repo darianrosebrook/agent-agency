@@ -5,7 +5,7 @@
 //! considerations for working specification evaluation.
 
 use schemars::JsonSchema;
-use crate::council_errors::CouncilResult;
+use serde::{Serialize, Deserialize};use crate::council_errors::CouncilResult;
 use std::sync::RwLock;
 use crate::judge_backup::risk::{EthicalAssessment, EthicalConcern, StakeholderImpact, EthicalTradeoff, ConsequenceAssessment, CulturalConsideration, EthicalCategory, EthicalSeverity, TimeHorizon};
 use crate::judge_backup::traits::Judge;
@@ -38,7 +38,7 @@ impl Default for ResponseCache {
 /// Enhanced with performance optimizations from integration testing
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-struct EthicsJudge {
+pub struct EthicsJudge {
     config: JudgeConfig,
     ethical_frameworks: Vec<String>,
     cultural_contexts: Vec<String>,

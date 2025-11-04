@@ -273,6 +273,19 @@ pub enum ExecutionStatus {
     Cancelled,
 }
 
+impl std::fmt::Display for ExecutionStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ExecutionStatus::Pending => write!(f, "pending"),
+            ExecutionStatus::Running => write!(f, "running"),
+            ExecutionStatus::Completed => write!(f, "completed"),
+            ExecutionStatus::Failed => write!(f, "failed"),
+            ExecutionStatus::Timeout => write!(f, "timeout"),
+            ExecutionStatus::Cancelled => write!(f, "cancelled"),
+        }
+    }
+}
+
 /// Log entry
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LogEntry {

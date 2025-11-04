@@ -4,7 +4,7 @@
 //! for testing council workflows and integration scenarios.
 
 use schemars::JsonSchema;
-use crate::council_errors::CouncilResult;
+use serde::{Serialize, Deserialize};use crate::council_errors::CouncilResult;
 use crate::judge_backup::backup_types::JudgeType;
 use crate::judge_backup::traits::Judge;
 use crate::judge_backup::backup_types::{JudgeHealthMetrics, JudgeHealthStatus};
@@ -17,7 +17,7 @@ use rand::Rng;
 /// Verdict strategy for mock judge behavior
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-enum VerdictStrategy {
+pub enum VerdictStrategy {
     AlwaysApprove,
     AlwaysRefine(Vec<RequiredChange>),
     AlwaysReject(Vec<CriticalIssue>),
@@ -29,7 +29,7 @@ enum VerdictStrategy {
 /// Mock judge for testing and development
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-struct MockJudge {
+pub struct MockJudge {
     config: JudgeConfig,
     verdict_strategy: VerdictStrategy,
 }

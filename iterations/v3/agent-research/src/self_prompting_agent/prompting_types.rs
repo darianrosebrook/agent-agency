@@ -109,6 +109,7 @@ pub enum ArtifactType {
     Documentation,
     Configuration,
     Report,
+    Text,
 }
 
 /// Change set for task execution
@@ -165,4 +166,7 @@ pub enum SelfPromptingAgentError {
 
     #[error("Learning error: {0}")]
     Learning(String),
+
+    #[error("Database error: {0}")]
+    Database(String),
 }

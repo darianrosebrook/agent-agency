@@ -4,6 +4,7 @@
 //! the system to learn from execution patterns and optimize performance.
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use crate::parallel_types::{TaskId, SubTaskId, WorkerId};
 use crate::learning::{
     ExecutionRecord, WorkerPerformanceProfile, SuccessPattern, FailurePattern,
@@ -19,110 +20,7 @@ use tracing::{info, error};
 use anyhow::Result;
 use sqlx::{Row, postgres::PgRow};
 
-/// Real fairness monitor implementation using database tracking
-pub struct RealFairnessMonitor {
-    db_client: Arc<DatabaseClient>,
-}
-
-impl RealFairnessMonitor {
-    pub fn new(db_client: Arc<DatabaseClient>) -> Self {
-        Self { db_client }
-    }
-
-    /// Track worker utilization for fairness monitoring
-    pub async fn track_worker_utilization(&self, worker_id: &WorkerId, task_count: i32) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let query = r#"
-            INSERT INTO worker_utilization_tracking (worker_id, task_count, tracked_at)
-            VALUES ($1, $2, $3)
-            ON CONFLICT (worker_id, tracked_at) 
-            DO UPDATE SET task_count = EXCLUDED.task_count
-        "#;
-
-        let now = Utc::now();
-        self.db_client.execute(query, &[&worker_id.0.to_string(), &task_count, &now]).await?;
-        Ok(())
-    }
-
-    /// Calculate fairness score based on worker utilization
-    pub async fn calculate_fairness_score(&self) -> Result<f64, Box<dyn std::error::Error + Send + Sync>> {
-        let query = r#"
-            SELECT 
-                worker_id,
-                AVG(task_count) as avg_tasks,
-                STDDEV(task_count) as task_stddev
-            FROM worker_utilization_tracking
-            WHERE tracked_at >= NOW() - INTERVAL '24 hours'
-            GROUP BY worker_id
-        "#;
-
-        match self.db_client.query(query, &[]).await {
-            Ok(rows) => {
-                if rows.is_empty() {
-                    return Ok(1.0); // Perfect fairness if no data
-                }
-
-                let mut utilizations = Vec::new();
-                for row in rows {
-                    let avg_tasks: f64 = row.try_get("avg_tasks")?;
-                    utilizations.push(avg_tasks);
-                }
-
-                // Calculate Gini coefficient for fairness
-                utilizations.sort_by(|a, b| a.partial_cmp(b).unwrap());
-                let n = utilizations.len() as f64;
-                let sum: f64 = utilizations.iter().sum();
-                
-                if sum == 0.0 {
-                    return Ok(1.0);
-                }
-
-                let mut gini = 0.0;
-                for (i, value) in utilizations.iter().enumerate() {
-                    gini += (2.0 * (i as f64 + 1.0) - n - 1.0) * value;
-                }
-                
-                let fairness_score = 1.0 - (gini / (n * sum));
-                Ok(fairness_score.clamp(0.0, 1.0))
-            }
-            Err(e) => {
-                error!("Failed to calculate fairness score: {}", e);
-                Ok(0.5) // Default to medium fairness on error
-            }
-        }
-    }
-
-    /// Get utilization distribution across workers
-    pub async fn get_utilization_distribution(&self) -> Result<HashMap<String, f64>, Box<dyn std::error::Error + Send + Sync>> {
-        let query = r#"
-            SELECT 
-                w.id as worker_id,
-                w.name as worker_name,
-                COALESCE(AVG(ut.task_count), 0) as avg_utilization
-            FROM workers w
-            LEFT JOIN worker_utilization_tracking ut ON w.id = ut.worker_id
-                AND ut.tracked_at >= NOW() - INTERVAL '24 hours'
-            GROUP BY w.id, w.name
-            ORDER BY avg_utilization DESC
-        "#;
-
-        match self.db_client.query(query, &[]).await {
-            Ok(rows) => {
-                let mut distribution = HashMap::new();
-                for row in rows {
-                    let worker_name: String = row.try_get("worker_name")?;
-                    let avg_utilization: f64 = row.try_get("avg_utilization")?;
-                    distribution.insert(worker_name, avg_utilization);
-                }
-                Ok(distribution)
-            }
-            Err(e) => {
-                error!("Failed to get utilization distribution: {}", e);
-                Ok(HashMap::new())
-            }
-        }
-    }
-}
-
+// RealFairnessMonitor moved to fairness_monitor.rs to avoid trait implementation conflicts
 /// Real adaptive selector implementation using ML-based worker selection
 pub struct RealAdaptiveSelector {
     db_client: Arc<DatabaseClient>,
@@ -884,7 +782,7 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
                 &worker_id.0.to_string(),
                 &profile.task_count,
                 &profile.success_rate,
-                &profile.avg_execution_time_ms,
+                &profile.average_execution_time_ms,
                 &profile.quality_score,
                 &profile.specialization_score,
                 &profile.last_updated,
@@ -943,12 +841,12 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
 
         for pattern in patterns {
             self.db_client.execute(query, &[
-                &pattern.pattern_name,
+                &format!("{:?}", pattern.pattern_type), // Use pattern_type as name
                 &serde_json::to_value(&pattern.pattern_type)?,
-                &pattern.confidence_score,
-                &serde_json::to_value(&pattern.outcomes)?,
-                &pattern.last_seen,
-                &serde_json::to_value(&pattern.metadata)?,
+                &pattern.success_rate, // Use success_rate as confidence
+                &serde_json::to_value(&pattern.conditions)?, // Use conditions as outcomes
+                &pattern.created_at, // Use created_at as last_seen
+                &serde_json::to_value(&pattern.conditions)?, // Store conditions as metadata
             ]).await?;
         }
 
@@ -962,13 +860,17 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
             Ok(rows) => {
                 let mut patterns = Vec::new();
                 for row in rows {
+                    let pattern_type: PatternType = serde_json::from_value(row.get("pattern_type"))?;
+                    let conditions: HashMap<String, serde_json::Value> = row.get("metadata");
+
                     patterns.push(SuccessPattern {
-                        pattern_name: row.get("pattern_name"),
-                        pattern_type: serde_json::from_value(row.get("pattern_type"))?,
-                        confidence_score: row.get("confidence_score"),
-                        outcomes: serde_json::from_value(row.get("outcomes"))?,
-                        last_seen: row.get("last_seen"),
-                        metadata: row.get("metadata").into(),
+                        id: Uuid::new_v4(), // Generate new ID since we don't store it
+                        pattern_type,
+                        conditions,
+                        success_rate: row.get("confidence_score"),
+                        average_quality: 0.8, // Default quality
+                        frequency: 1, // Default frequency
+                        created_at: row.get("last_seen"),
                     });
                 }
                 Ok(patterns)
@@ -995,12 +897,12 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
 
         for pattern in patterns {
             self.db_client.execute(query, &[
-                &pattern.pattern_name,
+                &format!("{:?}", pattern.pattern_type), // Use pattern_type as name
                 &serde_json::to_value(&pattern.pattern_type)?,
-                &pattern.confidence_score,
-                &serde_json::to_value(&pattern.outcomes)?,
-                &pattern.last_seen,
-                &serde_json::to_value(&pattern.metadata)?,
+                &pattern.failure_rate, // Use failure_rate as confidence
+                &serde_json::to_value(&pattern.common_errors)?, // Use common_errors as outcomes
+                &pattern.created_at, // Use created_at as last_seen
+                &serde_json::to_value(&pattern.conditions)?, // Store conditions as metadata
             ]).await?;
         }
 
@@ -1014,13 +916,18 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
             Ok(rows) => {
                 let mut patterns = Vec::new();
                 for row in rows {
+                    let pattern_type: PatternType = serde_json::from_value(row.get("pattern_type"))?;
+                    let conditions: HashMap<String, serde_json::Value> = row.get("metadata");
+                    let common_errors: Vec<String> = serde_json::from_value(row.get("outcomes"))?;
+
                     patterns.push(FailurePattern {
-                        pattern_name: row.get("pattern_name"),
-                        pattern_type: serde_json::from_value(row.get("pattern_type"))?,
-                        confidence_score: row.get("confidence_score"),
-                        outcomes: serde_json::from_value(row.get("outcomes"))?,
-                        last_seen: row.get("last_seen"),
-                        metadata: row.get("metadata").into(),
+                        id: Uuid::new_v4(), // Generate new ID since we don't store it
+                        pattern_type,
+                        conditions,
+                        failure_rate: row.get("confidence_score"),
+                        common_errors,
+                        frequency: 1, // Default frequency
+                        created_at: row.get("last_seen"),
                     });
                 }
                 Ok(patterns)

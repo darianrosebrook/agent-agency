@@ -14,11 +14,14 @@ use super::events::{EventEmitter, ResearchEvent};
 
 /// Web scraping coordinator
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug)]
 pub struct ScrapingCoordinator {
+    #[serde(skip)]
     web_scraper: Arc<WebScraper>,
+    #[serde(skip)]
     content_processor: Arc<ContentProcessorManager>,
     config: ResearchAgentConfig,
+    #[serde(skip)]
     event_emitter: Arc<EventEmitter>,
 }
 

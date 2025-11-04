@@ -4,12 +4,12 @@
 //! refinement, and rejection verdicts with associated metadata.
 
 use schemars::JsonSchema;
-use crate::judge_backup::risk::{RiskAssessment, RiskLevel};
+use serde::{Serialize, Deserialize};use crate::judge_backup::risk::{RiskAssessment, RiskLevel};
 
 /// Judge verdict on a working specification
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-enum JudgeVerdict {
+pub enum JudgeVerdict {
     /// Approve the working specification for execution
     Approve {
         confidence: f64,
@@ -59,7 +59,7 @@ impl JudgeVerdict {
 /// Required change for refinement
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-struct RequiredChange {
+pub struct RequiredChange {
     pub category: ChangeCategory,
     pub description: String,
     pub impact: ChangeImpact,
@@ -69,7 +69,7 @@ struct RequiredChange {
 /// Change category
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
-enum ChangeCategory {
+pub enum ChangeCategory {
     Quality,
     Security,
     Performance,
@@ -83,7 +83,7 @@ enum ChangeCategory {
 /// Change impact level
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-enum ChangeImpact {
+pub enum ChangeImpact {
     Minor,
     Moderate,
     Major,
@@ -93,7 +93,7 @@ enum ChangeImpact {
 /// Change priority
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema, Copy)]
-enum ChangePriority {
+pub enum ChangePriority {
     Low,
     Medium,
     High,
@@ -103,7 +103,7 @@ enum ChangePriority {
 /// Effort estimate for changes
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-struct EffortEstimate {
+pub struct EffortEstimate {
     pub person_hours: f64,
     pub complexity: ComplexityLevel,
     pub dependencies: Vec<String>,
@@ -112,7 +112,7 @@ struct EffortEstimate {
 /// Complexity level
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema, Copy)]
-enum ComplexityLevel {
+pub enum ComplexityLevel {
     Simple,
     Moderate,
     Complex,
@@ -122,7 +122,7 @@ enum ComplexityLevel {
 /// Critical issue for rejection
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-struct CriticalIssue {
+pub struct CriticalIssue {
     pub severity: IssueSeverity,
     pub category: String,
     pub description: String,
@@ -132,7 +132,7 @@ struct CriticalIssue {
 /// Issue severity
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema, Copy)]
-enum IssueSeverity {
+pub enum IssueSeverity {
     High,
     Critical,
 }

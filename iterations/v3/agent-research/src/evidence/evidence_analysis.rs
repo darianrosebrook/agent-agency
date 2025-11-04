@@ -11,7 +11,7 @@ use std::path::Path;
 /// Code analysis engine for various code quality metrics
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-struct CodeAnalysisEngine ;
+pub struct CodeAnalysisEngine ;
 
 impl CodeAnalysisEngine {
     pub fn new() -> Self {

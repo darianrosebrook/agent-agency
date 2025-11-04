@@ -15,6 +15,7 @@ use crate::evidence_enrichment::{EvidenceEnrichmentCoordinator, EnrichmentConfig
 use crate::frontier::{Frontier, FrontierConfig};
 use anyhow::Result;
 use uuid::Uuid;
+use chrono;
 
 /// Example of using the restored orchestration functionality
 pub async fn example_orchestration_workflow() -> Result<()> {
@@ -116,6 +117,11 @@ pub async fn example_orchestration_workflow() -> Result<()> {
         coverage_targets: None,
         file_changes: vec![],
         metadata: None,
+        milestones: vec![],
+        overview: String::new(),
+        quality_gates: None,
+        non_functional_requirements: None,
+        validation_results: None,
         created_at: chrono::Utc::now(),
         updated_at: chrono::Utc::now(),
     };

@@ -12,7 +12,7 @@ use system_configuration::types::ValidationIssue;
 /// Refinement suggestion from the engine
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct RefinementSuggestionn {
+pub struct RefinementSuggestion {
     /// Actions that were applied
     pub applied_actions: Vec<String>,
 

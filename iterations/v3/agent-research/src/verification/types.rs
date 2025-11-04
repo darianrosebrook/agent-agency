@@ -32,7 +32,7 @@ pub struct CheckResult {
     pub confidence: f64,
     pub details: String,
     pub evidence: Vec<String>,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
 }
@@ -59,7 +59,7 @@ pub struct VerificationResult {
     pub confidence: f64,
     pub checks: Vec<CheckResult>,
     pub overall_assessment: Assessment,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
 }
@@ -161,7 +161,7 @@ pub struct HistoricalLookupResult {
 pub struct HistoricalResult {
     pub claim: String,
     pub source: String,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
     pub confidence: f64,
@@ -258,6 +258,9 @@ pub struct EntityCandidate {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum DisambiguationMethod {
     Contextual,
+    ContextBased,
+    ExactMatch,
+    FuzzyMatch,
     KnowledgeBase,
     Embedding,
     PatternMatching,

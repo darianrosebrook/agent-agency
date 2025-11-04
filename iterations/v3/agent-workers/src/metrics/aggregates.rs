@@ -1,6 +1,7 @@
 //! Aggregated metrics with tail-aware quantiles
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use super::quantiles::OnlineQuantiles;
 
 /// Aggregated metrics with tail-aware quantiles

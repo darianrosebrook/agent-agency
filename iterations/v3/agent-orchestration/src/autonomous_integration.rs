@@ -6,7 +6,7 @@
 //! @author @darianrosebrook
 
 use schemars::JsonSchema;
-use std::path::Path;
+use serde::{Serialize, Deserialize};use std::path::Path;
 use std::sync::Arc;
 use async_trait::async_trait;
 use system_common_interfaces::{
@@ -25,8 +25,8 @@ use agent_agency_contracts::{TaskDescriptor, TaskScope, ChangeBudget, BlastRadiu
 
 /// Comprehensive autonomous agent integration
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
-struct AutonomousAgentIntegration {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AutonomousAgentIntegration {
     /// File operations service
     file_ops: Arc<dyn FileOperationsService>,
     /// Learning service for self-improvement
@@ -556,7 +556,7 @@ struct FileExecutionResult {
 /// Result of autonomous task execution
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct AutonomousExecutionResult {
+pub struct AutonomousExecutionResult {
     pub task_id: String,
     pub success: bool,
     pub changes_applied: usize,
@@ -569,7 +569,7 @@ struct AutonomousExecutionResult {
 /// Health status of the autonomous integration
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct AutonomousHealthStatus {
+pub struct AutonomousHealthStatus {
     pub overall_healthy: bool,
     pub file_operations: bool,
     pub learning_service: bool,
@@ -581,7 +581,7 @@ struct AutonomousHealthStatus {
 /// Errors that can occur during autonomous integration
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
-enum AutonomousIntegrationError {
+pub enum AutonomousIntegrationError {
     #[error("File operations error: {0}")]
     FileOps(String),
 

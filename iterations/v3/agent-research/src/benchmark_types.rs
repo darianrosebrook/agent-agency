@@ -153,7 +153,7 @@ pub enum ConstraintType {
 pub struct BenchmarkingReport {
     #[schemars(with = "String")]
     pub report_id: Uuid,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
     pub benchmark_results: Vec<BenchmarkResult>,
@@ -458,7 +458,7 @@ pub struct RegressionAlert {
     pub previous_value: f64,
     pub regression_percentage: f64,
     pub severity: RegressionSeverity,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
 }
@@ -476,7 +476,7 @@ pub enum RegressionSeverity {
 pub struct BenchmarkReport {
     #[schemars(with = "String")]
     pub report_id: Uuid,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
     pub benchmark_results: Vec<BenchmarkResult>,
@@ -570,7 +570,7 @@ pub struct SlaTargets {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SlaValidationReport {
     /// Timestamp when validation was performed
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
     /// Overall SLA compliance status

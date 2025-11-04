@@ -1,6 +1,7 @@
 //! Online quantile estimation using t-digest for mergeable, tail-aware metrics
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use tdigest::TDigest;
 
 /// Online quantile estimation using t-digest for mergeable, tail-aware metrics

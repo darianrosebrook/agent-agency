@@ -12,9 +12,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use serde::{Serialize, Deserialize};
 use schemars::JsonSchema;
-use uuid::Uuid;
+use serde::{Serialize, Deserialize};use uuid::Uuid;
 
 /// Unified error type for the entire Agent Agency system
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -248,19 +247,20 @@ pub struct CircuitBreaker {
     /// Service identifier
     service_name: String,
     /// Current state of the circuit breaker
-    #[schemars(skip)]
+    #[serde(skip)]
     state: Arc<RwLock<CircuitBreakerState>>,
     /// Configuration
     config: ErrorHandlingCircuitBreakerConfig,
     /// Statistics for monitoring
-    #[schemars(skip)]
+    #[serde(skip)]
     stats: Arc<RwLock<CircuitBreakerStats>>,
 }
 
 /// Circuit breaker states
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, Default)]
 pub enum CircuitBreakerState {
     /// Normal operation
+    #[default]
     Closed,
     /// Detecting failures, allowing limited requests
     Open,
@@ -286,7 +286,7 @@ pub struct ErrorHandlingCircuitBreakerConfig {
 
 /// Circuit breaker statistics
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default)]
 pub struct CircuitBreakerStats {
     /// Total requests made
     pub total_requests: u64,
@@ -297,10 +297,8 @@ pub struct CircuitBreakerStats {
     /// Current consecutive failures
     pub consecutive_failures: u32,
     /// Last failure time
-    #[schemars(with = "String")]
     pub last_failure_time: Option<Instant>,
     /// Last success time
-    #[schemars(with = "String")]
     pub last_success_time: Option<Instant>,
     /// State change history
     pub state_changes: Vec<StateChange>,
@@ -308,9 +306,8 @@ pub struct CircuitBreakerStats {
 
 /// State change record
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone)]
 struct StateChange {
-    #[schemars(with = "String")]
     pub timestamp: Instant,
     pub from_state: CircuitBreakerState,
     pub to_state: CircuitBreakerState,
@@ -614,10 +611,10 @@ where
 
 /// Graceful degradation manager
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, JsonSchema)]
 pub struct DegradationManager {
     /// Current degradation state
-    #[schemars(skip)]
+    #[serde(skip)]
     state: Arc<RwLock<DegradationState>>,
     /// Degradation policies by component
     policies: HashMap<String, DegradationPolicy>,
@@ -740,7 +737,7 @@ impl DegradationManager {
 
 /// Error recovery orchestrator
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug)]
 pub struct RecoveryOrchestrator {
     /// Circuit breakers for external services
     circuit_breakers: HashMap<String, Arc<CircuitBreaker>>,

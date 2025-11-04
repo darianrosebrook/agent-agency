@@ -4,6 +4,7 @@
 //! content to make it verifiable. Based on V2 qualification logic.
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use crate::extraction_types::*;
 use crate::VerificationMethod;
 use anyhow::Result;

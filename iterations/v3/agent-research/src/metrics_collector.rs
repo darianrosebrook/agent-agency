@@ -22,7 +22,7 @@ pub struct MetricsCollector {
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceSnapshot {
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
     #[schemars(with = "String")]
@@ -42,7 +42,7 @@ pub struct ModelPerformanceSummary {
     pub average_score: f64,
     pub best_score: f64,
     pub worst_score: f64,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub last_updated: DateTime<Utc>,
     pub performance_trend: PerformanceTrend,
@@ -333,7 +333,7 @@ impl MetricsCollector {
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceReport {
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub generated_at: DateTime<Utc>,
     pub total_models: usize,

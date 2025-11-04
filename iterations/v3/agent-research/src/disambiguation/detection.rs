@@ -129,7 +129,10 @@ impl AmbiguityDetector {
         for pattern in &self.temporal_patterns {
             for mat in pattern.find_iter(sentence) {
                 ambiguities.push(Ambiguity {
+                    text: mat.as_str().to_string(),
                     ambiguity_type: AmbiguityType::TemporalReference,
+                    start_pos: mat.start(),
+                    end_pos: mat.end(),
                     position: (mat.start(), mat.end()),
                     original_text: mat.as_str().to_string(),
                     possible_resolutions: vec![
@@ -137,7 +140,8 @@ impl AmbiguityDetector {
                         "at runtime".to_string(),
                         "when called".to_string(),
                     ],
-                    confidence: 0.5,
+                    confidence: 0.8,
+                    context: None,
                 });
             }
         }

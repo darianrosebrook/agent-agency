@@ -9,7 +9,7 @@ use std::collections::HashMap;
 /// Simple linear regression implementation
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct LinearRegressionModell {
+pub struct LinearRegressionModel {
     /// Learned weights (coefficients)
     weights: Array1<f64>,
     /// Bias term (intercept)
@@ -113,7 +113,7 @@ impl LinearRegressionModel {
 /// Ridge regression (L2 regularization)
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct RidgeRegressionn {
+pub struct RidgeRegression {
     base_model: LinearRegressionModel,
     alpha: f64, // Regularization strength
 }
@@ -144,7 +144,7 @@ impl RidgeRegression {
 /// Logistic regression for binary classification
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct LogisticRegressionn {
+pub struct LogisticRegression {
     weights: Array1<f64>,
     bias: f64,
     feature_count: usize,

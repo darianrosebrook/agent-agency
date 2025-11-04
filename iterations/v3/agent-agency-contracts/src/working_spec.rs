@@ -370,6 +370,8 @@ pub enum RollbackStrategy {
 pub enum DataImpact {
     /// No persistent data impact
     None,
+    /// No persistent data impact (alias for None)
+    NoImpact,
 
     /// Changes are reversible
     Reversible,

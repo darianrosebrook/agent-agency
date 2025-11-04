@@ -41,6 +41,57 @@ pub struct ExecutionPlan {
     pub execution_state: Option<ActiveExecutionState>,
 }
 
+impl Default for OrchestrationMetadata {
+    fn default() -> Self {
+        Self {
+            orchestrator_id: "default-orchestrator".to_string(),
+            worker_pool_id: "default-pool".to_string(),
+            council_session_id: None,
+            audit_correlation_id: Uuid::new_v4(),
+            planning_engine: "default-engine".to_string(),
+            planning_version: "1.0.0".to_string(),
+        }
+    }
+}
+
+impl Default for ExecutionContext {
+    fn default() -> Self {
+        Self {
+            session_start: Utc::now(),
+            working_directory: ".".to_string(),
+            environment: HashMap::new(),
+            available_resources: ResourceInventory::default(),
+            worker_assignments: HashMap::new(),
+            parallel_batches: Vec::new(),
+        }
+    }
+}
+
+impl Default for ExecutionPlan {
+    fn default() -> Self {
+        Self {
+            contract_plan: ContractExecutionPlan {
+                id: Uuid::new_v4(),
+                session_id: Uuid::new_v4(),
+                working_spec_id: "default-spec".to_string(),
+                title: "Default Plan".to_string(),
+                overview: "Default execution plan".to_string(),
+                state: ContractPlanState::Draft,
+                milestones: vec![],
+                dependency_graph: ContractDependencyGraph {
+                    nodes: HashMap::new(),
+                    edges: vec![],
+                },
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            },
+            orchestration_meta: OrchestrationMetadata::default(),
+            execution_context: ExecutionContext::default(),
+            execution_state: None,
+        }
+    }
+}
+
 /// Orchestration-specific metadata
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct OrchestrationMetadata {
@@ -457,7 +508,7 @@ pub enum EvidenceContent {
 /// Planning strategy options
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-enum PlanGenerationStrategy {
+pub enum PlanGenerationStrategy {
     /// Use AI-assisted planning with human oversight
     AIAssisted,
     /// Use fully automated planning

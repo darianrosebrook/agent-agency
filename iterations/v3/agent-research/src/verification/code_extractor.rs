@@ -296,6 +296,11 @@ impl CodeExtractor {
             verification_requirements: vec![],
             position: (0, 0),
             sentence_fragment: "".to_string(),
+            evidence_links: vec![],
+            temporal_context: None,
+            verification_status: crate::VerificationStatus::Unverified,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
         }))
     }
 
@@ -320,6 +325,11 @@ impl CodeExtractor {
             verification_requirements: vec![],
             position: (0, 0),
             sentence_fragment: "".to_string(),
+            evidence_links: vec![],
+            temporal_context: None,
+            verification_status: crate::VerificationStatus::Unverified,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
         }))
     }
 
@@ -346,6 +356,11 @@ impl CodeExtractor {
             verification_requirements: vec![],
             position: (0, 0),
             sentence_fragment: "".to_string(),
+            evidence_links: vec![],
+            temporal_context: None,
+            verification_status: crate::VerificationStatus::Unverified,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
         }))
     }
 }

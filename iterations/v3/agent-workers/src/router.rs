@@ -3,6 +3,7 @@
 //! Routes tasks to appropriate workers based on capabilities, load, and performance.
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use crate::worker_errors::WorkerError;
 use crate::specialized_workers::SpecializedWorker;
 use std::collections::HashMap;

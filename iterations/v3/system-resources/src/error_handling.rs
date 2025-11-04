@@ -31,8 +31,7 @@ pub struct ErrorContext {
     pub task_id: Option<String>,
     pub session_id: Option<String>,
     pub request_id: Option<String>,
-    ##[schemars(with = "String")]
-
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -100,10 +99,10 @@ pub struct ProductionError {
     pub cause: Option<Box<ProductionError>>,
     pub stack_trace: Option<String>,
     pub occurrences: u64,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub first_seen: DateTime<Utc>,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub last_seen: DateTime<Utc>,
 }

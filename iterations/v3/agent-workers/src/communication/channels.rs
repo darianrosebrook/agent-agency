@@ -1,6 +1,7 @@
 //! Channel-based communication infrastructure
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use crate::parallel_types::*;
 use crate::WorkerMessage;
 use crate::error::*;
@@ -28,8 +29,9 @@ impl Default for ChannelConfig {
 
 /// Reliable channel sender with retry logic
 
-#[derive(Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone)]
 struct ReliableSender {
+    #[serde(skip)]
     sender: tokio::sync::mpsc::UnboundedSender<WorkerMessage>,
     config: ChannelConfig,
 }

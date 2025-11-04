@@ -6,7 +6,7 @@
 //! @author @darianrosebrook
 
 use schemars::JsonSchema;
-use std::collections::{HashMap, HashSet};
+use serde::{Serialize, Deserialize};use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::{Semaphore, Mutex, RwLock};
 use tokio::time::{timeout, Duration};
@@ -24,6 +24,7 @@ use crate::planning::worker_assignment::WorkerAssignmentStrategy;
 use agent_agency_contracts::planning_io::{Milestone, MilestoneState};
 
 /// Parallel execution coordinator
+#[derive(Debug)]
 pub struct ParallelCoordinator {
     /// Plan executor for individual milestone execution
     plan_executor: Arc<PlanExecutor>,
@@ -53,7 +54,7 @@ pub struct ParallelCoordinator {
 /// Parallel execution configuration
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct ParallelConfig {
+pub struct ParallelConfig {
     /// Maximum parallel milestones
     pub max_parallel_milestones: usize,
 
@@ -101,7 +102,7 @@ impl Default for ParallelConfig {
 /// Parallel execution result
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct ParallelExecutionResult {
+pub struct ParallelExecutionResult {
     /// Total milestones executed
     pub total_milestones: usize,
 
@@ -176,9 +177,8 @@ impl ParallelCoordinator {
                 break;
             }
 
-            // Get mutable reference to batch separately
-            let batch = &mut plan.execution_context.parallel_batches[batch_index];
-            let batch_result = self.execute_batch_parallel(plan, batch_index, batch).await?;
+            // Execute batch in parallel
+            let batch_result = self.execute_batch_parallel(plan, batch_index).await?;
             total_successful += batch_result.successful;
             total_failed += batch_result.failed;
             scope_conflicts += batch_result.scope_conflicts;
@@ -216,9 +216,11 @@ impl ParallelCoordinator {
         &self,
         plan: &mut ExecutionPlan,
         batch_index: usize,
-        batch: &mut ParallelBatch,
     ) -> Result<BatchExecutionResult> {
         let batch_start = std::time::Instant::now();
+
+        // Get mutable reference to batch
+        let batch = &mut plan.execution_context.parallel_batches[batch_index];
 
         // Set batch status to executing
         batch.status = BatchStatus::Executing;

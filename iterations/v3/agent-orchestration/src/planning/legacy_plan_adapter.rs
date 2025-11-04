@@ -6,7 +6,7 @@
 //! @author @darianrosebrook
 
 use schemars::JsonSchema;
-use std::collections::HashMap;
+use serde::{Serialize, Deserialize};use std::collections::HashMap;
 use anyhow::Result;
 use agent_agency_contracts::{
     planning_io::{ExecutionPlan as ContractExecutionPlan, Milestone as ContractMilestone},

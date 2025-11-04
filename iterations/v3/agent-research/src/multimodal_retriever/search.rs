@@ -116,7 +116,7 @@ impl SearchCoordinator {
 
 /// Search execution statistics
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SearchStats {
     pub text_searches: u64,
     pub visual_searches: u64,

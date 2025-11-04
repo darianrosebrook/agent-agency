@@ -10,7 +10,7 @@ use tracing::debug;
 /// Code analysis evidence collector
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct CodeAnalysisCollectorr {
+pub struct CodeAnalysisCollector {
     config: EvidenceCollectorConfig,
     analysis_engine: CodeAnalysisEngine,
 }

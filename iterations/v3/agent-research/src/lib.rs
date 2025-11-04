@@ -66,12 +66,12 @@ use tracing::{info, warn};
 /// Integrates with council debate protocol to provide evidence
 /// for claim verification during judicial evaluation.
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize, JsonSchema)]
 pub struct ClaimExtractionAndVerificationProcessor {
     disambiguation_stage: disambiguation::DisambiguationStage,
     qualification_stage: qualification::QualificationStage,
     decomposition_stage: decomposition::DecompositionStage,
-    // verification_stage: MultiModalVerificationEngine, // Temporarily disabled
+    verification_stage: Option<verification::MultiModalVerificationEngine>, // Temporarily optional
 }
 
 impl ClaimExtractionAndVerificationProcessor {
@@ -81,7 +81,7 @@ impl ClaimExtractionAndVerificationProcessor {
             disambiguation_stage: disambiguation::minimal_stage(),
             qualification_stage: qualification::QualificationStage::new(),
             decomposition_stage: decomposition::DecompositionStage::new(),
-            // verification_stage: MultiModalVerificationEngine::new(), // Temporarily disabled
+            verification_stage: None, // Temporarily disabled
         }
     }
 
@@ -213,29 +213,40 @@ impl ClaimExtractionAndVerificationProcessor {
 
         // Stage 4: Verification (evidence collection)
         if !atomic_claims.is_empty() {
-            match self
-                .verification_stage
-                .process(&atomic_claims, context)
-                .await
-            {
-                Ok(verification_result) => {
-                    verification_evidence = verification_result.evidence;
-                    stages_completed.push(ProcessingStage::Verification);
-                    info!(
-                        "Verification completed: {} evidence items collected",
-                        verification_evidence.len()
-                    );
+            if let Some(ref verification_stage) = self.verification_stage {
+                match verification_stage
+                    .process(&atomic_claims, context)
+                    .await
+                {
+                    Ok(verification_result) => {
+                        verification_evidence = verification_result.evidence;
+                        stages_completed.push(ProcessingStage::Verification);
+                        info!(
+                            "Verification completed: {} evidence items collected",
+                            verification_evidence.len()
+                        );
+                    }
+                    Err(e) => {
+                        let error = ProcessingError {
+                            stage: ProcessingStage::Verification,
+                            error_type: "VerificationFailed".to_string(),
+                            message: e.to_string(),
+                            recoverable: true,
+                        };
+                        errors.push(error);
+                        warn!("Verification failed: {}", e);
+                    }
                 }
-                Err(e) => {
-                    let error = ProcessingError {
-                        stage: ProcessingStage::Verification,
-                        error_type: "VerificationFailed".to_string(),
-                        message: e.to_string(),
-                        recoverable: true,
-                    };
-                    errors.push(error);
-                    warn!("Verification failed: {}", e);
-                }
+            } else {
+                // Verification stage disabled
+                let error = ProcessingError {
+                    stage: ProcessingStage::Verification,
+                    error_type: "VerificationDisabled".to_string(),
+                    message: "Verification stage is currently disabled".to_string(),
+                    recoverable: true,
+                };
+                errors.push(error);
+                warn!("Verification stage is disabled, skipping evidence collection");
             }
         }
 

@@ -63,10 +63,10 @@ pub struct KnowledgeEntry {
     pub source: String,
     pub confidence: f64,
     pub entity_type: String,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub created_at: DateTime<Utc>,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub updated_at: DateTime<Utc>,
     pub decay_rate: f64,

@@ -1,6 +1,7 @@
 //! Task decomposition engine and pattern analysis
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use std::collections::{HashMap, HashSet};
 
 pub mod task_analyzer;

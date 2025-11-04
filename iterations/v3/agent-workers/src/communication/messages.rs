@@ -1,6 +1,7 @@
 //! Worker communication message types and handling
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use crate::parallel_types::*;
 use crate::WorkerMessage;
 use chrono::{DateTime, Utc};

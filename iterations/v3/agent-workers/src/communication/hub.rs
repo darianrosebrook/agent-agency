@@ -1,6 +1,7 @@
 //! Communication hub that orchestrates message passing
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use crate::parallel_types::*;
 use crate::WorkerMessage;
 use crate::error::*;

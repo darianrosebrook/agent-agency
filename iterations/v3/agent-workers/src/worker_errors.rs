@@ -1,6 +1,7 @@
 //! Error types for the parallel worker system
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use std::path::PathBuf;
 use thiserror::Error;
 use crate::parallel_types::{TaskId, SubTaskId, WorkerId, WorkerSpecialty};
@@ -376,6 +377,15 @@ impl From<WorkerError> for ParallelError {
         ParallelError::Coordination {
             message: format!("Worker error: {:?}", err),
             source: None,
+        }
+    }
+}
+
+impl From<DecompositionError> for ParallelError {
+    fn from(err: DecompositionError) -> Self {
+        ParallelError::Decomposition {
+            message: err.to_string(),
+            source: Some(Box::new(err)),
         }
     }
 }

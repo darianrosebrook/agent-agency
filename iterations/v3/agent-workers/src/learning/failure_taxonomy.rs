@@ -1,6 +1,7 @@
 //! Failure taxonomy for categorizing and analyzing failures
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;

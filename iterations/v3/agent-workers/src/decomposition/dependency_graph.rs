@@ -1,6 +1,7 @@
 //! Dependency analysis and graph construction for task decomposition
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use crate::parallel_types::*;
 use crate::error::*;
 use std::collections::{HashMap, HashSet};

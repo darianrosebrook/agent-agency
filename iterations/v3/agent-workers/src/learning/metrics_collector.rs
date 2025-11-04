@@ -1,6 +1,7 @@
 //! Parallel worker metrics collector
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use std::sync::Arc;
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};

@@ -9,7 +9,7 @@ use super::visual_search::VisualSearchEngine;
 /// Document indexer for managing content indexing
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct DocumentIndexerr {
+pub struct DocumentIndexer {
     text_engine: super::text_search::TextSearchEngine,
     visual_engine: super::visual_search::VisualSearchEngine,
 }

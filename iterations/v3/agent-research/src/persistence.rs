@@ -53,7 +53,7 @@ pub struct LearningStateSnapshot {
     #[schemars(with = "String")]
     pub id: Uuid,
     /// Timestamp of snapshot creation
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
     /// Worker performance models
@@ -80,7 +80,7 @@ pub struct WorkerPerformanceModel {
     /// Adaptation parameters
     pub adaptation_params: AdaptationParameters,
     /// Last updated timestamp
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub last_updated: DateTime<Utc>,
 }
@@ -157,7 +157,7 @@ pub struct LearningMetricsSnapshot {
 /// Efficiency data point
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EfficiencyDataPoint {
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
     pub efficiency_score: f64,
@@ -168,7 +168,7 @@ pub struct EfficiencyDataPoint {
 /// Quality data point
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QualityDataPoint {
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
     pub avg_quality_score: f64,
@@ -182,10 +182,10 @@ pub struct TaskExecutionRecord {
     pub task_id: Uuid,
     pub worker_id: String,
     pub task_type: TaskType,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub start_time: DateTime<Utc>,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub end_time: DateTime<Utc>,
     pub success: bool,
@@ -214,7 +214,7 @@ pub struct ResourceAllocationPattern {
     pub optimal_worker_assignment: Vec<String>,
     pub resource_requirements: ResourceRequirements,
     pub success_probability: f64,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub last_validated: DateTime<Utc>,
 }
@@ -589,7 +589,7 @@ pub trait LearningStorageBackend: Send + Sync {
 pub struct SnapshotMetadata {
     #[schemars(with = "String")]
     pub id: Uuid,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
     pub size_bytes: u64,

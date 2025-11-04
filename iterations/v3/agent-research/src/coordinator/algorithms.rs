@@ -20,7 +20,7 @@ pub enum LearningAlgorithmm {
 /// Learning algorithm implementation
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct LearningAlgorithmss {
+pub struct LearningAlgorithms {
     algorithms: HashMap<LearningAlgorithm, Box<dyn LearningStrategy>>,
 }
 
@@ -288,14 +288,14 @@ pub trait LearningStrategy {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct LearningInputt {
+pub struct LearningInput {
     pub data: Vec<f64>,
     pub context: HashMap<String, String>,
 }
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct LearningOutputt {
+pub struct LearningOutput {
     pub result: String,
     pub confidence: f64,
     pub improvements: Vec<String>,

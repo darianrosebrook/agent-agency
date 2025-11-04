@@ -10,9 +10,8 @@ use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use uuid::Uuid;
 use chrono::Utc;
-use serde::{Serialize, Deserialize};
 use schemars::JsonSchema;
-use agent_agency_contracts::*;
+use serde::{Serialize, Deserialize};use agent_agency_contracts::*;
 // Council coordinator trait is now imported from contracts
 
 

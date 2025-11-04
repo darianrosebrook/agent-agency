@@ -4,14 +4,14 @@
 //! and session management structures.
 
 use schemars::JsonSchema;
-use crate::judge_backup::verdicts::JudgeVerdict;
+use serde::{Serialize, Deserialize};use crate::judge_backup::verdicts::JudgeVerdict;
 use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Judge type specialization
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-enum JudgeType {
+pub enum JudgeType {
     Constitutional,     // CAWS compliance and constitutional analysis
     Technical,          // Technical implementation analysis
     Quality,            // Quality assessment (alias for QualityAssurance)
@@ -118,7 +118,7 @@ impl std::fmt::Display for VerdictSummary {
 /// Judge health metrics for monitoring
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct JudgeHealthMetrics {
+pub struct JudgeHealthMetrics {
     pub judge_id: String,
     pub response_time_avg_ms: u64,
     pub success_rate: f64,
@@ -133,7 +133,7 @@ struct JudgeHealthMetrics {
 /// Judge health status
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-enum JudgeHealthStatus {
+pub enum JudgeHealthStatus {
     Healthy,
     Degraded,
     Unhealthy,

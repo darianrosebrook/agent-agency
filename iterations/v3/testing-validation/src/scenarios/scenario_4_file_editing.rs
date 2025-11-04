@@ -18,8 +18,12 @@ use tempfile::TempDir;
 use tokio::fs;
 use tokio::process::Command;
 
+#[cfg(feature = "full")]
 use agent_orchestration::{
-    AutonomousFileEditor, FileChange, ChangeType,
+    AutonomousFileEditor,
+};
+use agent_agency_contracts::{
+    FileChange, ChangeType,
 };
 use data_infrastructure::file_operations_service::create_file_operations_service;
 use system_common_interfaces::{
@@ -35,6 +39,7 @@ pub enum FileEditingScenario {
 }
 
 /// Run the file editing E2E test
+#[cfg(feature = "full")]
 pub async fn run_file_editing_e2e_test() -> TestResult {
     let start_time = Instant::now();
     info!("Starting Scenario 4: Autonomous File Editing E2E test");
@@ -449,6 +454,19 @@ fn create_error_result(start_time: Instant, error_msg: String) -> TestResult {
         passed: false,
         duration_ms: start_time.elapsed().as_millis() as u64,
         error_message: Some(error_msg),
+        metrics: TestMetrics::default(),
+    }
+}
+
+/// Stub implementation when "full" feature is not enabled
+#[cfg(not(feature = "full"))]
+pub async fn run_file_editing_e2e_test() -> TestResult {
+    error!("File editing E2E test requires 'full' feature (agent-orchestration dependency)");
+    TestResult {
+        scenario: crate::Scenario::Scenario4FileEditing,
+        passed: false,
+        duration_ms: 0,
+        error_message: Some("File editing E2E test requires 'full' feature".to_string()),
         metrics: TestMetrics::default(),
     }
 }

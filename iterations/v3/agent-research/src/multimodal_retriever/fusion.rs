@@ -7,7 +7,7 @@ use super::core::MultimodalSearchResult;
 /// Fusion engine for combining results from different modalities
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct FusionEnginee {
+pub struct FusionEngine {
     config: super::core::MultimodalRetrieverConfig,
 }
 

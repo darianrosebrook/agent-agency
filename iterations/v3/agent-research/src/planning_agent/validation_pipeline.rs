@@ -29,9 +29,10 @@ pub enum ValidationStage {
 
 /// Adapter to convert domain-specific validation stages to system-configuration validation stages
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize, JsonSchema)]
 pub struct ValidationStageAdapter {
     stage_type: ValidationStage,
+    #[serde(skip)]
     caws_validator: Option<Arc<dyn CawsValidator>>,
 }
 
@@ -494,7 +495,7 @@ pub struct ValidationPipeline {
 /// Configuration for the validation pipeline
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct ValidationPipelineConfigg {
+pub struct ValidationPipelineConfig {
     /// Whether to run in strict mode (fail on warnings)
     pub strict_mode: bool,
 

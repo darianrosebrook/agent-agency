@@ -267,11 +267,7 @@ struct PerformanceRisk {
 
 /// Ethical concern category
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct EthicalConcernCategory {
-    pub category: crate::judge_backup::risk::EthicalCategory,
-    pub severity_score: f64,
-}
+// EthicalConcernCategory is imported from crate::judge_backup::risk
 
 /// Stakeholder impact assessment
 
@@ -599,16 +595,16 @@ impl RiskScorer {
 
         // Ethical concern categories
         let concern_categories = vec![
-            EthicalConcernCategory {
-                category: EthicalCategory::Privacy,
+            crate::judge_backup::risk::EthicalConcernCategory {
+                category: crate::judge_backup::risk::EthicalCategory::Privacy,
                 severity_score: if desc.contains("track") || desc.contains("monitor") { 0.9 } else { 0.1 },
-                affected_population_size: PopulationSize::LargeGroup,
+                affected_population_size: crate::judge_backup::risk::PopulationSize::LargeGroup,
                 regulatory_implications: true,
             },
-            EthicalConcernCategory {
-                category: EthicalCategory::Discrimination,
+            crate::judge_backup::risk::EthicalConcernCategory {
+                category: crate::judge_backup::risk::EthicalCategory::Discrimination,
                 severity_score: if desc.contains("profile") || desc.contains("demographic") { 0.8 } else { 0.1 },
-                affected_population_size: PopulationSize::SocietyWide,
+                affected_population_size: crate::judge_backup::risk::PopulationSize::SocietyWide,
                 regulatory_implications: true,
             },
         ];

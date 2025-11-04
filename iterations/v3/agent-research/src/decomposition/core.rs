@@ -12,7 +12,9 @@ use tracing::debug;
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct DecompositionStage {
+    #[serde(skip)]
     claim_extractor: Arc<RwLock<ClaimExtractor>>,
+    #[serde(skip)]
     context_bracket_adder: Arc<RwLock<ContextBracketAdder>>,
 }
 

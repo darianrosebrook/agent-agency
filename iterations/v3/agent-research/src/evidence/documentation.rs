@@ -4,11 +4,13 @@ use super::types::*;
 use crate::extraction_types::{AtomicClaim, Evidence, EvidenceType, EvidenceSource, ProcessingContext};
 use crate::evidence::evidence_types::EvidenceCollectorConfig;
 use anyhow::Result;
+use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 
 /// Documentation collector
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct DocumentationCollectorr {
+pub struct DocumentationCollector {
     config: EvidenceCollectorConfig,
 }
 

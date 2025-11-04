@@ -85,8 +85,9 @@ struct CoreMLModel {
 /// Core ML manager for loading and managing models
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-struct CoreMLManager {
+pub struct CoreMLManager {
     /// Loaded models by type and name
+    #[serde(skip)]
     #[schemars(skip)]
     models: RwLock<HashMap<(CoreMLModelType, String), Arc<CoreMLModel>>>,
     /// Base path for Core ML models

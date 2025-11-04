@@ -3,7 +3,7 @@
 //! This module provides standardized configuration structures that can be used
 //! across different pipeline implementations.
 
-use schemars::JsonSchema;
+// use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 

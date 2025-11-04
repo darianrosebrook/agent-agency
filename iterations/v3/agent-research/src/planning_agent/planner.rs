@@ -160,7 +160,7 @@ impl PlanningAgent {
 
     fn extract_goals_from_description(&self, description: &str) -> PlanningResult<Vec<String>> {
         // Extract goals using pattern matching and sentence analysis
-        let mut goals = Vec::new();
+        let mut goals: Vec<String> = Vec::new();
         
         // Split into sentences for better goal extraction
         let sentences: Vec<&str> = description.split(|c: char| c == '.' || c == '!' || c == '?')
@@ -724,7 +724,7 @@ pub enum ValidationType {
 }
 
 /// Validation results
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ValidationResult {
     Pass,
     Warning,
@@ -970,7 +970,7 @@ impl AdvancedGoalAnalyzer {
 
     /// Extract goals using multiple methods (pattern matching, semantic analysis, etc.)
     fn extract_goals_multimodal(&self, input_text: &str) -> PlanningResult<Vec<ExtractedGoal>> {
-        let mut goals = Vec::new();
+        let mut goals: Vec<ExtractedGoal> = Vec::new();
         let mut goal_id_counter = 0;
 
         // Method 1: Pattern-based extraction
@@ -1014,7 +1014,7 @@ impl AdvancedGoalAnalyzer {
 
     /// Extract goals using pattern matching
     fn extract_goals_by_patterns(&self, input_text: &str) -> PlanningResult<Vec<String>> {
-        let mut goals = Vec::new();
+        let mut goals: Vec<String> = Vec::new();
 
         // Split into sentences and analyze each
         for sentence in input_text.split(|c: char| c == '.' || c == '!' || c == '?') {
@@ -1038,7 +1038,7 @@ impl AdvancedGoalAnalyzer {
 
     /// Extract goals by analyzing individual sentences
     fn extract_goals_by_sentences(&self, input_text: &str) -> PlanningResult<Vec<String>> {
-        let mut goals = Vec::new();
+        let mut goals: Vec<String> = Vec::new();
 
         for sentence in input_text.split(|c: char| c == '.' || c == '!' || c == '?') {
             let sentence = sentence.trim();
@@ -1059,7 +1059,7 @@ impl AdvancedGoalAnalyzer {
 
     /// Extract stakeholder-specific goals
     fn extract_stakeholder_goals(&self, input_text: &str) -> PlanningResult<Vec<String>> {
-        let mut goals = Vec::new();
+        let mut goals: Vec<String> = Vec::new();
 
         for sentence in input_text.split(|c: char| c == '.' || c == '!' || c == '?') {
             let sentence = sentence.trim();

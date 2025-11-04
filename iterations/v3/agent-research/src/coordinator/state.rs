@@ -10,7 +10,7 @@ use uuid::Uuid;
 /// Learning session state
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct LearningSessionn {
+pub struct LearningSession {
     #[schemars(with = "String")]
     pub id: Uuid,
     pub state: SessionState,
@@ -62,7 +62,7 @@ pub enum EventType {
 /// State manager for learning sessions
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct StateManagerr {
+pub struct StateManager {
     sessions: HashMap<Uuid, LearningSession>,
 }
 

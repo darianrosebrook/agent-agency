@@ -7,6 +7,8 @@
 
 use std::sync::Arc;
 use anyhow::Result;
+use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 use async_trait::async_trait;
 use crate::planning::DatabaseOperations;
@@ -207,9 +209,10 @@ impl PlanningSystemFactory {
                     current_assignment: None,
                     health: crate::planning::plan_executor::WorkerHealth::Healthy,
                     performance: crate::planning::plan_executor::WorkerPerformance {
-                        avg_execution_time_ms: 0.0,
+                        tasks_completed: 0,
+                        tasks_failed: 0,
+                        avg_completion_time_ms: 0.0,
                         success_rate: 1.0,
-                        quality_score: 1.0,
                     },
                 })
             }
@@ -228,9 +231,9 @@ impl PlanningSystemFactory {
                 worker_assigner.clone(),
                 scope_guard.clone(),
                 council_monitor.clone(),
-                coordinator_ref.clone(), // Reference to the coordinator being created
+                coordinator_ref.clone(), // Weak reference to the coordinator being created
                 audit_trail.clone(),
-                Arc::new(std::sync::Mutex::new(todo_integration.clone())), // Wrap Arc<TodoIntegration> in Arc<Mutex<Arc<TodoIntegration>>>
+                Arc::new(tokio::sync::Mutex::new(todo_integration.clone())), // Wrap Arc<TodoIntegration> in Arc<Mutex<Arc<TodoIntegration>>>
                 crate::planning::plan_executor::ExecutionConfig::default(),
             ));
             

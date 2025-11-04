@@ -39,7 +39,7 @@ pub struct User {
     pub password_hash: String, // SHA-256 hash of password
     pub role: UserRole,
     pub permissions: Vec<String>,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub created_at: DateTime<Utc>,
     pub last_login: Option<DateTime<Utc>>,

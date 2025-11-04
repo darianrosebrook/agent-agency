@@ -4,7 +4,7 @@
 //! council decision, handling conflicting opinions and consensus algorithms.
 
 use schemars::JsonSchema;
-use futures_util::TryFutureExt;
+use serde::{Serialize, Deserialize};use futures_util::TryFutureExt;
 use std::collections::HashMap;
 use std::time::Duration;
 use futures_util::FutureExt;
@@ -36,7 +36,7 @@ fn string_to_judge_type(s: &str) -> JudgeType {
 }
 
 // Helper function to convert string to JudgeVerdict
-fn string_to_judge_verdict(s: &str) -> Result<JudgeVerdict, CouncilError> {
+fn string_to_judge_verdict(_s: &str) -> Result<JudgeVerdict, CouncilError> {
     // This is a simplified conversion - in reality this would need to parse the string
     // For now, return a default verdict
     Ok(JudgeVerdict::Approve {
@@ -90,7 +90,7 @@ enum EffortComplexity {
 /// Result of aggregating multiple judge verdicts
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct AggregationResult {
+pub struct AggregationResult {
     /// Overall council decision
     pub council_decision: CouncilDecision,
 
@@ -196,7 +196,7 @@ struct AggregatedChanges {
 /// Aggregated effort estimate
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-struct AggregatedEffort {
+pub struct AggregatedEffort {
     pub min_person_hours: f64,
     pub max_person_hours: f64,
     pub average_person_hours: f64,
@@ -238,7 +238,7 @@ struct AggregationMetadata {
 /// Verdict aggregator that combines judge opinions
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-struct VerdictAggregator {
+pub struct VerdictAggregator {
     config: AggregationConfig,
 }
 
@@ -251,7 +251,7 @@ impl Default for VerdictAggregator {
 /// Configuration for verdict aggregation
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct AggregationConfig {
+pub struct AggregationConfig {
     /// Minimum consensus threshold (0.0-1.0)
     pub consensus_threshold: f64,
 
@@ -271,7 +271,7 @@ struct AggregationConfig {
 /// How to handle dissenting opinions
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-enum DissentHandling {
+pub enum DissentHandling {
     /// Strict - any dissent requires human review
     Strict,
 
@@ -285,7 +285,7 @@ enum DissentHandling {
 /// Risk aggregation strategy
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-enum RiskAggregationStrategy {
+pub enum RiskAggregationStrategy {
     /// Most conservative risk level wins
     MostConservative,
 
@@ -1121,7 +1121,7 @@ impl VerdictAggregator {
 
 /// Comprehensive duplicate change detection and merging system
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug)]
 struct ChangeDeduplicationEngine {
     /// Semantic similarity threshold for duplicate detection (0.0-1.0)
     semantic_similarity_threshold: f64,
@@ -1130,11 +1130,25 @@ struct ChangeDeduplicationEngine {
     /// Maximum number of changes to process in batch
     max_batch_size: usize,
     /// Cached similarity computations for performance
+    #[serde(skip)]
     similarity_cache: lru::LruCache<String, HashMap<String, f64>>,
     /// Change conflict resolution strategies
     conflict_resolvers: HashMap<ConflictType, ConflictResolutionStrategy>,
     /// Performance metrics for deduplication operations
     metrics: DeduplicationMetrics,
+}
+
+impl Default for ChangeDeduplicationEngine {
+    fn default() -> Self {
+        Self {
+            semantic_similarity_threshold: 0.8,
+            text_similarity_threshold: 0.7,
+            max_batch_size: 100,
+            similarity_cache: lru::LruCache::new(std::num::NonZeroUsize::new(1000).unwrap()),
+            conflict_resolvers: HashMap::new(),
+            metrics: DeduplicationMetrics::default(),
+        }
+    }
 }
 
 /// Result of duplicate change detection and merging
@@ -1360,11 +1374,6 @@ pub fn create_verdict_aggregator() -> VerdictAggregator {
     VerdictAggregator::new(AggregationConfig::default())
 }
 
-impl Default for ChangeDeduplicationEngine {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
 impl ChangeDeduplicationEngine {
     /// Create a new deduplication engine with default settings

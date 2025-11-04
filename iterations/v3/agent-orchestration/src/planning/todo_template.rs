@@ -300,7 +300,7 @@ pub struct QualityVerification {
 /// TODO template system
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-struct TodoTemplateSystem {
+pub struct TodoTemplateSystem {
     /// Available templates
     templates: HashMap<String, TodoTemplate>,
 
@@ -400,8 +400,14 @@ impl TodoTemplateSystem {
 
     /// Complete a TODO step
     pub async fn complete_step(&mut self, instance_id: Uuid, step_id: &str, notes: Option<String>) -> Result<()> {
-        let instance = self.active_instances.get_mut(&instance_id)
+        // Get template info first (immutable borrow)
+        let instance_info = self.active_instances.get(&instance_id)
             .ok_or_else(|| anyhow!("Instance {} not found", instance_id))?;
+        let template = self.get_template_for_instance(instance_info)?;
+        let total_steps = template.steps.len();
+
+        // Now get mutable instance
+        let instance = self.active_instances.get_mut(&instance_id).unwrap();
 
         // Verify quality gates are satisfied
         if !self.quality_enforcer.verify_step_completion(instance, step_id).await? {
@@ -423,8 +429,11 @@ impl TodoTemplateSystem {
         instance.updated_at = Utc::now();
 
         // Check if instance is complete
-        if self.is_instance_complete(instance) {
-            self.mark_instance_complete(instance);
+        let completed_count = instance.completed_steps.len();
+
+        if completed_count >= total_steps {
+            instance.current_step = None;
+            // Could add completion timestamp, final verification, etc.
         }
 
         Ok(())

@@ -6,7 +6,7 @@ use crate::ResearchEvent;
 /// Event emitter for research events
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct EventEmitterr {
+pub struct EventEmitter {
     sender: mpsc::UnboundedSender<ResearchEvent>,
 }
 

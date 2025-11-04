@@ -77,6 +77,8 @@ libtorch
 
 # Rust build artifacts and cache
 target/
+# Per-process target directories for concurrent builds (auto-generated)
+.target/
 **/*.rs.bk
 **/.rustc_info.json
 

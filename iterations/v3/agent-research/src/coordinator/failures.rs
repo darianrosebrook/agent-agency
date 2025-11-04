@@ -9,7 +9,7 @@ use std::collections::HashMap;
 /// Failure categories for classification
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
-pub enum FailureCategoryy {
+pub enum FailureCategory {
     Timeout,
     ResourceExhaustion,
     QualityDegradation,
@@ -23,7 +23,7 @@ pub enum FailureCategoryy {
 /// Heuristic mapping for failure analysis
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct FailureHeuristicss {
+pub struct FailureHeuristics {
     pub failure_patterns: HashMap<FailureCategory, FailurePattern>,
     pub remediation_strategies: HashMap<FailureCategory, Vec<String>>,
     pub recovery_weights: HashMap<FailureCategory, f64>,
@@ -213,7 +213,7 @@ impl FailureHeuristics {
 /// Pattern for failure analysis
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct FailurePatternn {
+pub struct FailurePattern {
     pub keywords: Vec<String>,
     pub severity_indicators: Vec<String>,
     pub recovery_probability: f64,
@@ -234,7 +234,7 @@ pub struct FailureAnalysis {
 /// Severity levels for failure analysis
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-pub enum FailureSeverityy {
+pub enum FailureSeverity {
     Low,
     Medium,
     High,
@@ -244,7 +244,7 @@ pub enum FailureSeverityy {
 /// Context information for failure analysis
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct FailureContextt {
+pub struct FailureContext {
     pub execution_time: f64,
     pub timeout_threshold: f64,
     pub resource_usage: super::resources::ResourceMetrics,
@@ -256,7 +256,7 @@ pub struct FailureContextt {
 /// Failure recovery strategy
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub enum RecoveryStrategyy {
+pub enum RecoveryStrategy {
     RetryWithBackoff,
     ReduceComplexity,
     IncreaseResources,

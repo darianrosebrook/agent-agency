@@ -211,7 +211,7 @@ impl ContextBracketAdder {
 /// Verification requirements derived from contextual brackets
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct VerificationRequirementss {
+pub struct VerificationRequirements {
     /// Types of tests needed for verification
     pub test_types: Vec<String>,
     /// Data sources required for verification

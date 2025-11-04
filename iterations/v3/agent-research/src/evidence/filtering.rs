@@ -8,7 +8,7 @@ use std::collections::HashMap;
 /// Evidence filter and ranking engine
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct EvidenceFilterr {
+pub struct EvidenceFilter {
     config: EvidenceCollectorConfig,
 }
 

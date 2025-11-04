@@ -9,7 +9,7 @@ use std::collections::HashMap;
 /// Resource utilization metrics
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct ResourceMetricss {
+pub struct ResourceMetrics {
     pub cpu_seconds: f64,
     pub memory_bytes: u64,
     pub tokens_used: u64,
@@ -19,7 +19,7 @@ pub struct ResourceMetricss {
 /// Resource utilization levels
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub enum ResourceLevell {
+pub enum ResourceLevel {
     Low,
     Moderate,
     High,
@@ -29,7 +29,7 @@ pub enum ResourceLevell {
 /// Heuristic mapping for resource utilization
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct ResourceHeuristicss {
+pub struct ResourceHeuristics {
     pub cpu_thresholds: ResourceThresholds,
     pub memory_thresholds: ResourceThresholds,
     pub token_thresholds: ResourceThresholds,
@@ -128,7 +128,7 @@ impl ResourceHeuristics {
 /// Resource usage thresholds
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct ResourceThresholdss {
+pub struct ResourceThresholds {
     pub low_max: f64,
     pub moderate_max: f64,
     pub high_max: f64,
@@ -138,7 +138,7 @@ pub struct ResourceThresholdss {
 /// Efficiency calculation weights
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct EfficiencyWeightss {
+pub struct EfficiencyWeights {
     pub cpu_efficiency: f64,
     pub memory_efficiency: f64,
     pub token_efficiency: f64,
@@ -159,7 +159,7 @@ impl Default for EfficiencyWeights {
 /// Resource status assessment
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct ResourceStatuss {
+pub struct ResourceStatus {
     pub cpu_level: ResourceLevel,
     pub memory_level: ResourceLevel,
     pub token_level: ResourceLevel,
@@ -203,7 +203,7 @@ impl ResourceStatus {
 /// Resource usage trend analysis
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct ResourceTrendd {
+pub struct ResourceTrend {
     pub metric: ResourceMetric,
     pub trend: Trend,
     pub change_percentage: f64,
@@ -212,7 +212,7 @@ pub struct ResourceTrendd {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub enum ResourceMetricc {
+pub enum ResourceMetric {
     CpuUsage,
     MemoryUsage,
     TokenUsage,
@@ -221,7 +221,7 @@ pub enum ResourceMetricc {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub enum Trendd {
+pub enum Trend {
     Improving,
     Stable,
     Degrading,

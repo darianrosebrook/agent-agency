@@ -5,14 +5,13 @@
 //! decision making.
 
 use schemars::JsonSchema;
-use std::collections::HashMap;
+use serde::{Serialize, Deserialize};use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{mpsc, RwLock};
 use tokio::time;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
-use serde::{Serialize, Deserialize};
 
 use agent_agency_contracts::task_executor::{TaskExecutionResult, TaskExecutor};
 use agent_agency_contracts::working_spec::{
@@ -49,7 +48,7 @@ use agent_agency_contracts::final_verdict::FinalVerdictContract;
 // Define missing types that were referenced from non-existent crates
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct ConsensusResult {
+pub struct ConsensusResult {
     pub approved: bool,
     pub confidence: f64,
     pub reason: String,
@@ -828,7 +827,6 @@ struct ValidationResult {
 /// Configuration for the autonomous executor
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-#[derive(Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AutonomousExecutorConfig {
     /// Maximum concurrent tasks
     pub max_concurrent_tasks: usize,
@@ -1074,7 +1072,7 @@ impl AutonomousExecutor {
 
         // Spawn the main execution loop
         tokio::spawn(async move {
-            if let Err(e) = executor.execution_loop().await {
+            if let Err(e) = Arc::clone(&executor).execution_loop().await {
                 tracing::error!("Autonomous execution loop failed: {}", e);
             }
         });
@@ -1095,7 +1093,7 @@ impl AutonomousExecutor {
     }
 
     /// Main execution loop
-    async fn execution_loop(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn execution_loop(self: Arc<Self>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut receiver = self.task_receiver.write().await;
 
         loop {
@@ -1459,7 +1457,7 @@ impl AutonomousExecutor {
             ExecutionMode::DryRun => {
                 tracing::info!("Dry-run mode: Skipping actual orchestration, simulating results");
                 // Create a mock verdict for dry-run
-                Ok(agent_agency_contracts::final_verdict::FinalVerdictContract {
+                Ok::<agent_agency_contracts::final_verdict::FinalVerdictContract, Box<dyn std::error::Error + Send + Sync>>(agent_agency_contracts::final_verdict::FinalVerdictContract {
                     decision: agent_agency_contracts::final_verdict::FinalDecision::Accept,
                     votes: vec![],
                     dissent: String::new(),

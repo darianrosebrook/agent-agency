@@ -3,7 +3,7 @@
 //! Core types for judge configuration, health metrics, and review contexts.
 
 use schemars::JsonSchema;
-use std::collections::HashMap;
+use serde::{Serialize, Deserialize};use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use crate::judge_backup::backup_types::JudgeType;
 use crate::judge_backup::verdicts::JudgeVerdict;

@@ -6,7 +6,7 @@ use crate::{ConfigurationUpdate, ContentProcessingConfig, ContentProcessor};
 /// Content processor manager
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct ContentProcessorManagerr {
+pub struct ContentProcessorManager {
     processor: Arc<ContentProcessor>,
     config: ResearchAgentConfig,
 }

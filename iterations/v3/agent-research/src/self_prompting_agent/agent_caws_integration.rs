@@ -216,16 +216,16 @@ impl WorkingSpecValidator {
 
     pub async fn validate_spec(&self, spec_content: &str) -> Result<(), SelfPromptingAgentError> {
         // Parse YAML or JSON working spec
-        // PLACEHOLDER: YAML parsing requires serde_yaml dependency
-        // For now, only JSON format is supported
-        let spec: serde_json::Value = if spec_content.trim().starts_with('{') {
+        // TODO: Add serde_yaml dependency for full YAML support
+        let spec: serde_json::Value = if spec_content.trim().starts_with('{') || spec_content.trim().starts_with('[') {
             // JSON format
             serde_json::from_str(spec_content)
                 .map_err(|e| SelfPromptingAgentError::Validation(format!("Invalid JSON spec: {}", e)))?
         } else {
-            // YAML format - PLACEHOLDER: requires serde_yaml dependency
+            // YAML format - currently unsupported
+            // TODO: Implement YAML parsing with serde_yaml when dependency is available
             return Err(SelfPromptingAgentError::Validation(
-                "YAML format requires serde_yaml dependency (not currently available)".to_string()
+                "YAML format not yet supported. Please use JSON format for working specs.".to_string()
             ));
         };
 

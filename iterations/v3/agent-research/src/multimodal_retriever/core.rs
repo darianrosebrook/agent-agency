@@ -107,7 +107,7 @@ pub struct MultimodalSearchResult {
     pub modality_scores: HashMap<String, f32>,
     pub combined_score: f32,
     pub metadata: HashMap<String, serde_json::Value>,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
     pub source_modality: String,
@@ -129,6 +129,16 @@ pub struct VisualSearchConfig {
     pub similarity_threshold: f32,
     pub max_results: usize,
     pub feature_dimensions: usize,
+}
+
+impl Default for VisualSearchConfig {
+    fn default() -> Self {
+        Self {
+            similarity_threshold: 0.8,
+            max_results: 10,
+            feature_dimensions: 512,
+        }
+    }
 }
 
 use std::collections::HashMap;

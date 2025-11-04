@@ -6,7 +6,7 @@
 //! @author @darianrosebrook
 
 use schemars::JsonSchema;
-use std::collections::HashMap;
+use serde::{Serialize, Deserialize};use std::collections::HashMap;
 use anyhow::{anyhow, Result};
 use agent_agency_contracts::{
     working_spec::{WorkingSpec, FileChange as WorkingSpecFileChange, AcceptanceCriterion},

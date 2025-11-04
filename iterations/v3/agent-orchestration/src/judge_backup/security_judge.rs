@@ -5,6 +5,8 @@
 
 use crate::council_errors::CouncilResult;
 use crate::judge_backup::traits::Judge;
+use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use crate::judge_backup::backup_types::JudgeHealthMetrics;
 use crate::judge_backup::types::{JudgeConfig, ReviewContext};
 use crate::judge_backup::verdicts::{
@@ -17,7 +19,7 @@ use std::time::{Duration, Instant};
 /// Security Judge for security analysis and vulnerability assessment
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-struct SecurityJudge {
+pub struct SecurityJudge {
     config: JudgeConfig,
     health_metrics: JudgeHealthMetrics,
     last_review_time: Option<Instant>,

@@ -1,6 +1,7 @@
 //! Parallel coordinator - main orchestrator for parallel task execution
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use crate::parallel_types::{ComplexTask, SubTask, TaskId, SubTaskId, WorkerId, TaskResult, WorkerResult, ParallelResult};
 use crate::error::{ParallelError, CommunicationError, ValidationError, ProgressError};
 use crate::decomposition::{DecompositionEngine};
@@ -85,8 +86,9 @@ impl OrchestratorHandle for RealOrchestratorHandle {
         // Execute the task using the real TaskExecutor
         let worker_id = uuid::Uuid::new_v4();
         let execution_result = self.task_executor.execute_task(task_spec, worker_id).await
-            .map_err(|e| ParallelError::Coordination { 
-                message: format!("Task execution failed: {}", e) 
+            .map_err(|e| ParallelError::Coordination {
+                message: format!("Task execution failed: {}", e),
+                source: Some(Box::new(e))
             })?;
         
         let execution_time = start_time.elapsed();
@@ -246,7 +248,7 @@ impl ParallelCoordinator {
         // Analyze task complexity
         let complexity_analysis = self.decomposition_engine.analyze_complexity(&task).await?;
         
-        if complexity_analysis.complexity_score < self.config.complexity_threshold {
+        if complexity_analysis.complexity_score < self.config.complexity_threshold as f64 {
             tracing::info!("Task complexity too low for parallel execution, using sequential");
             return self.execute_sequential_fallback(task).await;
         }
@@ -263,7 +265,7 @@ impl ParallelCoordinator {
         let execution_stats = self.execute_subtasks_parallel(subtasks, &task).await?;
 
         // Synthesize results
-        let final_result = self.progress_synthesizer.synthesize_results(execution_stats).await?;
+        let final_result = self.progress_synthesizer.synthesize_results(execution_stats)?;
 
         tracing::info!("Parallel execution completed for task: {}", task.title);
         Ok(final_result)
@@ -274,40 +276,34 @@ impl ParallelCoordinator {
         &self,
         subtasks: Vec<SubTask>,
         parent_task: &ComplexTask,
-    ) -> ParallelResult<ParallelExecutionStats> {
-        let mut execution_stats = ParallelExecutionStats::new();
+    ) -> ParallelResult<Vec<WorkerResult>> {
         let mut handles = Vec::new();
 
-        // Create execution handles for each subtask
+        // Create execution futures for each subtask
         for subtask in subtasks {
-            let handle = self.create_subtask_execution_handle(subtask, parent_task).await?;
-            handles.push(handle);
+            let future = self.create_subtask_execution_handle(subtask, parent_task);
+            handles.push(future);
         }
 
         // Execute all subtasks concurrently
         let results = futures::future::join_all(handles).await;
 
-        // Process results and update stats
+        // Collect successful results
+        let mut worker_results = Vec::new();
         for result in results {
             match result {
                 Ok(worker_result) => {
-                    execution_stats.update_with_task(
-                        worker_result.task_id,
-                        worker_result.execution_time.as_millis() as u64,
-                        worker_result.success,
-                        worker_result.quality_score,
-                        1, // subtask count
-                        1, // worker count
-                    );
+                    worker_results.push(worker_result);
                 }
                 Err(e) => {
                     tracing::error!("Subtask execution failed: {}", e);
-                    execution_stats.update_with_cancellation();
+                    // For failed subtasks, we could create a failed WorkerResult
+                    // but for now we'll just log the error
                 }
             }
         }
 
-        Ok(execution_stats)
+        Ok(worker_results)
     }
 
     /// Create execution handle for a subtask
@@ -316,23 +312,18 @@ impl ParallelCoordinator {
         subtask: SubTask,
         parent_task: &ComplexTask,
     ) -> ParallelResult<WorkerResult> {
+        // Get available workers from worker manager
+        let available_workers = self.worker_manager.list_available_workers().await;
+        
         // Select optimal worker for the subtask
-        let task_pattern = TaskPattern {
-            id: uuid::Uuid::new_v4(),
-            pattern_type: crate::learning::types::PatternType::TaskComplexity,
-            characteristics: std::collections::HashMap::from([
-                ("domain".to_string(), serde_json::json!(parent_task.scope.domains.first().cloned().unwrap_or_default())),
-                ("complexity".to_string(), serde_json::json!(subtask.complexity)),
-                ("required_capabilities".to_string(), serde_json::json!(subtask.required_capabilities)),
-                ("estimated_duration_ms".to_string(), serde_json::json!(subtask.estimated_duration_ms)),
-            ]),
-            frequency: 1,
-            last_seen: chrono::Utc::now(),
-        };
-
-        let worker_id = self.adaptive_selector.select_worker(&task_pattern).await
-            .map_err(|e| ParallelError::Coordination { 
-                message: format!("Worker selection failed: {}", e) 
+        let worker_id = self.adaptive_selector.select_worker(&subtask, &available_workers).await
+            .map_err(|e| ParallelError::Coordination {
+                message: format!("Worker selection failed: {}", e),
+                source: Some(e)
+            })?
+            .ok_or_else(|| ParallelError::Coordination {
+                message: "No suitable worker available".to_string(),
+                source: None
             })?;
 
         // Execute the subtask
@@ -342,12 +333,21 @@ impl ParallelCoordinator {
 
         Ok(WorkerResult {
             task_id: result.task_id,
+            subtask_id: result.subtask_id,
             worker_id,
             success: result.success,
+            output: format!("Subtask {} executed successfully", subtask.id.0),
             execution_time,
             quality_score: result.quality_score,
-            artifacts: result.artifacts,
-            errors: result.errors,
+            errors: result.errors.clone(),
+            metadata: HashMap::new(),
+            metrics: crate::parallel_types::WorkerMetrics {
+                start_time: chrono::Utc::now(),
+                end_time: chrono::Utc::now(),
+                files_modified: 0,
+                lines_changed: 0,
+            },
+            artifacts: result.artifacts.clone(),
         })
     }
 

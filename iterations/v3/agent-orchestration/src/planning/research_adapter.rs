@@ -43,9 +43,26 @@ impl ResearchEvidenceCollector for ResearchEvidenceAdapter {
             id: Uuid::new_v4(),
             claim_text: query.query.clone(),
             claim_type: agent_research::extraction_types::ClaimType::Factual, // Default to factual
+            verifiability: agent_research::extraction_types::VerifiabilityLevel::DirectlyVerifiable,
+            scope: agent_research::extraction_types::ClaimScope {
+                working_spec_id: "contracts-adapter".to_string(),
+                component_boundaries: vec![],
+                data_impact: agent_research::extraction_types::DataImpact::ReadOnly,
+            },
             confidence: 0.8,
-            context: query.context.clone(),
-            metadata: std::collections::HashMap::new(),
+            contextual_brackets: vec![],
+            subject: None,
+            predicate: None,
+            object: None,
+            context_brackets: vec![],
+            verification_requirements: vec![],
+            position: (0, 0),
+            sentence_fragment: "".to_string(),
+            evidence_links: vec![],
+            temporal_context: None,
+            verification_status: agent_research::extraction_types::VerificationStatus::Unverified,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
         };
 
         let processing_context = agent_research::extraction_types::ProcessingContext {
@@ -80,9 +97,26 @@ impl ResearchEvidenceCollector for ResearchEvidenceAdapter {
             id: Uuid::parse_str(&evidence.id).unwrap_or_else(|_| Uuid::new_v4()),
             claim_text: evidence.content.clone(),
             claim_type: self.map_evidence_type_to_claim_type(evidence.evidence_type),
+            verifiability: agent_research::extraction_types::VerifiabilityLevel::DirectlyVerifiable,
+            scope: agent_research::extraction_types::ClaimScope {
+                working_spec_id: "contracts-adapter".to_string(),
+                component_boundaries: vec![],
+                data_impact: agent_research::extraction_types::DataImpact::ReadOnly,
+            },
             confidence: evidence.confidence,
-            context: evidence.metadata.clone(),
-            metadata: std::collections::HashMap::new(),
+            contextual_brackets: vec![],
+            subject: None,
+            predicate: None,
+            object: None,
+            context_brackets: vec![],
+            verification_requirements: vec![],
+            position: (0, 0),
+            sentence_fragment: "".to_string(),
+            evidence_links: vec![],
+            temporal_context: None,
+            verification_status: agent_research::extraction_types::VerificationStatus::Unverified,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
         };
 
         // For now, return a basic validation result

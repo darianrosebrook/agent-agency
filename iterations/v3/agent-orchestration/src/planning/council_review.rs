@@ -11,9 +11,8 @@ use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use uuid::Uuid;
 use chrono::Utc;
-use serde::{Serialize, Deserialize};
 use schemars::JsonSchema;
-use agent_agency_contracts::{
+use serde::{Serialize, Deserialize};use agent_agency_contracts::{
     planning_io::ExecutionPlan as ContractExecutionPlan,
     types::prelude::*,
     *,
@@ -88,7 +87,7 @@ pub struct CouncilReviewResult {
 
 /// Scope validation result
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct ScopeValidationResult {
     /// Scope is valid
     pub is_valid: bool,
@@ -105,7 +104,7 @@ struct ScopeValidationResult {
 
 /// Scope violation details
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct ScopeViolation {
     /// Violation type
     pub violation_type: ScopeViolationType,
@@ -125,7 +124,7 @@ struct ScopeViolation {
 
 /// Scope violation types
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 enum ScopeViolationType {
     /// Exceeds file budget
     FileBudgetExceeded,
@@ -148,7 +147,7 @@ enum ScopeViolationType {
 
 /// Violation severity levels
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 enum ViolationSeverity {
     Low,
     Medium,
@@ -158,7 +157,7 @@ enum ViolationSeverity {
 
 /// Scope risk levels
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 enum ScopeRiskLevel {
     Low,
     Medium,
@@ -168,7 +167,7 @@ enum ScopeRiskLevel {
 
 /// Ethical assessment result
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct EthicalAssessmentResult {
     /// Assessment passed
     pub passed: bool,
@@ -185,7 +184,7 @@ struct EthicalAssessmentResult {
 
 /// Ethical concern details
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct EthicalConcern {
     /// Concern category
     pub category: EthicalCategory,
@@ -202,7 +201,7 @@ struct EthicalConcern {
 
 /// Ethical concern categories
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 enum EthicalCategory {
     Privacy,
     Security,
@@ -216,7 +215,7 @@ enum EthicalCategory {
 
 /// Ethical risk levels
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 enum EthicalRiskLevel {
     Low,
     Medium,
@@ -226,7 +225,7 @@ enum EthicalRiskLevel {
 
 /// Quality requirements for plan execution
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct QualityRequirements {
     /// Minimum test coverage required
     pub min_test_coverage: f64,
@@ -249,7 +248,7 @@ struct QualityRequirements {
 
 /// Council decision details
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct CouncilDecision {
     /// Final verdict
     pub verdict: CouncilVerdict,
@@ -270,7 +269,7 @@ struct CouncilDecision {
 
 /// Judge verdict details
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct JudgeVerdict {
     /// Judge identifier
     pub judge_id: String,
@@ -287,7 +286,7 @@ struct JudgeVerdict {
 
 /// Judge verdict types
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 enum JudgeVerdictType {
     Approve,
     Reject,
@@ -341,7 +340,7 @@ struct ReviewConfig {
 
 /// Council verdict types (simplified for planning)
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 enum CouncilVerdict {
     Approved,
     Rejected,

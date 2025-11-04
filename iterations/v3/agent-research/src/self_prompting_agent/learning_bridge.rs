@@ -6,10 +6,9 @@ use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 use std::sync::Arc;
 use crate::self_prompting_agent::prompting_types::SelfPromptingAgentError;
-use crate::learning_service::create_learning_service;
-// PLACEHOLDER: system_common_interfaces crate doesn't exist
-// Using a stub trait implementation instead
-// TODO: Replace with actual system_common_interfaces when available
+use crate::learning_service::{create_learning_service, LearningService as LearningServiceTrait};
+// Learning service trait for reflexive learning integration
+// This provides the interface for learning algorithms to analyze execution data
 #[async_trait::async_trait]
 pub trait LearningService: Send + Sync {
     async fn learn_from_execution(&self, context: &LearningContext, performance: &TaskPerformance) -> Result<LearningInsights, String>;
@@ -155,7 +154,7 @@ pub struct LearningStatistics {
 /// Learning bridge coordinator
 pub struct LearningBridge {
     /// Learning service instance
-    learning_service: Arc<dyn LearningService>,
+    learning_service: Arc<dyn LearningServiceTrait>,
 }
 
 impl LearningBridge {
@@ -255,7 +254,7 @@ pub struct LearningSignal {
 /// Reflexive learning system integration
 pub struct ReflexiveLearningSystem {
     /// Learning service instance
-    learning_service: Arc<dyn LearningService>,
+    learning_service: Arc<dyn LearningServiceTrait>,
 }
 
 impl ReflexiveLearningSystem {

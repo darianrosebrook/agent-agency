@@ -15,7 +15,7 @@ use tokio::sync::RwLock;
 /// Learning orchestrator that coordinates algorithm selection and execution
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct LearningOrchestratorr {
+pub struct LearningOrchestrator {
     /// Available learning algorithms
     algorithms: HashMap<LearningAlgorithmType, Box<dyn LearningAlgorithm>>,
     /// Performance tracker
@@ -137,13 +137,13 @@ impl Default for LearningOrchestrator {
 /// Learning system health monitor
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct LearningSystemHealthh {
+pub struct LearningSystemHealth {
     pub algorithm_count: usize,
     pub total_training_sessions: u64,
     pub average_performance: f64,
     pub system_uptime_seconds: u64,
     pub memory_usage_mb: f64,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub last_health_check: DateTime<Utc>,
 }

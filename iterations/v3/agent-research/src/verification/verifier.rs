@@ -96,6 +96,16 @@ pub struct SemanticAnalyzer {
     intent_analyzer: IntentAnalyzer,
 }
 
+impl SemanticAnalyzer {
+    pub fn new() -> Self {
+        Self {
+            semantic_parser: SemanticParser,
+            meaning_extractor: MeaningExtractor,
+            intent_analyzer: IntentAnalyzer,
+        }
+    }
+}
+
 // Placeholder implementations for all the validator components
 
 #[derive(Debug)]

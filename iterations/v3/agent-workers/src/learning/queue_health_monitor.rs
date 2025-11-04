@@ -1,6 +1,7 @@
 //! Queue health monitor for tracking queue performance
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use std::sync::Arc;
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};

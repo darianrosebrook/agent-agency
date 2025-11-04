@@ -8,7 +8,7 @@ use uuid::Uuid;
 /// Code metrics for analysis
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct CodeMetricss {
+pub struct CodeMetrics {
     pub lines_of_code: usize,
     pub function_count: usize,
 }

@@ -40,12 +40,13 @@ impl Default for WorkerPoolConfig {
 
 /// Handle to a worker instance with access to shared memory system
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone)]
 pub struct WorkerHandle {
     pub id: WorkerId,
     pub specialty: WorkerSpecialty,
     pub capabilities: WorkerCapabilities,
     /// Access to shared memory system - all agents use the same memory
+    #[serde(skip)]
     pub memory_access: std::sync::Arc<agent_memory::MemorySystem>,
 }
 

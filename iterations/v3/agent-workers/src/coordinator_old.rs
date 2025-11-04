@@ -815,26 +815,25 @@ impl ParallelCoordinator {
         let progress = self.get_progress();
 
         ParallelExecutionStats {
-            active_workers: worker_stats.total_workers,
-            completed_subtasks: progress.completed_subtasks,
-            total_subtasks: progress.total_subtasks,
-            overall_progress: progress.percentage,
-            estimated_completion: progress.estimated_completion,
+            total_tasks: 1, // This is a single task execution
+            successful_tasks: if progress.completed_subtasks == progress.total_subtasks { 1 } else { 0 },
+            failed_tasks: if progress.completed_subtasks == progress.total_subtasks { 0 } else { 1 },
+            cancelled_tasks: 0,
+            total_execution_time_ms: 0, // Not available in old coordinator
+            avg_execution_time_ms: 0.0,
+            total_subtasks: progress.total_subtasks as u32,
+            workers_used: worker_stats.total_workers as u32,
+            success_rate: if progress.total_subtasks > 0 { progress.completed_subtasks as f64 / progress.total_subtasks as f64 } else { 0.0 },
+            throughput_tasks_per_second: 0.0, // Not available
+            quality_score: 0.8, // Default quality score
+            resource_utilization: 0.0, // Not available
+            calculated_at: chrono::Utc::now(),
         }
     }
 }
 
 
-/// Statistics for parallel execution
-
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct ParallelExecutionStats {
-    pub active_workers: usize,
-    pub completed_subtasks: usize,
-    pub total_subtasks: usize,
-    pub overall_progress: f32,
-    pub estimated_completion: Option<chrono::DateTime<chrono::Utc>>,
-}
+// ParallelExecutionStats is now defined in execution_stats.rs
 
 /// Integration helpers for orchestration layer
 pub mod integration {

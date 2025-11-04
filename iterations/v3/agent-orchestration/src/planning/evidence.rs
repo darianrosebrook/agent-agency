@@ -28,7 +28,7 @@ pub struct ResearchEvidence {
 }
 
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 enum ResearchEvidenceType {
     CodeReview,
     CodeAnalysis, // Alias/synonym for CodeReview

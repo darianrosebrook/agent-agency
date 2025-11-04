@@ -5,8 +5,9 @@
 //!
 //! @author @darianrosebrook
 
+
 use schemars::JsonSchema;
-use agent_agency_contracts::{TaskDescriptor, WorkingSpec};
+use serde::{Serialize, Deserialize};use agent_agency_contracts::{TaskDescriptor, WorkingSpec};
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use tracing::{debug, info, warn};
@@ -14,7 +15,7 @@ use tracing::{debug, info, warn};
 /// Evidence enrichment coordinator
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-struct EvidenceEnrichmentCoordinator {
+pub struct EvidenceEnrichmentCoordinator {
     /// Configuration for enrichment
     config: EnrichmentConfig,
     /// Cache for enriched evidence
@@ -24,7 +25,7 @@ struct EvidenceEnrichmentCoordinator {
 /// Configuration for evidence enrichment
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct EnrichmentConfig {
+pub struct EnrichmentConfig {
     /// Maximum cache size
     pub max_cache_size: usize,
     /// Cache TTL in seconds

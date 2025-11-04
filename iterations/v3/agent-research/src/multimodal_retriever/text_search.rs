@@ -168,10 +168,11 @@ impl VectorIndex {
 
 /// Text search API bridge with BM25 and dense vector search
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize, JsonSchema)]
 pub struct TextSearchBridge {
     bm25_index: Bm25Index,
     vector_index: VectorIndex,
+    #[serde(skip)]
     embedding_service: Option<Arc<dyn data_infrastructure::embedding::embedding_service::EmbeddingService>>,
 }
 
@@ -355,6 +356,19 @@ impl TextSearchEngine {
     ) -> Result<Vec<MultimodalSearchResult>> {
         // Code search with language-specific handling
         self.search(query, k).await
+    }
+
+    /// Index a document for search
+    pub async fn index_document(&mut self, doc_id: String, content: String) -> Result<()> {
+        // Use the search bridge to add the document
+        self.search_bridge.add_document(doc_id, content).await
+    }
+
+    /// Remove a document from the index
+    pub async fn remove_document(&mut self, doc_id: &str) -> Result<()> {
+        // TODO: Implement document removal in TextSearchBridge
+        // For now, this is a placeholder
+        Ok(())
     }
 
     /// Get search statistics

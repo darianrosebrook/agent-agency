@@ -23,6 +23,14 @@ pub enum QueryType {
     BestPractices,
     /// Technical research
     Technical,
+    /// Text-based query
+    Text,
+    /// Image-based query
+    Image,
+    /// Visual search query
+    Visual,
+    /// Hybrid text and image query
+    Hybrid,
 }
 
 /// Research priority levels
@@ -131,7 +139,7 @@ pub struct ResearchQuery {
     pub context: Option<String>,
     pub max_results: Option<u32>,
     pub sources: Vec<KnowledgeSource>,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub created_at: DateTime<Utc>,
     pub deadline: Option<DateTime<Utc>>,
@@ -149,7 +157,7 @@ pub struct ResearchResult {
     pub summary: Option<String>,
     pub relevance_score: f32,
     pub confidence_score: f32,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub extracted_at: DateTime<Utc>,
     pub url: Option<String>,
@@ -167,7 +175,7 @@ pub struct SynthesizedContext {
     pub key_findings: Vec<String>,
     pub supporting_evidence: Vec<ResearchResult>,
     pub confidence_score: f32,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub synthesized_at: DateTime<Utc>,
     pub sources: Vec<KnowledgeSource>,
@@ -213,7 +221,7 @@ pub struct VectorEmbedding {
     pub vector: Vec<f32>,
     pub model: String,
     pub dimension: u32,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub created_at: DateTime<Utc>,
 }
@@ -231,10 +239,10 @@ pub struct KnowledgeEntry {
     pub language: Option<String>,
     pub tags: Vec<String>,
     pub embedding: Option<VectorEmbedding>,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub created_at: DateTime<Utc>,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub updated_at: DateTime<Utc>,
     pub access_count: u64,
@@ -272,7 +280,7 @@ pub struct WebScrapingResult {
     pub title: String,
     pub content: String,
     pub content_type: ContentType,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub scraped_at: DateTime<Utc>,
     pub status_code: u16,
@@ -309,7 +317,7 @@ pub struct ResearchMetrics {
     pub web_scraping_success_rate: f32,
     pub context_synthesis_quality: f32,
     pub fuzzy_match_adjustments: u64,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub last_updated: DateTime<Utc>,
 }
@@ -334,7 +342,7 @@ pub enum ResearchAgentStatus {
 pub struct ResearchConfigUpdate {
     pub field: String,
     pub value: serde_json::Value,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub updated_at: DateTime<Utc>,
 }
@@ -347,10 +355,10 @@ pub struct ResearchSession {
     pub session_name: String,
     pub queries: Vec<Uuid>,
     pub context: Option<String>,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub created_at: DateTime<Utc>,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub last_activity: DateTime<Utc>,
     pub is_active: bool,

@@ -12,7 +12,9 @@ use tracing::{info, error};
 use uuid::Uuid;
 
 use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceManager}};
+#[cfg(feature = "full")]
 use agent_orchestration::council::create_default_council;
+#[cfg(feature = "full")]
 use agent_orchestration::types::{TaskDescriptor, TaskScope, ChangeBudget, BlastRadius, AcceptanceCriterion, TaskPriority, ExecutionMode, TaskType};
 use std::sync::Arc;
 

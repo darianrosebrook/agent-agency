@@ -17,7 +17,7 @@ pub struct LearningMilestone {
     pub session_id: Uuid,
     pub milestone_type: MilestoneType,
     pub description: String,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub achieved_at: DateTime<Utc>,
     pub metrics_at_achievement: ProgressMetrics,
@@ -81,10 +81,10 @@ pub struct MonitoringAnalytics {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProgressMonitoringSummary {
     pub sample_count: u32,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub last_snapshot: DateTime<Utc>,
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub next_evaluation: DateTime<Utc>,
     pub rolling_metrics: ProgressMetrics,
@@ -118,7 +118,7 @@ pub struct ProgressTracker {
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ProgressSnapshot {
-    ##[schemars(with = "String")]
+    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
     pub metrics: ProgressMetrics,

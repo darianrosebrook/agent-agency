@@ -17,6 +17,7 @@ use std::sync::Arc;
 use tracing::{info, warn, error};
 use uuid::Uuid;
 use sqlx::Row;
+use rand;
 
 // Additional types for distributed worker execution
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -131,7 +132,7 @@ pub struct WorkerLoad {
 
 /// Task executor for running tasks with workers
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug)]
 pub struct TaskExecutor {
     // HTTP client for model communication with robust error handling and performance optimization
     client: reqwest::Client,
@@ -1819,10 +1820,17 @@ impl TaskExecutor {
                 use_jitter: retry_config.use_jitter,
             },
             || async {
-                circuit_breaker.call(|| async {
-                    self.execute_with_worker_direct(worker_id, execution_input, strategy).await
-                })
-                .await
+                // Check circuit breaker state
+                match circuit_breaker.get_state() {
+                    system_resilience::resilience_circuit_breaker::CircuitState::Open => {
+                        Err(WorkerError::ExecutionError {
+                            message: "Circuit breaker is open".to_string()
+                        })
+                    }
+                    system_resilience::resilience_circuit_breaker::CircuitState::HalfOpen | system_resilience::resilience_circuit_breaker::CircuitState::Closed => {
+                        self.execute_with_worker_direct(worker_id, execution_input, strategy).await
+                    }
+                }
             },
         )
         .await
@@ -1841,7 +1849,9 @@ impl TaskExecutor {
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(strategy.timeout_seconds))
             .build()
-            .map_err(|e| anyhow::anyhow!("Failed to create HTTP client: {}", e))?;
+            .map_err(|e| WorkerError::ExecutionError {
+                message: format!("Failed to create HTTP client: {}", e),
+            })?;
 
         // Prepare request payload
         let payload = serde_json::json!({
@@ -1861,17 +1871,24 @@ impl TaskExecutor {
             .json(&payload)
             .send()
             .await
-            .map_err(|e| anyhow::anyhow!("Worker execution request failed: {}", e))?;
+            .map_err(|e| WorkerError::Communication {
+                message: format!("Worker execution request failed: {}", e),
+            })?;
 
         if response.status().is_success() {
             let result: WorkerExecutionResult = response
                 .json()
                 .await
-                .map_err(|e| anyhow::anyhow!("Failed to parse worker response: {}", e))?;
+                .map_err(|e| WorkerError::Communication {
+                    message: format!("Failed to parse worker response: {}", e),
+                })?;
             Ok(result)
         } else {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            Err(anyhow::anyhow!("Worker execution failed with status {}: {}", response.status(), error_text))
+            Err(WorkerError::ExecutionFailed {
+                worker_id,
+                message: format!("Worker execution failed with status {}: {}", response.status(), error_text),
+            })
         }
     }
 
@@ -2055,5 +2072,67 @@ impl TaskExecutor {
         });
         
         (base_load + time_load).min(100.0)
+    }
+
+    /// Get worker endpoint for the given worker ID
+    async fn get_worker_endpoint(&self, worker_id: Uuid) -> WorkerExecutionResult<String> {
+        // Query database for worker endpoint
+        let query = "SELECT endpoint FROM workers WHERE id = $1";
+
+        match self.db_client.query_one(query, &[&worker_id]).await {
+            Ok(row) => {
+                let endpoint: String = row.get("endpoint");
+                Ok(endpoint)
+            }
+            Err(sqlx::Error::RowNotFound) => {
+                Err(WorkerError::WorkerNotFound(worker_id))
+            }
+            Err(e) => {
+                Err(WorkerError::DatabaseError(format!("Failed to get worker endpoint: {}", e)))
+            }
+        }
+    }
+
+    /// Execute with retry logic using local backoff
+    async fn retry_with_backoff_local<F, Fut, T>(
+        &self,
+        retry_config: RetryConfig,
+        operation: F,
+    ) -> WorkerExecutionResult<T>
+    where
+        F: Fn() -> Fut,
+        Fut: std::future::Future<Output = WorkerExecutionResult<T>>,
+    {
+        let mut attempt = 0;
+        let mut delay_ms = retry_config.initial_delay_ms;
+
+        loop {
+            attempt += 1;
+
+            match operation().await {
+                Ok(result) => return Ok(result),
+                Err(e) => {
+                    if attempt >= retry_config.max_attempts {
+                        return Err(e);
+                    }
+
+                    // Calculate next delay
+                    if retry_config.use_exponential_backoff {
+                        delay_ms = (delay_ms as f64 * retry_config.backoff_multiplier) as u64;
+                        delay_ms = delay_ms.min(retry_config.max_delay_ms);
+                    }
+
+                    // Add jitter if enabled
+                    let actual_delay = if retry_config.use_jitter {
+                        let jitter = (rand::random::<f64>() - 0.5) * 2.0 * retry_config.jitter_factor;
+                        ((delay_ms as f64 * (1.0 + jitter)) as u64).max(0)
+                    } else {
+                        delay_ms
+                    };
+
+                    tokio::time::sleep(std::time::Duration::from_millis(actual_delay)).await;
+                }
+            }
+        }
     }
 }

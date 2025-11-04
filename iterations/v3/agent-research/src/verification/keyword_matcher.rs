@@ -5,6 +5,8 @@
 use std::collections::HashMap;
 use regex::Regex;
 use anyhow::Result;
+use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 
 use crate::verification::types::*;
 

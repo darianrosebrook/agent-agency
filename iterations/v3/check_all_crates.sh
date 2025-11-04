@@ -4,9 +4,10 @@ echo "# Crate Compilation Status Report"
 echo "Generated: $(date)"
 echo ""
 
-declare -A crate_status
-declare -A crate_errors
-declare -A crate_warnings
+# Use indexed arrays instead of associative arrays for better compatibility
+crate_status=()
+crate_errors=()
+crate_warnings=()
 
 crates=(
     "agent-agency-contracts"
@@ -39,34 +40,41 @@ total_warnings=0
 crates_with_errors=0
 crates_with_warnings=0
 
+# Create index mapping (associative array for string key lookup)
+declare -A crate_indices
+for i in "${!crates[@]}"; do
+    crate_indices[${crates[$i]}]=$i
+done
+
 for crate in "${crates[@]}"; do
     echo "Checking $crate..."
-    
+
     # Run cargo check and capture output
     output=$(cd "$crate" && cargo check 2>&1)
     exit_code=$?
-    
-    # Count errors and warnings
+
+    # Count errors and warnings more accurately
     errors=$(echo "$output" | grep -c "^error\[")
     warnings=$(echo "$output" | grep -c "^warning:")
-    
+
+    idx=${crate_indices[$crate]}
     if [ $exit_code -eq 0 ]; then
-        crate_status[$crate]="✅ Compiles"
-        crate_errors[$crate]=0
-        crate_warnings[$crate]=$warnings
+        crate_status[$idx]="✅ Compiles"
+        crate_errors[$idx]=0
+        crate_warnings[$idx]=$warnings
         if [ $warnings -gt 0 ]; then
             ((crates_with_warnings++))
         fi
     else
-        crate_status[$crate]="❌ Errors"
-        crate_errors[$crate]=$errors
-        crate_warnings[$crate]=$warnings
+        crate_status[$idx]="❌ Errors"
+        crate_errors[$idx]=$errors
+        crate_warnings[$idx]=$warnings
         ((crates_with_errors++))
         if [ $warnings -gt 0 ]; then
             ((crates_with_warnings++))
         fi
     fi
-    
+
     ((total_errors += errors))
     ((total_warnings += warnings))
 done
@@ -76,9 +84,10 @@ echo ""
 echo "| Crate | Status | Errors | Warnings |"
 echo "|-------|--------|--------|----------|"
 
-for crate in "${crates[@]}"; do
+for i in "${!crates[@]}"; do
+    crate="${crates[$i]}"
     printf "| %-30s | %-12s | %-6d | %-8d |\n" \
-        "$crate" "${crate_status[$crate]}" "${crate_errors[$crate]}" "${crate_warnings[$crate]}"
+        "$crate" "${crate_status[$i]}" "${crate_errors[$i]}" "${crate_warnings[$i]}"
 done
 
 echo ""
@@ -95,8 +104,8 @@ echo "| Rank | Crate | Errors |"
 echo "|------|-------|--------|"
 
 # Sort crates by error count descending
-sorted_crates=$(for crate in "${crates[@]}"; do
-    echo "${crate_errors[$crate]} $crate"
+sorted_crates=$(for i in "${!crates[@]}"; do
+    echo "${crate_errors[$i]} ${crates[$i]}"
 done | sort -nr | head -10)
 
 rank=1

@@ -4,6 +4,7 @@
 //! Services register their capabilities as MCP tools that workers can discover and use.
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use agent_mcp::ToolRegistry;
 use agent_mcp::mcp_types::{
     ToolExecutionRequest, ToolExecutionResult, ExecutionPriority, ExecutionContext,

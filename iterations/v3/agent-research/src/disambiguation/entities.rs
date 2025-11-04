@@ -281,10 +281,10 @@ impl NamedEntityRecognizer {
 
                 if confidence > 0.6 {
                     entities.push(NamedEntity {
-                        text: mat.as_str().to_string(),
+                        name: mat.as_str().to_string(),
                         entity_type: EntityType::TechnicalTerm,
-                        start: mat.start(),
-                        end: mat.end(),
+                        start_pos: mat.start(),
+                        end_pos: mat.end(),
                         confidence,
                         context: Some(format!("Technical term in domain context")),
                     });

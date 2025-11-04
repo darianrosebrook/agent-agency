@@ -257,7 +257,7 @@ pub struct DiffStats {
 /// Multimodal task for processing different content types
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct MultimodalTask {
+pub struct MultimodalTask {
     /// Task ID
     pub task_id: String,
     /// Task description
@@ -273,7 +273,7 @@ struct MultimodalTask {
 /// Result of multimodal processing
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct MultimodalProcessingResult {
+pub struct MultimodalProcessingResult {
     /// Task ID
     pub task_id: String,
     /// Processing status (uses contracts ExecutionStatus for standard statuses, local for orchestration-specific)

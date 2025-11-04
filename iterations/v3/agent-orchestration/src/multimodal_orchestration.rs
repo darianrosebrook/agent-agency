@@ -10,9 +10,8 @@ use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use agent_agency_contracts::types::prelude::*;
 use agent_agency_contracts::types::data_processing::ProcessingPriority;
-use serde::{Serialize, Deserialize};
 use schemars::JsonSchema;
-use uuid::Uuid;
+use serde::{Serialize, Deserialize};use uuid::Uuid;
 use chrono::Utc;
 
 // Import OrchestrationError from lib.rs
@@ -43,12 +42,11 @@ pub trait KnowledgeSeeker: Send + Sync {
 
 /// Context for tracking active operations
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone)]
 struct OperationContext {
     /// Operation ID for correlation
     pub operation_id: String,
     /// Start time
-    #[schemars(with = "String")]
     pub start_time: Instant,
     /// Operation type
     pub operation_type: String,
@@ -281,7 +279,7 @@ struct EnrichmentCircuitBreakerConfig ;
 // These mirror types from agent-workers crate
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct MCPWorkerPool ;
+pub struct MCPWorkerPool ;
 
 impl MCPWorkerPool {
     pub async fn new(_config: WorkerPoolConfig) -> Result<Self, String> {
@@ -292,7 +290,7 @@ impl MCPWorkerPool {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct WorkerPoolConfig ;
+pub struct WorkerPoolConfig ;
 
 impl Default for WorkerPoolConfig {
     fn default() -> Self {
@@ -369,43 +367,69 @@ use std::path::{Path, PathBuf};
 use serde_json;
 
 /// Multimodal document processing orchestrator
+#[derive(Clone, Serialize, Deserialize)]
 pub struct MultimodalOrchestrator {
     /// Unified ingestor for all content types
+    #[serde(skip)]
     unified_ingestor: UnifiedIngestor,
     /// File watcher for monitoring directories
+    #[serde(skip)]
     file_watcher: FileWatcher,
     /// Enrichers for content enhancement
+    #[serde(skip)]
     unified_enricher: UnifiedEnrichmentStage,
     /// Unified indexer for search capabilities
+    #[serde(skip)]
     unified_indexer: UnifiedIndexer,
     /// Job scheduler for coordination
+    #[serde(skip)]
     job_scheduler: JobScheduler,
     /// Circuit breaker for resilience
+    #[serde(skip)]
     circuit_breaker: CircuitBreaker,
     /// Core ML model manager for accelerated inference
+    #[serde(skip)]
     coreml_manager: Option<Arc<CoreMLManager>>,
     /// Council coordinator for decision-making
+    #[serde(skip)]
     council_coordinator: Option<Arc<dyn ConsensusCoordinator>>,
     /// Audit trail manager for recording processing events
+    #[serde(skip)]
     audit_trail: Option<Arc<AuditTrailManager>>,
     /// Circuit breakers for external service protection
+    #[serde(skip)]
     circuit_breakers: HashMap<String, Arc<CircuitBreaker>>,
     /// Active operation contexts for correlation
+    #[serde(skip)]
     active_contexts: Arc<RwLock<HashMap<String, OperationContext>>>,
     /// Database audit operations for audit persistence
-    /// 
+    ///
     /// Provides audit trail persistence without requiring full database operations.
     /// Inject a DatabaseAuditOperations implementation (e.g., from data-infrastructure)
     /// via `set_database_audit_operations()` or `with_db_audit_ops()`.
+    #[serde(skip)]
     db_audit_ops: Option<Arc<dyn DatabaseAuditOperations>>,
     /// Planning integration for planning-aware task execution
     planning_integration: Option<Arc<crate::planning::orchestrator_integration::OrchestratorPlanningIntegration>>,
 }
 
+impl std::fmt::Debug for MultimodalOrchestrator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MultimodalOrchestrator")
+            .field("circuit_breaker", &self.circuit_breaker)
+            .field("coreml_manager", &self.coreml_manager.is_some())
+            .field("council_coordinator", &self.council_coordinator.is_some())
+            .field("audit_trail", &self.audit_trail.is_some())
+            .field("db_audit_ops", &self.db_audit_ops.is_some())
+            .field("planning_integration", &self.planning_integration.is_some())
+            .finish()
+    }
+}
+
 /// Processing result for document pipeline
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct ProcessingResult {
+pub struct ProcessingResult {
     /// Document identifier
     #[schemars(with = "String")]
     pub document_id: Uuid,
@@ -442,24 +466,6 @@ pub enum ProcessingStatus {
     Cancelled,
 }
 
-impl std::fmt::Debug for MultimodalOrchestrator {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("MultimodalOrchestrator")
-            .field("unified_ingestor", &self.unified_ingestor)
-            .field("file_watcher", &self.file_watcher)
-            .field("unified_enricher", &self.unified_enricher)
-            .field("unified_indexer", &self.unified_indexer)
-            .field("job_scheduler", &self.job_scheduler)
-            .field("circuit_breaker", &self.circuit_breaker)
-            .field("coreml_manager", &self.coreml_manager.is_some())
-            .field("council_coordinator", &self.council_coordinator.is_some())
-            .field("audit_trail", &self.audit_trail.is_some())
-            .field("circuit_breakers", &self.circuit_breakers.len())
-            .field("active_contexts", &"<async>")
-            .field("db_audit_ops", &self.db_audit_ops.is_some())
-            .finish()
-    }
-}
 
 impl MultimodalOrchestrator {
     /// Create new multimodal orchestrator
@@ -1218,7 +1224,7 @@ enum FileType {
 /// Processing statistics
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct ProcessingStats {
+pub struct ProcessingStats {
     /// Total documents processed
     pub total_documents_processed: u64,
     /// Total blocks processed

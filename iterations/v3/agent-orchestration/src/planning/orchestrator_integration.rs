@@ -6,7 +6,7 @@
 //! @author @darianrosebrook
 
 use schemars::JsonSchema;
-use std::sync::Arc;
+use serde::{Serialize, Deserialize};use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use uuid::Uuid;
 use agent_agency_contracts::*;
@@ -25,6 +25,7 @@ use crate::planning::{
 };
 
 /// Planning integration for orchestrators
+#[derive(Debug)]
 pub struct OrchestratorPlanningIntegration {
     /// Plan generator for creating execution plans
     plan_generator: Arc<PlanGenerator>,
@@ -270,7 +271,7 @@ impl OrchestratorPlanningIntegration {
             Arc::clone(&self.worker_assigner),
             Arc::clone(&self.scope_guard),
             Arc::clone(&self.council_monitor),
-            Arc::clone(&self.parallel_coordinator),
+            Arc::downgrade(&self.parallel_coordinator),
             audit_trail,
             Arc::new(tokio::sync::Mutex::new(Arc::clone(&self.todo_integration))),
             crate::planning::plan_executor::ExecutionConfig::default(),

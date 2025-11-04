@@ -6,7 +6,7 @@
 use std::process::{Command, Stdio};
 use std::sync::Arc;
 use tokio_postgres::{Client, NoTls};
-use tracing::{info, warn};
+use tracing::{info, warn, error};
 use std::time::Duration;
 use bb8::{Pool, PooledConnection};
 use bb8_postgres::PostgresConnectionManager;
@@ -132,7 +132,8 @@ impl PostgresService {
             .map_err(|e| format!("Failed to create connection pool: {}", e))?;
 
         // Test the pool by getting a connection
-        let _connection = pool.get().await
+        let cloned_pool = pool.clone();
+        let _connection = cloned_pool.get().await
             .map_err(|e| format!("Failed to get connection from pool: {}", e))?;
 
         self.pool = Some(pool);
@@ -149,14 +150,38 @@ impl PostgresService {
 
         info!("Applying database migrations...");
 
+        // Format connection string for tokio_postgres::connect (requires postgres:// URI format)
         let connection_string = format!(
-            "host={} port={} dbname={} user={} password={}",
-            self.host, self.port, self.database, self.username, self.password
+            "postgres://{}:{}@{}:{}/{}",
+            self.username, self.password, self.host, self.port, self.database
         );
 
-        let mut config = Config::from_str(&connection_string);
-        let mut runner = embedded::migrations::runner();
-        let report = runner.run_async(&mut config).await
+        // Apply migrations using refinery
+        // Create a direct Client connection for migrations (refinery needs Client, not PooledConnection)
+        let (mut client, connection) = tokio_postgres::connect(
+            &connection_string,
+            NoTls,
+        )
+        .await
+        .map_err(|e| format!("Failed to create migration client: {}", e))?;
+
+        // Spawn connection task
+        tokio::spawn(async move {
+            if let Err(e) = connection.await {
+                error!("PostgreSQL migration connection error: {}", e);
+            }
+        });
+
+        let migrations = vec![
+            refinery::Migration::unapplied(
+                "V1__initial_test_schema",
+                include_str!("../../migrations/V1__initial_test_schema.sql"),
+            )?,
+        ];
+
+        let report = refinery::Runner::new(&migrations)
+            .run_async(&mut client)
+            .await
             .map_err(|e| format!("Failed to run migrations: {}", e))?;
 
         info!("Applied {} migration(s)", report.applied_migrations().len());
@@ -238,12 +263,25 @@ impl PostgresService {
         f: F,
     ) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
     where
-        F: FnOnce(&Client) -> futures::future::BoxFuture<'_, Result<T, tokio_postgres::Error>> + Send,
+        F: for<'a> FnOnce(&'a tokio_postgres::Transaction<'a>) -> futures::future::BoxFuture<'a, Result<T, tokio_postgres::Error>> + Send,
     {
-        let conn = self.get_connection().await?;
-        let transaction = conn.transaction().await?;
-        let result = f(&transaction).await?;
-        transaction.commit().await?;
+        // Get a connection from the pool - PooledConnection dereferences to Client
+        let pool = self.pool.as_ref().ok_or("Connection pool not initialized")?;
+        let mut client = pool.get().await
+            .map_err(|e| format!("Failed to get connection from pool: {}", e))?;
+        
+        // Start a transaction (PooledConnection derefs to Client)
+        let transaction = client.transaction().await
+            .map_err(|e| format!("Failed to start transaction: {}", e))?;
+        
+        // Execute the closure with the transaction
+        let result = f(&transaction).await
+            .map_err(|e| format!("Transaction execution failed: {}", e))?;
+        
+        // Commit the transaction
+        transaction.commit().await
+            .map_err(|e| format!("Failed to commit transaction: {}", e))?;
+        
         Ok(result)
     }
 

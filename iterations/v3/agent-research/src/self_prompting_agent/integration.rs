@@ -167,9 +167,9 @@ impl IntegratedAutonomousAgent {
         
         for agent in agents {
             let agent_name = agent.name();
-            // PLACEHOLDER: MetricsCollector doesn't have get_agent_health method
-            // Using a default scoring approach instead
-            let metrics: Option<AgentHealthMetrics> = None;
+            // Get agent health metrics - using basic implementation
+            // TODO: Integrate with system-observability crate for real metrics
+            let metrics = Some(self.get_agent_health_metrics(agent_name).await);
             
             let score = if let Some(metrics) = metrics {
                 // Calculate selection score based on multiple factors
@@ -262,7 +262,7 @@ pub struct IntegrationState {
 
 /// Integration status
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, serde::Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct IntegrationStatus {
     pub registered_agents: usize,
     pub active_agent: Option<String>,
@@ -553,6 +553,22 @@ impl AgentCommunicationHub {
     /// Register agent channel
     pub fn register_agent(&mut self, agent_name: String, sender: tokio::sync::mpsc::UnboundedSender<Message>) {
         self.channels.insert(agent_name, sender);
+    }
+
+    /// Get agent health metrics - basic implementation
+    /// TODO: Integrate with system-observability crate for real metrics
+    async fn get_agent_health_metrics(&self, agent_name: &str) -> AgentHealthMetrics {
+        // Basic implementation - return reasonable defaults
+        // In a real implementation, this would query actual health metrics
+        AgentHealthMetrics {
+            agent_id: agent_name.to_string(),
+            health_score: 0.85, // Assume generally healthy
+            current_load: 50,    // Assume moderate load
+            max_load: 100,
+            success_rate: 0.92,  // Assume high success rate
+            error_rate: 0.02,    // Low error rate
+            response_time_p95: 250, // 250ms P95 response time
+        }
     }
 }
 

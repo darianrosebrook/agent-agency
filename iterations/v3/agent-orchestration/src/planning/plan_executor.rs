@@ -52,7 +52,7 @@ pub struct PlanExecutor {
     council_monitor: Arc<CouncilMonitor>,
 
     /// Parallel coordinator for coordinated execution
-    parallel_coordinator: Arc<ParallelCoordinator>,
+    parallel_coordinator: std::sync::Weak<ParallelCoordinator>,
 
     /// Audit trail for execution logging
     audit_trail: Arc<dyn AuditTrail>,
@@ -83,7 +83,7 @@ pub trait WorkerPool: Send + Sync {
 /// Worker information
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct WorkerInfo {
+pub struct WorkerInfo {
     /// Worker unique identifier
     #[schemars(with = "String")]
     pub id: Uuid,
@@ -153,7 +153,7 @@ pub trait AuditTrail: Send + Sync {
 /// Audit event for execution tracking
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct AuditEvent {
+pub struct AuditEvent {
     /// Event type
     pub event_type: AuditEventType,
 
@@ -182,7 +182,7 @@ struct AuditEvent {
 /// Audit event types
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-enum AuditEventType {
+pub enum AuditEventType {
     /// Plan execution started
     PlanStarted,
 
@@ -242,7 +242,7 @@ impl std::fmt::Display for AuditEventType {
 /// Execution configuration
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct ExecutionConfig {
+pub struct ExecutionConfig {
     /// Maximum parallel milestones
     pub max_parallel_milestones: usize,
 
@@ -332,7 +332,7 @@ impl PlanExecutor {
         worker_assigner: Arc<WorkerAssignmentStrategy>,
         scope_guard: Arc<ScopeGuard>,
         council_monitor: Arc<CouncilMonitor>,
-        parallel_coordinator: Arc<ParallelCoordinator>,
+        parallel_coordinator: std::sync::Weak<ParallelCoordinator>,
         audit_trail: Arc<dyn AuditTrail>,
         todo_integration: Arc<Mutex<Arc<TodoIntegration>>>,
         config: ExecutionConfig,
@@ -414,7 +414,9 @@ impl PlanExecutor {
         plan.execution_state = Some(execution_state);
 
         // Execute plan using parallel coordinator
-        let parallel_result = self.parallel_coordinator.execute_plan_parallel(&mut plan).await?;
+        let parallel_coordinator = self.parallel_coordinator.upgrade()
+            .ok_or_else(|| anyhow!("Parallel coordinator has been dropped"))?;
+        let parallel_result = parallel_coordinator.execute_plan_parallel(&mut plan).await?;
 
         // Collect evidence from successful executions
         let mut all_evidence = ExecutionEvidence {
@@ -580,7 +582,9 @@ impl PlanExecutor {
         plan.execution_context.parallel_batches = vec![batch.clone()];
 
         // Execute batch using parallel coordinator
-        let batch_result = self.parallel_coordinator.execute_batch_parallel(plan, batch_index, &mut batch).await?;
+        let parallel_coordinator = self.parallel_coordinator.upgrade()
+            .ok_or_else(|| anyhow!("Parallel coordinator has been dropped"))?;
+        let batch_result = parallel_coordinator.execute_batch_parallel(plan, batch_index).await?;
 
         // Process results
         let batch_success = batch_result.failed == 0;
@@ -854,7 +858,6 @@ impl PlanExecutor {
             agent_agency_contracts::TaskPriority::High => 500,
             agent_agency_contracts::TaskPriority::Urgent => 200,
             agent_agency_contracts::TaskPriority::Medium => 2000,
-            agent_agency_contracts::TaskPriority::High => 1500,
             agent_agency_contracts::TaskPriority::Critical => 500,
         };
 

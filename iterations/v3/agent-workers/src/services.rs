@@ -1,32 +1,33 @@
-//! Service Registration and Tool Discovery
-//!
-//! This module provides the infrastructure for services from other crates
-//! to register their capabilities as MCP tools. Services can dynamically
-//! register tools at runtime, making the system highly modular and extensible.
-//!
-//! ## Service Registration Pattern
-//!
-//! Services implement the `ToolProvider` trait and register their tools:
-//!
-//! ```rust
-//! struct KnowledgeSeekerService;
-//!
-//! impl ToolProvider for KnowledgeSeekerService {
-//!     fn register_tools(&self, registry: &MCPIntegration) -> Vec<MCPTool> {
-//!         vec![
-//!             create_tool_definition(
-//!                 "knowledge_search",
-//!                 "Search knowledge base for information",
-//!                 ToolType::Utility,
-//!                 vec![ToolCapability::TextProcessing],
-//!                 vec![create_parameter("query", "Search query", "string", true, None)],
-//!                 vec![],
-//!             )
-//!         ]
-//!     }
-//! }
-//! ```
+/// Service Registration and Tool Discovery
+///
+/// This module provides the infrastructure for services from other crates
+/// to register their capabilities as MCP tools. Services can dynamically
+/// register tools at runtime, making the system highly modular and extensible.
+///
+/// ## Service Registration Pattern
+///
+/// Services implement the `ToolProvider` trait and register their tools:
+///
+/// ```rust
+/// struct KnowledgeSeekerService;
+///
+/// impl ToolProvider for KnowledgeSeekerService {
+///     fn register_tools(&self, registry: &MCPIntegration) -> Vec<MCPTool> {
+///         vec![
+///             create_tool_definition(
+///                 "knowledge_search",
+///                 "Search knowledge base for information",
+///                 ToolType::Utility,
+///                 vec![ToolCapability::TextProcessing],
+///                 vec![create_parameter("query", "Search query", "string", true, None)],
+///                 vec![],
+///             )
+///         ]
+///     }
+/// }
+/// ```
 
+use serde::{Serialize, Deserialize};
 use schemars::JsonSchema;
 use crate::mcp_integration::{MCPIntegration, create_tool_definition, create_parameter};
 use agent_mcp::mcp_types::{MCPTool, ToolType, ToolCapability, ParameterDefinition};
@@ -120,26 +121,34 @@ impl WorkerServiceRegistry {
 /// Service health status
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-enum ServiceHealth {
+pub enum ServiceHealth {
+    /// Service is operating normally
     Healthy,
+    /// Service is operating but with reduced performance
     Degraded,
+    /// Service is experiencing issues
     Unhealthy,
+    /// Service is completely unavailable
     Offline,
 }
 
 /// Errors from service operations
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
-enum ServiceError {
+pub enum ServiceError {
+    /// Service initialization failed
     #[error("Service initialization failed: {0}")]
     InitializationFailed(String),
 
+    /// Tool registration with MCP failed
     #[error("Tool registration failed: {0}")]
     ToolRegistrationFailed(String),
 
+    /// Requested service was not found
     #[error("Service not found: {0}")]
     ServiceNotFound(String),
 
+    /// Service health check failed
     #[error("Service health check failed: {0}")]
     HealthCheckFailed(String),
 }

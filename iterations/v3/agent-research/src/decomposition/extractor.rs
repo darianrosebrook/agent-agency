@@ -11,9 +11,11 @@ use uuid::Uuid;
 
 /// Atomic claim extractor implementation
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug)]
 pub struct ClaimExtractor {
+    #[serde(skip)]
     subject_verb_patterns: Vec<Regex>,
+    #[serde(skip)]
     negation_patterns: Vec<Regex>,
 }
 
@@ -148,7 +150,7 @@ impl ClaimExtractor {
                 component_boundaries: vec!["system".to_string()], // Basic scope
                 data_impact: DataImpact::None,
             },
-            confidence_score: confidence,
+            confidence,
             evidence_links: Vec::new(),
             temporal_context: None,
             verification_status: VerificationStatus::Unverified,

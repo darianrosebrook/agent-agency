@@ -21,7 +21,7 @@ use super::events::{EventEmitter, ResearchEvent};
 /// Query orchestrator for coordinating research execution
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct QueryOrchestratorr {
+pub struct QueryOrchestrator {
     config: ResearchAgentConfig,
     search_coordinator: Arc<SearchCoordinator>,
     scraping_coordinator: Arc<ScrapingCoordinator>,

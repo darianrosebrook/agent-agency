@@ -78,6 +78,8 @@ impl ValidationResult {
 pub enum ValidationStatus {
     /// Validation passed
     Valid,
+    /// Validation passed (alias for Valid)
+    Passed,
     /// Validation has warnings but is acceptable
     Warnings,
     /// Validation failed

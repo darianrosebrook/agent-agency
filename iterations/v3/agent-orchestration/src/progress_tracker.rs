@@ -197,19 +197,15 @@ pub enum EventType {
 
 /// Real-time progress tracker implementation
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug)]
 pub struct RealTimeProgressTracker {
     /// In-memory progress storage
-    #[schemars(skip)]
     progress_store: Arc<RwLock<HashMap<Uuid, ExecutionProgress>>>,
     /// Event subscribers
-    #[schemars(skip)]
     subscribers: Arc<RwLock<HashMap<Uuid, Vec<mpsc::Sender<ExecutionProgress>>>>>,
     /// Event emitter
-    #[schemars(skip)]
     event_emitter: Arc<RwLock<Vec<mpsc::Sender<ExecutionEvent>>>>,
     /// Persistence backend
-    #[schemars(skip)]
     persistence_backend: Option<Arc<dyn ProgressPersistence + Send + Sync>>,
 }
 

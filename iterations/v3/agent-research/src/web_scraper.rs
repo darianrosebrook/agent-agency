@@ -11,7 +11,7 @@ use tracing::info;
 /// Web scraper for content extraction
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct WebScraperr {
+pub struct WebScraper {
     config: WebScrapingConfig,
     client: reqwest::Client,
     cache: Arc<RwLock<std::collections::HashMap<String, WebScrapingResult>>>,
