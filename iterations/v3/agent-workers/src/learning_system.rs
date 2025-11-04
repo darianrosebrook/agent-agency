@@ -749,7 +749,7 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
                         success: success_rate > 0.5, // Convert rate back to bool
                         quality_score: row.try_get("quality_score")?,
                         error_message: None, // Not stored in database
-                        metadata: row.try_get::<serde_json::Value, _>("metadata")?.into(),
+                        metadata: serde_json::from_value(row.try_get::<serde_json::Value, _>("metadata")?)?,
                         created_at: row.try_get("created_at")?,
                     });
                 }

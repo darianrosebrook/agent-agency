@@ -10,7 +10,7 @@ use tokio::sync::RwLock;
 
 /// Worker pool manager
 pub struct WorkerPoolManager {
-    workers: Arc<RwLock<HashMap<String, Box<dyn SpecializedWorker + Send + Sync>>>>,
+    workers: Arc<RwLock<HashMap<String, Arc<dyn SpecializedWorker + Send + Sync>>>>,
 }
 
 impl WorkerPoolManager {
@@ -20,15 +20,15 @@ impl WorkerPoolManager {
         }
     }
 
-    pub async fn add_worker(&self, name: String, worker: Box<dyn SpecializedWorker + Send + Sync>) -> Result<(), WorkerError> {
+    pub async fn add_worker(&self, name: String, worker: Arc<dyn SpecializedWorker + Send + Sync>) -> Result<(), WorkerError> {
         let mut workers = self.workers.write().await;
         workers.insert(name, worker);
         Ok(())
     }
 
-    pub async fn get_worker(&self, name: &str) -> Option<&Box<dyn SpecializedWorker + Send + Sync>> {
+    pub async fn get_worker(&self, name: &str) -> Option<Arc<dyn SpecializedWorker + Send + Sync>> {
         let workers = self.workers.read().await;
-        workers.get(name)
+        workers.get(name).cloned()
     }
 
     pub async fn list_workers(&self) -> Vec<String> {

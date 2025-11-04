@@ -2092,11 +2092,11 @@ impl TaskExecutor {
         let query = "SELECT endpoint FROM workers WHERE id = $1";
 
         match self.db_client.query_one(query, &[&worker_id]).await {
-            Ok(row) => {
-                let endpoint: String = row.get("endpoint");
+            Ok(Some(row)) => {
+                let endpoint: String = row.try_get("endpoint").context("Failed to get endpoint from row")?;
                 Ok(endpoint)
             }
-            Err(sqlx::Error::RowNotFound) => {
+            Ok(None) => {
                 Err(WorkerError::WorkerNotFound { worker_id: WorkerId(worker_id) })
             }
             Err(e) => {
