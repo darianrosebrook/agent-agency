@@ -207,7 +207,7 @@ impl SpecializedWorker for RefactoringSpecialist {
         clippy_cmd.arg("clippy").arg("--").arg("-W").arg("clippy::all");
         
         let clippy_output = clippy_cmd.output()
-            .map_err(|e| WorkerError::ExecutionError(format!("Failed to execute cargo clippy: {}", e)))?;
+            .map_err(|e| WorkerError::ExecutionError { message: format!("Failed to execute cargo clippy: {}", e) })?;
         
         let mut refactoring_results = Vec::new();
         
@@ -233,7 +233,7 @@ impl SpecializedWorker for RefactoringSpecialist {
         }
         
         let fmt_output = fmt_cmd.output()
-            .map_err(|e| WorkerError::ExecutionError(format!("Failed to execute cargo fmt: {}", e)))?;
+            .map_err(|e| WorkerError::ExecutionError { message: format!("Failed to execute cargo fmt: {}", e) })?;
         
         if fmt_output.status.success() {
             let fmt_stdout = String::from_utf8_lossy(&fmt_output.stdout);

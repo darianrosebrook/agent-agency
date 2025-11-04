@@ -819,7 +819,7 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
                     quality_score: row.try_get("quality_score")?,
                     specialization_score: row.try_get("specialization_score")?,
                     last_updated: row.try_get("last_updated")?,
-                    metadata: row.try_get::<serde_json::Value, _>("metadata")?.into(),
+                    metadata: serde_json::from_value(row.try_get::<serde_json::Value, _>("metadata")?)?,
                 }))
             }
             Ok(None) => Ok(None),

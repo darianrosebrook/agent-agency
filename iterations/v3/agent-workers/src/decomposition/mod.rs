@@ -67,12 +67,8 @@ impl DecompositionEngine {
         // First analyze the task
         let analysis = self.analyze(task).await?;
 
-        // Use a decomposition strategy based on the analysis
-        let strategy = if analysis.should_parallelize {
-            DecompositionStrategy::Parallel
-        } else {
-            DecompositionStrategy::Sequential
-        };
+        // Select appropriate decomposition strategy based on task complexity
+        let strategy = self.select_decomposition_strategy(&analysis)?;
 
         // Generate subtasks based on the strategy
         let subtasks = match strategy {
