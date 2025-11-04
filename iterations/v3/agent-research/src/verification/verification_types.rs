@@ -87,7 +87,6 @@ pub struct EntityCandidate {
 }
 
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 // DisambiguationMethod is imported from types module
 
 /// Code output structure for claim extraction

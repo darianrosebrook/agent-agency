@@ -16,7 +16,6 @@ use data_infrastructure::embedding::embedding_types::{SearchResultFeature, Conte
 
 /// Configuration for multimodal retrieval
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct MultimodalRetrieverConfig {
     /// Maximum number of results per modality
     pub k_per_modality: usize,
