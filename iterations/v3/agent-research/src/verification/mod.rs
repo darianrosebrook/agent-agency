@@ -47,7 +47,7 @@ mod verification_types;
 
 // Re-export Entity types from verification_types
 pub use verification_types::{
-    Entity, EntityType, EntityDisambiguation, EntityCandidate, DisambiguationMethod,
+    Entity, EntityType, EntityDisambiguation, EntityCandidate,
 };
 
 // Engine / primary entrypoints

@@ -11,7 +11,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 // Import types from learning_bridge
 use crate::self_prompting_agent::learning_bridge::{
-    LearningService as LearningServiceTrait, LearningContext, TaskPerformance, SystemMetrics,
+    LearningService, LearningContext, TaskPerformance, SystemMetrics,
     LearningInsights, Pattern, Improvement, OptimizationRecommendation, LearningStatistics,
     OptimizationGoal, RecommendationType, Priority, PatternType, ImprovementType, Difficulty,
     Experience,
@@ -207,7 +207,7 @@ impl ReflexiveLearningService {
 }
 
 #[async_trait]
-impl LearningServiceTrait for ReflexiveLearningService {
+impl LearningService for ReflexiveLearningService {
     async fn learn_from_execution(
         &self,
         context: &LearningContext,
@@ -357,7 +357,7 @@ impl PatternRecognitionEngine {
 }
 
 /// Create a learning service instance
-pub fn create_learning_service() -> Arc<dyn LearningServiceTrait> {
+pub fn create_learning_service() -> Arc<dyn LearningService> {
     Arc::new(ReflexiveLearningService::new())
 }
 
