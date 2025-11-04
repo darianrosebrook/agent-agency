@@ -225,6 +225,9 @@ pub enum WorkerError {
 
     #[error("Execution failed: {message}")]
     ExecutionError { message: String },
+
+    #[error("Database error: {message}")]
+    DatabaseError { message: String },
 }
 
 impl Clone for WorkerError {
@@ -274,6 +277,9 @@ impl Clone for WorkerError {
                 resource_type: resource_type.clone(),
             },
             WorkerError::ExecutionError { message } => WorkerError::ExecutionError {
+                message: message.clone(),
+            },
+            WorkerError::DatabaseError { message } => WorkerError::DatabaseError {
                 message: message.clone(),
             },
         }
@@ -362,14 +368,7 @@ impl From<SynthesisError> for ParallelError {
     }
 }
 
-impl From<DecompositionError> for ParallelError {
-    fn from(err: DecompositionError) -> Self {
-        ParallelError::Decomposition {
-            message: format!("Decomposition error: {:?}", err),
-            source: None,
-        }
-    }
-}
+// Removed duplicate From implementation - using the one below that includes source
 
 impl From<ProgressError> for ParallelError {
     fn from(err: ProgressError) -> Self {

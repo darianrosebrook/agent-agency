@@ -276,7 +276,11 @@ impl ParallelCoordinator {
         let execution_stats = self.execute_subtasks_parallel(subtasks, &task).await?;
 
         // Synthesize results
-        let final_result = self.progress_synthesizer.synthesize_results(execution_stats)?;
+        let final_result = self.progress_synthesizer.synthesize_results(execution_stats)
+            .map_err(|e| ParallelError::Coordination {
+                message: format!("Failed to synthesize results: {}", e),
+                source: Some(Box::new(e)),
+            })?;
 
         tracing::info!("Parallel execution completed for task: {}", task.title);
         Ok(final_result)

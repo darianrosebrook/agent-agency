@@ -1273,6 +1273,8 @@ pub enum ValidationRuleType {
     Custom,
     Builtin,
     External,
+    Acceptance,
+    Invariant,
 }
 
 impl Default for TaskDefinition {

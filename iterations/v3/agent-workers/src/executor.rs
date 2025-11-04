@@ -1563,7 +1563,7 @@ impl TaskExecutor {
                         is_active: row.try_get::<bool, _>(8).context("Failed to get active status")?,
                         last_heartbeat: row.try_get::<Option<DateTime<Utc>>, _>(9).context("Failed to get last heartbeat")?,
                         version: row.try_get::<String, _>(10).context("Failed to get version")?,
-                        endpoint_url: row.try_get::<Option<String>, _>(11).context("Failed to get endpoint URL")?,
+                        endpoint_url: row.try_get::<Option<String>, _>(11).context("Failed to get endpoint URL")?.unwrap_or_else(|| "http://localhost:3000".to_string()),
                     })
                 } else {
                     Err(anyhow::anyhow!("Worker {} not found in registry", worker_id))
@@ -1900,7 +1900,7 @@ impl TaskExecutor {
         } else {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
             Err(WorkerError::ExecutionFailed {
-                worker_id,
+                worker_id: WorkerId(worker_id),
                 message: format!("Worker execution failed with status {}: {}", response.status(), error_text),
             })
         }
