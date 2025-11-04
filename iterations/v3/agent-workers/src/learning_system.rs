@@ -58,7 +58,7 @@ impl RealAdaptiveSelector {
             ORDER BY wp.success_rate DESC, wp.quality_score DESC
         "#;
 
-        match self.db_client.query(query, &[]).await {
+        match self.db_client.query(query).await {
             Ok(rows) => {
                 if rows.is_empty() {
                     return Err("No available workers found".into());
@@ -356,7 +356,7 @@ impl RealConfigOptimizer {
             LIMIT 50
         "#;
 
-        match self.db_client.query(query, &[]).await {
+        match self.db_client.query(query).await {
             Ok(rows) => {
                 let mut events = Vec::new();
                 for row in rows {
@@ -857,7 +857,7 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
     async fn get_success_patterns(&self) -> Result<Vec<SuccessPattern>> {
         let query = "SELECT pattern_name, pattern_type, confidence_score, outcomes, last_seen, metadata FROM success_patterns";
 
-        match self.db_client.query(query, &[]).await {
+        match self.db_client.query(query).await {
             Ok(rows) => {
                 let mut patterns = Vec::new();
                 for row in rows {
@@ -913,7 +913,7 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
     async fn get_failure_patterns(&self) -> Result<Vec<FailurePattern>> {
         let query = "SELECT pattern_name, pattern_type, confidence_score, outcomes, last_seen, metadata FROM failure_patterns";
 
-        match self.db_client.query(query, &[]).await {
+        match self.db_client.query(query).await {
             Ok(rows) => {
                 let mut patterns = Vec::new();
                 for row in rows {
@@ -972,7 +972,7 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
     async fn get_optimal_configs(&self) -> Result<Vec<OptimalConfig>> {
         let query = "SELECT id, worker_type, task_type, config, performance_metrics, confidence, expires_at, metadata, created_at FROM optimal_configs WHERE expires_at > NOW() OR expires_at IS NULL";
 
-        match self.db_client.query(query, &[]).await {
+        match self.db_client.query(query).await {
             Ok(rows) => {
                 let mut configs = Vec::new();
                 for row in rows {
