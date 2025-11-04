@@ -165,7 +165,7 @@ impl DecompositionStrategy for RefactoringStrategy {
                             max_files: None,
                             max_loc: None,
                         },
-                        specialty: WorkerSpecialty::Refactoring,
+                        specialty: WorkerSpecialty::Refactoring { strategies: vec!["code_cleanup".to_string(), "optimization".to_string()] },
                         estimated_effort: (operation.complexity * 300.0),
                         metadata: HashMap::new(),
                     };
