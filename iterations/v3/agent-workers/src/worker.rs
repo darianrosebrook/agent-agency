@@ -78,11 +78,7 @@ impl WorkerManager {
             })?;
 
         // Assign the worker to the subtask
-        self.assign_worker(&worker_id).await
-            .map_err(|e| ParallelError::Coordination {
-                message: format!("Failed to assign worker: {}", e),
-                source: None,
-            })?;
+        self.assign_worker(&worker_id).await?;
 
         // Execute the subtask using the worker's capabilities
         // PLACEHOLDER: Real execution logic would go here

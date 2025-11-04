@@ -52,7 +52,13 @@ impl ConfigurationOptimizer {
         let mut best_match_score = 0.0;
 
         for config in optimal_configs.iter() {
-            let match_score = self.calculate_config_match_score(task_characteristics, &config.conditions);
+            // Extract conditions from config JSON - assume it's an object
+            let conditions = config.config.as_object()
+                .unwrap_or(&serde_json::Map::new())
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect::<HashMap<String, serde_json::Value>>();
+            let match_score = self.calculate_config_match_score(task_characteristics, &conditions);
             if match_score > best_match_score {
                 best_match_score = match_score;
                 best_config = Some(config.clone());

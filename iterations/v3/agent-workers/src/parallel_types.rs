@@ -421,3 +421,12 @@ impl From<Box<dyn std::error::Error + Send + Sync>> for ParallelError {
         }
     }
 }
+
+impl From<String> for ParallelError {
+    fn from(error: String) -> Self {
+        ParallelError::Coordination {
+            message: error,
+            source: None,
+        }
+    }
+}

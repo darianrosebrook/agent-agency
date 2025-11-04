@@ -29,9 +29,9 @@
     "documentation": {
       "description": "Documentation quality violations",
       "enforcement_levels": {
-        "commit": "warning",
-        "push": "warning",
-        "ci": "block"
+        "commit": "fail",
+        "push": "block",
+        "ci": "fail"
       }
     },
     "code_freeze": {

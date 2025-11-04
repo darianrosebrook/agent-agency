@@ -75,7 +75,7 @@ impl DecompositionEngine {
             DecompositionStrategyType::Parallel => {
                 self.decompose_parallel(task, &analysis).await?
             }
-            DecompositionStrategy::Sequential => {
+            DecompositionStrategyType::Sequential => {
                 self.decompose_sequential(task, &analysis).await?
             }
             DecompositionStrategyType::Hierarchical => {
@@ -113,7 +113,7 @@ impl DecompositionEngine {
         // 3. Adjusting recommended_workers based on council feedback
 
         Ok(TaskAnalysis {
-            task_id: task.id,
+            task_id: task.id.clone(),
             complexity_score: subtask_scores.parallelization_score,
             patterns,
             dependencies,
