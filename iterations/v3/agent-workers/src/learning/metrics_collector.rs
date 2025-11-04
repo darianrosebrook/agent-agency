@@ -82,6 +82,11 @@ impl ParallelWorkerMetricsCollector {
             last_updated: Utc::now(),
             performance_trend: PerformanceTrend::Unknown,
             capability_scores: HashMap::new(),
+            task_count: 0,
+            success_rate: 0.0,
+            quality_score: 0.0,
+            specialization_score: 0.0,
+            metadata: HashMap::new(),
         });
 
         // Update profile statistics

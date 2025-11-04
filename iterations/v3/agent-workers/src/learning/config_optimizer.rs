@@ -38,6 +38,10 @@ impl ConfigurationOptimizer {
             quality_thresholds: None,
             confidence: 0.0,
             reasoning: String::new(),
+            recommended_config: None,
+            confidence_score: 0.0,
+            expected_improvement: None,
+            optimization_reason: None,
         };
 
         // Get optimal configurations

@@ -117,6 +117,8 @@ impl DecompositionEngine {
         // 3. Adjusting recommended_workers based on council feedback
 
         Ok(TaskAnalysis {
+            task_id: task.id,
+            complexity_score: subtask_scores.parallelization_score,
             patterns,
             dependencies,
             subtask_scores,

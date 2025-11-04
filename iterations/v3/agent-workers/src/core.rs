@@ -18,6 +18,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, warn, debug};
+use chrono::{DateTime, Utc};
 
 /// Configuration for the MCP worker pool
 
@@ -70,13 +71,21 @@ impl MCPWorkerPool {
             shared_memory_system: shared_memory,
             stats: Arc::new(RwLock::new(WorkerPoolStats {
                 total_workers: 0,
+                available_workers: 0,
+                busy_workers: 0,
+                unavailable_workers: 0,
                 active_workers: 0,
                 idle_workers: 0,
                 unhealthy_workers: 0,
-                total_tasks_completed: 0,
                 tasks_in_progress: 0,
-                average_queue_time_ms: 0.0,
+                total_tasks_completed: 0,
+                total_tasks_failed: 0,
                 average_execution_time_ms: 0.0,
+                average_quality_score: 0.0,
+                average_caws_compliance: 0.0,
+                average_queue_time_ms: 0.0,
+                pool_uptime_seconds: 0,
+                last_updated: Utc::now(),
             })),
         }
     }
