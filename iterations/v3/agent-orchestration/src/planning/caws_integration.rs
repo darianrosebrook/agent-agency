@@ -16,6 +16,7 @@ use agent_agency_contracts::{
 };
 
 /// CAWS integration bridge
+#[derive(Debug)]
 pub struct CawsPlanBridge {
     /// Validation rules for working specs
     validation_rules: ValidationRules,

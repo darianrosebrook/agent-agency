@@ -100,7 +100,7 @@ impl PlanningEngineImpl {
         // planning_io types are exported at top level of agent_agency_contracts
         use agent_agency_contracts::*;
 
-        let milestones = local_plan.contract_plan.milestones.iter().map(|milestone| {
+        let milestones: Vec<Milestone> = local_plan.contract_plan.milestones.iter().map(|milestone| {
             // Convert local milestone to contract milestone
             Milestone {
                 id: milestone.id.clone(),

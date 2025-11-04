@@ -29,6 +29,7 @@ pub mod waiver_integration;
 pub mod caws_integration;
 pub mod todo_template;
 pub mod data_infrastructure_types;
+pub mod quality_gates;
 
 // Re-export types for convenience
 pub use types::*;

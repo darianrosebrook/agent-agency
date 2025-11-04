@@ -25,13 +25,16 @@ use agent_agency_contracts::{TaskDescriptor, TaskScope, ChangeBudget, BlastRadiu
 
 /// Comprehensive autonomous agent integration
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct AutonomousAgentIntegration {
     /// File operations service
+    #[serde(skip)]
     file_ops: Arc<dyn FileOperationsService>,
     /// Learning service for self-improvement
+    #[serde(skip)]
     learning: Arc<dyn LearningService>,
     /// Model orchestration service
+    #[serde(skip)]
     model_orchestrator: Arc<dyn ModelOrchestrator>,
     /// File editor for autonomous file operations
     file_editor: AutonomousFileEditor,

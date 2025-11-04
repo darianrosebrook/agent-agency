@@ -7,7 +7,7 @@ use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};use std::sync::Arc;
 use tokio::time::{timeout, Duration};
 use uuid::Uuid;
-use rand::seq::SliceRandom;
+// use rand::seq::SliceRandom;
 
 use crate::council_errors::{CouncilError, CouncilResult};
 use crate::judge_backup::{Judge, JudgeContribution, JudgeConfig, JudgeHealthMetrics, VerdictSummary};

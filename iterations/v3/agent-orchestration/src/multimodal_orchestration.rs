@@ -367,47 +367,35 @@ use std::path::{Path, PathBuf};
 use serde_json;
 
 /// Multimodal document processing orchestrator
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone)]
 pub struct MultimodalOrchestrator {
     /// Unified ingestor for all content types
-    #[serde(skip)]
     unified_ingestor: UnifiedIngestor,
     /// File watcher for monitoring directories
-    #[serde(skip)]
     file_watcher: FileWatcher,
     /// Enrichers for content enhancement
-    #[serde(skip)]
     unified_enricher: UnifiedEnrichmentStage,
     /// Unified indexer for search capabilities
-    #[serde(skip)]
     unified_indexer: UnifiedIndexer,
     /// Job scheduler for coordination
-    #[serde(skip)]
     job_scheduler: JobScheduler,
     /// Circuit breaker for resilience
-    #[serde(skip)]
     circuit_breaker: CircuitBreaker,
     /// Core ML model manager for accelerated inference
-    #[serde(skip)]
     coreml_manager: Option<Arc<CoreMLManager>>,
     /// Council coordinator for decision-making
-    #[serde(skip)]
     council_coordinator: Option<Arc<dyn ConsensusCoordinator>>,
     /// Audit trail manager for recording processing events
-    #[serde(skip)]
     audit_trail: Option<Arc<AuditTrailManager>>,
     /// Circuit breakers for external service protection
-    #[serde(skip)]
     circuit_breakers: HashMap<String, Arc<CircuitBreaker>>,
     /// Active operation contexts for correlation
-    #[serde(skip)]
     active_contexts: Arc<RwLock<HashMap<String, OperationContext>>>,
     /// Database audit operations for audit persistence
     ///
     /// Provides audit trail persistence without requiring full database operations.
     /// Inject a DatabaseAuditOperations implementation (e.g., from data-infrastructure)
     /// via `set_database_audit_operations()` or `with_db_audit_ops()`.
-    #[serde(skip)]
     db_audit_ops: Option<Arc<dyn DatabaseAuditOperations>>,
     /// Planning integration for planning-aware task execution
     planning_integration: Option<Arc<crate::planning::orchestrator_integration::OrchestratorPlanningIntegration>>,

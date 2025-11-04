@@ -64,6 +64,14 @@ pub struct CouncilMonitor {
     config: MonitorConfig,
 }
 
+impl std::fmt::Debug for CouncilMonitor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CouncilMonitor")
+            .field("config", &self.config)
+            .finish()
+    }
+}
+
 /// Configuration for council monitoring
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -463,9 +471,9 @@ impl CouncilMonitor {
         let file_changes = plan.contract_plan.scope.iter()
             .flat_map(|scope| scope.allowed_paths.iter())
             .chain(plan.contract_plan.scope.iter().flat_map(|scope| scope.blocked_paths.iter()))
-            .map(|path| agent_agency_contracts::FileChange {
+            .map(|path| agent_agency_contracts::working_spec::FileChange {
                 file: path.clone(),
-                change_type: agent_agency_contracts::ChangeType::Modified,
+                change_type: agent_agency_contracts::working_spec::ChangeType::Modified,
                 timestamp: chrono::Utc::now(),
             })
             .collect::<Vec<_>>();
@@ -533,11 +541,7 @@ impl CouncilMonitor {
             metadata: None,
             milestones: vec![],
             change_budget: plan.contract_plan.change_budget.clone(),
-            file_changes: file_changes.into_iter().map(|fc| agent_agency_contracts::working_spec::FileChange {
-                file: fc.file,
-                change_type: fc.change_type,
-                timestamp: fc.timestamp,
-            }).collect(),
+            file_changes: file_changes,
             coverage_targets: Some(coverage_targets),
             overview: plan.contract_plan.overview.clone(),
             created_at: plan.contract_plan.created_at,

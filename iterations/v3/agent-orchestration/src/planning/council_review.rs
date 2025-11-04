@@ -315,6 +315,14 @@ pub struct CouncilPlanReview {
     config: ReviewConfig,
 }
 
+impl std::fmt::Debug for CouncilPlanReview {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CouncilPlanReview")
+            .field("config", &self.config)
+            .finish()
+    }
+}
+
 /// Review configuration
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -895,6 +903,7 @@ impl CouncilPlanReview {
 }
 
 /// Scope validator for plan boundaries
+#[derive(Debug)]
 pub struct ScopeValidator;
 
 impl ScopeValidator {
@@ -985,6 +994,7 @@ impl ScopeValidator {
 }
 
 /// Ethical assessor for constitutional compliance
+#[derive(Debug)]
 pub struct EthicalAssessor;
 
 impl EthicalAssessor {
@@ -1067,6 +1077,7 @@ impl EthicalAssessor {
 }
 
 /// Quality requirements assessor
+#[derive(Debug)]
 pub struct QualityRequirementsAssessor;
 
 impl QualityRequirementsAssessor {

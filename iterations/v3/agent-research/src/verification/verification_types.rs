@@ -7,6 +7,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use crate::extraction_types::Language;
+use crate::verification::types::DisambiguationMethod;
 
 /// Coreference resolution data structures
 
@@ -87,13 +88,7 @@ pub struct EntityCandidate {
 
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-pub enum DisambiguationMethod {
-    ExactMatch,
-    FuzzyMatch,
-    ContextBased,
-    KnowledgeGraph,
-    EmbeddingSimilarity,
-}
+// DisambiguationMethod is imported from types module
 
 /// Code output structure for claim extraction
 
@@ -356,5 +351,4 @@ impl CheckResult {
     }
 }
 
-// Import shared types to avoid duplication
-use crate::Language;
+// Language is already imported from extraction_types above

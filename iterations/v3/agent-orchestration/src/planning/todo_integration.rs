@@ -29,6 +29,14 @@ pub struct TodoIntegration {
     quality_enforcer: TodoQualityEnforcer,
 }
 
+impl std::fmt::Debug for TodoIntegration {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TodoIntegration")
+            .field("quality_enforcer", &self.quality_enforcer)
+            .finish()
+    }
+}
+
 /// Quality gate enforcer that prevents bypass
 pub struct TodoQualityEnforcer {
     /// Gates that absolutely cannot be bypassed
@@ -36,6 +44,14 @@ pub struct TodoQualityEnforcer {
     
     /// Database operations for querying planning telemetry
     db_ops: Option<Arc<dyn DatabaseOperations>>,
+}
+
+impl std::fmt::Debug for TodoQualityEnforcer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TodoQualityEnforcer")
+            .field("critical_gates", &self.critical_gates)
+            .finish()
+    }
 }
 
 impl TodoIntegration {
@@ -625,8 +641,25 @@ mod tests {
 
         // Test hook execution (should not fail)
         let result = integration.on_plan_started(&agent_agency_contracts::planning_io::ExecutionPlan {
+            id: Uuid::new_v4(),
+            session_id: Uuid::new_v4(),
+            working_spec_id: "test".to_string(),
             contract_plan: Default::default(),
+            title: "Test".to_string(),
+            overview: "Test".to_string(),
+            state: agent_agency_contracts::planning_io::PlanState::Draft,
+            milestones: vec![],
+            dependency_graph: Default::default(),
+            change_budget: Default::default(),
+            quality_gates: Default::default(),
+            evidence_requirements: vec![],
+            active_waivers: vec![],
+            metadata: Default::default(),
             execution_context: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            approved_at: None,
+            completed_at: None,
         }).await;
 
         assert!(result.is_ok());

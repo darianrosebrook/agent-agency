@@ -24,7 +24,6 @@ use crate::planning::worker_assignment::WorkerAssignmentStrategy;
 use agent_agency_contracts::planning_io::{Milestone, MilestoneState};
 
 /// Parallel execution coordinator
-#[derive(Debug)]
 pub struct ParallelCoordinator {
     /// Plan executor for individual milestone execution
     plan_executor: Arc<PlanExecutor>,
@@ -49,6 +48,14 @@ pub struct ParallelCoordinator {
 
     /// Council session tracker
     council_sessions: Arc<RwLock<HashMap<Uuid, String>>>,
+}
+
+impl std::fmt::Debug for ParallelCoordinator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ParallelCoordinator")
+            .field("config", &self.config)
+            .finish()
+    }
 }
 
 /// Parallel execution configuration

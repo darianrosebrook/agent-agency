@@ -510,17 +510,15 @@ struct OrchestrationResult {
 
 /// Unified orchestration error type
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
+#[derive(Debug, thiserror::Error)]
 enum OrchestrationError {
     #[error("Council rejected task: {0}")]
     CouncilRejection(String),
 
     #[error("Orchestration execution failed: {0}")]
-    #[schemars(with = "String")]
-    ExecutionError(#[from] Box<dyn std::error::Error + Send + Sync>),
+    ExecutionError(Box<dyn std::error::Error + Send + Sync>),
 
     #[error("Council error: {0}")]
-    #[schemars(with = "String")]
     CouncilError(#[from] council_errors::CouncilError),
 
     #[error("Circuit breaker error: {0}")]
@@ -530,10 +528,8 @@ enum OrchestrationError {
     AuditError(String),
 
     #[error("IO error: {0}")]
-    #[schemars(with = "String")]
     IoError(#[from] std::io::Error),
 
     #[error("Anyhow error: {0}")]
-    #[schemars(with = "String")]
     AnyhowError(#[from] anyhow::Error),
 }

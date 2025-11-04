@@ -198,7 +198,7 @@ impl DataConsistencyManager {
         drop(transactions); // Release the lock
 
         // Execute prepare phase for each participant concurrently
-        let prepare_futures = participants.iter().enumerate().map(|(i, participant)| {
+        let prepare_futures = participants.iter().enumerate().map(|(_i, participant)| {
             let tx_id = transaction_id.to_string();
             let participant = participant.clone();
             async move {
@@ -787,7 +787,7 @@ impl DataConsistencyManager {
         info!("Executing abort phase for participant {} in transaction {}", participant.service_id, transaction_id);
 
         // Connect to participant's database
-        let pool = sqlx::PgPool::connect(&participant.connection_info).await
+        let _pool = sqlx::PgPool::connect(&participant.connection_info).await
             .map_err(|e| format!("Failed to connect to participant database: {}", e))?;
 
         // In a real implementation, we'd rollback the prepared transaction
@@ -800,7 +800,7 @@ impl DataConsistencyManager {
     }
 
     /// Execute an insert operation
-    async fn execute_insert_operation(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, operation: &TransactionOperation, transaction_id: &str) -> Result<(), String> {
+    async fn execute_insert_operation(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, operation: &TransactionOperation, _transaction_id: &str) -> Result<(), String> {
         let table = &operation.table;
         let data = &operation.data;
 

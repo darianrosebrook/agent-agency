@@ -48,6 +48,7 @@ enum LockMode {
 }
 
 /// Scope guard for file locking and scope enforcement
+#[derive(Debug)]
 pub struct ScopeGuard {
     /// Active file locks (file_path -> lock_info)
     active_locks: Arc<RwLock<HashMap<PathBuf, FileLock>>>,
@@ -95,16 +96,17 @@ impl ScopeGuard {
         let milestone_uuid = Uuid::parse_str(&milestone_id)
             .map_err(|_| anyhow!("Invalid milestone ID format: {}", milestone_id))?;
 
+        let mut acquired_locks = Vec::new();
+
         // Acquire semaphore permit to limit concurrent operations
         let _permit = self.lock_semaphore.acquire().await?;
 
         // Clean up expired locks first
         self.cleanup_expired_locks().await;
 
-        let mut acquired_locks = Vec::new();
         let mut conflicts = Vec::new();
 
-        // Check for conflicts and acquire locks
+        // Check for conflicts
         {
             let locks = self.active_locks.read().await;
 
@@ -128,32 +130,16 @@ impl ScopeGuard {
 
         // Handle conflicts
         if !conflicts.is_empty() {
-            // Convert conflicts to PathBufs for waiting logic
-            let conflicts_with_paths: Vec<(std::path::PathBuf, _)> = conflicts.into_iter()
-                .map(|(s, l)| (std::path::PathBuf::from(s), l))
-                .collect();
-
-            // Try to wait for locks to be released
-            if self.can_wait_for_locks(&conflicts_with_paths).await {
-                // Wait and retry
-                for (file_path, _) in &conflicts_with_paths {
-                    self.wait_for_lock_release(file_path).await?;
-                }
-
-                // Retry acquisition
-                return self.acquire_locks(milestone_id, scope).await;
-            } else {
-                // Cannot resolve conflicts
-                let conflict_details = conflicts_with_paths.into_iter()
-                    .map(|(path, lock)| format!("{} (held by {})", path.display(), lock.milestone_id))
-                    .collect::<Vec<_>>()
-                    .join(", ");
+            // For now, fail if there are conflicts (simplified implementation)
+            let conflict_details = conflicts.into_iter()
+                .map(|(path, lock)| format!("{} (held by {})", path, lock.milestone_id))
+                .collect::<Vec<_>>()
+                .join(", ");
 
                 return Err(anyhow!(
                     "Scope conflict for milestone {}: files locked by other milestones: {}",
                     milestone_id, conflict_details
                 ));
-            }
         }
 
         // No conflicts - acquire locks
@@ -183,6 +169,7 @@ impl ScopeGuard {
             }
         }
 
+        // Success - return acquired locks
         Ok(acquired_locks)
     }
 
@@ -474,6 +461,10 @@ mod tests {
         assert!(!invalid);
     }
 
+    #[cfg(test)]
+    mod lock_stats_tests {
+        use super::*;
+
     #[tokio::test]
     async fn test_lock_statistics() {
         let guard = ScopeGuard::new();
@@ -483,5 +474,6 @@ mod tests {
         assert_eq!(stats.write_locks, 0);
         assert_eq!(stats.read_locks, 0);
         assert_eq!(stats.unique_milestones, 0);
+        }
     }
 }

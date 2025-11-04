@@ -8,8 +8,14 @@ use tdigest::TDigest;
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct OnlineQuantiles {
+    #[serde(skip)]
+    #[serde(default = "default_tdigest")]
     digest: TDigest,
     count: u64,
+}
+
+fn default_tdigest() -> TDigest {
+    TDigest::new_with_size(100)
 }
 
 impl OnlineQuantiles {

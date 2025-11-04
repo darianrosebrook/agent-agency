@@ -834,7 +834,7 @@ pub struct EthicalAssessment {
 
 /// Specific ethical concern identified
 
-#[derive(Debug, Clone, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EthicalConcern {
     /// Category of ethical concern
     pub category: EthicalCategory,

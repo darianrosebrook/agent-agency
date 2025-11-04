@@ -242,7 +242,7 @@ pub enum RecoveryStrategyType {
 
 /// Circuit breaker for external service resilience
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CircuitBreaker {
     /// Service identifier
     service_name: String,
@@ -282,6 +282,18 @@ pub struct ErrorHandlingCircuitBreakerConfig {
     pub monitoring_window: Duration,
     /// Timeout for individual requests
     pub request_timeout: Duration,
+}
+
+impl Default for ErrorHandlingCircuitBreakerConfig {
+    fn default() -> Self {
+        Self {
+            failure_threshold: 5,
+            success_threshold: 3,
+            recovery_timeout: Duration::from_secs(60),
+            monitoring_window: Duration::from_secs(300),
+            request_timeout: Duration::from_secs(30),
+        }
+    }
 }
 
 /// Circuit breaker statistics
@@ -546,6 +558,15 @@ impl CircuitBreaker {
                 self.transition_to_closed("Success threshold met in half-open state".to_string()).await;
             }
         }
+    }
+}
+
+impl Default for CircuitBreaker {
+    fn default() -> Self {
+        Self::new(
+            "default".to_string(),
+            ErrorHandlingCircuitBreakerConfig::default(),
+        )
     }
 }
 

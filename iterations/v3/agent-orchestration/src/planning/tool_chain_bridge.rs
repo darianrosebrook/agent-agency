@@ -20,6 +20,7 @@ use crate::planning::tool_chain_types::{
 };
 
 /// Bridge to tool chain planner
+#[derive(Debug)]
 pub struct ToolChainBridge {
     /// Reference to the tool chain planner (external or local)
     tool_chain_planner: std::sync::Arc<ExternalToolChainPlanner>,
@@ -160,12 +161,12 @@ impl ToolChainBridge {
         }
 
         // Determine root and sink milestones
-        let roots = tool_chain.roots.iter()
+        let roots: Vec<String> = tool_chain.roots.iter()
             .filter_map(|&idx| node_indices.get(&idx))
             .cloned()
             .collect();
 
-        let sinks = tool_chain.sinks.iter()
+        let sinks: Vec<String> = tool_chain.sinks.iter()
             .filter_map(|&idx| node_indices.get(&idx))
             .cloned()
             .collect();

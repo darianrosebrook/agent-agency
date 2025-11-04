@@ -64,6 +64,14 @@ pub struct PlanExecutor {
     config: ExecutionConfig,
 }
 
+impl std::fmt::Debug for PlanExecutor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PlanExecutor")
+            .field("config", &self.config)
+            .finish()
+    }
+}
+
 /// Worker pool abstraction
 #[async_trait::async_trait]
 pub trait WorkerPool: Send + Sync {

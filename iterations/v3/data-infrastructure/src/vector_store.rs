@@ -268,7 +268,7 @@ impl VectorStore {
     }
 
     /// Search similar vectors
-    pub async fn search_similar(&self, query_vector: &[f32], model_id: &str, k: usize, project_scope: Option<&str>) -> Result<Vec<VectorSearchResult>, anyhow::Error> {
+    pub async fn search_similar(&self, query_vector: &[f32], model_id: &str, k: usize, _project_scope: Option<&str>) -> Result<Vec<VectorSearchResult>, anyhow::Error> {
         // Validate reference count is healthy
         if self.pool.reference_count() == 0 {
             return Err(anyhow::anyhow!("Vector store pool has no active references"));
@@ -291,7 +291,7 @@ impl VectorStore {
     }
 
     /// Log search operation
-    pub async fn log_search(&self, entry: SearchAuditEntry) -> Result<(), anyhow::Error> {
+    pub async fn log_search(&self, _entry: SearchAuditEntry) -> Result<(), anyhow::Error> {
         // Validate reference count is healthy
         if self.pool.reference_count() == 0 {
             return Err(anyhow::anyhow!("Vector store pool has no active references"));
@@ -434,7 +434,7 @@ impl DatabaseVectorStore {
         debug!("Logging search operation: query={}", query);
 
         // Convert results to SearchResult structs with default values
-        let search_results: Vec<SearchResult> = results
+        let _search_results: Vec<SearchResult> = results
             .iter()
             .enumerate()
             .map(|(i, block_id)| SearchResult {

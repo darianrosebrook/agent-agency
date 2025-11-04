@@ -25,7 +25,6 @@ use crate::planning::{
 };
 
 /// Planning integration for orchestrators
-#[derive(Debug)]
 pub struct OrchestratorPlanningIntegration {
     /// Plan generator for creating execution plans
     plan_generator: Arc<PlanGenerator>,
@@ -56,6 +55,22 @@ pub struct OrchestratorPlanningIntegration {
 
     /// Database operations for audit trails and persistence
     db_ops: Arc<dyn crate::planning::DatabaseOperations>,
+}
+
+impl std::fmt::Debug for OrchestratorPlanningIntegration {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OrchestratorPlanningIntegration")
+            .field("plan_generator", &true)
+            .field("planning_storage", &true)
+            .field("parallel_coordinator", &true)
+            .field("worker_assigner", &true)
+            .field("evidence_collector", &true)
+            .field("scope_guard", &true)
+            .field("council_monitor", &true)
+            .field("todo_integration", &true)
+            .field("council_review", &true)
+            .finish()
+    }
 }
 
 /// Planning-aware task execution result

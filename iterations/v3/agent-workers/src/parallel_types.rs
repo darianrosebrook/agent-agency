@@ -46,7 +46,7 @@ impl Default for TaskId {
 }
 
 /// Sub-task identifier
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub struct SubTaskId (pub Uuid);
 
 impl SubTaskId {

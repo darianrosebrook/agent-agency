@@ -17,7 +17,7 @@ pub mod types;
 // Re-export main types and traits
 pub use adaptive_selector::{AdaptiveWorkerSelector, WorkerSelectionStrategy};
 pub use config_optimizer::ConfigurationOptimizer;
-pub use fairness_monitor::FairnessMonitor;
+pub use fairness_monitor::{FairnessMonitor, RealFairnessMonitor};
 pub use learning_persistence::LearningPersistence;
 pub use metrics_collector::ParallelWorkerMetricsCollector;
 pub use pattern_analyzer::PatternAnalyzer;
@@ -27,5 +27,5 @@ pub use types::{
     OptimizationEvent, ConfigurationRecommendations, FairnessMetrics, ExecutionRecord,
     WorkerPerformanceProfile, SuccessPattern, FailurePattern, OptimalConfig,
     RewardWeights, Baseline, TaskPattern, PatternMatch, QueueHealthMetrics,
-    FailureCategory, FailureAnalysis
+    FailureCategory, FailureAnalysis, PatternType
 };

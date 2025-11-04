@@ -1,0 +1,61 @@
+error[E0382]: borrow of moved value: `contextual_info`
+error[E0277]: `CouncilMonitor` doesn't implement `std::fmt::Debug`
+error[E0277]: `todo_integration::TodoIntegration` doesn't implement `std::fmt::Debug`
+error[E0277]: `CouncilPlanReview` doesn't implement `std::fmt::Debug`
+error[E0277]: `(dyn data_infrastructure_types::DatabaseOperations + 'static)` doesn't implement `std::fmt::Debug`
+error[E0063]: missing fields `critical_path`, `cycles`, `has_cycles` and 1 other field in initializer of `DependencyGraph`
+error[E0063]: missing fields `active_waivers`, `approved_at`, `change_budget` and 6 other fields in initializer of `agent_agency_contracts::ExecutionPlan`
+error[E0277]: `CawsPlanBridge` doesn't implement `std::fmt::Debug`
+error[E0277]: `ToolChainBridge` doesn't implement `std::fmt::Debug`
+error[E0277]: `LegacyPlanAdapter` doesn't implement `std::fmt::Debug`
+error[E0277]: `planning::storage::FileStorage` doesn't implement `std::fmt::Debug`
+error[E0277]: `(dyn data_infrastructure_types::DatabaseOperations + 'static)` doesn't implement `std::fmt::Debug`
+error[E0277]: `PlanExecutor` doesn't implement `std::fmt::Debug`
+error[E0277]: `CouncilMonitor` doesn't implement `std::fmt::Debug`
+error[E0277]: `(dyn data_infrastructure_types::DatabaseOperations + 'static)` doesn't implement `std::fmt::Debug`
+error[E0308]: mismatched types
+error[E0283]: type annotations needed
+error[E0277]: the trait bound `risk::EthicalConcern: serde::Serialize` is not satisfied
+error[E0277]: the trait bound `risk::EthicalConcern: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `risk::EthicalConcern: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `risk::EthicalConcern: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `std::time::Instant: serde::Serialize` is not satisfied
+error[E0277]: the trait bound `std::time::Instant: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `std::time::Instant: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `std::time::Instant: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `std::time::Instant: schemars::JsonSchema` is not satisfied
+error[E0277]: the trait bound `std::time::Instant: serde::Serialize` is not satisfied
+error[E0277]: the trait bound `std::time::Instant: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `std::time::Instant: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `std::time::Instant: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `std::time::Instant: schemars::JsonSchema` is not satisfied
+error[E0277]: the trait bound `dyn FileOperationsService: serde::Serialize` is not satisfied
+error[E0277]: the trait bound `dyn FileOperationsService: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `dyn FileOperationsService: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `dyn FileOperationsService: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `dyn FileOperationsService: serde::Serialize` is not satisfied
+error[E0277]: the trait bound `dyn LearningService: serde::Serialize` is not satisfied
+error[E0277]: the trait bound `dyn ModelOrchestrator: serde::Serialize` is not satisfied
+error[E0277]: the trait bound `dyn FileOperationsService: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `dyn LearningService: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `dyn ModelOrchestrator: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `dyn FileOperationsService: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `dyn LearningService: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `dyn ModelOrchestrator: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `dyn FileOperationsService: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `dyn LearningService: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `dyn ModelOrchestrator: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `error_handling::CircuitBreaker: Clone` is not satisfied
+error[E0277]: the trait bound `OrchestratorPlanningIntegration: serde::Serialize` is not satisfied
+error[E0277]: the trait bound `OrchestratorPlanningIntegration: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `error_handling::CircuitBreaker: std::default::Default` is not satisfied
+error[E0277]: the trait bound `OrchestratorPlanningIntegration: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `OrchestratorPlanningIntegration: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `dyn StdError + std::marker::Send + Sync: serde::Serialize` is not satisfied
+error[E0277]: the trait bound `std::io::Error: serde::Serialize` is not satisfied
+error[E0277]: the trait bound `anyhow::Error: serde::Serialize` is not satisfied
+error[E0277]: the trait bound `dyn StdError + std::marker::Send + Sync: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `std::io::Error: serde::Deserialize<'de>` is not satisfied
+error[E0277]: the trait bound `anyhow::Error: serde::Deserialize<'de>` is not satisfied
+error[E0733]: recursion in an async fn requires boxing
+error[E0507]: cannot move out of `task_descriptor.risk_tier` which is behind a shared reference

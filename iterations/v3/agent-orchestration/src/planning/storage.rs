@@ -23,7 +23,6 @@ use agent_agency_contracts::*;
 use crate::planning::plan_types::{ExecutionPlan, PlanGenerationContext};
 
 /// Planning storage with dual persistence strategy
-#[derive(Debug)]
 pub struct PlanningStorage {
     /// Database operations for state storage
     db_ops: Arc<dyn DatabaseOperations>,
@@ -38,7 +37,17 @@ pub struct PlanningStorage {
     config: StorageConfig,
 }
 
+impl std::fmt::Debug for PlanningStorage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PlanningStorage")
+            .field("file_storage", &self.file_storage)
+            .field("config", &self.config)
+            .finish()
+    }
+}
+
 /// File storage for plan specifications
+#[derive(Debug)]
 pub struct FileStorage {
     /// Base directory for plan files
     plans_dir: PathBuf,

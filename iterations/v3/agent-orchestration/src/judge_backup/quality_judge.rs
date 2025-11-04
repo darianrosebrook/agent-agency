@@ -22,6 +22,7 @@ use std::time::{Duration, Instant};
 pub struct QualityAssuranceJudge {
     config: JudgeConfig,
     health_metrics: JudgeHealthMetrics,
+    #[serde(skip)]
     last_review_time: Option<Instant>,
 }
 

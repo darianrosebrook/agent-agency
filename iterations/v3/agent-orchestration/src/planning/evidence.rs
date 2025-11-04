@@ -79,6 +79,15 @@ pub struct EvidenceCollector {
     storage_config: EvidenceStorageConfig,
 }
 
+impl std::fmt::Debug for EvidenceCollector {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EvidenceCollector")
+            .field("validation_config", &self.validation_config)
+            .field("storage_config", &self.storage_config)
+            .finish()
+    }
+}
+
 /// Evidence validation configuration
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

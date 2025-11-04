@@ -17,9 +17,10 @@ use tracing::{info, warn, error, instrument};
 
 /// Autonomous file editor that integrates with agent orchestration
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct AutonomousFileEditor {
     /// File operations service
+    #[serde(skip)]
     file_ops: Arc<dyn FileOperationsService>,
     /// Default repository path
     repo_path: std::path::PathBuf,

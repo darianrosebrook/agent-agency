@@ -1121,7 +1121,7 @@ impl VerdictAggregator {
 
 /// Comprehensive duplicate change detection and merging system
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 struct ChangeDeduplicationEngine {
     /// Semantic similarity threshold for duplicate detection (0.0-1.0)
     semantic_similarity_threshold: f64,
@@ -1131,11 +1131,16 @@ struct ChangeDeduplicationEngine {
     max_batch_size: usize,
     /// Cached similarity computations for performance
     #[serde(skip)]
+    #[serde(default = "default_similarity_cache")]
     similarity_cache: lru::LruCache<String, HashMap<String, f64>>,
     /// Change conflict resolution strategies
     conflict_resolvers: HashMap<ConflictType, ConflictResolutionStrategy>,
     /// Performance metrics for deduplication operations
     metrics: DeduplicationMetrics,
+}
+
+fn default_similarity_cache() -> lru::LruCache<String, HashMap<String, f64>> {
+    lru::LruCache::new(std::num::NonZeroUsize::new(1000).unwrap())
 }
 
 impl Default for ChangeDeduplicationEngine {
@@ -1144,7 +1149,7 @@ impl Default for ChangeDeduplicationEngine {
             semantic_similarity_threshold: 0.8,
             text_similarity_threshold: 0.7,
             max_batch_size: 100,
-            similarity_cache: lru::LruCache::new(std::num::NonZeroUsize::new(1000).unwrap()),
+            similarity_cache: default_similarity_cache(),
             conflict_resolvers: HashMap::new(),
             metrics: DeduplicationMetrics::default(),
         }

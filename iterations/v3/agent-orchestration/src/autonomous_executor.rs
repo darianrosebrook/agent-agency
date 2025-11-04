@@ -245,7 +245,7 @@ pub fn to_task_spec(task_descriptor: &TaskDescriptor) -> agent_agency_contracts:
     let acceptance_criteria = generate_acceptance_criteria(task_descriptor);
     
     // Create invariants based on task type
-    let invariants = generate_invariants(task_descriptor);
+    let _invariants = generate_invariants(task_descriptor);
     
     // Create contracts WorkingSpec directly
     agent_agency_contracts::WorkingSpec {
@@ -1196,7 +1196,7 @@ impl AutonomousExecutor {
             },
             tags: vec![
                 "autonomous".to_string(), // Default task type for contracts compatibility
-                format!("risk-tier-{}", task_descriptor.risk_tier.map(|t| t as u8).unwrap_or(2)),
+                format!("risk-tier-{}", task_descriptor.risk_tier.clone().map(|t| t as u8).unwrap_or(2)),
             ],
         });
         
@@ -1256,6 +1256,7 @@ impl AutonomousExecutor {
 
         #[cfg(not(feature = "memory"))]
         let contextual_info: Vec<String> = Vec::new();
+        let contextual_info_len = contextual_info.len();
 
         // Combine session context and task context
         let mut all_context = session_context.clone();
@@ -1263,8 +1264,8 @@ impl AutonomousExecutor {
 
         // Enrich task descriptor with retrieved context if available
         if !all_context.is_empty() {
-            tracing::info!("Retrieved {} contextual memories for task {} ({} from session, {} from task)", 
-                all_context.len(), task_id, session_context.len(), contextual_info.len());
+            tracing::info!("Retrieved {} contextual memories for task {} ({} from session, {} from task)",
+                all_context.len(), task_id, session_context.len(), contextual_info_len);
         }
 
         // Enforce execution mode behavior

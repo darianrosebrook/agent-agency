@@ -14,6 +14,7 @@ use agent_agency_contracts::{
 };
 
 /// Adapter for legacy planning agent
+#[derive(Debug)]
 pub struct LegacyPlanAdapter {
     // Would hold reference to actual planning agent when integrated
     // planning_agent: Arc<agent_research::planning_agent::PlanningAgent>,

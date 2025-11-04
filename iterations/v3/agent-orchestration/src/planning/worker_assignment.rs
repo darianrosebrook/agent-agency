@@ -14,7 +14,6 @@ use agent_agency_contracts::planning_io::Milestone;
 use crate::planning::{DatabaseOperations, models::Worker};
 
 /// Worker assignment strategy with real implementation
-#[derive(Debug)]
 pub struct WorkerAssignmentStrategy {
     /// Database operations for worker access
     db_ops: std::sync::Arc<dyn DatabaseOperations>,
@@ -27,6 +26,15 @@ pub struct WorkerAssignmentStrategy {
 
     /// Load balancing strategy
     load_balancer: LoadBalancingStrategy,
+}
+
+impl std::fmt::Debug for WorkerAssignmentStrategy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WorkerAssignmentStrategy")
+            .field("config", &self.config)
+            .field("load_balancer", &self.load_balancer)
+            .finish()
+    }
 }
 
 /// Assignment configuration

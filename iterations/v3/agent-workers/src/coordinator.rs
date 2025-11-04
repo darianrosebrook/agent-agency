@@ -24,8 +24,11 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 // Import refactored modules
+use crate::learning::{
+    RealFairnessMonitor
+};
 use crate::learning_system::{
-    RealFairnessMonitor, RealAdaptiveSelector, RealConfigOptimizer, 
+    RealAdaptiveSelector, RealConfigOptimizer,
     RealQueueHealthMonitor, RealFailureTaxonomy, RealLearningPersistence,
     QueueHealthMetrics, FailureClassification
 };
@@ -246,7 +249,11 @@ impl ParallelCoordinator {
         }
 
         // Analyze task complexity
-        let complexity_analysis = self.decomposition_engine.analyze_complexity(&task).await?;
+        let complexity_analysis = self.decomposition_engine.analyze_complexity(&task).await
+            .map_err(|e| ParallelError::Decomposition {
+                message: format!("Failed to analyze task complexity: {}", e),
+                source: Some(Box::new(e)),
+            })?;
         
         if complexity_analysis.complexity_score < self.config.complexity_threshold as f64 {
             tracing::info!("Task complexity too low for parallel execution, using sequential");
@@ -254,7 +261,11 @@ impl ParallelCoordinator {
         }
 
         // Decompose task into subtasks
-        let subtasks = self.decomposition_engine.decompose_task(&task).await?;
+        let subtasks = self.decomposition_engine.decompose_task(&task).await
+            .map_err(|e| ParallelError::Decomposition {
+                message: format!("Failed to decompose task: {}", e),
+                source: Some(Box::new(e)),
+            })?;
         
         if subtasks.len() > self.config.max_subtasks_per_task {
             tracing::warn!("Too many subtasks ({}) for parallel execution, using sequential", subtasks.len());
