@@ -11,7 +11,7 @@ use std::collections::HashMap;
 
 // Import contracts types directly
 use agent_agency_contracts::WorkingSpec as ContractsWorkingSpec;
-use agent_agency_contracts::types::planning::{TaskPriority, BlastRadius};
+use agent_agency_contracts::types::planning::{TaskPriority, BlastRadius, ExecutionMode};
 use agent_agency_contracts::planning_io::ChangeBudget as ContractsChangeBudget;
 
 /// Task scope definition for orchestration
@@ -168,10 +168,12 @@ impl Default for RetryConfig {
 // ExecutionMode is now imported from agent_agency_contracts::types::planning
 // (removed duplicate definition)
 
-/// Task type classification
-
+/// Task type classification for CAWS working specs
+/// 
+/// This type is used for categorizing tasks in the orchestration system.
+/// If this becomes shared across crates, it should be moved to contracts.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-enum TaskType {
+pub enum TaskType {
     Feature,
     BugFix,
     Refactor,
@@ -252,6 +254,22 @@ pub struct DiffStats {
     pub lines_deleted: u32,
     /// Number of binary files changed
     pub binary_files_changed: u32,
+}
+
+impl Default for DiffStats {
+    fn default() -> Self {
+        DiffStats {
+            files_changed: 0,
+            lines_added: 0,
+            lines_removed: 0,
+            lines_modified: 0,
+            files_added: 0,
+            files_modified: 0,
+            files_deleted: 0,
+            lines_deleted: 0,
+            binary_files_changed: 0,
+        }
+    }
 }
 
 /// Multimodal task for processing different content types

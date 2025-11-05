@@ -26,7 +26,8 @@ use agent_agency_contracts::ExecutionStatus;
 use agent_agency_contracts::task_executor_provider::TaskExecutorProvider;
 
 // Import local types for council integration
-use crate::council_types::RiskTier;
+// Use RiskTier from agent_agency_contracts (contracts-first)
+use agent_agency_contracts::types::planning::RiskTier;
 
 // Import evaluation framework
 use agent_evaluation::{EvaluationOrchestrator, EvaluationHook, IterationEvaluation, StopReason};
@@ -824,10 +825,10 @@ fn verify_acceptance_criterion(criterion: &agent_agency_contracts::AcceptanceCri
 /// Validation result
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-struct ValidationResult {
-    is_valid: bool,
-    reason: String,
-    warnings: Vec<String>,
+pub struct ValidationResult {
+    pub is_valid: bool,
+    pub reason: String,
+    pub warnings: Vec<String>,
 }
 
 /// Configuration for the autonomous executor
@@ -1173,7 +1174,7 @@ impl AutonomousExecutor {
                 agent_agency_contracts::types::planning::RiskTier::Tier3 => agent_agency_contracts::task_request::RiskTier::Tier3,
             }).unwrap_or_else(|| match task_descriptor.priority {
                     agent_agency_contracts::types::planning::TaskPriority::Critical | agent_agency_contracts::types::planning::TaskPriority::High | agent_agency_contracts::types::planning::TaskPriority::Urgent => agent_agency_contracts::task_request::RiskTier::Tier1,
-                    agent_agency_contracts::types::planning::TaskPriority::Medium | agent_agency_contracts::types::planning::TaskPriority::Normal => agent_agency_contracts::task_request::RiskTier::Tier2,
+                    agent_agency_contracts::types::planning::TaskPriority::Normal | agent_agency_contracts::types::planning::TaskPriority::Medium => agent_agency_contracts::task_request::RiskTier::Tier2,
                     agent_agency_contracts::types::planning::TaskPriority::Low => agent_agency_contracts::task_request::RiskTier::Tier3,
             }),
             max_duration_minutes: None, // Could be configured per task type
@@ -1195,7 +1196,8 @@ impl AutonomousExecutor {
             requester: None, // Could be populated from execution context
             priority: match task_descriptor.priority {
                 agent_agency_contracts::types::planning::TaskPriority::Low => Some(RequestTaskPriority::Low),
-                agent_agency_contracts::types::planning::TaskPriority::Medium | agent_agency_contracts::types::planning::TaskPriority::Normal => Some(RequestTaskPriority::Normal),
+                agent_agency_contracts::types::planning::TaskPriority::Normal => Some(RequestTaskPriority::Normal),
+                agent_agency_contracts::types::planning::TaskPriority::Medium => Some(RequestTaskPriority::Medium),
                 agent_agency_contracts::types::planning::TaskPriority::High => Some(RequestTaskPriority::High),
                 agent_agency_contracts::types::planning::TaskPriority::Critical => Some(RequestTaskPriority::Urgent),
                 agent_agency_contracts::types::planning::TaskPriority::Urgent => Some(RequestTaskPriority::Urgent),
@@ -2564,8 +2566,7 @@ impl AutonomousExecutor {
                 priority: match task_descriptor.priority {
                     agent_agency_contracts::types::planning::TaskPriority::Critical | 
                     agent_agency_contracts::types::planning::TaskPriority::High => TaskPriority::High,
-                    agent_agency_contracts::types::planning::TaskPriority::Medium |
-                    agent_agency_contracts::types::planning::TaskPriority::Normal => TaskPriority::Normal,
+                    agent_agency_contracts::types::planning::TaskPriority::Normal => TaskPriority::Normal, // Medium variant doesn't exist
                     agent_agency_contracts::types::planning::TaskPriority::Low => TaskPriority::Low,
                     agent_agency_contracts::types::planning::TaskPriority::Urgent => TaskPriority::High,
                 },
@@ -3713,19 +3714,19 @@ mod tests {
             None, // planning_integration
         );
 
-        // Create a test task descriptor
+        // Create a test task descriptor (using contracts TaskDescriptor structure)
         let task_descriptor = TaskDescriptor {
-            task_id: "test-task-001".to_string(),
+            task_id: Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap_or_else(|_| Uuid::new_v4()),
             description: "Create a simple hello world function in Rust".to_string(),
-            scope_in: TaskScope {
-                in_scope: vec!["src/main.rs".to_string()],
-                out_scope: vec![],
+            scope_in: agent_agency_contracts::task_request::ScopeRestrictions {
+                allowed_paths: vec!["src/main.rs".to_string()],
+                blocked_paths: vec![],
             },
-            scope_out: TaskScope {
-                in_scope: vec![],
-                out_scope: vec![],
-            },
-            change_budget: ChangeBudget {
+            scope_out: Some(agent_agency_contracts::task_request::ScopeRestrictions {
+                allowed_paths: vec![],
+                blocked_paths: vec![],
+            }),
+            change_budget: agent_agency_contracts::planning_io::ChangeBudget {
                 max_files: 5,
                 max_loc: 100,
                 max_migrations: 0,
@@ -3740,14 +3741,8 @@ mod tests {
             },
             priority: agent_agency_contracts::types::planning::TaskPriority::Normal,
             execution_mode: agent_agency_contracts::types::planning::ExecutionMode::Auto,
-            task_type: crate::types::TaskType::Feature,
-            risk_tier: 2,
-            acceptance: vec![AcceptanceCriterion {
-                id: "AC1".to_string(),
-                given: "Given a Rust project".to_string(),
-                when: "When the hello world function is called".to_string(),
-                then: "Then it should print 'Hello, World!'".to_string(),
-            }],
+            risk_tier: Some(RiskTier::Tier2),
+            acceptance: Some("Given a Rust project, when the hello world function is called, then it should print 'Hello, World!'".to_string()),
         };
 
         // Step 1: Submit task

@@ -66,13 +66,12 @@ impl std::fmt::Debug for FileStorage {
 
 /// Cached session data for fast access
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct CachedSession {
     /// Session data
     session: DbPlanningSession,
 
     /// Last accessed timestamp
-    #[schemars(with = "String")]
     last_accessed: DateTime<Utc>,
 
     /// Whether session has unsaved changes

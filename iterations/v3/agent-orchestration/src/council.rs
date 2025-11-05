@@ -1329,7 +1329,7 @@ impl Council {
                     timestamp: chrono::Utc::now(),
                     duration: None,
                     sequence_number: None,
-                    priority: TaskPriority::Medium, // Normal mapped to Medium
+                    priority: TaskPriority::Normal, // Medium variant doesn't exist in contracts
                 }),
             };
 
@@ -1448,7 +1448,7 @@ impl Council {
             working_spec: serde_json::to_string(&session.working_spec).unwrap_or_default(),
             risk_tier: match task_descriptor.priority {
                 agent_agency_contracts::types::planning::TaskPriority::Critical | agent_agency_contracts::types::planning::TaskPriority::High => 1,
-                agent_agency_contracts::types::planning::TaskPriority::Medium | agent_agency_contracts::types::planning::TaskPriority::Normal => 2,
+                agent_agency_contracts::types::planning::TaskPriority::Normal | agent_agency_contracts::types::planning::TaskPriority::Medium => 2,
                 agent_agency_contracts::types::planning::TaskPriority::Low => 3,
                 agent_agency_contracts::types::planning::TaskPriority::Urgent => 1,
             },
@@ -1493,7 +1493,7 @@ impl Council {
             risk_tier: match task_descriptor.priority {
                 agent_agency_contracts::types::planning::TaskPriority::Critical | agent_agency_contracts::types::planning::TaskPriority::Urgent => 1,
                 agent_agency_contracts::types::planning::TaskPriority::High => 1,
-                agent_agency_contracts::types::planning::TaskPriority::Medium | agent_agency_contracts::types::planning::TaskPriority::Normal => 2,
+                agent_agency_contracts::types::planning::TaskPriority::Normal | agent_agency_contracts::types::planning::TaskPriority::Medium => 2,
                 agent_agency_contracts::types::planning::TaskPriority::Low => 3,
             },
             constraints: WorkingSpecConstraints {

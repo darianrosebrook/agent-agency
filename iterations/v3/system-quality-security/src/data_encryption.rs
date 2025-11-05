@@ -289,12 +289,15 @@ impl DataEncryptionService {
             message: format!("Failed to generate nonce: {}", e),
         })?;
 
+        // Create nonce for storage
         let nonce = Nonce::try_assume_unique_for_key(&nonce_bytes)
             .map_err(|e| EncryptionError::EncryptionFailed {
                 message: format!("Failed to create nonce: {}", e),
             })?;
 
-        // Create sealing key
+        // Create sealing key with explicit type annotation
+        // Note: We use LessSafeKey here because we need to manually manage the nonce
+        // for storage purposes. BoundKey would manage nonces internally via NonceSequence.
         let mut sealing_key = LessSafeKey::new(unbound_key);
 
         // Encrypt the data
@@ -369,12 +372,15 @@ impl DataEncryptionService {
                 message: "Failed to convert nonce to array".to_string(),
             })?;
 
+        // Create nonce for decryption
         let nonce = Nonce::try_assume_unique_for_key(&nonce_array)
             .map_err(|e| EncryptionError::DecryptionFailed {
                 message: format!("Failed to create nonce: {}", e),
             })?;
 
         // Create opening key
+        // Note: We use LessSafeKey here because we need to manually manage the nonce
+        // from the encrypted data. BoundKey would manage nonces internally via NonceSequence.
         let mut opening_key = LessSafeKey::new(unbound_key);
 
         // Decode encrypted data
@@ -401,14 +407,16 @@ impl DataEncryptionService {
 
     /// Rotate encryption key
     pub async fn rotate_key(&self, key_id: Uuid) -> Result<Uuid, EncryptionError> {
-        let mut manager = self.key_manager.write().await;
-        
-        let (algorithm, rotation_days) = manager.keys.get(&key_id)
-            .map(|key| (key.algorithm, key.rotation_days))
-            .ok_or_else(|| EncryptionError::KeyNotFound { key_id })?;
+        // Extract owned values before dropping lock
+        let (algorithm, rotation_days) = {
+            let manager = self.key_manager.read().await;
+            let key = manager.keys.get(&key_id)
+                .ok_or_else(|| EncryptionError::KeyNotFound { key_id })?;
+            // Copy types can be extracted directly
+            (key.algorithm, key.rotation_days)
+        }; // Lock released here
 
         // Generate new key with same algorithm
-        drop(manager); // Release lock
         let new_key_id = self.generate_key(algorithm, rotation_days).await?;
 
         // Mark old key as inactive

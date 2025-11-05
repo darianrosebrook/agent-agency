@@ -152,8 +152,8 @@ pub mod models {
     /// Audit trail entry model
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct AuditTrailEntry {
-        #[schemars(with = "String")]
-        pub id: Uuid,
+    #[schemars(with = "String")]
+    pub id: Uuid,
         pub event_type: String,
         pub description: String,
         #[schemars(with = "String")]
@@ -164,8 +164,8 @@ pub mod models {
     /// Worker model
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct Worker {
-        #[schemars(with = "String")]
-        pub id: Uuid,
+    #[schemars(with = "String")]
+    pub id: Uuid,
         pub name: String,
         pub worker_type: String,
         pub specialty: Option<String>,
@@ -206,6 +206,38 @@ pub mod models {
         #[schemars(with = "Option<String>")]
         pub expires_at: Option<DateTime<Utc>>,
         pub metadata: HashMap<String, serde_json::Value>,
+    }
+
+    /// Judge model
+    #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+    pub struct Judge {
+    #[schemars(with = "String")]
+    pub id: Uuid,
+        pub name: String,
+        pub judge_type: String,
+        pub configuration: serde_json::Value,
+        pub is_active: bool,
+        pub metadata: HashMap<String, serde_json::Value>,
+        #[schemars(with = "String")]
+        pub created_at: DateTime<Utc>,
+        #[schemars(with = "String")]
+        pub updated_at: DateTime<Utc>,
+    }
+
+    /// Judge evaluation model
+    #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+    pub struct JudgeEvaluation {
+    #[schemars(with = "String")]
+    pub id: Uuid,
+        #[schemars(with = "String")]
+        pub judge_id: Uuid,
+        #[schemars(with = "String")]
+        pub task_id: Uuid,
+        pub evaluation: serde_json::Value,
+        pub score: f64,
+        pub metadata: HashMap<String, serde_json::Value>,
+        #[schemars(with = "String")]
+        pub created_at: DateTime<Utc>,
     }
 }
 
@@ -275,6 +307,7 @@ pub struct UpdateWaiver {
 /// Create judge request
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateJudge {
+    #[schemars(with = "String")]
     pub id: Uuid,
     pub name: String,
     pub judge_type: String,
@@ -284,10 +317,23 @@ pub struct CreateJudge {
 /// Create judge evaluation request
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateJudgeEvaluation {
+    #[schemars(with = "String")]
     pub judge_id: Uuid,
+    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub evaluation: serde_json::Value,
     pub score: f64,
+}
+
+/// Update judge request
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UpdateJudge {
+    #[schemars(with = "String")]
+    pub id: Uuid,
+    pub name: Option<String>,
+    pub judge_type: Option<String>,
+    pub configuration: Option<serde_json::Value>,
+    pub is_active: Option<bool>,
 }
 
 /// Cost limits
