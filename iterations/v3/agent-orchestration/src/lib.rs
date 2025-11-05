@@ -466,8 +466,8 @@ impl AgentOrchestrationService {
             priority: task.priority.clone(),
             execution_mode: agent_agency_contracts::ExecutionMode::Auto,
             risk_tier: Some(match task.priority {
-                TaskPriority::Critical | TaskPriority::High => agent_agency_contracts::task_request::RiskTier::Tier1,
-                TaskPriority::Medium => agent_agency_contracts::RiskTier::Tier2,
+                TaskPriority::Critical | TaskPriority::High | TaskPriority::Urgent => agent_agency_contracts::task_request::RiskTier::Tier1,
+                TaskPriority::Normal | TaskPriority::Medium => agent_agency_contracts::RiskTier::Tier2,
                 TaskPriority::Low => agent_agency_contracts::RiskTier::Tier3,
             }),
             acceptance: Some("Orchestrated task".to_string()),

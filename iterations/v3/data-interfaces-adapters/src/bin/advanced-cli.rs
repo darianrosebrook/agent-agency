@@ -6,6 +6,8 @@
 use schemars::JsonSchema;
 use std::io::{self, Write};
 use std::sync::Arc;
+use std::sync::Mutex;
+use std::collections::HashMap;
 use clap::{Parser, Subcommand};
 use tokio::sync::mpsc;
 use uuid::Uuid;
@@ -14,8 +16,8 @@ use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 
 /// Global task state registry
 lazy_static::lazy_static! {
-    static ref TASK_REGISTRY: Arc<Mutex<HashMap<Uuid, TaskState>>> = Arc::new(Mutex::new(HashMap::new()));
-    static ref LOOP_REGISTRY: Arc<Mutex<HashMap<Uuid, Arc<SelfPromptingLoop>>>> = Arc::new(Mutex::new(HashMap::new()));
+    static ref TASK_REGISTRY: Mutex<HashMap<Uuid, TaskState>> = Mutex::new(HashMap::new());
+    static ref LOOP_REGISTRY: Mutex<HashMap<Uuid, Arc<SelfPromptingLoop>>> = Mutex::new(HashMap::new());
 }
 
 /// Task execution state
@@ -121,8 +123,6 @@ use axum::{
     routing::get,
     Router,
 };
-use std::collections::HashMap;
-use std::sync::Mutex;
 use tower_http::cors::CorsLayer;
 
 /// Execution modes with different intervention levels
@@ -145,7 +145,7 @@ struct DashboardState {
 
 /// Start the real-time dashboard server
 async fn start_dashboard_server(
-    execution_rx: mpsc::UnboundedReceiver<agent_agency_v3::orchestration::planning::types::ExecutionEvent>,
+    execution_rx: mpsc::UnboundedReceiver<String>, // TODO: Use proper ExecutionEvent type when available
 ) -> Result<(), Box<dyn std::error::Error>> {
     let state = DashboardState {
         execution_events: Arc::new(Mutex::new(Vec::new())),
@@ -419,7 +419,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn execute_task(
     description: String,
     project_path: Option<String>,
-    mode: ExecutionMode,
+    mode: SafetyMode,
     enable_arbiter: bool,
     risk_tier: Option<String>,
     max_iterations: usize,
@@ -430,8 +430,8 @@ async fn execute_task(
     println!("═══════════════════════════════════════════\n");
 
     // Display execution mode information
-        match mode {
-            SafetyMode::Strict => {
+    match mode {
+        SafetyMode::Strict => {
             println!(" EXECUTION MODE: STRICT");
             println!("   Manual approval required for each changeset");
             println!("   Full control over what changes are applied\n");
@@ -573,7 +573,7 @@ async fn execute_task(
             println!(" Starting autonomous execution...\n");
             execute_auto(&executor, &loop_controller, &task, task_id, watch).await?;
         }
-        ExecutionMode::Strict => {
+        SafetyMode::Strict => {
             println!(" Starting strict mode execution...\n");
             execute_strict(&executor, &loop_controller, &task, task_id, watch).await?;
         }
