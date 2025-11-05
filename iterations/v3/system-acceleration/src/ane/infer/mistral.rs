@@ -136,7 +136,7 @@ pub async fn generate_text(
     prompt: &str,
     options: &MistralInferenceOptions,
 ) -> Result<String> {
-    // Update last accessed time
+    // Update last accessed time (std::sync::Mutex, no await needed)
     if let Ok(mut last_accessed) = model.last_accessed.lock() {
         *last_accessed = std::time::Instant::now();
     }
@@ -168,40 +168,60 @@ pub async fn generate_text(
     // - [ ] Add integration tests with real ANE inference
     // Prepare input tensor
     let device = Device::Cpu; // Use CPU for now, ANE integration will come later
-    // Convert i32 tokens to f32 for tensor creation
+    // Keep token ids as i32; the backend embeds internally
+    // Note: Candle requires converting to f32 for tensor creation, but we'll treat them as IDs
     let input_tokens_f32: Vec<f32> = input_tokens.iter().map(|&x| x as f32).collect();
-    let _input_tensor = Tensor::from_slice(&input_tokens_f32, (input_tokens_f32.len(),), &device)?
+    let _input_tensor = Tensor::from_slice(input_tokens_f32.as_slice(), (input_tokens_f32.len(),), &device)?
         .unsqueeze(0)?; // Add batch dimension
 
     // Generate tokens
     let mut generated_tokens = input_tokens.clone();
-    let mut kv_cache = model.kv_cache.lock().unwrap();
+    let mut kv_cache = model.kv_cache.lock().await;
+    
+    // Get EOS token ID from tokenizer
+    let eos_id = model.tokenizer.eos_id().unwrap_or(2);
+    
+    // Pre-allocate capacity to avoid reallocations
+    generated_tokens.reserve(input_tokens.len() + options.max_tokens);
     
     for _ in 0..options.max_tokens {
         // Prepare input for next token prediction
         let input_len = generated_tokens.len();
         let input_slice = &generated_tokens[input_len.saturating_sub(context_length)..];
         
-        // Convert i32 tokens to f32 for tensor creation
+        // Keep token ids as i32; the backend embeds internally
+        // Note: Candle requires converting to f32 for tensor creation, but we'll treat them as IDs
         let input_slice_f32: Vec<f32> = input_slice.iter().map(|&x| x as f32).collect();
-        let input_tensor = Tensor::from_slice(&input_slice_f32, (input_slice_f32.len(),), &device)?
+        let input_tensor = Tensor::from_slice(input_slice_f32.as_slice(), (input_slice_f32.len(),), &device)?
             .unsqueeze(0)?;
 
-        // Run inference through Core ML
-        let logits = run_mistral_inference(model, &input_tensor).await?;
+        // Run inference through Core ML with timeout
+        let step_future = run_mistral_inference(model, &input_tensor);
+        let logits = match tokio::time::timeout(
+            std::time::Duration::from_millis(options.timeout_ms),
+            step_future
+        ).await {
+            Ok(result) => result?,
+            Err(_) => {
+                model.circuit_breaker.record_failure();
+                return Err(ANEError::Timeout(options.timeout_ms));
+            }
+        };
         
         // Sample next token
         let next_token = sample_token(&logits, options)?;
         
         // Check for end token
-        if next_token == 2 { // EOS token
+        if next_token == eos_id {
             break;
         }
         
         generated_tokens.push(next_token);
         
-        // Update KV cache
-        kv_cache.update(&generated_tokens);
+        // Update KV cache if enabled
+        if options.use_kv_cache {
+            kv_cache.step();
+        }
     }
 
     // Decode generated tokens
@@ -230,12 +250,11 @@ async fn run_mistral_inference(
         // This would call the actual Core ML inference
         // For now, return a placeholder tensor
         let device = Device::Cpu;
-        let vocab_size = 32000; // Mistral vocab size
         let batch_size = input_tensor.dims()[0];
-        let seq_len = input_tensor.dims()[1];
-
-        // Create placeholder logits tensor
-        Tensor::zeros(&[batch_size, seq_len, vocab_size], candle_core::DType::F32, &device)
+        
+        // Return [B, V] shape (last token logits only) to reduce I/O and simplify sampling
+        let vocab_size = model.tokenizer.vocab_size().unwrap_or(32000) as usize;
+        Tensor::zeros(&[batch_size, vocab_size], candle_core::DType::F32, &device)
             .map_err(|e| ANEError::InferenceFailed(format!("Failed to create tensor: {}", e)))
     });
 
@@ -247,20 +266,32 @@ async fn run_mistral_inference(
 
 /// Sample next token from logits
 fn sample_token(logits: &Tensor, options: &MistralInferenceOptions) -> Result<i32> {
-    // Get the last token logits
-    let last_logits = logits.i((.., logits.dims()[1] - 1, ..))?;
+    // Logits shape is [B, V] (last token logits only)
+    // Extract logits for batch index 0
+    let logits = logits.i((0, ..))?;
+    
+    // Fast path: greedy sampling (temperature=None, top_p=None)
+    if options.temperature.is_none() && options.top_p.is_none() {
+        let logits_vec: Vec<f32> = logits.to_vec1()?;
+        let argmax = logits_vec.iter()
+            .enumerate()
+            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+            .map(|(i, _)| i)
+            .unwrap_or(0);
+        return Ok(argmax as i32);
+    }
     
     // Apply temperature if specified
     let logits = if let Some(temp) = options.temperature {
-        let temp_tensor = Tensor::new(&[temp], &last_logits.device())?;
-        (&last_logits / &temp_tensor)?
+        let temp_tensor = Tensor::new(&[temp], logits.device())?;
+        (&logits / &temp_tensor)?
     } else {
-        last_logits
+        logits
     };
     
-    // Apply top-p filtering if specified
+    // Apply top-p filtering if specified (stable version)
     let logits = if let Some(top_p) = options.top_p {
-        apply_top_p_filtering(&logits, top_p)?
+        apply_top_p_filtering_stable(&logits, top_p)?
     } else {
         logits
     };
@@ -291,35 +322,65 @@ fn sample_token(logits: &Tensor, options: &MistralInferenceOptions) -> Result<i3
     Ok(argmax as i32)
 }
 
-/// Apply top-p (nucleus) filtering
-fn apply_top_p_filtering(logits: &Tensor, top_p: f32) -> Result<Tensor> {
+/// Apply top-p (nucleus) filtering with numerically stable log-sum-exp
+fn apply_top_p_filtering_stable(logits: &Tensor, top_p: f32) -> Result<Tensor> {
+    use candle_core::DType;
+    
+    // Ensure logits are float type
+    let dtype = logits.dtype();
+    if !matches!(dtype, DType::F32 | DType::F16 | DType::BF16) {
+        return Err(ANEError::InvalidInput(
+            format!("Logits must be float type, got {:?}", dtype)
+        ));
+    }
+    
+    // Log-sum-exp normalization for numerical stability
+    // Convert to Vec for stable computation
     let logits_vec: Vec<f32> = logits.to_vec1()?;
-    let mut indexed_logits: Vec<(usize, f32)> = logits_vec.iter()
-        .enumerate()
-        .map(|(i, &val)| (i, val))
+    
+    // Find max logit
+    let max_logit = logits_vec.iter()
+        .fold(f32::NEG_INFINITY, |acc, &x| acc.max(x));
+    
+    // Compute exp(shifted) and sum in a single pass for efficiency
+    let mut exp_sum = 0.0;
+    let exp_shifted: Vec<f32> = logits_vec.iter()
+        .map(|&x| {
+            let exp_val = (x - max_logit).exp();
+            exp_sum += exp_val;
+            exp_val
+        })
         .collect();
     
-    // Sort by logit value (descending)
-    indexed_logits.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap());
+    // Compute probabilities: exp(shifted) / sumexp
+    let probs_vec: Vec<f32> = exp_shifted.iter()
+        .map(|&x| x / exp_sum)
+        .collect();
     
-    // Calculate cumulative probabilities
+    // Sort indices by probability (descending)
+    let mut indices: Vec<usize> = (0..probs_vec.len()).collect();
+    indices.sort_unstable_by(|&i, &j| {
+        probs_vec[j].partial_cmp(&probs_vec[i]).unwrap()
+    });
+    
+    // Find cutoff: how many top tokens to keep to reach top_p probability mass
     let mut cumulative_prob = 0.0;
-    let mut cutoff_idx = indexed_logits.len();
+    let mut keep_count = 0;
     
-    for (i, (_, logit)) in indexed_logits.iter().enumerate() {
-        let prob = logit.exp();
-        cumulative_prob += prob;
-        
+    for &idx in &indices {
+        cumulative_prob += probs_vec[idx];
+        keep_count += 1;
         if cumulative_prob >= top_p {
-            cutoff_idx = i + 1;
             break;
         }
     }
     
-    // Create filtered logits
+    // Create mask: keep top-p set, mask rest with -inf
     let mut filtered_logits = vec![f32::NEG_INFINITY; logits_vec.len()];
-    for (i, _) in indexed_logits.iter().take(cutoff_idx) {
-        filtered_logits[*i] = logits_vec[*i];
+    
+    // Keep only the top-p tokens (first keep_count indices)
+    for &idx in indices.iter().take(keep_count) {
+        filtered_logits[idx] = logits_vec[idx];
     }
     
     Tensor::new(&*filtered_logits, logits.device())

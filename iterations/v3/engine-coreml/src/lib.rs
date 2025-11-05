@@ -39,8 +39,8 @@ pub struct CoreMLEngine {
     /// Engine capabilities and metadata
     caps: EngineCaps,
 
-    /// Loaded Mistral model for inference
-    mistral_model: Option<MistralModel>,
+    /// Loaded Mistral model for inference (thread-safe shared mutable access)
+    mistral_model: Option<Arc<tokio::sync::Mutex<MistralModel>>>,
 
     /// Prompt cache to avoid redundant inference
     prompt_cache: PromptCache,
@@ -116,13 +116,13 @@ impl CoreMLEngine {
         // Check ANE availability
         let ane_active = Self::check_ane_availability();
 
-        // Load Mistral model
+        // Load Mistral model and wrap in Arc<tokio::sync::Mutex<>> for thread-safe shared access
         let compilation_options = system_acceleration::ane::models::mistral_model::MistralCompilationOptions::default();
         let telemetry = system_acceleration::telemetry::TelemetryCollector::new();
         let mistral_model = match load_mistral_model(&model_path, &compilation_options, telemetry).await {
             Ok(model) => {
                 info!("✅ Loaded Mistral model from {}", model_path.display());
-                Some(model)
+                Some(Arc::new(tokio::sync::Mutex::new(model)))
             }
             Err(e) => {
                 warn!("❌ Failed to load Mistral model: {}", e);
@@ -269,23 +269,15 @@ impl CoreMLEngine {
 
     /// Run inference using real Mistral model or fallback to simulation
     async fn run_inference(&self, prompt: &JudgePrompt, max_tokens: usize) -> Result<String, EngineError> {
-        // TODO: Wrap MistralModel in Arc<Mutex<...>> or similar for shared mutable access
-        // - [ ] Wrap MistralModel in Arc<Mutex<MistralModel>> for thread-safe access
-        // - [ ] Implement proper model sharing across concurrent requests
-        // - [ ] Handle model locking and contention gracefully
-        // - [ ] Add unit tests with shared model instances
-        // - [ ] Add integration tests with concurrent inference requests
         // Use real Mistral inference if model is loaded
-        // PLACEHOLDER: MistralModel doesn't implement Clone, so we need to use interior mutability
-        // For now, fallback to simulation until model sharing is properly implemented
-        warn!("Real Mistral inference requires model sharing implementation - using simulation");
-        return self.run_simulated_inference(prompt, max_tokens).await;
+        if let Some(ref model) = self.mistral_model {
+            let mut model_guard = model.lock().await;
+            return self.run_real_mistral_inference(&mut model_guard, prompt, max_tokens).await;
+        }
         
-        // TODO: Uncomment when MistralModel is wrapped in Arc<Mutex<...>>:
-        // if let Some(ref model) = self.mistral_model {
-        //     let mut model_guard = model.lock().await;
-        //     return self.run_real_mistral_inference(&mut model_guard, prompt, max_tokens).await;
-        // }
+        // Fallback to simulation if model is not loaded
+        warn!("Mistral model not loaded - using simulation");
+        self.run_simulated_inference(prompt, max_tokens).await
     }
 
     /// Run real Mistral inference through system-acceleration
