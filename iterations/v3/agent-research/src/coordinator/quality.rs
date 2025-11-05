@@ -9,7 +9,7 @@ use std::collections::HashMap;
 /// Quality indicators for assessment
 
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize) ]
 pub enum QualityIndicator {
     Compliance,
     EvidenceStrength,
@@ -20,7 +20,7 @@ pub enum QualityIndicator {
 
 /// Quality heuristics for assessment
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct QualityHeuristics {
     /// Weight for different quality indicators
     pub indicator_weights: HashMap<QualityIndicator, f64>,
@@ -91,7 +91,7 @@ impl QualityHeuristics {
 
 /// Quality classification levels
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
 pub enum QualityLevel {
     Excellent,
     Good,
@@ -102,7 +102,7 @@ pub enum QualityLevel {
 
 /// Quality thresholds for classification
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct QualityThresholds {
     pub excellent_min: f64,
     pub good_min: f64,
@@ -123,7 +123,7 @@ impl Default for QualityThresholds {
 
 /// Keyword patterns for quality analysis
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct QualityPatterns {
     pub positive_indicators: Vec<String>,
     pub negative_indicators: Vec<String>,
@@ -168,7 +168,7 @@ impl Default for QualityPatterns {
 
 /// Quality assessment result
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct QualityAssessment {
     pub overall_score: f64,
     pub quality_level: QualityLevel,

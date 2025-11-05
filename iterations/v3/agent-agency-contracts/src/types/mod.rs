@@ -12,6 +12,7 @@ pub mod data;
 pub mod council;
 pub mod memory;
 pub mod research;
+pub mod validation;
 pub mod tool_chain;
 pub mod data_processing;
 pub mod prelude;

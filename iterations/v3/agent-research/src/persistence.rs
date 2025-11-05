@@ -17,7 +17,7 @@ use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 /// Learning persistence configuration
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningPersistenceConfig {
     /// Base directory for learning data storage
     pub storage_path: PathBuf,
@@ -47,13 +47,11 @@ impl Default for LearningPersistenceConfig {
 }
 
 /// Learning state snapshot for persistence
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningStateSnapshot {
     /// Unique snapshot identifier
-    #[schemars(with = "String")]
     pub id: Uuid,
     /// Timestamp of snapshot creation
-    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
     /// Worker performance models
@@ -69,7 +67,7 @@ pub struct LearningStateSnapshot {
 }
 
 /// Worker performance model for persistence
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct WorkerPerformanceModel {
     /// Worker identifier
     pub worker_id: String,
@@ -80,13 +78,12 @@ pub struct WorkerPerformanceModel {
     /// Adaptation parameters
     pub adaptation_params: AdaptationParameters,
     /// Last updated timestamp
-    #[schemars(with = "String")]
 
     pub last_updated: DateTime<Utc>,
 }
 
 /// Task performance metrics
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct TaskPerformanceMetrics {
     /// Number of tasks completed
     pub tasks_completed: u64,
@@ -103,7 +100,7 @@ pub struct TaskPerformanceMetrics {
 }
 
 /// Performance trend analysis
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum PerformanceTrend {
     Improving { rate: f64 },
     Declining { rate: f64 },
@@ -112,7 +109,7 @@ pub enum PerformanceTrend {
 }
 
 /// Learning progress indicators
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningProgressIndicators {
     /// Experience points accumulated
     pub experience_points: f64,
@@ -127,7 +124,7 @@ pub struct LearningProgressIndicators {
 }
 
 /// Adaptation parameters for learning
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct AdaptationParameters {
     /// Exploration vs exploitation balance
     pub exploration_rate: f64,
@@ -140,7 +137,7 @@ pub struct AdaptationParameters {
 }
 
 /// Learning metrics snapshot
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningMetricsSnapshot {
     /// Overall system learning effectiveness
     pub system_learning_effectiveness: f64,
@@ -155,9 +152,8 @@ pub struct LearningMetricsSnapshot {
 }
 
 /// Efficiency data point
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct EfficiencyDataPoint {
-    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
     pub efficiency_score: f64,
@@ -166,9 +162,8 @@ pub struct EfficiencyDataPoint {
 }
 
 /// Quality data point
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct QualityDataPoint {
-    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
     pub avg_quality_score: f64,
@@ -176,16 +171,13 @@ pub struct QualityDataPoint {
 }
 
 /// Task execution record
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct TaskExecutionRecord {
-    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub worker_id: String,
     pub task_type: TaskType,
-    #[schemars(with = "String")]
 
     pub start_time: DateTime<Utc>,
-    #[schemars(with = "String")]
 
     pub end_time: DateTime<Utc>,
     pub success: bool,
@@ -195,7 +187,7 @@ pub struct TaskExecutionRecord {
 }
 
 /// Resource usage metrics
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ResourceUsageMetrics {
     pub cpu_seconds: f64,
     pub memory_bytes: u64,
@@ -205,22 +197,20 @@ pub struct ResourceUsageMetrics {
 }
 
 /// Resource allocation pattern
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ResourceAllocationPattern {
-    #[schemars(with = "String")]
     pub pattern_id: Uuid,
     pub task_type: TaskType,
     pub complexity: TaskComplexity,
     pub optimal_worker_assignment: Vec<String>,
     pub resource_requirements: ResourceRequirements,
     pub success_probability: f64,
-    #[schemars(with = "String")]
 
     pub last_validated: DateTime<Utc>,
 }
 
 /// Resource requirements specification
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ResourceRequirements {
     pub min_cpu_cores: u32,
     pub min_memory_gb: f64,
@@ -230,7 +220,7 @@ pub struct ResourceRequirements {
 }
 
 /// System configuration snapshot
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct SystemConfigurationSnapshot {
     pub learning_config: LearningConfigSnapshot,
     pub worker_config: HashMap<String, WorkerConfiguration>,
@@ -239,7 +229,7 @@ pub struct SystemConfigurationSnapshot {
 }
 
 /// Learning configuration snapshot
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningConfigSnapshot {
     pub learning_rate: f64,
     pub exploration_rate: f64,
@@ -249,7 +239,7 @@ pub struct LearningConfigSnapshot {
 }
 
 /// Worker configuration
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct WorkerConfiguration {
     pub capabilities: Vec<TaskType>,
     pub max_concurrent_tasks: u32,
@@ -258,7 +248,7 @@ pub struct WorkerConfiguration {
 }
 
 /// Worker resource limits
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct WorkerResourceLimits {
     pub max_cpu_percent: f64,
     pub max_memory_gb: f64,
@@ -266,7 +256,7 @@ pub struct WorkerResourceLimits {
 }
 
 /// Resource limits snapshot
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ResourceLimitsSnapshot {
     pub total_cpu_cores: u32,
     pub total_memory_gb: f64,
@@ -275,7 +265,7 @@ pub struct ResourceLimitsSnapshot {
 }
 
 /// Quality thresholds snapshot
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct QualityThresholdsSnapshot {
     pub min_quality_score: f64,
     pub max_error_rate: f64,
@@ -585,11 +575,9 @@ pub trait LearningStorageBackend: Send + Sync {
 }
 
 /// Snapshot metadata for listing
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct SnapshotMetadata {
-    #[schemars(with = "String")]
     pub id: Uuid,
-    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
     pub size_bytes: u64,
@@ -597,7 +585,7 @@ pub struct SnapshotMetadata {
 }
 
 /// Storage statistics
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct StorageStatistics {
     pub total_snapshots: u64,
     pub total_size_bytes: u64,

@@ -4,15 +4,14 @@
 //! to validate working specifications before they proceed to execution.
 
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use async_trait::async_trait;
 
 use crate::planning_agent::planning_errors::{PlanningError, PlanningResult};
 
 /// CAWS validation error
-
-use serde::{Deserialize, Serialize};
-#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
+#[derive(Debug, Serialize, Deserialize, thiserror::Error)]
 pub enum CawsValidationError {
     #[error("CAWS validation service unavailable: {0}")]
     ServiceUnavailable(String),
@@ -24,7 +23,7 @@ pub enum CawsValidationError {
     ConfigurationError(String),
 
     #[error("JSON serialization error: {0}")]
-    Serialization(#[from] serde_json::Error),
+    Serialization(String),
 
     #[error("Validation timeout: {0}")]
     Timeout(String),
@@ -32,7 +31,7 @@ pub enum CawsValidationError {
 
 /// Context for CAWS validation
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ValidationContext {
     /// Risk tier of the task
     pub risk_tier: agent_agency_contracts::task_request::RiskTier,
@@ -46,7 +45,7 @@ pub struct ValidationContext {
 
 /// Validation options
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ValidationOptions {
     /// Enable strict mode (fail on warnings)
     pub strict_mode: bool,
@@ -60,7 +59,7 @@ pub struct ValidationOptions {
 
 /// CAWS validation result
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct CawsValidationResult {
     /// Whether validation passed
     pub compliant: bool,
@@ -80,7 +79,7 @@ pub struct CawsValidationResult {
 
 /// Validation violation
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ValidationViolation {
     /// Violation code
     pub code: String,
@@ -97,7 +96,7 @@ pub struct ValidationViolation {
 
 /// Violation severity
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, Copy)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Copy)]
 pub enum ViolationSeverity {
     Error,
     Warning,
@@ -106,7 +105,7 @@ pub enum ViolationSeverity {
 
 /// Quality indicator
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct QualityIndicator {
     /// Indicator name
     pub name: String,

@@ -9,7 +9,7 @@ use std::collections::HashMap;
 /// Learning algorithm types
 
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum LearningAlgorithmm {
     ReinforcementLearning,
     SupervisedLearning,
@@ -20,7 +20,7 @@ pub enum LearningAlgorithmm {
 
 /// Learning algorithm implementation
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct LearningAlgorithms {
     algorithms: HashMap<LearningAlgorithm, Box<dyn LearningStrategy>>,
 }
@@ -288,14 +288,14 @@ pub trait LearningStrategy {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningInput {
     pub data: Vec<f64>,
     pub context: HashMap<String, String>,
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningOutput {
     pub result: String,
     pub confidence: f64,

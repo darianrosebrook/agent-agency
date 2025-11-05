@@ -41,9 +41,25 @@ pub use super::memory::{
     TemporalQuery, Experience
 };
 
-// Research types
+// Validation types - unified validation issue types
+pub use super::validation::{
+    ValidationIssue, ValidationSeverity, ValidationCategory, ValidationCategoryEnum,
+    ValidationResult, SimpleIssueSeverity,
+};
+
+// Research types - explicit imports, not wildcard
 pub use super::research::{
-    Evidence, EvidenceType, EvidenceQuery, ValidationResult, EvidenceStats
+    // Existing Evidence types (backward compatibility)
+    Evidence, EvidenceType, EvidenceQuery, ValidationResult as EvidenceValidationResult, EvidenceStats,
+    // New DTOs
+    EntityMatch, EntityType, EntityKey, UnresolvableAmbiguity,
+    VerificationMethod, UnresolvableReason, Embedding, QueryType,
+    // Ports
+    EmbeddingProvider, KnowledgeBase, KnowledgeIngest,
+    BoxFuture,
+    // Errors
+    EmbeddingError, EmbeddingErrorCode, KnowledgeError, KnowledgeErrorCode,
+    RetryHint,
 };
 
 // Tool chain types

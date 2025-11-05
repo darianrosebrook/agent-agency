@@ -195,10 +195,10 @@ impl MultiModalVerificationEngine {
                     VerificationStatus::Unverified 
                 },
                 confidence: verification_result.confidence,
-                verification_results: if was_verified { 
-                    VerificationStatus::Verified 
-                } else { 
-                    VerificationStatus::Unverified 
+                verification_results: if was_verified {
+                    VerificationStatus::Verified
+                } else {
+                    VerificationStatus::Unverified
                 },
                 evidence: verification_result.checks.iter().flat_map(|c| c.evidence.clone()).map(|content| {
                     crate::extraction_types::Evidence {
@@ -211,7 +211,7 @@ impl MultiModalVerificationEngine {
                             authority: "system".to_string(),
                             freshness: chrono::Utc::now(),
                         },
-                        confidence: c.confidence,
+                        confidence: verification_result.confidence,
                         relevance: 0.8,
                         timestamp: chrono::Utc::now(),
                     }
@@ -1125,14 +1125,14 @@ impl MultiModalVerificationEngine {
                             authority: "system".to_string(),
                             freshness: chrono::Utc::now(),
                         },
-                        confidence: c.confidence,
+                        confidence: verification_result.confidence,
                         relevance: 0.8,
                         timestamp: chrono::Utc::now(),
                     }
                 }).collect(),
                         timestamp: chrono::Utc::now(),
                         original_claim: claim.claim_text.clone(),
-                        verification_results: if verification_result.overall_confidence > 0.7 {
+                        verification_results: if verification_result.confidence > 0.7 {
                             VerificationStatus::Verified
                         } else {
                             VerificationStatus::Unverified
@@ -1157,12 +1157,12 @@ impl MultiModalVerificationEngine {
             claim_id: batch_claim_id,
             verified: final_confidence > 0.7,
             confidence: final_confidence,
-            checks: evidence.into_iter().map(|evidence_item| {
+            checks: evidence.into_iter().map(|evidence_content| {
                 CheckResult {
                     check_type: crate::verification::types::CheckType::Other("batch_verification".to_string()),
                     passed: true,
                     confidence: 0.8,
-                    details: evidence_item.content,
+                    details: evidence_content,
                     evidence: vec![],
                     timestamp: chrono::Utc::now(),
                 }

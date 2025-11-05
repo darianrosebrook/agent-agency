@@ -101,5 +101,20 @@ rand = "0.8.5"
 indicatif = "0.17"
 console = { version = "0.15", features = ["std"] }
 
+# CRITICAL: DO NOT CHANGE THESE VERSIONS - CoreML functionality depends on aligned versions
+# These versions were carefully aligned to resolve candle-core conflicts that blocked CoreML.
+# Changing these versions may break CoreML inference, YOLO, and fp16 precision conversion.
+# DO NOT update these without thorough testing of CoreML functionality.
+# DO NOT downgrade or change tokenizers version (0.19 is required for CoreML).
+# Last fixed: P0 priority - candle-core dependency alignment (2025-01-XX)
+# ML/AI dependencies - aligned versions to prevent conflicts
+tokenizers = "0.19"
+candle-core = "0.9"
+candle-nn = "0.9"
+candle-transformers = "0.9"
+safetensors = "0.4"
+hf-hub = "0.3"
+memmap2 = "0.9"
+
 pkcs8 = "0.10"
 

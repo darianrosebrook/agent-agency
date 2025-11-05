@@ -6,14 +6,14 @@
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
 use crate::extraction_types::*;
-use crate::VerificationMethod;
+use agent_agency_contracts::types::research::VerificationMethod;
 use anyhow::Result;
 use regex::Regex;
 use tracing::debug;
 
 /// Stage 2: Qualification of verifiable content
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct QualificationStage {
     verifiability_detector: VerifiabilityDetector,
     content_rewriter: ContentRewriter,
@@ -131,7 +131,7 @@ impl QualificationStage {
 
 /// Detects what content can be verified
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct VerifiabilityDetector {
     factual_patterns: Vec<String>,
     technical_patterns: Vec<String>,
@@ -634,7 +634,7 @@ impl VerifiabilityDetector {
 
 /// Rewrites content to make it verifiable
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct ContentRewriter {
     subjective_terms: Vec<(String, String)>,
     vague_quantifiers: Vec<String>,
@@ -899,7 +899,7 @@ impl ContentRewriter {
 
 /// Assessment of content verifiability
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct VerifiabilityAssessment {
     pub overall_verifiability: VerifiabilityLevel,
     pub verifiable_parts: Vec<VerifiableContent>,

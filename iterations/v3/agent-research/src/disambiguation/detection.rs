@@ -10,15 +10,11 @@ use crate::ProcessingContext;
 
 /// Detects various types of ambiguities in text
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug)]
 pub struct AmbiguityDetector {
-    #[schemars(with = "String")]
     pronoun_regex: Regex,
-    #[schemars(with = "Vec<String>")]
     technical_term_patterns: Vec<Regex>,
-    #[schemars(with = "Vec<String>")]
     scope_boundary_patterns: Vec<Regex>,
-    #[schemars(with = "Vec<String>")]
     temporal_patterns: Vec<Regex>,
 }
 
@@ -90,7 +86,7 @@ impl AmbiguityDetector {
                     original_text: mat.as_str().to_string(),
                     possible_resolutions: self.get_technical_resolutions(mat.as_str(), context),
                     confidence: 0.7,
-                    context: context.map(|s| s.to_string()),
+                    context: Some(context.input_text.clone()),
                 });
             }
         }
@@ -161,7 +157,7 @@ impl AmbiguityDetector {
         match pronoun {
             "it" | "this" | "that" => Some(ReferentInfo {
                 referent: "the system".to_string(),
-                entity_type: EntityType::Organization,
+                entity_type: agent_agency_contracts::types::research::EntityType::Organization,
                 confidence: 0.8,
                 context: Some("system reference".to_string()),
             }),

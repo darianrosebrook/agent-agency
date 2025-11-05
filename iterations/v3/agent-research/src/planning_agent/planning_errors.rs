@@ -9,7 +9,7 @@ pub type PlanningResult<T> = Result<T, PlanningError>;
 
 /// Errors that can occur during planning operations
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
+#[derive(Debug, Serialize, Deserialize, thiserror::Error)]
 pub enum PlanningError {
     #[error("Task request validation failed: {0}")]
     InvalidTaskRequest(String),
@@ -27,7 +27,7 @@ pub enum PlanningError {
     Refinement(String),
 
     #[error("Database operation failed: {0}")]
-    Database(#[from] anyhow::Error),
+    Database(String),
 
     #[error("Task constraints violated: {0}")]
     ConstraintViolation(String),
@@ -36,7 +36,7 @@ pub enum PlanningError {
     Timeout(String),
 
     #[error("Serialization failed: {0}")]
-    Serialization(#[from] serde_json::Error),
+    Serialization(String),
 
     #[error("Risk tier escalation required: {reason}")]
     RiskEscalation { reason: String },

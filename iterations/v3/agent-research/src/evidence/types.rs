@@ -6,17 +6,16 @@ use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 
 /// Evidence collection result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct EvidenceCollectionResult {
     pub evidence: Vec<EvidenceItem>,
     pub total_items: usize,
-    #[schemars(with = "String")]
     pub collection_time: DateTime<Utc>,
     pub confidence: f64,
 }
 
 /// Individual evidence item
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct EvidenceItem {
     pub id: String,
     pub evidence_type: EvidenceType,
@@ -24,12 +23,11 @@ pub struct EvidenceItem {
     pub content: String,
     pub metadata: HashMap<String, String>,
     pub confidence: f64,
-    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 }
 
 /// Types of evidence
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum EvidenceType {
     CodeAnalysis,
     TestExecution,
@@ -41,7 +39,7 @@ pub enum EvidenceType {
 }
 
 /// Source of evidence
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum EvidenceSource {
     StaticAnalysis,
     RuntimeExecution,
@@ -53,7 +51,7 @@ pub enum EvidenceSource {
 }
 
 /// Evidence collector configuration
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct EvidenceCollectorConfig {
     pub enable_code_analysis: bool,
     pub enable_test_execution: bool,
@@ -83,18 +81,17 @@ impl Default for EvidenceCollectorConfig {
 }
 
 /// Evidence analysis result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct EvidenceAnalysisResult {
     pub analysis_type: AnalysisType,
     pub findings: Vec<Finding>,
     pub summary: String,
     pub confidence: f64,
-    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 }
 
 /// Types of analysis
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum AnalysisType {
     CodeQuality,
     TestCoverage,
@@ -106,7 +103,7 @@ pub enum AnalysisType {
 }
 
 /// Individual finding
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct Finding {
     pub id: String,
     pub severity: Severity,
@@ -117,7 +114,7 @@ pub struct Finding {
 }
 
 /// Severity levels
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum Severity {
     Critical,
     High,
@@ -127,7 +124,7 @@ pub enum Severity {
 }
 
 /// Evidence filter configuration
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct EvidenceFilterConfig {
     pub min_confidence: f64,
     pub max_items: usize,

@@ -7,14 +7,14 @@ use schemars::JsonSchema;
 use agent_agency_embedding_service;
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct EmbeddingConfig {
     pub dimension: usize,
     pub seed: Option<u64>,
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct EmbeddingVector {
     pub values: Vec<f32>,
 }

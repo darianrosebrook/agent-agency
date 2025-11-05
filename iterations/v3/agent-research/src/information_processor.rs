@@ -17,8 +17,8 @@ use tracing::info;
 use uuid::Uuid;
 
 /// Information processor configuration
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct InformationProcessorConfig {
     pub quality: QualityConfig,
     pub min_relevance_score: f64,
@@ -31,7 +31,7 @@ pub struct InformationProcessorConfig {
 }
 
 /// Quality assessment configuration
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct QualityConfig {
     pub enable_duplicate_detection: bool,
     pub enable_relevance_filtering: bool,
@@ -64,9 +64,8 @@ impl Default for InformationProcessorConfig {
 }
 
 /// Enhanced search result with quality metrics
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ProcessedSearchResult {
-    #[schemars(with = "String")]
     pub id: Uuid,
     pub title: String,
     pub content: String,
@@ -81,7 +80,7 @@ pub struct ProcessedSearchResult {
 }
 
 /// Quality level classification
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq) ]
 pub enum QualityLevel {
     High,
     Medium,
@@ -90,7 +89,7 @@ pub enum QualityLevel {
 }
 
 /// Processing metadata for result tracking
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ProcessingMetadata {
     pub original_relevance: f64,
     pub original_credibility: f64,
@@ -132,7 +131,7 @@ pub struct InformationProcessor {
 
 /// Processing statistics
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct ProcessingStats {
     pub total_processed: u64,
     pub duplicates_removed: u64,
@@ -501,7 +500,7 @@ mod tests {
         KnowledgeQuery {
             id: Uuid::new_v4(),
             query: "artificial intelligence".to_string(),
-            query_type: QueryType::Technical,
+            query_type: crate::research_types::QueryType::Technical,
             max_results: Some(10),
             context: None,
             filters: HashMap::new(),

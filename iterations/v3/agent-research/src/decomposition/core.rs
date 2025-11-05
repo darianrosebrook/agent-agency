@@ -10,7 +10,7 @@ use tracing::debug;
 
 /// Stage 3: Decomposition into atomic claims
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct DecompositionStage {
     #[serde(skip)]
     claim_extractor: Arc<RwLock<ClaimExtractor>>,
@@ -68,7 +68,7 @@ impl DecompositionStage {
 
 /// Configuration for decomposition processing
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct DecompositionConfig {
     /// Maximum number of atomic claims to extract
     pub max_atomic_claims: usize,
@@ -93,7 +93,7 @@ impl Default for DecompositionConfig {
 
 /// Result of decomposition processing
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct DecompositionResult {
     /// Extracted atomic claims
     pub atomic_claims: Vec<AtomicClaim>,
@@ -117,7 +117,7 @@ impl DecompositionResult {
 
 /// Forward declarations for types that will be implemented in other modules
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 struct ClaimExtractor;
 
 impl ClaimExtractor {
@@ -136,7 +136,7 @@ impl ClaimExtractor {
 }
 
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 struct ContextBracketAdder;
 
 impl ContextBracketAdder {

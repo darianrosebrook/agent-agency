@@ -6,6 +6,7 @@ use std::collections::{HashMap, HashSet};
 use anyhow::Result;
 
 /// Semantic analyzer for meaning extraction
+#[derive(Debug)]
 pub struct SemanticAnalyzer {
     // Basic synonym dictionary
     synonym_map: HashMap<String, Vec<String>>,

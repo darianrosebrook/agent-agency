@@ -17,7 +17,7 @@ use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 /// Confidence reinforcement request
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ConfidenceReinforcementRequest {
     pub entity_id: String,
     pub content: String,
@@ -28,7 +28,7 @@ pub struct ConfidenceReinforcementRequest {
 }
 
 /// Type of confidence reinforcement
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum ReinforcementType {
     /// Direct confirmation from authoritative source
     DirectConfirmation,
@@ -43,7 +43,7 @@ pub enum ReinforcementType {
 }
 
 /// Knowledge update request
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct KnowledgeUpdateRequest {
     pub entity_id: String,
     pub content: String,
@@ -54,19 +54,16 @@ pub struct KnowledgeUpdateRequest {
 }
 
 /// Knowledge entry with confidence tracking
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct KnowledgeEntry {
-    #[schemars(with = "String")]
     pub id: Uuid,
     pub entity_id: String,
     pub content: String,
     pub source: String,
     pub confidence: f64,
     pub entity_type: String,
-    #[schemars(with = "String")]
 
     pub created_at: DateTime<Utc>,
-    #[schemars(with = "String")]
 
     pub updated_at: DateTime<Utc>,
     pub decay_rate: f64,
@@ -76,8 +73,8 @@ pub struct KnowledgeEntry {
 }
 
 /// Confidence manager configuration
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct ConfidenceManagerConfig {
     pub default_decay_rate: f64,
     pub reinforcement_step: f64,

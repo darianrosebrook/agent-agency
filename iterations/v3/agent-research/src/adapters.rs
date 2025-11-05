@@ -50,7 +50,7 @@ fn infer_task_type(description: &str) -> TaskType {
 
 /// Convert Research Task to simple benchmark-compatible format
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct SimpleTask {
     pub id: String,
     pub description: String,

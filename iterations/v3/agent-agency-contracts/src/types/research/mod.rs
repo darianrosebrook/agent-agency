@@ -1,16 +1,26 @@
-//! Research and Evidence Types - DTOs for research operations
+//! Research domain types - DTOs and ports for research operations
 //!
-//! Defines the data transfer objects used by the research evidence collector.
-//! These types enable clean communication between orchestration and research services.
+//! This module provides shared types for research, evidence collection,
+//! and disambiguation operations across the agent-research crate.
 //!
 //! @author @darianrosebrook
 
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
+pub mod dto;
+pub mod ports;
+pub mod errors;
+
+// Re-export all new types
+pub use dto::*;
+pub use ports::*;
+pub use errors::*;
+
+// Keep existing Evidence types for backward compatibility
+// These are still used by the ResearchEvidenceCollector port
 
 /// Evidence collected from research and analysis
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone)]
 pub struct Evidence {
     /// Unique identifier for this evidence
     pub id: String,
@@ -25,15 +35,17 @@ pub struct Evidence {
     /// Relevance score (0.0 to 1.0)
     pub relevance: f64,
     /// Timestamp when evidence was collected
-    #[schemars(with = "String")]
-    pub timestamp: DateTime<Utc>,
+    #[cfg_attr(feature = "serde", schemars(with = "String"))]
+    pub timestamp: chrono::DateTime<chrono::Utc>,
     /// Additional metadata
     pub metadata: std::collections::HashMap<String, serde_json::Value>,
 }
 
 /// Types of evidence that can be collected
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EvidenceType {
     CodeAnalysis,
     TestResults,
@@ -53,7 +65,9 @@ pub enum EvidenceType {
 }
 
 /// Query for evidence collection
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone)]
 pub struct EvidenceQuery {
     /// Topic or claim to collect evidence for
     pub query: String,
@@ -62,15 +76,17 @@ pub struct EvidenceQuery {
     /// Context information for the query
     pub context: std::collections::HashMap<String, serde_json::Value>,
     /// Maximum number of results to return
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub limit: Option<usize>,
     /// Minimum confidence threshold
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub min_confidence: Option<f64>,
 }
 
 /// Validation result for evidence
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone)]
 pub struct ValidationResult {
     /// Whether the evidence is valid
     pub is_valid: bool,
@@ -83,7 +99,9 @@ pub struct ValidationResult {
 }
 
 /// Statistics about evidence collection system
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone)]
 pub struct EvidenceStats {
     /// Total number of evidence items collected
     pub total_evidence: u64,
@@ -96,7 +114,7 @@ pub struct EvidenceStats {
     /// Evidence collection success rate (0.0 to 1.0)
     pub collection_success_rate: f64,
     /// Last collection timestamp
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "Option<String>")]
-    pub last_collection_time: Option<DateTime<Utc>>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(feature = "serde", schemars(with = "Option<String>"))]
+    pub last_collection_time: Option<chrono::DateTime<chrono::Utc>>,
 }

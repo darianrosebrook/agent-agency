@@ -7,7 +7,7 @@ use schemars::JsonSchema;
 use std::sync::Arc;
 use async_trait::async_trait;
 
-use crate::self_prompting_agent::prompting_types::{TaskResult, EvalReport, EvalStatus, SelfPromptingAgentError};
+use crate::self_prompting_agent::prompting_types::{TaskResult, EvalReport, EvalStatus, SelfPromptingAgentError, ArtifactType};
 
 /// Evaluation orchestrator
 pub struct EvaluationOrchestrator {
@@ -16,7 +16,7 @@ pub struct EvaluationOrchestrator {
 
 /// Evaluation result
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct EvaluationResult {
     pub score: f64,
     pub status: EvalStatus,

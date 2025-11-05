@@ -13,7 +13,7 @@ pub mod context {
     use schemars::JsonSchema;
 
     
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct HierarchicalContextManager {
         contexts: HashMap<String, String>,
     }
@@ -34,24 +34,24 @@ pub struct HierarchicalContextManager {
     }
 
     
-    #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+    #[derive(Debug, Clone, Serialize, Deserialize) ]
     pub struct ContextBundle {
         pub id: String,
         pub content: String,
     }
 
     
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ContextBudget {
         pub max_tokens: usize,
     }
 
     
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 struct Allocation ;
 
     
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 struct ContextStats ;
 }
 
@@ -85,7 +85,7 @@ pub mod learning_bridge {
     }
 
     
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningSignal {
         pub signal_type: String,
         pub value: f64,
@@ -152,14 +152,14 @@ pub mod profiling {
     }
 
     
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PerformanceBenchmark {
         pub name: String,
         pub score: f64,
     }
 
     
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PerformanceReport {
         pub operation: String,
         pub duration_ms: f64,
@@ -172,14 +172,14 @@ pub mod prompting {
     use serde::{Deserialize, Serialize};
     use schemars::JsonSchema;
     
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PromptFrame {
         pub content: String,
         pub metadata: std::collections::HashMap<String, String>,
     }
 
     
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PatchAction {
         pub action_type: String,
         pub target: String,
@@ -199,7 +199,7 @@ pub struct PatchAction {
     }
 
     
-#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
+#[derive(Debug, Serialize, Deserialize, thiserror::Error)]
 pub enum ToolSchemaError {
         #[error("Invalid tool schema")]
         InvalidSchema,
@@ -249,7 +249,7 @@ pub mod rl_signals {
     }
 
     
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PolicyAdjustment {
         pub parameter: String,
         pub new_value: f64,

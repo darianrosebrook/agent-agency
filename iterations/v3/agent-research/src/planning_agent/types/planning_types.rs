@@ -7,9 +7,18 @@ use schemars::JsonSchema;
 use std::time::Duration;
 use serde::{Deserialize, Serialize};
 
+// Use unified ValidationIssue from contracts
+pub use agent_agency_contracts::types::validation::{
+    ValidationIssue, ValidationSeverity, ValidationCategory, ValidationCategoryEnum,
+    ValidationResult, SimpleIssueSeverity,
+};
+
+// Re-export SimpleIssueSeverity as IssueSeverity for backward compatibility
+pub type IssueSeverity = SimpleIssueSeverity;
+
 /// Configuration for the planning agent
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PlanningConfig {
     /// Maximum time allowed for planning (in seconds)
     pub max_planning_time_seconds: u64,
@@ -37,7 +46,7 @@ impl Default for PlanningConfig {
 
 /// Risk escalation thresholds
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct RiskEscalationThresholds {
     /// Maximum files for T1 tasks before escalation
     pub t1_max_files: u32,
@@ -61,7 +70,7 @@ impl Default for RiskEscalationThresholds {
 
 /// Request to the planning agent
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PlanningRequest {
     /// The task request to plan
     pub task_request: agent_agency_contracts::task_request::TaskRequest,
@@ -72,7 +81,7 @@ pub struct PlanningRequest {
 
 /// Response from the planning agent
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PlanningResponse {
     /// Generated working specification
     pub working_spec: agent_agency_contracts::working_spec::WorkingSpec,
@@ -89,7 +98,7 @@ pub struct PlanningResponse {
 
 /// Planning operation metadata
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PlanningMetadata {
     /// Total planning time
     pub planning_duration: Duration,
@@ -106,7 +115,7 @@ pub struct PlanningMetadata {
 
 /// Risk assessment result
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct RiskAssessment {
     /// Assessed risk tier
     pub assessed_tier: agent_agency_contracts::task_request::RiskTier,
@@ -120,7 +129,7 @@ pub struct RiskAssessment {
 
 /// Validation results summary
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ValidationResults {
     /// Overall validation status
     pub overall_status: ValidationStatus,
@@ -137,7 +146,7 @@ pub struct ValidationResults {
 
 /// Validation status
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
 pub enum ValidationStatus {
     Passed,
     PassedWithRefinements,
@@ -145,35 +154,9 @@ pub enum ValidationStatus {
     EscalationRequired,
 }
 
-/// Individual validation issue
-
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct ValidationIssue {
-    /// Issue severity
-    pub severity: IssueSeverity,
-
-    /// Issue category
-    pub category: String,
-
-    /// Human-readable description
-    pub description: String,
-
-    /// Suggested fix
-    pub suggestion: Option<String>,
-}
-
-/// Issue severity levels
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub enum IssueSeverity {
-    Error,
-    Warning,
-    Info,
-}
-
 /// Refinement record
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct RefinementRecord {
     /// Refinement iteration number
     pub iteration: u32,

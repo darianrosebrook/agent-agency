@@ -3,12 +3,13 @@
 use schemars::JsonSchema;
 use anyhow::Result;
 
-use super::core::{MultimodalQuery, QueryType};
+use super::core::MultimodalQuery;
+use agent_agency_contracts::types::research::QueryType;
 
 /// Processed query with validated and normalized parameters
 
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ProcessedQuery {
     pub text: Option<String>,
     pub image_path: Option<std::path::PathBuf>,
@@ -21,7 +22,7 @@ pub struct ProcessedQuery {
 
 /// Query processor for parsing and validating search queries
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct QueryProcessor {
     config: super::core::MultimodalRetrieverConfig,
 }

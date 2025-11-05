@@ -11,7 +11,7 @@ use crate::verification::types::DisambiguationMethod;
 
 /// Coreference resolution data structures
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct Entity {
     pub id: String,
     pub name: String,
@@ -24,23 +24,11 @@ pub struct Entity {
 }
 
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-pub enum EntityType {
-    Person,
-    Organization,
-    Location,
-    Technology,
-    Concept,
-    Code,
-    CodeEntity, // Alias for Code - used in disambiguation
-    SystemComponent, // System components like APIs, services
-    Documentation,
-    Data,
-    Other(String),
-}
+// Use EntityType from contracts
+pub use agent_agency_contracts::types::research::EntityType;
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct CoreferenceChain {
     pub representative: Entity,
     pub mentions: Vec<Entity>,
@@ -49,7 +37,7 @@ pub struct CoreferenceChain {
 }
 
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize) ]
 pub enum CoreferenceType {
     Identity, // Same entity (he/she/it -> specific entity)
     Appositive, // Descriptive (John, the developer -> John)
@@ -59,7 +47,7 @@ pub enum CoreferenceType {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct CoreferenceResolution {
     pub chains: Vec<CoreferenceChain>,
     pub unresolved_pronouns: Vec<String>,
@@ -69,7 +57,7 @@ pub struct CoreferenceResolution {
 
 /// Entity disambiguation result
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct EntityDisambiguation {
     pub original_entity: Entity,
     pub candidates: Vec<EntityCandidate>,
@@ -78,7 +66,7 @@ pub struct EntityDisambiguation {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct EntityCandidate {
     pub entity: Entity,
     pub similarity_score: f64,
@@ -91,7 +79,7 @@ pub struct EntityCandidate {
 
 /// Code output structure for claim extraction
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct CodeOutput {
     pub content: String,
     pub language: Language,
@@ -100,7 +88,7 @@ pub struct CodeOutput {
 
 /// Code specification for validation
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct CodeSpecification {
     pub expected_signatures: HashMap<String, String>,
     pub expected_types: HashMap<String, String>,
@@ -109,7 +97,7 @@ pub struct CodeSpecification {
 
 /// Code structure analysis results
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct CodeStructure {
     pub functions: Vec<FunctionDefinition>,
     pub types: Vec<TypeDefinition>,
@@ -118,7 +106,7 @@ pub struct CodeStructure {
 
 /// Function definition in code
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct FunctionDefinition {
     pub name: String,
     pub parameters: Vec<String>,
@@ -128,7 +116,7 @@ pub struct FunctionDefinition {
 
 /// Type definition in code
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct TypeDefinition {
     pub name: String,
     pub kind: String, // "struct", "enum", "trait", etc.
@@ -137,7 +125,7 @@ pub struct TypeDefinition {
 
 /// Implementation block in code
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ImplementationBlock {
     pub target: String,
     pub methods: Vec<String>,
@@ -145,7 +133,7 @@ pub struct ImplementationBlock {
 
 /// Documentation output structure
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct DocumentationOutput {
     pub content: String,
     pub format: String,
@@ -154,7 +142,7 @@ pub struct DocumentationOutput {
 
 /// Documentation standards for validation
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct DocumentationStandards {
     pub required_sections: Vec<String>,
     pub style_guide: HashMap<String, String>,
@@ -163,7 +151,7 @@ pub struct DocumentationStandards {
 
 /// Documentation structure analysis
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct DocumentationStructure {
     pub sections: Vec<String>,
     pub examples: Vec<UsageExample>,
@@ -172,7 +160,7 @@ pub struct DocumentationStructure {
 
 /// API documentation structure
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ApiDocumentation {
     pub endpoints: Vec<String>,
     pub parameters: HashMap<String, Vec<String>>,
@@ -181,7 +169,7 @@ pub struct ApiDocumentation {
 
 /// Usage example in documentation
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct UsageExample {
     pub description: String,
     pub code: String,
@@ -190,7 +178,7 @@ pub struct UsageExample {
 
 /// Data analysis output for claim validation
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct DataAnalysisOutput {
     pub results: Vec<StatisticalResult>,
     pub correlations: Vec<CorrelationResult>,
@@ -201,7 +189,7 @@ pub struct DataAnalysisOutput {
 
 /// Data schema for validation
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct DataSchema {
     pub fields: HashMap<String, String>,
     pub constraints: Vec<String>,
@@ -210,7 +198,7 @@ pub struct DataSchema {
 
 /// Data analysis results container
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct DataAnalysisResults {
     pub statistics: Vec<StatisticalResult>,
     pub correlations: Vec<CorrelationResult>,
@@ -219,7 +207,7 @@ pub struct DataAnalysisResults {
 
 /// Statistical result from data analysis
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct StatisticalResult {
     pub variable: String,
     pub metric: String, // "mean", "median", "std_dev", etc.
@@ -229,7 +217,7 @@ pub struct StatisticalResult {
 
 /// Pattern result from data analysis
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PatternResult {
     pub pattern_type: String,
     pub description: String,
@@ -238,7 +226,7 @@ pub struct PatternResult {
 
 /// Correlation result from data analysis
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct CorrelationResult {
     pub variable1: String,
     pub variable2: String,
@@ -248,7 +236,7 @@ pub struct CorrelationResult {
 
 /// Keyword match result
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct KeywordMatch {
     pub keyword: String,
     pub file_path: String,
@@ -260,7 +248,7 @@ pub struct KeywordMatch {
 
 /// Type of keyword match
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize) ]
     pub enum MatchType {
     Exact,
     Fuzzy,
@@ -270,7 +258,7 @@ pub struct KeywordMatch {
 
 /// Test output structure for code verification
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct TestOutput {
     pub test_results: Vec<TestResult>,
     pub coverage: f64,
@@ -281,7 +269,7 @@ pub struct TestOutput {
 
 /// Individual test result
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
 pub struct TestResult {
     pub name: String,
     pub passed: bool,
@@ -291,7 +279,7 @@ pub struct TestResult {
 
 /// Test consistency analysis
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct TestConsistency {
     pub overall_score: f64,
     pub consistency_issues: Vec<String>,
@@ -299,7 +287,7 @@ pub struct TestConsistency {
 
 /// Test coverage analysis
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct TestCoverage {
     pub overall_score: f64,
     pub line_coverage: f64,
@@ -309,7 +297,7 @@ pub struct TestCoverage {
 
 /// Test relevance analysis
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct TestRelevance {
     pub overall_score: f64,
     pub relevance_factors: Vec<String>,
@@ -317,7 +305,7 @@ pub struct TestRelevance {
 
 /// Test quality analysis
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct TestQuality {
     pub overall_score: f64,
     pub quality_metrics: Vec<String>,
@@ -325,7 +313,7 @@ pub struct TestQuality {
 
 /// Helper for verification check results
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct CheckResult {
     pub score: f64,
     // TODO: Enhance evidence structure with rich metadata

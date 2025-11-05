@@ -29,7 +29,7 @@ use super::events::{EventEmitter, ResearchEvent};
 
 /// Main knowledge seeker for research coordination
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct KnowledgeSeeker {
     config: ResearchAgentConfig,
 
@@ -49,7 +49,7 @@ pub struct KnowledgeSeeker {
 }
 
 /// Research events for monitoring and debugging
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum ResearchEvent {
     QueryStarted(Uuid),
     QueryCompleted(Uuid, usize), // query_id, result_count

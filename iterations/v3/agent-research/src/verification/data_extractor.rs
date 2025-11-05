@@ -98,7 +98,8 @@ impl DataExtractor {
     /// Parse mixed analysis output
     fn parse_mixed_analysis_output(&self, text: &str) -> Result<DataAnalysisResults, Box<dyn std::error::Error + Send + Sync>> {
         let mut results = DataAnalysisResults {
-            statistics: vec![],
+            statistical: vec![],
+            patterns: vec![],
             correlations: vec![],
             insights: vec![],
         };

@@ -18,7 +18,7 @@ pub trait LearningService: Send + Sync {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningContext {
     pub task_id: String,
     pub state: String,
@@ -27,7 +27,7 @@ pub struct LearningContext {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct TaskPerformance {
     pub success_rate: f64,
     pub avg_execution_time: std::time::Duration,
@@ -35,7 +35,7 @@ pub struct TaskPerformance {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct SystemMetrics {
     pub cpu_usage: f64,
     pub memory_usage: f64,
@@ -45,7 +45,7 @@ pub struct SystemMetrics {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningInsights {
     pub patterns: Vec<Pattern>,
     pub improvements: Vec<Improvement>,
@@ -54,7 +54,7 @@ pub struct LearningInsights {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct Pattern {
     pub pattern_type: PatternType,
     pub description: String,
@@ -63,7 +63,7 @@ pub struct Pattern {
 }
 
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
 pub enum PatternType {
     ResourceBottleneck,
     ModelInefficiency,
@@ -71,7 +71,7 @@ pub enum PatternType {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct Improvement {
     pub improvement_type: ImprovementType,
     pub expected_benefit: f64,
@@ -80,7 +80,7 @@ pub struct Improvement {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum ImprovementType {
     ResourceAllocation,
     ModelSelection,
@@ -88,7 +88,7 @@ pub enum ImprovementType {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum Difficulty {
     Easy,
     Moderate,
@@ -96,7 +96,7 @@ pub enum Difficulty {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct OptimizationRecommendation {
     pub recommendation_type: RecommendationType,
     pub description: String,
@@ -106,7 +106,7 @@ pub struct OptimizationRecommendation {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum RecommendationType {
     AdjustResources,
     ExecutionStrategy,
@@ -115,7 +115,7 @@ pub enum RecommendationType {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum Priority {
     Low,
     Medium,
@@ -123,7 +123,7 @@ pub enum Priority {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum OptimizationGoal {
     MinimizeTime,
     MinimizeResources,
@@ -132,7 +132,7 @@ pub enum OptimizationGoal {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct Experience {
     pub state: String,
     pub action: String,
@@ -141,7 +141,7 @@ pub struct Experience {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningStatistics {
     pub total_experiences: usize,
     pub total_patterns: usize,
@@ -243,7 +243,7 @@ impl LearningBridge {
 
 /// Learning signal for RL feedback
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningSignal {
     pub signal_type: String,
     pub value: f64,

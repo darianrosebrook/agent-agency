@@ -10,7 +10,7 @@ use super::visual_search::VisualSearchEngine;
 
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug)]
 pub struct DocumentIndexer {
     text_engine: super::text_search::TextSearchEngine,
     visual_engine: super::visual_search::VisualSearchEngine,

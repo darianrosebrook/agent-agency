@@ -8,7 +8,7 @@ use std::collections::HashMap;
 /// Prompt frame with metadata
 
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PromptFrame {
     pub content: String,
     pub metadata: HashMap<String, String>,
@@ -18,7 +18,7 @@ pub struct PromptFrame {
 
 /// Patch action for prompt modification
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PatchAction {
     pub action_type: String,
     pub target: String,
@@ -63,7 +63,7 @@ impl ToolCallValidator {
 
 /// Tool schema error
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
+#[derive(Debug, Serialize, Deserialize, thiserror::Error)]
 pub enum ToolSchemaError {
     #[error("Invalid tool schema")]
     InvalidSchema,
@@ -136,7 +136,7 @@ impl AgentTelemetryCollector {
 
 /// Telemetry event
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct TelemetryEvent {
     pub event_type: String,
     pub timestamp: chrono::DateTime<chrono::Utc>,
@@ -173,7 +173,7 @@ impl PromptOptimizer {
 
 /// Prompt analysis result
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PromptAnalysis {
     pub original_prompt: String,
     pub quality_score: f64,

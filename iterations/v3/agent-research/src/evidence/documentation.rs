@@ -9,7 +9,7 @@ use serde::{Serialize, Deserialize};
 
 /// Documentation collector
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct DocumentationCollector {
     config: EvidenceCollectorConfig,
 }

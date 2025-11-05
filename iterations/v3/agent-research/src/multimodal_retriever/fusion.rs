@@ -8,7 +8,7 @@ use super::core::MultimodalSearchResult;
 
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct FusionEngine {
     config: super::core::MultimodalRetrieverConfig,
 }
@@ -47,15 +47,15 @@ impl FusionEngine {
 
     /// Apply Reciprocal Rank Fusion
     fn apply_rrf_fusion(&self, results: &mut [MultimodalSearchResult]) {
-        // Group by content ID
+        // Collect RRF scores first (immutable borrow)
         let mut rrf_scores = std::collections::HashMap::new();
 
         for (rank, result) in results.iter().enumerate() {
             let rrf_score = 1.0 / (60.0 + rank as f32); // k=60 is standard
-            *rrf_scores.entry(&result.id).or_insert(0.0) += rrf_score;
+            *rrf_scores.entry(result.id.clone()).or_insert(0.0) += rrf_score;
         }
 
-        // Update combined scores
+        // Then mutate (mutable borrow)
         for result in results.iter_mut() {
             if let Some(rrf_score) = rrf_scores.get(&result.id) {
                 result.combined_score = *rrf_score;

@@ -14,7 +14,7 @@ use super::events::EventEmitter;
 
 /// Search coordinator for managing different search strategies
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct SearchCoordinator {
     vector_search: Arc<VectorSearchEngine>,
     keyword_index: Arc<InvertedIndex>,
@@ -142,7 +142,7 @@ impl SearchCoordinator {
 
 /// Inverted index for keyword-based search
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct InvertedIndex {
     index: std::collections::HashMap<String, Vec<Posting>>,
 }
@@ -182,7 +182,7 @@ impl InvertedIndex {
 }
 
 /// Posting in the inverted index
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct Posting {
     pub document_id: usize,
     pub positions: Vec<usize>,
@@ -190,7 +190,7 @@ pub struct Posting {
 }
 
 /// Search result from inverted index
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct SearchResult {
     pub document_id: usize,
     pub score: f32,

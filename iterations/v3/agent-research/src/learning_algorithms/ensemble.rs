@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 /// Ensemble learning orchestrator
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct LearningAlgorithms {
     algorithms: HashMap<LearningAlgorithmType, Box<dyn LearningAlgorithm>>,
 }
@@ -65,7 +65,7 @@ pub trait LearningAlgorithm: Send + Sync {
 
 /// Ensemble analytics and component tracking
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct EnsembleAnalytics {
     component_stats: Vec<EnsembleComponentStatistics>,
     overall_performance: HashMap<String, f64>,
@@ -153,7 +153,7 @@ impl EnsembleAnalytics {
 
 /// Problem characteristics analysis
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct ProblemCharacteristicsAnalyzer {
     characteristics_cache: HashMap<String, ProblemCharacteristics>,
 }

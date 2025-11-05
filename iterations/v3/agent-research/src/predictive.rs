@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 
 /// Configuration parameters for predictive learning
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PredictiveLearningConfig {
     pub success_baseline: f64,
     pub partial_penalty: f64,
@@ -37,7 +37,7 @@ impl Default for PredictiveLearningConfig {
 
 /// Predictive learning system orchestrator
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct PredictiveLearningSystem {
     config: PredictiveLearningConfig,
     performance_predictor: PerformancePredictor,
@@ -96,7 +96,7 @@ impl PredictiveLearningSystem {
 
 /// Future performance prediction engine
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct PerformancePredictor {
     config: PredictiveLearningConfig,
 }
@@ -341,7 +341,7 @@ impl PerformancePredictor {
 
 /// Proactive strategy optimization engine
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct StrategyOptimizer {
     config: PredictiveLearningConfig,
 }
@@ -502,7 +502,7 @@ impl StrategyOptimizer {
 
 /// Resource requirement prediction engine
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct ResourcePredictor {
     config: PredictiveLearningConfig,
 }

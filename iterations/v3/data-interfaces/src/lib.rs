@@ -13,8 +13,7 @@
 //! - **Interface Contracts**: Type-safe interface definitions and data contracts
 //! - **User Experience**: Consistent interaction patterns across all interfaces
 
-// CLI interface modules (from cli)
-pub mod cli;
+// CLI interface modules
 pub mod commands;
 pub mod interactive;
 
@@ -34,8 +33,10 @@ pub mod ux;
 pub mod feedback;
 pub mod formatting;
 
+// External imports
+use schemars::JsonSchema;
+
 // Re-export CLI functionality
-pub use cli::*;
 pub use commands::*;
 
 // Re-export API functionality
@@ -113,7 +114,7 @@ impl DataInterfacesService {
     }
 
     /// Start all interface services
-    pub async fn start(&self) -> Result<(), InterfaceError> {
+    pub async fn start(&mut self) -> Result<(), InterfaceError> {
         // Start API server first
         self.api_server.start().await
             .map_err(|e| InterfaceError::ApiError(e.to_string()))?;
@@ -130,7 +131,7 @@ impl DataInterfacesService {
     }
 
     /// Stop all interface services
-    pub async fn stop(&self) -> Result<(), InterfaceError> {
+    pub async fn stop(&mut self) -> Result<(), InterfaceError> {
         // Stop in reverse order
         self.cli_interface.stop().await
             .map_err(|e| InterfaceError::CliError(e.to_string()))?;
@@ -146,7 +147,7 @@ impl DataInterfacesService {
 
     /// Execute CLI command
     pub async fn execute_cli_command(
-        &self,
+        &mut self,
         command: &str,
         args: &[String],
     ) -> Result<CliResponse, InterfaceError> {
@@ -188,9 +189,6 @@ impl DataInterfacesService {
     }
 }
 
-/// CLI interface wrapper
-pub type CliInterface = cli::CliInterface;
-
 /// API server wrapper
 pub type ApiServer = api::ApiServer;
 
@@ -199,9 +197,6 @@ pub type WebSocketManager = websocket::WebSocketManager;
 
 /// Contract validator wrapper
 pub type ContractValidator = contracts::ContractValidator;
-
-/// CLI response wrapper
-pub type CliResponse = cli::CliResponse;
 
 /// API request wrapper
 pub type ApiRequest = api::ApiRequest;
@@ -224,13 +219,6 @@ pub struct InterfaceConfig {
     pub contract_config: ContractConfig,
 }
 
-/// CLI configuration
-#[derive(Debug, Clone, JsonSchema)]
-pub struct CliConfig {
-    pub interactive_mode: bool,
-    pub command_timeout_seconds: u64,
-    pub max_concurrent_commands: usize,
-}
 
 /// API configuration
 #[derive(Debug, Clone, JsonSchema)]
@@ -256,6 +244,7 @@ pub struct ContractConfig {
     pub schema_cache_size: usize,
     pub validation_timeout_seconds: u64,
 }
+
 
 /// Interface errors
 #[derive(Debug, thiserror::Error, JsonSchema)]

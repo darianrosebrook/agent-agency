@@ -15,7 +15,7 @@ use tokio::sync::RwLock;
 /// Learning orchestrator that coordinates algorithm selection and execution
 
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct LearningOrchestrator {
     /// Available learning algorithms
     algorithms: HashMap<LearningAlgorithmType, Box<dyn LearningAlgorithm>>,
@@ -137,14 +137,13 @@ impl Default for LearningOrchestrator {
 
 /// Learning system health monitor
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningSystemHealth {
     pub algorithm_count: usize,
     pub total_training_sessions: u64,
     pub average_performance: f64,
     pub system_uptime_seconds: u64,
     pub memory_usage_mb: f64,
-    #[schemars(with = "String")]
 
     pub last_health_check: DateTime<Utc>,
 }
@@ -227,7 +226,7 @@ impl LearningSystemHealth {
 
 /// Meta-learning coordinator for algorithm improvement
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct MetaLearningCoordinator {
     orchestrator: Arc<RwLock<LearningOrchestrator>>,
     meta_algorithms: HashMap<String, Box<dyn MetaLearningAlgorithm>>,

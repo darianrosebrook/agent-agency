@@ -7,9 +7,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningContext {
-    #[schemars(with = "String")]
     pub session_id: Uuid,
     pub task_type: String,
     pub algorithm_type: String,
@@ -21,7 +20,7 @@ pub struct LearningContext {
     pub version: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningProgress {
     pub epoch: u32,
     pub iterations: u64,
@@ -31,7 +30,7 @@ pub struct LearningProgress {
     pub checkpoint_data: HashMap<String, serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningEnvironment {
     pub hardware_specs: HardwareSpecs,
     pub software_versions: HashMap<String, String>,
@@ -39,7 +38,7 @@ pub struct LearningEnvironment {
     pub data_characteristics: DataCharacteristics,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct HardwareSpecs {
     pub cpu_cores: usize,
     pub memory_gb: usize,
@@ -47,7 +46,7 @@ pub struct HardwareSpecs {
     pub disk_space_gb: usize,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct DataCharacteristics {
     pub dataset_size: usize,
     pub feature_count: usize,
@@ -56,7 +55,7 @@ pub struct DataCharacteristics {
     pub class_distribution: Option<HashMap<String, usize>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ContextMetadata {
     pub tags: Vec<String>,
     pub description: String,
@@ -66,7 +65,7 @@ pub struct ContextMetadata {
 }
 
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct ContextPreservationEngine {
     contexts: Arc<RwLock<HashMap<Uuid, LearningContext>>>,
     metadata: Arc<RwLock<HashMap<Uuid, ContextMetadata>>>,
@@ -395,7 +394,7 @@ impl ContextPreservationEngine {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ContextAnalysis {
     pub task_type_distribution: HashMap<String, usize>,
     pub algorithm_performance: HashMap<String, f64>,
@@ -403,9 +402,8 @@ pub struct ContextAnalysis {
     pub total_contexts: usize,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningTrend {
-    #[schemars(with = "String")]
     pub session_id: Uuid,
     pub algorithm: String,
     pub improvement_rate: f64,

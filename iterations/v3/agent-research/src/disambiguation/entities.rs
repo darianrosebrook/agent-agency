@@ -4,13 +4,18 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use anyhow::Result;
-use crate::disambiguation::types::*;
+use crate::disambiguation::disambiguation_types::{NamedEntity};
+// Explicit imports from contracts (narrow, not wildcard)
+use agent_agency_contracts::types::research::{
+    EmbeddingProvider, KnowledgeBase, KnowledgeIngest,
+    EntityMatch as ContractsEntityMatch, EntityType, UnresolvableReason,
+};
 use crate::ProcessingContext;
 use crate::disambiguation::patterns::EntityPatterns;
 
 /// Named Entity Recognizer with optional integrations
 pub struct NamedEntityRecognizer {
-    entity_cache: Arc<RwLock<HashMap<String, Vec<EntityMatch>>>>,
+    entity_cache: Arc<RwLock<HashMap<String, Vec<NamedEntity>>>>,  // Cache NamedEntity directly
     confidence_threshold: f64,
     entity_patterns: EntityPatterns,
     embedding_provider: Option<Arc<dyn EmbeddingProvider>>,
@@ -119,10 +124,10 @@ impl NamedEntityRecognizer {
 
                 if confidence > 0.5 {
                     entities.push(NamedEntity {
-                        name: entity_text.to_string(),
-                        entity_type: EntityType::Person,
-                        start_pos: mat.start(),
-                        end_pos: mat.end(),
+                        text: entity_text.to_string(),
+                        entity_type: agent_agency_contracts::types::research::EntityType::Person,
+                        start: mat.start(),
+                        end: mat.end(),
                         confidence,
                         context: Some(format!("Person entity in context: {}", context.input_text)),
                     });
@@ -148,10 +153,10 @@ impl NamedEntityRecognizer {
 
                 if confidence > 0.5 {
                     entities.push(NamedEntity {
-                        name: entity_text.to_string(),
-                        entity_type: EntityType::Organization,
-                        start_pos: mat.start(),
-                        end_pos: mat.end(),
+                        text: entity_text.to_string(),
+                        entity_type: agent_agency_contracts::types::research::EntityType::Organization,
+                        start: mat.start(),
+                        end: mat.end(),
                         confidence,
                         context: Some(format!("Organization entity in context: {}", context.input_text)),
                     });
@@ -176,10 +181,10 @@ impl NamedEntityRecognizer {
                 let confidence = 0.75; // Location patterns are generally reliable
 
                 entities.push(NamedEntity {
-                    name: entity_text.to_string(),
-                    entity_type: EntityType::Location,
-                    start_pos: mat.start(),
-                    end_pos: mat.end(),
+                    text: entity_text.to_string(),
+                    entity_type: agent_agency_contracts::types::research::EntityType::Location,
+                    start: mat.start(),
+                    end: mat.end(),
                     confidence,
                     context: None,
                 });
@@ -201,10 +206,10 @@ impl NamedEntityRecognizer {
         for pattern in &self.entity_patterns.date_patterns {
             for mat in pattern.find_iter(text) {
                 entities.push(NamedEntity {
-                    name: mat.as_str().to_string(),
-                    entity_type: EntityType::Date,
-                    start_pos: mat.start(),
-                    end_pos: mat.end(),
+                    text: mat.as_str().to_string(),
+                    entity_type: agent_agency_contracts::types::research::EntityType::Date,
+                    start: mat.start(),
+                    end: mat.end(),
                     confidence: 0.85,
                     context: None,
                 });
@@ -215,10 +220,10 @@ impl NamedEntityRecognizer {
         for pattern in &self.entity_patterns.time_patterns {
             for mat in pattern.find_iter(text) {
                 entities.push(NamedEntity {
-                    name: mat.as_str().to_string(),
-                    entity_type: EntityType::Date, // Time is also temporal
-                    start_pos: mat.start(),
-                    end_pos: mat.end(),
+                    text: mat.as_str().to_string(),
+                    entity_type: agent_agency_contracts::types::research::EntityType::Date, // Time is also temporal
+                    start: mat.start(),
+                    end: mat.end(),
                     confidence: 0.8,
                     context: None,
                 });
@@ -240,10 +245,10 @@ impl NamedEntityRecognizer {
         for pattern in &self.entity_patterns.money_patterns {
             for mat in pattern.find_iter(text) {
                 entities.push(NamedEntity {
-                    name: mat.as_str().to_string(),
-                    entity_type: EntityType::Money,
-                    start_pos: mat.start(),
-                    end_pos: mat.end(),
+                    text: mat.as_str().to_string(),
+                    entity_type: agent_agency_contracts::types::research::EntityType::Money,
+                    start: mat.start(),
+                    end: mat.end(),
                     confidence: 0.9,
                     context: None,
                 });
@@ -254,10 +259,10 @@ impl NamedEntityRecognizer {
         for pattern in &self.entity_patterns.percent_patterns {
             for mat in pattern.find_iter(text) {
                 entities.push(NamedEntity {
-                    name: mat.as_str().to_string(),
-                    entity_type: EntityType::Percent,
-                    start_pos: mat.start(),
-                    end_pos: mat.end(),
+                    text: mat.as_str().to_string(),
+                    entity_type: agent_agency_contracts::types::research::EntityType::Percent,
+                    start: mat.start(),
+                    end: mat.end(),
                     confidence: 0.9,
                     context: None,
                 });
@@ -281,10 +286,10 @@ impl NamedEntityRecognizer {
 
                 if confidence > 0.6 {
                     entities.push(NamedEntity {
-                        name: mat.as_str().to_string(),
-                        entity_type: EntityType::TechnicalTerm,
-                        start_pos: mat.start(),
-                        end_pos: mat.end(),
+                        text: mat.as_str().to_string(),
+                        entity_type: agent_agency_contracts::types::research::EntityType::TechnicalTerm,
+                        start: mat.start(),
+                        end: mat.end(),
                         confidence,
                         context: Some(format!("Technical term in domain context")),
                     });
@@ -306,7 +311,7 @@ impl NamedEntityRecognizer {
         let mut deduplicated = Vec::new();
 
         for entity in entities {
-            let key = (entity.name.clone(), entity.entity_type.clone());
+            let key = (entity.text.clone(), entity.entity_type.clone());
             if let Some(existing) = seen.get(&key) {
                 // Keep the one with higher confidence
                 if entity.confidence > existing.confidence {
@@ -338,27 +343,12 @@ impl NamedEntityRecognizer {
     /// Get cached entities for text
     async fn get_cached_entities(&self, text: &str) -> Option<Vec<NamedEntity>> {
         let cache = self.entity_cache.read().await;
-        cache.get(text).map(|matches| {
-            matches.iter().map(|m| m.entity.clone()).collect()
-        })
+        cache.get(text).cloned()
     }
 
-    /// Cache entities for text
     async fn cache_entities(&self, text: &str, entities: &[NamedEntity]) {
-        let matches: Vec<EntityMatch> = entities
-            .iter()
-            .map(|entity| EntityMatch {
-                entity: entity.name.clone(),
-                entity_type: entity.entity_type,
-                confidence: entity.confidence,
-                start_pos: entity.start_pos,
-                end_pos: entity.end_pos,
-                context: entity.context,
-            })
-            .collect();
-
         let mut cache = self.entity_cache.write().await;
-        cache.insert(text.to_string(), matches);
+        cache.insert(text.to_string(), entities.to_vec());
     }
 
     /// Calculate confidence for person entity detection

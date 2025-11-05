@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 
 /// Coreference resolution result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct CoreferenceResolution {
     pub text: String,
     pub resolved_text: String,
@@ -15,7 +15,7 @@ pub struct CoreferenceResolution {
 }
 
 /// Individual coreference
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct Coreference {
     pub mention: String,
     pub entity: String,
@@ -25,20 +25,19 @@ pub struct Coreference {
 }
 
 /// Check result for verification
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct CheckResult {
     pub check_type: CheckType,
     pub passed: bool,
     pub confidence: f64,
     pub details: String,
     pub evidence: Vec<String>,
-    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
 }
 
 /// Types of checks
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum CheckType {
     CrossReference,
     Authority,
@@ -52,20 +51,19 @@ pub enum CheckType {
 }
 
 /// Verification result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct VerificationResult {
     pub claim_id: String,
     pub verified: bool,
     pub confidence: f64,
     pub checks: Vec<CheckResult>,
     pub overall_assessment: Assessment,
-    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
 }
 
 /// Overall assessment
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum Assessment {
     Verified,
     PartiallyVerified,
@@ -75,7 +73,7 @@ pub enum Assessment {
 }
 
 /// Authority validation result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct AuthorityValidationResult {
     pub source: String,
     pub authority_score: f64,
@@ -84,7 +82,7 @@ pub struct AuthorityValidationResult {
 }
 
 /// Credibility factors
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct CredibilityFactor {
     pub factor_type: CredibilityType,
     pub score: f64,
@@ -92,7 +90,7 @@ pub struct CredibilityFactor {
 }
 
 /// Types of credibility factors
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum CredibilityType {
     Expertise,
     Reputation,
@@ -103,7 +101,7 @@ pub enum CredibilityType {
 }
 
 /// Validation status
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum ValidationStatus {
     Valid,
     Invalid,
@@ -112,7 +110,7 @@ pub enum ValidationStatus {
 }
 
 /// Semantic analysis result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct SemanticAnalysisResult {
     pub intent: String,
     pub entities: Vec<String>,
@@ -121,7 +119,7 @@ pub struct SemanticAnalysisResult {
 }
 
 /// Relationship between entities
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct Relationship {
     pub subject: String,
     pub predicate: String,
@@ -130,7 +128,7 @@ pub struct Relationship {
 }
 
 /// Keyword matching result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct KeywordMatchResult {
     pub matches: Vec<KeywordMatch>,
     pub total_matches: usize,
@@ -138,7 +136,7 @@ pub struct KeywordMatchResult {
 }
 
 /// Individual keyword match
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct KeywordMatch {
     pub keyword: String,
     pub context: String,
@@ -148,7 +146,7 @@ pub struct KeywordMatch {
 }
 
 /// Historical lookup result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct HistoricalLookupResult {
     pub query: String,
     pub results: Vec<HistoricalResult>,
@@ -157,11 +155,10 @@ pub struct HistoricalLookupResult {
 }
 
 /// Individual historical result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct HistoricalResult {
     pub claim: String,
     pub source: String,
-    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
     pub confidence: f64,
@@ -169,7 +166,7 @@ pub struct HistoricalResult {
 }
 
 /// Verification configuration
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct VerificationConfig {
     pub enable_cross_reference: bool,
     pub enable_authority_check: bool,
@@ -203,7 +200,7 @@ impl Default for VerificationConfig {
 }
 
 /// Entity in verification context
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct Entity {
     pub id: String,
     pub name: String,
@@ -216,7 +213,7 @@ pub struct Entity {
 }
 
 /// Coreference chain - sequence of coreferences
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct CoreferenceChain {
     pub chain_id: String,
     pub coreferences: Vec<Coreference>,
@@ -225,7 +222,7 @@ pub struct CoreferenceChain {
 }
 
 /// Coreference type classification
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum CoreferenceType {
     Pronominal,
     Nominal,
@@ -235,7 +232,7 @@ pub enum CoreferenceType {
 }
 
 /// Entity disambiguation result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct EntityDisambiguation {
     pub entity: String,
     pub candidates: Vec<EntityCandidate>,
@@ -245,7 +242,7 @@ pub struct EntityDisambiguation {
 }
 
 /// Entity candidate for disambiguation
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct EntityCandidate {
     pub id: String,
     pub name: String,
@@ -255,7 +252,7 @@ pub struct EntityCandidate {
 }
 
 /// Disambiguation method used
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum DisambiguationMethod {
     Contextual,
     ContextBased,
@@ -268,7 +265,7 @@ pub enum DisambiguationMethod {
 }
 
 /// Code output from analysis
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct CodeOutput {
     pub code: String,
     pub language: String,
@@ -279,7 +276,7 @@ pub struct CodeOutput {
 }
 
 /// Code specification
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct CodeSpecification {
     pub language: String,
     pub api_signature: Option<String>,
@@ -288,7 +285,7 @@ pub struct CodeSpecification {
 }
 
 /// Documentation output
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct DocumentationOutput {
     pub content: String,
     pub format: String,
@@ -297,7 +294,7 @@ pub struct DocumentationOutput {
 }
 
 /// Documentation standards
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct DocumentationStandards {
     pub format: String,
     pub required_sections: Vec<String>,
@@ -305,7 +302,7 @@ pub struct DocumentationStandards {
 }
 
 /// Data analysis output
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct DataAnalysisOutput {
     pub analysis_type: String,
     pub results: DataAnalysisResults,
@@ -315,7 +312,7 @@ pub struct DataAnalysisOutput {
 }
 
 /// Data analysis results container
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct DataAnalysisResults {
     pub statistical: Vec<StatisticalResult>,
     pub patterns: Vec<PatternResult>,
@@ -324,14 +321,14 @@ pub struct DataAnalysisResults {
 }
 
 /// Data schema
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct DataSchema {
     pub fields: Vec<SchemaField>,
     pub constraints: Vec<String>,
 }
 
 /// Schema field definition
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct SchemaField {
     pub name: String,
     pub field_type: String,
@@ -339,7 +336,7 @@ pub struct SchemaField {
 }
 
 /// Statistical result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct StatisticalResult {
     pub metric: String,
     pub value: f64,
@@ -348,7 +345,7 @@ pub struct StatisticalResult {
 }
 
 /// Pattern result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PatternResult {
     pub pattern_type: String,
     pub matches: Vec<String>,
@@ -356,7 +353,7 @@ pub struct PatternResult {
 }
 
 /// Correlation result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct CorrelationResult {
     pub variable1: String,
     pub variable2: String,
@@ -366,7 +363,7 @@ pub struct CorrelationResult {
 }
 
 /// Match type for keyword matching
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum MatchType {
     Exact,
     Fuzzy,
@@ -374,18 +371,5 @@ pub enum MatchType {
     Regex,
 }
 
-/// Entity type for verification
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub enum EntityType {
-    Person,
-    Organization,
-    Location,
-    Technology,
-    Concept,
-    Code,
-    CodeEntity, // Alias for Code - used in disambiguation
-    SystemComponent, // System components like APIs, services
-    Documentation,
-    Data,
-    Other(String),
-}
+// Use EntityType from contracts
+pub use agent_agency_contracts::types::research::EntityType;

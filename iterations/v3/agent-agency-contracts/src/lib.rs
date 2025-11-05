@@ -4,6 +4,16 @@
 //! so workers, council, orchestration, and provenance components exchange
 //! data safely with deterministic error handling.
 
+/// API version constants for compatibility checking
+pub const API_MAJOR: u32 = 1;
+pub const API_MINOR: u32 = 3;
+
+/// Returns the current API version as a string
+pub const fn api_version() -> &'static str {
+    const VERSION: &str = concat!(env!("CARGO_PKG_VERSION_MAJOR"), ".", env!("CARGO_PKG_VERSION_MINOR"));
+    VERSION
+}
+
 pub mod contract_errors;
 pub mod execution_artifacts;
 pub mod engine;

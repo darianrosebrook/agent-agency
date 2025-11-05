@@ -24,7 +24,7 @@ use crate::reflexive_types::*;
 
 /// Learning service implementation using reinforcement learning
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug)]
 pub struct ReflexiveLearningService {
     /// Q-learning algorithm for task optimization
     q_learning: Arc<RwLock<QLearning>>,
@@ -317,7 +317,7 @@ impl LearningService for ReflexiveLearningService {
 
 /// Pattern recognition engine for identifying performance patterns
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct PatternRecognitionEngine {
     /// Recent patterns identified (stored in LRU-like fashion, keeping most recent)
     recent_patterns: Vec<Pattern>,

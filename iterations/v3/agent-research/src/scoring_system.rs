@@ -224,7 +224,7 @@ const WEAKNESS_THRESHOLD: f64 = 0.7;
 const IMPROVEMENT_TARGET: f64 = 0.85;
 
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct ModelAggregate {
     count: usize,
     total_score: f64,
@@ -263,7 +263,7 @@ impl ModelAggregate {
 }
 
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct MetricAverages {
     accuracy: f64,
     speed: f64,
@@ -273,7 +273,7 @@ pub struct MetricAverages {
 }
 
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct MetricTotals {
     accuracy: f64,
     speed: f64,
@@ -338,7 +338,7 @@ const METRIC_WEIGHTS: MetricWeights = MetricWeights::new();
 
 // Supporting types for the scoring system
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum ScoringAlgorithm {
     WeightedAverage,
     NormalizedSum,
@@ -346,7 +346,7 @@ pub enum ScoringAlgorithm {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct NormalizationSettings {
     pub min_score: f64,
     pub max_score: f64,
@@ -364,14 +364,14 @@ impl Default for NormalizationSettings {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum NormalizationMethodd {
     MinMax,
     ZScore,
     Robust,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ModelBenchmarkingMetrics {
     pub accuracy: f64,
     pub speed: f64,

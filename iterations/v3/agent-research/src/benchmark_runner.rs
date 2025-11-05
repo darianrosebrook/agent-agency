@@ -14,7 +14,7 @@ use uuid::Uuid;
 /// Execution telemetry for comprehensive performance monitoring
 
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ExecutionTelemetry {
     execution_id: Uuid,
     start_time: std::time::Instant,
@@ -290,7 +290,7 @@ pub struct BenchmarkRunner {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct BenchmarkConfig {
     /// Number of iterations for each benchmark
     pub iterations: usize,
@@ -317,7 +317,7 @@ impl Default for BenchmarkConfig {
 // Helper structs for benchmark execution
 
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct MicroTaskResult {
     execution_time: Duration,
     memory_usage_mb: f64,
@@ -325,7 +325,7 @@ pub struct MicroTaskResult {
 }
 
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct ComplianceTestResult {
     compliance_score: f64,
     violation_count: usize,
@@ -348,7 +348,7 @@ impl Default for BenchmarkMetrics {
 /// Additional BenchmarkRunner methods
 /// Performance analysis results
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PerformanceAnalysis {
     pub overall_score: f32,
     pub bottlenecks: Vec<String>,
@@ -358,7 +358,7 @@ pub struct PerformanceAnalysis {
 
 /// Quality analysis results
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct QualityAnalysis {
     pub overall_quality_score: f32,
     pub quality_issues: Vec<String>,

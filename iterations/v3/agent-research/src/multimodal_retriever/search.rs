@@ -6,6 +6,7 @@ use anyhow::Result;
 use tracing::{info, debug};
 
 use super::core::{MultimodalRetrieverConfig, MultimodalQuery, MultimodalSearchResult};
+use agent_agency_contracts::types::research::QueryType;
 use super::text_search::TextSearchEngine;
 use super::visual_search::VisualSearchEngine;
 use super::query_processing::ProcessedQuery;
@@ -13,7 +14,7 @@ use super::query_processing::ProcessedQuery;
 /// Search coordinator managing multimodal search execution
 
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug)]
 pub struct SearchCoordinator {
     config: MultimodalRetrieverConfig,
     text_engine: Arc<TextSearchEngine>,
@@ -84,19 +85,19 @@ impl SearchCoordinator {
 
     /// Determine if text search should be executed
     fn should_search_text(&self, query: &ProcessedQuery) -> bool {
-        matches!(query.query_type, crate::research_types::QueryType::Text | crate::research_types::QueryType::Hybrid)
+        matches!(query.query_type, QueryType::Text | QueryType::Hybrid)
             && query.text.is_some()
     }
 
     /// Determine if visual search should be executed
     fn should_search_visual(&self, query: &ProcessedQuery) -> bool {
-        matches!(query.query_type, crate::research_types::QueryType::Visual | crate::research_types::QueryType::Image | crate::research_types::QueryType::Hybrid)
+        matches!(query.query_type, QueryType::Visual | QueryType::Image | QueryType::Hybrid)
             && query.image_path.is_some()
     }
 
     /// Determine if code search should be executed
     fn should_search_code(&self, query: &ProcessedQuery) -> bool {
-        matches!(query.query_type, crate::research_types::QueryType::Code | crate::research_types::QueryType::Hybrid)
+        matches!(query.query_type, QueryType::Code | QueryType::Hybrid)
             && query.text.is_some()
     }
 
@@ -110,14 +111,14 @@ impl SearchCoordinator {
             visual_searches: visual_stats.total_searches,
             total_searches: text_stats.total_searches + visual_stats.total_searches,
             average_text_latency_ms: text_stats.average_latency_ms,
-            average_visual_latency_ms: visual_stats.average_latency_ms,
+            average_visual_latency_ms: visual_stats.average_visual_latency_ms,
         })
     }
 }
 
 /// Search execution statistics
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct SearchStats {
     pub text_searches: u64,
     pub visual_searches: u64,

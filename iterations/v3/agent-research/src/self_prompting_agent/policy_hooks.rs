@@ -76,7 +76,7 @@ impl AdaptiveAgent {
 
 /// Policy state snapshot
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PolicyState {
     pub temperature: f64,
     pub max_iterations: usize,
@@ -152,7 +152,7 @@ pub trait PolicyHook: Send + Sync {
 
 /// Policy decision
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum PolicyDecision {
     Allow,
     Deny(String),

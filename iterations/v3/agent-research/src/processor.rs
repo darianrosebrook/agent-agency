@@ -13,7 +13,7 @@ use tracing::{debug, info};
 
 /// Main claim extraction processor with multi-modal verification integration
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug)]
 pub struct ClaimExtractionProcessor {
     disambiguation_stage: DisambiguationStage,
     qualification_stage: QualificationStage,
@@ -57,7 +57,7 @@ impl ClaimExtractionProcessor {
         debug!("Stage 2: Qualification");
         let qualification_result = self
             .qualification_stage
-            .process(&disambiguation_result.disambiguated_text, ctx)
+            .process(&disambiguation_result.disambiguated_sentence, ctx)
             .await
             .map_err(|e| ClaimExtractionError::QualificationFailed(e.to_string()))?;
 
@@ -65,7 +65,7 @@ impl ClaimExtractionProcessor {
         debug!("Stage 3: Decomposition");
         let decomposition_result = self
             .decomposition_stage
-            .process(&disambiguation_result.disambiguated_text, ctx)
+            .process(&disambiguation_result.disambiguated_sentence, ctx)
             .await
             .map_err(|e| ClaimExtractionError::DecompositionFailed(e.to_string()))?;
 
@@ -78,7 +78,7 @@ impl ClaimExtractionProcessor {
         // - [ ] Add integration tests with real verification
         // Stage 4: Verification (Temporarily disabled - awaiting verification module)
         debug!("Stage 4: Verification - Skipped (temporarily disabled)");
-        let verification_result = Vec::new(); // Placeholder empty result
+        let _verification_result: Vec<Evidence> = Vec::new(); // Placeholder empty result
 
         // TODO: Re-enable multi-modal verification when multi-modal verifier is available
         // - [ ] Integrate multi-modal verification module
@@ -94,10 +94,16 @@ impl ClaimExtractionProcessor {
         let verified_claims = crate::extraction_types::VerificationResult {
             verified_claims: atomic_claims.into_iter().map(|claim| {
                 crate::extraction_types::VerifiedClaim {
-                    claim,
+                    id: claim.id,
+                    claim_text: claim.claim_text.clone(),
                     verification_status: crate::extraction_types::VerificationStatus::Unverified,
                     confidence: 0.5,
                     evidence: Vec::new(),
+                    timestamp: chrono::Utc::now(),
+                    original_claim: claim.claim_text,
+                    verification_results: crate::extraction_types::VerificationStatus::Unverified,
+                    overall_confidence: 0.5,
+                    verification_timestamp: chrono::Utc::now(),
                 }
             }).collect(),
             evidence: Vec::new(),
@@ -137,13 +143,13 @@ impl ClaimExtractionProcessor {
             }
         }
 
-        let claims_count = atomic_claims.len();
+        let claims_count = decomposition_result.atomic_claims.len();
         let evidence_count = all_evidence.len();
 
         Ok(ClaimExtractionResult {
             original_sentence: input.to_string(),
             disambiguated_sentence: disambiguation_result.disambiguated_sentence,
-            atomic_claims,
+            atomic_claims: decomposition_result.atomic_claims,
             verification_evidence: all_evidence,
             processing_metadata: ProcessingMetadata {
                 processing_time_ms: processing_time,

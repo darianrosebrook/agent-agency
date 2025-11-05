@@ -7,14 +7,14 @@ use uuid::Uuid;
 
 /// Code metrics for analysis
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct CodeMetrics {
     pub lines_of_code: usize,
     pub function_count: usize,
 }
 
 /// Test timing data structures
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct TestTimingData {
     pub test_name: String,
     pub duration_ms: f64,
@@ -24,7 +24,7 @@ pub struct TestTimingData {
     pub status: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct TestSuiteTimingData {
     pub suite_name: String,
     pub tests: Vec<TestTimingData>,
@@ -33,7 +33,7 @@ pub struct TestSuiteTimingData {
 }
 
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct TestTimingAnalysis {
     pub test_count: usize,
     pub average_time_ms: f64,
@@ -42,24 +42,12 @@ pub struct TestTimingAnalysis {
     pub slowest_test: Option<String>,
 }
 
-/// Verification methods enumeration
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub enum VerificationMethod {
-    CodeAnalysis,
-    TestExecution,
-    DocumentationReview,
-    PerformanceMeasurement,
-    SecurityScan,
-    ConstitutionalCheck,
-    Measurement,
-    LogicalAnalysis,
-    ProcessAnalysis,
-}
+// Import VerificationMethod from contracts instead of defining locally
+pub use agent_agency_contracts::types::research::VerificationMethod;
 
 /// Evidence collection configuration
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct EvidenceCollectorConfig {
     pub min_relevance_threshold: f64,
     pub min_credibility_threshold: f64,

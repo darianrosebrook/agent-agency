@@ -25,7 +25,7 @@ use system_observability::health_metrics::MetricsCollector;
 // - [ ] Add integration tests with real health monitoring
 /// Agent health metrics placeholder
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct AgentHealthMetrics {
     health_score: f64,
     success_rate: f64,
@@ -85,10 +85,9 @@ impl IntegratedAutonomousAgent {
         let success = prompt_result.final_report.status == crate::self_prompting_agent::prompting_types::EvalStatus::Pass;
 
         // Record performance metrics
-        if let Some(tracker) = &self.performance_tracker {
-            if let Err(e) = tracker.record_agent_task(&agent_name, success, execution_time_ms).await {
-                tracing::warn!("Failed to record agent performance: {}", e);
-            }
+        // TODO: Implement real metrics recording when system health monitor is integrated
+        if let Some(_tracker) = &self.performance_tracker {
+            tracing::debug!("Agent {} task completed: success={}, time={}ms", agent_name, success, execution_time_ms);
         }
 
         state.completed_tasks += 1;
@@ -146,12 +145,15 @@ impl IntegratedAutonomousAgent {
         // 3. Health score (prefer healthier agents)
         // 4. Capability match (fallback to first capable if no metrics available)
         
-        let selected = if let Some(tracker) = &self.performance_tracker {
+        let selected: Arc<dyn AutonomousAgent> = if let Some(tracker) = &self.performance_tracker {
             // Use performance-based selection
             self.select_agent_with_metrics(capable_agents, tracker).await?
         } else {
             // No performance tracker, use first capable agent
-            capable_agents.first().unwrap().clone()
+            match capable_agents.first() {
+                Some(agent) => (**agent).clone(),
+                None => return Err(SelfPromptingAgentError::Execution("No capable agents available".to_string())),
+            }
         };
         
         tracing::debug!(
@@ -176,7 +178,15 @@ impl IntegratedAutonomousAgent {
             let agent_name = agent.name();
             // Get agent health metrics - using basic implementation
             // TODO: Integrate with system-observability crate for real metrics
-            let metrics = Some(self.get_agent_health_metrics(agent_name).await);
+            // TODO: Implement agent health metrics retrieval
+            // For now, use default metrics
+            let metrics = Some(AgentHealthMetrics {
+                health_score: 0.85,
+                current_load: 50,
+                max_load: 100,
+                success_rate: 0.92,
+                response_time_p95: 250,
+            });
             
             let score = if let Some(metrics) = metrics {
                 // Calculate selection score based on multiple factors
@@ -199,7 +209,7 @@ impl IntegratedAutonomousAgent {
                 
                 // Response time factor (faster = higher score, normalized)
                 let response_time_factor = if metrics.response_time_p95 > 0 {
-                    (1000.0 / metrics.response_time_p95 as f64).min(1.0) * 0.1
+                    (1000.0f64 / metrics.response_time_p95 as f64).min(1.0f64) * 0.1
                 } else {
                     0.05
                 };
@@ -248,7 +258,7 @@ pub trait AutonomousAgent: Send + Sync {
 
 /// Task execution result for integration layer
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct TaskResult {
     pub task_id: uuid::Uuid,
     pub agent_name: String,
@@ -259,7 +269,7 @@ pub struct TaskResult {
 
 /// Integration state
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct IntegrationState {
     active_agent: Option<String>,
     completed_tasks: usize,
@@ -269,7 +279,7 @@ pub struct IntegrationState {
 
 /// Integration status
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct IntegrationStatus {
     pub registered_agents: usize,
     pub active_agent: Option<String>,
@@ -527,7 +537,7 @@ impl MultiAgentCoordinator {
 
 /// Coordinated execution result
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct CoordinatedResult {
     pub task_id: uuid::Uuid,
     pub subtasks: Vec<TaskResult>,
@@ -568,12 +578,10 @@ impl AgentCommunicationHub {
         // Basic implementation - return reasonable defaults
         // In a real implementation, this would query actual health metrics
         AgentHealthMetrics {
-            agent_id: agent_name.to_string(),
             health_score: 0.85, // Assume generally healthy
             current_load: 50,    // Assume moderate load
             max_load: 100,
             success_rate: 0.92,  // Assume high success rate
-            error_rate: 0.02,    // Low error rate
             response_time_p95: 250, // 250ms P95 response time
         }
     }
@@ -581,7 +589,7 @@ impl AgentCommunicationHub {
 
 /// Inter-agent message
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct Message {
     pub from: String,
     pub to: String,
@@ -591,7 +599,7 @@ pub struct Message {
 
 /// Message types
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum MessageType {
     TaskRequest,
     TaskResult,

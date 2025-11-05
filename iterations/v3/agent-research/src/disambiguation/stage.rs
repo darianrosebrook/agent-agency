@@ -3,12 +3,17 @@
 use std::sync::Arc;
 use anyhow::Result;
 use tracing::debug;
-use crate::disambiguation::types::{EntityMatch, Ambiguity};
+use crate::disambiguation::types::{Ambiguity, AmbiguityType};
 use crate::disambiguation::disambiguation_types::*;
 use crate::ProcessingContext;
 use crate::disambiguation::detection::AmbiguityDetector;
 use crate::disambiguation::context::ContextResolver;
 use crate::disambiguation::entities::NamedEntityRecognizer;
+// Explicit imports from contracts - use fully qualified names to avoid conflicts
+use agent_agency_contracts::types::research::{
+    EmbeddingProvider, KnowledgeBase, KnowledgeIngest,
+    UnresolvableAmbiguity as ContractsUnresolvableAmbiguity, UnresolvableReason,
+};
 
 /// Main disambiguation stage that orchestrates the entire process
 // #[derive(Debug)] // Removed due to trait object issues
@@ -157,25 +162,25 @@ impl DisambiguationStage {
         &self,
         ambiguities: &[Ambiguity],
         context: &ProcessingContext,
-    ) -> Vec<UnresolvableAmbiguity> {
+    ) -> Vec<ContractsUnresolvableAmbiguity> {
         ambiguities
             .iter()
             .filter_map(|ambiguity| {
                 if let Some(reason) = self.resolver.detect_unresolvable_ambiguity(ambiguity, context) {
-                    Some(UnresolvableAmbiguity {
-                        text: ambiguity.original_text.clone(),
-                        reason,
-                        context: Some({
-                            let resolutions = self.resolver.get_pronoun_resolutions(
-                                &ambiguity.original_text,
-                                context,
-                            );
-                            if resolutions.is_empty() {
-                                "no resolution available".to_string()
-                            } else {
-                                format!("{:?}", resolutions)
+                    Some(ContractsUnresolvableAmbiguity {
+                        ambiguity: ambiguity.original_text.clone(),
+                        suggested_context: {
+                                let resolutions = self.resolver.get_pronoun_resolutions(
+                                    &ambiguity.original_text,
+                                    context,
+                                );
+                                if resolutions.is_empty() {
+                                Some("no resolution available".to_string())
+                                } else {
+                                Some(format!("{:?}", resolutions))
                             }
-                        }),
+                        },
+                        reason,
                     })
                 } else {
                     None

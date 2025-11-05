@@ -16,6 +16,10 @@ use std::collections::HashMap;
 use crate::ExecutionPlan;
 use crate::types::planning::PlanningStrategy;
 use crate::PlanState;
+// Use unified validation types
+use crate::types::validation::{
+    ValidationIssue, ValidationSeverity, ValidationCategory, ValidationCategoryEnum,
+};
 
 /// Core planning engine trait
 /// Defines the interface for planning engines that can generate and execute plans
@@ -106,89 +110,9 @@ pub enum PlanningError {
 }
 
 /// Validation result with detailed feedback
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct ValidationResult {
-    /// Whether validation passed
-    pub valid: bool,
-
-    /// Validation score (0.0-1.0)
-    pub score: f64,
-
-    /// Detailed validation issues
-    pub issues: Vec<ValidationIssue>,
-
-    /// Validation warnings (non-blocking)
-    pub warnings: Vec<String>,
-
-    /// Suggested improvements
-    pub suggestions: Vec<String>,
-}
-
-/// Individual validation issue
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct ValidationIssue {
-    /// Issue severity
-    pub severity: ValidationSeverity,
-
-    /// Issue category
-    pub category: ValidationCategory,
-
-    /// Human-readable description
-    pub description: String,
-
-    /// Affected milestone or component
-    pub affected_component: Option<String>,
-
-    /// Suggested fix
-    pub suggestion: Option<String>,
-}
-
-/// Validation severity levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-pub enum ValidationSeverity {
-    /// Critical issue preventing execution
-    Critical,
-
-    /// High-priority issue requiring attention
-    High,
-
-    /// Medium-priority issue
-    Medium,
-
-    /// Low-priority issue
-    Low,
-
-    /// Informational note
-    Info,
-}
-
-/// Validation categories
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-pub enum ValidationCategory {
-    /// Dependency-related issues
-    Dependency,
-
-    /// Scope boundary violations
-    Scope,
-
-    /// Resource constraint issues
-    Resource,
-
-    /// Quality gate violations
-    Quality,
-
-    /// Evidence requirement issues
-    Evidence,
-
-    /// Council compliance issues
-    Council,
-
-    /// Performance constraint issues
-    Performance,
-
-    /// Security requirement violations
-    Security,
-}
+/// 
+/// Re-export from validation module for backward compatibility
+pub use crate::types::validation::ValidationResult;
 
 /// Plan execution result
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

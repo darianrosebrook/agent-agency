@@ -7,7 +7,7 @@ use data_infrastructure::DatabaseClient;
 
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct DatabaseManager {
     client: Arc<DatabaseClient>,
 }

@@ -10,13 +10,10 @@ use tracing::debug;
 
 /// Context bracket adder for adding contextual scope to claims
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug)]
 pub struct ContextBracketAdder {
-    #[schemars(with = "Vec<String>")]
     temporal_patterns: Vec<Regex>,
-    #[schemars(with = "Vec<String>")]
     scope_patterns: Vec<Regex>,
-    #[schemars(with = "Vec<String>")]
     condition_patterns: Vec<Regex>,
 }
 
@@ -211,7 +208,7 @@ impl ContextBracketAdder {
 
 /// Verification requirements derived from contextual brackets
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct VerificationRequirements {
     /// Types of tests needed for verification
     pub test_types: Vec<String>,

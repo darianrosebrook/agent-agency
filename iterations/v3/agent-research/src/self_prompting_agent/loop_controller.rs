@@ -19,7 +19,7 @@ pub struct SelfPromptingLoop {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum SelfPromptingEvent {
     IterationStarted { iteration: usize, task_id: String },
     PromptGenerated { iteration: usize, prompt: String },
@@ -30,7 +30,7 @@ pub enum SelfPromptingEvent {
 }
 
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct SelfPromptingResult {
     pub task: Task,
     pub result: TaskResult,

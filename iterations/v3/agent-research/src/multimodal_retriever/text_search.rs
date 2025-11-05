@@ -10,11 +10,11 @@ use serde_json;
 
 use super::core::MultimodalSearchResult;
 use super::query_processing::ProcessedQuery;
-use data_infrastructure::embedding::embedding_types::MultimodalSearchResult as DataInfraSearchResult;
+use data_infrastructure::embedding::embedding_types::{MultimodalSearchResult as DataInfraSearchResult, ContentType};
 
 /// BM25 index for keyword-based text search
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct Bm25Index {
     documents: HashMap<String, String>, // doc_id -> content
     term_frequencies: HashMap<String, HashMap<String, usize>>, // term -> (doc_id -> frequency)
@@ -112,7 +112,7 @@ impl Bm25Index {
 
 /// Vector index for dense embedding search
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct VectorIndex {
     vectors: HashMap<String, Vec<f32>>, // doc_id -> embedding vector
     dimension: usize,
@@ -168,11 +168,10 @@ impl VectorIndex {
 
 /// Text search API bridge with BM25 and dense vector search
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+// Note: Debug derive removed because EmbeddingService trait object doesn't implement Debug
 pub struct TextSearchBridge {
     bm25_index: Bm25Index,
     vector_index: VectorIndex,
-    #[serde(skip)]
     embedding_service: Option<Arc<dyn data_infrastructure::embedding::embedding_service::EmbeddingService>>,
 }
 
@@ -193,7 +192,7 @@ impl TextSearchBridge {
 
         // Add to vector index if embedding service is available
         if let Some(service) = &self.embedding_service {
-            let embedding = service.generate_embedding(&content).await?;
+            let embedding = service.generate_embedding(&content, ContentType::Text, "text_search").await?;
             self.vector_index.add_vector(doc_id, embedding.vector.values);
         }
 
@@ -206,6 +205,7 @@ impl TextSearchBridge {
 
         // BM25 search
         let bm25_results = self.bm25_index.search(query, k * 2);
+        let bm25_fallback = bm25_results.clone(); // Clone for fallback
 
         // Vector search if available
         if let Some(service) = &self.embedding_service {
@@ -240,7 +240,7 @@ impl TextSearchBridge {
 
         // Fallback to BM25 only
         if results.is_empty() {
-            results = bm25_results.into_iter().map(|(doc_id, score)| {
+            results = bm25_fallback.into_iter().map(|(doc_id, score)| {
                 let doc_id_clone = doc_id.clone();
                 DataInfraSearchResult {
                     ref_id: doc_id,
@@ -293,11 +293,21 @@ impl TextSearchBridge {
 
 /// Text search engine combining multiple search strategies
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct TextSearchEngine {
     config: super::core::MultimodalRetrieverConfig,
     search_bridge: TextSearchBridge,
     database_pool: Option<Arc<data_infrastructure::DatabaseClient>>,
+}
+
+// Manual Debug implementation because EmbeddingService trait object doesn't implement Debug
+impl std::fmt::Debug for TextSearchEngine {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TextSearchEngine")
+            .field("config", &self.config)
+            .field("search_bridge", &"...")
+            .field("database_pool", &"...")
+            .finish()
+    }
 }
 
 impl TextSearchEngine {
@@ -390,7 +400,7 @@ impl TextSearchEngine {
 
 /// Search engine statistics
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct SearchEngineStats {
     pub total_searches: u64,
     pub average_latency_ms: f64,

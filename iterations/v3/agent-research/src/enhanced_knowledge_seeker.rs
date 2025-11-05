@@ -11,8 +11,8 @@ use std::collections::HashMap;
 use tracing::info;
 
 /// Enhanced knowledge seeker configuration
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct EnhancedKnowledgeSeekerConfig {
     pub enabled: bool,
     pub caching: CachingConfig,
@@ -24,7 +24,7 @@ pub struct EnhancedKnowledgeSeekerConfig {
 }
 
 /// Caching configuration
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct CachingConfig {
     pub enable_query_caching: bool,
     pub cache_ttl_seconds: u64,
@@ -32,7 +32,7 @@ pub struct CachingConfig {
 }
 
 /// Semantic search configuration
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct SemanticSearchConfig {
     pub enabled: bool,
     pub max_results: usize,
@@ -40,7 +40,7 @@ pub struct SemanticSearchConfig {
 }
 
 /// Hybrid search configuration
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct HybridSearchConfig {
     pub enabled: bool,
     pub fusion_strategy: FusionStrategy,
@@ -49,7 +49,7 @@ pub struct HybridSearchConfig {
 }
 
 /// Fusion strategy for hybrid search
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum FusionStrategy {
     ReciprocalRankFusion,
     WeightedSum,
@@ -57,7 +57,7 @@ pub enum FusionStrategy {
 }
 
 /// Enhanced knowledge seeker status
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct EnhancedKnowledgeSeekerStatus {
     pub enabled: bool,
     pub active_queries: usize,
@@ -67,7 +67,7 @@ pub struct EnhancedKnowledgeSeekerStatus {
 }
 
 /// Cache statistics
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct CacheStats {
     pub query_cache_size: usize,
     pub result_cache_size: usize,
@@ -75,7 +75,7 @@ pub struct CacheStats {
 }
 
 /// Performance metrics
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct KnowledgeSeekerMetrics {
     pub total_queries_processed: u64,
     pub average_response_time_ms: f64,

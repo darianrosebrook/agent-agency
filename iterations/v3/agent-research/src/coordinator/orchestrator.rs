@@ -21,7 +21,7 @@ use uuid::Uuid;
 /// Main learning coordinator that orchestrates multi-turn learning
 
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct MultiTurnLearningCoordinator {
     /// Quality analysis heuristics
     quality_heuristics: QualityHeuristics,
@@ -492,9 +492,8 @@ impl MultiTurnLearningCoordinator {
 
 /// Results from learning coordination
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningCoordinationResult {
-    #[schemars(with = "String")]
     pub session_id: Uuid,
     pub quality_assessment: QualityAssessment,
     pub resource_status: ResourceStatus,
@@ -505,7 +504,7 @@ pub struct LearningCoordinationResult {
 
 /// Coordination decisions and actions
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct CoordinationDecisions {
     pub actions: Vec<CoordinationAction>,
     pub needs_algorithm_execution: bool,
@@ -514,7 +513,7 @@ pub struct CoordinationDecisions {
 
 /// Types of coordination actions
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum CoordinationAction {
     ImproveQuality,
     OptimizeResources,
@@ -526,7 +525,7 @@ pub enum CoordinationAction {
 
 /// Coordination priority levels
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum CoordinationPriority {
     Low,
     Normal,
@@ -536,7 +535,7 @@ pub enum CoordinationPriority {
 
 /// Results from algorithm execution
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct AlgorithmResult {
     pub algorithm: String,
     pub success: bool,

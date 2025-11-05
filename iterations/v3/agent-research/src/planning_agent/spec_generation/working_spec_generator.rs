@@ -254,6 +254,6 @@ fn create_working_spec_context(task_request: &agent_agency_contracts::task_reque
         git_branch: "main".to_string(),
         recent_changes: vec![], // No recent changes by default
         dependencies: std::collections::HashMap::new(), // Empty dependencies map
-        environment: agent_agency_contracts::working_spec::Environment::Development,
+        environment: agent_agency_contracts::task_request::Environment::Development,
     })
 }

@@ -8,11 +8,11 @@ use anyhow::Result;
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
 
-use crate::verification::types::*;
+use crate::verification::verification_types::*;
 
 /// Keyword matcher for text search
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct KeywordMatcher ;
 
 impl KeywordMatcher {

@@ -426,6 +426,52 @@ impl Drop for CoreMLEmbeddingProvider {
     }
 }
 
+// Contracts adapter implementation
+impl agent_agency_contracts::types::research::EmbeddingProvider for CoreMLEmbeddingProvider {
+    fn embed<'a>(&'a self, text: &'a str) -> agent_agency_contracts::types::research::BoxFuture<'a, Result<agent_agency_contracts::types::research::Embedding, agent_agency_contracts::types::research::EmbeddingError>> {
+        use agent_agency_contracts::types::research::{Embedding, EmbeddingError, EmbeddingErrorCode, RetryHint};
+        
+        let text = text.to_string();
+        Box::pin(async move {
+            self.run_coreml_inference(&text).await
+                .map_err(|e| EmbeddingError {
+                    code: EmbeddingErrorCode::Internal,
+                    message: e.to_string(),
+                    transient: false,
+                    hint: Some(RetryHint {
+                        retryable: false,
+                        after_ms: None,
+                    }),
+                })
+                .map(|vec| Embedding(vec))
+        })
+    }
+    
+    fn embed_many<'a>(&'a self, texts: &'a [String]) -> agent_agency_contracts::types::research::BoxFuture<'a, Result<Vec<agent_agency_contracts::types::research::Embedding>, agent_agency_contracts::types::research::EmbeddingError>> {
+        use agent_agency_contracts::types::research::{Embedding, EmbeddingError, EmbeddingErrorCode, RetryHint};
+        
+        let texts = texts.to_vec();
+        Box::pin(async move {
+            let mut results = Vec::new();
+            for text in texts {
+                match self.run_coreml_inference(&text).await {
+                    Ok(vec) => results.push(Embedding(vec)),
+                    Err(e) => return Err(EmbeddingError {
+                        code: EmbeddingErrorCode::Internal,
+                        message: e.to_string(),
+                        transient: false,
+                        hint: Some(RetryHint {
+                            retryable: false,
+                            after_ms: None,
+                        }),
+                    }),
+                }
+            }
+            Ok(results)
+        })
+    }
+}
+
 /// Dummy provider for testing
 pub struct DummyEmbeddingProvider {
     dimension: usize,

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Simple evaluation report stub (replace with real evaluation when available)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct EvalReport {
     pub score: f64,
     pub status: EvalStatus,
@@ -16,7 +16,7 @@ pub struct EvalReport {
 }
 
 /// Evaluation status
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
 pub enum EvalStatus {
     Pass,
     Fail,
@@ -25,7 +25,7 @@ pub enum EvalStatus {
 
 /// Execution modes for the autonomous agent
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
 pub enum ExecutionMode {
     Strict,    // Ask for approval before each change
     Auto,      // Apply changes automatically, promote only when gates pass
@@ -34,7 +34,7 @@ pub enum ExecutionMode {
 
 /// Safety modes for the sandbox
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
 pub enum SafetyMode {
     Strict,      // No file operations allowed
     Sandbox,     // Limited operations within workspace
@@ -42,9 +42,8 @@ pub enum SafetyMode {
 }
 
 /// Task definition for self-prompting execution
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct Task {
-    #[schemars(with = "String")]
     pub id: Uuid,
     pub description: String,
     pub task_type: TaskType,
@@ -54,7 +53,7 @@ pub struct Task {
 }
 
 /// Task types
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
 pub enum TaskType {
     CodeGeneration,
     CodeReview,
@@ -79,9 +78,8 @@ impl Task {
 }
 
 /// Task execution result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct TaskResult {
-    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub task_type: TaskType,
     pub final_report: EvalReport,
@@ -90,19 +88,17 @@ pub struct TaskResult {
 }
 
 /// Execution artifact
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct Artifact {
-    #[schemars(with = "String")]
     pub id: Uuid,
     pub file_path: String,
     pub content: String,
     pub artifact_type: ArtifactType,
-    #[schemars(with = "String")]
     pub created_at: DateTime<Utc>,
 }
 
 /// Artifact types
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
 pub enum ArtifactType {
     Code,
     Test,
@@ -113,20 +109,17 @@ pub enum ArtifactType {
 }
 
 /// Change set for task execution
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ChangeSet {
-    #[schemars(with = "String")]
     pub id: Uuid,
-    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub changes: Vec<FileChange>,
     pub rationale: String,
-    #[schemars(with = "String")]
     pub created_at: DateTime<Utc>,
 }
 
 /// File change in a change set
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct FileChange {
     pub file_path: String,
     pub change_type: ChangeType,
@@ -135,7 +128,7 @@ pub struct FileChange {
 }
 
 /// Change types
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
 pub enum ChangeType {
     Create,
     Modify,
@@ -144,7 +137,7 @@ pub enum ChangeType {
 
 /// Self-prompting agent error
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
+#[derive(Debug, Serialize, Deserialize, thiserror::Error)]
 pub enum SelfPromptingAgentError {
     #[error("Configuration error: {0}")]
     Configuration(String),

@@ -6,7 +6,7 @@ use std::collections::HashMap;
 /// Inverted index for efficient keyword search
 
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct InvertedIndex {
     index: HashMap<String, Vec<Posting>>,
 }
@@ -46,7 +46,7 @@ impl InvertedIndex {
 
 /// Posting in the inverted index
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct Posting {
     pub document_id: usize,
     pub positions: Vec<usize>,
@@ -55,7 +55,7 @@ pub struct Posting {
 
 /// Search result from inverted index
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct SearchResult {
     pub document_id: usize,
     pub score: f32,

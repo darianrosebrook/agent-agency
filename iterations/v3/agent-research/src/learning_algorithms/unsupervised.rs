@@ -9,7 +9,7 @@ use std::collections::HashMap;
 /// K-means clustering implementation
 
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct KMeansClustering {
     /// Number of clusters (K)
     k: usize,
@@ -265,7 +265,7 @@ impl KMeansClustering {
 
 /// Gaussian Mixture Model for soft clustering
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct GaussianMixture {
     /// Number of components
     n_components: usize,

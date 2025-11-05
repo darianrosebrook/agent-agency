@@ -10,7 +10,7 @@ use std::collections::HashMap;
 /// Q-learning implementation with epsilon-greedy exploration
 
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone)]
 pub struct QLearning {
     q_table: QTable,
     config: AlgorithmConfig,
@@ -69,7 +69,7 @@ impl QLearning {
 
 /// SARSA (State-Action-Reward-State-Action) learning algorithm
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone)]
 pub struct Sarsa {
     q_table: QTable,
     config: AlgorithmConfig,
@@ -117,7 +117,7 @@ impl Sarsa {
 
 /// Deep Q-Network implementation with feedforward neural network
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct DeepQLearning {
     config: AlgorithmConfig,
     // Neural network layers

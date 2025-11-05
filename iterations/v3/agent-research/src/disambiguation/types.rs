@@ -5,24 +5,18 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use chrono;
 
-/// Trait for embedding providers
-pub trait EmbeddingProvider: Send + Sync {
-    fn embed(&self, text: &str) -> Result<Vec<f32>, Box<dyn std::error::Error>>;
-}
+// Import port traits from contracts instead of defining locally
+pub use agent_agency_contracts::types::research::{
+    EmbeddingProvider, KnowledgeBase, KnowledgeIngest,
+    UnresolvableReason,
+};
 
-/// Trait for knowledge base operations
-pub trait KnowledgeBase: Send + Sync {
-    fn lookup(&self, entity: &str) -> Result<Option<String>, Box<dyn std::error::Error>>;
-    fn search(&self, query: &str) -> Result<Vec<String>, Box<dyn std::error::Error>>;
-}
-
-/// Trait for knowledge ingestion
-pub trait KnowledgeIngest: Send + Sync {
-    fn ingest(&self, content: &str) -> Result<(), Box<dyn std::error::Error>>;
-}
+// Note: EntityMatch is kept local here because it has additional 'context' field
+// that contracts::EntityMatch doesn't have. Use contracts::EntityMatch when
+// the context field is not needed.
 
 /// Entity match result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct EntityMatch {
     pub entity: String,
     pub entity_type: EntityType,
@@ -33,7 +27,7 @@ pub struct EntityMatch {
 }
 
 /// Entity types for disambiguation
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash) ]
 pub enum EntityType {
     Person,
     Organization,
@@ -48,7 +42,7 @@ pub enum EntityType {
 }
 
 /// Ambiguity detection result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct AmbiguityResult {
     pub text: String,
     pub ambiguities: Vec<Ambiguity>,
@@ -56,7 +50,7 @@ pub struct AmbiguityResult {
 }
 
 /// Individual ambiguity
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct Ambiguity {
     pub text: String,
     pub ambiguity_type: AmbiguityType,
@@ -70,7 +64,7 @@ pub struct Ambiguity {
 }
 
 /// Types of ambiguities
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum AmbiguityType {
     Pronoun,
     TechnicalTerm,
@@ -82,7 +76,7 @@ pub enum AmbiguityType {
 }
 
 /// Disambiguation result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct DisambiguationResult {
     pub original_text: String,
     pub disambiguated_text: String,
@@ -92,7 +86,7 @@ pub struct DisambiguationResult {
 }
 
 /// Context resolution result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ContextResolutionResult {
     pub entity: String,
     pub resolved_meaning: String,
@@ -101,7 +95,7 @@ pub struct ContextResolutionResult {
 }
 
 /// Source of context resolution
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum ContextSource {
     DomainKnowledge,
     EmbeddingSimilarity,
@@ -111,7 +105,7 @@ pub enum ContextSource {
 }
 
 /// Configuration for disambiguation
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct DisambiguationConfig {
     pub confidence_threshold: f64,
     pub enable_entity_recognition: bool,
@@ -133,7 +127,7 @@ impl Default for DisambiguationConfig {
 }
 
 /// Language enumeration
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum Language {
     English,
     Spanish,
@@ -144,26 +138,20 @@ pub enum Language {
     Other(String),
 }
 
-/// Unresolvable ambiguity
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+// Import UnresolvableReason from contracts (already imported above, removing duplicate)
+// UnresolvableReason is available via the pub use above
+
+/// Unresolvable ambiguity record (legacy - different structure from contracts)
+/// Use contracts::UnresolvableAmbiguity when possible
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct UnresolvableAmbiguity {
     pub text: String,
     pub reason: UnresolvableReason,
     pub context: Option<String>,
 }
 
-/// Reason why ambiguity cannot be resolved
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub enum UnresolvableReason {
-    InsufficientContext,
-    MultipleValidInterpretations,
-    DomainSpecific,
-    AmbiguousReference,
-    MissingKnowledge,
-}
-
 /// Named entity
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct NamedEntity {
     pub name: String,
     pub entity_type: EntityType,
@@ -174,7 +162,7 @@ pub struct NamedEntity {
 }
 
 /// Knowledge base source
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum KbSource {
     Internal,
     External,
@@ -183,7 +171,7 @@ pub enum KbSource {
 }
 
 /// Knowledge base result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct KnowledgeBaseResult {
     pub entity: String,
     pub result: String,
@@ -193,7 +181,7 @@ pub struct KnowledgeBaseResult {
 }
 
 /// Related entity
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct RelatedEntity {
     pub entity: String,
     pub relation: String,
@@ -202,7 +190,7 @@ pub struct RelatedEntity {
 }
 
 /// Historical entity analysis
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct HistoricalEntityAnalysis {
     pub entity: String,
     pub occurrences: Vec<EntityOccurrence>,
@@ -211,7 +199,7 @@ pub struct HistoricalEntityAnalysis {
 }
 
 /// Entity occurrence in history
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct EntityOccurrence {
     pub text: String,
     pub timestamp: chrono::DateTime<chrono::Utc>,
@@ -219,7 +207,7 @@ pub struct EntityOccurrence {
 }
 
 /// Trend in entity usage
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct Trend {
     pub metric: String,
     pub value: f64,
@@ -227,7 +215,7 @@ pub struct Trend {
 }
 
 /// Trend direction
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum TrendDirection {
     Increasing,
     Decreasing,
@@ -235,7 +223,7 @@ pub enum TrendDirection {
 }
 
 /// Entity relationship
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct EntityRelationship {
     pub entity1: String,
     pub entity2: String,
@@ -245,7 +233,7 @@ pub struct EntityRelationship {
 }
 
 /// Relationship type
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum RelationshipType {
     PartOf,
     RelatedTo,
@@ -256,7 +244,7 @@ pub enum RelationshipType {
 }
 
 /// Resolved entity
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ResolvedEntity {
     pub original: String,
     pub resolved: String,
@@ -266,7 +254,7 @@ pub struct ResolvedEntity {
 }
 
 /// Resolution method
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum ResolutionMethod {
     Context,
     KnowledgeBase,
@@ -275,7 +263,7 @@ pub enum ResolutionMethod {
 }
 
 /// Context-aware disambiguation
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ContextAwareDisambiguation {
     pub entity: String,
     pub context: HashMap<String, String>,
@@ -284,7 +272,7 @@ pub struct ContextAwareDisambiguation {
 }
 
 /// Domain integration
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct DomainIntegration {
     pub domain: String,
     pub entities: Vec<String>,
@@ -293,7 +281,7 @@ pub struct DomainIntegration {
 }
 
 /// External knowledge entity
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ExternalKnowledgeEntity {
     pub id: String,
     pub name: String,
@@ -303,7 +291,7 @@ pub struct ExternalKnowledgeEntity {
 }
 
 /// Ingestion channel
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum IngestionChannel {
     File,
     Api,
@@ -313,7 +301,7 @@ pub enum IngestionChannel {
 }
 
 /// Ingestion candidate
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct IngestionCandidate {
     pub content: String,
     pub channel: IngestionChannel,
@@ -322,7 +310,7 @@ pub struct IngestionCandidate {
 }
 
 /// Ingestion cache entry
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct IngestionCacheEntry {
     pub key: String,
     pub content: String,
@@ -331,7 +319,7 @@ pub struct IngestionCacheEntry {
 }
 
 /// Ingestion pipeline statistics
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct IngestionPipelineStats {
     pub total_ingested: u64,
     pub successful: u64,
@@ -341,10 +329,11 @@ pub struct IngestionPipelineStats {
 }
 
 /// Referent information for pronoun resolution
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+/// Uses contracts::EntityType for consistency
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ReferentInfo {
     pub referent: String,
-    pub entity_type: EntityType,
+    pub entity_type: agent_agency_contracts::types::research::EntityType,
     pub confidence: f64,
     pub context: Option<String>,
 }

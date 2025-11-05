@@ -7,7 +7,7 @@ use crate::{ConfigurationUpdate, ContentProcessingConfig, ContentProcessor};
 
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct ContentProcessorManager {
     processor: Arc<ContentProcessor>,
     config: ResearchAgentConfig,

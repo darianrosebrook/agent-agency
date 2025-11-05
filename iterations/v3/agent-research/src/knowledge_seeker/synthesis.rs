@@ -12,7 +12,7 @@ use super::events::EventEmitter;
 
 /// Context synthesizer for combining and summarizing research results
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct ContextSynthesizer {
     context_builder: Arc<ContextBuilder>,
     config: ResearchAgentConfig,

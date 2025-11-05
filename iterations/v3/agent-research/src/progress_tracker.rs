@@ -10,15 +10,12 @@ use uuid::Uuid;
 /// Learning milestone achieved during progress
 
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningMilestone {
-    #[schemars(with = "String")]
     pub id: Uuid,
-    #[schemars(with = "String")]
     pub session_id: Uuid,
     pub milestone_type: MilestoneType,
     pub description: String,
-    #[schemars(with = "String")]
 
     pub achieved_at: DateTime<Utc>,
     pub metrics_at_achievement: ProgressMetrics,
@@ -26,7 +23,7 @@ pub struct LearningMilestone {
 
 /// Types of learning milestones
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum MilestoneType {
     TaskStarted,
     FirstIteration,
@@ -39,7 +36,7 @@ pub enum MilestoneType {
 
 /// Progress optimization suggestion
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ProgressOptimization {
     pub suggestion_type: OptimizationType,
     pub description: String,
@@ -49,7 +46,7 @@ pub struct ProgressOptimization {
 
 /// Types of optimization suggestions
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum OptimizationType {
     StrategyChange,
     ResourceReallocation,
@@ -59,11 +56,9 @@ pub enum OptimizationType {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct MonitoringState {
-    #[schemars(with = "String")]
     last_snapshot: DateTime<Utc>,
-    #[schemars(with = "String")]
     next_evaluation: DateTime<Utc>,
     sample_count: u32,
     rolling_metrics: ProgressMetrics,
@@ -71,7 +66,7 @@ pub struct MonitoringState {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct MonitoringAnalytics {
     momentum_score: f64,
     health_score: f64,
@@ -79,13 +74,11 @@ pub struct MonitoringAnalytics {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ProgressMonitoringSummary {
     pub sample_count: u32,
-    #[schemars(with = "String")]
 
     pub last_snapshot: DateTime<Utc>,
-    #[schemars(with = "String")]
 
     pub next_evaluation: DateTime<Utc>,
     pub rolling_metrics: ProgressMetrics,
@@ -117,9 +110,8 @@ pub struct ProgressTracker {
 
 /// Progress snapshot for historical tracking
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ProgressSnapshot {
-    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
     pub metrics: ProgressMetrics,
@@ -128,7 +120,7 @@ pub struct ProgressSnapshot {
 
 /// Performance baseline for task type
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PerformanceBaseline {
     pub task_type: TaskType,
     pub average_completion_time: chrono::Duration,
@@ -714,9 +706,8 @@ impl ProgressTracker {
 
 /// Progress report for a learning session
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ProgressReport {
-    #[schemars(with = "String")]
     pub session_id: Uuid,
     pub current_progress: ProgressMetrics,
     pub progress_history: Vec<ProgressSnapshot>,
@@ -727,7 +718,7 @@ pub struct ProgressReport {
 
 /// Performance analysis results
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PerformanceAnalysis {
     pub trend_direction: TrendDirection,
     pub baseline_comparison: BaselineComparison,
@@ -737,7 +728,7 @@ pub struct PerformanceAnalysis {
 
 /// Trend direction for performance
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum TrendDirection {
     Improving,
     Declining,
@@ -746,7 +737,7 @@ pub enum TrendDirection {
 
 /// Baseline performance comparison
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct BaselineComparison {
     pub quality_vs_baseline: f64,
     pub efficiency_vs_baseline: f64,

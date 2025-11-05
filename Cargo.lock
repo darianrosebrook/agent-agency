@@ -255,7 +255,7 @@ dependencies = [
  "system-resilience",
  "tempfile",
  "thiserror 1.0.69",
- "tokenizers 0.19.1",
+ "tokenizers",
  "tokio",
  "tokio-postgres",
  "tokio-util 0.7.16",
@@ -323,6 +323,7 @@ dependencies = [
  "system-observability",
  "tendril",
  "thiserror 1.0.69",
+ "tokenizers",
  "tokio",
  "tokio-test",
  "tracing",
@@ -2472,7 +2473,7 @@ dependencies = [
  "tar",
  "tempfile",
  "thiserror 1.0.69",
- "tokenizers 0.15.2",
+ "tokenizers",
  "tokio",
  "tokio-postgres",
  "tokio-stream",
@@ -2491,6 +2492,7 @@ dependencies = [
  "agent-agency-contracts",
  "agent-data-processing",
  "agent-orchestration",
+ "agent-research",
  "agent-workers",
  "async-trait",
  "axum",
@@ -9754,7 +9756,7 @@ dependencies = [
  "system-configuration 0.1.0",
  "tempfile",
  "thiserror 1.0.69",
- "tokenizers 0.19.1",
+ "tokenizers",
  "tokio",
  "tokio-test",
  "tracing",
@@ -10295,39 +10297,6 @@ name = "tinyvec_macros"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
-
-[[package]]
-name = "tokenizers"
-version = "0.15.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3dd47962b0ba36e7fd33518fbf1754d136fd1474000162bbf2a8b5fcb2d3654d"
-dependencies = [
- "aho-corasick",
- "clap",
- "derive_builder 0.12.0",
- "esaxx-rs",
- "getrandom 0.2.16",
- "indicatif 0.17.11",
- "itertools 0.12.1",
- "lazy_static",
- "log",
- "macro_rules_attribute",
- "monostate",
- "onig",
- "paste",
- "rand 0.8.5",
- "rayon",
- "rayon-cond",
- "regex",
- "regex-syntax",
- "serde",
- "serde_json",
- "spm_precompiled",
- "thiserror 1.0.69",
- "unicode-normalization-alignments",
- "unicode-segmentation",
- "unicode_categories",
-]
 
 [[package]]
 name = "tokenizers"

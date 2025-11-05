@@ -27,13 +27,91 @@ enum TaskState {
     Completed,
 }
 
-use agent_agency_v3::{
-    self_prompting_agent::{SelfPromptingLoop, SelfPromptingConfig, Task, TaskBuilder},
-    workers::{WorkerPoolManager, AutonomousExecutor, AutonomousExecutorConfig},
-    orchestration::{arbiter::ArbiterOrchestrator, caws_runtime::DefaultValidator},
-    file_ops::{WorkspaceFactory, AllowList, Budgets},
-    config::AppConfig,
-};
+// Import available types from existing crates
+use agent_research::self_prompting_agent::{SelfPromptingLoop, Task};
+
+// Stub implementations for missing types (TODO: implement properly)
+#[derive(Debug, Clone)]
+pub struct SelfPromptingConfig {
+    pub max_iterations: usize,
+}
+
+#[derive(Debug)]
+pub struct TaskBuilder;
+
+impl TaskBuilder {
+    pub fn new() -> Self { Self }
+}
+
+#[derive(Debug)]
+pub struct WorkerPoolManager;
+
+impl WorkerPoolManager {
+    pub fn new(_config: WorkerConfig) -> Self { Self }
+}
+
+#[derive(Debug, Clone)]
+pub struct WorkerConfig;
+
+#[derive(Debug)]
+pub struct AutonomousExecutor;
+
+#[derive(Debug, Clone)]
+pub struct AutonomousExecutorConfig;
+
+impl AutonomousExecutor {
+    pub fn new(_config: AutonomousExecutorConfig, _validator: Arc<dyn CawsValidator>) -> (Self, tokio::sync::mpsc::UnboundedReceiver<ExecutionMessage>) {
+        (Self, tokio::sync::mpsc::unbounded_channel().1)
+    }
+}
+
+#[derive(Debug)]
+pub struct ArbiterOrchestrator;
+
+impl ArbiterOrchestrator {
+    pub fn new(_config: ArbiterConfig) -> Self { Self }
+}
+
+#[derive(Debug, Clone)]
+pub struct ArbiterConfig;
+
+pub trait CawsValidator: Send + Sync {}
+
+#[derive(Debug)]
+pub struct DefaultValidator;
+
+impl CawsValidator for DefaultValidator {}
+
+#[derive(Debug)]
+pub struct ExecutionMessage;
+
+#[derive(Debug)]
+pub struct WorkspaceFactory;
+
+impl WorkspaceFactory {
+    pub fn new() -> Self { Self }
+}
+
+#[derive(Debug, Clone)]
+pub struct AllowList;
+
+#[derive(Debug, Clone)]
+pub struct Budgets;
+
+#[derive(Debug, Clone)]
+pub struct AppConfig {
+    pub worker: WorkerConfig,
+    pub arbiter: ArbiterConfig,
+}
+
+impl Default for AppConfig {
+    fn default() -> Self {
+        Self {
+            worker: WorkerConfig,
+            arbiter: ArbiterConfig,
+        }
+    }
+}
 use axum::{
     extract::ws::{Message, WebSocket, WebSocketUpgrade},
     extract::State,
@@ -44,7 +122,6 @@ use axum::{
 use std::collections::HashMap;
 use std::sync::Mutex;
 use tower_http::cors::CorsLayer;
-use std::sync::Arc;
 
 /// Execution modes with different intervention levels
 #[derive(Debug, Clone, clap::ValueEnum, JsonSchema)]
@@ -846,8 +923,8 @@ async fn intervene_task(
 }
 
 /// Generate working specification for a task
-fn generate_working_spec(task: &Task, dry_run: bool) -> Result<agent_agency_v3::orchestration::planning::types::WorkingSpec, Box<dyn std::error::Error>> {
-    use agent_agency_v3::orchestration::planning::types::{WorkingSpec, AcceptanceCriterion, ChangeBudget, Scope};
+fn generate_working_spec(task: &Task, dry_run: bool) -> Result<agent_agency_contracts::WorkingSpec, Box<dyn std::error::Error>> {
+    use agent_agency_contracts::{WorkingSpec, AcceptanceCriterion, ChangeBudget};
 
     let risk_tier = if task.description.to_lowercase().contains("auth") ||
                        task.description.to_lowercase().contains("billing") {
@@ -915,7 +992,7 @@ fn generate_working_spec(task: &Task, dry_run: bool) -> Result<agent_agency_v3::
 
 /// Simulate artifact generation for dry-run
 async fn simulate_artifact_generation(
-    working_spec: &agent_agency_v3::orchestration::planning::types::WorkingSpec,
+    working_spec: &agent_agency_contracts::WorkingSpec,
 ) -> Result<DryRunArtifacts, Box<dyn std::error::Error>> {
     // Simulate creating code files
     let mut code_files = Vec::new();
@@ -980,26 +1057,6 @@ async fn start_file_watching(
     Ok(())
 }
 
-/// Rollback changes applied by an aborted task
-async fn rollback_task_changes(task_id: &str) -> Result<(), Box<dyn std::error::Error>> {
-    // For now, implement basic rollback logic
-    // In a full implementation, this would:
-    // 1. Query the task's change log
-    // 2. Reverse file modifications
-    // 3. Clean up temporary artifacts
-    // 4. Restore previous state
-
-    println!("     Checking for applied changes...");
-
-    // Check if there are any recorded changes for this task
-    // For now, assume no changes were applied (simplified implementation)
-    // In production, this would check the system-resilience recovery store
-
-    println!("     No persistent changes found to rollback");
-    println!("     Task state cleaned up");
-
-    Ok(())
-}
 
 /// Rollback changes applied by an aborted task
 async fn rollback_task_changes(task_id: &str) -> Result<(), Box<dyn std::error::Error>> {

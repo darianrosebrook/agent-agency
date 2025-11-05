@@ -12,7 +12,9 @@ pub mod indexing;
 pub mod query_processing;
 
 // Re-export the main components for backward compatibility
-pub use core::{MultimodalRetriever, MultimodalRetrieverConfig, MultimodalQuery, QueryType, FusionStrategy, MultimodalSearchResult};
+pub use core::{MultimodalRetriever, MultimodalRetrieverConfig, MultimodalQuery, FusionStrategy, MultimodalSearchResult};
+// QueryType is now imported from contracts, not core
+pub use agent_agency_contracts::types::research::QueryType;
 
 // Re-export supporting types
 pub use text_search::{Bm25Index, VectorIndex, TextSearchBridge, TextSearchEngine};

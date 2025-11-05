@@ -126,7 +126,7 @@ impl HistoricalLookup {
     async fn record_claim_access_db(&self, db_client: &DatabaseClient, claim_id: Uuid) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let result = db_client.execute_parameterized_query(
             "SELECT record_claim_access($1)",
-            &[&claim_id],
+            vec![&claim_id],
         ).await;
 
         match result {

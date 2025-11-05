@@ -13,7 +13,7 @@ use tracing::info;
 
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct ContentProcessor {
     config: ContentProcessingConfig,
     cache: Arc<RwLock<std::collections::HashMap<String, ContentProcessingResult>>>,

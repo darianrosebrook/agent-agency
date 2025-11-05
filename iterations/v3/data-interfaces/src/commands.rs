@@ -134,3 +134,83 @@ Use 'agent-agency-cli help <command>' for more information about a specific comm
         }
     }
 }
+
+/// CLI Interface for command execution
+#[derive(Debug)]
+pub struct CliInterface {
+    config: Option<CliConfig>,
+}
+
+impl CliInterface {
+    /// Create a new CLI interface
+    pub fn new() -> Result<Self, InterfaceError> {
+        Ok(Self { config: None })
+    }
+
+    /// Initialize the CLI interface
+    pub async fn initialize(&mut self, config: CliConfig) -> Result<(), InterfaceError> {
+        self.config = Some(config);
+        Ok(())
+    }
+
+    /// Start the CLI interface
+    pub async fn start(&mut self) -> Result<(), InterfaceError> {
+        // CLI interface is always ready
+        Ok(())
+    }
+
+    /// Stop the CLI interface
+    pub async fn stop(&mut self) -> Result<(), InterfaceError> {
+        // Nothing to stop
+        Ok(())
+    }
+
+    /// Execute a CLI command
+    pub async fn execute_command(
+        &mut self,
+        command: &str,
+        args: &[String],
+    ) -> Result<CliResponse, InterfaceError> {
+        match command {
+            "help" => Ok(CliResponse {
+                status: CliStatus::Success,
+                message: "Available commands: help, version, start, stop, status".to_string(),
+                data: None,
+            }),
+            "version" => Ok(CliResponse {
+                status: CliStatus::Success,
+                message: "Data Interfaces v0.1.0".to_string(),
+                data: None,
+            }),
+            _ => Ok(CliResponse {
+                status: CliStatus::Error,
+                message: format!("Unknown command: {}", command),
+                data: None,
+            }),
+        }
+    }
+}
+
+/// CLI Configuration
+#[derive(Debug, Clone, schemars::JsonSchema)]
+pub struct CliConfig {
+    pub interactive_mode: bool,
+    pub command_timeout_seconds: u64,
+    pub max_concurrent_commands: usize,
+}
+
+/// CLI Response
+#[derive(Debug, Clone)]
+pub struct CliResponse {
+    pub status: CliStatus,
+    pub message: String,
+    pub data: Option<serde_json::Value>,
+}
+
+/// CLI Status
+#[derive(Debug, Clone)]
+pub enum CliStatus {
+    Success,
+    Error,
+    Running,
+}

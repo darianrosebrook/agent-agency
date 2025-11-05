@@ -13,7 +13,7 @@ use crate::self_prompting_agent::prompting_types::SelfPromptingAgentError;
 
 /// RL signal for feedback
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct RLSignal {
     pub signal_type: String,
     pub value: f64,
@@ -34,6 +34,11 @@ impl RLSignalGenerator {
             learning_rate: 0.1,
             discount_factor: 0.9,
             exploration_rate: 0.1,
+            min_exploration_rate: Some(0.01),
+            exploration_decay: Some(0.99),
+            max_iterations: 1000,
+            max_episodes: Some(1000),
+            convergence_threshold: 0.001,
         };
         Self {
             q_learning: Arc::new(RwLock::new(QLearning::new(config))),
@@ -91,7 +96,7 @@ impl RLSignalGenerator {
 
 /// Policy adjustment based on RL signals
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PolicyAdjustment {
     pub parameter: String,
     pub current_value: f64,
@@ -252,6 +257,11 @@ impl RLTrainer {
             learning_rate,
             discount_factor,
             exploration_rate: 0.1,
+            convergence_threshold: 0.001,
+            exploration_decay: Some(0.99),
+            max_episodes: Some(1000),
+            min_exploration_rate: Some(0.01),
+            max_iterations: 1000,
         };
         Self {
             q_learning: Arc::new(RwLock::new(QLearning::new(config))),
@@ -312,7 +322,7 @@ impl RLTrainer {
 }
 
 /// Experience buffer for RL training
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ExperienceBuffer {
     experiences: Vec<Experience>,
     max_size: usize,
@@ -354,7 +364,7 @@ impl ExperienceBuffer {
 
 /// RL experience tuple
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct Experience {
     pub state: String,
     pub action: String,

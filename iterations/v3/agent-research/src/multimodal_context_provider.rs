@@ -40,7 +40,7 @@ use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 /// Result from multimodal context query
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct MultimodalContext {
     /// Query identifier for tracking
     pub query_id: String,
@@ -65,10 +65,9 @@ pub struct MultimodalContext {
 }
 
 /// Individual evidence item retrieved from multimodal indices
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct EvidenceItem {
     /// Evidence identifier
-    #[schemars(with = "String")]
     pub id: Uuid,
 
     /// Evidence text or description
@@ -94,13 +93,12 @@ pub struct EvidenceItem {
 }
 
 /// Citation information for retrieved evidence
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct Citation {
     /// Document URI or file path
     pub source_uri: String,
 
     /// Document identifier
-    #[schemars(with = "String")]
     pub document_id: Uuid,
 
     /// Page/slide number (if applicable)
@@ -114,7 +112,7 @@ pub struct Citation {
 }
 
 /// Metadata for retrieval operation
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct RetrievalMetadata {
     /// Number of indices queried
     pub indices_queried: usize,
@@ -131,7 +129,7 @@ pub struct RetrievalMetadata {
 
 /// Context budget for controlling evidence volume
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ContextBudget {
     /// Maximum tokens to use for evidence
     pub max_tokens: usize,

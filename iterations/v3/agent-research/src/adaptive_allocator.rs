@@ -7,7 +7,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ResourceMetrics {
     pub cpu_usage_percent: f64,
     pub memory_usage_gb: f64,
@@ -20,9 +20,8 @@ pub struct ResourceMetrics {
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct TaskResourceRequirements {
-    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub min_cpu_cores: usize,
     pub min_memory_gb: f64,
@@ -32,7 +31,7 @@ pub struct TaskResourceRequirements {
     pub resource_intensity: ResourceIntensity,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize) ]
 pub enum ResourcePriority {
     Low = 1,
     Medium = 2,
@@ -40,7 +39,7 @@ pub enum ResourcePriority {
     Critical = 4,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize) ]
 pub enum ResourceIntensity {
     Light,    // Simple computations, small datasets
     Medium,   // Standard ML training, moderate datasets
@@ -48,9 +47,8 @@ pub enum ResourceIntensity {
     Extreme,  // Distributed training, massive datasets
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ResourceAllocation {
-    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub allocated_cpu_cores: usize,
     pub allocated_memory_gb: f64,
@@ -59,7 +57,7 @@ pub struct ResourceAllocation {
     pub expected_completion: Option<chrono::DateTime<chrono::Utc>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ResourcePrediction {
     pub predicted_cpu_usage: f64,
     pub predicted_memory_usage: f64,
@@ -69,7 +67,7 @@ pub struct ResourcePrediction {
 }
 
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct AdaptiveResourceAllocator {
     current_metrics: Arc<RwLock<ResourceMetrics>>,
     active_allocations: Arc<RwLock<HashMap<Uuid, ResourceAllocation>>>,
@@ -80,7 +78,7 @@ pub struct AdaptiveResourceAllocator {
     system_limits: SystemResourceLimits,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct SystemResourceLimits {
     pub max_cpu_cores: usize,
     pub max_memory_gb: f64,
@@ -89,7 +87,7 @@ pub struct SystemResourceLimits {
 }
 
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct ResourcePredictor {
     cpu_model: SimpleLinearModel,
     memory_model: SimpleLinearModel,
@@ -97,7 +95,7 @@ pub struct ResourcePredictor {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct SimpleLinearModel {
     weights: Vec<f64>,
     bias: f64,
@@ -494,23 +492,22 @@ impl AdaptiveResourceAllocator {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ResourceReallocation {
-    #[schemars(with = "String")]
     pub task_id: Uuid,
     pub old_allocation: ResourceAllocation,
     pub new_allocation: ResourceAllocation,
     pub reason: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct AllocationRecommendation {
     pub recommendation_type: RecommendationType,
     pub description: String,
     pub priority: RecommendationPriority,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum RecommendationType {
     ScaleUpCPU,
     ScaleUpMemory,
@@ -519,7 +516,7 @@ pub enum RecommendationType {
     ImplementResourcePooling,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum RecommendationPriority {
     Low,
     Medium,

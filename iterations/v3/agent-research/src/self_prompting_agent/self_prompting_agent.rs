@@ -14,7 +14,7 @@ use crate::self_prompting_agent::prompting_types::{Task, SelfPromptingAgentError
 
 /// Configuration for the self-prompting agent
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct SelfPromptingAgentConfig {
     pub max_iterations: usize,
     pub enable_sandbox: bool,

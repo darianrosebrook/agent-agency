@@ -24,7 +24,7 @@ pub trait ModelProvider: Send + Sync {
 }
 
 /// Generation options
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct GenerationOptions {
     pub max_tokens: Option<usize>,
     pub temperature: Option<f64>,

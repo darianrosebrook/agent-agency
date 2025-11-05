@@ -7,12 +7,12 @@ use schemars::JsonSchema;
 use async_trait::async_trait;
 
 use crate::planning_agent::planning_errors::PlanningResult;
-use system_configuration::types::ValidationIssue;
+use agent_agency_contracts::types::validation::ValidationIssue;
 
 /// Refinement suggestion from the engine
 
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct RefinementSuggestion {
     /// Actions that were applied
     pub applied_actions: Vec<String>,

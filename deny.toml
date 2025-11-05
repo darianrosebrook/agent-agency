@@ -1,0 +1,24 @@
+# Forbidden dependency edges
+[bans]
+# Banned edges: services/* must not depend on interfaces/*
+[[bans.skip]]
+name = "agent-orchestration"
+reason = "orchestration can depend on data-interfaces"
+dependencies = [
+    { name = "data-interfaces", allow = true },
+]
+
+[[bans.skip]]
+name = "agent-research"
+reason = "research can depend on data-interfaces"
+dependencies = [
+    { name = "data-interfaces", allow = true },
+]
+
+[[bans.skip]]
+name = "agent-research"
+reason = "research can depend on contracts"
+dependencies = [
+    { name = "agent-agency-contracts", allow = true },
+]
+

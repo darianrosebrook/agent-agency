@@ -99,7 +99,7 @@ impl CoreferenceResolver {
                         id: format!("entity_{}", entities.len()),
                         name: capture_text.clone(),
                         text: capture_text.clone(),
-                        entity_type: EntityType::CodeEntity,
+                        entity_type: crate::verification::verification_types::EntityType::CodeEntity,
                         confidence: 0.8,
                         context: None,
                         position: Some((capture.start(), capture.end())),
@@ -256,12 +256,12 @@ impl CoreferenceResolver {
             // Boost score for semantic matches
             match pronoun {
                 "it" | "this" | "that" => {
-                    if matches!(candidate.entity_type, EntityType::CodeEntity | EntityType::SystemComponent) {
+                    if matches!(candidate.entity_type, crate::verification::verification_types::EntityType::CodeEntity | crate::verification::verification_types::EntityType::SystemComponent) {
                         score *= 1.5;
                     }
                 }
                 "they" | "them" => {
-                    if matches!(candidate.entity_type, EntityType::Organization) {
+                    if matches!(candidate.entity_type, crate::verification::verification_types::EntityType::Organization) {
                         score *= 1.3;
                     }
                 }
@@ -300,7 +300,7 @@ impl CoreferenceResolver {
         chains: &[CoreferenceChain],
     ) -> Vec<String> {
         let resolved_positions: HashSet<_> = chains.iter()
-            .flat_map(|chain| chain.mentions.iter().map(|mention| mention.position))
+            .flat_map(|chain| chain.mentions.iter().filter_map(|mention| mention.position))
             .collect();
 
         pronouns.iter()

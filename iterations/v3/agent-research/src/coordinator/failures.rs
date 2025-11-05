@@ -9,7 +9,7 @@ use std::collections::HashMap;
 /// Failure categories for classification
 
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize) ]
 pub enum FailureCategory {
     Timeout,
     ResourceExhaustion,
@@ -23,7 +23,7 @@ pub enum FailureCategory {
 
 /// Heuristic mapping for failure analysis
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct FailureHeuristics {
     pub failure_patterns: HashMap<FailureCategory, FailurePattern>,
     pub remediation_strategies: HashMap<FailureCategory, Vec<String>>,
@@ -213,7 +213,7 @@ impl FailureHeuristics {
 
 /// Pattern for failure analysis
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct FailurePattern {
     pub keywords: Vec<String>,
     pub severity_indicators: Vec<String>,
@@ -223,7 +223,7 @@ pub struct FailurePattern {
 
 /// Failure analysis result
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct FailureAnalysis {
     pub category: FailureCategory,
     pub severity: FailureSeverity,
@@ -234,7 +234,7 @@ pub struct FailureAnalysis {
 
 /// Severity levels for failure analysis
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize) ]
 pub enum FailureSeverity {
     Low,
     Medium,
@@ -244,7 +244,7 @@ pub enum FailureSeverity {
 
 /// Context information for failure analysis
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct FailureContext {
     pub execution_time: f64,
     pub timeout_threshold: f64,
@@ -256,7 +256,7 @@ pub struct FailureContext {
 
 /// Failure recovery strategy
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum RecoveryStrategy {
     RetryWithBackoff,
     ReduceComplexity,

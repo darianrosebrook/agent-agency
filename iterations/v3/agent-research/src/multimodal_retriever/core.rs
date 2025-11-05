@@ -14,8 +14,11 @@ use super::query_processing::QueryProcessor;
 // Import the embedding service types that the context provider expects
 use data_infrastructure::embedding::embedding_types::{SearchResultFeature, ContentType};
 
+// Use QueryType from contracts
+use agent_agency_contracts::types::research::QueryType;
+
 /// Configuration for multimodal retrieval
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct MultimodalRetrieverConfig {
     /// Maximum number of results per modality
     pub k_per_modality: usize,
@@ -60,7 +63,7 @@ pub struct MultimodalRetriever {
 }
 
 /// Search query with optional multimodal content
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct MultimodalQuery {
     pub text: Option<String>,
     pub image_path: Option<std::path::PathBuf>,
@@ -73,19 +76,9 @@ pub struct MultimodalQuery {
     pub time_window_seconds: Option<u64>,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema)]
-pub enum QueryType {
-    Text,
-    Visual,
-    Image,
-    Code,
-    TimestampAnchored,
-    Hybrid,
-}
-
 /// Advanced fusion strategies for multimodal results
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum FusionStrategy {
     /// Simple weighted combination
     Weighted,
@@ -99,14 +92,13 @@ pub enum FusionStrategy {
 
 /// Search result combining multiple modalities
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct MultimodalSearchResult {
     pub id: String,
     pub content: String,
     pub modality_scores: HashMap<String, f32>,
     pub combined_score: f32,
     pub metadata: HashMap<String, serde_json::Value>,
-    #[schemars(with = "String")]
 
     pub timestamp: DateTime<Utc>,
     pub source_modality: String,
@@ -114,7 +106,7 @@ pub struct MultimodalSearchResult {
 }
 
 /// Visual search result for image-based queries
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct VisualSearchResult {
     pub image_id: String,
     pub similarity_score: f32,
@@ -123,7 +115,7 @@ pub struct VisualSearchResult {
 }
 
 /// Configuration for visual search operations
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct VisualSearchConfig {
     pub similarity_threshold: f32,
     pub max_results: usize,
@@ -254,6 +246,9 @@ impl MultimodalRetriever {
         &self,
         query: MultimodalQuery,
     ) -> Result<Vec<data_infrastructure::embedding::embedding_types::MultimodalSearchResult>> {
+        // Extract project scope before moving query
+        let project_scope = query.project_scope.clone();
+        
         // Process the structured query
         let processed_query = self.query_processor.process_multimodal_query(query)?;
 
@@ -280,7 +275,7 @@ impl MultimodalRetriever {
                         "metadata": result.metadata
                     }),
                 },
-                project_scope: query.project_scope,
+                project_scope: project_scope.clone(),
             }
         }).collect();
 

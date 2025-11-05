@@ -38,6 +38,7 @@ impl EntityDisambiguator {
 
         // Select best match
         let best_match = self.select_best_entity_match(&candidates);
+        let confidence = best_match.as_ref().map(|c| c.confidence).unwrap_or(0.0);
 
         let method = if candidates.iter().any(|c| c.confidence >= 0.9) {
             DisambiguationMethod::ExactMatch
@@ -51,7 +52,7 @@ impl EntityDisambiguator {
             entity: entity.name.clone(),
             candidates,
             selected_candidate: best_match,
-            confidence: best_match.as_ref().map(|c| c.confidence).unwrap_or(0.0),
+            confidence,
             method,
         })
     }
@@ -111,12 +112,14 @@ impl EntityDisambiguator {
 
         // Define patterns for different entity types
         let patterns = match entity.entity_type {
-            EntityType::CodeEntity => vec![
+            agent_agency_contracts::types::research::EntityType::Code | 
+            agent_agency_contracts::types::research::EntityType::CodeEntity => vec![
                 r"\b(function|method|class|struct|module)\s+\w+\b",
                 r"\b\w+\(\)\s*\{",
                 r"\bconst\s+\w+\s*=",
             ],
-            EntityType::SystemComponent => vec![
+            agent_agency_contracts::types::research::EntityType::Technology |
+            agent_agency_contracts::types::research::EntityType::SystemComponent => vec![
                 r"\b(api|service|database|server)\s+\w+\b",
                 r"\bendpoint\s+[\w/]+\b",
                 r"\btable\s+\w+\b",
@@ -203,22 +206,22 @@ impl EntityDisambiguator {
     }
 
     /// Infer entity type from text content
-    fn infer_entity_type(&self, text: &str) -> EntityType {
+    fn infer_entity_type(&self, text: &str) -> agent_agency_contracts::types::research::EntityType {
         let text_lower = text.to_lowercase();
 
         // Check for code-related keywords
         if CODE_ENTITIES.iter().any(|&entity| text_lower.contains(entity)) {
-            return EntityType::CodeEntity;
+            return agent_agency_contracts::types::research::EntityType::Code;
         }
 
         // Check for system components
         let system_keywords = ["api", "service", "database", "server", "endpoint", "table"];
         if system_keywords.iter().any(|&kw| text_lower.contains(kw)) {
-            return EntityType::SystemComponent;
+            return agent_agency_contracts::types::research::EntityType::Technology;
         }
 
         // Default to concept
-        EntityType::Concept
+        agent_agency_contracts::types::research::EntityType::Concept
     }
 
     /// Calculate Levenshtein distance between two strings

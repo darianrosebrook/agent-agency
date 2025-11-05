@@ -187,7 +187,7 @@ impl SandboxEnvironment {
 
 /// Sandbox status information
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct SandboxStatus {
     pub active: bool,
     pub root_path: Option<PathBuf>,
@@ -197,7 +197,7 @@ pub struct SandboxStatus {
 
 /// Security levels for sandbox
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
 pub enum SecurityLevel {
     Low,
     Medium,
@@ -207,7 +207,7 @@ pub enum SecurityLevel {
 
 /// Sandbox configuration
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct SandboxConfig {
     pub max_memory_mb: usize,
     pub max_cpu_percent: f64,
@@ -330,7 +330,7 @@ impl ResourceMonitor {
 
 /// Resource usage information
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ResourceUsage {
     pub memory_mb: usize,
     pub cpu_percent: f64,

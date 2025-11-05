@@ -280,7 +280,7 @@ impl ToolChainPlanner {
 
             // Try adding each available tool as a new step
             for tool in available_tools {
-                let extended = self.try_extend_chain(&base_chain, tool, context, constraints)?;
+                let extended = self.try_extend_chain(&base_chain, tool, context, constraints).await?;
                 if let Some(chain) = extended {
                     extended_chains.push(chain);
 
@@ -296,7 +296,7 @@ impl ToolChainPlanner {
     }
 
     /// Try to extend a chain with a new tool
-    fn try_extend_chain(
+    async fn try_extend_chain(
         &self,
         base_chain: &ToolChain,
         new_tool: &RegisteredTool,
@@ -315,7 +315,7 @@ impl ToolChainPlanner {
             &new_node_clone,
             base_chain,
             context,
-        )?;
+        ).await?;
 
         // If no connections made, it's a parallel/independent step
         if connections_made == 0 {
@@ -356,7 +356,7 @@ impl ToolChainPlanner {
     }
 
     /// Connect a new node to the existing chain DAG
-    fn connect_node_to_chain(
+    async fn connect_node_to_chain(
         &self,
         dag: &mut Graph<ToolNode, ToolEdge>,
         new_node_idx: NodeIndex,
@@ -373,7 +373,7 @@ impl ToolChainPlanner {
 
                 // Check if existing node has compatible output
                 for output in &existing_node.outputs {
-                    if self.schemas_compatible(&input.schema, &output.schema)? {
+                    if self.schemas_compatible(&input.schema, &output.schema).await? {
                         // Create edge
                         let edge = ToolEdge {
                             from_port: output.name.clone(),
@@ -392,18 +392,27 @@ impl ToolChainPlanner {
     }
 
     /// Check if two port schemas are compatible
-    fn schemas_compatible(&self, input: &PortSchemaRef, output: &PortSchemaRef) -> Result<bool, anyhow::Error> {
-        // TODO: Implement real schema compatibility checking
-        // - [ ] Load actual schemas from registry using schema keys
-        // - [ ] Compare schema types and structures for compatibility
-        // - [ ] Support type coercion and conversion when needed
-        // - [ ] Handle schema version differences
+    async fn schemas_compatible(&self, input: &PortSchemaRef, output: &PortSchemaRef) -> Result<bool, anyhow::Error> {
+        // Exact schema match (most compatible)
+        if input.registry_key == output.registry_key {
+            return Ok(true);
+        }
+
+        // Check if direct conversion is available
+        if self.schema_registry.can_convert(&output.registry_key, &input.registry_key).await {
+            return Ok(true);
+        }
+
+        // TODO: Implement advanced schema compatibility checking
+        // - [ ] Load actual JSON schemas from registry
+        // - [ ] Compare schema structures for subtype compatibility
+        // - [ ] Support type coercion (string->number, etc.)
+        // - [ ] Handle schema version differences (@v1 -> @v2)
         // - [ ] Add unit tests with various schema types
         // - [ ] Add integration tests with real schema compatibility
-        // For now, simple string matching on registry keys
-        // In a full implementation, this would check schema compatibility
-        Ok(input.registry_key == output.registry_key ||
-           self.schema_registry.can_convert(&output.registry_key, &input.registry_key))
+
+        // For now, allow optional inputs to accept any output
+        Ok(input.optional)
     }
 
     /// Convert a registered tool to a DAG node

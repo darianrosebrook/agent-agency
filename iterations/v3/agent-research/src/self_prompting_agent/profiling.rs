@@ -60,7 +60,7 @@ impl PerformanceProfiler {
 
 /// Performance report for single operation
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PerformanceReport {
     pub operation: String,
     pub duration_ms: f64,
@@ -70,7 +70,7 @@ pub struct PerformanceReport {
 
 /// Performance benchmark configuration
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct PerformanceBenchmark {
     pub name: String,
     pub iterations: usize,
@@ -79,7 +79,7 @@ pub struct PerformanceBenchmark {
 
 /// Benchmark result
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct BenchmarkResult {
     pub benchmark_name: String,
     pub total_duration_ms: f64,
@@ -136,7 +136,7 @@ impl ProfilingSession {
 
 /// Profiling report
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ProfilingReport {
     pub session_name: String,
     pub total_duration_ms: f64,
@@ -145,7 +145,7 @@ pub struct ProfilingReport {
 
 /// Performance checkpoint
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct Checkpoint {
     pub name: String,
     pub duration_ms: f64,

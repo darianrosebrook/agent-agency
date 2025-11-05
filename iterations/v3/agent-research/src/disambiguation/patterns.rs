@@ -5,25 +5,15 @@ use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 
 /// Pattern-based entity recognition using regex
-#[derive(Clone)]
-
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Debug)]
 pub struct EntityPatterns {
-    #[schemars(with = "Vec<String>")]
     pub person_patterns: Vec<Regex>,
-    #[schemars(with = "Vec<String>")]
     pub organization_patterns: Vec<Regex>,
-    #[schemars(with = "Vec<String>")]
     pub location_patterns: Vec<Regex>,
-    #[schemars(with = "Vec<String>")]
     pub date_patterns: Vec<Regex>,
-    #[schemars(with = "Vec<String>")]
     pub time_patterns: Vec<Regex>,
-    #[schemars(with = "Vec<String>")]
     pub money_patterns: Vec<Regex>,
-    #[schemars(with = "Vec<String>")]
     pub percent_patterns: Vec<Regex>,
-    #[schemars(with = "Vec<String>")]
     pub technical_term_patterns: Vec<Regex>,
 }
 

@@ -16,7 +16,7 @@ use uuid::Uuid;
 
 /// Context builder for synthesizing research results
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct ContextBuilder {
     config: ContextSynthesisConfig,
     cache: Arc<RwLock<std::collections::HashMap<String, SynthesizedContext>>>,
@@ -25,14 +25,14 @@ pub struct ContextBuilder {
 
 /// Cross-reference detector for finding related knowledge
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct CrossReferenceDetector {
     similarity_threshold: f32,
     max_references: usize,
 }
 
 /// Context synthesis metrics
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ContextSynthesisMetrics {
     pub synthesis_time_ms: u64,
     pub evidence_items_processed: usize,

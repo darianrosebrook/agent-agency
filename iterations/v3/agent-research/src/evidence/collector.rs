@@ -18,7 +18,7 @@ use tracing::{debug, info, warn};
 
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct EvidenceCollector {
     config: EvidenceCollectorConfig,
     code_analyzer: CodeAnalysisCollector,
@@ -61,7 +61,7 @@ impl EvidenceCollector {
 
     /// Main entry point: collect evidence for a single atomic claim
     pub async fn collect_evidence(
-        &self,
+        &mut self,
         claim: &AtomicClaim,
         context: &ProcessingContext,
     ) -> Result<Vec<Evidence>> {
@@ -150,7 +150,7 @@ impl EvidenceCollector {
 
     /// Collect evidence using a specific verification method
     async fn collect_by_method(
-        &self,
+        &mut self,
         method: &VerificationMethod,
         claim: &AtomicClaim,
         context: &ProcessingContext,
@@ -200,6 +200,10 @@ impl EvidenceCollector {
                     relevance: 0.5,
                     timestamp: chrono::Utc::now(),
                 }])
+            }
+            // Catch-all for future non-exhaustive variants
+            _ => {
+                Ok(vec![])
             }
         }
     }

@@ -5,6 +5,12 @@ use std::sync::Arc;
 use anyhow::Result;
 use crate::disambiguation::types::*;
 use crate::ProcessingContext;
+// Explicit imports from contracts
+use agent_agency_contracts::types::research::{
+    EmbeddingProvider, KnowledgeBase, KnowledgeIngest,
+    UnresolvableReason as ContractsUnresolvableReason,
+    EntityType as ContractsEntityType,
+};
 
 /// Context resolver for disambiguating ambiguities
 pub struct ContextResolver {
@@ -66,7 +72,7 @@ impl ContextResolver {
                 hint.clone(),
                 ReferentInfo {
                     referent: hint.clone(),
-                    entity_type: EntityType::Person, // Default type
+                    entity_type: ContractsEntityType::Person, // Default type
                     confidence: 0.9,
                     context: Some("domain_hint".to_string()),
                 },
@@ -80,7 +86,7 @@ impl ContextResolver {
                 entity.clone(),
                 ReferentInfo {
                     referent: entity,
-                    entity_type: EntityType::Person, // Default type
+                    entity_type: ContractsEntityType::Person, // Default type
                     confidence: 0.8,
                     context: Some("surrounding_context".to_string()),
                 },
@@ -173,16 +179,16 @@ impl ContextResolver {
         &self,
         ambiguity: &Ambiguity,
         context: &ProcessingContext,
-    ) -> Option<UnresolvableReason> {
+    ) -> Option<ContractsUnresolvableReason> {
         match ambiguity.ambiguity_type {
             AmbiguityType::Pronoun if context.domain_hints.is_empty() => {
-                Some(UnresolvableReason::InsufficientContext)
+                Some(ContractsUnresolvableReason::InsufficientContext)
             }
             AmbiguityType::TechnicalTerm if ambiguity.possible_resolutions.len() > 3 => {
-                Some(UnresolvableReason::MultipleValidInterpretations)
+                Some(ContractsUnresolvableReason::ConflictingEvidence)
             }
             AmbiguityType::ScopeBoundary if context.surrounding_context.is_empty() => {
-                Some(UnresolvableReason::InsufficientContext)
+                Some(ContractsUnresolvableReason::InsufficientContext)
             }
             _ => None,
         }
@@ -314,6 +320,6 @@ mod tests {
 
         let reason = resolver.detect_unresolvable_ambiguity(&ambiguity, &context);
 
-        assert_eq!(reason, Some(UnresolvableReason::InsufficientContext));
+        assert_eq!(reason, Some(ContractsUnresolvableReason::InsufficientContext));
     }
 }

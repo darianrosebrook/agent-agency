@@ -3,6 +3,7 @@
 //! Interface contracts and validation.
 
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use crate::{ContractConfig, InterfaceError};
 
 /// Interface contract validator

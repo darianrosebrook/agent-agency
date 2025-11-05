@@ -151,6 +151,14 @@ impl ClaimExtractor {
                 data_impact: DataImpact::None,
             },
             confidence: confidence.into(),
+            contextual_brackets: vec![], // No contextual brackets by default
+            subject: None, // Will be extracted later if needed
+            predicate: None, // Will be extracted later if needed
+            object: None, // Will be extracted later if needed
+            context_brackets: vec![], // No context brackets by default
+            verification_requirements: vec![], // No specific requirements by default
+            position: (0, normalized_clause.len()), // Full clause position
+            sentence_fragment: normalized_clause.clone(), // The original clause
             evidence_links: Vec::new(),
             temporal_context: None,
             verification_status: VerificationStatus::Unverified,

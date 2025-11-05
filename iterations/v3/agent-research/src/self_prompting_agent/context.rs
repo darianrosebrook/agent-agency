@@ -109,7 +109,7 @@ impl HierarchicalContextManager {
 
 /// Context bundle with metadata and allocation info
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ContextBundle {
     pub id: String,
     pub content: String,
@@ -120,7 +120,7 @@ pub struct ContextBundle {
 
 /// Context allocation budget
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ContextBudget {
     pub max_tokens: usize,
     pub priority: f64,
@@ -129,7 +129,7 @@ pub struct ContextBudget {
 
 /// Allocation information
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct Allocation {
     pub tokens_used: usize,
     pub priority: f64,
@@ -138,7 +138,7 @@ pub struct Allocation {
 
 /// Context usage statistics
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ContextStats {
     pub total_tokens: usize,
     pub active_contexts: usize,

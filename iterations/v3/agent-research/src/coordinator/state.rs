@@ -10,9 +10,8 @@ use uuid::Uuid;
 /// Learning session state
 
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningSession {
-    #[schemars(with = "String")]
     pub id: Uuid,
     pub state: SessionState,
     pub progress: LearningProgress,
@@ -20,7 +19,7 @@ pub struct LearningSession {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum SessionState {
     Initializing,
     Active,
@@ -30,7 +29,7 @@ pub enum SessionState {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningProgresss {
     pub completed_steps: u32,
     pub total_steps: u32,
@@ -39,7 +38,7 @@ pub struct LearningProgresss {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LearningEvent {
     pub timestamp: chrono::DateTime<chrono::Utc>,
     pub event_type: EventType,
@@ -48,7 +47,7 @@ pub struct LearningEvent {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize) ]
 pub enum EventType {
     Started,
     Progress,
@@ -62,7 +61,7 @@ pub enum EventType {
 
 /// State manager for learning sessions
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct StateManager {
     sessions: HashMap<Uuid, LearningSession>,
 }
@@ -122,7 +121,7 @@ impl StateManager {
 }
 
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub enum SessionUpdatee {
     State(SessionState),
     Progress(LearningProgress),

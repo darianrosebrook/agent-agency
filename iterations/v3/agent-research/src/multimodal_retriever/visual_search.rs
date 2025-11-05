@@ -10,7 +10,7 @@ use super::core::{VisualSearchResult, VisualSearchConfig};
 
 /// Visual search bridge for image processing and similarity
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct VisualSearchBridge {
     config: VisualSearchConfig,
 }
@@ -38,7 +38,7 @@ impl VisualSearchBridge {
 
 /// Visual search engine
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize) ]
 pub struct VisualSearchEngine {
     config: super::core::MultimodalRetrieverConfig,
     search_bridge: VisualSearchBridge,
