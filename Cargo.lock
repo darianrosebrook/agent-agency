@@ -2490,15 +2490,10 @@ name = "data-interfaces"
 version = "0.1.0"
 dependencies = [
  "agent-agency-contracts",
- "agent-data-processing",
- "agent-orchestration",
- "agent-research",
- "agent-workers",
  "async-trait",
  "axum",
  "chrono",
  "clap",
- "data-infrastructure",
  "futures-util",
  "lazy_static",
  "notify",
@@ -2506,6 +2501,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "system-common-interfaces",
  "system-configuration 0.1.0",
  "thiserror 1.0.69",
  "tokio",
@@ -9766,6 +9762,7 @@ dependencies = [
 name = "system-common-interfaces"
 version = "0.1.0"
 dependencies = [
+ "agent-agency-contracts",
  "anyhow",
  "async-trait",
  "chrono",

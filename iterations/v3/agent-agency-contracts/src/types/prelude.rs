@@ -75,6 +75,11 @@ pub use super::data_processing::{
     FileOperation
 };
 
+// Learning types
+pub use super::learning::{
+    LearningAlgorithmType, AlgorithmConfig, LearningError, LearningResult,
+};
+
 // Port traits
 pub use crate::ports::planning_engine::PlanningEngine;
 pub use crate::ports::memory_system::MemorySystem;

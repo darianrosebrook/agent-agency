@@ -9,46 +9,10 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// Result type for learning operations
-pub type LearningResult<T> = Result<T, LearningError>;
-
-/// Errors that can occur during learning operations
-#[derive(thiserror::Error, Debug)]
-pub enum LearningError {
-    #[error("Algorithm error: {0}")]
-    Algorithm(String),
-
-    #[error("Training data error: {0}")]
-    TrainingData(String),
-
-    #[error("Model error: {0}")]
-    Model(String),
-
-    #[error("Optimization error: {0}")]
-    Optimization(String),
-
-    #[error("Configuration error: {0}")]
-    Configuration(String),
-}
-
-/// Learning algorithm configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AlgorithmConfig {
-    /// Learning rate (alpha)
-    pub learning_rate: f64,
-    /// Discount factor (gamma)
-    pub discount_factor: f64,
-    /// Exploration rate (epsilon)
-    pub exploration_rate: f64,
-    /// Minimum exploration rate
-    pub min_exploration_rate: f64,
-    /// Exploration decay rate
-    pub exploration_decay: f64,
-    /// Maximum training episodes
-    pub max_episodes: usize,
-    /// Convergence threshold
-    pub convergence_threshold: f64,
-}
+/// Re-export learning types from contracts for backward compatibility
+pub use agent_agency_contracts::types::learning::{
+    AlgorithmConfig, LearningError, LearningResult,
+};
 
 /// Q-table for Q-learning
 #[derive(Debug, Clone, Serialize, Deserialize)]

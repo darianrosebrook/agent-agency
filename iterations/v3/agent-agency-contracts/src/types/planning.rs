@@ -30,7 +30,7 @@ pub struct TaskScope {
 }
 
 /// Task priority levels
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum TaskPriority {
     Low,
     Normal,
@@ -42,13 +42,14 @@ pub enum TaskPriority {
 
 /// Risk tier assessment
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum RiskTier {
     /// Tier 1: Critical systems (auth, billing, migrations)
-    Tier1,
+    Tier1 = 1,
     /// Tier 2: Standard features (APIs, data writes)
-    Tier2,
+    Tier2 = 2,
     /// Tier 3: Low risk (UI, internal tools)
-    Tier3,
+    Tier3 = 3,
 }
 
 /// Planning strategy for execution plan generation

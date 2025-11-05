@@ -15,9 +15,9 @@ use chrono::Utc;
 use crate::api::{Orchestrator, ProgressTracker};
 use crate::api::TaskSubmissionRequest;
 
-/// Execution modes with different safety guardrails
+/// Safety modes for execution with different guardrail levels
 #[derive(Debug, Clone, clap::ValueEnum, JsonSchema)]
-pub enum ExecutionMode {
+pub enum SafetyMode {
     /// Manual approval required for each changeset before application
     Strict,
     /// Automatic execution with promotion only if quality gates pass
@@ -185,9 +185,9 @@ pub enum SelfPromptCommands {
         #[arg(long, default_value = "5", help = "Maximum number of self-prompting iterations")]
         max_iterations: usize,
 
-        /// Execution mode with safety guardrails
-        #[arg(long, default_value = "auto", help = "Execution mode: strict (manual approval), auto (automatic with gates), dry-run (no changes)")]
-        mode: ExecutionMode,
+        /// Safety mode with guardrail levels
+        #[arg(long, default_value = "auto", help = "Safety mode: strict (manual approval), auto (automatic with gates), dry-run (no changes)")]
+        mode: SafetyMode,
 
         /// Enable dashboard during execution
         #[arg(long, help = "Enable real-time dashboard for iteration tracking")]
@@ -777,21 +777,21 @@ impl CliInterface {
         model: Option<String>,
         watch: bool,
         max_iterations: usize,
-        mode: ExecutionMode,
+        mode: SafetyMode,
         dashboard: bool,
     ) -> Result<()> {
         println!(" Starting self-prompting execution with mode: {:?}", mode);
 
         match mode {
-            ExecutionMode::Strict => {
+            SafetyMode::Strict => {
                 println!(" Strict mode: Manual approval required for each changeset");
                 self.execute_strict_mode(description.clone(), files.clone(), model.clone(), watch, max_iterations).await?;
             }
-            ExecutionMode::Auto => {
+            SafetyMode::Auto => {
                 println!(" Auto mode: Automatic execution with quality gate validation");
                 self.execute_auto_mode(description.clone(), files.clone(), model.clone(), watch, max_iterations).await?;
             }
-            ExecutionMode::DryRun => {
+            SafetyMode::DryRun => {
                 println!("👁️  Dry-run mode: Generating artifacts without filesystem changes");
                 self.execute_dry_run_mode(description.clone(), files.clone(), model.clone(), watch, max_iterations).await?;
             }

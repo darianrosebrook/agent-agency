@@ -18,7 +18,7 @@ use crate::types::planning::PlanningStrategy;
 use crate::PlanState;
 // Use unified validation types
 use crate::types::validation::{
-    ValidationIssue, ValidationSeverity, ValidationCategory, ValidationCategoryEnum,
+    ValidationIssue, ValidationSeverity, ValidationCategory, ValidationCategoryEnum, ValidationResult,
 };
 
 /// Core planning engine trait
@@ -109,10 +109,6 @@ pub enum PlanningError {
     Other(String),
 }
 
-/// Validation result with detailed feedback
-/// 
-/// Re-export from validation module for backward compatibility
-pub use crate::types::validation::ValidationResult;
 
 /// Plan execution result
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -573,12 +569,13 @@ mod tests {
 
     #[test]
     fn test_validation_result_creation() {
-        let result = ValidationResult {
+        let result: ValidationResult = ValidationResult {
             valid: true,
             score: 0.95,
             issues: vec![],
             warnings: vec!["Consider adding more tests".to_string()],
             suggestions: vec!["Add integration tests".to_string()],
+            metadata: std::collections::HashMap::new(),
         };
 
         assert!(result.valid);

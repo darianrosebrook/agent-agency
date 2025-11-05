@@ -65,3 +65,88 @@ impl Default for TaskExecutorProvider {
         }
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+    use crate::task_executor::TaskExecutor;
+
+    /// Mock task executor for testing
+    #[derive(Debug)]
+    pub struct MockTaskExecutor;
+
+    #[async_trait::async_trait]
+    impl crate::task_executor::TaskExecutor for MockTaskExecutor {
+        async fn execute_task(
+            &self,
+            _task_spec: crate::task_executor::TaskSpec,
+            _worker_id: uuid::Uuid,
+        ) -> Result<crate::task_executor::TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(crate::task_executor::TaskExecutionResult {
+                execution_id: uuid::Uuid::new_v4(),
+                task_id: _task_spec.id,
+                success: true,
+                output: "Task completed successfully".to_string(),
+                errors: vec![],
+                metadata: std::collections::HashMap::new(),
+                started_at: chrono::Utc::now(),
+                completed_at: chrono::Utc::now(),
+                duration_ms: 100,
+                worker_id: Some(_worker_id),
+            })
+        }
+
+        async fn execute_task_with_circuit_breaker(
+            &self,
+            task_spec: crate::task_executor::TaskSpec,
+            worker_id: uuid::Uuid,
+            _circuit_breaker_enabled: bool,
+        ) -> Result<crate::task_executor::TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
+            self.execute_task(task_spec, worker_id).await
+        }
+
+        async fn health_check(&self) -> Result<crate::task_executor::TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(crate::task_executor::TaskExecutorHealth {
+                status: crate::task_executor::HealthStatus::Healthy,
+                last_execution_time: Some(chrono::Utc::now()),
+                active_tasks: 0,
+                queued_tasks: 0,
+                total_executions: 100,
+                success_rate: 0.95,
+            })
+        }
+
+        async fn get_execution_stats(&self) -> Result<crate::task_executor::TaskExecutionStats, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(crate::task_executor::TaskExecutionStats {
+                total_executions: 100,
+                successful_executions: 95,
+                failed_executions: 5,
+                average_execution_time_ms: 100.0,
+                median_execution_time_ms: 95.0,
+                p95_execution_time_ms: 150.0,
+                p99_execution_time_ms: 200.0,
+            })
+        }
+
+        async fn cancel_task_execution(&self, _task_id: uuid::Uuid, _worker_id: uuid::Uuid) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+            Ok(())
+        }
+    }
+
+    /// Mock task executor provider for testing
+    pub struct MockTaskExecutorProvider {
+        executor: Arc<dyn crate::task_executor::TaskExecutor>,
+    }
+
+    impl MockTaskExecutorProvider {
+        pub fn new() -> Self {
+            Self {
+                executor: Arc::new(MockTaskExecutor),
+            }
+        }
+
+        pub fn create_executor(&self) -> Arc<dyn crate::task_executor::TaskExecutor> {
+            self.executor.clone()
+        }
+    }
+}

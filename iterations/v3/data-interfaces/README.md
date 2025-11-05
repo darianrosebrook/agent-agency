@@ -4,16 +4,47 @@
 
 The Data Interfaces crate provides a comprehensive, unified interface layer that consolidates command-line interfaces, web API endpoints, WebSocket connections, and user interaction patterns into a cohesive system for interacting with Agent Agency V3.
 
-## Overview
+## Architecture
 
-This interface platform combines multiple critical interaction capabilities:
+This crate follows a **contracts-first architecture** with zero implementation dependencies. All service interfaces are defined as traits, with concrete implementations provided by the `data-interfaces-adapters` crate.
 
-- **Command-Line Interface (CLI)**: Powerful command-line tools for system administration and interaction
-- **REST API Endpoints**: Programmatic access to agent system functionality
-- **WebSocket Support**: Real-time bidirectional communication channels
-- **Interface Contracts**: Type-safe data contracts and validation schemas
-- **User Experience (UX)**: Consistent interaction patterns and feedback mechanisms
-- **Serialization & Validation**: Robust data serialization and input validation
+### Architectural Layers
+
+```
+Foundation Layer (Zero Dependencies)
+├── agent-agency-contracts ✅
+└── system-common-interfaces ✅
+
+Interface Layer (Contracts Only)  
+└── data-interfaces ✅ (THIS CRATE)
+    - Service trait definitions
+    - Zero implementation dependencies
+    - Clean type contracts
+
+Adapter Layer (Implementation Bridges)
+└── data-interfaces-adapters
+    - Concrete implementations
+    - Dependency injection adapters
+    - Binary executables
+
+Implementation Layer
+├── agent-research
+├── agent-orchestration
+├── agent-workers
+└── agent-memory
+```
+
+## Service Contracts
+
+This crate defines service trait interfaces for dependency injection:
+
+- **ResearchService** - Task planning and execution
+- **OrchestrationService** - Task orchestration and coordination  
+- **WorkerService** - Worker pool management
+- **ProgressTrackingService** - Progress tracking and monitoring
+- **MemoryService** - Agent memory operations
+
+All service traits use only contract types from `agent-agency-contracts`, ensuring zero circular dependencies and clean architectural boundaries.
 
 ## Key Features
 
@@ -147,7 +178,76 @@ The Data Interfaces layer follows a modular architecture with clear separation o
 4. **Data Layer**: Serialization, validation, and contract management
 5. **UX Layer**: User experience formatting and feedback mechanisms
 
-## Quick Start
+## Dependencies
+
+This crate maintains **zero implementation dependencies** for clean architectural boundaries:
+
+**Dependencies (Contracts/Interfaces Only):**
+- `agent-agency-contracts` - Core type definitions and contracts
+- `system-common-interfaces` - Common system interfaces
+- `system-configuration` - Configuration management
+
+**Removed (Moved to adapters):**
+- ❌ `agent-workers` - Now in `data-interfaces-adapters`
+- ❌ `agent-orchestration` - Now in `data-interfaces-adapters`
+- ❌ `agent-research` - Now in `data-interfaces-adapters`
+- ❌ `agent-data-processing` - Now in `data-interfaces-adapters`
+- ❌ `data-infrastructure` - Now in `data-interfaces-adapters`
+
+## Usage
+
+### Using Service Traits
+
+```rust
+use data_interfaces::service_contracts::{
+    ResearchService, OrchestrationService, WorkerService,
+    ProgressTrackingService, MemoryService,
+};
+use std::sync::Arc;
+
+// Services are provided via dependency injection
+// See data-interfaces-adapters for concrete implementations
+pub struct MyService {
+    research: Arc<dyn ResearchService>,
+    orchestration: Arc<dyn OrchestrationService>,
+}
+
+impl MyService {
+    pub fn new(
+        research: Arc<dyn ResearchService>,
+        orchestration: Arc<dyn OrchestrationService>,
+    ) -> Self {
+        Self { research, orchestration }
+    }
+    
+    pub async fn execute_task(&self, task_request: TaskRequest) -> Result<TaskResponse, ServiceError> {
+        self.research.execute_task(task_request).await
+    }
+}
+```
+
+### Using Adapters
+
+For concrete implementations, use the `data-interfaces-adapters` crate:
+
+```rust
+use data_interfaces_adapters::ServiceContainer;
+
+let services = ServiceContainer::new();
+let result = services.research_service.execute_task(request).await?;
+```
+
+## Binaries
+
+All binaries have been moved to `data-interfaces-adapters` crate:
+
+- `agent-agency-cli` - Command-line interface
+- `agent-agency-advanced-cli` - Advanced CLI with intervention controls
+- `agent-agency-api-server` - REST API server
+
+See `data-interfaces-adapters` README for binary usage.
+
+## Architecture
 
 ### 1. Add to Dependencies
 

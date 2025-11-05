@@ -95,20 +95,8 @@ pub struct PlanningContext {
     pub risk_tolerance: RiskLevel,
 }
 
-/// Validation result for tool chain plans
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct ValidationResult {
-    /// Whether the plan is valid
-    pub is_valid: bool,
-    /// Validation score (0.0 to 1.0)
-    pub score: f64,
-    /// Validation issues found
-    pub issues: Vec<String>,
-    /// Validation warnings
-    pub warnings: Vec<String>,
-    /// Recommended improvements
-    pub recommendations: Vec<String>,
-}
+/// Validation result for tool chain plans - uses string issues with warnings
+pub type ValidationResult = super::validation::ValidationResult<String>;
 
 /// Statistics about tool chain planning system
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

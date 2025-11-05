@@ -154,20 +154,5 @@ pub enum FileOperation {
     Move { from: String, to: String },
 }
 
-/// Validation result for data processing
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct ValidationResult {
-    /// Whether the data is valid for processing
-    pub is_valid: bool,
-    /// Validation score (0.0 to 1.0)
-    pub score: f64,
-    /// Validation issues found
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub issues: Vec<String>,
-    /// Validation warnings
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub warnings: Vec<String>,
-    /// Recommended actions
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub recommendations: Vec<String>,
-}
+/// Validation result for data processing - uses string issues with recommendations
+pub type ValidationResult = super::validation::ValidationResult<String>;

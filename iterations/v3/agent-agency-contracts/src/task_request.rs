@@ -112,18 +112,8 @@ pub struct TaskConstraints {
 }
 
 /// Risk tier for task execution
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum RiskTier {
-    /// Tier 1: Critical - highest scrutiny, manual approval required
-    Tier1 = 1,
-
-    /// Tier 2: Standard - balanced validation and automation
-    Tier2 = 2,
-
-    /// Tier 3: Low risk - minimal validation, full automation
-    Tier3 = 3,
-}
+/// Re-export RiskTier from planning module for consistency
+pub use crate::types::planning::RiskTier;
 
 /// Change budget constraints
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]

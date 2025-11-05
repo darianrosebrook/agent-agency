@@ -24,14 +24,8 @@ pub struct TemporalContext {
     pub priority: TaskPriority,
 }
 
-/// Task priority levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum TaskPriority {
-    Low,
-    Normal,
-    High,
-    Critical,
-}
+/// Re-export TaskPriority from contracts
+pub use agent_agency_contracts::types::planning::TaskPriority;
 
 /// Experience outcome classification
 #[derive(Debug, Clone, Serialize, Deserialize)]

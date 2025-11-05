@@ -716,7 +716,7 @@ pub struct WorkingSpec {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub enum ExecutionMode {
+pub enum TestExecutionMode {
     Strict,
     Auto,
     DryRun,

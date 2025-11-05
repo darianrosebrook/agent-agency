@@ -83,20 +83,8 @@ pub struct EvidenceQuery {
     pub min_confidence: Option<f64>,
 }
 
-/// Validation result for evidence
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone)]
-pub struct ValidationResult {
-    /// Whether the evidence is valid
-    pub is_valid: bool,
-    /// Validation score (0.0 to 1.0)
-    pub score: f64,
-    /// Validation issues or concerns
-    pub issues: Vec<String>,
-    /// Validation metadata
-    pub metadata: std::collections::HashMap<String, serde_json::Value>,
-}
+/// Validation result for evidence - uses string issues for simplicity
+pub type ValidationResult = super::validation::ValidationResult<String>;
 
 /// Statistics about evidence collection system
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]

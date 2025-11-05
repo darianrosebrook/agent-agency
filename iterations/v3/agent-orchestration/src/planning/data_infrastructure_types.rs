@@ -37,6 +37,12 @@ pub trait DatabaseOperations: Send + Sync {
     async fn get_planning_telemetry(&self, plan_id: Uuid, metric_type: Option<String>) -> Result<Vec<models::PlanningTelemetry>, anyhow::Error>;
     async fn create_planning_audit_event(&self, event: CreatePlanningAuditEvent) -> Result<(), anyhow::Error>;
     async fn get_planning_audit_events(&self, plan_id: Uuid) -> Result<Vec<models::PlanningAuditEvent>, anyhow::Error>;
+    async fn delete_execution_plan(&self, id: Uuid) -> Result<(), anyhow::Error>;
+    async fn create_judge(&self, judge: CreateJudge) -> Result<models::Judge, anyhow::Error>;
+    async fn get_judge(&self, id: Uuid) -> Result<Option<models::Judge>, anyhow::Error>;
+    async fn get_judges(&self) -> Result<Vec<models::Judge>, anyhow::Error>;
+    async fn create_judge_evaluation(&self, evaluation: CreateJudgeEvaluation) -> Result<models::JudgeEvaluation, anyhow::Error>;
+    async fn get_judge_evaluations(&self, task_id: Uuid) -> Result<Vec<models::JudgeEvaluation>, anyhow::Error>;
     async fn get_workers(&self) -> Result<Vec<models::Worker>, anyhow::Error>;
     async fn get_waivers(&self, status: Option<String>) -> Result<Vec<models::Waiver>, anyhow::Error>;
     async fn create_waiver(&self, waiver: CreateWaiver) -> Result<models::Waiver, anyhow::Error>;
@@ -264,6 +270,24 @@ pub struct UpdateWaiver {
     pub id: Uuid,
     pub status: String,
     // Add other fields as needed
+}
+
+/// Create judge request
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateJudge {
+    pub id: Uuid,
+    pub name: String,
+    pub judge_type: String,
+    pub configuration: serde_json::Value,
+}
+
+/// Create judge evaluation request
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateJudgeEvaluation {
+    pub judge_id: Uuid,
+    pub task_id: Uuid,
+    pub evaluation: serde_json::Value,
+    pub score: f64,
 }
 
 /// Cost limits

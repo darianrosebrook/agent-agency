@@ -96,11 +96,20 @@ pub enum Severity {
 impl InvariantResults {
     /// Check if any blocking failures were found
     pub fn blocking_failure(&self) -> Option<ViolationLocation> {
+        // First, try to find Critical violations
         for check in &self.checks {
             if !check.passed {
-                // Find the most severe violation
                 if let Some(violation) = check.violations.iter()
-                    .find(|v| matches!(v.severity, Severity::Critical | Severity::High)) {
+                    .find(|v| matches!(v.severity, Severity::Critical)) {
+                    return Some(violation.clone());
+                }
+            }
+        }
+        // If no Critical, return first High violation
+        for check in &self.checks {
+            if !check.passed {
+                if let Some(violation) = check.violations.iter()
+                    .find(|v| matches!(v.severity, Severity::High)) {
                     return Some(violation.clone());
                 }
             }
@@ -432,8 +441,10 @@ mod tests {
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
             metadata: Some(WorkingSpecMetadata {
-                created_by: "test".to_string(),
-                last_modified: chrono::Utc::now(),
+                created_at: chrono::Utc::now(),
+                created_by: Some("test".to_string()),
+                last_modified: Some(chrono::Utc::now()),
+                version: Some(1),
                 tags: vec![],
             }),
         }

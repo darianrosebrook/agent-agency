@@ -15,8 +15,8 @@ use data_infrastructure::api::server::RestApi;
 use data_infrastructure::api::types::ApiConfig;
 use data_infrastructure::client::orchestrator::DatabaseClient;
 use data_infrastructure::DatabaseConfig;
-use agent_orchestration::audited_orchestrator::Orchestrator;
-use agent_orchestration::progress_tracker::{ProgressTracker, RealTimeProgressTracker};
+// Use adapters instead of direct implementation dependencies
+use data_interfaces_adapters::ServiceContainer;
 
 #[derive(Parser)]
 #[command(name = "agent-agency-api")]

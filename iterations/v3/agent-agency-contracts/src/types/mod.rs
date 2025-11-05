@@ -15,5 +15,6 @@ pub mod research;
 pub mod validation;
 pub mod tool_chain;
 pub mod data_processing;
+pub mod learning;
 pub mod prelude;
 

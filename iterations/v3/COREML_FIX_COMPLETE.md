@@ -128,3 +128,4 @@ cargo check -p system-acceleration
 
 **Status**: ✅ **COMPLETE** - CoreML dependency conflicts resolved, functionality restored.
 
+

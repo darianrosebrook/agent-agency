@@ -80,7 +80,7 @@ agent-evaluation = { path = "../agent-evaluation" }
 system-common-interfaces = { path = "../system-common-interfaces" }
 # data-infrastructure = { path = "../data-infrastructure", optional = true, default-features = false }  # Circular dependency - using local type definitions instead
 # system-acceleration = { path = "../system-acceleration" }  # Temporarily disabled due to compilation errors
-agent-memory = { path = "../agent-memory", optional = true, features = ["database", "contracts"] }
+agent-memory = { path = "../agent-memory", optional = true, features = ["database"] }
 system-resilience = { path = "../system-resilience" }
 agent-research = { path = "../agent-research", optional = true }
 # agent-constitutional-council = { path = "../agent-constitutional-council", optional = true }  # Circular dependency - using local type definitions instead

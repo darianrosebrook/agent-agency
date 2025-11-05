@@ -9,10 +9,8 @@
 mod tests {
     use super::*;
     use crate::types::*;
-    use agent_agency_contracts::types::prelude::RiskTier;
-    use crate::evidence_enrichment::{EvidenceEnrichmentCoordinator, EnrichmentConfig, EnrichedEvidence, MultimodalContext, ContextType, SemanticAnalysis, SentimentScore, SentimentLabel, NamedEntity, EntityType, EnrichmentStats};
-    use crate::frontier::*;
-    use crate::adapter::*;
+    use agent_agency_contracts::types::prelude::*;
+    use agent_agency_contracts::task_executor::TaskScope;
 
     #[test]
     fn test_task_scope_creation() {
@@ -218,3 +216,4 @@ mod tests {
         let next_task = heap.pop().unwrap();
         assert_eq!(next_task.priority_score, 800);
     }
+}

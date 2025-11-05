@@ -60,8 +60,8 @@ config = { workspace = true }
 # Interfaces
 system-common-interfaces = { path = "../system-common-interfaces" }
 
-# Contracts integration (feature-gated)
-agent-agency-contracts = { path = "../agent-agency-contracts", optional = true }
+# Contracts for unified types
+agent-agency-contracts = { path = "../agent-agency-contracts", default-features = false, features = ["serde"] }
 
 # Integration with existing services
 # data-infrastructure = { path = "../data-infrastructure", optional = true }  # Removed to break circular dependency - now using direct sqlx
@@ -79,5 +79,4 @@ graph-reasoning = []
 temporal-analysis = []
 context-offloading = []
 provenance-tracking = []
-database = []  # Now uses direct sqlx, always available 
-contracts = ["agent-agency-contracts"]  # Enable contracts integration
+database = []  # Now uses direct sqlx, always available

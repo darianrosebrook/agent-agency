@@ -225,31 +225,49 @@ impl ValidationIssue {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", derive(JsonSchema))]
 #[derive(Debug, Clone)]
-pub struct ValidationResult {
+pub struct ValidationResult<T = ValidationIssue> {
     /// Whether validation passed
     pub valid: bool,
     /// Validation score (0.0-1.0)
     pub score: f64,
     /// Detailed validation issues
-    pub issues: Vec<ValidationIssue>,
+    pub issues: Vec<T>,
     /// Validation warnings (non-blocking)
     pub warnings: Vec<String>,
     /// Suggested improvements
     pub suggestions: Vec<String>,
+    /// Additional metadata
+    pub metadata: std::collections::HashMap<String, serde_json::Value>,
 }
 
-impl ValidationResult {
+impl<T> ValidationResult<T> {
     /// Create a new validation result
-    pub fn new(valid: bool, score: f64, issues: Vec<ValidationIssue>) -> Self {
+    pub fn new(valid: bool, score: f64, issues: Vec<T>) -> Self {
         Self {
             valid,
             score,
             issues,
             warnings: Vec::new(),
             suggestions: Vec::new(),
+            metadata: std::collections::HashMap::new(),
         }
     }
 
+    /// Create a passing result
+    pub fn pass() -> Self
+    where
+        T: Default,
+    {
+        Self::new(true, 1.0, Vec::new())
+    }
+
+    /// Create a failing result with issues
+    pub fn fail(issues: Vec<T>) -> Self {
+        Self::new(false, 0.0, issues)
+    }
+}
+
+impl ValidationResult<ValidationIssue> {
     /// Check if there are any critical or error issues
     pub fn has_critical_issues(&self) -> bool {
         self.issues.iter().any(|issue| {

@@ -51,13 +51,8 @@ pub enum ComplianceLevel {
     None,
 }
 
-/// Risk tiers
-#[derive(Debug, Clone, PartialEq, JsonSchema)]
-pub enum RiskTier {
-    Tier1,
-    Tier2,
-    Tier3,
-}
+/// Re-export RiskTier from contracts
+pub use agent_agency_contracts::types::planning::RiskTier;
 
 /// Verdict types
 #[derive(Debug, Clone, PartialEq, JsonSchema)]

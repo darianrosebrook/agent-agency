@@ -33,14 +33,8 @@ impl std::fmt::Display for TaskId {
     }
 }
 
-/// Task execution priority levels
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
-pub enum TaskPriority {
-    Low = 0,
-    Normal = 1,
-    High = 2,
-    Critical = 3,
-}
+/// Re-export TaskPriority from contracts for backward compatibility
+pub use agent_agency_contracts::types::planning::TaskPriority;
 
 /// Task execution status
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]

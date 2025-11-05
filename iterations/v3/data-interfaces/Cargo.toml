@@ -32,26 +32,26 @@ notify = "6.0"
 # Lazy static initialization (from cli)
 lazy_static = "1.4"
 
-# Local crates
-agent-workers = { path = "../agent-workers" }
-agent-orchestration = { path = "../agent-orchestration" }
-agent-research = { path = "../agent-research" }
-agent-data-processing = { path = "../agent-data-processing", optional = true }
+# Local crates - Contracts and interfaces only
 agent-agency-contracts = { path = "../agent-agency-contracts" }
-data-infrastructure = { path = "../data-infrastructure" }  # orchestration feature disabled by default to avoid circular dependency
+system-common-interfaces = { path = "../system-common-interfaces" }
 system-configuration = { path = "../system-configuration" }
 
-[[bin]]
-name = "agent-agency-cli"
-path = "src/bin/cli-main.rs"
+# NOTE: Binaries temporarily disabled - they require implementation dependencies.
+# Binaries will be moved to data-interfaces-adapters crate in next phase.
+# To use binaries, they should be built from data-interfaces-adapters crate.
 
-[[bin]]
-name = "agent-agency-advanced-cli"
-path = "src/bin/advanced-cli.rs"
-
-[[bin]]
-name = "agent-agency-api-server"
-path = "src/bin/api-server.rs"
+# [[bin]]
+# name = "agent-agency-cli"
+# path = "src/bin/cli-main.rs"
+#
+# [[bin]]
+# name = "agent-agency-advanced-cli"
+# path = "src/bin/advanced-cli.rs"
+#
+# [[bin]]
+# name = "agent-agency-api-server"
+# path = "src/bin/api-server.rs"
 
 [dev-dependencies]
 tokio-test = "0.4"

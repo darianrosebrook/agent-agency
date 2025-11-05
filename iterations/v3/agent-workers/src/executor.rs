@@ -46,7 +46,7 @@ pub struct CapabilityMatch {
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionStrategy {
-    pub execution_mode: ExecutionMode,
+    pub execution_mode: ConcurrencyMode,
     pub timeout_seconds: u64,
     pub retry_config: RetryConfig,
     pub resource_allocation: ResourceAllocation,
@@ -55,7 +55,7 @@ pub struct ExecutionStrategy {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub enum ExecutionMode {
+pub enum ConcurrencyMode {
     Sync,
     Async,
     Streaming,
@@ -1633,9 +1633,9 @@ impl TaskExecutor {
         
         Ok(ExecutionStrategy {
             execution_mode: if complexity.is_high() {
-                ExecutionMode::Async
+                ConcurrencyMode::Async
             } else {
-                ExecutionMode::Sync
+                ConcurrencyMode::Sync
             },
             timeout_seconds: self.calculate_timeout(task_spec, worker_info),
             retry_config: self.get_retry_config_for_task(task_spec),

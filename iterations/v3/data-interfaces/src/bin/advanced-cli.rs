@@ -125,7 +125,7 @@ use tower_http::cors::CorsLayer;
 
 /// Execution modes with different intervention levels
 #[derive(Debug, Clone, clap::ValueEnum, JsonSchema)]
-pub enum ExecutionMode {
+pub enum SafetyMode {
     /// Manual approval required for each changeset before application
     Strict,
     /// Automatic execution with quality gate validation
@@ -315,7 +315,7 @@ pub enum Commands {
 
         /// Execution mode with safety guardrails
         #[arg(long, default_value = "auto", help = "Execution mode: strict (manual approval), auto (automatic with gates), dry-run (no changes)")]
-        mode: ExecutionMode,
+        mode: SafetyMode,
 
         /// Enable arbiter adjudication
         #[arg(long, help = "Enable constitutional AI arbiter for task approval")]
@@ -428,18 +428,18 @@ async fn execute_task(
     println!("═══════════════════════════════════════════\n");
 
     // Display execution mode information
-    match mode {
-        ExecutionMode::Strict => {
+        match mode {
+            SafetyMode::Strict => {
             println!(" EXECUTION MODE: STRICT");
             println!("   Manual approval required for each changeset");
             println!("   Full control over what changes are applied\n");
         }
-        ExecutionMode::Auto => {
+            SafetyMode::Auto => {
             println!(" EXECUTION MODE: AUTO");
             println!("   Automatic execution with quality gate validation");
             println!("   Changes applied only if all gates pass\n");
         }
-        ExecutionMode::DryRun => {
+            SafetyMode::DryRun => {
             println!("👁️  EXECUTION MODE: DRY-RUN");
             println!("   All artifacts generated, no filesystem changes");
             println!("   Safe mode for testing and validation\n");
@@ -502,7 +502,7 @@ async fn execute_task(
     let loop_config = SelfPromptingConfig {
         max_iterations,
         enable_evaluation: true,
-        enable_rollback: matches!(mode, ExecutionMode::Auto | ExecutionMode::Strict),
+        enable_rollback: matches!(mode, SafetyMode::Auto | SafetyMode::Strict),
         evaluation_threshold: 0.8,
         satisficing_enabled: true,
         ..Default::default()
@@ -516,7 +516,7 @@ async fn execute_task(
     );
 
     // Set user approval callback for strict mode
-    if mode == ExecutionMode::Strict {
+    if mode == SafetyMode::Strict {
         loop_controller.set_user_approval_callback(Box::new(|prompt: &str| {
             println!(" {}", prompt);
             let mut input = String::new();
@@ -563,11 +563,11 @@ async fn execute_task(
 
     // Execute based on mode
     match mode {
-        ExecutionMode::DryRun => {
+            SafetyMode::DryRun => {
             println!("👁️  Starting dry-run execution...\n");
             execute_dry_run(&loop_controller, &task, watch).await?;
         }
-        ExecutionMode::Auto => {
+            SafetyMode::Auto => {
             println!(" Starting autonomous execution...\n");
             execute_auto(&executor, &loop_controller, &task, task_id, watch).await?;
         }

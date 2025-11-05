@@ -16,6 +16,9 @@ uuid.workspace = true
 chrono.workspace = true
 tracing.workspace = true
 
+# Contracts for unified types
+agent-agency-contracts = { path = "../agent-agency-contracts", default-features = false, features = ["serde"] }
+
 # Minimal external dependencies to avoid cycles
 anyhow = "1.0"
 schemars = { version = "0.8", features = ["derive"] }

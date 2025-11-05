@@ -10,7 +10,7 @@ use crate::self_prompting_agent::evaluation::EvaluationOrchestrator;
 use crate::self_prompting_agent::loop_controller::{SelfPromptingLoop, SelfPromptingResult, SelfPromptingEvent};
 use crate::self_prompting_agent::models::ModelRegistry;
 use crate::self_prompting_agent::sandbox::SandboxEnvironment;
-use crate::self_prompting_agent::prompting_types::{Task, SelfPromptingAgentError, ExecutionMode, SafetyMode};
+use crate::self_prompting_agent::prompting_types::{Task, SelfPromptingAgentError, AutonomousMode, SafetyMode};
 
 /// Configuration for the self-prompting agent
 
@@ -20,7 +20,7 @@ pub struct SelfPromptingAgentConfig {
     pub enable_sandbox: bool,
     pub sandbox_path: Option<String>,
     pub enable_git_snapshots: bool,
-    pub execution_mode: ExecutionMode,
+    pub execution_mode: AutonomousMode,
     pub safety_mode: SafetyMode,
 }
 
@@ -31,7 +31,7 @@ impl Default for SelfPromptingAgentConfig {
             enable_sandbox: true,
             sandbox_path: None,
             enable_git_snapshots: true,
-            execution_mode: ExecutionMode::Auto,
+            execution_mode: AutonomousMode::Auto,
             safety_mode: SafetyMode::Sandbox,
         }
     }

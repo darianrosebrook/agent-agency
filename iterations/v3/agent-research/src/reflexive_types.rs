@@ -28,46 +28,10 @@ mod duration_serde {
 }
 
 
-/// Types of learning algorithms supported
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize) ]
-pub enum LearningAlgorithmType {
-    ReinforcementLearning,
-    SupervisedLearning,
-    UnsupervisedLearning,
-    TransferLearning,
-    DeepReinforcementLearning,
-    EnsembleLearning,
-    MetaLearning,
-    OnlineLearning,
-}
-
-/// Configuration for learning algorithms
-#[derive(Debug, Clone, Serialize, Deserialize) ]
-pub struct AlgorithmConfig {
-    pub learning_rate: f64,
-    pub discount_factor: f64,
-    pub exploration_rate: f64,
-    pub min_exploration_rate: Option<f64>,
-    pub exploration_decay: Option<f64>,
-    pub max_iterations: usize,
-    pub max_episodes: Option<usize>,
-    pub convergence_threshold: f64,
-}
-
-impl Default for AlgorithmConfig {
-    fn default() -> Self {
-        Self {
-            learning_rate: 0.1,
-            discount_factor: 0.9,
-            exploration_rate: 0.1,
-            min_exploration_rate: Some(0.01),
-            exploration_decay: Some(0.995),
-            max_iterations: 1000,
-            max_episodes: Some(1000),
-            convergence_threshold: 0.001,
-        }
-    }
-}
+/// Re-export learning types from contracts
+pub use agent_agency_contracts::types::learning::{
+    LearningAlgorithmType, AlgorithmConfig, LearningError, LearningResult,
+};
 
 /// Q-learning table for reinforcement learning
 

@@ -23,10 +23,10 @@ pub enum EvalStatus {
     Partial,
 }
 
-/// Execution modes for the autonomous agent
+/// Autonomous execution modes for the self-prompting agent
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
-pub enum ExecutionMode {
+pub enum AutonomousMode {
     Strict,    // Ask for approval before each change
     Auto,      // Apply changes automatically, promote only when gates pass
     DryRun,    // Simulate execution without making changes

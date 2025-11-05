@@ -112,6 +112,12 @@ pub use task_executor::{
 pub use task_executor_provider::{
     TaskExecutorProvider, TaskExecutorFactory,
 };
+
+// Test utilities
+#[cfg(test)]
+pub use task_executor_provider::tests::{
+    MockTaskExecutorProvider, MockTaskExecutor,
+};
 pub use engine::{
     JudgeEngine, EngineRequest, EngineResponse, EngineError, EngineCaps, TokenUsage,
 };

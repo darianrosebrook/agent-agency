@@ -113,3 +113,4 @@ SELECT
 FROM wal_log_records
 GROUP BY operation_type;
 
+

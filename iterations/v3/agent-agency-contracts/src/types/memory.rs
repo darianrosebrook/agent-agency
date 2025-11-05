@@ -20,14 +20,8 @@ pub enum MemoryType {
     Working,   // Short-term working memory
 }
 
-/// Task priority levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
-pub enum TaskPriority {
-    Low,
-    Normal,
-    High,
-    Critical,
-}
+/// Re-export TaskPriority from planning module for consistency
+pub use super::planning::TaskPriority;
 
 /// Unique identifier for a memory/experience
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]

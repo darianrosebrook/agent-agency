@@ -28,6 +28,9 @@ pub mod contracts;
 pub mod serialization;
 pub mod validation;
 
+// Service contracts for dependency injection
+pub mod service_contracts;
+
 // User experience modules
 pub mod ux;
 pub mod feedback;
