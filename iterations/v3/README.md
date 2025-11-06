@@ -2,7 +2,21 @@
 
 ## Overview
 
-Agent Agency V3 provides a modular Rust-based infrastructure for autonomous agent systems with constitutional oversight. The system implements a task execution pipeline with governance controls and monitoring capabilities.
+Agent Agency V3 provides a modular Rust-based infrastructure for autonomous agent systems with constitutional oversight. The system implements a task execution pipeline with governance controls, monitoring capabilities, and comprehensive evaluation frameworks for measuring agent intelligence and performance.
+
+### Agent Evaluation Framework
+
+Unlike traditional software testing that focuses on binary success/failure, Agent Agency V3 evaluates autonomous agents across **5 key dimensions**:
+
+- **Functional Correctness (30%)**: Code compiles, functionality works, requirements met
+- **Process Quality (25%)**: Reasoning depth, decision quality, risk assessment, coordination
+- **Adaptability (20%)**: Uncertainty management, failure recovery, strategy flexibility
+- **Safety (15%)**: Risk avoidance, error handling, boundary compliance, audit completeness
+- **Efficiency (10%)**: Resource usage balanced against problem complexity
+
+**Chain-of-Thought Evaluation**: Every agent decision is captured and analyzed for reasoning quality, alternative consideration, confidence calibration, and risk awareness. See [Evaluation Framework](./docs/evaluation-framework.md) for detailed methodology.
+
+**Scenario-Based Testing**: Agents are evaluated in controlled playground environments with known issues, measuring not just outcomes but the quality of problem-solving approaches.
 
 ## Architecture
 
@@ -65,6 +79,12 @@ The system enforces quality gates through automated validation:
 - **Code Analysis**: Static analysis and quality checks
 - **Test Coverage**: Automated testing with coverage requirements
 - **Security Scanning**: Vulnerability detection and integrity verification
+- **Agent Evaluation Framework**: Multi-dimensional assessment of agent intelligence:
+  - **Process Quality** (25%): Reasoning depth, decision quality, risk assessment
+  - **Adaptability** (20%): Uncertainty management, failure recovery, strategy flexibility
+  - **Safety** (15%): Risk avoidance, boundary compliance, audit completeness
+  - **Functional Correctness** (30%): Code compilation, functionality, requirements
+  - **Efficiency** (10%): Resource usage vs. problem complexity
 
 ## Project Structure
 

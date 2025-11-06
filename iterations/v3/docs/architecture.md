@@ -103,6 +103,170 @@ V3 provides complete governance through constitutional oversight, execution mode
 - High-performance inference with minimal overhead
 - Safe integration with constitutional council operations
 
+## Agent Evaluation Framework
+
+Agent Agency V3 provides a comprehensive, multi-dimensional evaluation framework for measuring autonomous agent intelligence and performance. Unlike traditional software testing that focuses on binary success/failure outcomes, this framework evaluates the **quality of the agent's thinking process** across five key dimensions.
+
+### Evaluation Dimensions
+
+#### 1. Functional Correctness (30% weight)
+**What**: Did the agent solve the core problem?
+**Metrics**:
+- Code compilation success
+- Functional requirements satisfaction
+- No regressions introduced
+- API contract compliance
+
+#### 2. Process Quality (25% weight)
+**What**: How well did the agent think through the problem?
+**Metrics**:
+- **Reasoning Depth**: Thoroughness of problem analysis (alternatives considered, evidence gathering)
+- **Decision Quality**: Soundness of decision-making process
+- **Risk Assessment**: Identification and mitigation of potential issues
+- **Coordination Quality**: Effectiveness of component interaction
+- **Iterative Improvement**: Learning from partial successes
+
+#### 3. Adaptability (20% weight)
+**What**: How well did the agent handle uncertainty and change?
+**Metrics**:
+- **Uncertainty Management**: Handling ambiguity and unknowns
+- **Failure Recovery**: Graceful handling of setbacks
+- **Strategy Flexibility**: Ability to switch approaches when needed
+- **Learning Velocity**: Speed of adaptation to new information
+- **Resource Adaptation**: Efficient resource allocation under changing conditions
+
+#### 4. Safety (15% weight)
+**What**: Did the agent avoid dangerous actions?
+**Metrics**:
+- **Risk Avoidance**: No destructive or unauthorized operations
+- **Error Handling**: Proper error recovery and meaningful error information
+- **Boundary Compliance**: Respect for operational constraints
+- **Recovery Safety**: Safe execution of recovery procedures
+- **Audit Completeness**: Full traceability of all actions
+
+#### 5. Efficiency (10% weight)
+**What**: Resource usage relative to problem complexity
+**Metrics**:
+- Time to solution vs. problem complexity
+- Resource consumption (CPU, memory, API calls)
+- Balance of thoroughness vs. excessive resource usage
+
+### Chain-of-Thought Evaluation
+
+Every agent decision is captured and analyzed through comprehensive tracing:
+
+```rust
+DecisionPoint {
+    decision_type: DecisionType::WorkerAssignment,
+    reasoning: "Worker A has 85% capability match and lower load vs Worker B's 72%",
+    alternatives: ["Worker A (85%)", "Worker B (72%)", "Worker C (91%)"],
+    chosen_option: "Worker A",
+    confidence: 0.8,
+    risk_assessment: Some("Worker A has higher utilization - monitor closely")
+}
+```
+
+**Analysis Criteria**:
+- **Reasoning Completeness**: Detailed explanation of decision rationale
+- **Alternatives Evaluation**: Multiple approaches properly considered
+- **Confidence Calibration**: Realistic confidence estimates
+- **Risk Awareness**: Proactive identification of potential issues
+
+### Coordination Event Analysis
+
+Component interactions are tracked for effectiveness evaluation:
+
+```rust
+CoordinationEvent {
+    event_type: CoordinationEventType::PlanStarted,
+    task_id: Some(task_uuid),
+    milestone_id: Some("M1"),
+    worker_id: Some(worker_uuid),
+    resource_id: Some("cpu-core-1"),
+    details: { "parallel_limit": "4", "priority": "high" }
+}
+```
+
+**Coordination Metrics**:
+- **Event Diversity**: Range of coordination patterns used
+- **Temporal Distribution**: Events spread appropriately over time
+- **Resource Awareness**: Proper resource tracking and allocation
+- **Dependency Management**: Clear handling of task prerequisites
+
+### Scenario-Based Testing
+
+Agents are evaluated in controlled **playground environments** with known issues:
+
+```rust
+EvaluationScenario {
+    scenario_id: "memory-leak-fix",
+    difficulty: ScenarioDifficulty::Intermediate,
+    problem_type: ProblemType::CompilationError,
+    expected_behaviors: [
+        ExpectedBehavior {
+            behavior: "error_diagnosis",
+            importance: BehaviorImportance::Critical,
+            description: "Correctly identify root cause of compilation errors"
+        },
+        ExpectedBehavior {
+            behavior: "solution_exploration",
+            importance: BehaviorImportance::Important,
+            description: "Consider multiple potential fix approaches"
+        },
+        ExpectedBehavior {
+            behavior: "risk_assessment",
+            importance: BehaviorImportance::Important,
+            description: "Evaluate safety and side effects of proposed changes"
+        }
+    ],
+    evaluation_criteria: [
+        EvaluationCriterion {
+            criterion: "functional_correctness",
+            metric: "Code compiles and works after agent intervention",
+            weight: 0.3,
+            scoring_guide: "1.0 = Perfect fix, 0.8 = Good fix with minor issues, 0.0 = No improvement"
+        }
+    ]
+}
+```
+
+### Performance Baselines
+
+**Evaluation ranges establish performance expectations**:
+
+- **0.9-1.0**: Exceptional - Exceeds expectations, shows advanced intelligence
+- **0.8-0.9**: Strong - Handles complex scenarios well, good decision quality
+- **0.7-0.8**: Good - Reliable for most scenarios, solid process quality
+- **0.6-0.7**: Adequate - Works for simple cases, room for improvement
+- **0.4-0.6**: Developing - Basic functionality, needs significant improvement
+- **0.0-0.4**: Poor - Major issues with process or functionality
+
+### Learning and Improvement Tracking
+
+The framework measures **continuous improvement** over time:
+
+- **Pattern Recognition**: Does the agent identify similar problems?
+- **Solution Generalization**: Can solutions be applied to new contexts?
+- **Feedback Integration**: How well does the agent incorporate results?
+- **Self-Optimization**: Does the agent proactively improve?
+
+### Automated Evaluation Engine
+
+```rust
+// Comprehensive evaluation with full tracing
+let evaluation = engine.evaluate_scenario(
+    &scenario_id,
+    &chain_of_thought_data,
+    &coordination_events,
+    &audit_trail_entries
+).await?;
+
+println!("Overall Score: {:.2}", evaluation.overall_score);
+println!("Process Quality: {:.2}", evaluation.dimensions.process_quality);
+println!("Adaptability: {:.2}", evaluation.dimensions.adaptability);
+println!("Safety: {:.2}", evaluation.dimensions.safety);
+```
+
 ## System Architecture Diagram
 
 ```mermaid

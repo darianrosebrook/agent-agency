@@ -1,0 +1,13 @@
+id: WV-D9F1
+title: Documentation - Evaluation Framework (False Positive Quality Gate Violations)
+reason: documentation
+description: 'Documentation quality checker is flagging normal documentation language as unfounded claims. The "Disabling Temporarily" section heading is incorrectly flagged as a hidden TODO. These are false positives for framework methodology documentation.'
+gates:
+  - documentation_quality
+  - hidden_todo
+created_at: '2025-11-06T12:00:00.000Z'
+expires_at: '2025-12-31'
+approved_by: darianrosebrook
+impact_level: low
+mitigation_plan: Documentation quality checker needs refinement to distinguish between marketing language and appropriate framework documentation. The evaluation framework documentation uses standard technical documentation language that should not be flagged as "unfounded claims" or "superiority claims". The "Disabling Temporarily" section heading is not a hidden TODO.
+status: active
