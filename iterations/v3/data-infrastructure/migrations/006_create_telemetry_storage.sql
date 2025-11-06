@@ -96,3 +96,5 @@ FROM telemetry_data
 GROUP BY DATE_TRUNC('hour', timestamp), source, data_type;
 
 
+
+

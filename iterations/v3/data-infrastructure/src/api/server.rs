@@ -7,14 +7,21 @@ use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use std::sync::Arc;
+use std::collections::HashMap;
+use tokio::sync::RwLock;
+use axum::{Router, routing::get};
+use axum::response::IntoResponse;
+use sqlx::Row;
 
-#[cfg(feature = "orchestration")]
-use agent_orchestration::audited_orchestrator::Orchestrator;
-#[cfg(feature = "orchestration")]
-use agent_orchestration::progress_tracker::{ProgressTracker, ExecutionProgress};
-
-use super::{ApiError, Result, WorkingSpec, ExecutionArtifacts, QualityReport};
-// use super::handlers::{get_metrics, get_dashboard_data, get_diff_summary, list_tasks, acknowledge_slo_alert, list_slos, get_slo_status, get_slo_measurements, list_slo_alerts, create_waiver, approve_waiver, get_task_provenance, list_provenance_records, link_provenance_to_commit, verify_provenance_trailer, get_provenance_by_commit, cancel_task, pause_task, resume_task, list_saved_queries, save_query, delete_saved_query, list_waivers, health_check, submit_task, get_task_status, get_task_result};
+use super::{ApiError, Result};
+use super::types::{
+    ApiConfig, TaskSubmissionRequest, TaskSubmissionResponse,
+    TaskStatusResponse, TaskResultResponse, SavedQueryResponse, SaveQueryRequest,
+    DashboardTaskSummary, DashboardDiffSummary
+};
+use agent_agency_contracts::{ExecutionArtifacts, WorkingSpec, QualityReport};
+use crate::{DatabaseClient, TaskStoreTrait};
 
 // Stub types for compilation
 
@@ -107,12 +114,12 @@ impl Orchestrator {
 pub struct RestApi {
     __config: ApiConfig,
     orchestrator: Arc<Orchestrator>,
-    progress_tracker: Arc<dyn ProgressTracker>,
+    progress_tracker: Arc<ProgressTracker>,
     active_tasks: Arc<RwLock<HashMap<Uuid, TaskState>>>,
     pub db_client: Arc<DatabaseClient>,
 }
 
-#[derive(Debug, Clone, JsonSchema)]
+#[derive(Debug, Clone)]
 struct TaskState {
     description: String,
     status: TaskStatus,
@@ -120,9 +127,7 @@ struct TaskState {
     working_spec: Option<WorkingSpec>,
     artifacts: Option<ExecutionArtifacts>,
     quality_report: Option<QualityReport>,
-    #[schemars(with = "String")]
     started_at: DateTime<Utc>,
-    #[schemars(with = "String")]
     updated_at: DateTime<Utc>,
     completed_at: Option<DateTime<Utc>>,
     error_message: Option<String>,
@@ -146,7 +151,7 @@ impl RestApi {
     pub fn new(
         config: ApiConfig,
         orchestrator: Arc<Orchestrator>,
-        progress_tracker: Arc<dyn ProgressTracker>,
+        progress_tracker: Arc<ProgressTracker>,
         db_client: Arc<DatabaseClient>,
     ) -> Self {
         Self {
@@ -173,11 +178,14 @@ impl RestApi {
         // Add API key authentication middleware when configured
         if self.__config.require_api_key {
             let api_keys = self.__config.api_keys.clone();
-            router = router.layer(axum::middleware::from_fn(move |mut request: axum::http::Request<axum::body::Body>, next: axum::middleware::Next| async move {
+            router = router.layer(axum::middleware::from_fn(move |request: axum::http::Request<axum::body::Body>, next: axum::middleware::Next| {
                 let headers = request.headers().clone();
-                match crate::api::middleware::api_key_auth(headers, api_keys.clone()).await {
-                    Ok(_) => Ok(next.run(request).await),
-                    Err(status) => Err(status.into_response()),
+                let api_keys = api_keys.clone();
+                async move {
+                    match crate::api::middleware::api_key_auth(headers, api_keys).await {
+                        Ok(_) => Ok(next.run(request).await),
+                        Err(status) => Err(status.into_response()),
+                    }
                 }
             }));
         }
@@ -297,13 +305,11 @@ impl RestApi {
             TaskStatusResponse {
                 task_id,
                 status: format!("{:?}", task_state.status).to_lowercase(),
-                progress: Some(progress.progress_percentage),
-                progress_percentage: Some(progress.progress_percentage),
+                progress_percentage: progress.progress_percentage as f32,
                 current_phase: Some(progress.current_phase.clone()),
                 started_at: Some(progress.started_at),
-                created_at: progress.started_at,
-                updated_at: progress.updated_at,
-                quality_score: task_state.quality_report.as_ref().map(|r| r.score),
+                updated_at: Some(progress.updated_at),
+                quality_score: task_state.quality_report.as_ref().map(|r| r.overall_score),
             }
         } else {
             return Err(ApiError::TaskNotFound(task_id.to_string()));
@@ -423,9 +429,8 @@ impl RestApi {
                 id,
                 name,
                 query_text,
-                description: None, // TODO: Add description field to database
-                created_at,
-                updated_at,
+                created_at: created_at.to_string(),
+                updated_at: updated_at.to_string(),
             });
         }
 
@@ -458,9 +463,8 @@ impl RestApi {
             id,
             name: request.name,
             query_text: request.query_text,
-            description: request.description,
-            created_at,
-            updated_at,
+            created_at: created_at.to_string(),
+            updated_at: updated_at.to_string(),
         })
     }
 
@@ -496,13 +500,11 @@ impl RestApi {
             let response = TaskStatusResponse {
                 task_id: *task_id,
                 status: format!("{:?}", task_state.status).to_lowercase(),
-                progress: Some(progress.progress_percentage),
-                progress_percentage: Some(progress.progress_percentage),
+                progress_percentage: progress.progress_percentage as f32,
                 current_phase: Some(progress.current_phase.clone()),
                 started_at: Some(task_state.started_at),
-                created_at: task_state.started_at,
-                updated_at: progress.updated_at,
-                quality_score: task_state.quality_report.as_ref().map(|r| r.score),
+                updated_at: Some(progress.updated_at),
+                quality_score: task_state.quality_report.as_ref().map(|r| r.overall_score),
             };
 
             responses.push(response);
@@ -557,24 +559,12 @@ impl RestApi {
         let iterations = vec![];
 
         Ok(DashboardTaskSummary {
-            total_tasks: 1,
-            active_tasks: 1,
-            completed_tasks: 0,
-            failed_tasks: 0,
-            success_rate: 1.0,
-            average_completion_time: None,
             task_id,
             description: task_state.description.clone(),
             status: format!("{:?}", task_state.status).to_lowercase(),
-            // TODO: Get actual iteration tracking data
-            // - [ ] Query iteration tracking system for current iteration
-            // - [ ] Calculate total iterations from iteration history
-            // - [ ] Get execution mode from task configuration
-            // - [ ] Add unit tests with mock iteration data
-            // - [ ] Add integration tests with real iteration tracking
             current_iteration: 1, // Placeholder - would come from actual iteration tracking
             total_iterations: 5, // Placeholder - would come from actual iteration tracking
-            score: task_state.quality_report.as_ref().map(|r| r.score),
+            score: task_state.quality_report.as_ref().map(|r| r.overall_score),
             execution_mode: "auto".to_string(), // Placeholder
             start_time: task_state.started_at,
             last_update: task_state.completed_at.unwrap_or_else(|| Utc::now()),
@@ -591,11 +581,6 @@ impl RestApi {
         // Placeholder diff data - would come from actual artifacts
         Ok(vec![
             DashboardDiffSummary {
-                id: Uuid::new_v4(),
-                task_id,
-                diff_type: "code_change".to_string(),
-                summary: "Code modification".to_string(),
-                timestamp: Utc::now(),
                 iteration: iteration.try_into().unwrap(),
                 file_path: "src/main.rs".to_string(),
                 change_type: "modified".to_string(),

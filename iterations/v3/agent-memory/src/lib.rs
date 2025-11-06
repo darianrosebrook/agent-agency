@@ -19,6 +19,7 @@
 
 pub mod context_management;
 pub mod decay;
+pub mod decay_scheduler;
 pub mod graph_engine;
 pub mod memory_manager;
 pub mod memory_types;
@@ -46,10 +47,10 @@ pub mod long_term_management;
 
 // Enhanced memory system with new capabilities
 pub struct EnhancedMemorySystem {
-    base_system: MemorySystem,
-    vector_search: crate::vector_search::search_engine::InMemoryVectorSearchEngine,
-    consolidation: crate::consolidation::consolidation_engine::MemoryConsolidationEngine,
-    long_term_manager: crate::long_term_management::lifecycle::MemoryLifecycleManager,
+    pub(crate) base_system: MemorySystem,
+    pub(crate) vector_search: crate::vector_search::search_engine::InMemoryVectorSearchEngine,
+    pub(crate) consolidation: crate::consolidation::consolidation_engine::MemoryConsolidationEngine,
+    pub(crate) long_term_manager: crate::long_term_management::lifecycle::MemoryLifecycleManager,
 }
 
 #[cfg(feature = "embeddings")]

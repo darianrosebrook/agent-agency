@@ -524,7 +524,7 @@ impl ANEManager {
     /// * `Err(ANEError)` - If loading fails
     /// Validate that a loaded CoreML model is compatible with Mistral architecture
     fn validate_mistral_model_compatibility(
-        model_ref: &crate::ane::compat::coreml::coreml::ModelRef,
+        model_ref: &crate::ane::compat::coreml::ModelRef,
         options: &MistralCompilationOptions,
     ) -> Result<()> {
         // Validate model inputs - Mistral expects specific input schema
@@ -676,18 +676,18 @@ impl ANEManager {
 
         // Check memory availability
         let estimated_memory = estimate_mistral_memory_usage(&MistralModel {
-            handle: SafeModelHandle::new(crate::ane::compat::coreml::coreml::ModelRef::new()), // Mock ref for estimation
+            handle: SafeModelHandle::new(crate::ane::compat::coreml::ModelRef::new()), // Mock ref for estimation
             schema: crate::ane::models::mistral_model::ModelSchema {
                 inputs: vec![],
                 outputs: vec![],
                 context_length: options.context_length.unwrap_or(4096),
             },
-            tokenizer: SafeMistralTokenizer::new(std::ptr::null_mut()),
-            kv_cache: Arc::new(Mutex::new(KVCache::new(4096))),
+            tokenizer: SafeMistralTokenizer::new(),
+            kv_cache: Arc::new(tokio::sync::Mutex::new(KVCache::new(4096))),
             telemetry: TelemetryCollector::new(),
             circuit_breaker: CircuitBreaker::new(CircuitBreakerConfig::default()),
             loaded_at: std::time::Instant::now(),
-            last_accessed: Arc::new(Mutex::new(std::time::Instant::now())),
+            last_accessed: Arc::new(std::sync::Mutex::new(std::time::Instant::now())),
         });
 
         if estimated_memory > self.device_capabilities.max_memory_mb {
@@ -736,12 +736,12 @@ impl ANEManager {
                 outputs: vec![],
                 context_length: options.context_length.unwrap_or(4096),
             },
-            tokenizer: SafeMistralTokenizer::new(std::ptr::null_mut()),
-            kv_cache: Arc::new(Mutex::new(KVCache::new(4096))),
+            tokenizer: SafeMistralTokenizer::new(),
+            kv_cache: Arc::new(tokio::sync::Mutex::new(KVCache::new(4096))),
             telemetry: TelemetryCollector::new(),
             circuit_breaker: CircuitBreaker::new(CircuitBreakerConfig::default()),
             loaded_at: std::time::Instant::now(),
-            last_accessed: Arc::new(Mutex::new(std::time::Instant::now())),
+            last_accessed: Arc::new(std::sync::Mutex::new(std::time::Instant::now())),
         };
 
         // Generate model ID

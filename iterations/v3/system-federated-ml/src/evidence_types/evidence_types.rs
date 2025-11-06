@@ -174,3 +174,50 @@ pub struct EvidenceMetadata {
     /// Claims verified
     pub claims_verified: usize,
 }
+
+/// Evidence item for multimodal verification
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct EvidenceItem {
+    /// Unique evidence identifier
+    pub id: String,
+    /// Evidence content
+    pub content: String,
+    /// Evidence type
+    pub evidence_type: EvidenceType,
+    /// Confidence score (0.0-1.0)
+    pub confidence: f64,
+    /// Source identifier
+    pub source: String,
+    /// Timestamp
+    #[schemars(with = "String")]
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    /// Modality of the evidence
+    pub modality: Modality,
+}
+
+/// Types of evidence
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+pub enum EvidenceType {
+    /// Code analysis evidence
+    CodeAnalysis,
+    /// Benchmarking evidence
+    Benchmarking,
+    /// Profiling evidence
+    Profiling,
+    /// Load testing evidence
+    LoadTesting,
+    /// Security audit evidence
+    SecurityAudit,
+    /// Standards compliance evidence
+    StandardsCompliance,
+}
+
+/// Modality types
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+pub enum Modality {
+    Text,
+    Code,
+    Data,
+    Visual,
+    Audio,
+}

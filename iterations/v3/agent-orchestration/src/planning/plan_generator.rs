@@ -10,11 +10,9 @@ use serde::{Serialize, Deserialize};use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 use chrono::Utc;
 use anyhow::{anyhow, Result};
-use async_trait::async_trait;
 use agent_agency_contracts::{
     *,
-    planning::PlanningEngine,
-    planning_io::{ExecutionPlan as ContractExecutionPlan, Milestone as ContractMilestone, PlanState, MilestoneState},
+    planning_io::{ExecutionPlan as ContractExecutionPlan, Milestone as ContractMilestone, MilestoneState},
     WorkingSpec,
 };
 
@@ -23,6 +21,8 @@ use crate::planning::{
     caws_integration::CawsPlanBridge,
     tool_chain_bridge::ToolChainBridge,
     legacy_plan_adapter::LegacyPlanAdapter,
+    WorkingSpecProvider,
+    TaskDescriptorProvider,
 };
 
 /// AI-assisted plan generator
@@ -147,7 +147,7 @@ impl PlanGenerator {
     async fn generate_tool_chain_bridge(
         &self,
         working_spec: &WorkingSpec,
-        task_descriptor: &TaskDescriptor,
+        _task_descriptor: &TaskDescriptor,
         context: &PlanGenerationContext,
     ) -> Result<ExecutionPlan> {
         if let Some(bridge) = &self.tool_chain_bridge {
@@ -163,7 +163,7 @@ impl PlanGenerator {
     async fn generate_legacy_adapter(
         &self,
         working_spec: &WorkingSpec,
-        task_descriptor: &TaskDescriptor,
+        _task_descriptor: &TaskDescriptor,
         context: &PlanGenerationContext,
     ) -> Result<ExecutionPlan> {
         if let Some(adapter) = &self.legacy_adapter {
@@ -265,7 +265,7 @@ impl PlanGenerator {
 
     /// Extract dependencies from acceptance criterion
     fn extract_dependencies_from_criterion(&self, criterion: &agent_agency_contracts::AcceptanceCriterion) -> Result<Vec<String>> {
-        let mut deps = vec![];
+        let deps = vec![];
 
         // Look for dependency keywords in the criterion text
         let text = format!("{} {} {}", criterion.given, criterion.when, criterion.then);
@@ -375,7 +375,7 @@ impl PlanGenerator {
     }
 
     /// Determine milestone scope
-    fn determine_milestone_scope(&self, objective: &str, context: &PlanGenerationContext) -> Result<MilestoneScope> {
+    fn determine_milestone_scope(&self, objective: &str, _context: &PlanGenerationContext) -> Result<MilestoneScope> {
         // Analyze objective to determine affected files and operations
         // Simplified - real implementation would use NLP and project analysis
         Ok(MilestoneScope {
@@ -515,7 +515,7 @@ impl PlanGenerator {
     }
 
     // Placeholder implementations for complex methods
-    fn build_dependency_graph_from_analysis(&self, dependencies: &HashMap<String, Vec<String>>) -> Result<DependencyGraph> {
+    fn build_dependency_graph_from_analysis(&self, _dependencies: &HashMap<String, Vec<String>>) -> Result<DependencyGraph> {
         Ok(DependencyGraph {
             nodes: HashMap::new(),
             edges: vec![],
@@ -530,9 +530,8 @@ impl PlanGenerator {
         Ok(matches!(complexity, TaskComplexity::Complex) && plan.milestones.len() > 3)
     }
 
-    fn create_infrastructure_milestone(&self, plan: &ContractExecutionPlan) -> Result<ContractMilestone> {
+    fn create_infrastructure_milestone(&self, _plan: &ContractExecutionPlan) -> Result<ContractMilestone> {
         use agent_agency_contracts::planning_io::{MilestoneState, MilestonePriority};
-        use uuid::Uuid;
         
         Ok(ContractMilestone {
             id: "M0".to_string(),
@@ -573,7 +572,7 @@ impl PlanGenerator {
         })
     }
 
-    fn optimize_for_parallelism(&self, milestones: Vec<ContractMilestone>, resources: &ResourceInventory) -> Result<Vec<ContractMilestone>> {
+    fn optimize_for_parallelism(&self, milestones: Vec<ContractMilestone>, _resources: &ResourceInventory) -> Result<Vec<ContractMilestone>> {
         // Basic optimization - real implementation would analyze dependencies and resources
         Ok(milestones)
     }
@@ -582,12 +581,12 @@ impl PlanGenerator {
         format!("Revert changes made for: {}", objective)
     }
 
-    fn calculate_critical_path(&self, nodes: &HashMap<String, DependencyNode>, edges: &[DependencyEdge]) -> Result<Vec<String>> {
+    fn calculate_critical_path(&self, _nodes: &HashMap<String, DependencyNode>, _edges: &[DependencyEdge]) -> Result<Vec<String>> {
         // Simplified critical path calculation
         Ok(vec![])
     }
 
-    fn identify_parallel_groups(&self, nodes: &HashMap<String, DependencyNode>, edges: &[DependencyEdge]) -> Result<Vec<Vec<String>>> {
+    fn identify_parallel_groups(&self, _nodes: &HashMap<String, DependencyNode>, _edges: &[DependencyEdge]) -> Result<Vec<Vec<String>>> {
         // Simplified parallel group identification
         Ok(vec![])
     }
@@ -615,7 +614,7 @@ impl DependencyAnalysis {
         self.dependencies.get(criterion_id).cloned().unwrap_or_default()
     }
 
-    fn is_blocking_criterion(&self, criterion_id: &str) -> bool {
+    fn is_blocking_criterion(&self, _criterion_id: &str) -> bool {
         // Simplified - real implementation would check if criterion blocks others
         false
     }

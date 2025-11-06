@@ -215,7 +215,7 @@ impl LegacyOrchestratorAdapter {
         );
 
         // Step 1: Validate the task
-        let validation_result = self.validate_orchestration_task(spec, desc, diff, tests_added, deterministic).await?;
+        let validation_result = self.validate_orchestration_task(spec, desc, diff).await?;
         
         if let Some(short_circuit_result) = self.build_short_circuit_verdict(&validation_result) {
             warn!(
@@ -287,8 +287,8 @@ impl LegacyOrchestratorAdapter {
         spec: &WorkingSpec,
         desc: &TaskDescriptor,
         diff: &DiffStats,
-        tests_added: bool,
-        deterministic: bool,
+        // tests_added: bool,
+        // deterministic: bool,
     ) -> Result<ValidationResult> {
         debug!("Validating orchestration task: {}", desc.task_id);
 
@@ -600,7 +600,7 @@ impl LegacyOrchestratorAdapter {
             requirements: vec![], // TaskDescriptor doesn't have requirements field yet
             priority: match desc.priority {
                 agent_agency_contracts::types::planning::TaskPriority::Low => crate::council_types::TaskPriority::Low,
-                agent_agency_contracts::types::planning::TaskPriority::Medium => crate::council_types::TaskPriority::Normal,
+                agent_agency_contracts::types::planning::TaskPriority::Medium => crate::council_types::TaskPriority::Normal, // Medium maps to Normal for compatibility
                 agent_agency_contracts::types::planning::TaskPriority::Normal => crate::council_types::TaskPriority::Normal,
                 agent_agency_contracts::types::planning::TaskPriority::High => crate::council_types::TaskPriority::High,
                 agent_agency_contracts::types::planning::TaskPriority::Critical => crate::council_types::TaskPriority::Critical,
@@ -613,7 +613,7 @@ impl LegacyOrchestratorAdapter {
     fn convert_priority(&self, priority: TaskPriority) -> agent_agency_contracts::types::data_processing::ProcessingPriority {
         match priority {
             TaskPriority::Low => agent_agency_contracts::types::data_processing::ProcessingPriority::Low,
-            TaskPriority::Medium => agent_agency_contracts::types::data_processing::ProcessingPriority::Normal,
+            TaskPriority::Medium => agent_agency_contracts::types::data_processing::ProcessingPriority::Normal, // Medium maps to Normal
             TaskPriority::Normal => agent_agency_contracts::types::data_processing::ProcessingPriority::Normal,
             TaskPriority::High => agent_agency_contracts::types::data_processing::ProcessingPriority::High,
             TaskPriority::Urgent => agent_agency_contracts::types::data_processing::ProcessingPriority::High,

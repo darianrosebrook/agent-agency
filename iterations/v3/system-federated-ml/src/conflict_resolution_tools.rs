@@ -78,19 +78,21 @@ impl ConflictResolutionTool {
         
         let participants = conflict.get("participants")
             .and_then(|v| v.as_array())
-            .unwrap_or(&vec![]);
+            .cloned()
+            .unwrap_or_default();
         
         let evidence = conflict.get("evidence")
             .and_then(|v| v.as_array())
-            .unwrap_or(&vec![]);
+            .cloned()
+            .unwrap_or_default();
         
         // Apply conflict resolution strategy based on type
         let resolution = match conflict_type {
-            "model_parameter" => self.resolve_model_parameter_conflict(participants, evidence).await?,
-            "gradient_update" => self.resolve_gradient_update_conflict(participants, evidence).await?,
-            "aggregation_method" => self.resolve_aggregation_method_conflict(participants, evidence).await?,
-            "privacy_constraint" => self.resolve_privacy_constraint_conflict(participants, evidence).await?,
-            _ => self.resolve_generic_conflict(participants, evidence).await?,
+            "model_parameter" => self.resolve_model_parameter_conflict(&participants, &evidence).await?,
+            "gradient_update" => self.resolve_gradient_update_conflict(&participants, &evidence).await?,
+            "aggregation_method" => self.resolve_aggregation_method_conflict(&participants, &evidence).await?,
+            "privacy_constraint" => self.resolve_privacy_constraint_conflict(&participants, &evidence).await?,
+            _ => self.resolve_generic_conflict(&participants, &evidence).await?,
         };
         
         Ok(serde_json::json!({
@@ -153,7 +155,8 @@ impl ConflictResolutionTool {
         for participant in participants {
             let gradient = participant.get("gradient")
                 .and_then(|v| v.as_array())
-                .unwrap_or(&vec![]);
+                .cloned()
+                .unwrap_or_default();
             
             let sample_count = participant.get("sample_count")
                 .and_then(|v| v.as_u64())
@@ -208,10 +211,11 @@ impl ConflictResolutionTool {
         }
         
         // Find the method with the most votes
+        let default_method = "federated_averaging".to_string();
         let consensus_method = method_votes.iter()
             .max_by_key(|(_, count)| *count)
-            .map(|(method, _)| method)
-            .unwrap_or(&"federated_averaging".to_string());
+            .map(|(method, _)| method.as_str())
+            .unwrap_or(&default_method);
         
         Ok(serde_json::json!({
             "consensus_method": consensus_method,
@@ -267,10 +271,11 @@ impl ConflictResolutionTool {
             *position_counts.entry(position.to_string()).or_insert(0) += 1;
         }
         
+        let default_position = "neutral".to_string();
         let consensus_position = position_counts.iter()
             .max_by_key(|(_, count)| *count)
-            .map(|(position, _)| position)
-            .unwrap_or(&"neutral".to_string());
+            .map(|(position, _)| position.as_str())
+            .unwrap_or(&default_position);
         
         Ok(serde_json::json!({
             "consensus_position": consensus_position,

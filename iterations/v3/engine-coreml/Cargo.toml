@@ -35,7 +35,7 @@ enum-map = "2.7"
 # JSON schema validation
 jsonschema = { version = "0.17", default-features = false, features = ["draft202012"] }
 
-# Logging subscriber for demo
+# Logging subscriber (for future demos/tools)
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [features]
@@ -44,7 +44,3 @@ test-mock = []
 
 [dev-dependencies]
 tokio-test = "0.4"
-
-# [[bin]]
-# name = "engine-coreml-demo"
-# path = "src/demo.rs"

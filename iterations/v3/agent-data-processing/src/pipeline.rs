@@ -668,6 +668,13 @@ impl DataPipeline {
         self.domain_stages.push(stage);
     }
 
+    /// Remove a pipeline stage by name (no-op if stage doesn't exist)
+    pub fn remove_stage(&mut self, stage_name: &str) {
+        self.domain_stages.retain(|stage| stage.name() != stage_name);
+        self.stages.retain(|stage| stage.name() != stage_name);
+        // Note: composite_stage is rebuilt on next execution, so we don't modify it here
+    }
+
     /// Calculate total bytes processed from input and output
     fn calculate_bytes_processed(&self, input: &DataInput, output: &ProcessingOutput) -> DataProcessingResult<u64> {
         let mut total_bytes = 0u64;

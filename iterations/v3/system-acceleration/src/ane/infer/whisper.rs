@@ -17,7 +17,7 @@ pub struct WhisperInferenceExecutor {
     model: LoadedWhisperModel,
     audio_config: AudioPreprocessingConfig,
     #[cfg(target_os = "macos")]
-    coreml_model_handle: crate::ane::compat::coreml::coreml::ModelRef,
+    coreml_model_handle: crate::ane::compat::coreml::ModelRef,
 }
 
 impl WhisperInferenceExecutor {
@@ -231,7 +231,7 @@ impl WhisperInferenceExecutor {
 
             // Run inference on the encoder - TEMPORARILY DISABLED due to run_inference function being commented out
             /*
-            let _output_tensor = crate::ane::compat::coreml::coreml::run_inference(
+            let _output_tensor = crate::ane::compat::coreml::run_inference(
                 self.coreml_model_handle,
                 "input", // CoreML input name for mel spectrogram
                 mel_data,

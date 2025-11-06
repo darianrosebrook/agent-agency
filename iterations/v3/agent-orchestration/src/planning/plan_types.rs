@@ -18,11 +18,12 @@ use agent_agency_contracts::{
         DependencyGraph as ContractDependencyGraph, PlanMetadata,
     },
     planning::{
-        PlanningCapabilities, ValidationResult,
+        PlanningCapabilities,
         DetailedQualityMetrics, CoverageMetrics, TestQualityMetrics,
         CodeQualityMetrics, DocumentationQualityMetrics,
         QualityMetrics, PerformanceMetrics, HardwareResourceRequirements, NetworkRequirements, HumanResourceRequirements,
     },
+    types::validation::ValidationResult,
     ChangeBudget, QualityGates, WorkingSpec,
 };
 

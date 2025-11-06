@@ -6,6 +6,7 @@
 //! Usage:
 //!   cargo run --bin e2e_runner                    # Run autonomous workflow test
 //!   cargo run --bin e2e_runner -- caws-governance # Run CAWS governance test
+//!   cargo run --bin e2e_runner -- api-integration # Run API integration tests
 //!   cargo run --bin e2e_runner -- --help          # Show available scenarios
 
 #[cfg(feature = "full")]
@@ -211,6 +212,7 @@ fn parse_scenario_arg(arg: &str) -> Result<Scenario, Box<dyn std::error::Error +
         "claim-verification" | "claims" => Ok(Scenario::ClaimVerification),
         "performance" | "scalability" => Ok(Scenario::PerformanceScalability),
         "security" | "privacy" => Ok(Scenario::SecurityPrivacy),
+        "api-integration" | "api" => Ok(Scenario::ApiIntegration),
         _ => {
             error!("Unknown scenario: {}", arg);
             print_help();
@@ -281,6 +283,7 @@ fn print_help() {
     println!("  claim-verification, claims       - Claim Extraction & Verification tests");
     println!("  performance, scalability        - Performance & Scalability tests");
     println!("  security, privacy               - Security & Privacy tests");
+    println!("  api-integration, api            - API Handler Integration tests");
     println!();
     println!("EXAMPLES:");
     println!("  cargo run --bin e2e_runner -- caws");

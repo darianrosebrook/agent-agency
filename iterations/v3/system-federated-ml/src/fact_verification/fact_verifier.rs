@@ -7,6 +7,7 @@ use schemars::JsonSchema;
 use std::collections::HashMap;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
+use tracing::{debug, info};
 
 use crate::evidence_types::*;
 

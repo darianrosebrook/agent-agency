@@ -13,25 +13,29 @@ use std::sync::Arc;
 use uuid::Uuid;
 use agent_orchestration::{
     types::OrchestratorConfig,
-    adapter::OrchestrationAdapter,
+    adapter::LegacyOrchestratorAdapter,
 };
 use chrono::Utc;
 
 /// Adapter for orchestration service
 pub struct OrchestrationServiceAdapter {
-    adapter: Arc<OrchestrationAdapter>,
+    adapter: Arc<LegacyOrchestratorAdapter>,
 }
 
 impl OrchestrationServiceAdapter {
     /// Create a new orchestration service adapter
-    pub fn new(config: OrchestratorConfig) -> Self {
-        let adapter = Arc::new(OrchestrationAdapter::new(config));
-        Self { adapter }
+    pub async fn new(config: OrchestratorConfig) -> Result<Self, ServiceError> {
+        let adapter = LegacyOrchestratorAdapter::new(config)
+            .await
+            .map_err(|e| ServiceError::Internal(format!("Failed to create adapter: {}", e)))?;
+        Ok(Self {
+            adapter: Arc::new(adapter),
+        })
     }
     
     /// Create with default configuration
-    pub fn with_defaults() -> Self {
-        Self::new(OrchestratorConfig::default())
+    pub async fn with_defaults() -> Result<Self, ServiceError> {
+        Self::new(OrchestratorConfig::default()).await
     }
 }
 
@@ -43,14 +47,35 @@ impl OrchestrationService for OrchestrationServiceAdapter {
         context: TaskContext,
     ) -> Result<TaskExecutionResult, ServiceError> {
         // Convert TaskContext to TaskDescriptor
-        use agent_agency_contracts::types::planning::TaskDescriptor;
+        use agent_agency_contracts::types::planning::{TaskDescriptor, BlastRadius, RiskTier};
+        use agent_agency_contracts::planning_io::ChangeBudget;
+        use agent_agency_contracts::task_request::ScopeRestrictions;
+        
         let task_descriptor = TaskDescriptor {
             task_id: context.task_id,
             description: format!("Orchestrate task {}", context.task_id),
+            change_budget: ChangeBudget {
+                max_files: 25,
+                max_loc: 1000,
+                max_migrations: 0,
+                allow_breaking_changes: false,
+                allow_new_dependencies: false,
+                enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+            },
             priority: agent_agency_contracts::types::planning::TaskPriority::Normal,
-            risk_tier: Some(2), // Default risk tier
-            blast_radius: Default::default(),
             execution_mode: agent_agency_contracts::types::planning::ExecutionMode::Auto,
+            risk_tier: Some(RiskTier::Tier2),
+            blast_radius: BlastRadius {
+                modules: vec![],
+                data_migration: false,
+                external_deps: vec![],
+            },
+            scope_in: ScopeRestrictions {
+                allowed_paths: vec![],
+                blocked_paths: vec![],
+            },
+            scope_out: None,
+            acceptance: None,
         };
         
         // Create diff stats placeholder

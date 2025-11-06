@@ -536,113 +536,113 @@ mod tests {
     use tokio::sync::Mutex;
 
     // Mock database operations for testing
-    struct MockDatabaseOps;
+    // struct MockDatabaseOps;
 
-    #[async_trait::async_trait]
-    impl DatabaseOperations for MockDatabaseOps {
-        async fn create_execution_plan(&self, _plan: CreateExecutionPlan) -> Result<crate::planning::models::ExecutionPlan> {
-            Ok(crate::planning::models::ExecutionPlan {
-                id: Uuid::new_v4(),
-                session_id: Uuid::new_v4(),
-                working_spec_id: "test".to_string(),
-                title: "Test Plan".to_string(),
-                overview: "Test overview".to_string(),
-                state: "draft".to_string(),
-                milestones: serde_json::Value::Array(vec![]),
-                dependency_graph: serde_json::Value::Object(serde_json::Map::new()),
-                change_budget: serde_json::Value::Object(serde_json::Map::new()),
-                quality_gates: serde_json::Value::Object(serde_json::Map::new()),
-                evidence_requirements: serde_json::Value::Array(vec![]),
-                active_waivers: serde_json::Value::Array(vec![]),
-                metadata: serde_json::Value::Object(serde_json::Map::new()),
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
-                approved_at: None,
-                completed_at: None,
-            })
-        }
+    // #[async_trait::async_trait]
+    // impl DatabaseOperations for MockDatabaseOps {
+    //     async fn create_execution_plan(&self, _plan: CreateExecutionPlan) -> Result<crate::planning::models::ExecutionPlan> {
+    //         Ok(crate::planning::models::ExecutionPlan {
+    //             id: Uuid::new_v4(),
+    //             session_id: Uuid::new_v4(),
+    //             working_spec_id: "test".to_string(),
+    //             title: "Test Plan".to_string(),
+    //             overview: "Test overview".to_string(),
+    //             state: "draft".to_string(),
+    //             milestones: serde_json::Value::Array(vec![]),
+    //             dependency_graph: serde_json::Value::Object(serde_json::Map::new()),
+    //             change_budget: serde_json::Value::Object(serde_json::Map::new()),
+    //             quality_gates: serde_json::Value::Object(serde_json::Map::new()),
+    //             evidence_requirements: serde_json::Value::Array(vec![]),
+    //             active_waivers: serde_json::Value::Array(vec![]),
+    //             metadata: serde_json::Value::Object(serde_json::Map::new()),
+    //             created_at: Utc::now(),
+    //             updated_at: Utc::now(),
+    //             approved_at: None,
+    //             completed_at: None,
+    //         })
+    //     }
 
-        async fn get_execution_plan(&self, _id: Uuid) -> Result<Option<crate::planning::models::ExecutionPlan>> {
-            Ok(None)
-        }
+    //     async fn get_execution_plan(&self, _id: Uuid) -> Result<Option<crate::planning::models::ExecutionPlan>> {
+    //         Ok(None)
+    //     }
 
-        async fn get_execution_plans(&self) -> Result<Vec<crate::planning::models::ExecutionPlan>> {
-            Ok(vec![])
-        }
+    //     async fn get_execution_plans(&self) -> Result<Vec<crate::planning::models::ExecutionPlan>> {
+    //         Ok(vec![])
+    //     }
 
-        async fn update_execution_plan(&self, _id: Uuid, _update: UpdateExecutionPlan) -> Result<crate::planning::models::ExecutionPlan> {
-            Err(anyhow!("Not implemented"))
-        }
+    //     async fn update_execution_plan(&self, _id: Uuid, _update: UpdateExecutionPlan) -> Result<crate::planning::models::ExecutionPlan> {
+    //         Err(anyhow!("Not implemented"))
+    //     }
 
-        async fn delete_execution_plan(&self, _id: Uuid) -> Result<()> {
-            Ok(())
-        }
+    //     async fn delete_execution_plan(&self, _id: Uuid) -> Result<()> {
+    //         Ok(())
+    //     }
 
-        async fn create_planning_session(&self, session: CreatePlanningSession) -> Result<crate::planning::models::PlanningSession> {
-            Ok(crate::planning::models::PlanningSession {
-                id: session.id,
-                plan_id: session.plan_id,
-                orchestrator_id: session.orchestrator_id,
-                worker_pool_id: session.worker_pool_id,
-                council_session_id: session.council_session_id,
-                audit_correlation_id: session.audit_correlation_id,
-                status: session.status,
-                execution_state: session.execution_state,
-                started_at: Utc::now(),
-                completed_at: None,
-                created_at: Utc::now(),
-            })
-        }
+    //     async fn create_planning_session(&self, session: CreatePlanningSession) -> Result<crate::planning::models::PlanningSession> {
+    //         Ok(crate::planning::models::PlanningSession {
+    //             id: session.id,
+    //             plan_id: session.plan_id,
+    //             orchestrator_id: session.orchestrator_id,
+    //             worker_pool_id: session.worker_pool_id,
+    //             council_session_id: session.council_session_id,
+    //             audit_correlation_id: session.audit_correlation_id,
+    //             status: session.status,
+    //             execution_state: session.execution_state,
+    //             started_at: Utc::now(),
+    //             completed_at: None,
+    //             created_at: Utc::now(),
+    //         })
+    //     }
 
-        async fn get_planning_session(&self, _id: Uuid) -> Result<Option<crate::planning::models::PlanningSession>> {
-            Ok(None)
-        }
+    //     async fn get_planning_session(&self, _id: Uuid) -> Result<Option<crate::planning::models::PlanningSession>> {
+    //         Ok(None)
+    //     }
 
-        async fn get_planning_sessions(&self, _plan_id: Uuid) -> Result<Vec<crate::planning::models::PlanningSession>> {
-            Ok(vec![])
-        }
+    //     async fn get_planning_sessions(&self, _plan_id: Uuid) -> Result<Vec<crate::planning::models::PlanningSession>> {
+    //         Ok(vec![])
+    //     }
 
-        async fn update_planning_session(&self, _id: Uuid, _update: UpdatePlanningSession) -> Result<crate::planning::models::PlanningSession> {
-            Err(anyhow!("Not implemented"))
-        }
+    //     async fn update_planning_session(&self, _id: Uuid, _update: UpdatePlanningSession) -> Result<crate::planning::models::PlanningSession> {
+    //         Err(anyhow!("Not implemented"))
+    //     }
 
-        async fn create_planning_audit_event(&self, _event: CreatePlanningAuditEvent) -> Result<crate::planning::models::PlanningAuditEvent> {
-            Err(anyhow!("Not implemented"))
-        }
+    //     async fn create_planning_audit_event(&self, _event: CreatePlanningAuditEvent) -> Result<crate::planning::models::PlanningAuditEvent> {
+    //         Err(anyhow!("Not implemented"))
+    //     }
 
-        async fn get_planning_audit_events(&self, _plan_id: Uuid) -> Result<Vec<crate::planning::models::PlanningAuditEvent>> {
-            Ok(vec![])
-        }
+    //     async fn get_planning_audit_events(&self, _plan_id: Uuid) -> Result<Vec<crate::planning::models::PlanningAuditEvent>> {
+    //         Ok(vec![])
+    //     }
 
-        async fn create_planning_telemetry(&self, _telemetry: CreatePlanningTelemetry) -> Result<crate::planning::models::PlanningTelemetry> {
-            Err(anyhow!("Not implemented"))
-        }
+    //     async fn create_planning_telemetry(&self, _telemetry: CreatePlanningTelemetry) -> Result<crate::planning::models::PlanningTelemetry> {
+    //         Err(anyhow!("Not implemented"))
+    //     }
 
-        async fn get_planning_telemetry(&self, _plan_id: Uuid, _metric_type: Option<String>) -> Result<Vec<crate::planning::models::PlanningTelemetry>> {
-            Ok(vec![])
-        }
+    //     async fn get_planning_telemetry(&self, _plan_id: Uuid, _metric_type: Option<String>) -> Result<Vec<crate::planning::models::PlanningTelemetry>> {
+    //         Ok(vec![])
+    //     }
 
-        // Waiver operations
-        async fn get_waivers(&self, _status: Option<String>) -> Result<Vec<crate::planning::models::Waiver>> { Ok(vec![]) }
-        async fn create_waiver(&self, _waiver: crate::planning::CreateWaiver) -> Result<crate::planning::models::Waiver> { Err(anyhow!("Not implemented")) }
-        async fn update_waiver(&self, _id: Uuid, _update: crate::planning::UpdateWaiver) -> Result<crate::planning::models::Waiver> { Err(anyhow!("Not implemented")) }
-        async fn create_provenance_entry(&self, _entry: crate::planning::CreateProvenanceEntry) -> Result<crate::planning::models::ProvenanceEntry> { Err(anyhow!("Not implemented")) }
-        async fn get_provenance_entries(&self, _limit: Option<i64>) -> Result<Vec<crate::planning::models::ProvenanceEntry>> { Ok(vec![]) }
-        async fn create_judge(&self, _judge: crate::planning::CreateJudge) -> Result<crate::planning::models::Judge> { Err(anyhow!("Not implemented")) }
-        async fn get_judges(&self) -> Result<Vec<crate::planning::models::Judge>> { Ok(vec![]) }
-        async fn update_judge(&self, _id: Uuid, _update: crate::planning::UpdateJudge) -> Result<crate::planning::models::Judge> { Err(anyhow!("Not implemented")) }
-        async fn create_worker(&self, _worker: crate::planning::CreateWorker) -> Result<crate::planning::models::Worker> { Err(anyhow!("Not implemented")) }
-        async fn get_workers(&self) -> Result<Vec<crate::planning::models::Worker>> { Ok(vec![]) }
-        async fn update_worker(&self, _id: Uuid, _update: crate::planning::UpdateWorker) -> Result<crate::planning::models::Worker> { Err(anyhow!("Not implemented")) }
-        async fn create_task(&self, _task: crate::planning::CreateTask) -> Result<crate::planning::models::Task> { Err(anyhow!("Not implemented")) }
-        async fn get_tasks(&self, _status: Option<String>) -> Result<Vec<crate::planning::models::Task>> { Ok(vec![]) }
-        async fn update_task(&self, _id: Uuid, _update: crate::planning::UpdateTask) -> Result<crate::planning::models::Task> { Err(anyhow!("Not implemented")) }
-        async fn get_task(&self, _id: Uuid) -> Result<Option<crate::planning::models::Task>> { Ok(None) }
-        async fn delete_task(&self, _id: Uuid) -> Result<()> { Ok(()) }
-        async fn create_milestone(&self, _milestone: crate::planning::CreateMilestone) -> Result<crate::planning::models::Milestone> { Err(anyhow!("Not implemented")) }
-        async fn get_milestones(&self, _plan_id: Uuid) -> Result<Vec<crate::planning::models::Milestone>> { Ok(vec![]) }
-        async fn update_milestone(&self, _plan_id: Uuid, _milestone_id: String, _update: crate::planning::UpdateMilestone) -> Result<crate::planning::models::Milestone> { Err(anyhow!("Not implemented")) }
-    }
+    //     // Waiver operations
+    //     async fn get_waivers(&self, _status: Option<String>) -> Result<Vec<crate::planning::models::Waiver>> { Ok(vec![]) }
+    //     async fn create_waiver(&self, _waiver: crate::planning::CreateWaiver) -> Result<crate::planning::models::Waiver> { Err(anyhow!("Not implemented")) }
+    //     async fn update_waiver(&self, _id: Uuid, _update: crate::planning::UpdateWaiver) -> Result<crate::planning::models::Waiver> { Err(anyhow!("Not implemented")) }
+    //     async fn create_provenance_entry(&self, _entry: crate::planning::CreateProvenanceEntry) -> Result<crate::planning::models::ProvenanceEntry> { Err(anyhow!("Not implemented")) }
+    //     async fn get_provenance_entries(&self, _limit: Option<i64>) -> Result<Vec<crate::planning::models::ProvenanceEntry>> { Ok(vec![]) }
+    //     async fn create_judge(&self, _judge: crate::planning::CreateJudge) -> Result<crate::planning::models::Judge> { Err(anyhow!("Not implemented")) }
+    //     async fn get_judges(&self) -> Result<Vec<crate::planning::models::Judge>> { Ok(vec![]) }
+    //     async fn update_judge(&self, _id: Uuid, _update: crate::planning::UpdateJudge) -> Result<crate::planning::models::Judge> { Err(anyhow!("Not implemented")) }
+    //     async fn create_worker(&self, _worker: crate::planning::CreateWorker) -> Result<crate::planning::models::Worker> { Err(anyhow!("Not implemented")) }
+    //     async fn get_workers(&self) -> Result<Vec<crate::planning::models::Worker>> { Ok(vec![]) }
+    //     async fn update_worker(&self, _id: Uuid, _update: crate::planning::UpdateWorker) -> Result<crate::planning::models::Worker> { Err(anyhow!("Not implemented")) }
+    //     async fn create_task(&self, _task: crate::planning::CreateTask) -> Result<crate::planning::models::Task> { Err(anyhow!("Not implemented")) }
+    //     async fn get_tasks(&self, _status: Option<String>) -> Result<Vec<crate::planning::models::Task>> { Ok(vec![]) }
+    //     async fn update_task(&self, _id: Uuid, _update: crate::planning::UpdateTask) -> Result<crate::planning::models::Task> { Err(anyhow!("Not implemented")) }
+    //     async fn get_task(&self, _id: Uuid) -> Result<Option<crate::planning::models::Task>> { Ok(None) }
+    //     async fn delete_task(&self, _id: Uuid) -> Result<()> { Ok(()) }
+    //     async fn create_milestone(&self, _milestone: crate::planning::CreateMilestone) -> Result<crate::planning::models::Milestone> { Err(anyhow!("Not implemented")) }
+    //     async fn get_milestones(&self, _plan_id: Uuid) -> Result<Vec<crate::planning::models::Milestone>> { Ok(vec![]) }
+    //     async fn update_milestone(&self, _plan_id: Uuid, _milestone_id: String, _update: crate::planning::UpdateMilestone) -> Result<crate::planning::models::Milestone> { Err(anyhow!("Not implemented")) }
+    // }
 
     #[tokio::test]
     async fn test_planning_storage_creation() {

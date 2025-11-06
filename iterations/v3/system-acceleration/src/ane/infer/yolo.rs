@@ -15,7 +15,7 @@ use crate::ane::models::yolo_model::{
     LoadedYOLOModel, YOLODetectionResult, Detection,
     YOLOInferenceOptions,
 };
-use crate::ane::compat::coreml::{coreml, coreml::ModelRef};
+use crate::ane::compat::coreml::{coreml, ModelRef};
 use system_configuration::geometry::BoundingBox;
 use crate::ane::infer::execute::{execute_inference, InferenceOptions, InferenceResult};
 use image::{DynamicImage, ImageBuffer, Rgb};

@@ -8,7 +8,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use agent_agency_contracts::types::prelude::*;
+// Explicit imports from contracts (contracts-first: no wildcard imports)
+use agent_agency_contracts::types::planning::{TaskDescriptor, TaskPriority, RiskTier, BlastRadius};
 use agent_agency_contracts::types::data_processing::ProcessingPriority;
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};use uuid::Uuid;
@@ -28,11 +29,6 @@ use tracing::{debug, info, warn};
 
 // Import ConsensusCoordinator from local module (not in contracts yet)
 use crate::consensus_coordinator::ConsensusCoordinator;
-// Import types from contracts
-use agent_agency_contracts::types::prelude::*;
-
-// Import local types for council integration
-use crate::council_types::RiskTier;
 
 // KnowledgeSeeker trait for research integration
 // PLACEHOLDER: Proper implementation needed when research integration is functional
@@ -190,12 +186,15 @@ struct ExtractedTopic {
 }
 
 // Placeholder types for data processing stages (would be implemented by agent-data-processing)
+// Following contracts-first architecture: Use contracts types where possible, local types for implementations
 
-#[cfg(feature = "data-processing")]
-use agent_data_processing::{
-    UnifiedIngestor, UnifiedEnrichmentStage, UnifiedIndexer, FileWatcher, JobScheduler,
-    EnrichmentCircuitBreakerConfig, DataInput, BlockData, Block, EnrichedBlock,
-};
+// Contracts-first approach: Remove direct dependency on agent-data-processing
+// Instead, use local type definitions that mirror the needed types
+// When data-processing feature is enabled, these can be replaced with trait objects
+// that implement contracts-defined ports
+
+// Local type definitions for data processing (avoiding direct dependency)
+// These mirror types from agent-data-processing crate but are local to avoid circular dependencies
 
 #[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -1085,7 +1084,7 @@ impl MultimodalOrchestrator {
                     data_migration: false,
                     external_deps: vec![],
                 },
-                priority: agent_agency_contracts::TaskPriority::Medium,
+                priority: agent_agency_contracts::TaskPriority::Normal,
                 execution_mode: agent_agency_contracts::ExecutionMode::Auto,
                 risk_tier: Some(RiskTier::Tier2),
                 acceptance: Some("Multimodal orchestration task".to_string()),

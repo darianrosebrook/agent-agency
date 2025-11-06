@@ -27,6 +27,9 @@
 pub mod enrichment;
 pub mod indexing;
 pub mod ingestion;
+pub mod ingestion_runtime;
+pub mod ingestion_util;
+pub mod ingestion_cleanup;
 pub mod knowledge;
 pub mod operations;
 pub mod pipeline;

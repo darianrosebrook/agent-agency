@@ -41,10 +41,10 @@ impl ReflexiveLearningService {
             learning_rate: 0.1,
             discount_factor: 0.9,
             exploration_rate: 0.1,
-            min_exploration_rate: Some(0.01),
-            exploration_decay: Some(0.995),
+            min_exploration_rate: 0.01,
+            exploration_decay: 0.995,
             max_iterations: 1000,
-            max_episodes: Some(1000),
+            max_episodes: 1000,
             convergence_threshold: 0.001,
         };
 

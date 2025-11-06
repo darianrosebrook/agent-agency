@@ -220,7 +220,10 @@ pub async fn generate_text(
         
         // Update KV cache if enabled
         if options.use_kv_cache {
-            kv_cache.step();
+            if let Err(e) = kv_cache.step() {
+                tracing::warn!("KV cache step failed: {}", e);
+                // Continue without cache for this step
+            }
         }
     }
 

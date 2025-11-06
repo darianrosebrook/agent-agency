@@ -369,3 +369,4 @@ mod tests {
         let result = reward_fn.check_constraints(&params, &constraints, &baseline);
         assert!(result.passed, "Valid parameters should pass constraint check");
     }
+}

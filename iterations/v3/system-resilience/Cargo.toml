@@ -48,6 +48,7 @@ sha2 = "0.10"
 # Memory management utilities
 lazy_static = "1.4"
 once_cell = "1.19"
+sysinfo = "0.30"
 
 # Platform-specific dependencies for handle cleanup and metrics
 [target.'cfg(unix)'.dependencies]
@@ -57,8 +58,8 @@ nix = { version = "0.27", features = ["fs"] }
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["handleapi", "minwinbase", "processthreadsapi", "psapi", "sysinfoapi"] }
 
-# System metrics collection - temporarily disabled
-# sysinfo = "0.30"
+# System metrics collection
+sysinfo = { version = "0.30" }
 procfs = "0.16"
 
 [target.'cfg(target_os = "macos")'.dependencies]

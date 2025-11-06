@@ -7,7 +7,7 @@
 //! - `api_errors.rs`: API error types and Axum response conversions
 //! - `middleware.rs`: Authentication and request processing middleware
 //! - `server.rs`: Main RestApi server struct and business logic methods
-//! - `handlers.rs`: HTTP endpoint handler functions
+//! - `handlers/`: Modular HTTP endpoint handler functions
 //!
 //! The public interface remains compatible with the original monolithic version.
 

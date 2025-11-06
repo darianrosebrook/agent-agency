@@ -14,8 +14,9 @@ use tracing::{debug, info, warn, error};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
+use std::fmt;
+
 /// Policy enforcement tools for CAWS validation and task management
-#[derive(Debug, Clone, JsonSchema)]
 pub struct PolicyEnforcementTools {
     /// CAWS validation configuration
     pub caws_config: CawsValidationConfig,
@@ -31,6 +32,20 @@ pub struct PolicyEnforcementTools {
     pub chain_logger: ChainLogger,
     /// Compliance metrics
     pub compliance_metrics: ComplianceMetrics,
+}
+
+impl fmt::Debug for PolicyEnforcementTools {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PolicyEnforcementTools")
+            .field("caws_config", &self.caws_config)
+            .field("decomposition_algorithms", &format!("{} algorithms", self.decomposition_algorithms.len()))
+            .field("quality_gates", &self.quality_gates)
+            .field("reasoning_engine", &self.reasoning_engine)
+            .field("workflow_logger", &self.workflow_logger)
+            .field("chain_logger", &self.chain_logger)
+            .field("compliance_metrics", &self.compliance_metrics)
+            .finish()
+    }
 }
 
 /// CAWS validation configuration
@@ -274,10 +289,17 @@ impl TaskDecompositionAlgorithm for AdaptiveDecompositionAlgorithm {
 }
 
 /// Quality gate registry
-#[derive(Debug, Clone, JsonSchema)]
 pub struct QualityGateRegistry {
     /// Registered quality gates
     pub gates: HashMap<String, Box<dyn QualityGate + Send + Sync>>,
+}
+
+impl fmt::Debug for QualityGateRegistry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("QualityGateRegistry")
+            .field("gates", &format!("{} gates", self.gates.len()))
+            .finish()
+    }
 }
 
 /// Quality gate trait
@@ -464,12 +486,20 @@ impl QualityGate for MutationTestingGate {
 }
 
 /// Reasoning engine
-#[derive(Debug, Clone, JsonSchema)]
 pub struct ReasoningEngine {
     /// Available reasoning algorithms
     pub algorithms: HashMap<String, Box<dyn ReasoningAlgorithm + Send + Sync>>,
     /// Knowledge base
     pub knowledge_base: KnowledgeBase,
+}
+
+impl fmt::Debug for ReasoningEngine {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ReasoningEngine")
+            .field("algorithms", &format!("{} algorithms", self.algorithms.len()))
+            .field("knowledge_base", &self.knowledge_base)
+            .finish()
+    }
 }
 
 /// Reasoning algorithm trait
@@ -573,10 +603,17 @@ impl ReasoningAlgorithm for MachineLearningReasoningAlgorithm {
 }
 
 /// Evidence synthesizer
-#[derive(Debug, Clone, JsonSchema)]
 pub struct EvidenceSynthesizer {
     /// Synthesis algorithms
     pub algorithms: HashMap<String, Box<dyn SynthesisAlgorithm + Send + Sync>>,
+}
+
+impl fmt::Debug for EvidenceSynthesizer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("EvidenceSynthesizer")
+            .field("algorithms", &format!("{} algorithms", self.algorithms.len()))
+            .finish()
+    }
 }
 
 /// Synthesis algorithm trait
@@ -717,12 +754,19 @@ impl SynthesisAlgorithm for BayesianEvidenceSynthesisAlgorithm {
 }
 
 /// Workflow logger
-#[derive(Debug, Clone, JsonSchema)]
 pub struct WorkflowLogger {
     /// Log storage
     pub storage: Arc<dyn LogStorage + Send + Sync>,
     /// Log level
     pub log_level: LogLevel,
+}
+
+impl fmt::Debug for WorkflowLogger {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("WorkflowLogger")
+            .field("log_level", &self.log_level)
+            .finish()
+    }
 }
 
 /// Log storage trait
@@ -837,12 +881,19 @@ pub struct RetentionPolicy {
 }
 
 /// Chain logger for execution tracking
-#[derive(Debug, Clone, JsonSchema)]
 pub struct ChainLogger {
     /// Chain storage
     pub storage: Arc<dyn ChainStorage + Send + Sync>,
     /// Current execution
     pub current_execution: Option<ChainExecution>,
+}
+
+impl fmt::Debug for ChainLogger {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ChainLogger")
+            .field("current_execution", &self.current_execution)
+            .finish()
+    }
 }
 
 /// Chain storage trait
@@ -952,10 +1003,17 @@ pub struct ChainFilter {
 }
 
 /// Chain analyzer
-#[derive(Debug, Clone, JsonSchema)]
 pub struct ChainAnalyzer {
     /// Analysis algorithms
     pub algorithms: HashMap<String, Box<dyn ChainAnalysisAlgorithm + Send + Sync>>,
+}
+
+impl fmt::Debug for ChainAnalyzer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ChainAnalyzer")
+            .field("algorithms", &format!("{} algorithms", self.algorithms.len()))
+            .finish()
+    }
 }
 
 /// Chain analysis algorithm trait
@@ -1098,12 +1156,20 @@ impl ChainAnalysisAlgorithm for ReliabilityAnalysisAlgorithm {
 }
 
 /// Compliance metrics
-#[derive(Debug, Clone, JsonSchema)]
+#[derive(Clone)]
 pub struct ComplianceMetrics {
     /// Metrics storage
     pub storage: Arc<dyn MetricsStorage + Send + Sync>,
     /// Current metrics
     pub current_metrics: HashMap<String, Metric>,
+}
+
+impl fmt::Debug for ComplianceMetrics {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ComplianceMetrics")
+            .field("current_metrics", &format!("{} metrics", self.current_metrics.len()))
+            .finish()
+    }
 }
 
 /// Metrics storage trait
@@ -1157,10 +1223,17 @@ pub struct MetricsFilter {
 }
 
 /// Metrics aggregator
-#[derive(Debug, Clone, JsonSchema)]
 pub struct MetricsAggregator {
     /// Aggregation algorithms
     pub algorithms: HashMap<String, Box<dyn AggregationAlgorithm + Send + Sync>>,
+}
+
+impl fmt::Debug for MetricsAggregator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MetricsAggregator")
+            .field("algorithms", &format!("{} algorithms", self.algorithms.len()))
+            .finish()
+    }
 }
 
 /// Aggregation algorithm trait
@@ -1581,7 +1654,7 @@ impl PolicyEnforcementTools {
         Ok(PolicyValidationResult {
             passed: violations.is_empty(),
             violations,
-            compliance_score: compliance_score.max(0.0),
+            compliance_score: f64::max(compliance_score, 0.0f64),
         })
     }
 

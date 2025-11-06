@@ -7,8 +7,8 @@
 //! - Performing multi-hop reasoning
 //! - Analyzing temporal patterns
 //! - Managing memory decay and importance
-use agent_memory::{MemoryConfig, MemorySystem, TimeRange, MemoryType, RelationshipType};
-use agent_memory::memory_types::{AgentExperience, MemoryId, TaskContext, ExperienceOutcome, ReasoningQuery};
+use agent_memory::{MemoryConfig, MemorySystem, MemoryType};
+use agent_memory::memory_types::{AgentExperience, MemoryId, TaskContext, ExperienceOutcome, ReasoningQuery, TimeRange, ExperienceContext, TemporalContext, TaskPriority};
 use chrono::{Utc, Duration};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -37,24 +37,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         agent_id: agent_id.to_string(),
         task_id: task_id_1.to_string(),
         content: "Review pull request for authentication middleware implementation".to_string(),
-        context: TaskContext {
-            agent_id: agent_id.to_string(),
-            task_id: task_id_1.to_string(),
-            task_type: "code_review".to_string(),
+        context: ExperienceContext {
             description: "Review pull request for authentication middleware implementation".to_string(),
-            keywords: vec!["security".to_string(), "authentication".to_string()],
-            entities: vec!["middleware".to_string(), "JWT".to_string()],
-            timestamp: Utc::now() - Duration::hours(2),
+            domain: vec!["security".to_string(), "authentication".to_string()],
+            task_type: "code_review".to_string(),
+            temporal_context: Some(TemporalContext {
+                timestamp: Utc::now() - Duration::hours(2),
+                duration: None,
+                sequence_number: None,
+                priority: TaskPriority::Medium,
+            }),
         },
         input: serde_json::json!({
             "files": ["auth_middleware.rs", "tests.rs"],
             "lines_of_code": 150
-        }),
+        }).to_string(),
         output: serde_json::json!({
             "issues_found": 2,
             "suggestions": ["Add input validation", "Improve error handling"],
             "approved": true
-        }),
+        }).to_string(),
         outcome: ExperienceOutcome {
             quality_score: 0.9,
             error_message: None,
@@ -75,24 +77,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         id: MemoryId::new_v4(),
         agent_id: agent_id.to_string(),
         task_id: task_id_2.to_string(),
-        context: TaskContext {
-            agent_id: agent_id.to_string(),
-            task_id: task_id_2.to_string(),
-            task_type: "database_optimization".to_string(),
+        context: ExperienceContext {
             description: "Optimize slow database queries in user management system".to_string(),
-            keywords: vec!["database".to_string(), "performance".to_string()],
-            entities: vec!["PostgreSQL".to_string(), "indexes".to_string()],
-            timestamp: Utc::now() - Duration::hours(1),
+            domain: vec!["database".to_string(), "performance".to_string()],
+            task_type: "database_optimization".to_string(),
+            temporal_context: Some(TemporalContext {
+                timestamp: Utc::now() - Duration::hours(1),
+                duration: None,
+                sequence_number: None,
+                priority: TaskPriority::High,
+            }),
         },
         input: serde_json::json!({
             "query_count": 15,
             "slowest_query_time": "2.3s"
-        }),
+        }).to_string(),
         output: serde_json::json!({
             "indexes_added": 3,
             "queries_optimized": 12,
             "performance_improvement": "75%"
-        }),
+        }).to_string(),
         outcome: ExperienceOutcome {
             quality_score: 0.85,
             error_message: None,
@@ -148,7 +152,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         target_entity: "capability:security_review".to_string(),
         start_entities: vec!["agent:agent-001".to_string()],
         target_entities: vec!["capability:security_review".to_string()],
-        relationship_types: vec![RelationshipType::LearnsFrom, RelationshipType::Performs],
+        relationship_types: vec!["LearnsFrom".to_string(), "Performs".to_string()],
         max_hops: 2,
         min_confidence: 0.5,
     };
@@ -161,12 +165,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   - Entities discovered: {}", reasoning_result.entities_discovered.len());
 
     for (i, path) in reasoning_result.paths.iter().take(2).enumerate() {
-        println!("   Path {}: {} -> {} (confidence: {:.3}, hops: {})",
+        println!("   Path {}: {} -> {} (hops: {})",
                 i + 1,
-                path.entities.first().unwrap_or(&"unknown".to_string()),
-                path.entities.last().unwrap_or(&"unknown".to_string()),
-                path.confidence,
-                path.hops);
+                path.first().unwrap_or(&"unknown".to_string()),
+                path.last().unwrap_or(&"unknown".to_string()),
+                path.len().saturating_sub(1)); // hops = number of connections
     }
     println!();
 
@@ -187,10 +190,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   - Causality links: {}", temporal_analysis.causality_links.len());
 
     println!("   Performance Summary:");
-    println!("     - Average score: {:.3}", temporal_analysis.performance_summary.average_score);
-    println!("     - Best score: {:.3}", temporal_analysis.performance_summary.best_score);
-    println!("     - Improvement rate: {:.3}", temporal_analysis.performance_summary.improvement_rate);
-    println!("     - Consistency: {:.3}", temporal_analysis.performance_summary.consistency_score);
+    println!("     - Performance summary: {}", temporal_analysis.performance_summary);
+    println!("     - Performance metrics: {} entries", temporal_analysis.performance_metrics.len());
+    println!("     - Trends identified: {}", temporal_analysis.trends.len());
+    println!("     - Causality links: {}", temporal_analysis.causality_links.len());
     println!();
 
     // 6. Run memory maintenance
@@ -208,14 +211,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let memory_stats = memory_system.manager().get_memory_stats().await?;
     let decay_stats = memory_system.decay_engine().get_decay_stats().await?;
-    let embedding_stats = memory_system.embedding_integration().get_embedding_stats().await?;
     let graph_stats = memory_system.graph_engine().get_graph_stats().await?;
 
     println!("📊 Memory System Health:");
     println!("   Total Memories: {}", memory_stats.total_memories);
     println!("   Unique Agents: {}", memory_stats.unique_agents);
     println!("   Knowledge Graph: {} entities, {} relationships", graph_stats.entity_count, graph_stats.relationship_count);
-    println!("   Embeddings: {} stored", embedding_stats.total_embeddings);
+
+    #[cfg(feature = "embeddings")]
+    {
+        let embedding_stats = memory_system.embedding_integration().get_embedding_stats().await?;
+        println!("   Embeddings: {} stored", embedding_stats.total_embeddings);
+    }
+    #[cfg(not(feature = "embeddings"))]
+    {
+        println!("   Embeddings: Feature not enabled");
+    }
+
     println!("   Average Importance: {:.3}", decay_stats.avg_importance);
     println!("   Average Decay: {:.3}", decay_stats.avg_decay);
     println!("   Heavily Decayed: {}", decay_stats.heavily_decayed);

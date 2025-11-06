@@ -83,17 +83,11 @@ Worker ready at http://127.0.0.1:8081
 ### Using the CLI
 
 ```bash
-# Submit task in auto mode (recommended for most cases)
-cargo run --bin agent-agency-cli execute \
-  "Implement user authentication system with JWT tokens, user registration, login, and secure password storage" \
-  --mode auto \
-  --risk-tier 2 \
-  --watch
+# CLI binaries temporarily removed - use API server directly
+# Start the API server first:
+cargo run --bin agent-agency-api-server --host 127.0.0.1 --port 8080
 
-# Alternative: Dry-run mode for safe testing
-cargo run --bin agent-agency-cli execute \
-  "Design the user authentication API schema" \
-  --mode dry-run
+# Then submit tasks via REST API (CLI interface will be rebuilt)
 ```
 
 ### Using the API Directly
@@ -178,25 +172,25 @@ Open http://localhost:3000 to see:
 ### Pause and Resume Tasks
 
 ```bash
-# Pause execution
-cargo run --bin agent-agency-cli intervene pause $TASK_ID
-
-# Resume execution
-cargo run --bin agent-agency-cli intervene resume $TASK_ID
+# CLI intervention temporarily removed - use API endpoints:
+# Pause: curl -X POST http://localhost:8080/api/v1/tasks/$TASK_ID/pause
+# Resume: curl -X POST http://localhost:8080/api/v1/tasks/$TASK_ID/resume
 ```
 
 ### Override Council Decisions
 
 ```bash
-# Override verdict in strict mode
-cargo run --bin agent-agency-cli intervene override $TASK_ID --verdict accept --reason "Approved by human review"
+# CLI override temporarily removed - use API endpoint:
+# curl -X POST http://localhost:8080/api/v1/tasks/$TASK_ID/override \
+#   -H "Content-Type: application/json" \
+#   -d '{"verdict": "accept", "reason": "Approved by human review"}'
 ```
 
 ### Cancel Running Tasks
 
 ```bash
-# Cancel task execution
-cargo run --bin agent-agency-cli intervene cancel $TASK_ID
+# CLI cancel temporarily removed - use API endpoint:
+# curl -X POST http://localhost:8080/api/v1/tasks/$TASK_ID/cancel
 ```
 
 ## Step 5: Review Results and Provenance
@@ -280,7 +274,8 @@ cargo run --bin api-server
 
 ```bash
 # CLI help
-cargo run --bin agent-agency-cli --help
+# CLI help temporarily removed - use API server help:
+# cargo run --bin agent-agency-api-server --help
 
 # API health check
 curl http://localhost:8080/health

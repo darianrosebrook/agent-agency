@@ -65,8 +65,8 @@ cargo run --bin api-server &
 cargo run --bin agent-agency-worker &
 cd apps/web-dashboard && npm run dev &
 
-# 4. Execute a task
-cargo run --bin agent-agency-cli execute "Implement user authentication" --mode auto
+# 4. Execute tasks via API (CLI binaries temporarily removed)
+# Use REST API at http://localhost:8080/api/v1/tasks
 ```
 
 ## Documentation
@@ -90,26 +90,18 @@ cargo run --bin agent-agency-cli execute "Implement user authentication" --mode 
 
 ### Task Execution
 ```bash
-# Execute with different modes
-cargo run --bin agent-agency-cli execute "task description" --mode strict
-cargo run --bin agent-agency-cli execute "task description" --mode auto
-cargo run --bin agent-agency-cli execute "task description" --mode dry-run
-
-# Monitor and intervene
-cargo run --bin agent-agency-cli intervene pause task-id
-cargo run --bin agent-agency-cli intervene resume task-id
-cargo run --bin agent-agency-cli intervene cancel task-id
+# CLI binaries temporarily removed - use API endpoints:
+# Task execution: POST /api/v1/tasks
+# Pause: POST /api/v1/tasks/{id}/pause
+# Resume: POST /api/v1/tasks/{id}/resume
+# Cancel: POST /api/v1/tasks/{id}/cancel
 ```
 
 ### System Management
 ```bash
-# Waiver management
-cargo run --bin agent-agency-cli waiver create --title "Emergency fix"
-cargo run --bin agent-agency-cli waiver approve waiver-id
-
-# Provenance tracking
-cargo run --bin agent-agency-cli provenance install-hooks
-cargo run --bin agent-agency-cli provenance generate
+# CLI system management temporarily removed - use API endpoints:
+# Waivers: /api/v1/waivers
+# Provenance: /api/v1/provenance
 ```
 
 ## API Endpoints

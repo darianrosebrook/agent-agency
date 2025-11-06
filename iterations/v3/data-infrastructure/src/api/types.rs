@@ -218,3 +218,24 @@ pub struct LinkProvenanceRequest {
     pub provenance_id: String,
     pub commit_hash: String,
 }
+
+/// Task persistence structure
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct PersistedTask {
+    pub id: String,
+    pub spec: String,
+    pub state: String,
+    pub created_at: String,
+    pub updated_at: String,
+    pub created_by: Option<String>,
+    pub metadata: String,
+}
+
+/// Task storage trait for persistence operations
+#[async_trait::async_trait]
+pub trait TaskStoreTrait: Send + Sync {
+    async fn create_task(&self, task: PersistedTask) -> anyhow::Result<()>;
+    async fn get_tasks(&self) -> anyhow::Result<Vec<PersistedTask>>;
+    async fn get_task(&self, task_id: String) -> anyhow::Result<Option<PersistedTask>>;
+    async fn get_task_events(&self, task_id: String) -> anyhow::Result<Vec<serde_json::Value>>;
+}

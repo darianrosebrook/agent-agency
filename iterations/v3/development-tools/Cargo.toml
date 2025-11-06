@@ -58,6 +58,7 @@ petgraph = "0.6"
 
 # Integration with existing V3 components
 system-quality-security = { path = "../system-quality-security" }
+agent-agency-contracts = { path = "../agent-agency-contracts" }
 # agent-mcp = { path = "../agent-mcp" }  # Removed to avoid cyclic dependency
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 

@@ -442,3 +442,4 @@ impl BanditPolicy for LinUCB {
     fn version(&self) -> String {
         "linucb@1.0.0".to_string()
     }
+}

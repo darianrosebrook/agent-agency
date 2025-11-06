@@ -161,7 +161,7 @@ mod tests {
                     risk_tier: "low".to_string(),
                     context: serde_json::Value::Object(serde_json::Map::new()),
                 },
-                output_schema: "{}".to_string(),
+                output_schema: r#"{"type":"object","properties":{"score":{"type":"number"},"label":{"type":"string"},"rationale":{"type":"string"}}}"#.to_string(),
             },
             max_tokens: 128,
             temperature: 0.1,

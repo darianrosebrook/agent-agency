@@ -101,6 +101,8 @@ pub use coordinator::{ParallelCoordinator, ParallelCoordinatorConfig};
 pub use decomposition::DecompositionEngine;
 pub use communication::hub::CommunicationHub;
 pub use progress::{WorkerProgressTracker};
+pub use worker::WorkerManager;
+pub use parallel_types::DependencyType;
 pub use validation::{QualityValidatorTrait, QualityGate};
 pub use worker_errors::*;
 

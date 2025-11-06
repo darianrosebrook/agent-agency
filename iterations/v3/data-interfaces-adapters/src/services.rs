@@ -27,10 +27,10 @@ pub struct ServiceContainer {
 
 impl ServiceContainer {
     /// Create a new service container with default adapters
-    pub fn new() -> Self {
+    pub async fn new() -> Self {
         Self {
             research_service: Arc::new(ResearchServiceAdapter::with_defaults()),
-            orchestration_service: Arc::new(OrchestrationServiceAdapter::with_defaults()),
+            orchestration_service: Arc::new(OrchestrationServiceAdapter::with_defaults().await.expect("Failed to create orchestration service")),
             worker_service: Arc::new(WorkerServiceAdapter::new()),
             progress_service: Arc::new(ProgressTrackingServiceAdapter::new()),
             memory_service: None, // Memory service requires database connection
@@ -57,7 +57,9 @@ impl ServiceContainer {
 
 impl Default for ServiceContainer {
     fn default() -> Self {
-        Self::new()
+        // Note: This will panic if called in async context. Use ServiceContainer::new() in async contexts.
+        // For sync contexts, consider using a lazy_static or OnceCell pattern.
+        panic!("ServiceContainer::default() cannot be used. Use ServiceContainer::new() in async contexts or ServiceContainer::with_services() for sync contexts.")
     }
 }
 

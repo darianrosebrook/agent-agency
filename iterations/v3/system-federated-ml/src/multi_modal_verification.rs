@@ -13,7 +13,7 @@ use tracing::{info, debug, warn};
 use chrono::{DateTime, Utc};
 
 use crate::tool_registry::{Tool, ToolMetadata, ToolCategory};
-use crate::evidence_collection_tools::{EvidenceItem, EvidenceType, AtomicClaim};
+use crate::evidence_types::{AtomicClaim, EvidenceItem, EvidenceType, Modality};
 
 /// Multimodal verification tool suite
 #[derive(Debug)]
@@ -846,11 +846,3 @@ pub struct SemanticMapping {
     pub confidence_weight: f64,
 }
 
-/// Modality types
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
-pub enum Modality {
-    Text,
-    Code,
-    Data,
-    Visual,
-    Audio,

@@ -404,3 +404,4 @@ mod tests {
         let fingerprint = features.fingerprint();
         assert!(fingerprint > 0);
     }
+}

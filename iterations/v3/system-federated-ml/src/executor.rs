@@ -200,7 +200,7 @@ impl ChainExecutor {
         // Execute with timeout and cancellation
         let execution_future = self.tool_executor.execute_tool(invocation);
         let result = tokio::select! {
-            result = execution_future => result,
+            result = execution_future => result.map_err(|e| ChainExecutionError::ToolExecution(e.to_string())),
             _ = cancel.cancelled() => return Err(ChainExecutionError::Cancelled),
             _ = tokio::time::sleep(Duration::from_millis(timeout_ms)) => {
                 return Err(ChainExecutionError::Timeout(timeout_ms));
@@ -209,7 +209,8 @@ impl ChainExecutor {
 
         // Validate output schema
         for output in &node.outputs {
-            self.schema_registry.validate(&output.schema.registry_key, &result.result)?;
+            self.schema_registry.validate(&output.schema.registry_key, &result.result)
+                .map_err(|e| ChainExecutionError::SchemaValidation(e.to_string()))?;
         }
 
         Ok(result.result)
@@ -251,7 +252,7 @@ impl ChainExecutor {
         let to_schema = format!("codec_output_{}", to_port);
 
         self.schema_registry.convert(&from_schema, &to_schema, value)
-            .map_err(|e| ChainExecutionError::CodecError(Box::new(e)))
+            .map_err(|e| ChainExecutionError::CodecError(e.to_string()))
     }
 
     /// Get human-readable node name
@@ -261,19 +262,19 @@ impl ChainExecutor {
 }
 
 /// Errors from chain execution
-#[derive(Debug, thiserror::Error, JsonSchema)]
+#[derive(Debug, thiserror::Error)]
 pub enum ChainExecutionError {
     #[error("Missing dependency result for step: {0}")]
     MissingDependency(String),
 
     #[error("Schema validation failed: {0}")]
-    SchemaValidation(Box<dyn std::error::Error + Send + Sync>),
+    SchemaValidation(String),
 
     #[error("Codec transformation failed: {0}")]
-    CodecError(Box<dyn std::error::Error + Send + Sync>),
+    CodecError(String),
 
     #[error("Tool execution failed: {0}")]
-    ToolExecution(Box<dyn std::error::Error + Send + Sync>),
+    ToolExecution(String),
 
     #[error("Execution timeout after {0}ms")]
     Timeout(u64),
@@ -285,7 +286,7 @@ pub enum ChainExecutionError {
     ConcurrencyError,
 
     #[error("General execution error: {0}")]
-    General(#[from] anyhow::Error),
+    General(String),
 
     #[error("Circuit breaker open for tool: {0}")]
     CircuitBreakerOpen(String),
@@ -296,7 +297,7 @@ pub enum ChainExecutionError {
 
 impl From<crate::schema_registry::SchemaError> for ChainExecutionError {
     fn from(error: crate::schema_registry::SchemaError) -> Self {
-        ChainExecutionError::SchemaValidation(Box::new(error))
+        ChainExecutionError::SchemaValidation(error.to_string())
     }
 }
 
@@ -308,7 +309,7 @@ pub struct CircuitBreaker {
     last_failure: Option<Instant>,
 }
 
-#[derive(Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Clone, Debug, PartialEq)]
 enum CircuitState {
     Closed,
     Open { until: Instant },
@@ -426,3 +427,4 @@ impl<'a> Drop for ResourceGuard<'a> {
         self.limiter.current_memory_mb.fetch_sub(self.memory_mb, std::sync::atomic::Ordering::Relaxed);
         self.limiter.current_cpu_percent.fetch_sub(self.cpu_percent, std::sync::atomic::Ordering::Relaxed);
     }
+}

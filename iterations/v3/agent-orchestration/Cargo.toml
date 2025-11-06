@@ -79,7 +79,7 @@ agent-agency-contracts = { path = "../agent-agency-contracts" }
 agent-evaluation = { path = "../agent-evaluation" }
 system-common-interfaces = { path = "../system-common-interfaces" }
 # data-infrastructure = { path = "../data-infrastructure", optional = true, default-features = false }  # Circular dependency - using local type definitions instead
-# system-acceleration = { path = "../system-acceleration" }  # Temporarily disabled due to compilation errors
+system-acceleration = { path = "../system-acceleration" }
 agent-memory = { path = "../agent-memory", optional = true, features = ["database"] }
 system-resilience = { path = "../system-resilience" }
 agent-research = { path = "../agent-research", optional = true }
@@ -105,7 +105,3 @@ data-processing = ["dep:agent-data-processing"]  # Gate data processing integrat
 [[bin]]
 name = "agent-orchestration-server"
 path = "src/main.rs"
-
-[[bin]]
-name = "coreml-demo"
-path = "src/coreml/demo.rs"

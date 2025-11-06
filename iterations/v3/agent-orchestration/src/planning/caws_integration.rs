@@ -9,10 +9,8 @@ use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};use std::collections::HashMap;
 use anyhow::{anyhow, Result};
 use agent_agency_contracts::{
-    working_spec::{WorkingSpec, FileChange as WorkingSpecFileChange, AcceptanceCriterion},
+    working_spec::{WorkingSpec, AcceptanceCriterion},
     planning_io::{ExecutionPlan as ContractExecutionPlan, Milestone as ContractMilestone, PlanState, EvidenceGate},
-    types::prelude::*,
-    working_spec::*,
 };
 
 /// CAWS integration bridge
@@ -542,7 +540,7 @@ impl CawsPlanBridge {
 
     /// Create evidence requirements
     fn create_evidence_requirements(&self, working_spec: &WorkingSpec) -> Vec<agent_agency_contracts::planning_io::EvidenceRequirement> {
-        working_spec.acceptance_criteria.iter().enumerate().map(|(i, criterion)| {
+        working_spec.acceptance_criteria.iter().enumerate().map(|(_i, criterion)| {
             agent_agency_contracts::planning_io::EvidenceRequirement {
                 milestone_id: criterion.id.clone(),
                 evidence_type: "test_results".to_string(),
@@ -603,7 +601,7 @@ mod tests {
 
     #[test]
     fn test_caws_bridge_creation() {
-        let bridge = CawsPlanBridge::new();
+        let _bridge = CawsPlanBridge::new();
         // Bridge created successfully
         assert!(true);
     }
@@ -632,6 +630,7 @@ mod tests {
             given: "User is logged out".to_string(),
             when: "User submits valid credentials".to_string(),
             then: "User is logged in".to_string(),
+            priority: Some(MoSCoWPriority::Must),
         };
         assert!(bridge.validate_acceptance_criterion(&valid_criterion, 0).is_ok());
 
@@ -755,7 +754,7 @@ mod tests {
             },
             non_functional_requirements: None,
             validation_results: None,
-            quality_gates: vec![],
+            quality_gates: None,
             scope: vec![ScopeRestrictions {
                 allowed_paths: vec!["src/".to_string()],
                 blocked_paths: vec!["node_modules/".to_string()],

@@ -7,7 +7,6 @@
 //! - Evaluation hooks for integration with autonomous executor
 
 use schemars::JsonSchema;
-use std::sync::Arc;
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 use tracing::{info, warn};
@@ -62,7 +61,7 @@ pub struct IterationEvaluation {
     pub timestamp: DateTime<Utc>,
     pub quality_score: f64,
     pub improvement_delta: f64,
-    pub verdict: Arc<FinalVerdictContract>,
+    pub verdict: FinalVerdictContract,
     pub should_continue: bool,
     pub stop_reason: Option<StopReason>,
 }
@@ -131,7 +130,7 @@ impl EvaluationOrchestrator {
         iteration: u32,
         quality_score: f64,
         quality_history: &[f64],
-        verdict: Arc<FinalVerdictContract>,
+        verdict: FinalVerdictContract,
         council_approved: bool,
     ) -> IterationEvaluation {
         // Calculate improvement delta
@@ -360,8 +359,11 @@ impl EvaluationHook for NoOpEvaluationHook {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use super::*;
     use agent_agency_contracts::final_verdict::{FinalDecision, FinalVerdictContract, VerificationSummary, VoteEntry, VoteVerdict};
+    use uuid::Uuid;
     
     fn create_test_verdict(decision: FinalDecision, coverage: f64) -> Arc<FinalVerdictContract> {
         Arc::new(FinalVerdictContract {
@@ -383,7 +385,7 @@ mod tests {
             verification_summary: VerificationSummary {
                 claims_total: 10,
                 claims_verified: (coverage * 10.0) as u32,
-                coverage_pct: coverage * 100.0,
+                coverage_pct: (coverage * 100.0) as f32,
             },
         })
     }
@@ -391,17 +393,18 @@ mod tests {
     #[tokio::test]
     async fn test_iteration_limit() {
         let evaluator = EvaluationOrchestrator::new();
-        
+        let config = evaluator.config();
+
         let verdict = create_test_verdict(FinalDecision::Accept, 0.8);
         let quality_score = evaluator.calculate_quality_score(&verdict);
         let quality_history = vec![0.7, 0.75, 0.8];
-        
+
         // Test iteration limit
         let eval = evaluator.evaluate_iteration(
             config.max_iterations,
             quality_score,
             &quality_history,
-            verdict,
+            (*verdict).clone(),
             false,
         ).await;
         
@@ -412,7 +415,6 @@ mod tests {
     #[tokio::test]
     async fn test_quality_ceiling() {
         let evaluator = EvaluationOrchestrator::new();
-        let config = evaluator.config();
         
         let verdict = create_test_verdict(FinalDecision::Accept, 0.98);
         let quality_score = evaluator.calculate_quality_score(&verdict);
@@ -423,7 +425,7 @@ mod tests {
             1,
             quality_score,
             &quality_history,
-            verdict,
+            (*verdict).clone(),
             false,
         ).await;
         
@@ -434,7 +436,6 @@ mod tests {
     #[tokio::test]
     async fn test_satisficing_threshold() {
         let evaluator = EvaluationOrchestrator::new();
-        let config = evaluator.config();
         
         let verdict = create_test_verdict(FinalDecision::Accept, 0.9);
         let quality_score = evaluator.calculate_quality_score(&verdict);
@@ -445,7 +446,7 @@ mod tests {
             2,
             quality_score,
             &quality_history,
-            verdict,
+            (*verdict).clone(),
             false,
         ).await;
         
@@ -466,7 +467,7 @@ mod tests {
             2,
             quality_score,
             &quality_history,
-            verdict,
+            (*verdict).clone(),
             false,
         ).await;
         
@@ -492,7 +493,7 @@ mod tests {
             4,
             quality_score,
             &quality_history,
-            verdict,
+            (*verdict).clone(),
             false,
         ).await;
         
@@ -513,7 +514,7 @@ mod tests {
             1,
             quality_score,
             &quality_history,
-            verdict,
+            (*verdict).clone(),
             true, // Council approved
         ).await;
         
@@ -534,7 +535,7 @@ mod tests {
             1,
             quality_score,
             &quality_history,
-            verdict,
+            (*verdict).clone(),
             false,
         ).await;
         

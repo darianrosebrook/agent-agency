@@ -7,7 +7,7 @@
 
 use agent_agency_contracts::types::prelude::*;
 use agent_agency_contracts::{
-    TaskDescriptor, ExecutionContext, Milestone, AcceptanceCriterion,
+    AcceptanceCriterion, ExecutionContext, Milestone, TaskDescriptor, TaskScope
 };
 use schemars::JsonSchema;
 use serde_json::Value;

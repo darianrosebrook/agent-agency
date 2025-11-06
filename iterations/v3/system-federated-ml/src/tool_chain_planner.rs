@@ -65,7 +65,7 @@ pub struct ToolEdge {
 }
 
 /// Complete tool chain as a DAG
-#[derive(Clone, Debug, JsonSchema)]
+#[derive(Clone, Debug)]
 pub struct ToolChain {
     pub dag: Graph<ToolNode, ToolEdge>,
     pub roots: Vec<NodeIndex>,
@@ -97,7 +97,7 @@ pub struct RetryPolicy {
 }
 
 /// Chain execution result
-#[derive(Clone, Debug, JsonSchema)]
+#[derive(Clone, Debug)]
 pub struct ChainResult {
     pub chain_hash: u64,
     pub success: bool,
@@ -399,7 +399,7 @@ impl ToolChainPlanner {
         }
 
         // Check if direct conversion is available
-        if self.schema_registry.can_convert(&output.registry_key, &input.registry_key).await {
+        if self.schema_registry.can_convert(&output.registry_key, &input.registry_key) {
             return Ok(true);
         }
 

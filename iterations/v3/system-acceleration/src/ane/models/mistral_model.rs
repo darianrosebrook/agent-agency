@@ -6,7 +6,7 @@
 use schemars::JsonSchema;
 use crate::ane::ane_errors::{ANEError, Result};
 use crate::ane::compat::coreml as coreml_bridge;
-use crate::ane::compat::coreml::{MLModelConfiguration, MLComputeUnits};
+use crate::ane::compat::coreml::{MLModelConfiguration, MLComputeUnits, KvStateHandle};
 use crate::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
 use crate::telemetry::TelemetryCollector;
 use std::path::{Path, PathBuf};
@@ -16,10 +16,10 @@ use std::sync::Arc;
 /// Safe model reference that can be sent across threads
 /// The actual CoreML handle is stored in a thread-local registry
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, JsonSchema)]
-pub struct SafeModelHandle (crate::ane::compat::coreml::coreml::ModelRef);
+pub struct SafeModelHandle (crate::ane::compat::coreml::ModelRef);
 
 impl SafeModelHandle {
-    pub fn new(model_ref: crate::ane::compat::coreml::coreml::ModelRef) -> Self {
+    pub fn new(model_ref: crate::ane::compat::coreml::ModelRef) -> Self {
         Self(model_ref)
     }
 
@@ -32,10 +32,10 @@ impl SafeModelHandle {
     /// Never returns a fabricated handle - callers must handle None explicitly
     pub fn with_handle<F, R>(&self, f: F) -> Option<R>
     where
-        F: FnOnce(&crate::ane::compat::coreml::coreml::CoreMlHandle) -> R,
+        F: FnOnce(&crate::ane::compat::coreml::CoreMlHandle) -> R,
     {
-        if let Some(ptr) = crate::ane::compat::coreml::coreml::registry::get_model_handle(self.0) {
-            if let Some(handle) = crate::ane::compat::coreml::coreml::CoreMlHandle::new(ptr.as_ptr()) {
+        if let Some(ptr) = crate::ane::compat::coreml::registry::get_model_handle(self.0) {
+            if let Some(handle) = crate::ane::compat::coreml::CoreMlHandle::new(ptr.as_ptr()) {
                 return Some(f(&handle));
             }
         }
@@ -138,8 +138,8 @@ pub struct KVCache {
     pub n_layers: usize,
     pub n_kv_heads: usize,
     pub head_dim: usize,
-    /// Core ML session state handle or indices (optional, for future integration)
-    pub coreml_state: Option<()>, // TODO: Replace with actual KvStateHandle type when bridge defines it
+    /// Core ML session state handle (optional, for KV cache acceleration)
+    pub coreml_state: Option<KvStateHandle>,
 }
 
 impl KVCache {
@@ -155,23 +155,58 @@ impl KVCache {
         }
     }
 
-    /// Configure cache with model architecture metadata
+    /// Configure cache with model architecture metadata and initialize Core ML state
     /// Called once model config is known
-    pub fn configure(&mut self, n_layers: usize, n_kv_heads: usize, head_dim: usize) {
+    pub fn configure(&mut self, n_layers: usize, n_kv_heads: usize, head_dim: usize, model_handle: &SafeModelHandle) -> Result<()> {
         self.n_layers = n_layers;
         self.n_kv_heads = n_kv_heads;
         self.head_dim = head_dim;
+
+        // Try to create Core ML KV state if available
+        // This will fail gracefully on non-macOS platforms
+        // The SafeModelHandle contains a ModelRef that we can use directly
+        match KvStateHandle::create(
+            &model_handle.0, // SafeModelHandle(ModelRef)
+            n_layers,
+            n_kv_heads,
+            head_dim,
+            self.max_length,
+        ) {
+            Ok(state) => {
+                self.coreml_state = Some(state);
+                tracing::info!("Initialized Core ML KV cache state for {} layers", n_layers);
+            }
+            Err(e) => {
+                tracing::warn!("Failed to create Core ML KV state, falling back to CPU: {}", e);
+                self.coreml_state = None;
+            }
+        }
+
+        Ok(())
     }
 
     /// Advance one token in streamed generation
-    pub fn step(&mut self) {
+    pub fn step(&mut self) -> Result<()> {
         self.current_length = self.current_length.saturating_add(1);
+
+        // Update Core ML state if available
+        if let Some(ref state) = self.coreml_state {
+            state.step()?;
+        }
+
+        Ok(())
     }
 
     /// Reset cache
-    pub fn reset(&mut self) {
+    pub fn reset(&mut self) -> Result<()> {
         self.current_length = 0;
-        self.coreml_state = None;
+
+        // Reset Core ML state if available
+        if let Some(ref state) = self.coreml_state {
+            state.reset()?;
+        }
+
+        Ok(())
     }
 
     /// Get current sequence length
@@ -263,7 +298,16 @@ pub async fn load_mistral_model(
 
     // Initialize thread-safe KV cache
     let context_length = options.context_length.unwrap_or(4096);
-    let kv_cache = Arc::new(tokio::sync::Mutex::new(KVCache::new(context_length)));
+    let mut kv_cache = KVCache::new(context_length);
+
+    // Configure KV cache with model architecture (if available)
+    // For Mistral-7B: n_layers=32, n_kv_heads=8, head_dim=128
+    let model_handle = SafeModelHandle::new(handle);
+    if let Err(e) = kv_cache.configure(32, 8, 128, &model_handle) {
+        tracing::warn!("Failed to configure KV cache with Core ML: {}", e);
+        // Continue with CPU-only KV cache
+    }
+    let kv_cache = Arc::new(tokio::sync::Mutex::new(kv_cache));
 
     // Initialize circuit breaker
     let circuit_breaker = CircuitBreaker::new(CircuitBreakerConfig::default());
@@ -274,7 +318,7 @@ pub async fn load_mistral_model(
     telemetry.record_compile(load_time.as_millis() as u64, true);
 
     Ok(MistralModel {
-        handle: SafeModelHandle::new(handle),
+        handle: model_handle,
         schema,
         tokenizer,
         kv_cache,
@@ -289,13 +333,13 @@ pub async fn load_mistral_model(
 async fn load_coreml_model(
     model_path: &Path,
     options: &MistralCompilationOptions,
-) -> Result<crate::ane::compat::coreml::coreml::ModelRef> {
+) -> Result<crate::ane::compat::coreml::ModelRef> {
     // Compile if needed
     let compiled_path = compile_if_needed(model_path, options).await?;
 
     // Load through CoreML compat layer
     let model_path_str = compiled_path.to_string_lossy().to_string();
-    crate::ane::compat::coreml::coreml::load_model(&model_path_str)
+    crate::ane::compat::coreml::load_model(&model_path_str)
 }
 
 /// Compile model if needed
@@ -359,7 +403,7 @@ fn discover_context_len_or_default(default: usize) -> usize {
 }
 
 /// Extract model schema from loaded model
-async fn extract_model_schema(_handle: crate::ane::compat::coreml::coreml::ModelRef) -> Result<ModelSchema> {
+async fn extract_model_schema(_handle: crate::ane::compat::coreml::ModelRef) -> Result<ModelSchema> {
     // TODO: Implement schema extraction through CoreML bridge
     // For now, return default Mistral schema
     Ok(ModelSchema {
@@ -532,7 +576,7 @@ fn compile_mistral_model(
     {
         
         // Load the source model
-        let model = crate::ane::compat::coreml::coreml::load_model(source_path.to_str().unwrap())?;
+        let model = crate::ane::compat::coreml::load_model(source_path.to_str().unwrap())?;
         
         // Create compilation configuration optimized for Mistral
         let mut config = MLModelConfiguration::new();
@@ -557,12 +601,8 @@ fn compile_mistral_model(
             tracing::info!("Compiling Mistral model for context length: {}", context_length);
         }
         
-        // Compile the model
-        let compiled_model = model.compiled_model()
-            .map_err(|e| ANEError::CompilationFailed(format!("Failed to compile Mistral model: {:?}", e)))?;
-        
-        // Save compiled model to disk
-        compiled_model.save_to_path(compiled_path)
+        // Save compiled model to disk using scoped access
+        model.save_to_path(compiled_path)
             .map_err(|e| ANEError::CompilationFailed(format!("Failed to save compiled Mistral model: {:?}", e)))?;
         
         tracing::info!("Successfully compiled Mistral model to: {}", compiled_path.display());
@@ -578,7 +618,6 @@ fn compile_mistral_model(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempdir;
 
     #[test]
     fn test_tokenizer_encode_decode() {
@@ -625,21 +664,26 @@ mod tests {
         let mut cache = KVCache::new(4096);
         assert_eq!(cache.sequence_length(), 0);
 
+        // Create a mock model handle for testing (will fail gracefully)
+        // In real usage, this would be a valid Core ML handle
+        let mock_handle = SafeModelHandle::new(crate::ane::compat::coreml::ModelRef::new());
+
         // Test cache configuration
-        cache.configure(32, 8, 128);
+        cache.configure(32, 8, 128, &mock_handle).unwrap();
         assert_eq!(cache.n_layers, 32);
         assert_eq!(cache.n_kv_heads, 8);
         assert_eq!(cache.head_dim, 128);
 
         // Test cache step
-        cache.step();
+        cache.step().unwrap();
         assert_eq!(cache.sequence_length(), 1);
-        cache.step();
+        cache.step().unwrap();
         assert_eq!(cache.sequence_length(), 2);
 
         // Test cache reset
-        cache.reset();
+        cache.reset().unwrap();
         assert_eq!(cache.sequence_length(), 0);
+        // Core ML state should still be None since we used a mock handle
         assert_eq!(cache.coreml_state, None);
     }
 

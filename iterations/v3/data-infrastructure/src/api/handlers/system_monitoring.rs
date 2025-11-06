@@ -257,3 +257,74 @@ pub async fn get_diff_summary(
     
     Err(StatusCode::NOT_IMPLEMENTED)
 }
+
+/// Create a new chat session
+pub async fn create_chat_session(
+    State(state): State<ApiState>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    // Generate session ID
+    let session_id = uuid::Uuid::new_v4().to_string();
+
+    // Create session record in database
+    let insert_query = r#"
+        INSERT INTO chat_sessions (id, status, created_at, updated_at)
+        VALUES ($1, 'active', NOW(), NOW())
+    "#;
+
+    match state.api.db_client.execute(insert_query, &[&session_id]).await {
+        Ok(_) => {
+            // TODO: Log chat session creation using log_audit_event
+
+            Ok(Json(serde_json::json!({
+                "session_id": session_id,
+                "status": "active",
+                "websocket_url": format!("/ws/chat/{}", session_id),
+                "created_at": chrono::Utc::now(),
+                "message": "Chat session created successfully"
+            })))
+        }
+        Err(e) => {
+            error!("Failed to create chat session: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+/// Get WebSocket configuration for a chat session
+pub async fn get_websocket_config(
+    State(state): State<ApiState>,
+    Path(session_id): Path<String>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    // Validate session ID format
+    if let Err(_) = uuid::Uuid::parse_str(&session_id) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // Check if session exists and is active
+    let check_query = r#"
+        SELECT status FROM chat_sessions
+        WHERE id = $1 AND status = 'active'
+    "#;
+
+    match state.api.db_client.query(check_query, &[&session_id]).await {
+        Ok(rows) => {
+            if !rows.is_empty() {
+                Ok(Json(serde_json::json!({
+                    "session_id": session_id,
+                    "websocket_url": format!("/ws/chat/{}", session_id),
+                    "protocols": ["chat-v1"],
+                    "heartbeat_interval": 30000,
+                    "max_message_size": 65536,
+                    "compression": "permessage-deflate",
+                    "status": "ready"
+                })))
+            } else {
+                Err(StatusCode::NOT_FOUND)
+            }
+        }
+        Err(e) => {
+            error!("Failed to check chat session {}: {}", session_id, e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}

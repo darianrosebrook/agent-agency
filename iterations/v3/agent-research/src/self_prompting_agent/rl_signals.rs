@@ -34,10 +34,10 @@ impl RLSignalGenerator {
             learning_rate: 0.1,
             discount_factor: 0.9,
             exploration_rate: 0.1,
-            min_exploration_rate: Some(0.01),
-            exploration_decay: Some(0.99),
+            min_exploration_rate: 0.01,
+            exploration_decay: 0.99,
             max_iterations: 1000,
-            max_episodes: Some(1000),
+            max_episodes: 1000,
             convergence_threshold: 0.001,
         };
         Self {
@@ -117,10 +117,10 @@ impl PolicyAdjuster {
             learning_rate: 0.1,
             discount_factor: 0.9,
             exploration_rate: 0.1,
-            min_exploration_rate: Some(0.01),
-            exploration_decay: Some(0.995),
+            min_exploration_rate: 0.01,
+            exploration_decay: 0.995,
             max_iterations: 1000,
-            max_episodes: Some(10000),
+            max_episodes: 10000,
             convergence_threshold: 0.001,
         };
         let mut default_policy = HashMap::new();
@@ -258,9 +258,9 @@ impl RLTrainer {
             discount_factor,
             exploration_rate: 0.1,
             convergence_threshold: 0.001,
-            exploration_decay: Some(0.99),
-            max_episodes: Some(1000),
-            min_exploration_rate: Some(0.01),
+            exploration_decay: 0.99,
+            max_episodes: 1000,
+            min_exploration_rate: 0.01,
             max_iterations: 1000,
         };
         Self {

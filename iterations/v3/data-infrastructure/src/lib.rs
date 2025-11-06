@@ -18,6 +18,7 @@ pub mod database_circuit_breaker;
 pub mod database_config;
 pub mod database_metrics;
 pub mod database_operations;
+pub mod database_init;
 pub mod migrations;
 pub mod models;
 pub mod optimization;
@@ -34,9 +35,9 @@ pub mod api_circuit_breaker;
 pub mod artifact_store;
 pub mod cli_implementation;
 pub mod cli_interface;
+pub mod chat_service;
 pub mod client; // client/mod.rs module
 pub mod simple_client; // simple_client.rs is automatically included as a module
-pub mod handlers;
 pub mod health;
 pub mod keystore_api;
 pub mod knowledge_queries;
@@ -154,10 +155,10 @@ pub struct AppState {
 }
 
 // Re-export API and interface types (from consolidated interfaces and api-server crates)
-pub use handlers::{PersistedTask, TaskStoreTrait};
-pub use handlers::{list_tasks, get_task, submit_task, get_api_metrics};
-pub use handlers::{create_chat_session, get_websocket_config, list_waivers, create_waiver};
-pub use handlers::{approve_waiver, get_task_provenance};
+pub use api::types::{PersistedTask, TaskStoreTrait};
+pub use api::handlers::{list_tasks, get_task_status as get_task, submit_task, get_metrics as get_api_metrics};
+pub use api::handlers::{create_chat_session, get_websocket_config, list_waivers, create_waiver};
+pub use api::handlers::{approve_waiver, get_task_provenance};
 pub use client::orchestrator::DatabaseClient as ApiDatabaseClient; // Complex DatabaseClient
 
 // Re-export health check from api module

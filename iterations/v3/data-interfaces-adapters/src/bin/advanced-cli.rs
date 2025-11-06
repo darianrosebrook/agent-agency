@@ -57,6 +57,9 @@ impl WorkerPoolManager {
 #[derive(Debug, Clone)]
 pub struct WorkerConfig;
 
+#[derive(Debug, Clone)]
+pub struct Scope; // Stub type
+
 #[derive(Debug)]
 pub struct AutonomousExecutor;
 
@@ -173,6 +176,7 @@ async fn start_dashboard_server(
             let mut disconnected = Vec::new();
 
             for (client_id, sender) in clients.iter() {
+                let task_id = client_id.clone(); // Use client_id as task_id for now
                 if sender.send(event_msg.clone()).is_err() {
                     disconnected.push(client_id.clone());
                 }
@@ -230,27 +234,26 @@ async fn handle_socket(socket: WebSocket, state: DashboardState) {
     {
         let events = state.execution_events.lock().unwrap();
         for event in events.iter().rev().take(10).rev() {
-            if let Err(_) = receiver.send(event.clone()).await {
+            if let Err(_) = sender.send(event.clone()) {
                 break;
             }
         }
     }
 
-    let (mut ws_sender, mut ws_receiver) = socket.split();
-
     // Handle incoming messages from client
     let mut send_task = tokio::spawn(async move {
         while let Some(msg) = receiver.recv().await {
-            if ws_sender.send(Message::Text(msg)).await.is_err() {
+            if socket.send(Message::Text(msg)).await.is_err() {
                 break;
             }
         }
     });
 
-    // Handle outgoing messages to client
+    // Handle outgoing messages to client (for future bidirectional communication)
     let mut recv_task = tokio::spawn(async move {
-        while let Some(Ok(_)) = ws_receiver.next().await {
+        while let Some(Ok(_)) = socket.recv().await {
             // Handle client messages if needed
+            // For now, just consume them
         }
     });
 

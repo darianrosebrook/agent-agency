@@ -6,13 +6,14 @@
 //! @author @darianrosebrook
 
 use agent_agency_contracts::types::prelude::*;
-use agent_agency_contracts::types::council::{CouncilVerdict, FinalDecision, JudgeResult};
+use agent_agency_contracts::types::council::{CouncilVerdict, FinalDecision};
 use agent_agency_contracts::types::data::{ProcessingId, ContentType, ProcessedContent};
-use agent_agency_contracts::types::execution::{ExecutionContext, Milestone, MilestoneScope, AcceptanceCriterion};
-use agent_agency_contracts::types::planning::{TaskDescriptor, TaskScope};
+use agent_agency_contracts::{ExecutionContext, Milestone, MilestoneScope, AcceptanceCriterion, InterfaceContract, TestRequirement, EvidenceGate, MilestoneState, MilestonePriority, MoSCoWPriority, MilestoneMetrics};
+use agent_agency_contracts::types::planning::{ TaskScope};
 use serde_json;
 use uuid::Uuid;
 use chrono::Utc;
+use std::collections::HashMap;
 
 /// Helper macro to test round-trip serialization
 macro_rules! test_round_trip {
@@ -136,14 +137,38 @@ fn test_milestone_round_trip() {
         id: "M1".to_string(),
         objective: "Test objective".to_string(),
         scope: MilestoneScope {
+            files: vec!["src/".to_string()],
+            directories: vec!["tests/".to_string()],
             included_paths: vec!["src/".to_string()],
             excluded_paths: vec!["tests/".to_string()],
+            will_modify: false,
+            allowed_operations: vec!["read".to_string(), "write".to_string()],
+            parallelism: None,
+            resource_requirements: HashMap::new(),
         },
-        interfaces: vec!["api".to_string()],
-        tests: vec!["test1".to_string()],
+        interfaces: vec![],
+        tests: vec![],
+        evidence_gate: EvidenceGate {
+            min_coverage: 0.8,
+            min_branch_coverage: 0.9,
+            min_mutation_score: 0.7,
+            security_scan_required: false,
+            performance_budget: None,
+            required_artifacts: vec![],
+            custom_validations: vec![],
+        },
         quality_gates: vec!["coverage".to_string()],
         dependencies: vec!["M0".to_string()],
         estimated_duration: Some(60),
+        rollback_plan: "Revert changes".to_string(),
+        state: MilestoneState::Pending,
+        assigned_workers: vec![],
+        estimated_effort: 1.0,
+        priority: MilestonePriority::Normal,
+        risk_tier: 2,
+        is_blocking: false,
+        blocking_reason: None,
+        metrics: None,
     };
 
     let json = serde_json::to_string(&milestone).expect("serialize Milestone");
@@ -161,6 +186,7 @@ fn test_acceptance_criterion_round_trip() {
         given: "User is logged in".to_string(),
         when: "User submits form".to_string(),
         then: "Form is validated".to_string(),
+        priority: Some(MoSCoWPriority::Must),
     };
 
     let json = serde_json::to_string(&criterion).expect("serialize AcceptanceCriterion");
@@ -233,14 +259,38 @@ fn test_partial_serde_with_optionals() {
         id: "M1".to_string(),
         objective: "Test".to_string(),
         scope: MilestoneScope {
+            files: vec![],
+            directories: vec![],
             included_paths: vec![],
             excluded_paths: vec![],
+            will_modify: false,
+            allowed_operations: vec![],
+            parallelism: None,
+            resource_requirements: HashMap::new(),
         },
         interfaces: vec![],
         tests: vec![],
+        evidence_gate: EvidenceGate {
+            min_coverage: 0.0,
+            min_branch_coverage: 0.0,
+            min_mutation_score: 0.0,
+            security_scan_required: false,
+            performance_budget: None,
+            required_artifacts: vec![],
+            custom_validations: vec![],
+        },
         quality_gates: vec![],
         dependencies: vec![],
-        estimated_duration: None, // Optional field
+        estimated_duration: None,
+        rollback_plan: "".to_string(),
+        state: MilestoneState::Pending,
+        assigned_workers: vec![],
+        estimated_effort: 0.0,
+        priority: MilestonePriority::Normal,
+        risk_tier: 1,
+        is_blocking: false,
+        blocking_reason: None,
+        metrics: None,
     };
 
     let json = serde_json::to_string(&minimal_milestone).expect("serialize minimal Milestone");

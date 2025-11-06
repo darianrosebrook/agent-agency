@@ -9,7 +9,7 @@ use data_interfaces::service_contracts::{
 use agent_agency_contracts::types::memory::{MemoryType, MemoryId};
 use std::sync::Arc;
 use agent_memory::memory_manager::{MemoryManager, MemoryQuery as AgentMemoryQuery};
-use agent_memory::memory_types::{AgentExperience, MemoryConfig, TimeRange};
+use agent_memory::memory_types::{AgentExperience, MemoryConfig, ExperienceOutcome, ExperienceContext};
 use sqlx::PgPool;
 
 /// Adapter for memory service
@@ -47,37 +47,61 @@ impl MemoryService for MemoryServiceAdapter {
             MemoryType::Working => AgentMemoryType::Working,
         };
         
+        // Convert metadata from Option<Value> to HashMap<String, Value>
+        let metadata_map = metadata
+            .and_then(|v| serde_json::from_value::<std::collections::HashMap<String, serde_json::Value>>(v).ok())
+            .unwrap_or_default();
+        
         // Create AgentExperience from content
+        let experience_id = uuid::Uuid::new_v4();
         let experience = AgentExperience {
-            id: uuid::Uuid::new_v4(),
-            agent_id: uuid::Uuid::new_v4(), // TODO: Get from context
-            task_id: uuid::Uuid::new_v4(),   // TODO: Get from context
-            context: Default::default(),
+            id: experience_id,
+            agent_id: "default-agent".to_string(), // TODO: Get from context
+            task_id: "default-task".to_string(),   // TODO: Get from context
+            content: content.clone(),
             input: content.clone(),
             output: content,
-            outcome: metadata.unwrap_or_default(),
+            context: ExperienceContext {
+                description: "Memory storage operation".to_string(),
+                domain: vec!["memory".to_string()],
+                task_type: "store".to_string(),
+                temporal_context: None,
+            },
+            outcome: ExperienceOutcome {
+                success: true,
+                quality_score: 1.0,
+                error_message: None,
+                metadata: metadata_map.clone(),
+                performance_score: None,
+                execution_time_ms: None,
+                learned_capabilities: vec![],
+            },
             memory_type: agent_memory_type,
             timestamp: chrono::Utc::now(),
-            metadata: metadata.unwrap_or_default(),
+            metadata: metadata_map,
         };
         
-        // Store experience
-        let memory_id = self.memory_manager.store_experience(experience)
+        // Store experience - returns Uuid (MemoryId type alias)
+        let memory_id_uuid = self.memory_manager.store_experience(experience)
             .await
             .map_err(|e| ServiceError::Internal(format!("Failed to store memory: {}", e)))?;
         
-        Ok(memory_id)
+        // Wrap Uuid in MemoryId newtype wrapper
+        Ok(MemoryId(memory_id_uuid))
     }
     
     async fn retrieve_memory(
         &self,
         memory_id: &MemoryId,
     ) -> Result<MemoryContent, ServiceError> {
+        // Unwrap MemoryId newtype to get Uuid
+        let memory_id_uuid = memory_id.0;
+        
         // Retrieve experience
-        let experience = self.memory_manager.retrieve_memory(*memory_id)
+        let experience = self.memory_manager.retrieve_memory(memory_id_uuid)
             .await
             .map_err(|e| ServiceError::Internal(format!("Failed to retrieve memory: {}", e)))?;
-        
+
         // Convert to MemoryContent
         use agent_agency_contracts::types::memory::MemoryType as ContractsMemoryType;
         let memory_type = match experience.memory_type {
@@ -86,12 +110,12 @@ impl MemoryService for MemoryServiceAdapter {
             agent_memory::memory_types::MemoryType::Procedural => ContractsMemoryType::Procedural,
             agent_memory::memory_types::MemoryType::Working => ContractsMemoryType::Working,
         };
-        
+
         Ok(MemoryContent {
-            memory_id: experience.id,
+            memory_id: *memory_id,
             memory_type,
             content: experience.output,
-            metadata: Some(experience.metadata),
+            metadata: serde_json::to_value(experience.metadata).ok(),
             created_at: experience.timestamp,
         })
     }
@@ -131,12 +155,12 @@ impl MemoryService for MemoryServiceAdapter {
                 agent_memory::memory_types::MemoryType::Procedural => ContractsMemoryType::Procedural,
                 agent_memory::memory_types::MemoryType::Working => ContractsMemoryType::Working,
             };
-            
+
             MemoryContent {
-                memory_id: exp.id,
+                memory_id: MemoryId(exp.id),
                 memory_type,
                 content: exp.output,
-                metadata: Some(exp.metadata),
+                metadata: serde_json::to_value(exp.metadata).ok(),
                 created_at: exp.timestamp,
             }
         }).collect();

@@ -85,7 +85,7 @@ agent-mcp = { path = "../agent-mcp", optional = true }
 system-common-interfaces = { path = "../system-common-interfaces" }
 
 [features]
-default = []  # Orchestration dependency removed to break circular dependency
+default = ["orchestration"]  # Enable modular handlers by default
 mcp = ["agent-mcp"]
 orchestration = []  # Feature flag for conditional compilation
 

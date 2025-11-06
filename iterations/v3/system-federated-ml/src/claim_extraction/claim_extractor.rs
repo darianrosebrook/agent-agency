@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use tracing::info;
 
 use crate::evidence_types::*;
 
@@ -143,11 +144,13 @@ impl ClaimExtractor {
         // Phase 4: CAWS-compliant verification preparation
         let verification_requirements = self.prepare_verification_requirements(&claims, context).await?;
 
+        let entity_count = claims.iter().map(|c| c.entities.len()).sum();
+
         Ok(ClaimExtractionResult {
             claims,
             metadata: ExtractionMetadata {
                 processing_time_ms: 0, // Would be measured in real implementation
-                entity_count: claims.iter().map(|c| c.entities.len()).sum(),
+                entity_count,
                 confidence_score: 0.8, // Default confidence
                 content_length: content.len(),
             },
@@ -222,3 +225,4 @@ impl ClaimExtractor {
 
         Ok(requirements)
     }
+}

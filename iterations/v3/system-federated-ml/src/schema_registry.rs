@@ -431,3 +431,4 @@ impl SchemaEvolutionTracker {
             None
         }
     }
+}

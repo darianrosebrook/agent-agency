@@ -35,9 +35,9 @@ impl JudgeEngine for MockJudgeEngine {
 
     fn capabilities(&self) -> agent_agency_contracts::EngineCaps {
         agent_agency_contracts::EngineCaps {
-            max_tokens: 4096,
-            supports_json: true,
-            supports_structured_output: true,
+            model_id: "mistral-7b-instruct".to_string(),
+            family: "mistral".to_string(),
+            max_ctx: 4096,
         }
     }
 }

@@ -20,17 +20,12 @@
 #[macro_use]
 extern crate tracing;
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
-use std::sync::Arc;
-use uuid::Uuid;
-use crate::autonomous_executor::{OrchestrationProvenanceEmitter, MockCawsRuntimeValidator, MockVerdictWriter};
 
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
 
-mod progress_tracker;
+pub mod progress_tracker;
 mod consensus_coordinator;
 mod quality_gates;
 

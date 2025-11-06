@@ -17,6 +17,7 @@ pub struct MemoryManager {
     config: MemoryConfig,
     workspace_id: Option<uuid::Uuid>,
     workspace_registry: Option<Arc<crate::workspace_registry::WorkspaceRegistry>>,
+    decay_scheduler: Option<Arc<crate::decay_scheduler::MemoryDecayScheduler>>,
 }
 
 impl MemoryManager {
@@ -38,11 +39,25 @@ impl MemoryManager {
 
     /// Create a new memory manager
     pub async fn new(config: MemoryConfig, db_pool: PgPool) -> MemoryResult<Self> {
+        let scheduler_config = crate::decay_scheduler::DecaySchedulerConfig {
+            decay_interval_seconds: 3600, // 1 hour
+            enabled: true, // Always enable scheduler for now
+            max_concurrent_cycles: 1,
+        };
+
+        let decay_scheduler = Some(Arc::new(
+            crate::decay_scheduler::MemoryDecayScheduler::new(
+                scheduler_config,
+                db_pool.clone(),
+            ).await?
+        ));
+
         Ok(Self {
             db_pool,
             config: config.clone(),
             workspace_id: config.workspace_config.current_workspace_id.parse().ok(),
             workspace_registry: None,
+            decay_scheduler,
         })
     }
 
@@ -51,11 +66,25 @@ impl MemoryManager {
         db_pool: PgPool,
         workspace_registry: Arc<crate::workspace_registry::WorkspaceRegistry>
     ) -> MemoryResult<Self> {
+        let scheduler_config = crate::decay_scheduler::DecaySchedulerConfig {
+            decay_interval_seconds: 3600, // 1 hour
+            enabled: true, // Always enable scheduler for now
+            max_concurrent_cycles: 1,
+        };
+
+        let decay_scheduler = Some(Arc::new(
+            crate::decay_scheduler::MemoryDecayScheduler::new(
+                scheduler_config,
+                db_pool.clone(),
+            ).await?
+        ));
+
         Ok(Self {
             db_pool,
             config: config.clone(),
             workspace_id: config.workspace_config.current_workspace_id.parse().ok(),
             workspace_registry: Some(workspace_registry),
+            decay_scheduler,
         })
     }
 
@@ -343,6 +372,42 @@ impl MemoryManager {
             newest_memory,
             memory_types_distribution,
         })
+    }
+
+    /// Start the memory decay scheduler
+    pub async fn start_decay_scheduler(&self) -> MemoryResult<()> {
+        if let Some(ref scheduler) = self.decay_scheduler {
+            scheduler.start().await
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Stop the memory decay scheduler
+    pub async fn stop_decay_scheduler(&self) -> MemoryResult<()> {
+        if let Some(ref scheduler) = self.decay_scheduler {
+            scheduler.stop().await
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Get decay scheduler status
+    pub async fn get_decay_scheduler_status(&self) -> Option<crate::decay_scheduler::DecaySchedulerStatus> {
+        if let Some(ref scheduler) = self.decay_scheduler {
+            Some(scheduler.status().await)
+        } else {
+            None
+        }
+    }
+
+    /// Run a manual decay cycle
+    pub async fn run_manual_decay_cycle(&self) -> MemoryResult<usize> {
+        if let Some(ref scheduler) = self.decay_scheduler {
+            scheduler.run_manual_cycle().await
+        } else {
+            Ok(0)
+        }
     }
 }
 

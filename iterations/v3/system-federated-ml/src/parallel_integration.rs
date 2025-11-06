@@ -53,8 +53,7 @@ impl ParallelToolCoordinator {
         ));
 
         let parallel_coordinator = Arc::new(ParallelCoordinator::new(config));
-        let worker_pool = Arc::new(DefaultWorkerPool::new());
-        let worker_manager = Arc::new(WorkerManager::new(worker_pool));
+        let worker_manager = Arc::new(WorkerManager::new());
         let communication_hub = Arc::new(CommunicationHub::new(ChannelConfig::default()));
 
         Self {
@@ -134,10 +133,9 @@ impl ParallelToolCoordinator {
             let edge = chain.dag.edge_weight(edge_idx).unwrap();
 
             dependencies.push(Dependency {
-                from_subtask: agent_workers::SubTaskId(self.node_id_to_task_id(source)),
-                to_subtask: agent_workers::SubTaskId(self.node_id_to_task_id(target)),
-                dependency_type: agent_workers::DependencyType::DataDependency,
-                blocking: true,
+                from: agent_workers::SubTaskId(uuid::Uuid::parse_str(&self.node_id_to_task_id(source)).unwrap_or_else(|_| uuid::Uuid::new_v4())),
+                to: agent_workers::SubTaskId(uuid::Uuid::parse_str(&self.node_id_to_task_id(target)).unwrap_or_else(|_| uuid::Uuid::new_v4())),
+                dependency_type: agent_workers::DependencyType::Data,
             });
         }
 
@@ -145,6 +143,8 @@ impl ParallelToolCoordinator {
         // In a real implementation, this would convert the ToolChain to a ComplexTask
         // and use the DecompositionEngine to analyze it properly
         let task_analysis = TaskAnalysis {
+            task_id: agent_workers::TaskId::new(),
+            complexity_score: 0.5, // Default complexity score
             patterns: vec![], // No patterns identified for tool chains
             dependencies,
             subtask_scores: agent_workers::SubtaskScores {
@@ -276,12 +276,10 @@ impl ParallelToolCoordinator {
         worker_manager: Arc<WorkerManager>,
         communication_hub: Arc<CommunicationHub>,
     ) -> Result<(String, ToolResult), ParallelExecutionError> {
-        // Stub: create a mock worker handle
-        let worker = agent_workers::WorkerHandle {
-            id: agent_workers::WorkerId::new(),
-            subtask_id: agent_workers::SubTaskId(task.task_id.clone()),
-            start_time: chrono::Utc::now(),
-        };
+        // Stub: create a mock worker handle - WorkerHandle requires memory_access but we don't have agent_memory
+        // For now, we'll create a minimal worker handle with a placeholder
+        // TODO: Add agent_memory dependency or refactor WorkerHandle to not require it
+        let _worker = (); // Placeholder - actual WorkerHandle creation requires agent_memory
 
         // Create worker task
         let worker_task = WorkerTask {
@@ -321,12 +319,10 @@ impl ParallelToolCoordinator {
         worker_manager: Arc<WorkerManager>,
         communication_hub: Arc<CommunicationHub>,
     ) -> Result<(String, ToolResult), ParallelExecutionError> {
-        // Stub: create a mock worker handle
-        let worker = agent_workers::WorkerHandle {
-            id: agent_workers::WorkerId::new(),
-            subtask_id: agent_workers::SubTaskId(task.task_id.clone()),
-            start_time: chrono::Utc::now(),
-        };
+        // Stub: create a mock worker handle - WorkerHandle requires memory_access but we don't have agent_memory
+        // For now, we'll create a minimal worker handle with a placeholder
+        // TODO: Add agent_memory dependency or refactor WorkerHandle to not require it
+        let _worker = (); // Placeholder - actual WorkerHandle creation requires agent_memory
 
         // Create worker task
         let worker_task = WorkerTask {
@@ -552,7 +548,7 @@ impl ParallelToolCoordinator {
 }
 
 /// Parallel task representation
-#[derive(Clone, Debug, JsonSchema)]
+#[derive(Clone, Debug)]
 pub struct ParallelTask {
     pub task_id: String,
     pub node_idx: petgraph::graph::NodeIndex,
@@ -574,10 +570,10 @@ pub struct WorkerTask {
 }
 
 /// Parallel execution errors
-#[derive(Debug, thiserror::Error, JsonSchema)]
+#[derive(Debug, thiserror::Error)]
 pub enum ParallelExecutionError {
     #[error("Sequential execution failed: {0}")]
-    SequentialExecution(#[from] Box<dyn std::error::Error + Send + Sync>),
+    SequentialExecution(String),
 
     #[error("Parallel decomposition failed: {0}")]
     DecompositionError(String),
@@ -596,3 +592,4 @@ pub enum ParallelExecutionError {
 
     #[error("Timeout exceeded")]
     Timeout,
+}

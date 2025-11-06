@@ -690,3 +690,4 @@ impl Default for DashboardMetadata {
             version: "1.0.0".to_string(),
         }
     }
+}

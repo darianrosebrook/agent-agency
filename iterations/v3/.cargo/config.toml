@@ -1,4 +1,7 @@
 [build]
+# Default to aarch64-apple-darwin for Apple Silicon
+# Comment out if you need to build for x86_64 or universal binary
+target = "aarch64-apple-darwin"
 
 [target.aarch64-apple-darwin]
 rustflags = [

@@ -7,9 +7,112 @@
 //! - Cache memory management
 
 use schemars::JsonSchema;
-use super::*;
 use std::sync::Arc;
 use uuid::Uuid;
+use tracing::{warn, info};
+use crate::memory::metrics::MemoryPressure;
+use crate::memory::allocator::MemoryStats;
+
+/// Generic object pool for resource management
+pub struct ObjectPool<T> {
+    items: Arc<tokio::sync::Mutex<Vec<T>>>,
+    factory: Box<dyn Fn() -> T + Send + Sync>,
+    max_size: usize,
+}
+
+impl<T> ObjectPool<T> {
+    pub fn new<F>(factory: F, max_size: usize) -> Self
+    where
+        F: Fn() -> T + Send + Sync + 'static,
+    {
+        Self {
+            items: Arc::new(tokio::sync::Mutex::new(Vec::new())),
+            factory: Box::new(factory),
+            max_size,
+        }
+    }
+
+    pub async fn borrow(&self) -> PooledObject<T> {
+        let mut items = self.items.lock().await;
+        if let Some(item) = items.pop() {
+            PooledObject {
+                item: Some(item),
+                pool: self.items.clone(),
+            }
+        } else {
+            let item = (self.factory)();
+            PooledObject {
+                item: Some(item),
+                pool: self.items.clone(),
+            }
+        }
+    }
+
+    pub async fn stats(&self) -> PoolStats {
+        let items = self.items.lock().await;
+        PoolStats {
+            total_objects: items.len(),
+            max_objects: self.max_size,
+        }
+    }
+}
+
+/// Pooled object that returns to pool when dropped
+pub struct PooledObject<T: Send + 'static> {
+    item: Option<T>,
+    pool: Arc<tokio::sync::Mutex<Vec<T>>>,
+}
+
+impl<T: Send + 'static> PooledObject<T> {
+    pub fn get(&self) -> &T {
+        self.item.as_ref().unwrap()
+    }
+
+    pub fn get_mut(&mut self) -> &mut T {
+        self.item.as_mut().unwrap()
+    }
+}
+
+impl<T: Send + 'static> Drop for PooledObject<T> {
+    fn drop(&mut self) {
+        if let Some(item) = self.item.take() {
+            let pool = self.pool.clone();
+            tokio::spawn(async move {
+                let mut items = pool.lock().await;
+                items.push(item);
+            });
+        }
+    }
+}
+
+/// Pool statistics
+#[derive(Debug, Clone)]
+pub struct PoolStats {
+    pub total_objects: usize,
+    pub max_objects: usize,
+}
+
+/// Memory-managed cache interface
+pub trait MemoryManagedCache<K, V> {
+    fn get(&mut self, key: &K) -> Option<&V>;
+    fn insert(&mut self, key: K, value: V) -> bool;
+    fn clean_expired(&mut self);
+    fn estimate_memory_usage(&self) -> usize;
+}
+
+/// Memory manager interface
+pub trait MemoryManager: Send + Sync {
+    fn get_memory_pressure(&self) -> MemoryPressure;
+    fn get_memory_stats(&self) -> MemoryStats;
+    fn force_gc(&self);
+    fn create_cache(
+        &self,
+        name: &str,
+        max_entries: usize,
+        max_memory_mb: usize,
+        ttl_seconds: u64,
+    ) -> Box<dyn MemoryManagedCache<(), ()>>;
+}
 
 /// Database connection pool integration
 pub struct DatabaseConnectionPool {
@@ -174,8 +277,8 @@ impl HttpClient {
 
 /// Memory-managed cache integration
 pub struct SmartCache<K, V> {
-    cache: MemoryManagedCache<K, V>,
-    memory_manager: Arc<MemoryManager>,
+    cache: Box<dyn MemoryManagedCache<K, V>>,
+    memory_manager: Arc<dyn MemoryManager>,
 }
 
 impl<K, V> SmartCache<K, V>
@@ -184,7 +287,7 @@ where
     V: Clone + Send + Sync,
 {
     pub fn new(
-        memory_manager: Arc<MemoryManager>,
+        memory_manager: Arc<dyn MemoryManager>,
         max_entries: usize,
         max_memory_mb: usize,
         ttl_seconds: u64,
@@ -226,20 +329,20 @@ where
         (entries, memory_mb)
     }
 
-    pub fn get_memory_pressure(&self) -> super::MemoryPressure {
+    pub fn get_memory_pressure(&self) -> MemoryPressure {
         self.memory_manager.get_memory_pressure()
     }
 }
 
 /// Memory-aware task scheduler
 pub struct MemoryAwareScheduler {
-    memory_manager: Arc<MemoryManager>,
+    memory_manager: Arc<dyn MemoryManager>,
     max_concurrent_tasks: usize,
     active_tasks: Arc<std::sync::RwLock<usize>>,
 }
 
 impl MemoryAwareScheduler {
-    pub fn new(memory_manager: Arc<MemoryManager>, max_concurrent_tasks: usize) -> Self {
+    pub fn new(memory_manager: Arc<dyn MemoryManager>, max_concurrent_tasks: usize) -> Self {
         Self {
             memory_manager,
             max_concurrent_tasks,
@@ -306,12 +409,12 @@ pub enum MemoryPressureStrategy {
 
 /// Memory pressure manager
 pub struct MemoryPressureManager {
-    memory_manager: Arc<MemoryManager>,
+    memory_manager: Arc<dyn MemoryManager>,
     strategies: Vec<(MemoryPressure, MemoryPressureStrategy)>,
 }
 
 impl MemoryPressureManager {
-    pub fn new(memory_manager: Arc<MemoryManager>) -> Self {
+    pub fn new(memory_manager: Arc<dyn MemoryManager>) -> Self {
         let strategies = vec![
             (MemoryPressure::Moderate, MemoryPressureStrategy::ReduceCaches),
             (MemoryPressure::High, MemoryPressureStrategy::ForceGC),
@@ -374,12 +477,12 @@ impl Clone for MemoryPressureManager {
 
 /// Performance monitoring integration
 pub struct MemoryPerformanceMonitor {
-    memory_manager: Arc<MemoryManager>,
+    memory_manager: Arc<dyn MemoryManager>,
     metrics_history: Arc<std::sync::RwLock<Vec<(std::time::Instant, MemoryStats)>>>,
 }
 
 impl MemoryPerformanceMonitor {
-    pub fn new(memory_manager: Arc<MemoryManager>) -> Self {
+    pub fn new(memory_manager: Arc<dyn MemoryManager>) -> Self {
         Self {
             memory_manager,
             metrics_history: Arc::new(std::sync::RwLock::new(Vec::new())),

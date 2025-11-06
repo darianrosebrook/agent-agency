@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use tracing::debug;
 
 use crate::evidence_types::*;
 

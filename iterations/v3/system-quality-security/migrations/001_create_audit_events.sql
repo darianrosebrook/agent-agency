@@ -151,3 +151,5 @@ COMMENT ON COLUMN audit_events.user_agent IS 'User agent string if applicable';
 COMMENT ON COLUMN audit_events.session_id IS 'Session identifier if applicable';
 COMMENT ON COLUMN audit_events.request_id IS 'Request identifier for correlation';
 
+
+

@@ -630,7 +630,7 @@ impl ValidationPipeline {
                     ..issue
                 });
             } else {
-                all_issues.push(issue);
+            all_issues.push(issue);
             }
         }
 

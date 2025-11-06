@@ -108,7 +108,7 @@ struct ExecutionContext {
 }
 
 /// Resource tracker for execution monitoring
-#[derive(Debug, Clone, JsonSchema)]
+#[derive(Debug, Clone)]
 struct ResourceTracker {
     /// Initial memory usage
     initial_memory: f64,

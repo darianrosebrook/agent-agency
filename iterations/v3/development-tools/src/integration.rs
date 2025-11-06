@@ -14,6 +14,10 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 // Removed unused HashMap import
 
+// Import ExecutionMode from contracts
+use agent_agency_contracts::types::planning::ExecutionMode;
+use agent_agency_contracts::WorkingSpec as ContractsWorkingSpec;
+
 /// MCP integration interface
 #[async_trait]
 pub trait McpIntegration: Send + Sync {

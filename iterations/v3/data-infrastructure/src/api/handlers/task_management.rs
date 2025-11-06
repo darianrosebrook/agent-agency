@@ -15,30 +15,120 @@ use uuid::Uuid;
 use crate::api::ApiState;
 
 /// Cancel a task
-pub async fn cancel_task(Path(task_id): Path<String>) -> Json<serde_json::Value> {
-    Json(serde_json::json!({
-        "task_id": task_id,
-        "status": "cancelled",
-        "message": "Task cancellation requested"
-    }))
+pub async fn cancel_task(
+    axum::extract::State(state): axum::extract::State<crate::AppState>,
+    axum::extract::Path(task_id): axum::extract::Path<String>
+) -> Result<axum::Json<serde_json::Value>, axum::http::StatusCode> {
+    // Validate task ID format
+    if let Err(_) = uuid::Uuid::parse_str(&task_id) {
+        return Err(axum::http::StatusCode::BAD_REQUEST);
+    }
+
+    // Update task state in database
+    let update_query = r#"
+        UPDATE tasks
+        SET state = 'cancelled', updated_at = NOW()
+        WHERE id = $1 AND state IN ('pending', 'in_progress', 'paused')
+    "#;
+
+    match state.db_client.execute(update_query, &[&task_id]).await {
+        Ok(result) => {
+            if result.rows_affected() > 0 {
+                // TODO: Log the task cancellation using log_audit_event
+
+                Ok(axum::Json(serde_json::json!({
+                    "message": "Task cancelled successfully",
+                    "task_id": task_id,
+                    "new_state": "cancelled",
+                    "cancelled_at": chrono::Utc::now()
+                })))
+            } else {
+                Err(axum::http::StatusCode::NOT_FOUND)
+            }
+        }
+        Err(e) => {
+            tracing::error!("Failed to cancel task {}: {}", task_id, e);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 /// Pause a task
-pub async fn pause_task(Path(task_id): Path<String>) -> Json<serde_json::Value> {
-    Json(serde_json::json!({
-        "task_id": task_id,
-        "status": "paused",
-        "message": "Task paused"
-    }))
+pub async fn pause_task(
+    axum::extract::State(state): axum::extract::State<crate::AppState>,
+    axum::extract::Path(task_id): axum::extract::Path<String>
+) -> Result<axum::Json<serde_json::Value>, axum::http::StatusCode> {
+    // Validate task ID format
+    if let Err(_) = uuid::Uuid::parse_str(&task_id) {
+        return Err(axum::http::StatusCode::BAD_REQUEST);
+    }
+
+    // Update task state in database
+    let update_query = r#"
+        UPDATE tasks
+        SET state = 'paused', updated_at = NOW()
+        WHERE id = $1 AND state = 'in_progress'
+    "#;
+
+    match state.db_client.execute(update_query, &[&task_id]).await {
+        Ok(result) => {
+            if result.rows_affected() > 0 {
+                // TODO: Log the task pause using log_audit_event
+
+                Ok(axum::Json(serde_json::json!({
+                    "message": "Task paused successfully",
+                    "task_id": task_id,
+                    "new_state": "paused",
+                    "paused_at": chrono::Utc::now()
+                })))
+            } else {
+                Err(axum::http::StatusCode::NOT_FOUND)
+            }
+        }
+        Err(e) => {
+            tracing::error!("Failed to pause task {}: {}", task_id, e);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 /// Resume a paused task
-pub async fn resume_task(Path(task_id): Path<String>) -> Json<serde_json::Value> {
-    Json(serde_json::json!({
-        "task_id": task_id,
-        "status": "resumed",
-        "message": "Task resumed"
-    }))
+pub async fn resume_task(
+    axum::extract::State(state): axum::extract::State<crate::AppState>,
+    axum::extract::Path(task_id): axum::extract::Path<String>
+) -> Result<axum::Json<serde_json::Value>, axum::http::StatusCode> {
+    // Validate task ID format
+    if let Err(_) = uuid::Uuid::parse_str(&task_id) {
+        return Err(axum::http::StatusCode::BAD_REQUEST);
+    }
+
+    // Update task state in database
+    let update_query = r#"
+        UPDATE tasks
+        SET state = 'in_progress', updated_at = NOW()
+        WHERE id = $1 AND state = 'paused'
+    "#;
+
+    match state.db_client.execute(update_query, &[&task_id]).await {
+        Ok(result) => {
+            if result.rows_affected() > 0 {
+                // TODO: Log the task resume using log_audit_event
+
+                Ok(axum::Json(serde_json::json!({
+                    "message": "Task resumed successfully",
+                    "task_id": task_id,
+                    "new_state": "in_progress",
+                    "resumed_at": chrono::Utc::now()
+                })))
+            } else {
+                Err(axum::http::StatusCode::NOT_FOUND)
+            }
+        }
+        Err(e) => {
+            tracing::error!("Failed to resume task {}: {}", task_id, e);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 /// Submit a new task

@@ -52,3 +52,6 @@ pub mod performance_scalability;
 // Security & Privacy tests
 pub mod security_privacy;
 
+// API Integration tests
+pub mod api_integration;
+

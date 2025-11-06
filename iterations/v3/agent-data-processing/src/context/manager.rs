@@ -168,10 +168,12 @@ pub struct ContextManager {
 }
 
 impl ContextManager {
-    /// Create a new unified context manager
-    pub async fn new(config: ContextConfig, ai_service: Arc<ModelRegistry>) -> DataProcessingResult<Self> {
-        let db_config = DatabaseConfig::default();
-        let db_client = Arc::new(DatabaseClient::new(db_config).await?);
+    /// Create a new unified context manager with database client
+    pub fn new_with_db_client(
+        config: ContextConfig,
+        ai_service: Arc<ModelRegistry>,
+        db_client: Arc<DatabaseClient>
+    ) -> DataProcessingResult<Self> {
 
         let stats = Arc::new(RwLock::new(ContextStats {
             total_contexts: 0,

@@ -249,7 +249,7 @@ async fn execute_with_timeout(
         // DO NOT comment out or disable this code.
         // If you encounter issues, fix them rather than disabling this functionality.
         // Last fixed: P0 priority - candle-core dependency alignment (2025-01-XX)
-        let output_tensor = crate::ane::compat::coreml::coreml::run_inference(
+        let output_tensor = crate::ane::compat::coreml::run_inference(
             model.model_ref,
             &model.input_name,
             &_prepared_input,
@@ -530,7 +530,7 @@ mod tests {
             },
             loaded_at: Instant::now(),
             last_accessed: Instant::now(),
-            model_ref: crate::ane::compat::coreml::coreml::ModelRef::default(),
+            model_ref: crate::ane::compat::coreml::ModelRef::default(),
             input_name: "input".to_string(),
             input_shape: vec![1, 3, 224, 224],
             requires_normalization: false,

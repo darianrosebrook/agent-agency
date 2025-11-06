@@ -13,24 +13,19 @@ use tokio::time;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
-use agent_agency_contracts::task_executor::{TaskExecutionResult, TaskExecutor};
-use agent_agency_contracts::working_spec::{
-    WorkingSpec, WorkingSpecConstraints, BudgetLimits, ScopeRestrictions, TestPlan, RollbackPlan,
-    WorkingSpecContext, NonFunctionalRequirements, PerformanceRequirements, ScalabilityRequirements,
-    WorkingSpecMetadata, UnitTestSpec, IntegrationTestSpec, E2eScenario, RollbackStrategy, DataImpact,
-    AcceptanceCriterion, MoSCoWPriority
-};
 use agent_agency_contracts::task_request::{TaskRequest, TaskContext, TaskConstraints, TaskMetadata, BudgetLimits as RequestBudgetLimits, ScopeRestrictions as RequestScopeRestrictions, Environment, TaskPriority as RequestTaskPriority};
 use agent_agency_contracts::types::prelude::*;
 use agent_agency_contracts::ExecutionStatus;
 use agent_agency_contracts::task_executor_provider::TaskExecutorProvider;
+use agent_agency_contracts::WorkingSpec;
+use agent_agency_contracts::MoSCoWPriority;
 
 // Import local types for council integration
 // Use RiskTier from agent_agency_contracts (contracts-first)
 use agent_agency_contracts::types::planning::RiskTier;
 
 // Import evaluation framework
-use agent_evaluation::{EvaluationOrchestrator, EvaluationHook, IterationEvaluation, StopReason};
+use agent_evaluation::{EvaluationOrchestrator, EvaluationHook, StopReason};
 
 // Import the correct traits from system crates
 use system_observability::cache::CacheBackend;
@@ -43,7 +38,7 @@ use crate::consensus_coordinator::{ConsensusCoordinator, RealTimeConsensusCoordi
 use crate::progress_tracker::{ProgressTracker, RealTimeProgressTracker, ExecutionProgress as ProgressTrackerExecutionProgress, ProgressMessage, ProgressError, MessageLevel, ProgressMetrics, ExecutionStatus as ProgressTrackerExecutionStatus};
 
 // Use agent-agency-contracts instead of missing crates
-use agent_agency_contracts::refinement_decision::{CouncilDecision, CouncilVerdict};
+use agent_agency_contracts::refinement_decision::CouncilVerdict;
 use agent_agency_contracts::final_verdict::FinalVerdictContract;
 
 // Define missing types that were referenced from non-existent crates
@@ -55,7 +50,6 @@ pub struct ConsensusResult {
     pub reason: String,
 }
 pub type FinalVerdict = FinalVerdictContract;
-use agent_agency_contracts::execution_events::ExecutionEvent;
 // CacheBackend and MetricsBackend are already imported from system crates (lines 26-27)
 // MemorySystem port from contracts (feature-gated)
 #[cfg(feature = "memory")]
@@ -142,24 +136,6 @@ pub enum TypesExecutionStatus {
 }
 
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct OrchestrationProvenanceEmitter {
-    pub id: String,
-}
-
-impl OrchestrationProvenanceEmitter {
-    pub fn new() -> Self {
-        Self {
-            id: uuid::Uuid::new_v4().to_string(),
-        }
-    }
-}
-
-impl Default for OrchestrationProvenanceEmitter {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
 // Traits imported from system crates above
 
@@ -225,7 +201,7 @@ impl From<ExecutionProgress> for ProgressTrackerExecutionProgress {
 /// Real task spec conversion implementation
 /// Returns contracts WorkingSpec directly (no local types)
 pub fn to_task_spec(task_descriptor: &TaskDescriptor) -> agent_agency_contracts::WorkingSpec {
-    use tracing::{info, warn};
+    use tracing::info;
     
     info!("Converting task descriptor to working spec: {}", task_descriptor.task_id.to_string());
     
@@ -239,8 +215,7 @@ pub fn to_task_spec(task_descriptor: &TaskDescriptor) -> agent_agency_contracts:
     // Estimate change budget based on scope
     let change_budget = estimate_change_budget(task_descriptor);
     
-    // Create scope from task descriptor (returns ScopeRestrictions from contracts)
-    let scope_restrictions = create_scope_from_task(task_descriptor);
+    // Scope restrictions are created inline in the constraints below
     
     // Generate acceptance criteria (now returns contracts types directly)
     let acceptance_criteria = generate_acceptance_criteria(task_descriptor);
@@ -336,90 +311,8 @@ pub fn to_task_spec(task_descriptor: &TaskDescriptor) -> agent_agency_contracts:
     }
 }
 
-/// Convert TaskDescriptor context to TaskRequest context
-fn convert_task_context(task_descriptor: &TaskDescriptor) -> HashMap<String, serde_json::Value> {
-    let mut context = HashMap::new();
-    
-    // Add scope information
-    context.insert("scope_in".to_string(), serde_json::to_value(&task_descriptor.scope_in.allowed_paths).unwrap_or(serde_json::Value::Null));
-    
-    if let Some(scope_out) = &task_descriptor.scope_out {
-        context.insert("scope_out".to_string(), serde_json::to_value(&scope_out.blocked_paths).unwrap_or(serde_json::Value::Null));
-    }
-    
-    // Add change budget information
-    let budget = &task_descriptor.change_budget;
-    context.insert("change_budget".to_string(), serde_json::to_value(budget).unwrap_or(serde_json::Value::Null));
-    
-    // Add blast radius information
-    let blast_radius = &task_descriptor.blast_radius;
-    context.insert("blast_radius".to_string(), serde_json::to_value(blast_radius).unwrap_or(serde_json::Value::Null));
-    
-    // Add execution mode
-    context.insert("execution_mode".to_string(), serde_json::Value::String(format!("{:?}", task_descriptor.execution_mode)));
-    
-    // Add priority
-    context.insert("priority".to_string(), serde_json::Value::String(format!("{:?}", task_descriptor.priority)));
-    
-    context
-}
 
-/// Convert TaskDescriptor constraints to TaskRequest constraints
-fn convert_task_constraints(task_descriptor: &TaskDescriptor) -> HashMap<String, serde_json::Value> {
-    let mut constraints = HashMap::new();
-    
-    // Add change budget constraints
-    let budget = &task_descriptor.change_budget;
-    constraints.insert("max_files".to_string(), serde_json::Value::Number(serde_json::Number::from(budget.max_files)));
-    constraints.insert("max_loc".to_string(), serde_json::Value::Number(serde_json::Number::from(budget.max_loc)));
-    
-    // Add blast radius constraints
-    let blast_radius = &task_descriptor.blast_radius;
-    constraints.insert("modules".to_string(), serde_json::to_value(&blast_radius.modules).unwrap_or(serde_json::Value::Null));
-    constraints.insert("data_migration".to_string(), serde_json::Value::Bool(blast_radius.data_migration));
-    
-    // Add scope constraints
-    constraints.insert("scope_in_count".to_string(), serde_json::Value::Number(serde_json::Number::from(task_descriptor.scope_in.allowed_paths.len())));
-    
-    if let Some(scope_out) = &task_descriptor.scope_out {
-        constraints.insert("scope_out_count".to_string(), serde_json::Value::Number(serde_json::Number::from(scope_out.blocked_paths.len())));
-    }
-    
-    constraints
-}
 
-/// Convert TaskDescriptor metadata to TaskRequest metadata
-fn convert_task_metadata(task_descriptor: &TaskDescriptor) -> HashMap<String, serde_json::Value> {
-    let mut metadata = HashMap::new();
-    
-    // Add basic task information
-    metadata.insert("task_id".to_string(), serde_json::Value::String(task_descriptor.task_id.to_string()));
-    metadata.insert("description".to_string(), serde_json::Value::String(task_descriptor.description.clone()));
-    metadata.insert("execution_mode".to_string(), serde_json::Value::String(format!("{:?}", task_descriptor.execution_mode)));
-    metadata.insert("priority".to_string(), serde_json::Value::String(format!("{:?}", task_descriptor.priority)));
-    
-    // Add scope metadata
-    metadata.insert("scope_in_files".to_string(), serde_json::to_value(&task_descriptor.scope_in.allowed_paths).unwrap_or(serde_json::Value::Null));
-    
-    if let Some(scope_out) = &task_descriptor.scope_out {
-        metadata.insert("scope_out_files".to_string(), serde_json::to_value(&scope_out.blocked_paths).unwrap_or(serde_json::Value::Null));
-    }
-    
-    // Add change budget metadata
-    let budget = &task_descriptor.change_budget;
-    metadata.insert("budget_max_files".to_string(), serde_json::Value::Number(serde_json::Number::from(budget.max_files)));
-    metadata.insert("budget_max_loc".to_string(), serde_json::Value::Number(serde_json::Number::from(budget.max_loc)));
-    
-    // Add blast radius metadata
-    let blast_radius = &task_descriptor.blast_radius;
-    metadata.insert("blast_radius_modules".to_string(), serde_json::to_value(&blast_radius.modules).unwrap_or(serde_json::Value::Null));
-    metadata.insert("blast_radius_data_migration".to_string(), serde_json::Value::Bool(blast_radius.data_migration));
-    
-    // Add timestamp
-    metadata.insert("created_at".to_string(), serde_json::Value::String(Utc::now().to_rfc3339()));
-    
-    metadata
-}
 
 /// Calculate risk tier based on task complexity
 fn calculate_risk_tier(task_descriptor: &TaskDescriptor) -> RiskTier {
@@ -561,30 +454,13 @@ fn generate_invariants(task_descriptor: &TaskDescriptor) -> Vec<String> {
     invariants
 }
 
-/// Determine execution mode based on task characteristics
-fn determine_execution_mode(task_descriptor: &TaskDescriptor) -> ExecutionMode {
-    if task_descriptor.description.to_lowercase().contains("dry-run") {
-        ExecutionMode::DryRun
-    } else if task_descriptor.description.to_lowercase().contains("auto") {
-        ExecutionMode::Auto
-    } else {
-        ExecutionMode::Strict
-    }
-}
-
-/// Check if task requires data migration
-fn requires_data_migration(task_descriptor: &TaskDescriptor) -> bool {
-    task_descriptor.description.to_lowercase().contains("migration") ||
-    task_descriptor.description.to_lowercase().contains("database") ||
-    task_descriptor.description.to_lowercase().contains("schema")
-}
 
 /// Real orchestration implementation
 pub fn orchestrate_task(
     working_spec: &WorkingSpec,
     task_descriptor: &TaskDescriptor,
 ) -> Result<agent_agency_contracts::final_verdict::FinalVerdictContract, Box<dyn std::error::Error + Send + Sync>> {
-    use tracing::{info, warn, error};
+    use tracing::info;
     
     info!("Starting orchestration for task: {}", task_descriptor.task_id.to_string());
     
@@ -686,36 +562,6 @@ fn execute_strict_mode(spec: &WorkingSpec, task_descriptor: &TaskDescriptor) -> 
     execute_task_with_validation(spec, task_descriptor)
 }
 
-/// Execute in auto mode
-fn execute_auto_mode(spec: &WorkingSpec, task_descriptor: &TaskDescriptor) -> Result<agent_agency_contracts::final_verdict::FinalVerdictContract, Box<dyn std::error::Error + Send + Sync>> {
-    use tracing::info;
-    
-    info!("Executing task in auto mode: {}", task_descriptor.task_id);
-    
-    // In auto mode, execute with automatic approval for low-risk tasks
-    execute_task_with_validation(spec, task_descriptor)
-}
-
-/// Execute in dry-run mode
-fn execute_dry_run_mode(spec: &WorkingSpec, task_descriptor: &TaskDescriptor) -> Result<agent_agency_contracts::final_verdict::FinalVerdictContract, Box<dyn std::error::Error + Send + Sync>> {
-    use tracing::info;
-    
-    info!("Executing task in dry-run mode: {}", task_descriptor.task_id);
-    
-    // In dry-run mode, simulate execution without making changes
-    Ok(agent_agency_contracts::final_verdict::FinalVerdictContract {
-        decision: agent_agency_contracts::final_verdict::FinalDecision::Accept,
-        votes: vec![],
-        dissent: "".to_string(),
-        remediation: vec![],
-        constitutional_refs: vec![],
-        verification_summary: agent_agency_contracts::final_verdict::VerificationSummary {
-            claims_total: spec.acceptance_criteria.len() as u32,
-            claims_verified: spec.acceptance_criteria.len() as u32,
-            coverage_pct: 100.0,
-        },
-    })
-}
 
 /// Execute task with validation
 fn execute_task_with_validation(spec: &WorkingSpec, task_descriptor: &TaskDescriptor) -> Result<agent_agency_contracts::final_verdict::FinalVerdictContract, Box<dyn std::error::Error + Send + Sync>> {
@@ -904,7 +750,6 @@ pub struct AutonomousExecutor {
     runtime_validator: Arc<dyn CawsRuntimeValidator>,
     consensus_coordinator: Option<Arc<dyn ConsensusCoordinator>>,
     verdict_writer: Arc<dyn VerdictWriter>,
-    provenance_emitter: Arc<OrchestrationProvenanceEmitter>,
     cache: Option<Arc<dyn CacheBackend>>,
     metrics: Option<Arc<dyn MetricsBackend>>,
     task_executor_provider: TaskExecutorProvider,
@@ -929,7 +774,6 @@ impl AutonomousExecutor {
         runtime_validator: Arc<dyn CawsRuntimeValidator>,
         consensus_coordinator: Option<Arc<dyn ConsensusCoordinator>>,
         verdict_writer: Arc<dyn VerdictWriter>,
-        provenance_emitter: Arc<OrchestrationProvenanceEmitter>,
         cache: Option<Arc<dyn CacheBackend>>,
         metrics: Option<Arc<dyn MetricsBackend>>,
         task_executor_provider: TaskExecutorProvider,
@@ -945,7 +789,6 @@ impl AutonomousExecutor {
             runtime_validator,
             consensus_coordinator: consensus_coordinator.or_else(|| Some(Arc::new(RealTimeConsensusCoordinator::new(crate::consensus_coordinator::ConsensusConfig::default())))),
             verdict_writer,
-            provenance_emitter,
             cache,
             metrics,
             task_executor_provider,
@@ -1380,7 +1223,7 @@ impl AutonomousExecutor {
         }
 
         // Phase 3.5: Council Review (if enabled)
-        let council_approved = if self.config.enable_council_review {
+        let _council_approved = if self.config.enable_council_review {
             match self.perform_council_review(&working_spec, &task_descriptor).await {
                 Ok((approved, _, _)) => {
                     if !approved {
@@ -1560,7 +1403,7 @@ impl AutonomousExecutor {
                 iteration,
                 quality_score,
                 &quality_scores,
-                verdict_arc.clone(),
+                (*verdict_arc).clone(),
                 council_approved,
             ).await;
 
@@ -1653,7 +1496,7 @@ impl AutonomousExecutor {
                                 iteration,
                                 quality_score,
                                 &quality_scores,
-                                verdict_arc.clone(),
+                                (*verdict_arc).clone(),
                                 true, // Council approved
                             ).await;
                             
@@ -1938,7 +1781,7 @@ impl AutonomousExecutor {
     /// Perform consensus coordination
     async fn perform_consensus_coordination(&self, working_spec: &WorkingSpec, task_descriptor: &TaskDescriptor) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if let Some(ref coordinator) = self.consensus_coordinator {
-            let task_spec = to_task_spec(task_descriptor);
+            let _task_spec = to_task_spec(task_descriptor);
 
             // Create consensus decision
             let decision = ConsensusDecision {
@@ -3678,7 +3521,45 @@ mod tests {
     async fn test_task_submission_and_status_tracking() {
         use crate::consensus_coordinator::RealTimeConsensusCoordinator;
         use crate::progress_tracker::RealTimeProgressTracker;
-        use agent_agency_contracts::task_executor_provider::MockTaskExecutorProvider;
+
+        // Local mock task executor for testing
+        #[derive(Debug)]
+        struct TestTaskExecutor;
+
+        #[async_trait::async_trait]
+        impl agent_agency_contracts::task_executor::TaskExecutor for TestTaskExecutor {
+            async fn execute_task(
+                &self,
+                task_spec: agent_agency_contracts::task_executor::TaskSpec,
+                worker_id: uuid::Uuid,
+            ) -> Result<agent_agency_contracts::task_executor::TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(agent_agency_contracts::task_executor::TaskExecutionResult {
+                    execution_id: uuid::Uuid::new_v4(),
+                    task_id: task_spec.id,
+                    success: true,
+                    output: "Task completed successfully".to_string(),
+                    errors: vec![],
+                    metadata: std::collections::HashMap::new(),
+                    started_at: chrono::Utc::now(),
+                    completed_at: chrono::Utc::now(),
+                    duration_ms: 100,
+                    worker_id: Some(worker_id),
+                })
+            }
+
+            async fn execute_task_with_circuit_breaker(
+                &self,
+                task_spec: agent_agency_contracts::task_executor::TaskSpec,
+                worker_id: uuid::Uuid,
+                _circuit_breaker_enabled: bool,
+            ) -> Result<agent_agency_contracts::task_executor::TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
+                self.execute_task(task_spec, worker_id).await
+            }
+
+            async fn cancel_task_execution(&self, _task_id: uuid::Uuid, _worker_id: uuid::Uuid) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+                Ok(())
+            }
+        }
 
         // Create test configuration
         let config = AutonomousExecutorConfig {
@@ -3695,8 +3576,9 @@ mod tests {
         // Create mock dependencies
         let runtime_validator = Arc::new(MockCawsRuntimeValidator);
         let verdict_writer = Arc::new(MockVerdictWriter);
-        let provenance_emitter = Arc::new(OrchestrationProvenanceEmitter::new());
-        let task_executor_provider = MockTaskExecutorProvider::new();
+        let task_executor_provider = agent_agency_contracts::task_executor_provider::TaskExecutorProvider::new(
+            || Arc::new(TestTaskExecutor) as Arc<dyn agent_agency_contracts::task_executor::TaskExecutor>
+        );
 
         // Create executor
         let executor = AutonomousExecutor::new(
@@ -3705,7 +3587,6 @@ mod tests {
             runtime_validator,
             Some(Arc::new(RealTimeConsensusCoordinator::new(crate::consensus_coordinator::ConsensusConfig::default()))),
             verdict_writer,
-            provenance_emitter,
             None, // cache
             None, // metrics
             task_executor_provider,

@@ -75,5 +75,17 @@ pub enum LearningError {
     Configuration(String),
 }
 
+impl std::fmt::Display for LearningError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LearningError::Algorithm(msg) => write!(f, "Algorithm error: {}", msg),
+            LearningError::TrainingData(msg) => write!(f, "Training data error: {}", msg),
+            LearningError::Model(msg) => write!(f, "Model error: {}", msg),
+            LearningError::Optimization(msg) => write!(f, "Optimization error: {}", msg),
+            LearningError::Configuration(msg) => write!(f, "Configuration error: {}", msg),
+        }
+    }
+}
+
 /// Result type for learning operations
 pub type LearningResult<T> = Result<T, LearningError>;

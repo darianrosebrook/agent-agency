@@ -24,17 +24,14 @@ axum = { version = "0.7", features = ["json", "ws"] }
 tower-http = { version = "0.5", features = ["cors"] }
 futures-util = "0.3"
 
-# HTTP client (for CLI binaries)
-reqwest = { version = "0.11", features = ["json"] }
-
-# File watching (for CLI binaries)
-notify = "6.0"
-
-# CLI framework
+# CLI framework (for API server binary)
 clap = { version = "4.0", features = ["derive"] }
 
-# Lazy static initialization (for CLI binaries)
-lazy_static = "1.4"
+# Schema generation (for JsonSchema derives)
+schemars = { version = "0.8", features = ["chrono"] }
+
+# TOML parsing (for config files)
+toml = "0.8"
 
 # Interface contracts
 data-interfaces = { path = "../data-interfaces" }
@@ -46,14 +43,6 @@ agent-orchestration = { path = "../agent-orchestration" }
 agent-research = { path = "../agent-research" }
 agent-memory = { path = "../agent-memory" }
 data-infrastructure = { path = "../data-infrastructure" }
-
-[[bin]]
-name = "agent-agency-cli"
-path = "src/bin/cli-main.rs"
-
-[[bin]]
-name = "agent-agency-advanced-cli"
-path = "src/bin/advanced-cli.rs"
 
 [[bin]]
 name = "agent-agency-api-server"

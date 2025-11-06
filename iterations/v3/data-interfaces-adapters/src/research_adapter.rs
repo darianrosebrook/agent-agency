@@ -48,7 +48,7 @@ impl ResearchServiceAdapter {
         use agent_research::planning_agent::validation_pipeline::ValidationPipelineConfig;
         
         let config = PlanningConfig::default();
-        let caws_validator = Arc::new(agent_research::planning_agent::planning_caws_integration::DefaultCawsValidator);
+        let caws_validator: Arc<dyn CawsValidator> = Arc::new(agent_research::planning_agent::planning_caws_integration::DefaultCawsValidator::new());
         let validation_pipeline = Arc::new(ValidationPipeline::new(
             Arc::clone(&caws_validator),
             ValidationPipelineConfig::default(),
@@ -90,8 +90,8 @@ impl ResearchService for ResearchServiceAdapter {
             working_spec: Some(agent_agency_contracts::WorkingSpecSummary {
                 id: planning_response.working_spec.id.clone(),
                 title: planning_response.working_spec.title.clone(),
-                description: planning_response.working_spec.description.clone().unwrap_or_default(),
-                goals: planning_response.working_spec.goals.iter().map(|g| g.description.clone()).collect(),
+                description: planning_response.working_spec.description.clone(),
+                goals: planning_response.working_spec.goals.clone(),
                 risk_tier: planning_response.working_spec.risk_tier,
                 acceptance_criteria_count: planning_response.working_spec.acceptance_criteria.len(),
             }),

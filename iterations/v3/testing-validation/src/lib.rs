@@ -161,6 +161,10 @@ impl E2ETestRunner {
             Scenario::SecurityPrivacy => {
                 scenarios::security_privacy::run_security_test(&self.environment, &self.services).await
             }
+            // API Integration tests
+            Scenario::ApiIntegration => {
+                scenarios::api_integration::run_api_integration_tests(&self.environment, &self.services).await
+            }
             #[cfg(not(feature = "full"))]
             _ => {
                 error!("Scenario requires 'full' feature: {:?}", scenario);
@@ -214,6 +218,8 @@ pub enum Scenario {
     PerformanceScalability,
     // Security & Privacy tests
     SecurityPrivacy,
+    // API Integration tests
+    ApiIntegration,
 }
 
 /// Result of a test scenario execution

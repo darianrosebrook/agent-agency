@@ -24,20 +24,20 @@ pub use monitoring::*;
 pub trait ResourceManagementService: Send + Sync + std::fmt::Debug {
     /// Allocate resources for a task
     async fn allocate_resources_for_task(
-        &self,
+        &mut self,
         task_id: &str,
         requirements: ResourceRequirements,
     ) -> Result<ResourceAllocation, ResourceError>;
 
     /// Release resources for a completed task
     async fn release_resources_for_task(
-        &self,
+        &mut self,
         task_id: &str,
     ) -> Result<(), ResourceError>;
 
     /// Adjust resource allocation for a task
     async fn adjust_resource_allocation(
-        &self,
+        &mut self,
         task_id: &str,
         new_requirements: ResourceRequirements,
     ) -> Result<ResourceAllocation, ResourceError>;
@@ -52,32 +52,44 @@ pub trait ResourceManagementService: Send + Sync + std::fmt::Debug {
 #[async_trait]
 impl ResourceManagementService for ResourceManagerService {
     async fn allocate_resources_for_task(
-        &self,
-        _task_id: &str,
+        &mut self,
+        task_id: &str,
         requirements: ResourceRequirements,
     ) -> Result<ResourceAllocation, ResourceError> {
         // Select best pool for requirements
         let pool_name = self.select_best_pool(&requirements).await?;
-        
+
         // Allocate from selected pool
         let allocation = self.allocate_resources(&pool_name, requirements).await?;
-        
+
+        // Track allocation by task_id for efficient lookup
+        self.task_allocations.insert(task_id.to_string(), allocation.clone());
+
+        tracing::debug!("Allocated resources for task {}: {:?}", task_id, allocation);
+
         Ok(allocation)
     }
 
     async fn release_resources_for_task(
-        &self,
+        &mut self,
         task_id: &str,
     ) -> Result<(), ResourceError> {
         // Find which pool has this allocation
         let pool_name = self.find_pool_for_allocation(task_id).await?;
-        
+
         // Release from pool
-        self.release_resources(&pool_name, task_id).await
+        self.release_resources(&pool_name, task_id).await?;
+
+        // Remove from task allocation tracking
+        self.task_allocations.remove(task_id);
+
+        tracing::debug!("Released resources for task {}", task_id);
+
+        Ok(())
     }
 
     async fn adjust_resource_allocation(
-        &self,
+        &mut self,
         task_id: &str,
         new_requirements: ResourceRequirements,
     ) -> Result<ResourceAllocation, ResourceError> {
@@ -93,16 +105,17 @@ impl ResourceManagementService for ResourceManagerService {
     }
 
     async fn get_task_allocation(&self, task_id: &str) -> Result<Option<ResourceAllocation>, ResourceError> {
-        // PLACEHOLDER: In a real implementation, this would track allocations by task_id
-        // For now, search through pools to find allocation
-
-        // TODO: Implement this properly with the following acceptance criteria:
-        // - Return the allocation if it exists
-        // - Return None if it does not exist
-        // - Return an error if the allocation cannot be found
-        Err(ResourceError::AllocationFailed {
-            message: format!("Task allocation lookup not yet implemented for task {}", task_id),
-        })
+        // Look up allocation directly from task_allocations map
+        match self.task_allocations.get(task_id) {
+            Some(allocation) => {
+                tracing::debug!("Found allocation for task {}: {:?}", task_id, allocation);
+                Ok(Some(allocation.clone()))
+            },
+            None => {
+                tracing::debug!("No allocation found for task {}", task_id);
+                Ok(None)
+            }
+        }
     }
 }
 
@@ -112,6 +125,8 @@ pub struct ResourceManagerService {
     // Service configuration and state
     pools: std::collections::HashMap<String, Box<dyn ResourcePool>>,
     monitor: ResourceMonitor,
+    // Track allocations by task_id for efficient lookup
+    task_allocations: std::collections::HashMap<String, ResourceAllocation>,
 }
 
 impl ResourceManagerService {
@@ -120,6 +135,7 @@ impl ResourceManagerService {
         Self {
             pools: std::collections::HashMap::new(),
             monitor: ResourceMonitor::new(),
+            task_allocations: std::collections::HashMap::new(),
         }
     }
 

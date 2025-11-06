@@ -9,23 +9,17 @@
 //! health checks, and metrics streaming.
 //! Uses dependency injection via adapters for service implementations.
 
-use schemars::JsonSchema;
-use std::sync::Arc;
 use clap::Parser;
-use tokio::sync::RwLock;
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
 use std::env;
+use std::sync::Arc;
 
-use data_infrastructure::api::server::RestApi;
-use data_infrastructure::api::types::ApiConfig;
-use data_infrastructure::client::orchestrator::DatabaseClient;
-use data_infrastructure::DatabaseConfig;
-// NOTE: RestApi still expects concrete types, so we bridge from adapters
-// TODO: Refactor RestApi to use service traits
-use agent_orchestration::audited_orchestrator::Orchestrator;
-use agent_orchestration::progress_tracker::{ProgressTracker, RealTimeProgressTracker};
-use data_interfaces_adapters::ServiceContainer;
+// Database integration
+use data_infrastructure::database_config::DatabaseConfig;
+use data_infrastructure::database_init::{initialize_database, verify_schema};
+use data_infrastructure::simple_client::DatabaseClient;
+
+// NOTE: Full RestApi integration requires orchestration feature flag in data-infrastructure
+// TODO: Enable orchestration feature flag or refactor RestApi to use service traits
 
 #[derive(Parser)]
 #[command(name = "agent-agency-api")]
@@ -52,64 +46,6 @@ struct Args {
     config_file: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct ServerConfig {
-    /// API keys for authentication
-    api_keys: Option<Vec<String>>,
-    /// Rate limiting enabled
-    enable_rate_limiting: Option<bool>,
-    /// Rate limit requests per minute
-    rate_limit_per_minute: Option<u32>,
-}
-
-/// Load server configuration from file and environment variables
-async fn load_server_config(config_file: &str) -> Result<ServerConfig, Box<dyn std::error::Error>> {
-    let mut config = ServerConfig {
-        api_keys: None,
-        enable_rate_limiting: None,
-        rate_limit_per_minute: None,
-    };
-
-    // Try to load from config file first
-    let config_loaded = if let Ok(config_content) = tokio::fs::read_to_string(config_file).await {
-        if let Ok(file_config) = toml::from_str::<ServerConfig>(&config_content) {
-            config = file_config;
-            true
-        } else {
-            return Err(format!("Could not parse config file '{}'", config_file).into());
-        }
-    } else {
-        false
-    };
-
-    // If no config file and no environment variables, fail
-    if !config_loaded && config.api_keys.is_none() {
-        return Err("No configuration found. Either provide a config file or set AGENT_AGENCY_API_KEYS environment variable.".into());
-    }
-
-    // Override with environment variables if set
-    if let Ok(env_keys) = env::var("AGENT_AGENCY_API_KEYS") {
-        let keys: Vec<String> = env_keys.split(',')
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-            .collect();
-        if !keys.is_empty() {
-            config.api_keys = Some(keys);
-        }
-    }
-
-    if let Ok(env_rate_limiting) = env::var("AGENT_AGENCY_ENABLE_RATE_LIMITING") {
-        config.enable_rate_limiting = Some(env_rate_limiting.to_lowercase() == "true");
-    }
-
-    if let Ok(env_rate_limit) = env::var("AGENT_AGENCY_RATE_LIMIT_PER_MINUTE") {
-        if let Ok(limit) = env_rate_limit.parse::<u32>() {
-            config.rate_limit_per_minute = Some(limit);
-        }
-    }
-
-    Ok(config)
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -118,80 +54,77 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!(" Starting Agent Agency V3 API Server");
     println!(" Server: {}:{}", args.host, args.port);
 
-    // Load server configuration
-    let server_config = load_server_config(&args.config_file).await?;
-
     // Validate configuration if API key auth is required
     if args.require_api_key {
-        if server_config.api_keys.as_ref().map_or(true, |keys| keys.is_empty()) {
-            eprintln!(" API key authentication required but no API keys configured!");
-            eprintln!("   Set AGENT_AGENCY_API_KEYS environment variable or add api_keys to {}", args.config_file);
+        if let Ok(api_keys_env) = env::var("AGENT_AGENCY_API_KEYS") {
+            let keys: Vec<String> = api_keys_env.split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect();
+            if keys.is_empty() {
+                eprintln!(" API key authentication required but no API keys configured!");
+                eprintln!("   Set AGENT_AGENCY_API_KEYS environment variable");
+                std::process::exit(1);
+            }
+            println!(" API key authentication enabled with {} keys", keys.len());
+        } else {
+            eprintln!(" API key authentication required but AGENT_AGENCY_API_KEYS not set!");
             std::process::exit(1);
         }
-        println!(" API key authentication enabled");
     }
 
-    // Initialize database client first (required for other services)
-    let database_url = env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgresql://localhost/agent_agency_v3".to_string());
-    let db_config = DatabaseConfig {
-        database_url: database_url.clone(),
-        host: None,
-        port: None,
-        database: None,
-        username: None,
-        password: None,
-        max_connections: Some(10),
-        min_connections: Some(2),
-        connection_timeout_seconds: Some(30),
-        idle_timeout_seconds: Some(600),
-        max_lifetime_seconds: Some(3600),
-        ssl_mode: None,
-        pool_timeout_seconds: Some(30),
-    };
-    let db_client = Arc::new(
-        DatabaseClient::new(db_config).await
-            .expect("Failed to connect to database")
-    );
-
-    // Initialize service container with adapters
-    let services = ServiceContainer::new();
-    
-    // NOTE: RestApi currently expects concrete Orchestrator, not our trait
-    // Bridge from adapters to concrete types for now
-    // TODO: Refactor RestApi to accept OrchestrationService trait
-    use agent_orchestration::types::OrchestratorConfig;
-    let orchestrator_config = OrchestratorConfig::default();
-    let orchestrator = Arc::new(Orchestrator::new_with_dependencies(orchestrator_config));
-
-    // Initialize progress tracker with real implementation
-    let progress_tracker: Arc<dyn ProgressTracker> = Arc::new(RealTimeProgressTracker::new(None));
-    
-    // Store services for potential future use
-    let _services = services; // Keep services available for future trait-based refactoring
-
-    // Configure API
-    let api_config = ApiConfig {
-        host: args.host.clone(),
-        port: args.port,
-        enable_cors: args.enable_cors,
-        require_api_key: args.require_api_key,
-        api_keys: server_config.api_keys.unwrap_or_default(),
-        enable_rate_limiting: server_config.enable_rate_limiting.unwrap_or(false),
-        rate_limit_per_minute: server_config.rate_limit_per_minute.unwrap_or(100),
+    // Initialize database connection and run migrations
+    let db_client = if let Ok(database_url) = env::var("DATABASE_URL") {
+        println!("📦 Initializing database connection...");
+        
+        let db_config = DatabaseConfig {
+            database_url: database_url.clone(),
+            pool_max: Some(10),
+            connection_timeout: Some(30),
+            query_timeout: Some(60),
+            ..Default::default()
+        };
+        
+        match initialize_database(db_config).await {
+            Ok(client) => {
+                println!("✅ Database initialized and migrations applied");
+                
+                // Verify schema
+                if let Err(e) = verify_schema(client.pool()).await {
+                    eprintln!("⚠️  Schema verification warning: {}", e);
+                } else {
+                    println!("✅ Database schema verified");
+                }
+                
+                Some(Arc::new(client))
+            }
+            Err(e) => {
+                eprintln!("⚠️  Failed to initialize database: {}", e);
+                eprintln!("   Continuing in standalone mode without database");
+                None
+            }
+        }
+    } else {
+        println!("⚠️  Note: DATABASE_URL not set - running in standalone mode");
+        println!("   Set DATABASE_URL to enable database persistence");
+        None
     };
 
     println!("⚙️  Configuration loaded:");
-    println!("   - API Keys: {}", if api_config.require_api_key { "Required" } else { "Optional" });
-    println!("   - Rate Limiting: {}", if api_config.enable_rate_limiting { "Enabled" } else { "Disabled" });
-    println!("   - Keys Count: {}", api_config.api_keys.len());
-    println!("   - Database: {}", database_url);
+    println!("   - API Keys: {}", if args.require_api_key { "Required" } else { "Optional" });
+    println!("   - CORS: {}", if args.enable_cors { "Enabled" } else { "Disabled" });
+    println!("   - Database: {}", if db_client.is_some() { "Connected" } else { "Not connected" });
 
-    // Create REST API instance
-    let rest_api = RestApi::new(api_config, orchestrator, progress_tracker, db_client);
-
-    // Create router
-    let app = rest_api.create_router();
+    // Create basic Axum router
+    use axum::{
+        routing::get,
+        Router,
+        Json,
+    };
+    
+    let app = Router::new()
+        .route("/health", get(|| async { Json(serde_json::json!({"status": "ok"})) }))
+        .route("/", get(|| async { "Agent Agency V3 API Server" }));
 
     // Add CORS if enabled
     let app = if args.enable_cors {
