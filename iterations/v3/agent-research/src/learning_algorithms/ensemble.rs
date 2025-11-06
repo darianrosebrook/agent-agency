@@ -6,9 +6,19 @@ use std::collections::HashMap;
 
 /// Ensemble learning orchestrator
 
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Serialize, Deserialize) ]
 pub struct LearningAlgorithms {
+    #[serde(skip)]
     algorithms: HashMap<LearningAlgorithmType, Box<dyn LearningAlgorithm>>,
+}
+
+impl std::fmt::Debug for LearningAlgorithms {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LearningAlgorithms")
+            .field("algorithm_count", &self.algorithms.len())
+            .field("algorithm_types", &self.algorithms.keys().collect::<Vec<_>>())
+            .finish()
+    }
 }
 
 impl LearningAlgorithms {

@@ -6,7 +6,8 @@
 //! @author @darianrosebrook
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use anyhow::{anyhow, Result};
 use uuid::Uuid;
 use chrono::Utc;
@@ -80,32 +81,32 @@ impl TodoIntegration {
     }
 
     /// Initialize TODO tracking for a plan
-    pub async fn initialize_plan_todos(&mut self, plan: &ExecutionPlan) -> Result<()> {
+    pub async fn initialize_plan_todos(&mut self, plan_id: Uuid, title: &str) -> Result<()> {
         // Determine appropriate template based on plan characteristics
-        let template_name = self.select_template_for_plan(plan)?;
+        // For now, use a default template since we only have plan_id and title
+        let template_name = "standard-feature-template".to_string();
 
         // Create TODO instance (requires mutable access to todo_system)
         let todo_instance_id = {
-            let mut system = self.todo_system.lock()
-                .map_err(|e| anyhow!("Failed to lock TODO system: {}", e))?;
+            let mut system = self.todo_system.lock().await;
             system.create_instance(
                 &template_name,
-                plan,
+                plan_id,
                 None, // No specific milestone initially
             )?
         };
 
         // Get plan id as String
-        let plan_id = plan.contract_plan.id.to_string();
+        let plan_id_str = plan_id.to_string();
 
         // Track the association
-        self.plan_todos.insert(plan_id.clone(), todo_instance_id);
+        self.plan_todos.insert(plan_id_str.clone(), todo_instance_id);
 
         // Persist the association
-        self.persist_plan_todo_association(Uuid::parse_str(&plan_id)?, todo_instance_id).await?;
+        self.persist_plan_todo_association(plan_id, todo_instance_id).await?;
 
         info!(
-            plan_id = %plan.contract_plan.id,
+            plan_id = %plan_id,
             todo_instance_id = %todo_instance_id,
             template = %template_name,
             "Initialized TODO tracking for plan"
@@ -120,8 +121,7 @@ impl TodoIntegration {
             .ok_or_else(|| anyhow!("No TODO instance for plan {}", plan_id))?;
 
         // Get the TODO instance and check dependencies
-        let system = self.todo_system.lock()
-            .map_err(|e| anyhow!("Failed to lock TODO system: {}", e))?;
+        let system = self.todo_system.lock().await;
         
         let instance = system.get_instance(*todo_instance_id)?;
         
@@ -147,8 +147,7 @@ impl TodoIntegration {
 
         // Complete the step (requires mutable access)
         {
-            let mut system = self.todo_system.lock()
-                .map_err(|e| anyhow!("Failed to lock TODO system: {}", e))?;
+            let mut system = self.todo_system.lock().await;
             system.complete_step(
                 *todo_instance_id,
                 &step_id,
@@ -172,8 +171,7 @@ impl TodoIntegration {
             .ok_or_else(|| anyhow!("No TODO instance for plan {}", plan_id))?;
 
         // Get instance and check for blocking conditions
-        let system = self.todo_system.lock()
-            .map_err(|e| anyhow!("Failed to lock TODO system: {}", e))?;
+        let system = self.todo_system.lock().await;
         
         let instance = system.get_instance(*todo_instance_id)?;
         
@@ -220,8 +218,7 @@ impl TodoIntegration {
             .ok_or_else(|| anyhow!("No TODO instance for plan {}", plan_id))?;
 
         // Get instance progress from the TODO system
-        let system = self.todo_system.lock()
-            .map_err(|e| anyhow!("Failed to lock TODO system: {}", e))?;
+        let system = self.todo_system.lock().await;
         
         let instance = system.get_instance(*todo_instance_id)?;
         let progress = system.get_instance_progress(instance)?;

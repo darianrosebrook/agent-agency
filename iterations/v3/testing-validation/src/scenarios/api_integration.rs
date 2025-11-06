@@ -26,7 +26,8 @@ pub async fn run_api_integration_tests(
     let mut audit_operations = 0;
 
     // Get postgres service
-    let postgres_guard = services.postgres().lock().await;
+    let postgres_service = services.postgres();
+    let postgres_guard = postgres_service.lock().await;
 
     // Test database connectivity
     info!("📡 Testing database connectivity");

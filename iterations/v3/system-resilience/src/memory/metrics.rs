@@ -156,7 +156,7 @@ pub struct LoadAverageMetrics {
 #[derive(Debug)]
 pub struct SystemMetricsCollector {
     /// Previous metrics for calculating deltas
-    previous_metrics: Option<SystemMetrics>,
+    pub previous_metrics: Option<SystemMetrics>,
     /// Collection interval in seconds
     collection_interval_secs: u64,
     /// Whether to enable detailed per-core CPU metrics

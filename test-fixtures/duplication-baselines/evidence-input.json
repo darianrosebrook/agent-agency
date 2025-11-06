@@ -1,0 +1,28 @@
+{
+  "description": "Golden input fixture for EvidenceCollector behavioral equivalence testing",
+  "text_sample": "The new AI model shows significant improvements in accuracy and speed compared to previous versions. However, there are still some edge cases that need to be addressed.",
+  "context": {
+    "domain": "technical_evaluation",
+    "confidence_threshold": 0.8,
+    "max_evidence_items": 5
+  },
+  "expected_evidence_output": {
+    "constitutional_evidence": [
+      {
+        "claim": "AI model shows improvements",
+        "confidence": 0.92,
+        "evidence_type": "factual_statement"
+      }
+    ],
+    "performance_evidence": [
+      {
+        "claim": "Accuracy improved",
+        "confidence": 0.89,
+        "metrics": ["precision", "recall", "f1_score"]
+      }
+    ],
+    "processing_time_ms": 150
+  }
+}
+
+

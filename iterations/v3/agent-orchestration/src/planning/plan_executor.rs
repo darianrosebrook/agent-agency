@@ -16,8 +16,8 @@ use anyhow::{anyhow, Result};
 use uuid::Uuid;
 use chrono::Utc;
 use rand::prelude::*;
-use parking_lot::RwLock;
-use agent_agency_contracts::planning::{PlanningEngine, PlanningCapabilities, PlanningError, PlanExecutionResult, ExecutionEvidence};
+use tokio::sync::RwLock;
+use agent_agency_contracts::planning::{PlanningEngine, PlanningCapabilities, PlanningError, PlanExecutionResult, ExecutionEvidence, ExecutionEventType};
 use agent_agency_contracts::types::validation::ValidationResult;
 use agent_agency_contracts::{WorkerContext, TaskPriority};
 
@@ -31,6 +31,7 @@ use crate::planning::{
     scope_guard::ScopeGuard,
     council_monitor::CouncilMonitor,
 };
+use crate::audit_trail::AuditTrailManager;
 use agent_agency_contracts::planning::{QualityMetrics, CoverageMetrics, TestQualityMetrics, CodeQualityMetrics, DocumentationQualityMetrics};
 
 /// TODO integration interface with interior mutability
@@ -43,7 +44,7 @@ pub trait TodoInterface: Send + Sync {
 
 /// Thin adapter over existing TodoIntegration using RwLock for interior mutability
 pub struct TodoAdapter {
-    inner: RwLock<TodoIntegration>,
+    pub inner: RwLock<TodoIntegration>,
 }
 
 /// Deterministic failure oracle for testing
@@ -67,15 +68,15 @@ impl FailureOracle {
 #[async_trait::async_trait]
 impl TodoInterface for TodoAdapter {
     async fn initialize_plan(&self, plan_id: Uuid, title: &str) -> Result<()> {
-        self.inner.write().initialize_plan_todos(plan_id, title).await
+        self.inner.write().await.initialize_plan_todos(plan_id, title).await
     }
 
     async fn can_progress_to_milestone(&self, plan_id: Uuid, milestone_id: &str) -> Result<bool> {
-        self.inner.read().can_progress_to_milestone(plan_id, milestone_id).await
+        self.inner.read().await.can_progress_to_milestone(plan_id, milestone_id).await
     }
 
     async fn milestone_completed(&self, plan_id: Uuid, milestone_id: &str) -> Result<()> {
-        self.inner.write().milestone_completed(plan_id, milestone_id).await
+        self.inner.write().await.milestone_completed(plan_id, milestone_id).await
     }
 }
 
@@ -105,6 +106,9 @@ pub struct PlanExecutor {
     /// Audit trail for execution logging
     audit_trail: Arc<dyn AuditTrail>,
 
+    /// Audit trail manager for chain-of-thought recording
+    audit_trail_manager: Option<Arc<AuditTrailManager>>,
+
     /// TODO integration for quality gate enforcement
     todo_integration: Arc<dyn TodoInterface>,
 
@@ -113,6 +117,14 @@ pub struct PlanExecutor {
 
     /// Failure oracle for deterministic testing
     failure_oracle: Arc<FailureOracle>,
+
+    /// Clock for deterministic time (feature-gated)
+    #[cfg(feature = "evaluation")]
+    clock: Arc<dyn crate::evaluation::determinism::Clock>,
+
+    /// RNG source for deterministic randomness (feature-gated)
+    #[cfg(feature = "evaluation")]
+    rng_source: Arc<crate::evaluation::determinism::ThreadSafeRngSource>,
 
     /// Execution configuration
     config: ExecutionConfig,
@@ -396,17 +408,48 @@ impl PlanExecutor {
         council_monitor: Arc<CouncilMonitor>,
         parallel_coordinator: std::sync::Weak<ParallelCoordinator>,
         audit_trail: Arc<dyn AuditTrail>,
-        todo_integration: Arc<Mutex<Arc<TodoIntegration>>>,
+        audit_trail_manager: Option<Arc<AuditTrailManager>>,
+        todo_integration: Arc<dyn TodoInterface>,
         config: ExecutionConfig,
     ) -> Self {
-        // Convert the complex todo integration to our interface
-        let todo_adapter = TodoAdapter {
-            inner: RwLock::new(
-                // Clone the inner TodoIntegration for the adapter
-                (*todo_integration.lock().clone()).clone()
-            ),
-        };
+        Self::with_determinism(
+            plan,
+            worker_pool,
+            evidence_collector,
+            worker_assigner,
+            scope_guard,
+            council_monitor,
+            parallel_coordinator,
+            audit_trail,
+            audit_trail_manager,
+            todo_integration,
+            config,
+            #[cfg(feature = "evaluation")]
+            Arc::new(crate::evaluation::determinism::SystemClock),
+            #[cfg(feature = "evaluation")]
+            Arc::new(crate::evaluation::determinism::ThreadSafeRngSource::new(
+                Box::new(crate::evaluation::determinism::SystemRng::new())
+            )),
+        )
+    }
 
+    /// Create new plan executor with determinism controls (feature-gated)
+    #[cfg(feature = "evaluation")]
+    pub fn with_determinism(
+        plan: ExecutionPlan,
+        worker_pool: Arc<dyn WorkerPool>,
+        evidence_collector: Arc<EvidenceCollector>,
+        worker_assigner: Arc<WorkerAssignmentStrategy>,
+        scope_guard: Arc<ScopeGuard>,
+        council_monitor: Arc<CouncilMonitor>,
+        parallel_coordinator: std::sync::Weak<ParallelCoordinator>,
+        audit_trail: Arc<dyn AuditTrail>,
+        audit_trail_manager: Option<Arc<AuditTrailManager>>,
+        todo_integration: Arc<dyn TodoInterface>,
+        config: ExecutionConfig,
+        clock: Arc<dyn crate::evaluation::determinism::Clock>,
+        rng_source: Arc<crate::evaluation::determinism::ThreadSafeRngSource>,
+    ) -> Self {
         Self {
             plan,
             worker_pool,
@@ -416,11 +459,132 @@ impl PlanExecutor {
             council_monitor,
             parallel_coordinator,
             audit_trail,
-            todo_integration: Arc::new(todo_adapter),
+            audit_trail_manager,
+            todo_integration,
+            parallel_limit: Arc::new(Semaphore::new(config.max_parallel_milestones.max(1))),
+            failure_oracle: Arc::new(FailureOracle::new(42)), // Fixed seed for deterministic testing
+            clock,
+            rng_source,
+            config,
+        }
+    }
+
+    #[cfg(not(feature = "evaluation"))]
+    fn with_determinism(
+        plan: ExecutionPlan,
+        worker_pool: Arc<dyn WorkerPool>,
+        evidence_collector: Arc<EvidenceCollector>,
+        worker_assigner: Arc<WorkerAssignmentStrategy>,
+        scope_guard: Arc<ScopeGuard>,
+        council_monitor: Arc<CouncilMonitor>,
+        parallel_coordinator: std::sync::Weak<ParallelCoordinator>,
+        audit_trail: Arc<dyn AuditTrail>,
+        audit_trail_manager: Option<Arc<AuditTrailManager>>,
+        todo_integration: Arc<dyn TodoInterface>,
+        config: ExecutionConfig,
+    ) -> Self {
+        Self {
+            plan,
+            worker_pool,
+            evidence_collector,
+            worker_assigner,
+            scope_guard,
+            council_monitor,
+            parallel_coordinator,
+            audit_trail,
+            audit_trail_manager,
+            todo_integration,
             parallel_limit: Arc::new(Semaphore::new(config.max_parallel_milestones.max(1))),
             failure_oracle: Arc::new(FailureOracle::new(42)), // Fixed seed for deterministic testing
             config,
         }
+    }
+
+    /// Get current time (uses clock if available, otherwise system time)
+    fn now(&self) -> chrono::DateTime<chrono::Utc> {
+        #[cfg(feature = "evaluation")]
+        {
+            self.clock.now()
+        }
+        #[cfg(not(feature = "evaluation"))]
+        {
+            chrono::Utc::now()
+        }
+    }
+
+    /// Generate a UUID (uses RNG source if available, otherwise system UUID)
+    fn generate_uuid(&self) -> Uuid {
+        #[cfg(feature = "evaluation")]
+        {
+            self.rng_source.generate_uuid()
+        }
+        #[cfg(not(feature = "evaluation"))]
+        {
+            Uuid::new_v4()
+        }
+    }
+
+    /// Record a decision point for chain-of-thought visibility
+    async fn record_decision_point(
+        &self,
+        decision_type: crate::chain_of_thought::DecisionType,
+        context: crate::chain_of_thought::DecisionContext,
+        alternatives: Vec<crate::chain_of_thought::Alternative>,
+        chosen_option: String,
+        reasoning: String,
+        confidence: f64,
+    ) -> Result<()> {
+        if let Some(ref audit_manager) = self.audit_trail_manager {
+            let decision_point = crate::chain_of_thought::DecisionPoint {
+                decision_id: self.generate_uuid(),
+                decision_type,
+                timestamp: self.now(),
+                context,
+                alternatives,
+                chosen_option,
+                reasoning,
+                confidence,
+                risk_assessment: None, // Could be enhanced later
+                metadata: std::collections::HashMap::new(),
+            };
+
+            audit_manager.record_orchestration_decision(decision_point).await?;
+        }
+        Ok(())
+    }
+
+    /// Record coordination events
+    async fn record_coordination_event(
+        &self,
+        event_type: crate::chain_of_thought::CoordinationEventType,
+        task_id: Option<Uuid>,
+        milestone_id: Option<String>,
+        worker_id: Option<Uuid>,
+        details: std::collections::HashMap<String, serde_json::Value>,
+    ) -> Result<()> {
+        if let Some(ref audit_manager) = self.audit_trail_manager {
+            let event = crate::chain_of_thought::CoordinationEvent {
+                event_id: self.generate_uuid(),
+                event_type,
+                timestamp: self.now(),
+                task_id,
+                milestone_id,
+                worker_id,
+                resource_id: None, // No specific resource ID for this event
+                details,
+            };
+
+            // Store coordination event for evaluation framework
+            #[cfg(feature = "evaluation")]
+            {
+                audit_manager.record_coordination_event(event.clone()).await?;
+            }
+
+            // For now, we'll record coordination events as part of the broader trace
+            // This could be enhanced with a dedicated coordination trace
+            info!("Coordination event: {:?}", event.event_type);
+        }
+        Ok(())
     }
 
     /// Audit helper to reduce repetition and ensure consistent metadata
@@ -438,7 +602,7 @@ impl PlanExecutor {
                 plan_id: self.plan.contract_plan.id,
                 milestone_id,
                 worker_id,
-                timestamp: Utc::now(),
+                timestamp: self.now(),
                 description: msg.into(),
                 metadata: meta,
             })
@@ -451,19 +615,19 @@ impl PlanExecutor {
         match self.config.council_oversight {
             None => Ok(()),
             Notify => {
-                self.council_monitor.notify(phase, &self.plan).await?;
+                self.council_monitor.notify(phase, &self.plan.contract_plan).await?;
                 Ok(())
             }
-            Standard => self.council_monitor.observe(phase, &self.plan).await,
+            Standard => self.council_monitor.observe(phase, &self.plan.contract_plan).await,
             Approve | Full => {
-                self.council_monitor.request_approval(phase, &self.plan).await
+                self.council_monitor.request_approval(phase, &self.plan.contract_plan).await
             }
         }
     }
 
     /// Execute the plan
     pub async fn execute(&self) -> Result<PlanExecutionResult> {
-        let start = Utc::now();
+        let start = self.now();
 
         // Log plan execution start
         self.audit(
@@ -522,12 +686,12 @@ impl PlanExecutor {
             {
                 let b = &mut plan.execution_context.parallel_batches[batch_index];
                 b.status = BatchStatus::Executing;
-                b.started_at = Some(Utc::now());
+                b.started_at = Some(self.now());
             }
 
             // Acquire parallelism permits for this batch
             let permits = self.config.max_parallel_milestones.min(ids.len());
-            let _permit = self.parallel_limit.acquire_many_owned(permits as u32).await?;
+            let _permit = self.parallel_limit.acquire_many(permits as u32).await?;
 
             // Execute batch
             let res = coordinator.execute_batch_parallel(&mut plan, batch_index).await?;
@@ -571,14 +735,14 @@ impl PlanExecutor {
             // Finalize batch
             {
                 let b = &mut plan.execution_context.parallel_batches[batch_index];
-                b.completed_at = Some(Utc::now());
+                b.completed_at = Some(self.now());
                 b.status = if res.failed == 0 { BatchStatus::Completed } else { BatchStatus::Failed };
             }
 
             self.council_gate("post-batch").await.ok();
         }
 
-        let end = Utc::now();
+        let end = self.now();
         let total_ms = (end - start).num_milliseconds().max(0) as u64;
         let success = total_failed == 0;
 
@@ -679,7 +843,7 @@ impl PlanExecutor {
             batch_index: 0,
             milestone_ids: milestone_ids.clone(),
             status: BatchStatus::Executing,
-            started_at: Some(Utc::now()),
+            started_at: Some(self.now()),
             completed_at: None,
             resource_requirements: ResourceRequirements::default(),
         };
@@ -784,8 +948,38 @@ impl PlanExecutor {
             ])
         ).await?;
 
-        // Assign worker
+        // Assign worker with chain-of-thought recording
         let worker_id = self.worker_assigner.assign_worker(&milestone).await?;
+
+        // Record worker assignment decision
+        self.record_decision_point(
+            crate::chain_of_thought::DecisionType::WorkerAssignment,
+            crate::chain_of_thought::DecisionContext {
+                task_id: Some(self.plan.contract_plan.id),
+                plan_id: Some(self.plan.contract_plan.id),
+                milestone_id: Some(milestone_id.clone()),
+                worker_id: Some(worker_id),
+                resource_constraints: std::collections::HashMap::new(),
+                time_constraints: None,
+                priority_level: Some(milestone.priority.to_string()),
+            },
+            vec![], // Could be populated with alternative workers considered
+            format!("Worker {}", worker_id),
+            format!("Assigned worker {} to milestone {} based on capability matching", worker_id, milestone_id),
+            0.9, // High confidence for worker assignments
+        ).await?;
+
+        // Record coordination event
+        self.record_coordination_event(
+            crate::chain_of_thought::CoordinationEventType::WorkerAssigned,
+            Some(self.plan.contract_plan.id),
+            Some(milestone_id.clone()),
+            Some(worker_id),
+            std::collections::HashMap::from([
+                ("objective".to_string(), serde_json::Value::String(milestone.objective.clone())),
+            ]),
+        ).await?;
+
         self.worker_pool.assign_worker(worker_id, milestone_id.clone()).await?;
 
         // Log worker assignment
@@ -882,8 +1076,37 @@ impl PlanExecutor {
         // Create worker context from milestone
         let worker_context = self.create_worker_context(milestone)?;
 
-        // Find suitable worker for this milestone
+        // Find suitable worker for this milestone with chain-of-thought recording
         let worker_id = self.worker_assigner.assign_worker(milestone).await?;
+
+        // Record worker assignment decision for individual milestone execution
+        self.record_decision_point(
+            crate::chain_of_thought::DecisionType::WorkerAssignment,
+            crate::chain_of_thought::DecisionContext {
+                task_id: Some(self.plan.contract_plan.id),
+                plan_id: Some(self.plan.contract_plan.id),
+                milestone_id: Some(milestone.id.clone()),
+                worker_id: Some(worker_id),
+                resource_constraints: std::collections::HashMap::new(),
+                time_constraints: None,
+                priority_level: Some(milestone.priority.to_string()),
+            },
+            vec![], // Could be populated with alternative workers considered
+            format!("Worker {}", worker_id),
+            format!("Assigned worker {} to milestone {} for individual execution", worker_id, milestone.id),
+            0.85, // Slightly lower confidence for individual assignments
+        ).await?;
+
+        // Record coordination event for individual execution
+        self.record_coordination_event(
+            crate::chain_of_thought::CoordinationEventType::TaskStarted,
+            Some(self.plan.contract_plan.id),
+            Some(milestone.id.clone()),
+            Some(worker_id),
+            std::collections::HashMap::from([
+                ("execution_mode".to_string(), serde_json::Value::String("individual".to_string())),
+            ]),
+        ).await?;
 
         // Get worker reference from pool
         let worker_pool = self.worker_pool.available_workers().await?;
@@ -1047,8 +1270,10 @@ impl PlanExecutor {
             let mut v = Vec::new();
             if let Some(s) = b.started_at {
                 v.push(agent_agency_contracts::planning::ExecutionEvent {
-                    event_type: "BatchStarted".into(),
+                    event_type: ExecutionEventType::BatchStarted,
                     timestamp: s,
+                    milestone_id: None,
+                    description: format!("Batch {} started execution", b.batch_index),
                     metadata: HashMap::from([
                         ("batch_index".into(), b.batch_index.into()),
                         ("milestone_count".into(), b.milestone_ids.len().into()),
@@ -1057,8 +1282,10 @@ impl PlanExecutor {
             }
             if let Some(e) = b.completed_at {
                 v.push(agent_agency_contracts::planning::ExecutionEvent {
-                    event_type: "BatchCompleted".into(),
+                    event_type: ExecutionEventType::MilestoneCompleted,
                     timestamp: e,
+                    milestone_id: None,
+                    description: format!("Batch {} completed execution", b.batch_index),
                     metadata: HashMap::from([
                         ("batch_index".into(), b.batch_index.into()),
                         ("status".into(), format!("{:?}", b.status).into()),
@@ -1082,8 +1309,13 @@ impl PlanExecutor {
             scope_guard: self.scope_guard.clone(),
             council_monitor: self.council_monitor.clone(),
             audit_trail: self.audit_trail.clone(),
+            audit_trail_manager: self.audit_trail_manager.clone(),
             parallel_limit: self.parallel_limit.clone(),
             failure_oracle: self.failure_oracle.clone(),
+            #[cfg(feature = "evaluation")]
+            clock: self.clock.clone(),
+            #[cfg(feature = "evaluation")]
+            rng_source: self.rng_source.clone(),
             config: self.config.clone(),
         })
     }

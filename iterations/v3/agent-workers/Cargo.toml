@@ -23,9 +23,6 @@ agent-mcp = { path = "../agent-mcp" }
 # Contracts for task definitions
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 
-# Council for security and compliance
-agent-orchestration = { path = "../agent-orchestration", optional = true }
-
 # Resilience patterns
 system-resilience = { path = "../system-resilience" }
 

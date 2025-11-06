@@ -20,6 +20,22 @@ pub struct ProcessingContext {
     pub language: Option<Language>,
 }
 
+impl Default for ProcessingContext {
+    fn default() -> Self {
+        Self {
+            task_id: Uuid::new_v4(),
+            working_spec_id: String::new(),
+            source_file: None,
+            line_number: None,
+            surrounding_context: String::new(),
+            domain_hints: Vec::new(),
+            metadata: std::collections::HashMap::new(),
+            input_text: String::new(),
+            language: None,
+        }
+    }
+}
+
 /// Result of claim extraction process
 #[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ClaimExtractionResult {

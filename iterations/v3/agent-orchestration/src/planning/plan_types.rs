@@ -370,6 +370,9 @@ pub enum BatchStatus {
     /// Batch queued for execution
     Queued,
 
+    /// Batch pending additional requirements
+    Pending,
+
     /// Batch currently executing
     Executing,
 

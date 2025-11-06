@@ -13,6 +13,9 @@ serde_json.workspace = true
 serde_yaml = "0.9"
 tokio.workspace = true
 async-trait.workspace = true
+
+# Agent crates
+# agent-workers = { path = "../agent-workers" } # TODO: Re-enable when circular dependency is resolved
 # Logging and observability
 tracing.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
@@ -101,6 +104,11 @@ development = ["development-tools"]
 memory = ["agent-memory"]  # Gate memory functionality behind feature flag
 research = ["agent-research"]  # Gate research functionality behind feature flag
 data-processing = ["dep:agent-data-processing"]  # Gate data processing integration behind feature flag
+evaluation = []  # Gate evaluation framework behind feature flag
+
+[dev-dependencies]
+insta = { version = "1.38", features = ["yaml"] }
+proptest = "1.5"
 
 [[bin]]
 name = "agent-orchestration-server"

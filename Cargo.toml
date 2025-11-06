@@ -4,6 +4,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "xtask",
     "iterations/v3/agent-data-processing",
     "iterations/v3/agent-workers",
     "iterations/v3/agent-mcp",
@@ -96,6 +97,11 @@ image = { version = "0.24", features = ["jpeg", "png", "webp", "tiff", "bmp", "g
 
 # Random number generation - aligned with candle-core requirements
 rand = "0.8.5"
+
+# Testing and verification infrastructure
+insta = "1.39"
+proptest = "1.5"
+criterion = { version = "0.5", features = ["html_reports"] }
 
 # Force compatible versions to resolve indicatif/console conflicts
 indicatif = "0.17"

@@ -21,6 +21,7 @@ pub struct LeakInfo {
 }
 
 /// Memory leak detector
+#[derive(Debug)]
 pub struct MemoryLeakDetector {
     allocation_snapshots: Arc<RwLock<Vec<(Instant, HashMap<String, usize>)>>>,
     _alert_threshold_mb: u64,
@@ -42,7 +43,7 @@ impl MemoryLeakDetector {
         allocations.insert(label.to_string(), allocation_count);
 
         let snapshot = (Instant::now(), allocations);
-        let mut snapshots = self.allocation_snapshots.write().await.unwrap();
+        let mut snapshots = self.allocation_snapshots.write().await;
         snapshots.push(snapshot);
 
         // Keep only last 10 snapshots
@@ -53,7 +54,7 @@ impl MemoryLeakDetector {
 
     /// Analyze for potential memory leaks
     pub async fn analyze_leaks(&self) -> Vec<String> {
-        let snapshots = self.allocation_snapshots.read().await.unwrap();
+        let snapshots = self.allocation_snapshots.read().await;
         let mut alerts = Vec::new();
 
         if snapshots.len() < 2 {
@@ -96,10 +97,10 @@ impl Default for MemoryManagementConfig {
             monitor_config: MemoryLimitConfig {
                 max_heap_mb: 1024, // 1GB
                 max_stack_mb: 8,    // 8MB per thread
-                warning_threshold_mb: 768, // 75% of heap limit
-                critical_threshold_mb: 896, // 87.5% of heap limit
+                warning_threshold_percent: 0.75, // 75% of heap limit
+                critical_threshold_percent: 0.875, // 87.5% of heap limit
                 enable_gc_pressure: true,
-                gc_pressure_threshold_mb: 800,
+                gc_pressure_threshold_mb: 800.0,
                 monitoring_interval_ms: 5000, // 5 seconds
             },
             enable_object_pooling: true,

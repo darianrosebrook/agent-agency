@@ -24,6 +24,7 @@ pub mod models;
 pub mod optimization;
 pub mod pooling;
 pub mod queries;
+pub mod queue;
 pub mod vector_store;
 pub mod wal_storage;
 pub mod wal_replay;

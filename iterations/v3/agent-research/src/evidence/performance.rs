@@ -1,17 +1,62 @@
 //! Performance measurement evidence collection
 
+use super::common::{EvidenceCollector, CollectorCtx, helpers};
 use super::types::*;
-use crate::extraction_types::{AtomicClaim, Evidence, EvidenceType, EvidenceSource, ProcessingContext};
+use crate::extraction_types::{AtomicClaim, Evidence, EvidenceType, ProcessingContext};
 use crate::evidence::evidence_types::EvidenceCollectorConfig;
 use anyhow::Result;
+use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
+use async_trait::async_trait;
 
 /// Performance collector
-
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PerformanceCollector {
     config: EvidenceCollectorConfig,
+}
+
+#[async_trait]
+impl EvidenceCollector for PerformanceCollector {
+    type Input = AtomicClaim;
+    type Output = Vec<Evidence>;
+
+    fn name(&self) -> &'static str { "performance" }
+
+    fn config(&self) -> &EvidenceCollectorConfig {
+        &self.config
+    }
+
+    async fn collect(&self, claim: &AtomicClaim, ctx: &CollectorCtx) -> Result<Vec<Evidence>, Box<dyn std::error::Error + Send + Sync + 'static>> {
+        // Check timeout
+        if ctx.should_timeout() {
+            return Err(Box::from("Performance collection timed out"));
+        }
+
+        let evidence = helpers::create_evidence_base(
+            claim.id,
+            EvidenceType::PerformanceMetrics,
+            "Performance measurement evidence collection not yet implemented".to_string(),
+            0.7,
+            0.8,
+        );
+
+        // Update source with performance-specific information
+        let evidence = Evidence {
+            source: crate::extraction_types::EvidenceSource::CodeSearch {
+                location: "performance".to_string(),
+                authority: "performance-measurement".to_string(),
+                freshness: chrono::Utc::now(),
+            },
+            ..evidence
+        };
+
+        // Validate evidence quality using min_relevance_threshold as proxy for confidence threshold
+        if evidence.confidence < ctx.config.min_relevance_threshold {
+            return Err(Box::from("Evidence confidence below threshold"));
+        }
+
+        Ok(vec![evidence])
+    }
 }
 
 impl PerformanceCollector {
@@ -25,24 +70,14 @@ impl PerformanceCollector {
         Self { config }
     }
 
+    /// Legacy method for backward compatibility
     pub async fn collect_evidence(
         &self,
         claim: &AtomicClaim,
-        _context: &ProcessingContext,
+        context: &ProcessingContext,
     ) -> Result<Vec<Evidence>> {
-        Ok(vec![Evidence {
-            id: uuid::Uuid::new_v4(),
-            claim_id: claim.id,
-            evidence_type: EvidenceType::PerformanceMetrics,
-            content: "Performance measurement evidence collection not yet implemented".to_string(),
-            source: EvidenceSource::CodeSearch {
-                location: "performance".to_string(),
-                authority: "performance-measurement".to_string(),
-                freshness: chrono::Utc::now(),
-            },
-            confidence: 0.7,
-            relevance: 0.8,
-            timestamp: chrono::Utc::now(),
-        }])
+        use crate::evidence::common::{EvidenceCollector as _, CollectorCtx};
+        let ctx = CollectorCtx::new(self.config.clone(), context.clone());
+        <Self as EvidenceCollector>::run(self, claim, &ctx).await.map_err(|e| anyhow::anyhow!("{}", e))
     }
 }

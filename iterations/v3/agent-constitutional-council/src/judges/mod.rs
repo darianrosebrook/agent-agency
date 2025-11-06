@@ -60,6 +60,7 @@ impl Judges {
     }
 }
 
+pub mod common;
 pub mod constitutional_judge;
 pub mod technical_auditor;
 pub mod quality_evaluator;

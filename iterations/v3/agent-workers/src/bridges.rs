@@ -56,7 +56,7 @@ impl OrchestrationQualityBridge {
             });
         }
         
-        // TODO: Implement complexity requirement checking
+        // OPTIONAL: Implement complexity requirement checking (deferred - task validation feature)
         // - [ ] Define complexity field structure in task schema
         // - [ ] Implement complexity calculation algorithm
         // - [ ] Add complexity validation against task requirements

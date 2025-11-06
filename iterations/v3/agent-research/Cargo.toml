@@ -54,7 +54,6 @@ console = { version = "0.16", features = ["std"] }
 # DO NOT change tokenizers - must use workspace version (0.19) for CoreML compatibility.
 # Last fixed: P0 priority - candle-core dependency alignment (2025-01-XX)
 # Benchmarking and metrics (from model-benchmarking)
-criterion = "0.5"
 prometheus = "0.13"
 statistical = "0.1"
 candle-core = { workspace = true }
@@ -87,9 +86,15 @@ system-observability = { path = "../system-observability" }
 [features]
 default = []
 coreml = ["system-acceleration"]
+# legacy_orchestrator feature removed - orchestrator consolidated to crate::orchestrator
 # # workers = ["agent-workers"]  # Removed feature since dependency removed  # Feature removed since dependency removed
 # orchestration = ["agent-orchestration"]  # Removed feature since dependency removed
 # data-processing = ["agent-data-processing"]  # Removed feature since dependency removed
 
 [dev-dependencies]
 tokio-test = "0.4"
+criterion = "0.5"
+
+[[bench]]
+name = "orchestrator"
+harness = false

@@ -27,19 +27,22 @@ use serde_json;
 use agent_agency_contracts::{
     JudgeEngine, JudgeVerdict, JudgePrompt, JudgeType, VerdictLabel,
     Violation, judge_io::Severity, RubricItem, WorkingSpecEvidence,
+    working_spec::WorkingSpec,
 };
 
 use crate::{ReviewContext, CouncilResult, CouncilError};
-use super::{Judge, JudgeUtils};
+use super::common::{Judge, JudgeUtils, RubricBuilder, EvidenceBuilder, RubricItemBuilder, JUDGE_OUTPUT_SCHEMA};
+
+// CAWS integration for runtime validation
+use agent_orchestration::planning::caws_integration::CawsPlanBridge;
 
 /// Integration Validator for system compatibility and deployment readiness
 #[derive(Debug)]
 pub struct IntegrationValidator {
     /// Inference engine for LLM-based analysis
     engine: Arc<dyn JudgeEngine>,
-
-    /// Integration evaluation rubric
-    rubric: IntegrationRubric,
+    /// CAWS validation bridge
+    caws_bridge: CawsPlanBridge,
 }
 
 /// Integration evaluation rubric
@@ -58,66 +61,87 @@ pub struct IntegrationRubric {
     deployment_items: Vec<RubricItem>,
 }
 
-impl Default for IntegrationRubric {
-    fn default() -> Self {
-        Self {
-            api_items: vec![
-                RubricItem {
-                    id: "API-001".to_string(),
-                    description: "API contracts are stable and backward compatible".to_string(),
-                    weight: 0.9,
-                    evidence_requirements: vec!["api_contracts".to_string()],
-                },
-                RubricItem {
-                    id: "API-002".to_string(),
-                    description: "Breaking changes are properly versioned and communicated".to_string(),
-                    weight: 0.85,
-                    evidence_requirements: vec!["versioning_strategy".to_string()],
-                },
-            ],
-            data_items: vec![
-                RubricItem {
-                    id: "DATA-001".to_string(),
-                    description: "Data schemas maintain backward compatibility".to_string(),
-                    weight: 0.9,
-                    evidence_requirements: vec!["schema_migrations".to_string()],
-                },
-                RubricItem {
-                    id: "DATA-002".to_string(),
-                    description: "Data consistency is maintained across system boundaries".to_string(),
-                    weight: 0.85,
-                    evidence_requirements: vec!["consistency_checks".to_string()],
-                },
-            ],
-            system_items: vec![
-                RubricItem {
-                    id: "SYS-001".to_string(),
-                    description: "Component interfaces and communication protocols are compatible".to_string(),
-                    weight: 0.8,
-                    evidence_requirements: vec!["interface_contracts".to_string()],
-                },
-                RubricItem {
-                    id: "SYS-002".to_string(),
-                    description: "System dependencies and service interactions are properly managed".to_string(),
-                    weight: 0.85,
-                    evidence_requirements: vec!["dependency_analysis".to_string()],
-                },
-            ],
-            deployment_items: vec![
-                RubricItem {
-                    id: "DEPLOY-001".to_string(),
-                    description: "Deployment process is automated and reliable".to_string(),
-                    weight: 0.8,
-                    evidence_requirements: vec!["deployment_pipeline".to_string()],
-                },
-                RubricItem {
-                    id: "DEPLOY-002".to_string(),
-                    description: "Infrastructure and operational requirements are specified".to_string(),
-                    weight: 0.75,
-                    evidence_requirements: vec!["infrastructure_specs".to_string()],
-                },
-            ],
-        }
+impl IntegrationRubric {
+    /// Build the rubric using RubricBuilder
+    pub fn build() -> Vec<RubricItem> {
+        RubricBuilder::new()
+            .add_items(vec![
+                RubricItemBuilder::new(
+                    "API-001",
+                    "API contracts are stable and backward compatible",
+                    0.9,
+                    vec!["api_contracts".to_string()],
+                ),
+                RubricItemBuilder::new(
+                    "API-002",
+                    "Breaking changes are properly versioned and communicated",
+                    0.85,
+                    vec!["versioning_strategy".to_string()],
+                ),
+            ])
+            .add_items(vec![
+                RubricItemBuilder::new(
+                    "DATA-001",
+                    "Data schemas maintain backward compatibility",
+                    0.9,
+                    vec!["schema_migrations".to_string()],
+                ),
+                RubricItemBuilder::new(
+                    "DATA-002",
+                    "Data consistency is maintained across system boundaries",
+                    0.85,
+                    vec!["consistency_checks".to_string()],
+                ),
+            ])
+            .add_items(vec![
+                RubricItemBuilder::new(
+                    "SYS-001",
+                    "Component interfaces and communication protocols are compatible",
+                    0.8,
+                    vec!["interface_contracts".to_string()],
+                ),
+                RubricItemBuilder::new(
+                    "SYS-002",
+                    "System dependencies and service interactions are properly managed",
+                    0.85,
+                    vec!["dependency_analysis".to_string()],
+                ),
+            ])
+            .add_items(vec![
+                RubricItemBuilder::new(
+                    "DEPLOY-001",
+                    "Deployment process is automated and reliable",
+                    0.8,
+                    vec!["deployment_pipeline".to_string()],
+                ),
+                RubricItemBuilder::new(
+                    "DEPLOY-002",
+                    "Infrastructure and operational requirements are specified",
+                    0.75,
+                    vec!["infrastructure_specs".to_string()],
+                ),
+            ])
+            .add_items(vec![
+                RubricItemBuilder::new(
+                    "CAWS-001",
+                    "Working specification adheres to CAWS standards and constraints",
+                    0.9,
+                    vec!["caws_compliance".to_string()],
+                ),
+                RubricItemBuilder::new(
+                    "CAWS-002",
+                    "Risk tier, scope boundaries, and change budgets are appropriately defined",
+                    0.85,
+                    vec!["scope_validation".to_string()],
+                ),
+                RubricItemBuilder::new(
+                    "CAWS-003",
+                    "API contracts and acceptance criteria are complete and testable",
+                    0.8,
+                    vec!["contract_validation".to_string()],
+                ),
+            ])
+            .build()
     }
 }
 
@@ -126,101 +150,71 @@ impl IntegrationValidator {
     pub fn new(engine: Arc<dyn JudgeEngine>) -> Self {
         Self {
             engine,
-            rubric: IntegrationRubric::default(),
+            caws_bridge: CawsPlanBridge::new(),
         }
     }
 
     /// Build the complete integration rubric
     fn build_rubric(&self) -> Vec<RubricItem> {
-        let mut rubric = Vec::new();
-        rubric.extend(self.rubric.api_items.clone());
-        rubric.extend(self.rubric.data_items.clone());
-        rubric.extend(self.rubric.system_items.clone());
-        rubric.extend(self.rubric.deployment_items.clone());
-        rubric
+        IntegrationRubric::build()
     }
 
     /// Build LLM prompt for integration analysis
-    fn build_prompt(&self, ctx: &ReviewContext) -> JudgePrompt {
+    fn build_prompt_impl(&self, ctx: &ReviewContext) -> JudgePrompt {
         let rubric = self.build_rubric();
 
         JudgePrompt {
             role: JudgeType::Integration,
-            objective: "Evaluate the API compatibility, data consistency, system integration, and deployment readiness of this implementation. Assess backward compatibility, schema coherence, component interactions, and operational deployment requirements.".to_string(),
+            objective: "Evaluate the API compatibility, data consistency, system integration, deployment readiness, and CAWS compliance of this implementation. Assess backward compatibility, schema coherence, component interactions, operational deployment requirements, and adherence to CAWS working specification standards including risk tier constraints, scope boundaries, change budgets, and contract specifications.".to_string(),
             rubric,
-            evidence: WorkingSpecEvidence {
-                spec_text: format!("{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
-                    ctx.working_spec.title,
-                    ctx.working_spec.description,
-                    ctx.working_spec.goals.join("\n- "),
-                    ctx.working_spec.acceptance_criteria.iter()
-                        .map(|ac| format!("{}: Given {}, When {}, Then {}", ac.id, ac.given, ac.when, ac.then))
-                        .collect::<Vec<_>>()
-                        .join("\n")
-                ),
-                acceptance_criteria: ctx.working_spec.acceptance_criteria.iter()
-                    .map(|ac| format!("{}: {}", ac.id, ac.then))
-                    .collect(),
-                risk_tier: ctx.working_spec.risk_tier.to_string(),
-                context: serde_json::to_value(&ctx.working_spec.context).unwrap_or(serde_json::Value::Null),
-            },
-            output_schema: r#"{
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "type": "object",
-                "required": ["score", "label", "rationale", "violations", "evidence_refs"],
-                "properties": {
-                    "score": {"type": "number", "minimum": 0.0, "maximum": 1.0},
-                    "label": {"type": "string", "enum": ["Pass", "Fail", "NeedsInfo", "Conditional"]},
-                    "rationale": {"type": "string"},
-                    "violations": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "required": ["rule_id", "severity", "waivable", "description"],
-                            "properties": {
-                                "rule_id": {"type": "string"},
-                                "severity": {"type": "string", "enum": ["Info", "Low", "Medium", "High", "Critical"]},
-                                "waivable": {"type": "boolean"},
-                                "description": {"type": "string"}
-                            }
-                        }
-                    },
-                    "evidence_refs": {"type": "array", "items": {"type": "string"}}
-                }
-            }"#.to_string(),
+            evidence: EvidenceBuilder::from_context(ctx),
+            output_schema: JUDGE_OUTPUT_SCHEMA.to_string(),
         }
     }
 }
 
+impl IntegrationValidator {
+    /// Get the judge type
+    fn judge_type(&self) -> JudgeType {
+        JudgeType::Integration
+    }
+
+    /// Get the judge rubric
+    fn rubric(&self) -> Vec<RubricItem> {
+        self.build_rubric()
+    }
+
+    /// Run deterministic integration checks
+    fn run_deterministic_checks(&self, ctx: &ReviewContext) -> Vec<Violation> {
+        self.run_deterministic_checks_impl(ctx)
+    }
+}
+
 #[async_trait]
-impl Judge for IntegrationValidator {
-    #[instrument(skip(self, ctx), fields(judge = "integration", spec_id = %ctx.working_spec.id))]
-    async fn review_spec(&self, ctx: &ReviewContext) -> CouncilResult<JudgeVerdict> {
+impl super::common::Judge for IntegrationValidator {
+    fn judge_type(&self) -> JudgeType {
+        JudgeType::Integration
+    }
+
+    fn rubric(&self) -> Vec<RubricItem> {
+        self.build_rubric()
+    }
+
+    fn build_prompt(&self, ctx: &ReviewContext) -> JudgePrompt {
+        self.build_prompt_impl(ctx)
+    }
+
+    fn run_deterministic_checks(&self, ctx: &ReviewContext) -> Vec<Violation> {
+        self.run_deterministic_checks_impl(ctx)
+    }
+
+    async fn execute_llm_evaluation(
+        &self,
+        ctx: &ReviewContext,
+        prompt: JudgePrompt,
+        violations: Vec<Violation>,
+    ) -> CouncilResult<JudgeVerdict> {
         debug!("🔗 Integration Validator reviewing spec {}", ctx.working_spec.id);
-
-        // STEP 1: Run deterministic integration checks
-        let integration_violations = self.run_deterministic_checks(ctx);
-
-        // STEP 2: Check for blocking integration violations
-        if JudgeUtils::has_blocking_violations(&integration_violations) {
-            debug!("🚫 Integration Validator: Blocking violations detected");
-            return Ok(JudgeVerdict {
-                label: VerdictLabel::Fail,
-                score: 0.0,
-                rationale: format!(
-                    "Rejected due to critical integration violations: {}",
-                    integration_violations.iter()
-                        .map(|v| v.description.as_str())
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                ),
-                violations: integration_violations,
-                evidence_refs: vec!["integration_analysis".to_string()],
-            });
-        }
-
-        // STEP 3: Build LLM prompt for integration analysis
-        let prompt = self.build_prompt(ctx);
 
         // STEP 4: Execute engine
         let req = JudgeUtils::build_request(prompt, 256);
@@ -228,7 +222,7 @@ impl Judge for IntegrationValidator {
             .map_err(|e| CouncilError::Engine(e))?;
 
         // STEP 5: Merge findings
-        let merged_verdict = JudgeUtils::merge_verdicts(integration_violations, llm_verdict.parsed);
+        let merged_verdict = JudgeUtils::merge_verdicts(violations, llm_verdict.parsed);
 
         debug!(
             "🔗 Integration Validator verdict: {} (score: {:.2})",
@@ -247,8 +241,73 @@ impl Judge for IntegrationValidator {
 
 impl IntegrationValidator {
     /// Run deterministic integration checks
-    fn run_deterministic_checks(&self, ctx: &ReviewContext) -> Vec<Violation> {
+    fn run_deterministic_checks_impl(&self, ctx: &ReviewContext) -> Vec<Violation> {
         let mut violations = vec![];
+
+        // CAWS Runtime Validation - Check working spec compliance
+        if let Err(caws_error) = self.caws_bridge.validate_working_spec(&ctx.working_spec) {
+            violations.push(Violation {
+                rule_id: "CAWS-RUNTIME-001".to_string(),
+                severity: Severity::High,
+                waivable: false,
+                description: format!("CAWS specification validation failed: {}", caws_error),
+            });
+        }
+
+        // Additional CAWS Runtime Checks
+
+        // Check risk tier constraints
+        if ctx.working_spec.risk_tier > 3 {
+            violations.push(Violation {
+                rule_id: "CAWS-RUNTIME-002".to_string(),
+                severity: Severity::High,
+                waivable: false,
+                description: format!("Risk tier {} exceeds maximum allowed tier 3", ctx.working_spec.risk_tier),
+            });
+        }
+
+        // Check scope boundaries are properly defined
+        if ctx.working_spec.scope.is_empty() {
+            violations.push(Violation {
+                rule_id: "CAWS-RUNTIME-003".to_string(),
+                severity: Severity::Medium,
+                waivable: true,
+                description: "Working spec scope boundaries are not defined - specify allowed/blocked paths".to_string(),
+            });
+        }
+
+        // Check change budget is reasonable
+        if ctx.working_spec.change_budget.max_files > 1000 || ctx.working_spec.change_budget.max_loc > 50000 {
+            violations.push(Violation {
+                rule_id: "CAWS-RUNTIME-004".to_string(),
+                severity: Severity::Medium,
+                waivable: true,
+                description: format!("Change budget exceeds recommended limits (files: {}, loc: {}) - consider breaking into smaller tasks",
+                    ctx.working_spec.change_budget.max_files, ctx.working_spec.change_budget.max_loc),
+            });
+        }
+
+        // Check for proper CAWS mode specification
+        // Note: mode field not present in WorkingSpec, skipping this check
+        // if ctx.working_spec.mode.is_empty() {
+        //     violations.push(Violation {
+        //         rule_id: "CAWS-RUNTIME-005".to_string(),
+        //         severity: Severity::Low,
+        //         waivable: true,
+        //         description: "Working spec mode not specified - specify 'feature', 'refactor', 'fix', 'chore', or 'doc'".to_string(),
+        //     });
+        // }
+
+        // Validate contracts exist for feature changes
+        // Note: mode and contracts fields not present in WorkingSpec, skipping this check
+        // if ctx.working_spec.mode == "feature" && ctx.working_spec.contracts.is_empty() {
+        //     violations.push(Violation {
+        //         rule_id: "CAWS-RUNTIME-006".to_string(),
+        //         severity: Severity::Medium,
+        //         waivable: true,
+        //         description: "Feature changes should include API contracts for compatibility validation".to_string(),
+        //     });
+        // }
 
         let spec_text = format!("{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
             ctx.working_spec.title,

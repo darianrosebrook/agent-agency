@@ -1,17 +1,62 @@
 //! Documentation review evidence collection
 
+use super::common::{EvidenceCollector, CollectorCtx, helpers};
 use super::types::*;
-use crate::extraction_types::{AtomicClaim, Evidence, EvidenceType, EvidenceSource, ProcessingContext};
+use crate::extraction_types::{AtomicClaim, Evidence, EvidenceType, ProcessingContext};
 use crate::evidence::evidence_types::EvidenceCollectorConfig;
 use anyhow::Result;
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
+use async_trait::async_trait;
 
 /// Documentation collector
-
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DocumentationCollector {
     config: EvidenceCollectorConfig,
+}
+
+#[async_trait]
+impl EvidenceCollector for DocumentationCollector {
+    type Input = AtomicClaim;
+    type Output = Vec<Evidence>;
+
+    fn name(&self) -> &'static str { "documentation" }
+
+    fn config(&self) -> &EvidenceCollectorConfig {
+        &self.config
+    }
+
+    async fn collect(&self, claim: &AtomicClaim, ctx: &CollectorCtx) -> Result<Vec<Evidence>, Box<dyn std::error::Error + Send + Sync + 'static>> {
+        // Check timeout
+        if ctx.should_timeout() {
+            return Err(Box::from("Documentation collection timed out"));
+        }
+
+        let evidence = helpers::create_evidence_base(
+            claim.id,
+            EvidenceType::Documentation,
+            "Documentation review evidence collection not yet implemented".to_string(),
+            0.6,
+            0.7,
+        );
+
+        // Update source with documentation-specific information
+        let evidence = Evidence {
+            source: crate::extraction_types::EvidenceSource::CodeSearch {
+                location: "docs".to_string(),
+                authority: "documentation-review".to_string(),
+                freshness: chrono::Utc::now(),
+            },
+            ..evidence
+        };
+
+        // Validate evidence quality using min_relevance_threshold as proxy for confidence threshold
+        if evidence.confidence < ctx.config.min_relevance_threshold {
+            return Err(Box::from("Evidence confidence below threshold"));
+        }
+
+        Ok(vec![evidence])
+    }
 }
 
 impl DocumentationCollector {
@@ -25,24 +70,14 @@ impl DocumentationCollector {
         Self { config }
     }
 
+    /// Legacy method for backward compatibility
     pub async fn collect_evidence(
         &self,
         claim: &AtomicClaim,
-        _context: &ProcessingContext,
+        context: &ProcessingContext,
     ) -> Result<Vec<Evidence>> {
-        Ok(vec![Evidence {
-            id: uuid::Uuid::new_v4(),
-            claim_id: claim.id,
-            evidence_type: EvidenceType::Documentation,
-            content: "Documentation review evidence collection not yet implemented".to_string(),
-            source: EvidenceSource::CodeSearch {
-                location: "docs".to_string(),
-                authority: "documentation-review".to_string(),
-                freshness: chrono::Utc::now(),
-            },
-            confidence: 0.6,
-            relevance: 0.7,
-            timestamp: chrono::Utc::now(),
-        }])
+        use crate::evidence::common::{EvidenceCollector as _, CollectorCtx};
+        let ctx = CollectorCtx::new(self.config.clone(), context.clone());
+        <Self as EvidenceCollector>::run(self, claim, &ctx).await.map_err(|e| anyhow::anyhow!("{}", e))
     }
 }

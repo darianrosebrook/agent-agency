@@ -1,0 +1,6 @@
+---
+source: system-quality-security/src/errors.rs
+assertion_line: 257
+expression: key_expired.to_string()
+---
+Key expired: expired-key-456

@@ -109,6 +109,53 @@ pub enum PlanState {
     Cancelled { reason: String },
 }
 
+/// Plan status enumeration (alias for PlanState for compatibility)
+pub type PlanStatus = PlanState;
+
+/// Plan priority levels for execution scheduling
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub enum PlanPriority {
+    /// Low priority - execute when resources available
+    Low,
+
+    /// Normal priority - standard execution priority
+    Normal,
+
+    /// Medium priority - elevated execution priority
+    Medium,
+
+    /// High priority - expedited execution
+    High,
+
+    /// Critical priority - immediate execution required
+    Critical,
+}
+
+/// Plan execution state for detailed tracking
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub enum PlanExecutionState {
+    /// Plan is queued for execution
+    Queued,
+
+    /// Plan is being prepared for execution
+    Preparing,
+
+    /// Plan is actively executing
+    Executing,
+
+    /// Plan execution is paused
+    Paused,
+
+    /// Plan execution completed successfully
+    Completed,
+
+    /// Plan execution failed
+    Failed,
+
+    /// Plan execution was cancelled
+    Cancelled,
+}
+
 /// Individual milestone within an execution plan
 /// Represents a discrete unit of work with dependencies and evidence gates
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -211,6 +258,17 @@ pub enum MilestonePriority {
 
     /// Critical priority requiring immediate attention
     Critical,
+}
+
+impl std::fmt::Display for MilestonePriority {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MilestonePriority::Low => write!(f, "Low"),
+            MilestonePriority::Normal => write!(f, "Normal"),
+            MilestonePriority::High => write!(f, "High"),
+            MilestonePriority::Critical => write!(f, "Critical"),
+        }
+    }
 }
 
 /// Execution scope defining milestone boundaries

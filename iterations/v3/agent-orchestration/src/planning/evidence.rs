@@ -529,19 +529,11 @@ mod tests {
             Ok(vec![
                 ResearchEvidence {
                     id: Uuid::new_v4(),
-                    claim_id: "test-claim".to_string(),
+                    content: "Quality test results for milestone execution".to_string(),
                     evidence_type: ResearchEvidenceType::TestExecution,
-                    source: "test".to_string(),
-                    confidence_score: 0.9,
-                    data: Some(serde_json::json!({
-                        "passed": 10,
-                        "failed": 0,
-                        "coverage": 0.85
-                    })),
-                    metadata: HashMap::new(),
-                    verified: true,
-                    created_at: Utc::now(),
-                    updated_at: Utc::now(),
+                    confidence: 0.9,
+                    source: "test-harness".to_string(),
+                    timestamp: Utc::now(),
                 }
             ])
         }
@@ -577,6 +569,7 @@ mod tests {
         let evidence = EvidenceBundle {
             milestone_id: "test".to_string(),
             plan_id: Uuid::new_v4(),
+            collected_at: Utc::now(),
             artifacts: vec![EvidenceArtifact {
                 id: Uuid::new_v4(),
                 artifact_type: "test_results".to_string(),
@@ -588,9 +581,11 @@ mod tests {
                 ])),
                 quality_score: 0.9,
                 collected_at: Utc::now(),
+                metadata: HashMap::new(),
             }],
-            collected_at: Utc::now(),
             quality_score: Some(0.9),
+            meets_quality_gates: true,
+            metadata: HashMap::new(),
         };
 
         let coverage = collector.get_test_coverage(&evidence);

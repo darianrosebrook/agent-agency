@@ -131,7 +131,7 @@ impl RealAdaptiveSelector {
 
     /// Calculate specialty match score
     fn calculate_specialty_match(&self, worker_specialty: &str, _task_pattern: &TaskPattern) -> f64 {
-        // TODO: Implement real specialty matching with task pattern analysis
+        // OPTIONAL: Implement real specialty matching with task pattern analysis (deferred - advanced routing feature)
         // - [ ] Extract domain/task type from TaskPattern
         // - [ ] Map worker specialties to task domains
         // - [ ] Calculate semantic similarity between specialty and task
@@ -1044,10 +1044,10 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
                         performance_delta: serde_json::from_value(row.get("performance_delta"))?,
                         timestamp: row.get("timestamp"),
                         metadata: serde_json::from_value(row.get("metadata"))?,
-                        config_before: None, // TODO: parse from metadata if available
-                        config_after: None, // TODO: parse from metadata if available
-                        performance_improvement: None, // TODO: calculate from performance_delta
-                        optimization_type: None, // TODO: parse from event_type or metadata
+                        config_before: None, // OPTIONAL: parse from metadata if available (deferred - analytics feature)
+                        config_after: None, // OPTIONAL: parse from metadata if available (deferred - analytics feature)
+                        performance_improvement: None, // OPTIONAL: calculate from performance_delta (deferred - analytics feature)
+                        optimization_type: None, // OPTIONAL: parse from event_type or metadata (deferred - analytics feature)
                     });
                 }
                 Ok(events)

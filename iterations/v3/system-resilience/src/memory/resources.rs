@@ -237,6 +237,17 @@ pub struct HandleRegistry {
     stats: HandleCleanupStats,
 }
 
+impl TrackedHandle {
+    /// Get the object reference for this handle
+    pub fn get_object_ref(&self) -> Option<ObjectRef> {
+        if self.closed {
+            None
+        } else {
+            Some(self.object_ref.clone())
+        }
+    }
+}
+
 /// Handle cleanup statistics
 #[derive(Debug, Clone, Default)]
 pub struct HandleCleanupStats {
@@ -262,6 +273,22 @@ impl HandleRegistry {
             next_id: AtomicU64::new(1),
             stats: HandleCleanupStats::default(),
         }
+    }
+
+    /// Get iterator over all tracked handles
+    pub fn handles(&self) -> impl Iterator<Item = &TrackedHandle> {
+        self.handles.values()
+    }
+
+    /// Remove all handles associated with a specific object reference
+    pub fn remove_handles_for_object(&mut self, obj_ref: &super::types::ObjectRef) {
+        self.handles.retain(|_, handle| {
+            if let Some(handle_obj_ref) = handle.get_object_ref() {
+                handle_obj_ref != *obj_ref
+            } else {
+                true
+            }
+        });
     }
 
     /// Register a new handle for tracking

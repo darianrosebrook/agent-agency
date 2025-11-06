@@ -646,7 +646,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_planning_storage_creation() {
-        let db_ops = Arc::new(MockDatabaseOps);
+        let db_ops = Arc::new(crate::test_utils::MockDatabaseOps);
         let plans_dir = PathBuf::from("/tmp/plans");
         let specs_dir = PathBuf::from("/tmp/specs");
         let config = StorageConfig::default();
@@ -658,7 +658,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_session_caching() {
-        let db_ops = Arc::new(MockDatabaseOps);
+        let db_ops = Arc::new(crate::test_utils::MockDatabaseOps);
         let plans_dir = PathBuf::from("/tmp/plans");
         let specs_dir = PathBuf::from("/tmp/specs");
         let config = StorageConfig::default();

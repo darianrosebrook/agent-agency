@@ -5,6 +5,7 @@
 
 pub mod types;
 pub mod evidence_types;
+pub mod common;
 pub mod collector;
 pub mod code_analysis;
 pub mod test_execution;

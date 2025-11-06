@@ -31,6 +31,17 @@ pub struct WorkerAssignmentStrategy {
 
     /// Load balancing strategy
     load_balancer: LoadBalancingStrategy,
+
+    /// Audit trail manager for chain-of-thought recording
+    audit_trail_manager: Option<std::sync::Arc<crate::audit_trail::AuditTrailManager>>,
+
+    /// Clock for deterministic time (feature-gated)
+    #[cfg(feature = "evaluation")]
+    clock: Option<std::sync::Arc<dyn crate::evaluation::determinism::Clock>>,
+
+    /// RNG source for deterministic randomness (feature-gated)
+    #[cfg(feature = "evaluation")]
+    rng_source: Option<std::sync::Arc<crate::evaluation::determinism::ThreadSafeRngSource>>,
 }
 
 impl std::fmt::Debug for WorkerAssignmentStrategy {
@@ -223,6 +234,35 @@ impl WorkerAssignmentStrategy {
         db_ops: std::sync::Arc<dyn DatabaseOperations>,
         config: AssignmentConfig,
     ) -> Self {
+        Self::with_config_and_audit(db_ops, config, None)
+    }
+
+    /// Create with custom configuration and audit trail manager
+    pub fn with_config_and_audit(
+        db_ops: std::sync::Arc<dyn DatabaseOperations>,
+        config: AssignmentConfig,
+        audit_trail_manager: Option<std::sync::Arc<crate::audit_trail::AuditTrailManager>>,
+    ) -> Self {
+        Self::with_config_audit_and_determinism(
+            db_ops,
+            config,
+            audit_trail_manager,
+            #[cfg(feature = "evaluation")]
+            None,
+            #[cfg(feature = "evaluation")]
+            None,
+        )
+    }
+
+    /// Create with custom configuration, audit trail manager, and determinism controls (feature-gated)
+    #[cfg(feature = "evaluation")]
+    pub fn with_config_audit_and_determinism(
+        db_ops: std::sync::Arc<dyn DatabaseOperations>,
+        config: AssignmentConfig,
+        audit_trail_manager: Option<std::sync::Arc<crate::audit_trail::AuditTrailManager>>,
+        clock: Option<std::sync::Arc<dyn crate::evaluation::determinism::Clock>>,
+        rng_source: Option<std::sync::Arc<crate::evaluation::determinism::ThreadSafeRngSource>>,
+    ) -> Self {
         let load_balancing_config = config.load_balancing.clone(); // Clone before moving config
         Self {
             db_ops,
@@ -230,6 +270,26 @@ impl WorkerAssignmentStrategy {
             config,
             performance_cache: std::sync::Arc::new(tokio::sync::RwLock::new(HashMap::new())),
             load_balancer: LoadBalancingStrategy::new(load_balancing_config),
+            audit_trail_manager,
+            clock,
+            rng_source,
+        }
+    }
+
+    #[cfg(not(feature = "evaluation"))]
+    fn with_config_audit_and_determinism(
+        db_ops: std::sync::Arc<dyn DatabaseOperations>,
+        config: AssignmentConfig,
+        audit_trail_manager: Option<std::sync::Arc<crate::audit_trail::AuditTrailManager>>,
+    ) -> Self {
+        let load_balancing_config = config.load_balancing.clone(); // Clone before moving config
+        Self {
+            db_ops,
+            assignment_storage: None,
+            config,
+            performance_cache: std::sync::Arc::new(tokio::sync::RwLock::new(HashMap::new())),
+            load_balancer: LoadBalancingStrategy::new(load_balancing_config),
+            audit_trail_manager,
         }
     }
 
@@ -239,6 +299,38 @@ impl WorkerAssignmentStrategy {
         config: AssignmentConfig,
         assignment_storage: std::sync::Arc<AssignmentDatabaseStorage>,
     ) -> Self {
+        Self::with_assignment_storage_and_audit(db_ops, config, assignment_storage, None)
+    }
+
+    /// Create with assignment database storage and audit trail manager
+    pub fn with_assignment_storage_and_audit(
+        db_ops: std::sync::Arc<dyn DatabaseOperations>,
+        config: AssignmentConfig,
+        assignment_storage: std::sync::Arc<AssignmentDatabaseStorage>,
+        audit_trail_manager: Option<std::sync::Arc<crate::audit_trail::AuditTrailManager>>,
+    ) -> Self {
+        Self::with_assignment_storage_audit_and_determinism(
+            db_ops,
+            config,
+            assignment_storage,
+            audit_trail_manager,
+            #[cfg(feature = "evaluation")]
+            None,
+            #[cfg(feature = "evaluation")]
+            None,
+        )
+    }
+
+    /// Create with assignment database storage, audit trail manager, and determinism controls (feature-gated)
+    #[cfg(feature = "evaluation")]
+    pub fn with_assignment_storage_audit_and_determinism(
+        db_ops: std::sync::Arc<dyn DatabaseOperations>,
+        config: AssignmentConfig,
+        assignment_storage: std::sync::Arc<AssignmentDatabaseStorage>,
+        audit_trail_manager: Option<std::sync::Arc<crate::audit_trail::AuditTrailManager>>,
+        clock: Option<std::sync::Arc<dyn crate::evaluation::determinism::Clock>>,
+        rng_source: Option<std::sync::Arc<crate::evaluation::determinism::ThreadSafeRngSource>>,
+    ) -> Self {
         let load_balancing_config = config.load_balancing.clone();
         Self {
             db_ops,
@@ -246,6 +338,59 @@ impl WorkerAssignmentStrategy {
             config,
             performance_cache: std::sync::Arc::new(tokio::sync::RwLock::new(HashMap::new())),
             load_balancer: LoadBalancingStrategy::new(load_balancing_config),
+            audit_trail_manager,
+            clock,
+            rng_source,
+        }
+    }
+
+    #[cfg(not(feature = "evaluation"))]
+    fn with_assignment_storage_audit_and_determinism(
+        db_ops: std::sync::Arc<dyn DatabaseOperations>,
+        config: AssignmentConfig,
+        assignment_storage: std::sync::Arc<AssignmentDatabaseStorage>,
+        audit_trail_manager: Option<std::sync::Arc<crate::audit_trail::AuditTrailManager>>,
+    ) -> Self {
+        let load_balancing_config = config.load_balancing.clone();
+        Self {
+            db_ops,
+            assignment_storage: Some(assignment_storage),
+            config,
+            performance_cache: std::sync::Arc::new(tokio::sync::RwLock::new(HashMap::new())),
+            load_balancer: LoadBalancingStrategy::new(load_balancing_config),
+            audit_trail_manager,
+        }
+    }
+
+    /// Get current time (uses clock if available, otherwise system time)
+    fn now(&self) -> chrono::DateTime<chrono::Utc> {
+        #[cfg(feature = "evaluation")]
+        {
+            if let Some(ref clock) = self.clock {
+                clock.now()
+            } else {
+                chrono::Utc::now()
+            }
+        }
+        #[cfg(not(feature = "evaluation"))]
+        {
+            chrono::Utc::now()
+        }
+    }
+
+    /// Generate a UUID (uses RNG source if available, otherwise system UUID)
+    fn generate_uuid(&self) -> Uuid {
+        #[cfg(feature = "evaluation")]
+        {
+            if let Some(ref rng) = self.rng_source {
+                rng.generate_uuid()
+            } else {
+                Uuid::new_v4()
+            }
+        }
+        #[cfg(not(feature = "evaluation"))]
+        {
+            Uuid::new_v4()
         }
     }
 
@@ -254,19 +399,321 @@ impl WorkerAssignmentStrategy {
         self.assignment_storage = Some(storage);
     }
 
+    /// Set audit trail manager (for chain-of-thought recording)
+    pub fn set_audit_trail_manager(&mut self, audit_trail_manager: std::sync::Arc<crate::audit_trail::AuditTrailManager>) {
+        self.audit_trail_manager = Some(audit_trail_manager);
+    }
+
+    /// Record assignment decision for chain-of-thought visibility
+    async fn record_assignment_decision(
+        &self,
+        milestone: &Milestone,
+        decision_type: &str,
+        reasoning: String,
+        alternatives: Vec<String>,
+        chosen_option: String,
+        confidence: f64,
+    ) -> Result<()> {
+        self.record_assignment_decision_with_candidates(
+            milestone,
+            decision_type,
+            reasoning,
+            alternatives,
+            chosen_option,
+            confidence,
+            None, // No candidate details
+        ).await
+    }
+
+    /// Record assignment decision with candidate details (enhanced for evaluation)
+    async fn record_assignment_decision_with_candidates(
+        &self,
+        milestone: &Milestone,
+        decision_type: &str,
+        reasoning: String,
+        alternatives: Vec<String>,
+        chosen_option: String,
+        confidence: f64,
+        candidates: Option<&[WorkerCandidate]>, // Optional candidate details with scores
+    ) -> Result<()> {
+        if let Some(ref audit_manager) = self.audit_trail_manager {
+            let context = crate::chain_of_thought::DecisionContext {
+                task_id: None,
+                plan_id: None,
+                milestone_id: Some(milestone.id.clone()),
+                worker_id: None,
+                resource_constraints: std::collections::HashMap::new(),
+                time_constraints: None,
+                priority_level: Some(milestone.priority.to_string()),
+            };
+
+            // Build alternatives with scores if candidates provided
+            let alternatives_vec: Vec<crate::chain_of_thought::Alternative> = if let Some(candidates_list) = candidates {
+                // Map candidates to alternatives with real scores
+                candidates_list.iter()
+                    .take(5) // Limit to top 5 candidates to avoid trace bloat
+                    .map(|c| {
+                        let mut pros = Vec::new();
+                        let mut cons = Vec::new();
+                        
+                        if c.capability_score >= 0.8 {
+                            pros.push("High capability match".to_string());
+                        } else if c.capability_score < 0.6 {
+                            cons.push("Low capability match".to_string());
+                        }
+                        
+                        if c.load_factor < 0.5 {
+                            pros.push("Low current load".to_string());
+                        } else if c.load_factor > 0.8 {
+                            cons.push("High current load".to_string());
+                        }
+                        
+                        if c.performance_score >= 0.8 {
+                            pros.push("High performance score".to_string());
+                        }
+                        
+                        crate::chain_of_thought::Alternative {
+                            option: format!("Worker {}", c.worker_id),
+                            score: c.assignment_score,
+                            reasoning: format!(
+                                "Capability: {:.2}, Load: {:.2}, Performance: {:.2}",
+                                c.capability_score, c.load_factor, c.performance_score
+                            ),
+                            pros,
+                            cons,
+                            confidence: c.assignment_score.min(1.0),
+                        }
+                    })
+                    .collect()
+            } else {
+                // Fallback to simple alternatives without scores
+                alternatives.into_iter()
+                    .take(5) // Limit to top 5
+                    .map(|alt| crate::chain_of_thought::Alternative {
+                        option: alt,
+                        score: 0.5,
+                        reasoning: "Candidate evaluation".to_string(),
+                        pros: vec!["Available".to_string()],
+                        cons: vec![],
+                        confidence: 0.7,
+                    })
+                    .collect()
+            };
+
+            // Calculate risk assessment if candidates provided
+            let risk_assessment = if let Some(candidates_list) = candidates {
+                self.calculate_risk_assessment(milestone, candidates_list, &chosen_option, confidence)
+            } else {
+                None
+            };
+
+            // Build evaluation metadata for context
+            let mut metadata = std::collections::HashMap::new();
+            metadata.insert("milestone_id".to_string(), serde_json::Value::String(milestone.id.clone()));
+            metadata.insert("milestone_priority".to_string(), serde_json::Value::String(format!("{:?}", milestone.priority)));
+            metadata.insert("milestone_state".to_string(), serde_json::Value::String(format!("{:?}", milestone.state)));
+            if let Some(duration) = milestone.estimated_duration {
+                metadata.insert("estimated_duration_minutes".to_string(), serde_json::Value::Number(duration.into()));
+            }
+            metadata.insert("is_blocking".to_string(), serde_json::Value::Bool(milestone.is_blocking));
+            metadata.insert("risk_tier".to_string(), serde_json::Value::Number(milestone.risk_tier.into()));
+            
+            // Add candidate pool information
+            if let Some(candidates_list) = candidates {
+                metadata.insert("candidate_pool_size".to_string(), serde_json::Value::Number(candidates_list.len().into()));
+                if let Some(best_candidate) = candidates_list.first() {
+                    metadata.insert("best_capability_score".to_string(), serde_json::Value::Number(
+                        serde_json::Number::from_f64(best_candidate.capability_score).unwrap_or(serde_json::Number::from(0))
+                    ));
+                }
+            }
+            
+            // Add decision context
+            metadata.insert("decision_type_label".to_string(), serde_json::Value::String(decision_type.to_string()));
+            metadata.insert("confidence_score".to_string(), serde_json::Value::Number(
+                serde_json::Number::from_f64(confidence).unwrap_or(serde_json::Number::from(0))
+            ));
+
+            let decision = crate::chain_of_thought::DecisionPoint {
+                decision_id: self.generate_uuid(),
+                decision_type: crate::chain_of_thought::DecisionType::WorkerAssignment,
+                timestamp: self.now(),
+                context,
+                alternatives: alternatives_vec,
+                chosen_option,
+                reasoning,
+                confidence,
+                risk_assessment,
+                metadata,
+            };
+
+            audit_manager.record_orchestration_decision(decision).await?;
+        }
+        Ok(())
+    }
+
+    /// Calculate risk assessment for worker assignment decision
+    fn calculate_risk_assessment(
+        &self,
+        milestone: &Milestone,
+        candidates: &[WorkerCandidate],
+        chosen_option: &str,
+        confidence: f64,
+    ) -> Option<crate::chain_of_thought::RiskAssessment> {
+        if candidates.is_empty() {
+            return None;
+        }
+
+        let mut risk_factors = Vec::new();
+        let mut mitigation_strategies = Vec::new();
+        let mut fallback_options = Vec::new();
+
+        // Find the chosen candidate
+        let chosen_worker_id = chosen_option
+            .strip_prefix("Worker ")
+            .and_then(|s| s.parse::<Uuid>().ok());
+        
+        let chosen_candidate = chosen_worker_id
+            .and_then(|id| candidates.iter().find(|c| c.worker_id == id));
+
+        // Analyze risk factors
+        if let Some(chosen) = chosen_candidate {
+            // Low capability score
+            if chosen.capability_score < 0.7 {
+                risk_factors.push(format!(
+                    "Low capability score ({:.2}) may impact task quality",
+                    chosen.capability_score
+                ));
+                mitigation_strategies.push("Monitor task execution closely".to_string());
+            }
+
+            // High load factor
+            if chosen.load_factor > 0.8 {
+                risk_factors.push(format!(
+                    "High worker load ({:.2}) may cause delays",
+                    chosen.load_factor
+                ));
+                mitigation_strategies.push("Consider load balancing or task prioritization".to_string());
+            }
+
+            // Low performance score
+            if chosen.performance_score < 0.6 {
+                risk_factors.push(format!(
+                    "Low performance score ({:.2}) indicates potential reliability issues",
+                    chosen.performance_score
+                ));
+                mitigation_strategies.push("Enable failover and error recovery mechanisms".to_string());
+            }
+        }
+
+        // Few qualified candidates (limited options)
+        if candidates.len() <= 2 {
+            risk_factors.push(format!(
+                "Limited candidate pool ({} workers) reduces flexibility",
+                candidates.len()
+            ));
+            mitigation_strategies.push("Consider expanding worker pool or relaxing constraints".to_string());
+        }
+
+        // Low confidence in decision
+        if confidence < 0.7 {
+            risk_factors.push(format!(
+                "Low confidence score ({:.2}) indicates uncertainty in assignment",
+                confidence
+            ));
+            mitigation_strategies.push("Review assignment criteria and worker capabilities".to_string());
+        }
+
+        // High priority milestone with risks
+        let is_high_priority = matches!(
+            milestone.priority,
+            agent_agency_contracts::planning_io::MilestonePriority::High
+                | agent_agency_contracts::planning_io::MilestonePriority::Critical
+        );
+        if is_high_priority && !risk_factors.is_empty() {
+            risk_factors.push("High priority milestone requires careful monitoring".to_string());
+            mitigation_strategies.push("Implement additional monitoring and checkpointing".to_string());
+        }
+
+        // Build fallback options from alternative candidates
+        for candidate in candidates.iter().take(3) {
+            if chosen_worker_id.map_or(true, |id| candidate.worker_id != id) {
+                fallback_options.push(format!(
+                    "Worker {} (capability: {:.2}, load: {:.2})",
+                    candidate.worker_id, candidate.capability_score, candidate.load_factor
+                ));
+            }
+        }
+
+        // Determine overall risk level
+        let risk_level = if risk_factors.is_empty() {
+            "low"
+        } else if risk_factors.len() <= 2 && confidence >= 0.7 {
+            "medium"
+        } else {
+            "high"
+        };
+
+        Some(crate::chain_of_thought::RiskAssessment {
+            risk_level: risk_level.to_string(),
+            risk_factors,
+            mitigation_strategies,
+            fallback_options,
+        })
+    }
+
     /// Assign worker to milestone using real logic
     pub async fn assign_worker(&self, milestone: &Milestone) -> Result<Uuid> {
+        // Record start of assignment process
+        self.record_assignment_decision(
+            milestone,
+            "assignment_started",
+            format!("Starting worker assignment for milestone {}", milestone.id),
+            vec![],
+            "".to_string(),
+            1.0,
+        ).await?;
+
         // Get available workers
         let available_workers = self.get_available_workers().await?;
 
         if available_workers.is_empty() {
+            self.record_assignment_decision(
+                milestone,
+                "no_workers_available",
+                "No available workers found".to_string(),
+                vec![],
+                "fail".to_string(),
+                0.0,
+            ).await?;
             return Err(anyhow!("No available workers found"));
         }
+
+        // Record worker discovery
+        self.record_assignment_decision(
+            milestone,
+            "workers_discovered",
+            format!("Found {} available workers", available_workers.len()),
+            available_workers.iter().map(|w| format!("Worker {}", w.id)).collect(),
+            "continue".to_string(),
+            0.8,
+        ).await?;
 
         // Evaluate candidates
         let candidates = self
             .evaluate_candidates(milestone, &available_workers)
             .await?;
+
+        // Record candidate evaluation with candidate details (before filtering)
+        self.record_assignment_decision_with_candidates(
+            milestone,
+            "candidates_evaluated",
+            format!("Evaluated {} candidates for milestone {}", candidates.len(), milestone.id),
+            candidates.iter().map(|c| format!("Worker {} (score: {:.2})", c.worker_id, c.capability_score)).collect(),
+            "filter_qualified".to_string(),
+            0.9,
+            Some(&candidates), // Pass candidate details with scores
+        ).await?;
 
         // Filter by minimum capability score
         let qualified_candidates: Vec<_> = candidates
@@ -275,20 +722,68 @@ impl WorkerAssignmentStrategy {
             .collect();
 
         if qualified_candidates.is_empty() {
+            self.record_assignment_decision(
+                milestone,
+                "no_qualified_candidates",
+                format!("No workers meet minimum capability score {:.2} for milestone {}", self.config.min_capability_score, milestone.id),
+                vec![],
+                "fail".to_string(),
+                0.0,
+            ).await?;
             return Err(anyhow!(
                 "No workers meet minimum capability requirements for milestone {}",
                 milestone.id
             ));
         }
 
+        // Record qualified candidates with details
+        self.record_assignment_decision_with_candidates(
+            milestone,
+            "qualified_candidates",
+            format!("{} workers qualified for milestone {}", qualified_candidates.len(), milestone.id),
+            qualified_candidates.iter().map(|c| format!("Worker {} (score: {:.2})", c.worker_id, c.capability_score)).collect(),
+            "apply_load_balancing".to_string(),
+            0.85,
+            Some(&qualified_candidates), // Pass qualified candidate details
+        ).await?;
+
         // Apply load balancing to select worker
         match self.load_balancer.select_worker(&qualified_candidates) {
             Some(worker_id) => {
+                // Record final selection
+                self.record_assignment_decision(
+                    milestone,
+                    "worker_selected",
+                    format!("Selected worker {} for milestone {} using {} algorithm",
+                        worker_id, milestone.id,
+                        match self.config.load_balancing {
+                            LoadBalancingAlgorithm::RoundRobin => "round-robin",
+                            LoadBalancingAlgorithm::LeastLoaded => "least-loaded",
+                            LoadBalancingAlgorithm::Random => "random",
+                            LoadBalancingAlgorithm::CapabilityWeighted => "capability-weighted",
+                            LoadBalancingAlgorithm::Custom(ref s) => s,
+                        }
+                    ),
+                    vec![format!("Worker {}", worker_id)],
+                    format!("Worker {}", worker_id),
+                    0.95,
+                ).await?;
+
                 // Update worker assignment in database
                 self.record_assignment(worker_id, &milestone.id).await?;
                 Ok(worker_id)
             }
-            None => Err(anyhow!("Load balancer failed to select worker")),
+            None => {
+                self.record_assignment_decision(
+                    milestone,
+                    "load_balancer_failed",
+                    format!("Load balancer failed to select worker for milestone {}", milestone.id),
+                    vec![],
+                    "fail".to_string(),
+                    0.0,
+                ).await?;
+                Err(anyhow!("Load balancer failed to select worker"))
+            }
         }
     }
 
@@ -885,7 +1380,7 @@ mod tests {
 
     #[test]
     fn test_capability_score_calculation() {
-        let strategy = WorkerAssignmentStrategy::new(Arc::new(MockDatabaseOps));
+        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps));
 
         // Create test milestone and worker
         let milestone = agent_agency_contracts::planning_io::Milestone {

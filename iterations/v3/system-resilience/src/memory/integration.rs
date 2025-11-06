@@ -20,7 +20,7 @@ pub struct ObjectPool<T> {
     max_size: usize,
 }
 
-impl<T> ObjectPool<T> {
+impl<T: Send + 'static> ObjectPool<T> {
     pub fn new<F>(factory: F, max_size: usize) -> Self
     where
         F: Fn() -> T + Send + Sync + 'static,
@@ -276,16 +276,12 @@ impl HttpClient {
 }
 
 /// Memory-managed cache integration
-pub struct SmartCache<K, V> {
-    cache: Box<dyn MemoryManagedCache<K, V>>,
+pub struct SmartCache {
+    cache: Box<dyn MemoryManagedCache<(), ()>>,
     memory_manager: Arc<dyn MemoryManager>,
 }
 
-impl<K, V> SmartCache<K, V>
-where
-    K: Eq + std::hash::Hash + Clone + Send + Sync + std::fmt::Debug,
-    V: Clone + Send + Sync,
-{
+impl SmartCache {
     pub fn new(
         memory_manager: Arc<dyn MemoryManager>,
         max_entries: usize,
@@ -299,13 +295,13 @@ where
         }
     }
 
-    pub fn get(&mut self, key: &K) -> Option<&V> {
+    pub fn get(&mut self, key: &()) -> Option<&()> {
         // Clean expired entries before access
         self.cache.clean_expired();
         self.cache.get(key)
     }
 
-    pub fn insert(&mut self, key: K, value: V) -> bool {
+    pub fn insert(&mut self, key: (), value: ()) -> bool {
         // Check memory pressure before insertion
         let pressure = self.memory_manager.get_memory_pressure();
         match pressure {
@@ -325,7 +321,7 @@ where
     pub fn stats(&self) -> (usize, u64) {
         // Return (entries, estimated_memory_mb)
         let entries = 0; // Would need to expose this from MemoryManagedCache
-        let memory_mb = self.cache.estimate_memory_usage() / (1024 * 1024);
+        let memory_mb = (self.cache.estimate_memory_usage() / (1024 * 1024)) as u64;
         (entries, memory_mb)
     }
 

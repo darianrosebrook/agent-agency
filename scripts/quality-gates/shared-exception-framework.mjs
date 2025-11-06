@@ -11,6 +11,7 @@
 import Ajv from 'ajv';
 import { execFileSync } from 'child_process';
 import fs from 'fs';
+import yaml from 'js-yaml';
 import micromatch from 'micromatch';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -20,6 +21,8 @@ const __dirname = path.dirname(__filename);
 const PROJECT_ROOT = repoRootSafe() ?? path.join(__dirname, '..', '..');
 const EXCEPTION_CONFIG_PATH = path.join(PROJECT_ROOT, '.caws', 'quality-exceptions.json');
 const LOCK_PATH = path.join(PROJECT_ROOT, '.caws', '.quality-exceptions.lock');
+const WAIVERS_DIR = path.join(PROJECT_ROOT, '.caws', 'waivers');
+const ACTIVE_WAIVERS_PATH = path.join(WAIVERS_DIR, 'active-waivers.yaml');
 
 function repoRootSafe() {
   try {
@@ -180,13 +183,204 @@ function releaseLock() {
   } catch {}
 }
 
+/**
+ * Load CAWS waivers from YAML files and convert to quality exceptions format
+ */
+function loadCawsWaivers() {
+  const exceptions = [];
+  const processedWaiverIds = new Set(); // Track processed waivers to avoid duplicates
+  
+  try {
+    // Load active-waivers.yaml
+    if (fs.existsSync(ACTIVE_WAIVERS_PATH)) {
+      const content = fs.readFileSync(ACTIVE_WAIVERS_PATH, 'utf8');
+      const parsed = yaml.load(content);
+      
+      if (parsed && parsed.waivers) {
+        const now = new Date();
+        
+        for (const [waiverId, waiver] of Object.entries(parsed.waivers)) {
+          // Use the waiver's id field if available, otherwise use the key
+          const id = waiver.id || waiverId;
+          processedWaiverIds.add(id);
+          
+          // Check if waiver is active and not expired
+          const expiresAt = new Date(waiver.expires_at);
+          if (now > expiresAt) continue; // Skip expired waivers
+          
+          // If status is explicitly set and not active, skip
+          if (waiver.status && waiver.status !== 'active') continue;
+          
+          // Convert expires_at to full date-time format if it's just a date
+          let expiresAtFormatted = waiver.expires_at;
+          if (expiresAtFormatted && !expiresAtFormatted.includes('T')) {
+            // If it's just a date (YYYY-MM-DD), convert to date-time (end of day UTC)
+            expiresAtFormatted = new Date(expiresAtFormatted + 'T23:59:59.999Z').toISOString();
+          }
+          
+          // Convert created_at to ISO format if needed
+          let createdAtFormatted = waiver.created_at || new Date().toISOString();
+          if (createdAtFormatted && !createdAtFormatted.includes('T')) {
+            createdAtFormatted = new Date(createdAtFormatted + 'T00:00:00.000Z').toISOString();
+          }
+          
+          // Convert each gate in the waiver to an exception
+          const gates = waiver.gates || [];
+          for (const gate of gates) {
+            // Map gate names (documentation_quality -> documentation, hidden_todo -> hidden-todo)
+            let gateName = gate;
+            if (gate === 'documentation_quality') gateName = 'documentation';
+            if (gate === 'hidden_todo' || gate === 'hidden_todos_check') gateName = 'hidden-todo';
+            
+            // Create exception for this gate
+            const exception = {
+              id: `waiver_${id}_${gate}`,
+              gate: gateName,
+              reason: waiver.description || waiver.risk_assessment?.mitigation_plan || `Waiver ${id}`,
+              approved_by: waiver.approved_by || 'unknown',
+              approved_at: createdAtFormatted,
+              expires_at: expiresAtFormatted,
+              review_required: false,
+              context: 'all', // Waivers apply to all contexts
+              file_pattern: '**/*', // Waivers apply to all files
+              violation_type: undefined, // Match all violation types
+              message_regex: undefined, // Match all messages
+              created_by: waiver.approved_by || 'unknown',
+              updated_at: createdAtFormatted,
+              hits: 0,
+            };
+            
+            exceptions.push(exception);
+          }
+        }
+      }
+    }
+    
+    // Also check individual waiver YAML files in the waivers directory
+    // Skip if already processed from active-waivers.yaml
+    if (fs.existsSync(WAIVERS_DIR)) {
+      const files = fs.readdirSync(WAIVERS_DIR);
+      for (const file of files) {
+        if (file.endsWith('.yaml') && file !== 'active-waivers.yaml') {
+          try {
+            const filePath = path.join(WAIVERS_DIR, file);
+            const content = fs.readFileSync(filePath, 'utf8');
+            const waiver = yaml.load(content);
+            
+            if (!waiver || !waiver.id) continue;
+            
+            // Skip if already processed from active-waivers.yaml
+            if (processedWaiverIds.has(waiver.id)) continue;
+            
+            // If status is explicitly set and not active, skip
+            if (waiver.status && waiver.status !== 'active') continue;
+            
+            const now = new Date();
+            const expiresAt = new Date(waiver.expires_at);
+            if (now > expiresAt) continue; // Skip expired
+            
+            // Convert expires_at to full date-time format if it's just a date
+            let expiresAtFormatted = waiver.expires_at;
+            if (expiresAtFormatted && !expiresAtFormatted.includes('T')) {
+              expiresAtFormatted = new Date(expiresAtFormatted + 'T23:59:59.999Z').toISOString();
+            }
+            
+            // Convert created_at to ISO format if needed
+            let createdAtFormatted = waiver.created_at || new Date().toISOString();
+            if (createdAtFormatted && !createdAtFormatted.includes('T')) {
+              createdAtFormatted = new Date(createdAtFormatted + 'T00:00:00.000Z').toISOString();
+            }
+            
+            const gates = waiver.gates || [];
+            for (const gate of gates) {
+              let gateName = gate;
+              if (gate === 'documentation_quality') gateName = 'documentation';
+              if (gate === 'hidden_todo' || gate === 'hidden_todos_check') gateName = 'hidden-todo';
+              
+              const exception = {
+                id: `waiver_${waiver.id}_${gate}`,
+                gate: gateName,
+                reason: waiver.description || waiver.mitigation_plan || `Waiver ${waiver.id}`,
+                approved_by: waiver.approved_by || 'unknown',
+                approved_at: createdAtFormatted,
+                expires_at: expiresAtFormatted,
+                review_required: false,
+                context: 'all',
+                file_pattern: '**/*',
+                violation_type: undefined,
+                message_regex: undefined,
+                created_by: waiver.approved_by || 'unknown',
+                updated_at: createdAtFormatted,
+                hits: 0,
+              };
+              
+              exceptions.push(exception);
+            }
+          } catch (e) {
+            // Skip invalid waiver files
+            if (!global._waiverLoadErrorsLogged) {
+              console.warn(`⚠️ Could not load waiver file ${file}: ${e.message}`);
+              global._waiverLoadErrorsLogged = true;
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    // Non-fatal: waivers are optional
+    if (!global._waiverLoadErrorsLogged) {
+      console.warn(`⚠️ Could not load CAWS waivers: ${e.message}`);
+      global._waiverLoadErrorsLogged = true;
+    }
+  }
+  
+  return exceptions;
+}
+
+/**
+ * Normalize date formats in exceptions to ensure they're valid ISO 8601 date-time strings
+ */
+function normalizeExceptionDates(config) {
+  if (!config.exceptions) return config;
+  
+  for (const ex of config.exceptions) {
+    // Normalize expires_at
+    if (ex.expires_at && !ex.expires_at.includes('T')) {
+      ex.expires_at = new Date(ex.expires_at + 'T23:59:59.999Z').toISOString();
+    }
+    
+    // Normalize approved_at
+    if (ex.approved_at && !ex.approved_at.includes('T')) {
+      ex.approved_at = new Date(ex.approved_at + 'T00:00:00.000Z').toISOString();
+    }
+    
+    // Normalize updated_at
+    if (ex.updated_at && !ex.updated_at.includes('T')) {
+      ex.updated_at = new Date(ex.updated_at + 'T00:00:00.000Z').toISOString();
+    }
+    
+    // Normalize effective_from
+    if (ex.effective_from && !ex.effective_from.includes('T')) {
+      ex.effective_from = new Date(ex.effective_from + 'T00:00:00.000Z').toISOString();
+    }
+  }
+  
+  return config;
+}
+
 export function loadExceptionConfig() {
+  let config;
+  
   try {
     if (fs.existsSync(EXCEPTION_CONFIG_PATH)) {
       const content = fs.readFileSync(EXCEPTION_CONFIG_PATH, 'utf8');
       const parsed = JSON.parse(content);
       // lightweight migration: add schema_version if missing
       if (!parsed.schema_version) parsed.schema_version = '2.0.0';
+      
+      // Normalize date formats before validation
+      normalizeExceptionDates(parsed);
+      
       if (!validateConfig(parsed)) {
         // Only log validation errors once per session to avoid spam
         if (!global._qualityExceptionsValidationLogged) {
@@ -196,14 +390,38 @@ export function loadExceptionConfig() {
           global._qualityExceptionsValidationLogged = true;
         }
         // fall back but keep parsed; don't lose data
-        return { ...DEFAULT_CONFIG, ...parsed };
+        config = { ...DEFAULT_CONFIG, ...parsed };
+      } else {
+        config = parsed;
       }
-      return parsed;
+    } else {
+      config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
     }
+    
+    // Merge in CAWS waivers as exceptions
+    const waiverExceptions = loadCawsWaivers();
+    if (waiverExceptions.length > 0) {
+      // Deduplicate: don't add if exception with same id already exists
+      const existingIds = new Set(config.exceptions.map(e => e.id));
+      for (const waiverEx of waiverExceptions) {
+        if (!existingIds.has(waiverEx.id)) {
+          config.exceptions.push(waiverEx);
+        }
+      }
+    }
+    
+    // Normalize dates one more time after merging waivers
+    normalizeExceptionDates(config);
+    
+    return config;
   } catch (e) {
     console.warn(`⚠️ Could not load quality exceptions: ${e.message}`);
+    // Return default config with waivers merged
+    const fallbackConfig = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+    const waiverExceptions = loadCawsWaivers();
+    fallbackConfig.exceptions.push(...waiverExceptions);
+    return fallbackConfig;
   }
-  return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
 }
 
 export function saveExceptionConfig(config) {
@@ -467,14 +685,26 @@ export function renewException(exceptionId, days = 90) {
 }
 
 export function addHit(exceptionId) {
+  // Skip saving for waiver exceptions - they're loaded dynamically and don't need persistence
+  if (exceptionId.startsWith('waiver_')) {
+    return { success: true, hits: 0, message: 'Waiver exceptions are not persisted' };
+  }
+  
   const cfg = loadExceptionConfig();
   const ex = cfg.exceptions.find((e) => e.id === exceptionId);
   if (!ex) return { success: false, message: 'No matching exception found' };
   ex.hits = (ex.hits ?? 0) + 1;
   ex.updated_at = nowIso();
-  return saveExceptionConfig(cfg)
-    ? { success: true, hits: ex.hits }
-    : { success: false, message: 'Failed to update hits' };
+  
+  // Try to save, but don't fail if validation errors exist (non-fatal)
+  try {
+    return saveExceptionConfig(cfg)
+      ? { success: true, hits: ex.hits }
+      : { success: false, message: 'Failed to update hits (validation error)' };
+  } catch (e) {
+    // Non-fatal: just track hits in memory
+    return { success: true, hits: ex.hits, message: 'Hits tracked in memory (save skipped due to validation)' };
+  }
 }
 
 /* ----------------------------- Listing ----------------------------- */

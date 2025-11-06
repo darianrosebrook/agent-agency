@@ -159,30 +159,9 @@ pub struct WaiverRequest {
     pub expires_at: DateTime<Utc>,
 }
 
-/// Waiver response
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct WaiverResponse {
-    #[schemars(with = "String")]
-    pub id: Uuid,
-    pub title: String,
-    pub reason: String,
-    pub description: String,
-    pub gates: Vec<String>,
-    pub approved_by: String,
-    pub impact_level: String,
-    pub mitigation_plan: String,
-    #[schemars(with = "String")]
-
-    pub expires_at: DateTime<Utc>,
-    #[schemars(with = "String")]
-
-    pub created_at: DateTime<Utc>,
-    #[schemars(with = "String")]
-
-    pub updated_at: DateTime<Utc>,
-    pub status: String,
-    pub metadata: serde_json::Value,
-}
+// WaiverResponse moved to api_types.rs to eliminate duplication
+// Re-export for backward compatibility
+pub use super::api_types::WaiverResponse;
 
 /// Waiver approval request
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

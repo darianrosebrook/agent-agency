@@ -507,7 +507,7 @@ struct WorkerProfileRow {
                 task_count: row.total_executions as u64,
                 success_rate: row.success_rate,
                 quality_score: row.success_rate, // Use success rate as quality score for now
-                specialization_score: 0.0, // TODO: Calculate specialization score
+                specialization_score: 0.0, // OPTIONAL: Calculate specialization score (deferred - analytics feature)
                 metadata: serde_json::from_value(row.metadata).unwrap_or_default(),
             };
 

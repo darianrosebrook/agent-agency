@@ -12,8 +12,7 @@
 
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-use crate::judge_io::{JudgePrompt, JudgeVerdict, WorkingSpecEvidence};
-use crate::JudgeType;
+use crate::judge_io::{JudgePrompt, JudgeVerdict};
 
 /// Core trait for judge inference engines
 /// Platform-agnostic interface for LLM inference backends

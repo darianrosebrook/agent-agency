@@ -16,10 +16,10 @@ use crate::memory::allocator::*;
 use crate::memory::metrics::*;
 use crate::memory::resources::*;
 use crate::memory::allocation::*;
-#[derive(Clone)]
 pub struct MemoryMonitor {
     config: MemoryLimitConfig,
     stats_history: Arc<AsyncRwLock<Vec<(Instant, MemoryStats)>>>,
+    #[allow(dead_code)]
     pressure_callbacks: Arc<AsyncRwLock<HashMap<MemoryPressure, Vec<Box<dyn Fn(MemoryPressure) + Send + Sync>>>>>,
     last_gc_time: Arc<AsyncRwLock<Option<Instant>>>,
     last_gc_completed: Arc<AsyncRwLock<Option<Instant>>>,
@@ -30,6 +30,14 @@ pub struct MemoryMonitor {
     handle_registry: Arc<AsyncRwLock<HandleRegistry>>,
     allocation_tracker: Arc<AsyncRwLock<AllocationSiteTracker>>,
     gc_registry: Arc<AsyncRwLock<GCRegistry>>,
+}
+
+impl std::fmt::Debug for MemoryMonitor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MemoryMonitor")
+            .field("config", &self.config)
+            .finish()
+    }
 }
 
 impl MemoryMonitor {
@@ -81,12 +89,17 @@ impl MemoryMonitor {
     /// Calculate current memory pressure level
     fn calculate_pressure(&self, stats: &MemoryStats) -> MemoryPressure {
         let usage_mb = stats.allocated_bytes as f64 / (1024.0 * 1024.0);
+        let usage_ratio = if self.config.max_heap_mb > 0 {
+            usage_mb / self.config.max_heap_mb as f64
+        } else {
+            0.0
+        };
 
-        if usage_mb >= self.config.critical_threshold_mb as f64 {
+        if usage_ratio >= self.config.critical_threshold_percent {
             MemoryPressure::Critical
-        } else if usage_mb >= self.config.warning_threshold_mb as f64 {
+        } else if usage_ratio >= self.config.warning_threshold_percent {
             MemoryPressure::High
-        } else if usage_mb >= (self.config.warning_threshold_mb as f64 * 0.7) {
+        } else if usage_ratio >= (self.config.warning_threshold_percent * 0.7) {
             MemoryPressure::Moderate
         } else {
             MemoryPressure::Low
@@ -137,16 +150,14 @@ impl MemoryMonitor {
 
                 *self.last_gc_time.write().await = Some(Instant::now());
 
-                let me = self.clone();
-                tokio::spawn(async move {
-                    let _permit = me.gc_guard.acquire().await.unwrap();
-                    *me.gc_state.write().await = GcState::Running;
-                    me.force_gc().await;
-                    *me.gc_state.write().await = GcState::Idle;
-                    *me.last_gc_completed.write().await = Some(Instant::now());
-                });
+                // Run GC synchronously to avoid lifetime issues
+                let _permit = self.gc_guard.acquire().await;
+                *self.gc_state.write().await = GcState::Running;
+                self.force_gc().await;
+                *self.gc_state.write().await = GcState::Idle;
+                *self.last_gc_completed.write().await = Some(Instant::now());
 
-                debug!("Garbage collection task spawned with concurrency control");
+                debug!("Garbage collection completed synchronously");
             }
         }
     }
@@ -207,14 +218,15 @@ impl MemoryMonitor {
         let fragmentation_stats = self.analyze_fragmentation().await;
 
         // Perform compaction if fragmentation is high
-        let compacted_bytes = if fragmentation_stats.fragmentation_ratio > 0.3 {
+        let fragmentation_ratio = (fragmentation_stats.external_fragmentation + fragmentation_stats.internal_fragmentation) / 2.0;
+        let compacted_bytes = if fragmentation_ratio > 0.3 {
             self.compact_memory_blocks()
         } else {
             0
         };
 
         debug!("Memory compaction: {:.2}% fragmentation, {} bytes compacted",
-               fragmentation_stats.fragmentation_ratio * 100.0, compacted_bytes);
+               fragmentation_ratio * 100.0, compacted_bytes);
         compacted_bytes
     }
 
@@ -320,15 +332,15 @@ impl MemoryMonitor {
         let mut roots = Vec::new();
         
         // Add objects from active handles
-        let handle_registry = self.handle_registry.read().await.unwrap();
-        for handle in handle_registry.values() {
+        let handle_registry = self.handle_registry.read().await;
+        for handle in handle_registry.handles() {
             if let Some(obj_ref) = handle.get_object_ref() {
                 roots.push(obj_ref);
             }
         }
         
         // Add objects from global registry
-        let gc_registry = self.gc_registry.read().await.unwrap();
+        let gc_registry = self.gc_registry.read().await;
         for obj_ref in gc_registry.marked_objects.iter() {
             roots.push(obj_ref.clone());
         }
@@ -341,7 +353,7 @@ impl MemoryMonitor {
         let mut referenced = Vec::new();
         
         // Look up references in the weak references map
-        let gc_registry = self.gc_registry.read().await.unwrap();
+        let gc_registry = self.gc_registry.read().await;
         if let Some(weak_refs) = gc_registry.weak_references.get(obj_ref) {
             for weak_ref in weak_refs {
                 if let Some(strong_ref) = weak_ref.upgrade() {
@@ -437,15 +449,15 @@ impl MemoryMonitor {
         let mut all_objects = Vec::new();
         
         // Get objects from handle registry
-        let handle_registry = self.handle_registry.read().await.unwrap();
-        for handle in handle_registry.values() {
+        let handle_registry = self.handle_registry.read().await;
+        for handle in handle_registry.handles() {
             if let Some(obj_ref) = handle.get_object_ref() {
                 all_objects.push(obj_ref);
             }
         }
         
         // Get objects from GC registry marked objects
-        let gc_registry = self.gc_registry.read().await.unwrap();
+        let gc_registry = self.gc_registry.read().await;
         all_objects.extend(gc_registry.marked_objects.iter().cloned());
         
         all_objects
@@ -454,7 +466,7 @@ impl MemoryMonitor {
     /// Check if an object needs finalization
     async fn needs_finalization(&self, obj_ref: &ObjectRef) -> bool {
         // Check if object has finalizer registered
-        let gc_registry = self.gc_registry.read().await.unwrap();
+        let gc_registry = self.gc_registry.read().await;
         // For now, check if object is in pending finalization
         gc_registry.pending_finalization.contains(obj_ref)
     }
@@ -463,13 +475,7 @@ impl MemoryMonitor {
     async fn deallocate_object(&self, obj_ref: &ObjectRef) -> bool {
         // Remove from all registries
         let mut handle_registry = self.handle_registry.write().await;
-        handle_registry.handles.retain(|_, handle| {
-            if let Some(handle_obj_ref) = handle.get_object_ref() {
-                handle_obj_ref != *obj_ref
-            } else {
-                true
-            }
-        });
+        handle_registry.remove_handles_for_object(obj_ref);
 
         let mut gc_registry = self.gc_registry.write().await;
 
@@ -539,11 +545,14 @@ impl MemoryMonitor {
         // Estimate free bytes and largest free block
         let total_free_bytes = (stats.allocated_bytes as usize).saturating_sub(gc_registry.total_bytes);
         let largest_free_block = total_free_bytes / 4; // Conservative estimate
+        let internal_fragmentation = allocation_overhead as f64 / stats.allocated_bytes as f64;
 
         FragmentationStats {
-            fragmentation_ratio,
-            total_free_bytes,
+            external_fragmentation,
+            internal_fragmentation,
             largest_free_block,
+            total_free_memory: total_free_bytes,
+            free_blocks_count: 0, // TODO: calculate this
         }
     }
 
@@ -571,8 +580,14 @@ impl MemoryMonitor {
         Vec::new()
     }
 
+    /// Get memory stats history
+    pub async fn get_stats_history(&self) -> Vec<(std::time::Instant, crate::memory::allocator::MemoryStats)> {
+        let history = self.stats_history.read().await;
+        history.clone()
+    }
+
     /// Get current memory pressure level
-    fn get_current_pressure(&self) -> MemoryPressure {
+    pub fn get_current_pressure(&self) -> MemoryPressure {
         let stats = MemoryTrackingAllocator::memory_stats();
         let usage_ratio = if self.config.max_heap_mb > 0 {
             stats.allocated_bytes as f64 / (self.config.max_heap_mb as f64 * 1024.0 * 1024.0)
@@ -632,11 +647,11 @@ impl MemoryMonitor {
 
     /// Record a garbage collection cycle
     async fn record_gc_cycle(&self, duration: Duration, bytes_freed: u64, objects_processed: usize) {
-        let mut gc_time = self.last_gc_time.write().await.unwrap();
+        let mut gc_time = self.last_gc_time.write().await;
         *gc_time = Some(Instant::now());
 
         // Record in stats history if available
-        let mut history = self.stats_history.write().await.unwrap();
+        let mut history = self.stats_history.write().await;
         let stats = MemoryTrackingAllocator::memory_stats();
         history.push((Instant::now(), stats.clone()));
 
@@ -687,7 +702,7 @@ impl MemoryMonitor {
 
     /// Get finalizer queue statistics
     pub async fn get_finalizer_stats(&self) -> FinalizerStats {
-        let queue = self.finalizer_queue.lock().await.unwrap();
+        let queue = self.finalizer_queue.lock().await;
         FinalizerStats {
             registered: queue.len() as u64,
             executed: 0, // Not tracked yet
@@ -847,7 +862,7 @@ impl MemoryMonitor {
     /// Get handle cleanup statistics
     pub async fn get_handle_cleanup_stats(&self) -> HandleCleanupStats {
         let registry = self.handle_registry.read().await;
-        *registry.stats()
+        registry.stats().clone()
     }
 
     /// Emergency handle cleanup (clear all tracked handles without cleanup)
@@ -965,11 +980,11 @@ impl MemoryMonitor {
         }
 
         debug!("Successfully cleaned up {} handles during GC sweep", successful);
-        successful;
+        successful
     }
 
     /// Create and register a file handle
-    pub fn register_file_handle(&self, fd: i32, file_path: std::path::PathBuf, object_ref: ObjectRef) -> u64 {
+    pub async fn register_file_handle(&self, fd: i32, file_path: std::path::PathBuf, object_ref: ObjectRef) -> u64 {
         let description = format!("File handle for {:?}", file_path);
 
         #[cfg(unix)]
@@ -984,11 +999,11 @@ impl MemoryMonitor {
         #[cfg(not(any(unix, windows, target_os = "macos")))]
         let handle_info = HandleInfo::Custom(vec![]);
 
-        self.register_system_handle(HandleType::File, handle_info, object_ref, description)
+        self.register_system_handle(HandleType::File, handle_info, object_ref, description).await
     }
 
     /// Create and register a socket handle
-    pub fn register_socket_handle(&self, socket_fd: i32, connection_info: String, object_ref: ObjectRef) -> u64 {
+    pub async fn register_socket_handle(&self, socket_fd: i32, connection_info: String, object_ref: ObjectRef) -> u64 {
         let description = format!("Socket handle for {}", connection_info);
 
         #[cfg(unix)]
@@ -1000,19 +1015,19 @@ impl MemoryMonitor {
         #[cfg(not(any(unix, target_os = "macos")))]
         let handle_info = HandleInfo::Custom(vec![]);
 
-        self.register_system_handle(HandleType::Socket, handle_info, object_ref, description)
+        self.register_system_handle(HandleType::Socket, handle_info, object_ref, description).await
     }
 
     /// Create and register a shared memory handle
-    pub fn register_shared_memory_handle(&self, segment_id: String, size: usize, object_ref: ObjectRef) -> u64 {
+    pub async fn register_shared_memory_handle(&self, segment_id: String, size: usize, object_ref: ObjectRef) -> u64 {
         let description = format!("Shared memory segment '{}' ({} bytes)", segment_id, size);
         let handle_info = HandleInfo::Custom(segment_id.into_bytes());
 
-        self.register_system_handle(HandleType::SharedMemory, handle_info, object_ref, description)
+        self.register_system_handle(HandleType::SharedMemory, handle_info, object_ref, description).await
     }
 
     /// Create and register a memory-mapped region handle
-    pub fn register_memory_map_handle(&self, address: usize, size: usize, file_path: Option<std::path::PathBuf>, object_ref: ObjectRef) -> u64 {
+    pub async fn register_memory_map_handle(&self, address: usize, size: usize, file_path: Option<std::path::PathBuf>, object_ref: ObjectRef) -> u64 {
         let description = match file_path {
             Some(path) => format!("Memory-mapped file {:?} at {:#x} ({} bytes)", path, address, size),
             None => format!("Anonymous memory mapping at {:#x} ({} bytes)", address, size),
@@ -1023,7 +1038,7 @@ impl MemoryMonitor {
 
         let handle_info = HandleInfo::Custom(data);
 
-        self.register_system_handle(HandleType::MemoryMap, handle_info, object_ref, description)
+        self.register_system_handle(HandleType::MemoryMap, handle_info, object_ref, description).await
     }
 
     /// Perform comprehensive memory layout analysis
@@ -1095,7 +1110,7 @@ impl MemoryMonitor {
         };
 
         // Analyze allocation history from stats
-        let history = self.stats_history.read().await.unwrap();
+        let history = self.stats_history.read().await;
 
         // Build size distribution
         for (timestamp, stats) in history.iter() {
@@ -1265,7 +1280,7 @@ impl MemoryMonitor {
         let mut patterns = Vec::new();
 
         // Get allocation history to analyze access patterns
-        let history = self.stats_history.read().await.unwrap();
+        let history = self.stats_history.read().await;
 
         if history.len() < 2 {
             return Ok(patterns);
@@ -1317,7 +1332,7 @@ impl MemoryMonitor {
 
     /// Collect all objects currently tracked by the GC system
     async fn collect_all_tracked_objects(&self) -> Vec<ObjectRef> {
-        let gc_registry = self.gc_registry.read().await.unwrap();
+        let gc_registry = self.gc_registry.read().await;
         let mut all_objects = Vec::new();
 
         // Add objects from GC registry
@@ -1339,7 +1354,7 @@ impl MemoryMonitor {
 
     /// Analyze allocation sites using real allocation tracking
     async fn analyze_allocation_sites(&self) -> HashMap<String, AllocationSiteStats> {
-        let tracker = self.allocation_tracker.read().await.unwrap();
+        let tracker = self.allocation_tracker.read().await;
 
         // Get all site statistics from the tracker
         let mut sites = HashMap::new();
@@ -1424,12 +1439,11 @@ impl MemoryMonitor {
             CompactionStrategy::None => {
                 // No compaction needed
                 return Ok(CompactionResult {
-                    strategy: CompactionStrategy::None,
-                    bytes_recovered: 0,
-                    objects_moved: 0,
-                    duration_ms: 0,
                     success: true,
-                    error_message: None,
+                    bytes_reclaimed: 0,
+                    blocks_moved: 0,
+                    duration_us: 0,
+                    error: None,
                 });
             }
             CompactionStrategy::Sliding => {
@@ -1467,6 +1481,7 @@ impl MemoryMonitor {
                     source_range: (current.address, current.address + current.size + next.size),
                     target_address: current.address,
                     size: current.size + next.size,
+                    priority: 1, // Low priority for coalescing
                     object_ref: ObjectRef {
                         ptr: current.address,
                         type_id: std::any::TypeId::of::<()>(),
@@ -1492,6 +1507,7 @@ impl MemoryMonitor {
                         source_range: (block.address, block.address + block.size),
                         target_address,
                         size: block.size,
+                        priority: 5, // Medium priority for block moves
                         object_ref: ObjectRef {
                             ptr: block.address,
                             type_id: block.type_info.unwrap_or(std::any::TypeId::of::<()>()),
@@ -1516,6 +1532,7 @@ impl MemoryMonitor {
                     source_range: action.source_range,
                     target_address: action.target_address,
                     size: action.size,
+                    priority: 10, // High priority for reference updates
                     object_ref: action.object_ref.clone(),
                     cost_estimate: 10, // Higher cost for reference updates
                 });
@@ -1668,12 +1685,11 @@ impl MemoryMonitor {
         let duration = start_time.elapsed().as_millis() as u64;
 
         Ok(CompactionResult {
-            strategy: CompactionStrategy::Sliding,
-            bytes_recovered,
-            objects_moved,
-            duration_ms: duration,
             success: true,
-            error_message: None,
+            bytes_reclaimed: bytes_recovered,
+            blocks_moved: objects_moved,
+            duration_us: duration,
+            error: None,
         })
     }
 
@@ -1698,12 +1714,11 @@ impl MemoryMonitor {
         let duration = start_time.elapsed().as_millis() as u64;
 
         Ok(CompactionResult {
-            strategy: CompactionStrategy::Copying,
-            bytes_recovered,
-            objects_moved,
-            duration_ms: duration,
             success: true,
-            error_message: None,
+            bytes_reclaimed: bytes_recovered,
+            blocks_moved: objects_moved,
+            duration_us: duration,
+            error: None,
         })
     }
 
@@ -1734,12 +1749,11 @@ impl MemoryMonitor {
         let duration = start_time.elapsed().as_millis() as u64;
 
         Ok(CompactionResult {
-            strategy: CompactionStrategy::MarkCompact,
-            bytes_recovered,
-            objects_moved,
-            duration_ms: duration,
             success: true,
-            error_message: None,
+            bytes_reclaimed: bytes_recovered,
+            blocks_moved: objects_moved,
+            duration_us: duration,
+            error: None,
         })
     }
 
@@ -1769,12 +1783,11 @@ impl MemoryMonitor {
         let duration = start_time.elapsed().as_millis() as u64;
 
         Ok(CompactionResult {
-            strategy: CompactionStrategy::Generational,
-            bytes_recovered,
-            objects_moved,
-            duration_ms: duration,
             success: true,
-            error_message: None,
+            bytes_reclaimed: bytes_recovered,
+            blocks_moved: objects_moved,
+            duration_us: duration,
+            error: None,
         })
     }
 }

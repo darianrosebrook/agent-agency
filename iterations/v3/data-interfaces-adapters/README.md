@@ -120,17 +120,6 @@ Basic command-line interface:
 cargo run --bin agent-agency-cli -- --help
 ```
 
-### agent-agency-advanced-cli
-
-Advanced CLI with intervention controls:
-
-```bash
-cargo run --bin agent-agency-advanced-cli execute \
-    --description "Add feature X" \
-    --project-path ./my-project \
-    --mode auto
-```
-
 ### agent-agency-api-server
 
 REST API server:

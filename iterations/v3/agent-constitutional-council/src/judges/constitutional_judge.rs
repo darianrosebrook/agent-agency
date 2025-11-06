@@ -32,7 +32,7 @@ use agent_agency_contracts::{
 };
 
 use crate::{ReviewContext, CouncilResult, CouncilError};
-use super::{Judge, JudgeUtils};
+use super::common::{Judge, JudgeUtils};
 
 /// Constitutional Judge for ethical and compliance evaluation
 #[derive(Debug)]
@@ -142,8 +142,8 @@ impl ConstitutionalJudge {
         rubric
     }
 
-    /// Build LLM prompt for constitutional analysis
-    fn build_prompt(&self, ctx: &ReviewContext, deterministic_violations: &[Violation]) -> JudgePrompt {
+    /// Build LLM prompt for constitutional analysis (implementation method)
+    fn build_prompt_impl(&self, ctx: &ReviewContext, deterministic_violations: &[Violation]) -> JudgePrompt {
         let rubric = self.build_rubric();
 
         JudgePrompt {
@@ -195,38 +195,63 @@ impl ConstitutionalJudge {
 }
 
 #[async_trait]
-impl Judge for ConstitutionalJudge {
+impl super::common::Judge for ConstitutionalJudge {
+    fn judge_type(&self) -> JudgeType {
+        JudgeType::Constitutional
+    }
+
+    fn rubric(&self) -> Vec<RubricItem> {
+        self.build_rubric()
+    }
+
+    fn build_prompt(&self, ctx: &ReviewContext) -> JudgePrompt {
+        self.build_prompt_impl(ctx, &[])
+    }
+
+    fn run_deterministic_checks(&self, ctx: &ReviewContext) -> Vec<Violation> {
+        self.run_deterministic_checks_impl(ctx)
+    }
+}
+
+impl ConstitutionalJudge {
+    fn run_deterministic_checks_impl(&self, ctx: &ReviewContext) -> Vec<Violation> {
+        // Run CAWS invariant checks
+        let invariant_results = crate::run_caws_invariants(&ctx.working_spec);
+        
+        // Convert ViolationLocation to Violation
+        invariant_results.checks.iter()
+            .flat_map(|check| &check.violations)
+            .map(|vl| Violation {
+                rule_id: vl.rule_id.clone(),
+                severity: match vl.severity {
+                    InvariantsSeverity::Info => Severity::Info,
+                    InvariantsSeverity::Low => Severity::Low,
+                    InvariantsSeverity::Medium => Severity::Medium,
+                    InvariantsSeverity::High => Severity::High,
+                    InvariantsSeverity::Critical => Severity::Critical,
+                },
+                waivable: false, // Invariants are never waivable
+                description: vl.description.clone(),
+            })
+            .collect()
+    }
+
+    // Override review_spec to use custom implementation
     #[instrument(skip(self, ctx), fields(judge = "constitutional", spec_id = %ctx.working_spec.id))]
     async fn review_spec(&self, ctx: &ReviewContext) -> CouncilResult<JudgeVerdict> {
         debug!("🧑‍⚖️  Constitutional Judge reviewing spec {}", ctx.working_spec.id);
 
         // STEP 1: Run deterministic CAWS invariant checks
-        let invariant_results = crate::run_caws_invariants(&ctx.working_spec);
+        let violations = self.run_deterministic_checks_impl(ctx);
 
         // STEP 2: Check for critical invariant violations (all invariants are non-waivable)
-        let critical_violations: Vec<agent_agency_contracts::ViolationLocation> = invariant_results.checks.iter()
-            .flat_map(|check| &check.violations)
-            .filter(|v| v.severity == InvariantsSeverity::Critical)
+        let critical_violations: Vec<Violation> = violations.iter()
+            .filter(|v| v.severity == Severity::Critical)
             .cloned()
             .collect();
 
         if !critical_violations.is_empty() {
             warn!("🚫 Constitutional Judge: Blocking CAWS violations detected");
-            // Convert ViolationLocation to Violation for JudgeVerdict
-            let violations: Vec<Violation> = critical_violations.into_iter()
-                .map(|vl| Violation {
-                    rule_id: vl.rule_id,
-                    severity: match vl.severity {
-                        InvariantsSeverity::Info => Severity::Info,
-                        InvariantsSeverity::Low => Severity::Low,
-                        InvariantsSeverity::Medium => Severity::Medium,
-                        InvariantsSeverity::High => Severity::High,
-                        InvariantsSeverity::Critical => Severity::Critical,
-                    },
-                    waivable: false, // Invariants are never waivable
-                    description: vl.description,
-                })
-                .collect();
 
             return Ok(JudgeVerdict {
                 label: VerdictLabel::Fail,
@@ -244,7 +269,7 @@ impl Judge for ConstitutionalJudge {
         }
 
         // STEP 3: Build LLM prompt for gray-zone assessment
-        let prompt = self.build_prompt(ctx, &[]);
+        let prompt = self.build_prompt(ctx);
 
         // STEP 4: Execute engine (may hit prompt cache)
         let req = JudgeUtils::build_request(prompt, 256); // Allow longer responses for constitutional analysis

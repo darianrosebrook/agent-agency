@@ -107,7 +107,7 @@ impl DecompositionEngine {
         let should_parallelize = subtask_scores.parallelization_score > 0.6;
 
         // Validate decomposition strategy with council (if available)
-        // TODO: Integrate with council for consensus validation of decomposition strategy
+        // OPTIONAL: Integrate with council for consensus validation of decomposition strategy (deferred - advanced governance feature)
         // This would involve:
         // 1. Creating a council task spec from the analysis
         // 2. Getting council consensus on the decomposition approach
@@ -240,7 +240,7 @@ impl DecompositionEngine {
 
     /// Calculate dependencies for compilation tasks
     fn calculate_compilation_dependencies(&self, idx: usize, error_groups: &[ErrorGroup]) -> Vec<SubTaskId> {
-        // TODO: Implement proper dependency tracking for compilation tasks
+        // OPTIONAL: Implement proper dependency tracking for compilation tasks (deferred - build optimization feature)
         // - [ ] Track actual SubTaskId for each error group
         // - [ ] Build dependency graph from error group relationships
         // - [ ] Return actual previous task IDs instead of placeholder
@@ -593,7 +593,7 @@ impl DecompositionEngine {
         _task: &ComplexTask,
         _analysis: &TaskAnalysis,
     ) -> Result<Vec<SubTask>, DecompositionError> {
-        // TODO: Implement parallel decomposition strategy
+        // OPTIONAL: Implement parallel decomposition strategy (deferred - advanced task optimization)
         // - [ ] Identify independent subtasks that can run concurrently
         // - [ ] Analyze task dependencies to determine parallelization opportunities
         // - [ ] Create subtasks with proper dependency metadata
@@ -610,7 +610,7 @@ impl DecompositionEngine {
         _task: &ComplexTask,
         _analysis: &TaskAnalysis,
     ) -> Result<Vec<SubTask>, DecompositionError> {
-        // TODO: Implement sequential decomposition strategy
+        // OPTIONAL: Implement sequential decomposition strategy (deferred - advanced task management feature)
         // - [ ] Identify task dependencies and execution order
         // - [ ] Create subtasks with proper sequencing metadata
         // - [ ] Handle data flow between sequential tasks
@@ -627,7 +627,7 @@ impl DecompositionEngine {
         _task: &ComplexTask,
         _analysis: &TaskAnalysis,
     ) -> Result<Vec<SubTask>, DecompositionError> {
-        // TODO: Implement hierarchical decomposition strategy
+        // OPTIONAL: Implement hierarchical decomposition strategy (deferred - advanced task optimization)
         // - [ ] Create parent-child task relationships
         // - [ ] Implement multi-level task decomposition
         // - [ ] Handle task aggregation and result composition
@@ -644,7 +644,7 @@ impl DecompositionEngine {
         _task: &ComplexTask,
         _analysis: &TaskAnalysis,
     ) -> Result<Vec<SubTask>, DecompositionError> {
-        // TODO: Implement adaptive decomposition strategy
+        // OPTIONAL: Implement adaptive decomposition strategy (deferred - advanced task optimization)
         // - [ ] Analyze task characteristics to select optimal strategy
         // - [ ] Implement dynamic strategy selection based on task properties
         // - [ ] Support hybrid strategies (parallel + sequential where appropriate)

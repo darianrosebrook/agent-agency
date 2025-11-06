@@ -36,11 +36,13 @@ use std::sync::Arc;
 
 pub mod council;
 pub mod judges;
+pub mod verdict_writer;
 pub mod invariants;
 pub mod metrics;
 
 pub use council::{CouncilCoordinator, ReviewContext};
 pub use judges::{Judges, Judge, ConstitutionalJudge, TechnicalAuditor, QualityEvaluator, IntegrationValidator};
+pub use verdict_writer::{VerdictWriter, VerdictWriterConfig, VerdictRecord};
 pub use invariants::run_caws_invariants;
 pub use metrics::CouncilMetrics;
 

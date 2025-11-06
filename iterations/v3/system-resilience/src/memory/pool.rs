@@ -292,6 +292,17 @@ where
         }
     }
 
+    /// Evict the least recently used item from the cache
+    fn evict_lru(&mut self) {
+        if let Some((key_to_remove, _)) = self.cache
+            .iter()
+            .min_by_key(|(_, (_, timestamp))| *timestamp)
+            .map(|(k, _)| (k.clone(), ()))
+        {
+            self.cache.remove(&key_to_remove);
+        }
+    }
+
     /// Insert with memory and size limits
     pub fn insert(&mut self, key: K, value: V) -> bool {
         // Check size limit
@@ -300,8 +311,8 @@ where
         }
 
         // Comprehensive memory limit management with configurable policies
-        // For now, implement basic insertion
-        self.cache.insert(key, value);
+        // For now, implement basic insertion with timestamp
+        self.cache.insert(key, (value, std::time::Instant::now()));
         true
     }
 }

@@ -1,0 +1,31 @@
+[package]
+name = "xtask"
+version = "0.1.0"
+edition = "2021"
+authors = ["Darian Rosebrook <hello@darianrosebrook.com>"]
+description = "Auxiliary tooling for functional deduplication and quality gates"
+
+[dependencies]
+# Command line argument parsing
+clap = { version = "4.0", features = ["derive"] }
+# JSON handling for metrics and API dumps
+serde_json = "1.0"
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+# File system operations
+walkdir = "2"
+# Process execution
+tokio = { version = "1.0", features = ["process", "rt-multi-thread", "macros"] }
+# Regex for codemod operations
+regex = "1.10"
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+# Git operations
+git2 = "0.19"
+# HTTP client for API operations (if needed)
+reqwest = { version = "0.11", features = ["json"] }
+
+[dev-dependencies]
+tempfile = "3.8"

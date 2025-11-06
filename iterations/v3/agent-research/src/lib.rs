@@ -29,14 +29,18 @@ pub mod research_types;
 // Learning service module
 pub mod learning_service;
 
+// Learning algorithms module
+pub mod learning_algorithms;
+
+// Orchestrator module (consolidated from learning_algorithms/orchestrator.rs)
+pub mod orchestrator;
+
 // Reinforcement learning module
 pub mod reinforcement;
 
 // Reflexive types module
 pub mod reflexive_types;
 
-#[cfg(test)]
-mod tests;
 
 
 // Re-export contract types for internal use
@@ -55,6 +59,7 @@ pub use contracts::{
 // pub use verification::MultiModalVerificationEngine; // Temporarily disabled due to verification module issues
 pub use processor::ClaimExtractionProcessor;
 pub use extraction_types::*;
+pub use orchestrator::LearningOrchestrator;
 pub use agent_agency_contracts::types::research::VerificationMethod;
 
 use anyhow::Result;

@@ -11,8 +11,8 @@ use tracing::{info, instrument, warn};
 use agent_agency_contracts::{JudgeEngine, JudgeType, VerdictLabel, JudgeVerdict, WorkingSpec};
 use agent_agency_contracts::judge_io::Severity;
 
-use crate::{Judges, FinalDecision, CouncilError, CouncilMetrics, CouncilResult};
-use crate::judges::Judge;
+use crate::{Judges, FinalDecision, CouncilError, CouncilMetrics, CouncilResult, VerdictWriter, VerdictWriterConfig};
+use crate::judges::common::Judge;
 
 
 /// Review context for a working spec
@@ -52,6 +52,9 @@ pub struct CouncilCoordinator <E: JudgeEngine> {
     /// Decision engine for final judgments
     decision_engine: DecisionEngine,
 
+    /// Verdict persistence and audit trail
+    verdict_writer: VerdictWriter,
+
     /// Performance and observability metrics
     metrics: CouncilMetrics,
 }
@@ -80,6 +83,7 @@ impl<E: JudgeEngine> CouncilCoordinator<E> {
             judges,
             aggregator: VerdictAggregator::default(),
             decision_engine: DecisionEngine::default(),
+            verdict_writer: VerdictWriter::new_default(),
             metrics: CouncilMetrics::new(),
         }
     }
@@ -119,6 +123,17 @@ impl<E: JudgeEngine> CouncilCoordinator<E> {
             decision.score,
             duration.as_millis()
         );
+
+        // Persist verdict to audit trail
+        if let Err(e) = self.verdict_writer.write_verdict(
+            &ctx.working_spec,
+            &format!("session_{}", start.elapsed().as_millis()), // Generate session ID
+            &decision,
+            duration,
+        ).await {
+            warn!("Failed to persist council verdict: {}", e);
+            // Don't fail the evaluation if persistence fails - log and continue
+        }
 
         Ok(decision)
     }

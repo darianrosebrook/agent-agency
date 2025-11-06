@@ -1,0 +1,39 @@
+{
+  "description": "Golden input fixture for Judge behavioral equivalence testing",
+  "working_spec": {
+    "id": "test-spec-456",
+    "title": "Implement user authentication system",
+    "description": "Add secure user login with JWT tokens and password hashing",
+    "acceptance_criteria": [
+      "Users can register with email/password",
+      "Users can login and receive JWT tokens",
+      "Passwords are properly hashed with bcrypt",
+      "Token expiration works correctly",
+      "Invalid credentials are rejected"
+    ],
+    "non_functional_requirements": {
+      "security": ["password_hashing", "token_security", "input_validation"],
+      "performance": {"response_time_ms": 500},
+      "reliability": {"uptime_percent": 99.9}
+    }
+  },
+  "expected_judge_outputs": {
+    "constitutional_judge": {
+      "score": 0.85,
+      "label": "approve",
+      "rationale": "Implementation includes proper security measures and follows privacy guidelines"
+    },
+    "technical_judge": {
+      "score": 0.78,
+      "label": "approve",
+      "rationale": "Architecture follows security best practices with proper token management"
+    },
+    "quality_judge": {
+      "score": 0.82,
+      "label": "approve",
+      "rationale": "Requirements are well-defined with clear acceptance criteria"
+    }
+  }
+}
+
+

@@ -31,7 +31,7 @@ use agent_agency_contracts::{
 };
 
 use crate::{ReviewContext, CouncilResult, CouncilError};
-use super::{Judge, JudgeUtils};
+use super::common::{Judge, JudgeUtils};
 
 /// Technical Auditor for code quality and architecture evaluation
 #[derive(Debug)]
@@ -141,8 +141,8 @@ impl TechnicalAuditor {
         rubric
     }
 
-    /// Build LLM prompt for technical analysis
-    fn build_prompt(&self, ctx: &ReviewContext) -> JudgePrompt {
+    /// Build LLM prompt for technical analysis (implementation method)
+    fn build_prompt_impl(&self, ctx: &ReviewContext) -> JudgePrompt {
         let rubric = self.build_rubric();
 
         JudgePrompt {
@@ -194,7 +194,24 @@ impl TechnicalAuditor {
 }
 
 #[async_trait]
-impl Judge for TechnicalAuditor {
+impl super::common::Judge for TechnicalAuditor {
+    fn judge_type(&self) -> JudgeType {
+        JudgeType::Technical
+    }
+
+    fn rubric(&self) -> Vec<RubricItem> {
+        self.build_rubric()
+    }
+
+    fn build_prompt(&self, ctx: &ReviewContext) -> JudgePrompt {
+        self.build_prompt_impl(ctx)
+    }
+
+    fn run_deterministic_checks(&self, ctx: &ReviewContext) -> Vec<Violation> {
+        self.run_deterministic_checks_impl(ctx)
+    }
+
+    // Override review_spec to use custom implementation
     #[instrument(skip(self, ctx), fields(judge = "technical", spec_id = %ctx.working_spec.id))]
     async fn review_spec(&self, ctx: &ReviewContext) -> CouncilResult<JudgeVerdict> {
         debug!("🔧 Technical Auditor reviewing spec {}", ctx.working_spec.id);
@@ -207,7 +224,7 @@ impl Judge for TechnicalAuditor {
         // - [ ] Add unit tests for each check type
         // - [ ] Add integration tests with real working specs
         // STEP 1: Run deterministic technical checks (placeholder for now)
-        let technical_violations = self.run_deterministic_checks(ctx);
+        let technical_violations = self.run_deterministic_checks_impl(ctx);
 
         // STEP 2: Check for blocking technical violations
         if JudgeUtils::has_blocking_violations(&technical_violations) {
@@ -228,7 +245,7 @@ impl Judge for TechnicalAuditor {
         }
 
         // STEP 3: Build LLM prompt for technical analysis
-        let prompt = self.build_prompt(ctx);
+        let prompt = self.build_prompt_impl(ctx);
 
         // STEP 4: Execute engine
         let req = JudgeUtils::build_request(prompt, 256);
@@ -255,7 +272,7 @@ impl Judge for TechnicalAuditor {
 
 impl TechnicalAuditor {
     /// Run deterministic technical checks
-    fn run_deterministic_checks(&self, ctx: &ReviewContext) -> Vec<Violation> {
+    fn run_deterministic_checks_impl(&self, ctx: &ReviewContext) -> Vec<Violation> {
         let mut violations = vec![];
 
         // Check for security basics (simplified checks)

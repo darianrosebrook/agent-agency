@@ -64,7 +64,7 @@ pub struct Ambiguity {
 }
 
 /// Types of ambiguities
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq) ]
 pub enum AmbiguityType {
     Pronoun,
     TechnicalTerm,

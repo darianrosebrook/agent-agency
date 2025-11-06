@@ -1,0 +1,31 @@
+{
+  "description": "Golden input fixture for LearningOrchestrator behavioral equivalence testing",
+  "task_spec": {
+    "task_id": "test-task-123",
+    "description": "Analyze user sentiment in product reviews",
+    "requirements": [
+      "Process text data",
+      "Extract sentiment scores",
+      "Handle multiple languages"
+    ],
+    "scope_in": ["src/analysis/"],
+    "scope_out": ["node_modules/"],
+    "change_budget": {
+      "max_files": 10,
+      "max_loc": 500
+    },
+    "acceptance_criteria": [
+      "Sentiment accuracy > 85%",
+      "Processing time < 2 seconds",
+      "Memory usage < 500MB"
+    ]
+  },
+  "expected_algorithm_selection": "supervised",
+  "expected_performance_metrics": {
+    "accuracy": 0.87,
+    "latency_ms": 1200,
+    "memory_mb": 350
+  }
+}
+
+

@@ -41,7 +41,7 @@
 //!     .record_command_complete(cmd_audit, exit_code, stdout, stderr, duration).await;
 //! ```
 
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
@@ -66,6 +66,18 @@ pub struct AuditTrailManager {
     error_recovery_auditor: Arc<ErrorRecoveryAuditor>,
     learning_auditor: Arc<LearningAuditor>,
     global_stats: Arc<RwLock<GlobalAuditStats>>,
+    // Evaluation framework storage (feature-gated)
+    #[cfg(feature = "evaluation")]
+    decision_points: Arc<RwLock<Vec<crate::chain_of_thought::DecisionPoint>>>,
+    #[cfg(feature = "evaluation")]
+    coordination_events: Arc<RwLock<Vec<crate::chain_of_thought::CoordinationEvent>>>,
+    // Indexes for O(log n) query performance (feature-gated)
+    #[cfg(feature = "evaluation")]
+    decision_points_by_plan_id: Arc<RwLock<BTreeMap<Uuid, Vec<usize>>>>,
+    #[cfg(feature = "evaluation")]
+    decision_points_by_timestamp: Arc<RwLock<BTreeMap<DateTime<Utc>, Vec<usize>>>>,
+    #[cfg(feature = "evaluation")]
+    coordination_events_by_timestamp: Arc<RwLock<BTreeMap<DateTime<Utc>, Vec<usize>>>>,
 }
 
 /// Configuration for audit trail system
@@ -315,6 +327,16 @@ impl AuditTrailManager {
             error_recovery_auditor: Arc::new(ErrorRecoveryAuditor::new(config.clone(), global_stats.clone())),
             learning_auditor: Arc::new(LearningAuditor::new(config.clone(), global_stats.clone())),
             global_stats,
+            #[cfg(feature = "evaluation")]
+            decision_points: Arc::new(RwLock::new(Vec::new())),
+            #[cfg(feature = "evaluation")]
+            coordination_events: Arc::new(RwLock::new(Vec::new())),
+            #[cfg(feature = "evaluation")]
+            decision_points_by_plan_id: Arc::new(RwLock::new(BTreeMap::new())),
+            #[cfg(feature = "evaluation")]
+            decision_points_by_timestamp: Arc::new(RwLock::new(BTreeMap::new())),
+            #[cfg(feature = "evaluation")]
+            coordination_events_by_timestamp: Arc::new(RwLock::new(BTreeMap::new())),
         }
     }
 
@@ -354,6 +376,16 @@ impl AuditTrailManager {
             error_recovery_auditor: Arc::new(ErrorRecoveryAuditor::new(config.clone(), global_stats.clone())),
             learning_auditor: Arc::new(LearningAuditor::new(config.clone(), global_stats.clone())),
             global_stats,
+            #[cfg(feature = "evaluation")]
+            decision_points: Arc::new(RwLock::new(Vec::new())),
+            #[cfg(feature = "evaluation")]
+            coordination_events: Arc::new(RwLock::new(Vec::new())),
+            #[cfg(feature = "evaluation")]
+            decision_points_by_plan_id: Arc::new(RwLock::new(BTreeMap::new())),
+            #[cfg(feature = "evaluation")]
+            decision_points_by_timestamp: Arc::new(RwLock::new(BTreeMap::new())),
+            #[cfg(feature = "evaluation")]
+            coordination_events_by_timestamp: Arc::new(RwLock::new(BTreeMap::new())),
         }
     }
 
@@ -395,6 +427,154 @@ impl AuditTrailManager {
     /// Get current global statistics
     pub async fn get_global_stats(&self) -> GlobalAuditStats {
         self.global_stats.read().await.clone()
+    }
+
+    /// Query decision points (evaluation framework)
+    /// 
+    /// Performance: O(log n + k) where k is the number of results
+    /// Uses BTreeMap indexes for efficient querying by plan_id and timestamp
+    #[cfg(feature = "evaluation")]
+    pub async fn query_decision_points(
+        &self,
+        plan_id: Option<Uuid>,
+        since: Option<DateTime<Utc>>,
+        until: Option<DateTime<Utc>>,
+        limit: Option<usize>,
+    ) -> Vec<crate::chain_of_thought::DecisionPoint> {
+        let decisions = self.decision_points.read().await;
+        let mut candidate_indices = std::collections::HashSet::new();
+        
+        // Use plan_id index if provided (O(log n))
+        if let Some(pid) = plan_id {
+            if let Some(indices) = self.decision_points_by_plan_id.read().await.get(&pid) {
+                candidate_indices.extend(indices.iter().copied());
+            } else {
+                // No decisions for this plan_id
+                return Vec::new();
+            }
+        }
+        
+        // Use timestamp index for time window (O(log n + k))
+        let timestamp_index = self.decision_points_by_timestamp.read().await;
+        let time_range_indices: Vec<usize> = if since.is_some() || until.is_some() {
+            let start_bound = since.map(|t| std::ops::Bound::Included(t))
+                .unwrap_or(std::ops::Bound::Unbounded);
+            let end_bound = until.map(|t| std::ops::Bound::Included(t))
+                .unwrap_or(std::ops::Bound::Unbounded);
+            
+            timestamp_index
+                .range((start_bound, end_bound))
+                .flat_map(|(_, indices)| indices.iter().copied())
+                .collect()
+        } else {
+            // No time filter - use all indices
+            timestamp_index.values().flat_map(|indices| indices.iter().copied()).collect()
+        };
+        
+        // Intersect candidate sets if both filters provided
+        let final_indices: Vec<usize> = if plan_id.is_some() && (since.is_some() || until.is_some()) {
+            time_range_indices.into_iter()
+                .filter(|idx| candidate_indices.contains(idx))
+                .collect()
+        } else if plan_id.is_some() {
+            candidate_indices.into_iter().collect()
+        } else {
+            time_range_indices
+        };
+        
+        // Retrieve actual decision points
+        let mut results: Vec<_> = final_indices.iter()
+            .filter_map(|idx| decisions.get(*idx))
+            .cloned()
+            .collect();
+        
+        // Sort by timestamp (already mostly sorted due to timestamp index)
+        results.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
+        
+        // Apply limit
+        if let Some(limit_val) = limit {
+            results.truncate(limit_val);
+        }
+        
+        results
+    }
+
+    /// Query coordination events (evaluation framework)
+    /// 
+    /// Performance: O(log n + k) where k is the number of results
+    /// Uses BTreeMap timestamp index for efficient time-window queries
+    #[cfg(feature = "evaluation")]
+    pub async fn query_coordination_events(
+        &self,
+        plan_id: Option<Uuid>,
+        since: Option<DateTime<Utc>>,
+        until: Option<DateTime<Utc>>,
+        limit: Option<usize>,
+    ) -> Vec<crate::chain_of_thought::CoordinationEvent> {
+        let events = self.coordination_events.read().await;
+        let timestamp_index = self.coordination_events_by_timestamp.read().await;
+        
+        // Use timestamp index for time window (O(log n + k))
+        let start_bound = since.map(|t| std::ops::Bound::Included(t))
+            .unwrap_or(std::ops::Bound::Unbounded);
+        let end_bound = until.map(|t| std::ops::Bound::Included(t))
+            .unwrap_or(std::ops::Bound::Unbounded);
+        
+        let mut indices: Vec<usize> = timestamp_index
+            .range((start_bound, end_bound))
+            .flat_map(|(_, indices)| indices.iter().copied())
+            .collect();
+        
+        // Filter by plan_id if provided (requires checking event details)
+        if let Some(pid) = plan_id {
+            indices.retain(|idx| {
+                if let Some(event) = events.get(*idx) {
+                    // Check if event is associated with this plan_id
+                    // This requires examining event details/metadata
+                    // For now, we'll need to check the event structure
+                    // Note: CoordinationEvent doesn't directly store plan_id,
+                    // so this is a placeholder for future enhancement
+                    true // Accept all for now - can be enhanced with plan_id tracking
+                } else {
+                    false
+                }
+            });
+        }
+        
+        // Retrieve actual events
+        let mut results: Vec<_> = indices.iter()
+            .filter_map(|idx| events.get(*idx))
+            .cloned()
+            .collect();
+        
+        // Sort by timestamp (already mostly sorted due to timestamp index)
+        results.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
+        
+        // Apply limit
+        if let Some(limit_val) = limit {
+            results.truncate(limit_val);
+        }
+        
+        results
+    }
+
+    /// Record coordination event (evaluation framework)
+    #[cfg(feature = "evaluation")]
+    pub async fn record_coordination_event(
+        &self,
+        event: crate::chain_of_thought::CoordinationEvent,
+    ) -> Result<(), AuditError> {
+        let mut events = self.coordination_events.write().await;
+        let index = events.len();
+        events.push(event.clone());
+        
+        // Update timestamp index for O(log n) queries
+        self.coordination_events_by_timestamp.write().await
+            .entry(event.timestamp)
+            .or_insert_with(Vec::new)
+            .push(index);
+        
+        Ok(())
     }
 
     /// Export audit trail for analysis
@@ -745,6 +925,211 @@ impl AuditTrailManager {
         );
 
         Ok(())
+    }
+
+    /// Record orchestration decision point
+    pub async fn record_orchestration_decision(
+        &self,
+        decision: crate::chain_of_thought::DecisionPoint,
+    ) -> Result<(), AuditError> {
+        // Store decision point for evaluation framework
+        #[cfg(feature = "evaluation")]
+        {
+            let mut decisions = self.decision_points.write().await;
+            let index = decisions.len();
+            decisions.push(decision.clone());
+            
+            // Update indexes for O(log n) queries
+            if let Some(plan_id) = decision.context.plan_id {
+                self.decision_points_by_plan_id.write().await
+                    .entry(plan_id)
+                    .or_insert_with(Vec::new)
+                    .push(index);
+            }
+            
+            self.decision_points_by_timestamp.write().await
+                .entry(decision.timestamp)
+                .or_insert_with(Vec::new)
+                .push(index);
+        }
+        
+        self.agent_thinking_auditor().record_decision_point(
+            format!("{:?}", decision.decision_type).as_str(),
+            decision.alternatives.into_iter().map(|a| a.option).collect(),
+            decision.chosen_option.as_str(),
+            decision.reasoning.as_str(),
+            Some(decision.confidence as f32),
+        ).await
+    }
+
+    /// Record worker coordination event
+    pub async fn record_worker_coordination(
+        &self,
+        trace: crate::chain_of_thought::CoordinationTrace,
+    ) -> Result<(), AuditError> {
+        // Record as performance metric since coordination involves resource utilization
+        let mut metadata = HashMap::new();
+        metadata.insert("task_id".to_string(), serde_json::Value::String(trace.task_id.to_string()));
+        metadata.insert("coordination_events".to_string(), serde_json::Value::Number(serde_json::Number::from(trace.coordination_events.len() as u64)));
+        metadata.insert("worker_assignments".to_string(), serde_json::Value::Number(serde_json::Number::from(trace.worker_assignments.len() as u64)));
+        metadata.insert("cpu_utilization".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(trace.resource_utilization.cpu_utilization).unwrap()));
+
+        self.performance_auditor().record_operation_performance(
+            "worker_coordination",
+            Duration::from_millis(0), // Coordination overhead timing not tracked here
+            true,
+            metadata,
+        ).await
+    }
+
+    /// Record council evaluation process
+    pub async fn record_council_evaluation(
+        &self,
+        trace: crate::chain_of_thought::CouncilEvaluationTrace,
+    ) -> Result<(), AuditError> {
+        // Record council consensus result
+        let vote_distribution = trace.individual_verdicts.iter()
+            .map(|v| (v.verdict.clone(), 1))
+            .collect();
+
+        self.council_auditor().record_council_consensus(
+            trace.session_id.to_string().as_str(),
+            trace.final_decision.as_str(),
+            vote_distribution,
+            trace.aggregation_process.final_consensus_score as f32,
+            Duration::from_millis(1000), // Default duration - can be made configurable later
+        ).await
+    }
+
+    /// Record chain-of-thought reasoning step
+    pub async fn record_chain_of_thought(
+        &self,
+        task_id: Uuid,
+        phase: crate::chain_of_thought::ChainOfThoughtPhase,
+        content: String,
+        confidence: f64,
+    ) -> Result<(), AuditError> {
+        self.agent_thinking_auditor().record_reasoning_step(
+            format!("{:?}", phase).as_str(),
+            content.as_str(),
+            vec![], // No alternatives for basic reasoning steps
+            "", // No chosen alternative for basic reasoning
+            confidence as f32,
+            Duration::from_millis(100), // Default reasoning step duration
+        ).await
+    }
+
+    /// Record heartbeat for progress monitoring
+    pub async fn record_heartbeat(
+        &self,
+        task_id: Uuid,
+        component: &str,
+        progress: crate::chain_of_thought::ProgressIndicator,
+        estimated_remaining: Option<std::time::Duration>,
+    ) -> Result<(), AuditError> {
+        // Delegate to performance auditor for operation performance tracking
+        let progress_desc = match &progress {
+            crate::chain_of_thought::ProgressIndicator::Percentage(p) => format!("{:.1}% complete", p),
+            crate::chain_of_thought::ProgressIndicator::Steps { current, total } => format!("Step {}/{}", current, total),
+            crate::chain_of_thought::ProgressIndicator::Phase(phase) => format!("Phase: {}", phase),
+            crate::chain_of_thought::ProgressIndicator::WaitingFor { resource, .. } => format!("Waiting for: {}", resource),
+        };
+
+        let mut metadata = HashMap::new();
+        metadata.insert("component".to_string(), serde_json::Value::String(component.to_string()));
+        metadata.insert("progress".to_string(), serde_json::Value::String(progress_desc));
+        metadata.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
+
+        self.performance_auditor().record_operation_performance(
+            "heartbeat",
+            Duration::from_millis(0),
+            true,
+            metadata,
+        ).await
+    }
+
+    /// Record timeout warning
+    pub async fn record_timeout_warning(
+        &self,
+        task_id: Uuid,
+        component: &str,
+        operation: &str,
+        elapsed: std::time::Duration,
+        timeout_threshold: std::time::Duration,
+    ) -> Result<(), AuditError> {
+        // Delegate to error recovery auditor since timeouts indicate potential issues
+        let mut context = HashMap::new();
+        context.insert("component".to_string(), serde_json::Value::String(component.to_string()));
+        context.insert("operation".to_string(), serde_json::Value::String(operation.to_string()));
+        context.insert("elapsed_ms".to_string(), serde_json::Value::Number(serde_json::Number::from(elapsed.as_millis() as u64)));
+        context.insert("threshold_ms".to_string(), serde_json::Value::Number(serde_json::Number::from(timeout_threshold.as_millis() as u64)));
+
+        self.error_recovery_auditor().record_error_recovery_attempt(
+            "timeout_warning",
+            "monitoring",
+            false, // Not a successful recovery yet
+            Duration::from_millis(0),
+            context,
+        ).await
+    }
+
+    /// Record stuck operation detection
+    pub async fn record_stuck_detection(
+        &self,
+        task_id: Uuid,
+        component: &str,
+        stuck_state: crate::chain_of_thought::StuckState,
+        last_activity: DateTime<Utc>,
+    ) -> Result<(), AuditError> {
+        // Delegate to error recovery auditor since stuck operations need recovery
+        let stuck_description = match &stuck_state {
+            crate::chain_of_thought::StuckState::NoProgress { duration_ms, .. } =>
+                format!("No progress for {}ms", duration_ms),
+            crate::chain_of_thought::StuckState::WaitingForResource { resource, .. } =>
+                format!("Waiting for resource: {}", resource),
+            crate::chain_of_thought::StuckState::DeadlockDetected { resources, .. } =>
+                format!("Deadlock detected with {} resources", resources.len()),
+            crate::chain_of_thought::StuckState::TimeoutImminent { elapsed_ms, threshold_ms } =>
+                format!("Timeout imminent: {}/{}ms", elapsed_ms, threshold_ms),
+        };
+
+        let mut context = HashMap::new();
+        context.insert("component".to_string(), serde_json::Value::String(component.to_string()));
+        context.insert("stuck_description".to_string(), serde_json::Value::String(stuck_description));
+        context.insert("last_activity".to_string(), serde_json::Value::String(last_activity.to_rfc3339()));
+        context.insert("stuck_state".to_string(), serde_json::to_value(&stuck_state).unwrap());
+
+        self.error_recovery_auditor().record_error_recovery_attempt(
+            "stuck_operation",
+            "detection",
+            false, // Not recovered yet
+            Utc::now().signed_duration_since(last_activity).to_std().unwrap_or(Duration::from_secs(0)),
+            context,
+        ).await
+    }
+
+    /// Record error propagation tracking
+    pub async fn record_error_propagation(
+        &self,
+        error_id: Uuid,
+        source_component: &str,
+        target_component: &str,
+        error_chain: Vec<crate::chain_of_thought::ErrorLink>,
+    ) -> Result<(), AuditError> {
+        // Delegate to error recovery auditor for error tracking
+        let mut context = HashMap::new();
+        context.insert("source_component".to_string(), serde_json::Value::String(source_component.to_string()));
+        context.insert("target_component".to_string(), serde_json::Value::String(target_component.to_string()));
+        context.insert("chain_length".to_string(), serde_json::Value::Number(serde_json::Number::from(error_chain.len() as u64)));
+        context.insert("error_chain".to_string(), serde_json::to_value(&error_chain).unwrap());
+
+        self.error_recovery_auditor().record_error_recovery_attempt(
+            "error_propagation",
+            "tracking",
+            false, // Error propagation is not a recovery success
+            Duration::from_millis(0), // Duration not applicable for propagation tracking
+            context,
+        ).await
     }
 }
 

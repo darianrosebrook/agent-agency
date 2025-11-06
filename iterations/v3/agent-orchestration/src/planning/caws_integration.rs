@@ -9,7 +9,7 @@ use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};use std::collections::HashMap;
 use anyhow::{anyhow, Result};
 use agent_agency_contracts::{
-    working_spec::{WorkingSpec, AcceptanceCriterion},
+    working_spec::{WorkingSpec, AcceptanceCriterion, MoSCoWPriority},
     planning_io::{ExecutionPlan as ContractExecutionPlan, Milestone as ContractMilestone, PlanState, EvidenceGate},
 };
 

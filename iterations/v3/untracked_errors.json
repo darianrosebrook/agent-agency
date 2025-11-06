@@ -1,0 +1,1150 @@
+[{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [4]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "4",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs"
+		}
+	},
+	"severity": 8,
+	"message": "mismatched types\nexpected struct `FinalVerdictContract`\n   found struct `std::sync::Arc<FinalVerdictContract>`",
+	"source": "rustc",
+	"startLineNumber": 469,
+	"startColumn": 13,
+	"endLineNumber": 469,
+	"endColumn": 20,
+	"relatedInformation": [
+		{
+			"startLineNumber": 465,
+			"startColumn": 30,
+			"endLineNumber": 465,
+			"endColumn": 48,
+			"message": "arguments to this method are incorrect",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs"
+		},
+		{
+			"startLineNumber": 130,
+			"startColumn": 18,
+			"endLineNumber": 130,
+			"endColumn": 36,
+			"message": "method defined here",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs"
+		}
+	],
+	"modelVersionId": 24
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [7]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "7",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs"
+		}
+	},
+	"severity": 8,
+	"message": "mismatched types\nexpected struct `FinalVerdictContract`\n   found struct `std::sync::Arc<FinalVerdictContract>`",
+	"source": "rustc",
+	"startLineNumber": 495,
+	"startColumn": 13,
+	"endLineNumber": 495,
+	"endColumn": 20,
+	"relatedInformation": [
+		{
+			"startLineNumber": 491,
+			"startColumn": 30,
+			"endLineNumber": 491,
+			"endColumn": 48,
+			"message": "arguments to this method are incorrect",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs"
+		},
+		{
+			"startLineNumber": 130,
+			"startColumn": 18,
+			"endLineNumber": 130,
+			"endColumn": 36,
+			"message": "method defined here",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs"
+		}
+	],
+	"modelVersionId": 24
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [9]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "9",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs"
+		}
+	},
+	"severity": 8,
+	"message": "mismatched types\nexpected struct `FinalVerdictContract`\n   found struct `std::sync::Arc<FinalVerdictContract>`",
+	"source": "rustc",
+	"startLineNumber": 516,
+	"startColumn": 13,
+	"endLineNumber": 516,
+	"endColumn": 20,
+	"relatedInformation": [
+		{
+			"startLineNumber": 512,
+			"startColumn": 30,
+			"endLineNumber": 512,
+			"endColumn": 48,
+			"message": "arguments to this method are incorrect",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs"
+		},
+		{
+			"startLineNumber": 130,
+			"startColumn": 18,
+			"endLineNumber": 130,
+			"endColumn": 36,
+			"message": "method defined here",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs"
+		}
+	],
+	"modelVersionId": 24
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [11]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "11",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs"
+		}
+	},
+	"severity": 8,
+	"message": "mismatched types\nexpected struct `FinalVerdictContract`\n   found struct `std::sync::Arc<FinalVerdictContract>`",
+	"source": "rustc",
+	"startLineNumber": 537,
+	"startColumn": 13,
+	"endLineNumber": 537,
+	"endColumn": 20,
+	"relatedInformation": [
+		{
+			"startLineNumber": 533,
+			"startColumn": 30,
+			"endLineNumber": 533,
+			"endColumn": 48,
+			"message": "arguments to this method are incorrect",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs"
+		},
+		{
+			"startLineNumber": 130,
+			"startColumn": 18,
+			"endLineNumber": 130,
+			"endColumn": 36,
+			"message": "method defined here",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs"
+		}
+	],
+	"modelVersionId": 24
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [0]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "0",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs"
+		}
+	},
+	"severity": 4,
+	"message": "unused import: `std::sync::Arc`\n`#[warn(unused_imports)]` on by default",
+	"source": "rustc",
+	"startLineNumber": 14,
+	"startColumn": 5,
+	"endLineNumber": 14,
+	"endColumn": 19,
+	"relatedInformation": [
+		{
+			"startLineNumber": 14,
+			"startColumn": 1,
+			"endLineNumber": 15,
+			"endColumn": 1,
+			"message": "remove the whole `use` item",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs"
+		}
+	],
+	"tags": [
+		1
+	],
+	"modelVersionId": 24
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [2]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "2",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs"
+		}
+	},
+	"severity": 4,
+	"message": "unused import: `uuid::Uuid`",
+	"source": "rustc",
+	"startLineNumber": 15,
+	"startColumn": 5,
+	"endLineNumber": 15,
+	"endColumn": 15,
+	"relatedInformation": [
+		{
+			"startLineNumber": 15,
+			"startColumn": 1,
+			"endLineNumber": 16,
+			"endColumn": 1,
+			"message": "remove the whole `use` item",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-evaluation/src/evaluation.rs"
+		}
+	],
+	"tags": [
+		1
+	],
+	"modelVersionId": 24
+},
+{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [26]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "26",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	},
+	"severity": 8,
+	"message": "not all trait items implemented, missing: `start_session`, `review_task`, `get_session_status`\nmissing `start_session`, `review_task`, `get_session_status` in implementation",
+	"source": "rustc",
+	"startLineNumber": 790,
+	"startColumn": 5,
+	"endLineNumber": 790,
+	"endColumn": 79,
+	"relatedInformation": [
+		{
+			"startLineNumber": 800,
+			"startColumn": 5,
+			"endLineNumber": 800,
+			"endColumn": 5,
+			"message": "implement the missing item: `fn start_session(&'life0 self, _: &'life1 agent_agency_contracts::TaskDescriptor) -> Pin<Box<(dyn futures_util::Future<Output = std::result::Result<agent_agency_contracts::ports::council_coordinator::SessionId, agent_agency_contracts::CouncilError>> + std::marker::Send + 'async_trait)>> { todo!() }`: `    fn start_session(&'life0 self, _: &'life1 agent_agency_contracts::TaskDescriptor) -> Pin<Box<(dyn futures_util::Future<Output = std::result::Result<agent_agency_contracts::ports::council_coordinator::SessionId, agent_agency_contracts::CouncilError>> + std::marker::Send + 'async_trait)>> { todo!() }\n    `",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		},
+		{
+			"startLineNumber": 800,
+			"startColumn": 5,
+			"endLineNumber": 800,
+			"endColumn": 5,
+			"message": "implement the missing item: `fn review_task(&'life0 self, _: &'life1 agent_agency_contracts::ports::council_coordinator::SessionId, _: &'life2 agent_agency_contracts::TaskDescriptor) -> Pin<Box<(dyn futures_util::Future<Output = std::result::Result<agent_agency_contracts::types::council::CouncilVerdict, agent_agency_contracts::CouncilError>> + std::marker::Send + 'async_trait)>> { todo!() }`: `    fn review_task(&'life0 self, _: &'life1 agent_agency_contracts::ports::council_coordinator::SessionId, _: &'life2 agent_agency_contracts::TaskDescriptor) -> Pin<Box<(dyn futures_util::Future<Output = std::result::Result<agent_agency_contracts::types::council::CouncilVerdict, agent_agency_contracts::CouncilError>> + std::marker::Send + 'async_trait)>> { todo!() }\n    `",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		},
+		{
+			"startLineNumber": 800,
+			"startColumn": 5,
+			"endLineNumber": 800,
+			"endColumn": 5,
+			"message": "implement the missing item: `fn get_session_status(&'life0 self, _: &'life1 agent_agency_contracts::ports::council_coordinator::SessionId) -> Pin<Box<(dyn futures_util::Future<Output = std::result::Result<agent_agency_contracts::ports::council_coordinator::SessionStatus, agent_agency_contracts::CouncilError>> + std::marker::Send + 'async_trait)>> { todo!() }`: `    fn get_session_status(&'life0 self, _: &'life1 agent_agency_contracts::ports::council_coordinator::SessionId) -> Pin<Box<(dyn futures_util::Future<Output = std::result::Result<agent_agency_contracts::ports::council_coordinator::SessionStatus, agent_agency_contracts::CouncilError>> + std::marker::Send + 'async_trait)>> { todo!() }\n    `",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [0]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "0",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	},
+	"severity": 8,
+	"message": "method `evaluate` is not a member of trait `agent_agency_contracts::CouncilCoordinator`\nnot a member of trait `agent_agency_contracts::CouncilCoordinator`",
+	"source": "rustc",
+	"startLineNumber": 791,
+	"startColumn": 9,
+	"endLineNumber": 799,
+	"endColumn": 10
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [23]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "23",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	},
+	"severity": 8,
+	"message": "enum takes 0 generic arguments but 1 generic argument was supplied\nexpected 0 generic arguments",
+	"source": "rustc",
+	"startLineNumber": 791,
+	"startColumn": 59,
+	"endLineNumber": 791,
+	"endColumn": 72,
+	"relatedInformation": [
+		{
+			"startLineNumber": 37,
+			"startColumn": 6,
+			"endLineNumber": 37,
+			"endColumn": 19,
+			"message": "enum defined here, with 0 generic parameters",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		},
+		{
+			"startLineNumber": 791,
+			"startColumn": 72,
+			"endLineNumber": 791,
+			"endColumn": 87,
+			"message": "remove the unnecessary generics",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [1]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "1",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	},
+	"severity": 8,
+	"message": "expected struct, variant or union type, found enum `FinalDecision`\nnot a struct, variant or union type",
+	"source": "rustc",
+	"startLineNumber": 792,
+	"startColumn": 16,
+	"endLineNumber": 792,
+	"endColumn": 29,
+	"relatedInformation": [
+		{
+			"startLineNumber": 783,
+			"startColumn": 5,
+			"endLineNumber": 783,
+			"endColumn": 5,
+			"message": "consider importing one of these structs instead: `use crate::council_types::FinalDecision;\n`, `use agent_agency_contracts::types::prelude::FinalDecision;\n`",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [3]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "3",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	},
+	"severity": 8,
+	"message": "cannot find value `db_ops` in this scope\nnot found in this scope",
+	"source": "rustc",
+	"startLineNumber": 868,
+	"startColumn": 52,
+	"endLineNumber": 868,
+	"endColumn": 58
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [16]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "16",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	},
+	"severity": 4,
+	"message": "enum `ReviewPriority` is never used",
+	"source": "rustc",
+	"startLineNumber": 28,
+	"startColumn": 6,
+	"endLineNumber": 28,
+	"endColumn": 20,
+	"tags": [
+		1
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [17]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "17",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	},
+	"severity": 4,
+	"message": "enum `CouncilResult` is never used",
+	"source": "rustc",
+	"startLineNumber": 37,
+	"startColumn": 6,
+	"endLineNumber": 37,
+	"endColumn": 19,
+	"tags": [
+		1
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [18]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "18",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	},
+	"severity": 4,
+	"message": "field `db_ops` is never read",
+	"source": "rustc",
+	"startLineNumber": 58,
+	"startColumn": 5,
+	"endLineNumber": 58,
+	"endColumn": 11,
+	"relatedInformation": [
+		{
+			"startLineNumber": 53,
+			"startColumn": 12,
+			"endLineNumber": 53,
+			"endColumn": 26,
+			"message": "field in this struct",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	],
+	"tags": [
+		1
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [10]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "10",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	},
+	"severity": 4,
+	"message": "type `MonitorConfig` is more private than the item `CouncilMonitor::with_config`\nassociated function `CouncilMonitor::with_config` is reachable at visibility `pub`",
+	"source": "rustc",
+	"startLineNumber": 158,
+	"startColumn": 5,
+	"endLineNumber": 162,
+	"endColumn": 14,
+	"relatedInformation": [
+		{
+			"startLineNumber": 79,
+			"startColumn": 1,
+			"endLineNumber": 79,
+			"endColumn": 21,
+			"message": "but type `MonitorConfig` is only usable at visibility `pub(self)`",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [4]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "4",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	},
+	"severity": 4,
+	"message": "unused variable: `working_spec`",
+	"source": "rustc",
+	"startLineNumber": 174,
+	"startColumn": 13,
+	"endLineNumber": 174,
+	"endColumn": 25,
+	"relatedInformation": [
+		{
+			"startLineNumber": 174,
+			"startColumn": 13,
+			"endLineNumber": 174,
+			"endColumn": 25,
+			"message": "if this is intentional, prefix it with an underscore: `_working_spec`",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	],
+	"tags": [
+		1
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [6]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "6",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	},
+	"severity": 4,
+	"message": "unused variable: `review_context`",
+	"source": "rustc",
+	"startLineNumber": 286,
+	"startColumn": 17,
+	"endLineNumber": 286,
+	"endColumn": 31,
+	"relatedInformation": [
+		{
+			"startLineNumber": 286,
+			"startColumn": 17,
+			"endLineNumber": 286,
+			"endColumn": 31,
+			"message": "if this is intentional, prefix it with an underscore: `_review_context`",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	],
+	"tags": [
+		1
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [8]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "8",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	},
+	"severity": 4,
+	"message": "unused variable: `review_context`",
+	"source": "rustc",
+	"startLineNumber": 348,
+	"startColumn": 13,
+	"endLineNumber": 348,
+	"endColumn": 27,
+	"relatedInformation": [
+		{
+			"startLineNumber": 348,
+			"startColumn": 13,
+			"endLineNumber": 348,
+			"endColumn": 27,
+			"message": "if this is intentional, prefix it with an underscore: `_review_context`",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	],
+	"tags": [
+		1
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [12]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "12",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	},
+	"severity": 4,
+	"message": "type `council_monitor::SessionStatus` is more private than the item `CouncilMonitor::end_monitoring_session`\nmethod `CouncilMonitor::end_monitoring_session` is reachable at visibility `pub`",
+	"source": "rustc",
+	"startLineNumber": 454,
+	"startColumn": 5,
+	"endLineNumber": 454,
+	"endColumn": 105,
+	"relatedInformation": [
+		{
+			"startLineNumber": 127,
+			"startColumn": 1,
+			"endLineNumber": 127,
+			"endColumn": 19,
+			"message": "but type `council_monitor::SessionStatus` is only usable at visibility `pub(self)`",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [20]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "20",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	},
+	"severity": 4,
+	"message": "methods `create_review_context` and `determine_review_priority` are never used",
+	"source": "rustc",
+	"startLineNumber": 554,
+	"startColumn": 8,
+	"endLineNumber": 554,
+	"endColumn": 29,
+	"relatedInformation": [
+		{
+			"startLineNumber": 144,
+			"startColumn": 1,
+			"endLineNumber": 144,
+			"endColumn": 20,
+			"message": "methods in this implementation",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	],
+	"tags": [
+		1
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [22]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "22",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	},
+	"severity": 4,
+	"message": "methods `create_review_context` and `determine_review_priority` are never used",
+	"source": "rustc",
+	"startLineNumber": 575,
+	"startColumn": 8,
+	"endLineNumber": 575,
+	"endColumn": 33,
+	"relatedInformation": [
+		{
+			"startLineNumber": 144,
+			"startColumn": 1,
+			"endLineNumber": 144,
+			"endColumn": 20,
+			"message": "methods in this implementation",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	],
+	"tags": [
+		1
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [14]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "14",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	},
+	"severity": 4,
+	"message": "type `MonitoringStats` is more private than the item `CouncilMonitor::get_monitoring_stats`\nmethod `CouncilMonitor::get_monitoring_stats` is reachable at visibility `pub`",
+	"source": "rustc",
+	"startLineNumber": 728,
+	"startColumn": 5,
+	"endLineNumber": 728,
+	"endColumn": 72,
+	"relatedInformation": [
+		{
+			"startLineNumber": 755,
+			"startColumn": 1,
+			"endLineNumber": 755,
+			"endColumn": 23,
+			"message": "but type `MonitoringStats` is only usable at visibility `pub(self)`",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/council_monitor.rs"
+		}
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [14]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "14",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	},
+	"severity": 8,
+	"message": "missing field `priority` in initializer of `agent_agency_contracts::AcceptanceCriterion`\nmissing `priority`",
+	"source": "rustc",
+	"startLineNumber": 630,
+	"startColumn": 31,
+	"endLineNumber": 630,
+	"endColumn": 50
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [15]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "15",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	},
+	"severity": 8,
+	"message": "mismatched types\nexpected enum `std::option::Option<agent_agency_contracts::QualityGates>`\n found struct `std::vec::Vec<_>`",
+	"source": "rustc",
+	"startLineNumber": 758,
+	"startColumn": 28,
+	"endLineNumber": 758,
+	"endColumn": 34
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [0]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "0",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	},
+	"severity": 4,
+	"message": "unused imports: `AcceptanceCriterion`, `FileChange as WorkingSpecFileChange`, `types::prelude::*`, and `working_spec::*`",
+	"source": "rustc",
+	"startLineNumber": 12,
+	"startColumn": 33,
+	"endLineNumber": 12,
+	"endColumn": 68,
+	"relatedInformation": [
+		{
+			"startLineNumber": 12,
+			"startColumn": 31,
+			"endLineNumber": 12,
+			"endColumn": 89,
+			"message": "remove the unused imports",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	],
+	"tags": [
+		1
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [2]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "2",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	},
+	"severity": 4,
+	"message": "unused imports: `AcceptanceCriterion`, `FileChange as WorkingSpecFileChange`, `types::prelude::*`, and `working_spec::*`",
+	"source": "rustc",
+	"startLineNumber": 12,
+	"startColumn": 70,
+	"endLineNumber": 12,
+	"endColumn": 89,
+	"relatedInformation": [
+		{
+			"startLineNumber": 12,
+			"startColumn": 31,
+			"endLineNumber": 12,
+			"endColumn": 89,
+			"message": "remove the unused imports",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	],
+	"tags": [
+		1
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [3]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "3",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	},
+	"severity": 4,
+	"message": "unused imports: `AcceptanceCriterion`, `FileChange as WorkingSpecFileChange`, `types::prelude::*`, and `working_spec::*`",
+	"source": "rustc",
+	"startLineNumber": 14,
+	"startColumn": 5,
+	"endLineNumber": 14,
+	"endColumn": 22,
+	"relatedInformation": [
+		{
+			"startLineNumber": 12,
+			"startColumn": 31,
+			"endLineNumber": 12,
+			"endColumn": 89,
+			"message": "remove the unused imports",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	],
+	"tags": [
+		1
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [4]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "4",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	},
+	"severity": 4,
+	"message": "unused imports: `AcceptanceCriterion`, `FileChange as WorkingSpecFileChange`, `types::prelude::*`, and `working_spec::*`",
+	"source": "rustc",
+	"startLineNumber": 15,
+	"startColumn": 5,
+	"endLineNumber": 15,
+	"endColumn": 20,
+	"relatedInformation": [
+		{
+			"startLineNumber": 12,
+			"startColumn": 31,
+			"endLineNumber": 12,
+			"endColumn": 89,
+			"message": "remove the unused imports",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	],
+	"tags": [
+		1
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [12]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "12",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	},
+	"severity": 4,
+	"message": "unused variable: `i`",
+	"source": "rustc",
+	"startLineNumber": 545,
+	"startColumn": 67,
+	"endLineNumber": 545,
+	"endColumn": 68,
+	"relatedInformation": [
+		{
+			"startLineNumber": 545,
+			"startColumn": 67,
+			"endLineNumber": 545,
+			"endColumn": 68,
+			"message": "if this is intentional, prefix it with an underscore: `_i`",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	],
+	"tags": [
+		1
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [5]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "5",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	},
+	"severity": 4,
+	"message": "unused imports: `ChangeType`, `CoverageTargets`, `FileChange`, `NonFunctionalRequirements`, `ScopeRestrictions`, and `WorkingSpecConstraints`",
+	"source": "rustc",
+	"startLineNumber": 602,
+	"startColumn": 55,
+	"endLineNumber": 602,
+	"endColumn": 65,
+	"relatedInformation": [
+		{
+			"startLineNumber": 602,
+			"startColumn": 53,
+			"endLineNumber": 602,
+			"endColumn": 164,
+			"message": "remove the unused imports",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	],
+	"tags": [
+		1
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [7]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "7",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	},
+	"severity": 4,
+	"message": "unused imports: `ChangeType`, `CoverageTargets`, `FileChange`, `NonFunctionalRequirements`, `ScopeRestrictions`, and `WorkingSpecConstraints`",
+	"source": "rustc",
+	"startLineNumber": 602,
+	"startColumn": 67,
+	"endLineNumber": 602,
+	"endColumn": 77,
+	"relatedInformation": [
+		{
+			"startLineNumber": 602,
+			"startColumn": 53,
+			"endLineNumber": 602,
+			"endColumn": 164,
+			"message": "remove the unused imports",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	],
+	"tags": [
+		1
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [8]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "8",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	},
+	"severity": 4,
+	"message": "unused imports: `ChangeType`, `CoverageTargets`, `FileChange`, `NonFunctionalRequirements`, `ScopeRestrictions`, and `WorkingSpecConstraints`",
+	"source": "rustc",
+	"startLineNumber": 602,
+	"startColumn": 79,
+	"endLineNumber": 602,
+	"endColumn": 96,
+	"relatedInformation": [
+		{
+			"startLineNumber": 602,
+			"startColumn": 53,
+			"endLineNumber": 602,
+			"endColumn": 164,
+			"message": "remove the unused imports",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	],
+	"tags": [
+		1
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [9]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "9",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	},
+	"severity": 4,
+	"message": "unused imports: `ChangeType`, `CoverageTargets`, `FileChange`, `NonFunctionalRequirements`, `ScopeRestrictions`, and `WorkingSpecConstraints`",
+	"source": "rustc",
+	"startLineNumber": 602,
+	"startColumn": 98,
+	"endLineNumber": 602,
+	"endColumn": 120,
+	"relatedInformation": [
+		{
+			"startLineNumber": 602,
+			"startColumn": 53,
+			"endLineNumber": 602,
+			"endColumn": 164,
+			"message": "remove the unused imports",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	],
+	"tags": [
+		1
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [10]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "10",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	},
+	"severity": 4,
+	"message": "unused imports: `ChangeType`, `CoverageTargets`, `FileChange`, `NonFunctionalRequirements`, `ScopeRestrictions`, and `WorkingSpecConstraints`",
+	"source": "rustc",
+	"startLineNumber": 602,
+	"startColumn": 122,
+	"endLineNumber": 602,
+	"endColumn": 137,
+	"relatedInformation": [
+		{
+			"startLineNumber": 602,
+			"startColumn": 53,
+			"endLineNumber": 602,
+			"endColumn": 164,
+			"message": "remove the unused imports",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	],
+	"tags": [
+		1
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [11]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "11",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	},
+	"severity": 4,
+	"message": "unused imports: `ChangeType`, `CoverageTargets`, `FileChange`, `NonFunctionalRequirements`, `ScopeRestrictions`, and `WorkingSpecConstraints`",
+	"source": "rustc",
+	"startLineNumber": 602,
+	"startColumn": 139,
+	"endLineNumber": 602,
+	"endColumn": 164,
+	"relatedInformation": [
+		{
+			"startLineNumber": 602,
+			"startColumn": 53,
+			"endLineNumber": 602,
+			"endColumn": 164,
+			"message": "remove the unused imports",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	],
+	"tags": [
+		1
+	]
+},{
+	"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs",
+	"owner": "rustc",
+	"code": {
+		"value": "Click for full compiler diagnostic",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostic message [16]",
+			"scheme": "rust-analyzer-diagnostics-view",
+			"query": "16",
+			"fragment": "file:///Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	},
+	"severity": 4,
+	"message": "unused variable: `bridge`",
+	"source": "rustc",
+	"startLineNumber": 606,
+	"startColumn": 13,
+	"endLineNumber": 606,
+	"endColumn": 19,
+	"relatedInformation": [
+		{
+			"startLineNumber": 606,
+			"startColumn": 13,
+			"endLineNumber": 606,
+			"endColumn": 19,
+			"message": "if this is intentional, prefix it with an underscore: `_bridge`",
+			"resource": "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/agent-orchestration/src/planning/caws_integration.rs"
+		}
+	],
+	"tags": [
+		1
+	]
+}]

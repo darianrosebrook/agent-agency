@@ -1,0 +1,6 @@
+---
+source: system-quality-security/src/errors.rs
+assertion_line: 262
+expression: encryption_failed.to_string()
+---
+Encryption failed: AES-GCM encryption failed

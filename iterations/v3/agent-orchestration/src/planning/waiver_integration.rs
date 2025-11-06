@@ -580,7 +580,7 @@ mod tests {
 
     #[test]
     fn test_waiver_integration_creation() {
-        let db_ops = Arc::new(MockDatabaseOps);
+        let db_ops = Arc::new(crate::test_utils::MockDatabaseOps);
         let integration = WaiverIntegration::new(db_ops);
         // Integration created successfully
         assert!(true);

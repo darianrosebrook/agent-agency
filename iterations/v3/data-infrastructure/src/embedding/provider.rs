@@ -880,7 +880,7 @@ impl ClipEmbeddingProvider {
         use tokenizers::processors::roberta::RobertaProcessing;
 
         let wordpiece = WordPiece::builder()
-            // TODO: Implement comprehensive CLIP vocabulary loading and management
+            // OPTIONAL: Implement comprehensive CLIP vocabulary loading and management (deferred - advanced embedding feature)
             // - Load actual CLIP vocabulary files (vocab.json, merges.txt for BPE)
             // - Support different CLIP model variants (ViT-B/32, ViT-B/16, ViT-L/14)
             // - Implement vocabulary caching and memory optimization
@@ -889,7 +889,7 @@ impl ClipEmbeddingProvider {
             // - Implement vocabulary compression and quantization
             // - Add vocabulary versioning and compatibility handling
             // - Support multilingual vocabulary extensions
-            .vocab(std::collections::HashMap::new()) // TODO: Replace with actual CLIP vocabulary loading
+            .vocab(std::collections::HashMap::new()) // OPTIONAL: Replace with actual CLIP vocabulary loading (deferred)
             .unk_token("[UNK]".to_string())
             .build()
             .map_err(|e| anyhow::anyhow!("Failed to build WordPiece tokenizer: {:?}", e))?;

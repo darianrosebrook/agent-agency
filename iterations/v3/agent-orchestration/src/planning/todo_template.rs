@@ -340,14 +340,14 @@ impl TodoTemplateSystem {
     }
 
     /// Create TODO instance from template
-    pub fn create_instance(&mut self, template_name: &str, plan: &ExecutionPlan, milestone_id: Option<String>) -> Result<Uuid> {
+    pub fn create_instance(&mut self, template_name: &str, plan_id: Uuid, milestone_id: Option<String>) -> Result<Uuid> {
         let template = self.templates.get(template_name)
             .ok_or_else(|| anyhow!("Template '{}' not found", template_name))?;
 
         let instance = TodoInstance {
             id: Uuid::new_v4(),
             template_id: template.id,
-            plan_id: plan.id,
+            plan_id,
             milestone_id: milestone_id.clone(),
             current_step: None,
             completed_steps: HashSet::new(),

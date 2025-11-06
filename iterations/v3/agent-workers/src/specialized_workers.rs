@@ -6,9 +6,11 @@
 use schemars::JsonSchema;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use crate::workers_common::{Worker, WorkerContext, WorkerResult, WorkerResultBuilder};
 use crate::worker_errors::WorkerError;
 
-/// Base trait for specialized workers
+/// Legacy trait for specialized workers (backward compatibility)
+/// @deprecated Use Worker trait from workers_common instead
 #[async_trait]
 pub trait SpecializedWorker {
     async fn execute(&self, task: String) -> Result<String, WorkerError>;
@@ -87,6 +89,12 @@ pub struct CompilationSpecialist;
 
 // Helper method for parsing compilation tasks
 impl CompilationSpecialist {
+    fn parse_compilation_params(&self, params: &serde_json::Value) -> Result<CompilationParams, WorkerError> {
+        serde_json::from_value(params.clone()).map_err(|e| WorkerError::ExecutionError {
+            message: format!("Invalid compilation parameters: {}", e),
+        })
+    }
+
     fn parse_compilation_task(&self, task: &str) -> Result<CompilationParams, WorkerError> {
         // Simple parsing - in a real implementation, this would parse structured input
         let mut profile = "debug".to_string();
@@ -116,15 +124,39 @@ impl CompilationSpecialist {
 }
 
 #[async_trait]
-impl SpecializedWorker for CompilationSpecialist {
-    async fn execute(&self, task: String) -> Result<String, WorkerError> {
+impl Worker for CompilationSpecialist {
+    fn id(&self) -> &'static str {
+        "compilation-specialist"
+    }
+
+    fn capabilities(&self) -> Vec<String> {
+        vec![
+            "rust-compilation".to_string(),
+            "cargo-build".to_string(),
+            "cross-compilation".to_string(),
+        ]
+    }
+
+    fn parse_task(&self, task: &str) -> Result<serde_json::Value, WorkerError> {
+        let params = self.parse_compilation_task(task)?;
+        serde_json::to_value(params).map_err(|e| WorkerError::ExecutionError {
+            message: format!("Failed to serialize params: {}", e),
+        })
+    }
+
+    async fn execute_task(
+        &self,
+        params: &serde_json::Value,
+        _context: &WorkerContext,
+    ) -> Result<WorkerResult, WorkerError> {
         use tracing::{info, warn, error};
         use std::process::Command;
+        use crate::workers_common::ExecutionTimer;
 
-        info!("Starting compilation task: {}", task);
+        let compilation_params: CompilationParams = self.parse_compilation_params(params)?;
+        let timer = ExecutionTimer::start();
 
-        // Parse task to extract compilation parameters
-        let compilation_params = self.parse_compilation_task(&task)?;
+        info!("Starting compilation task: {:?}", compilation_params);
 
         // Execute cargo build with appropriate flags
         let mut cmd = Command::new("cargo");
@@ -156,19 +188,35 @@ impl SpecializedWorker for CompilationSpecialist {
         // Execute compilation
         let output = cmd.output().map_err(|e| WorkerError::ExecutionError { message: format!("Failed to execute cargo build: {}", e) })?;
 
+        let execution_time = timer.elapsed_ms();
+
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
             info!("Compilation successful");
-            Ok(format!("Compilation successful:\n{}", stdout))
+            Ok(WorkerResultBuilder::new(format!("Compilation successful:\n{}", stdout))
+                .success(true)
+                .execution_time_ms(execution_time)
+                .quality_score(1.0)
+                .build())
         } else {
             let stderr = String::from_utf8_lossy(&output.stderr);
             error!("Compilation failed: {}", stderr);
             Err(WorkerError::ExecutionError { message: format!("Compilation failed: {}", stderr) })
         }
     }
+}
+
+// Backward compatibility: implement SpecializedWorker for CompilationSpecialist
+#[async_trait]
+impl SpecializedWorker for CompilationSpecialist {
+    async fn execute(&self, task: String) -> Result<String, WorkerError> {
+        // Use the Worker trait's default execute implementation
+        let context = WorkerContext::default();
+        <Self as Worker>::execute(self, task, Some(context)).await
+    }
 
     fn capabilities(&self) -> Vec<String> {
-        vec!["compilation".to_string(), "build".to_string(), "rust".to_string()]
+        <Self as Worker>::capabilities(self)
     }
 }
 

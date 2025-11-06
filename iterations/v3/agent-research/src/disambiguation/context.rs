@@ -283,11 +283,15 @@ mod tests {
         };
 
         let ambiguity = Ambiguity {
+            text: "it".to_string(),
             ambiguity_type: AmbiguityType::Pronoun,
+            start_pos: 0,
+            end_pos: 2,
             position: (0, 2),
             original_text: "it".to_string(),
             possible_resolutions: vec![],
             confidence: 0.8,
+            context: None,
         };
 
         let resolution = resolver.resolve_ambiguity(&ambiguity, &context).await.unwrap();
@@ -311,11 +315,15 @@ mod tests {
         };
 
         let ambiguity = Ambiguity {
+            text: "it".to_string(),
             ambiguity_type: AmbiguityType::Pronoun,
+            start_pos: 0,
+            end_pos: 2,
             position: (0, 2),
             original_text: "it".to_string(),
             possible_resolutions: vec![],
             confidence: 0.8,
+            context: None,
         };
 
         let reason = resolver.detect_unresolvable_ambiguity(&ambiguity, &context);

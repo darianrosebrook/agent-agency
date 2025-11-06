@@ -91,7 +91,7 @@ impl PlanningSystemFactory {
         council_monitor: Arc<CouncilMonitor>,
 
         // Quality enforcement
-        todo_integration: Arc<TodoIntegration>,
+        todo_integration: Arc<dyn crate::planning::plan_executor::TodoInterface>,
 
         // Council review for pre-execution assessment
         council_review: Arc<CouncilPlanReview>,
@@ -175,10 +175,19 @@ impl PlanningSystemFactory {
         let evidence_collector = Arc::new(EvidenceCollector::new(Arc::new(crate::planning::evidence::NoOpResearchEvidenceCollector)));
 
         // Create TODO integration
-        let todo_integration = Arc::new(TodoIntegration::new(
+        let todo_integration_inner = Arc::new(TodoIntegration::new(
             Arc::new(crate::planning::todo_template::TodoTemplateSystem::new()),
             db_ops.clone(),
         ));
+
+        // Create TODO adapter for the PlanExecutor interface
+        let new_todo_integration = TodoIntegration::new(
+            Arc::new(crate::planning::todo_template::TodoTemplateSystem::new()),
+            db_ops.clone(),
+        );
+        let todo_adapter = Arc::new(crate::planning::plan_executor::TodoAdapter {
+            inner: tokio::sync::RwLock::new(new_todo_integration),
+        });
 
         // Create audit trail stub for PlanExecutor
         struct StubAuditTrail;
@@ -233,7 +242,8 @@ impl PlanningSystemFactory {
                 council_monitor.clone(),
                 coordinator_ref.clone(), // Weak reference to the coordinator being created
                 audit_trail.clone(),
-                Arc::new(tokio::sync::Mutex::new(todo_integration.clone())), // Wrap Arc<TodoIntegration> in Arc<Mutex<Arc<TodoIntegration>>>
+                None, // audit_trail_manager - optional, not provided in factory
+                todo_adapter.clone(), // Pass the TodoAdapter implementing TodoInterface
                 crate::planning::plan_executor::ExecutionConfig::default(),
             ));
             
@@ -261,7 +271,7 @@ impl PlanningSystemFactory {
             evidence_collector,
             scope_guard,
             council_monitor,
-            todo_integration,
+            todo_integration: todo_adapter.clone(),
             council_review,
             // NOTE: When agent-constitutional-council is added back, uncomment this:
             // council_coordinator: Arc::new(CouncilCoordinatorAdapter::new(council_coordinator)),
@@ -289,7 +299,7 @@ pub struct PlanningSystemComponents {
     pub evidence_collector: Arc<EvidenceCollector>,
     pub scope_guard: Arc<ScopeGuard>,
     pub council_monitor: Arc<CouncilMonitor>,
-    pub todo_integration: Arc<TodoIntegration>,
+    pub todo_integration: Arc<dyn crate::planning::plan_executor::TodoInterface>,
     pub council_review: Arc<CouncilPlanReview>,
     pub council_coordinator: Arc<dyn agent_agency_contracts::CouncilCoordinator>,
     #[cfg(feature = "memory")]

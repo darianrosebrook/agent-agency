@@ -247,6 +247,54 @@ jobs:
           if [ -f stryker.conf.json ] || [ -f stryker.conf.cjs ]; then
             npm ci && npx stryker run || true
           fi
+
+  duplication_verification:
+    name: Functional Duplication Verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy,rustfmt
+      - name: Install verification tools
+        run: |
+          cargo install cargo-tarpaulin@0.30.0
+          cargo install cargo-criterion@0.5.1
+          # Note: cargo-public-api and cargo-semver-checks would be installed here
+      - name: Install Node.js tools
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install proptest and insta
+        run: |
+          cd iterations/v3
+          cargo add --dev proptest@1.5
+          cargo add --dev insta@1.39
+      - name: Run duplication verification bundle
+        run: |
+          # Run xtask verification (when implemented)
+          # cargo run --package xtask -- dup verify
+
+          # Run individual checks for now
+          echo "Running duplication checker..."
+          node scripts/quality-gates/check-functional-duplication.mjs ci || exit 1
+
+          echo "Running compilation checks..."
+          cargo check --workspace
+          cargo build --workspace
+
+          echo "Running lint checks..."
+          cargo clippy --workspace --all-features -- -D warnings -D clippy::pedantic
+
+          echo "Running test suite..."
+          cargo test --workspace
+
+          echo "Running performance benchmarks..."
+          # This would run criterion benchmarks when implemented
+          echo "Performance baseline check: TODO - implement criterion benchmarks"
+
+          echo "Duplication verification completed successfully"
       - name: Perf watchdog
         run: |
           if npm run -s perf:ci >/dev/null 2>&1; then npm run perf:ci; else echo "No perf:ci script"; fi

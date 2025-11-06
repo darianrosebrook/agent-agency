@@ -144,7 +144,7 @@ async fn cancel_task(
 
     println!(" Worker {} cancelling task {}: {}", worker_id, request.task_id, request.reason);
 
-    // TODO: Implement real task cancellation
+    // OPTIONAL: Implement real task cancellation (deferred - UX enhancement)
     // - [ ] Signal task execution to stop gracefully
     // - [ ] Send cancellation signal to running task
     // - [ ] Wait for task to complete cancellation

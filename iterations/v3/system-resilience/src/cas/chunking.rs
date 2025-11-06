@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::recovery_types::{Digest, StreamingHasher, ChunkRef};
+use crate::recovery_types::{Digest, StreamingHasher};
 
 /// Content-Defined Chunking configuration
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -121,49 +121,14 @@ impl CdcChunker {
         let file_digest = self.compute_file_digest(&chunk_digests)?;
 
         Ok(ChunkList {
-            chunks: chunks.into_iter().map(|chunk_ref| Chunk {
-                digest: chunk_ref.digest,
-                offset: chunk_ref.offset as usize,
-                length: chunk_ref.length() as usize,
-                // TODO: Chunk Data Storage - Implement optional chunk data storage
-                // 
-                // COMPLETION CHECKLIST:
-                // [ ] Add configuration option for chunk data storage
-                // [ ] Implement conditional data storage based on config
-                // [ ] Memory management for large chunks
-                // [ ] Data retrieval API from CAS store
-                // [ ] Unit tests written (80%+ coverage)
-                // [ ] Integration tests with CAS
-                // [ ] Documentation updated
-                // [ ] Performance benchmarks meet SLA
-                // [ ] Security considerations addressed
-                // [ ] Configuration options defined
-                // [ ] Monitoring/metrics implemented
-                // [ ] Logging added for debugging
-                //
-                // ACCEPTANCE CRITERIA:
-                // - Chunk data can be optionally stored in memory
-                // - Configuration controls data storage behavior
-                // - Data can be retrieved from CAS if not in memory
-                // - Memory usage is properly managed
-                // - Performance meets requirements
-                //
-                // DEPENDENCIES:
-                // - CAS store: Available
-                // - Configuration system: Available
-                //
-                // ESTIMATED EFFORT: 12 hours
-                // PRIORITY: MEDIUM
-                // BLOCKING: No - Current digest-only approach works
-                data: Vec::new(),
-            }).collect(),
+            chunks,
             total_length: content.len(),
             file_digest,
         })
     }
 
     /// Create a chunk from chunk data
-    fn create_chunk(&mut self, chunk_data: &fastcdc::v2020::Chunk, content: &[u8]) -> Result<ChunkRef> {
+    fn create_chunk(&mut self, chunk_data: &fastcdc::v2020::Chunk, content: &[u8]) -> Result<Chunk> {
         let offset = chunk_data.offset;
         let length = chunk_data.length;
         let data = content[offset..offset + length].to_vec();
@@ -171,13 +136,13 @@ impl CdcChunker {
         // Compute chunk digest
         let digest = self.compute_chunk_digest(&data)?;
 
-        let chunk_ref = ChunkRef {
+        let chunk = Chunk {
             digest,
-            offset: chunk_data.offset as u64,
-            length: chunk_data.length as u64,
-            size: length as u64,
+            offset: chunk_data.offset,
+            length: chunk_data.length,
+            data,
         };
-        Ok(chunk_ref)
+        Ok(chunk)
     }
 
     /// Compute digest for a chunk
@@ -474,19 +439,35 @@ mod tests {
 
     #[test]
     fn test_chunk_deduplication() {
-        let mut chunker = CdcChunker::new();
-        let content1 = b"Hello, world! This is a test.";
-        let content2 = b"Hello, world! This is another test.";
-        
-        let chunk_list1 = chunker.chunk_content(content1).unwrap();
-        let chunk_list2 = chunker.chunk_content(content2).unwrap();
-        
-        // Should have some shared chunks
+        // Create chunker with appropriate chunk sizes for testing
+        let config = ChunkingConfig {
+            min_size: 1024,   // 1KB minimum (FastCDC requirement)
+            avg_size: 2048,   // 2KB average (FastCDC requirement)
+            max_size: 4096,   // 4KB maximum
+            use_gear_hash: true,
+            gear_polynomial: 0x9e3779b97f4a7c15,
+            gear_mask: 0x1fffffffffffffff,
+        };
+        let mut chunker = CdcChunker {
+            config,
+            chunk_cache: HashMap::new(),
+        };
+
+        // Create large content that will produce multiple chunks
+        let base_content = b"Hello, world! This is a test content that should produce multiple chunks when chunked. We need enough content to create several chunks for testing deduplication. ";
+        let repeated_base = base_content.repeat(100); // Repeat many times to make it large
+        let content1 = [repeated_base.as_slice(), b" First version of the document."].concat();
+        let content2 = [repeated_base.as_slice(), b" Second version of the document."].concat();
+
+        let chunk_list1 = chunker.chunk_content(&content1).unwrap();
+        let chunk_list2 = chunker.chunk_content(&content2).unwrap();
+
+        // Should have some shared chunks from the common base content
         let chunks1: std::collections::HashSet<Digest> = chunk_list1.chunks.iter().map(|c| c.digest).collect();
         let chunks2: std::collections::HashSet<Digest> = chunk_list2.chunks.iter().map(|c| c.digest).collect();
-        
+
         let intersection: std::collections::HashSet<_> = chunks1.intersection(&chunks2).collect();
-        assert!(!intersection.is_empty());
+        assert!(!intersection.is_empty(), "Expected shared chunks between similar content, but found none");
     }
 
     #[test]

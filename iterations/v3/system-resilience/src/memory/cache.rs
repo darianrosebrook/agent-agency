@@ -190,7 +190,7 @@ impl MemoryLeakDetector {
         allocations.insert(label.to_string(), allocation_count);
 
         let snapshot = (Instant::now(), allocations);
-        let mut snapshots = self.allocation_snapshots.write().await.unwrap();
+        let mut snapshots = self.allocation_snapshots.write().await;
         snapshots.push(snapshot);
 
         // Keep only last 10 snapshots
@@ -201,7 +201,7 @@ impl MemoryLeakDetector {
 
     /// Analyze for potential memory leaks
     pub async fn analyze_leaks(&self) -> Vec<String> {
-        let snapshots = self.allocation_snapshots.read().await.unwrap();
+        let snapshots = self.allocation_snapshots.read().await;
         let mut alerts = Vec::new();
 
         if snapshots.len() < 2 {

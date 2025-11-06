@@ -1,0 +1,6 @@
+---
+source: system-quality-security/src/errors.rs
+assertion_line: 252
+expression: key_inactive.to_string()
+---
+Key is inactive: 550e8400-e29b-41d4-a716-446655440000

@@ -14,12 +14,14 @@ pub struct KMeansClustering {
     /// Number of clusters (K)
     k: usize,
     /// Cluster centroids
+    #[serde(skip)]
     centroids: Array2<f64>,
     /// Maximum iterations for convergence
     max_iterations: usize,
     /// Convergence tolerance
     tolerance: f64,
     /// Random number generator
+    #[serde(skip)]
     rng: ThreadRng,
 }
 
@@ -270,10 +272,13 @@ pub struct GaussianMixture {
     /// Number of components
     n_components: usize,
     /// Component weights
+    #[serde(skip)]
     weights: Array1<f64>,
     /// Component means
+    #[serde(skip)]
     means: Array2<f64>,
     /// Component covariances
+    #[serde(skip)]
     covariances: Vec<Array2<f64>>,
     /// Maximum iterations
     max_iterations: usize,

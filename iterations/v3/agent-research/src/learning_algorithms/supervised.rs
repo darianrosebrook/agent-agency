@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LinearRegressionModel {
     /// Learned weights (coefficients)
+    #[serde(skip)]
     weights: Array1<f64>,
     /// Bias term (intercept)
     bias: f64,
@@ -146,6 +147,7 @@ impl RidgeRegression {
 
 #[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct LogisticRegression {
+    #[serde(skip)]
     weights: Array1<f64>,
     bias: f64,
     feature_count: usize,

@@ -31,6 +31,7 @@ pub mod caws_integration;
 pub mod todo_template;
 pub mod data_infrastructure_types;
 pub mod quality_gates;
+pub mod task_executor_factory;
 
 // Re-export types for convenience
 pub use types::*;
@@ -62,3 +63,4 @@ pub use waiver_integration::*;
 pub use caws_integration::*;
 pub use todo_template::*;
 pub use data_infrastructure_types::*;
+pub use task_executor_factory::*;

@@ -18,6 +18,7 @@ pub mod server;
 #[cfg(feature = "orchestration")]
 pub mod handlers;
 pub mod types;
+pub mod transform;
 pub mod health;
 
 // Re-export public types and functions for backward compatibility

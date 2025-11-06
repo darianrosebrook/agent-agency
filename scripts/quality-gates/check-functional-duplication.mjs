@@ -20,37 +20,42 @@
  * @description: Detects functional duplication in the codebase and blocks commits that would create or worsen it.
  */
 
-import { execFileSync } from 'child_process';
-import crypto from 'crypto';
-import fs from 'fs';
-import yaml from 'js-yaml';
-import micromatch from 'micromatch';
-import os from 'os';
-import path from 'path';
-import { getFilesToCheck } from './file-scope-manager.mjs';
-import { processViolations } from './shared-exception-framework.mjs';
+import { execFileSync } from "child_process";
+import crypto from "crypto";
+import fs from "fs";
+import yaml from "js-yaml";
+import micromatch from "micromatch";
+import os from "os";
+import path from "path";
+import { getFilesToCheck } from "./file-scope-manager.mjs";
+import { processViolations } from "./shared-exception-framework.mjs";
 
 /* ------------------- small helpers ------------------- */
 function normalizePath(p) {
   // Normalize paths for cross-platform compatibility
-  return os.platform() === 'win32' ? p.replace(/\\/g, '/') : p;
+  return os.platform() === "win32" ? p.replace(/\\/g, "/") : p;
 }
 
 function repoRoot() {
   try {
-    return execFileSync('git', ['rev-parse', '--show-toplevel'], {
-      encoding: 'utf8',
+    return execFileSync("git", ["rev-parse", "--show-toplevel"], {
+      encoding: "utf8",
     }).trim();
   } catch (error) {
-    throw new Error('Not a git repository. Run from within a git repo.');
+    throw new Error("Not a git repository. Run from within a git repo.");
   }
 }
-function readStaged(root, rel, maxSize = 1024 * 1024, streamingThreshold = 5 * 1024 * 1024) {
+function readStaged(
+  root,
+  rel,
+  maxSize = 1024 * 1024,
+  streamingThreshold = 5 * 1024 * 1024
+) {
   try {
-    const content = execFileSync('git', ['show', `:${rel}`], {
+    const content = execFileSync("git", ["show", `:${rel}`], {
       cwd: root,
-      stdio: ['ignore', 'pipe', 'ignore'],
-      encoding: 'utf8',
+      stdio: ["ignore", "pipe", "ignore"],
+      encoding: "utf8",
     });
 
     // For very large files, use streaming approach
@@ -76,7 +81,7 @@ function readStaged(root, rel, maxSize = 1024 * 1024, streamingThreshold = 5 * 1
 
 function processLargeFileContent(content, rel) {
   // For very large files, extract meaningful regions rather than truncating
-  const lines = content.split('\n');
+  const lines = content.split("\n");
   const regions = [];
 
   // Sample different parts of the file to get a representative view
@@ -91,7 +96,7 @@ function processLargeFileContent(content, rel) {
   const end = lines.slice(-sampleSize);
 
   const sampledLines = [...beginning, ...middle, ...end];
-  const sampledContent = sampledLines.join('\n');
+  const sampledContent = sampledLines.join("\n");
 
   console.warn(
     `📊 File ${rel}: sampled ${sampledLines.length} lines from ${lines.length} total lines for analysis`
@@ -102,15 +107,15 @@ function processLargeFileContent(content, rel) {
 
 /* ------------------- caching system ------------------- */
 function getCacheKey(rel, content) {
-  const hash = crypto.createHash('md5').update(content).digest('hex');
+  const hash = crypto.createHash("md5").update(content).digest("hex");
   return `${rel}:${hash}`;
 }
 
 function loadAnalysisCache(root) {
-  const cacheFile = path.join(root, '.caws', 'duplication-cache.json');
+  const cacheFile = path.join(root, ".caws", "duplication-cache.json");
   try {
     if (fs.existsSync(cacheFile)) {
-      const data = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+      const data = JSON.parse(fs.readFileSync(cacheFile, "utf8"));
       // Clean expired cache entries (older than 24 hours)
       const now = Date.now();
       const validEntries = {};
@@ -122,21 +127,21 @@ function loadAnalysisCache(root) {
       return validEntries;
     }
   } catch (error) {
-    console.warn('⚠️  Could not load analysis cache:', error.message);
+    console.warn("⚠️  Could not load analysis cache:", error.message);
   }
   return {};
 }
 
 function saveAnalysisCache(root, cache) {
-  const cacheDir = path.join(root, '.caws');
-  const cacheFile = path.join(cacheDir, 'duplication-cache.json');
+  const cacheDir = path.join(root, ".caws");
+  const cacheFile = path.join(cacheDir, "duplication-cache.json");
   try {
     if (!fs.existsSync(cacheDir)) {
       fs.mkdirSync(cacheDir, { recursive: true });
     }
     fs.writeFileSync(cacheFile, JSON.stringify(cache, null, 2));
   } catch (error) {
-    console.warn('⚠️  Could not save analysis cache:', error.message);
+    console.warn("⚠️  Could not save analysis cache:", error.message);
   }
 }
 
@@ -156,17 +161,21 @@ function setCachedAnalysis(cache, cacheKey, regions) {
 }
 function resolveBaseRef(root, fallback) {
   try {
-    return execFileSync('git', ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], {
-      cwd: root,
-      encoding: 'utf8',
-    }).trim();
+    return execFileSync(
+      "git",
+      ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"],
+      {
+        cwd: root,
+        encoding: "utf8",
+      }
+    ).trim();
   } catch {
     return (
       process.env.GITHUB_BASE_REF ||
       process.env.PR_BASE_REF ||
       process.env.PR_BASE_SHA ||
       fallback ||
-      'origin/HEAD'
+      "origin/HEAD"
     );
   }
 }
@@ -176,15 +185,15 @@ function resolveBaseRef(root, fallback) {
 const DEFAULT_CFG = {
   // languages we’ll consider and their file globs
   languages: {
-    rust: ['**/*.rs'],
-    ts: ['**/*.{ts,tsx,mts,cts}'],
-    js: ['**/*.{js,jsx,mjs,cjs}'],
-    go: ['**/*.go'],
-    java: ['**/*.java'],
-    kotlin: ['**/*.kt'],
+    rust: ["**/*.rs"],
+    ts: ["**/*.{ts,tsx,mts,cts}"],
+    js: ["**/*.{js,jsx,mjs,cjs}"],
+    go: ["**/*.go"],
+    java: ["**/*.java"],
+    kotlin: ["**/*.kt"],
   },
   // generic excludes (linguist-generated/vendored handled upstream in file-scope manager)
-  exclude: ['**/target/**', '**/node_modules/**', '**/dist/**', '**/build/**'],
+  exclude: ["**/target/**", "**/node_modules/**", "**/dist/**", "**/build/**"],
   // token shingle parameters
   shingleSize: 7, // k
   minTokensPerRegion: 60, // skip tiny helpers
@@ -198,20 +207,20 @@ const DEFAULT_CFG = {
     clusterSizeBlock: 3,
   },
   // regression control
-  ciBaseRef: 'origin/HEAD',
+  ciBaseRef: "origin/HEAD",
   // test files policy (lower or ignore)
   considerTestFiles: false,
-  testPatterns: ['**/*_test.*', '**/*.test.*', '**/*.spec.*'],
+  testPatterns: ["**/*_test.*", "**/*.test.*", "**/*.spec.*"],
   // exceptions
-  exceptionsFile: '.caws/duplication-exceptions.yaml',
+  exceptionsFile: ".caws/duplication-exceptions.yaml",
   // crate/package boundary markers
   packageMarkers: [
-    'Cargo.toml',
-    'package.json',
-    'go.mod',
-    'pom.xml',
-    'build.gradle',
-    'settings.gradle.kts',
+    "Cargo.toml",
+    "package.json",
+    "go.mod",
+    "pom.xml",
+    "build.gradle",
+    "settings.gradle.kts",
   ],
   // per-cluster remediation budgets (normalized stem -> allowed growth in duplicate pairs)
   clusterBudgets: {
@@ -223,37 +232,37 @@ const DEFAULT_CFG = {
     // language-aware public symbol matchers (cheap regexes)
     allowNames: [
       // idioms and trait/impl boilerplate
-      'new',
-      'default',
-      'clone',
-      'from',
-      'into',
-      'try_from',
-      'as_str',
-      'len',
-      'is_empty',
-      'fmt',
-      'debug',
-      'serialize',
-      'deserialize',
-      'hash',
-      'eq',
-      'partial_eq',
-      'ord',
-      'partial_ord',
-      'config',
-      'with_config',
-      'update',
-      'validate',
-      'build',
-      'from_string',
-      'get',
-      'set',
-      'reset',
-      'stats',
-      'get_stats',
-      'summary',
-      'get_summary',
+      "new",
+      "default",
+      "clone",
+      "from",
+      "into",
+      "try_from",
+      "as_str",
+      "len",
+      "is_empty",
+      "fmt",
+      "debug",
+      "serialize",
+      "deserialize",
+      "hash",
+      "eq",
+      "partial_eq",
+      "ord",
+      "partial_ord",
+      "config",
+      "with_config",
+      "update",
+      "validate",
+      "build",
+      "from_string",
+      "get",
+      "set",
+      "reset",
+      "stats",
+      "get_stats",
+      "summary",
+      "get_summary",
     ],
     // thresholds are *regression* targets (only block if you increase totals)
     regressionBaselines: {
@@ -267,17 +276,21 @@ const DEFAULT_CFG = {
 
 function loadCfg(root) {
   const candidates = [
-    path.join(root, '.qualitygatesrc.yaml'),
-    path.join(root, '.qualitygatesrc.yml'),
-    path.join(root, '.qualitygatesrc.json'),
+    path.join(root, ".qualitygatesrc.yaml"),
+    path.join(root, ".qualitygatesrc.yml"),
+    path.join(root, ".qualitygatesrc.json"),
   ];
   let base = { ...DEFAULT_CFG };
   for (const p of candidates) {
     if (!fs.existsSync(p)) continue;
-    const raw = fs.readFileSync(p, 'utf8');
-    const user = p.endsWith('.json') ? JSON.parse(raw) : yaml.load(raw) || {};
+    const raw = fs.readFileSync(p, "utf8");
+    const user = p.endsWith(".json") ? JSON.parse(raw) : yaml.load(raw) || {};
     // shallow merge (fine for our fields)
-    base = { ...base, ...user.functionalDuplication, ciBaseRef: user.ciBaseRef || base.ciBaseRef };
+    base = {
+      ...base,
+      ...user.functionalDuplication,
+      ciBaseRef: user.ciBaseRef || base.ciBaseRef,
+    };
     break;
   }
   // exceptions
@@ -285,7 +298,9 @@ function loadCfg(root) {
   const excPath = path.join(root, base.exceptionsFile);
   if (fs.existsSync(excPath)) {
     try {
-      exceptions = yaml.load(fs.readFileSync(excPath, 'utf8')) || { exceptions: [] };
+      exceptions = yaml.load(fs.readFileSync(excPath, "utf8")) || {
+        exceptions: [],
+      };
     } catch {
       /* noop */
     }
@@ -328,7 +343,8 @@ const LANG = {
     regionStart: /\b(export\s+)?(function|class|interface|type)\b/,
     regionEnd: /\}/,
     id: /\b[_A-Za-z]\w*\b/g,
-    publicSymbolLines: /^\s*export\s+(?:function|class|interface|type)\s+([A-Za-z_]\w*)/m,
+    publicSymbolLines:
+      /^\s*export\s+(?:function|class|interface|type)\s+([A-Za-z_]\w*)/m,
   },
   js: {
     commentLine: /\/\/.*$/gm,
@@ -352,10 +368,12 @@ const LANG = {
     commentLine: /\/\/.*$/gm,
     commentBlock: /\/\*[\s\S]*?\*\//g,
     string: /"(?:\\.|[^"\\])*"/g,
-    regionStart: /\b(public|private|protected)?\s*(class|interface|enum|void|[\w<>]+\s+\w+\s*\()/,
+    regionStart:
+      /\b(public|private|protected)?\s*(class|interface|enum|void|[\w<>]+\s+\w+\s*\()/,
     regionEnd: /\}/,
     id: /\b[_A-Za-z]\w*\b/g,
-    publicSymbolLines: /^\s*public\s+(?:class|interface|enum)\s+([A-Za-z_]\w*)/m,
+    publicSymbolLines:
+      /^\s*public\s+(?:class|interface|enum)\s+([A-Za-z_]\w*)/m,
   },
   kotlin: {
     commentLine: /\/\/.*$/gm,
@@ -364,7 +382,8 @@ const LANG = {
     regionStart: /\b(class|interface|object|fun)\b/,
     regionEnd: /\}/,
     id: /\b[_A-Za-z]\w*\b/g,
-    publicSymbolLines: /^\s*(?:public\s+)?(?:class|interface|object|fun)\s+([A-Za-z_]\w*)/m,
+    publicSymbolLines:
+      /^\s*(?:public\s+)?(?:class|interface|object|fun)\s+([A-Za-z_]\w*)/m,
   },
 };
 
@@ -372,29 +391,29 @@ function langOf(rel) {
   const basename = path.basename(rel);
 
   // Handle files with multiple extensions (e.g., file.rs.bak, file.ts.old)
-  if (basename.includes('.')) {
-    const parts = basename.split('.');
+  if (basename.includes(".")) {
+    const parts = basename.split(".");
     const ext = parts[parts.length - 1];
 
     switch (ext) {
-      case 'rs':
-        return 'rust';
-      case 'ts':
-      case 'tsx':
-      case 'mts':
-      case 'cts':
-        return 'ts';
-      case 'js':
-      case 'jsx':
-      case 'mjs':
-      case 'cjs':
-        return 'js';
-      case 'go':
-        return 'go';
-      case 'java':
-        return 'java';
-      case 'kt':
-        return 'kotlin';
+      case "rs":
+        return "rust";
+      case "ts":
+      case "tsx":
+      case "mts":
+      case "cts":
+        return "ts";
+      case "js":
+      case "jsx":
+      case "mjs":
+      case "cjs":
+        return "js";
+      case "go":
+        return "go";
+      case "java":
+        return "java";
+      case "kt":
+        return "kotlin";
       default:
         return null;
     }
@@ -412,59 +431,59 @@ function langOf(rel) {
  */
 function normalizeTokens(src, langSpec) {
   let s = src
-    .replace(langSpec.commentBlock, ' ')
-    .replace(langSpec.commentLine, ' ')
-    .replace(/\s+/g, ' ');
+    .replace(langSpec.commentBlock, " ")
+    .replace(langSpec.commentLine, " ")
+    .replace(/\s+/g, " ");
   // strip strings and numbers
-  s = s.replace(langSpec.string, ' STR ');
-  s = s.replace(/\b\d[\d_]*(\.\d+)?\b/g, ' NUM ');
+  s = s.replace(langSpec.string, " STR ");
+  s = s.replace(/\b\d[\d_]*(\.\d+)?\b/g, " NUM ");
   // map identifiers last
   s = s.replace(langSpec.id, (m) => {
     // keep obvious keywords/operators by whitelisting common tokens
     const kw = [
-      'if',
-      'else',
-      'for',
-      'while',
-      'match',
-      'return',
-      'break',
-      'continue',
-      'impl',
-      'trait',
-      'enum',
-      'struct',
-      'class',
-      'interface',
-      'type',
-      'extends',
-      'implements',
-      'fn',
-      'pub',
-      'mod',
-      'use',
-      'const',
-      'let',
-      'var',
-      'async',
-      'await',
-      'try',
-      'catch',
-      'finally',
-      'switch',
-      'case',
-      'default',
-      'package',
-      'import',
-      'export',
-      'public',
-      'private',
-      'protected',
-      'object',
-      'fun',
+      "if",
+      "else",
+      "for",
+      "while",
+      "match",
+      "return",
+      "break",
+      "continue",
+      "impl",
+      "trait",
+      "enum",
+      "struct",
+      "class",
+      "interface",
+      "type",
+      "extends",
+      "implements",
+      "fn",
+      "pub",
+      "mod",
+      "use",
+      "const",
+      "let",
+      "var",
+      "async",
+      "await",
+      "try",
+      "catch",
+      "finally",
+      "switch",
+      "case",
+      "default",
+      "package",
+      "import",
+      "export",
+      "public",
+      "private",
+      "protected",
+      "object",
+      "fun",
     ];
     if (kw.includes(m)) return m;
-    return 'VAR';
+    return "VAR";
   });
   // split into tokens
   return s.trim().split(/\s+/).filter(Boolean);
@@ -483,19 +502,19 @@ function extractRegions(text, langSpec, minTokens, shingleSize) {
     const L = lines[i];
     // naive brace tracking
     for (const ch of L) {
-      if (ch === '{') depth++;
-      if (ch === '}') depth = Math.max(0, depth - 1);
+      if (ch === "{") depth++;
+      if (ch === "}") depth = Math.max(0, depth - 1);
     }
     buf.push(L);
     if (depth === 0 && buf.length) {
-      const block = buf.join('\n');
+      const block = buf.join("\n");
       if (langSpec.regionStart.test(block)) {
         const tokens = normalizeTokens(block, langSpec);
         if (tokens.length >= minTokens) {
           // build shingles
           const shingles = [];
           for (let j = 0; j <= tokens.length - shingleSize; j++) {
-            shingles.push(tokens.slice(j, j + shingleSize).join(' '));
+            shingles.push(tokens.slice(j, j + shingleSize).join(" "));
           }
           regions.push({ startLine: i - buf.length + 2, tokens, shingles });
         }
@@ -530,7 +549,9 @@ function collectPublicSymbols(text, langSpec) {
 
 /* ------------------- name duplication detection ------------------- */
 function collectNameCollisions(fileRegions, cfg) {
-  const allow = new Set((cfg.nameDuplication?.allowNames ?? []).map((s) => s.toLowerCase()));
+  const allow = new Set(
+    (cfg.nameDuplication?.allowNames ?? []).map((s) => s.toLowerCase())
+  );
   const nameCounts = new Map(); // symbolName -> count across repo
   const nameSites = new Map(); // symbolName -> [{file,line}]
 
@@ -547,7 +568,8 @@ function collectNameCollisions(fileRegions, cfg) {
 
   const duplicateSymbols = [];
   for (const [name, count] of nameCounts) {
-    if (count > 1) duplicateSymbols.push({ name, count, sites: nameSites.get(name) || [] });
+    if (count > 1)
+      duplicateSymbols.push({ name, count, sites: nameSites.get(name) || [] });
   }
 
   return duplicateSymbols;
@@ -555,19 +577,48 @@ function collectNameCollisions(fileRegions, cfg) {
 
 /* ------------------- file basename duplicates ------------------- */
 function collectFileBasenameDuplicates(fileRegions, cfg, root) {
+  // Language-specific standard filenames that should be excluded from duplication checks
+  const languageStandardFiles = new Set([
+    // Rust
+    "mod.rs",
+    "lib.rs",
+    "main.rs",
+    // TypeScript/JavaScript
+    "index.ts",
+    "index.js",
+    "index.d.ts",
+    // Go
+    "main.go",
+    // Java
+    "Main.java",
+    // Kotlin
+    "Main.kt",
+  ]);
+
   const baseNameMapPerPkg = new Map(); // pkg|basename -> count
 
   for (const fr of fileRegions) {
-    const pkgRoot = findPackageRoot(path.join(root, fr.rel), root, cfg.packageMarkers);
+    const basename = path.basename(fr.rel);
+
+    // Skip language-specific standard filenames
+    if (languageStandardFiles.has(basename.toLowerCase())) {
+      continue;
+    }
+
+    const pkgRoot = findPackageRoot(
+      path.join(root, fr.rel),
+      root,
+      cfg.packageMarkers
+    );
     const pkgKey = path.relative(root, pkgRoot);
-    const bnKey = `${pkgKey}|${path.basename(fr.rel)}`;
+    const bnKey = `${pkgKey}|${basename}`;
     baseNameMapPerPkg.set(bnKey, (baseNameMapPerPkg.get(bnKey) || 0) + 1);
   }
 
   const dupBasenames = [];
   for (const [key, count] of baseNameMapPerPkg) {
     if (count > 1) {
-      const [pkg, bn] = key.split('|');
+      const [pkg, bn] = key.split("|");
       dupBasenames.push({ pkg, basename: bn, count });
     }
   }
@@ -592,7 +643,7 @@ function loadExceptions(exceptions, rel) {
 
 /* ------------------- main check ------------------- */
 
-export async function checkFunctionalDuplication(context = 'commit') {
+export async function checkFunctionalDuplication(context = "commit") {
   const root = repoRoot();
   const { cfg, exceptions } = loadCfg(root);
   const baseRef = resolveBaseRef(root, cfg.ciBaseRef);
@@ -604,12 +655,17 @@ export async function checkFunctionalDuplication(context = 'commit') {
   // filter by supported language and excludes
   const langFiles = [];
   for (const rel of relFiles) {
-    if (cfg.exclude && micromatch.isMatch(rel, cfg.exclude, { dot: true })) continue;
+    if (cfg.exclude && micromatch.isMatch(rel, cfg.exclude, { dot: true }))
+      continue;
     const lang = langOf(rel);
     if (!lang) continue;
     const patterns = cfg.languages[lang] ?? [];
-    if (patterns.length && !micromatch.isMatch(rel, patterns, { dot: true })) continue;
-    if (!cfg.considerTestFiles && micromatch.isMatch(rel, cfg.testPatterns, { dot: true }))
+    if (patterns.length && !micromatch.isMatch(rel, patterns, { dot: true }))
+      continue;
+    if (
+      !cfg.considerTestFiles &&
+      micromatch.isMatch(rel, cfg.testPatterns, { dot: true })
+    )
       continue;
     langFiles.push({ rel, lang });
   }
@@ -646,7 +702,12 @@ export async function checkFunctionalDuplication(context = 'commit') {
           cacheHits++;
         } else {
           // Cache miss - analyze the file
-          regs = extractRegions(staged, spec, cfg.minTokensPerRegion, cfg.shingleSize);
+          regs = extractRegions(
+            staged,
+            spec,
+            cfg.minTokensPerRegion,
+            cfg.shingleSize
+          );
           setCachedAnalysis(cache, cacheKey, regs);
           cacheMisses++;
         }
@@ -654,7 +715,11 @@ export async function checkFunctionalDuplication(context = 'commit') {
         // Collect public symbols for name collision detection
         const symbols = collectPublicSymbols(staged, spec);
 
-        const pkgRoot = findPackageRoot(path.join(root, f.rel), root, cfg.packageMarkers);
+        const pkgRoot = findPackageRoot(
+          path.join(root, f.rel),
+          root,
+          cfg.packageMarkers
+        );
         return { ...f, pkgRoot, regions: regs, symbols };
       } catch (error) {
         console.warn(`⚠️  Error processing ${f.rel}: ${error.message}`);
@@ -704,9 +769,9 @@ export async function checkFunctionalDuplication(context = 'commit') {
   // evaluate pairs with Jaccard
   const pairFindings = [];
   for (const [key, shared] of pairMap) {
-    const [a, b] = key.split('|');
-    const [fi, ri] = a.split(',').map(Number);
-    const [fj, rj] = b.split(',').map(Number);
+    const [a, b] = key.split("|");
+    const [fi, ri] = a.split(",").map(Number);
+    const [fj, rj] = b.split(",").map(Number);
     const R1 = fileRegions[fi].regions[ri];
     const R2 = fileRegions[fj].regions[rj];
     const set1 = new Set(R1.shingles);
@@ -717,7 +782,8 @@ export async function checkFunctionalDuplication(context = 'commit') {
       const F1 = fileRegions[fi];
       const F2 = fileRegions[fj];
       // ignore comparisons inside the same file region
-      if (F1.rel === F2.rel && Math.abs(R1.startLine - R2.startLine) < 5) continue;
+      if (F1.rel === F2.rel && Math.abs(R1.startLine - R2.startLine) < 5)
+        continue;
 
       // exceptions
       const ex1 = loadExceptions(exceptions, F1.rel);
@@ -727,8 +793,18 @@ export async function checkFunctionalDuplication(context = 'commit') {
       pairFindings.push({
         sim,
         files: [
-          { file: F1.rel, pkg: path.relative(root, F1.pkgRoot), line: R1.startLine, lang: F1.lang },
-          { file: F2.rel, pkg: path.relative(root, F2.pkgRoot), line: R2.startLine, lang: F2.lang },
+          {
+            file: F1.rel,
+            pkg: path.relative(root, F1.pkgRoot),
+            line: R1.startLine,
+            lang: F1.lang,
+          },
+          {
+            file: F2.rel,
+            pkg: path.relative(root, F2.pkgRoot),
+            line: R2.startLine,
+            lang: F2.lang,
+          },
         ],
       });
     }
@@ -739,8 +815,10 @@ export async function checkFunctionalDuplication(context = 'commit') {
     const base = path
       .basename(rel)
       .toLowerCase()
-      .replace(/\.[^.]+$/, '');
-    return base.replace(/[-_.]v?\d+$/i, '').replace(/[-_.](final|copy|new|next)$/i, '');
+      .replace(/\.[^.]+$/, "");
+    return base
+      .replace(/[-_.]v?\d+$/i, "")
+      .replace(/[-_.](final|copy|new|next)$/i, "");
   }
   const clusters = new Map(); // pkg|stem -> Set<file>
   for (const p of pairFindings) {
@@ -761,31 +839,31 @@ export async function checkFunctionalDuplication(context = 'commit') {
 
   // pair-level functional duplicates
   for (const p of pairFindings.sort((a, b) => b.sim - a.sim)) {
-    const severity = p.sim >= cfg.thresholds.jaccardBlock ? 'block' : 'warn';
+    const severity = p.sim >= cfg.thresholds.jaccardBlock ? "block" : "warn";
     const msg =
       `High functional similarity (Jaccard ${p.sim.toFixed(2)}) between:\n` +
       `  - ${p.files[0].file}:${p.files[0].line}\n` +
       `  - ${p.files[1].file}:${p.files[1].line}`;
     const v = {
-      type: 'functional_duplicate_pair',
+      type: "functional_duplicate_pair",
       similarity: p.sim,
       files: p.files,
       severity,
       rule: `Rename-invariant similarity via ${cfg.shingleSize}-shingles`,
       message: msg,
     };
-    (severity === 'block' ? violations : warnings).push(v);
+    (severity === "block" ? violations : warnings).push(v);
   }
 
   // cluster-level functional duplicates
   for (const [key, set] of clusters) {
     const sz = set.size;
     if (sz >= cfg.thresholds.clusterSizeWarn) {
-      const severity = sz >= cfg.thresholds.clusterSizeBlock ? 'block' : 'warn';
-      const [pkg, stem] = key.split('|');
+      const severity = sz >= cfg.thresholds.clusterSizeBlock ? "block" : "warn";
+      const [pkg, stem] = key.split("|");
       const budget = DEFAULT_CFG.clusterBudgets?.[stem] ?? 0;
       const v = {
-        type: 'functional_duplicate_cluster',
+        type: "functional_duplicate_cluster",
         package: pkg,
         stem,
         size: sz,
@@ -794,7 +872,7 @@ export async function checkFunctionalDuplication(context = 'commit') {
         message: `Cluster '${stem}' in ${pkg} has ${sz} members.`,
         budgetAllowed: budget,
       };
-      (severity === 'block' ? violations : warnings).push(v);
+      (severity === "block" ? violations : warnings).push(v);
     }
   }
 
@@ -803,7 +881,9 @@ export async function checkFunctionalDuplication(context = 'commit') {
     const baselines = cfg.nameDuplication.regressionBaselines || {};
     const dupStructs = duplicateSymbols.filter((x) => /^[A-Z]/.test(x.name)); // rough: types/structs/classes
     const dupFns = duplicateSymbols.filter((x) => /^[a-z_]/.test(x.name)); // rough: functions/methods
-    const dupTraits = duplicateSymbols.filter((x) => /Trait$|Interface$/.test(x.name)); // rough: traits/interfaces
+    const dupTraits = duplicateSymbols.filter((x) =>
+      /Trait$|Interface$/.test(x.name)
+    ); // rough: traits/interfaces
 
     const counts = {
       structs: dupStructs.length,
@@ -811,11 +891,14 @@ export async function checkFunctionalDuplication(context = 'commit') {
       traits: dupTraits.length,
     };
 
-    if (baselines.duplicateStructs && counts.structs > baselines.duplicateStructs) {
+    if (
+      baselines.duplicateStructs &&
+      counts.structs > baselines.duplicateStructs
+    ) {
       violations.push({
-        type: 'struct_duplication_regression',
-        severity: 'block',
-        rule: 'Public type name duplicated above baseline',
+        type: "struct_duplication_regression",
+        severity: "block",
+        rule: "Public type name duplicated above baseline",
         message: `Duplicate public type names: ${counts.structs} > baseline ${baselines.duplicateStructs}`,
       });
     } else if (
@@ -823,26 +906,32 @@ export async function checkFunctionalDuplication(context = 'commit') {
       counts.structs > Math.floor(baselines.duplicateStructs * 0.9)
     ) {
       warnings.push({
-        type: 'struct_duplication_near_baseline',
-        severity: 'warn',
+        type: "struct_duplication_near_baseline",
+        severity: "warn",
         message: `Public type name duplicates near baseline: ${counts.structs}/${baselines.duplicateStructs}`,
       });
     }
 
-    if (baselines.duplicateFunctions && counts.functions > baselines.duplicateFunctions) {
+    if (
+      baselines.duplicateFunctions &&
+      counts.functions > baselines.duplicateFunctions
+    ) {
       violations.push({
-        type: 'function_duplication_regression',
-        severity: 'block',
-        rule: 'Public function name duplicated above baseline (allowlist filtered)',
+        type: "function_duplication_regression",
+        severity: "block",
+        rule: "Public function name duplicated above baseline (allowlist filtered)",
         message: `Duplicate public function names: ${counts.functions} > baseline ${baselines.duplicateFunctions}`,
       });
     }
 
-    if (baselines.duplicateTraits && counts.traits > baselines.duplicateTraits) {
+    if (
+      baselines.duplicateTraits &&
+      counts.traits > baselines.duplicateTraits
+    ) {
       violations.push({
-        type: 'trait_duplication_regression',
-        severity: 'block',
-        rule: 'Public trait/interface name duplicated above baseline',
+        type: "trait_duplication_regression",
+        severity: "block",
+        rule: "Public trait/interface name duplicated above baseline",
         message: `Duplicate trait/interface names: ${counts.traits} > baseline ${baselines.duplicateTraits}`,
       });
     }
@@ -851,14 +940,18 @@ export async function checkFunctionalDuplication(context = 'commit') {
   // file duplicates by basename within same package (contextual)
   for (const d of dupBasenames) {
     warnings.push({
-      type: 'basename_duplicate_within_package',
-      severity: 'warn',
+      type: "basename_duplicate_within_package",
+      severity: "warn",
       message: `Multiple files named '${d.basename}' in package ${d.pkg} (count=${d.count})`,
     });
   }
 
   // defer to exception framework for final severity resolution
-  const processed = processViolations('duplication', [...violations, ...warnings], context);
+  const processed = processViolations(
+    "duplication",
+    [...violations, ...warnings],
+    context
+  );
 
   return {
     violations: processed.violations,
@@ -869,24 +962,24 @@ export async function checkFunctionalDuplication(context = 'commit') {
 
 /* ------------------- CLI ------------------- */
 async function main() {
-  const ctx = process.argv[2] || 'commit';
+  const ctx = process.argv[2] || "commit";
   const res = await checkFunctionalDuplication(ctx);
 
   if (res.violations.length) {
     console.log(`Blocking duplication findings: ${res.violations.length}`);
     for (const v of res.violations) {
       switch (v.type) {
-        case 'functional_duplicate_pair':
+        case "functional_duplicate_pair":
           console.log(`- Pair (${v.similarity.toFixed(2)}):`);
           console.log(`  ${v.files[0].file}:${v.files[0].line}`);
           console.log(`  ${v.files[1].file}:${v.files[1].line}`);
           break;
-        case 'functional_duplicate_cluster':
+        case "functional_duplicate_cluster":
           console.log(`- Cluster '${v.stem}' in ${v.package} size=${v.size}`);
           break;
-        case 'struct_duplication_regression':
-        case 'function_duplication_regression':
-        case 'trait_duplication_regression':
+        case "struct_duplication_regression":
+        case "function_duplication_regression":
+        case "trait_duplication_regression":
           console.log(`- ${v.type}: ${v.message}`);
           break;
         default:
@@ -900,18 +993,22 @@ async function main() {
     console.log(`Warnings: ${res.warnings.length}`);
     for (const v of res.warnings.slice(0, 15)) {
       switch (v.type) {
-        case 'functional_duplicate_pair':
+        case "functional_duplicate_pair":
           console.log(
-            `- Pair warn (${v.similarity.toFixed(2)}): ${v.files[0].file} <> ${v.files[1].file}`
+            `- Pair warn (${v.similarity.toFixed(2)}): ${v.files[0].file} <> ${
+              v.files[1].file
+            }`
           );
           break;
-        case 'functional_duplicate_cluster':
-          console.log(`- Cluster warn '${v.stem}' in ${v.package} size=${v.size}`);
+        case "functional_duplicate_cluster":
+          console.log(
+            `- Cluster warn '${v.stem}' in ${v.package} size=${v.size}`
+          );
           break;
-        case 'basename_duplicate_within_package':
+        case "basename_duplicate_within_package":
           console.log(`- ${v.message}`);
           break;
-        case 'struct_duplication_near_baseline':
+        case "struct_duplication_near_baseline":
           console.log(`- ${v.message}`);
           break;
         default:
@@ -919,14 +1016,14 @@ async function main() {
       }
     }
   } else {
-    console.log('No duplication issues.');
+    console.log("No duplication issues.");
   }
   process.exit(0);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   main().catch((error) => {
-    console.error('❌ Functional duplication check failed:', error);
+    console.error("❌ Functional duplication check failed:", error);
     process.exit(1);
   });
 }

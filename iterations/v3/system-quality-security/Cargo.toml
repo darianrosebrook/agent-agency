@@ -93,3 +93,4 @@ cli = []
 
 [dev-dependencies]
 tokio-test = "0.4"
+insta = "1.39"

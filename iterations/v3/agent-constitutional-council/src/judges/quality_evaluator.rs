@@ -30,16 +30,13 @@ use agent_agency_contracts::{
 };
 
 use crate::{ReviewContext, CouncilResult, CouncilError};
-use super::{Judge, JudgeUtils};
+use super::common::{Judge, JudgeUtils, RubricBuilder, EvidenceBuilder, RubricItemBuilder, JUDGE_OUTPUT_SCHEMA};
 
 /// Quality Evaluator for testing and requirements completeness
 #[derive(Debug)]
 pub struct QualityEvaluator {
     /// Inference engine for LLM-based analysis
     engine: Arc<dyn JudgeEngine>,
-
-    /// Quality evaluation rubric
-    rubric: QualityRubric,
 }
 
 /// Quality evaluation rubric
@@ -58,66 +55,67 @@ pub struct QualityRubric {
     reliability_items: Vec<RubricItem>,
 }
 
-impl Default for QualityRubric {
-    fn default() -> Self {
-        Self {
-            testing_items: vec![
-                RubricItem {
-                    id: "TEST-001".to_string(),
-                    description: "Comprehensive test coverage for all critical paths".to_string(),
-                    weight: 0.9,
-                    evidence_requirements: vec!["test_coverage_report".to_string()],
-                },
-                RubricItem {
-                    id: "TEST-002".to_string(),
-                    description: "Acceptance criteria validated through automated tests".to_string(),
-                    weight: 0.85,
-                    evidence_requirements: vec!["acceptance_tests".to_string()],
-                },
-            ],
-            requirements_items: vec![
-                RubricItem {
-                    id: "REQ-001".to_string(),
-                    description: "All requirements have clear, testable acceptance criteria".to_string(),
-                    weight: 0.8,
-                    evidence_requirements: vec!["requirements_traceability".to_string()],
-                },
-                RubricItem {
-                    id: "REQ-002".to_string(),
-                    description: "Requirements are complete and unambiguous".to_string(),
-                    weight: 0.75,
-                    evidence_requirements: vec!["requirements_review".to_string()],
-                },
-            ],
-            documentation_items: vec![
-                RubricItem {
-                    id: "DOC-001".to_string(),
-                    description: "API and user documentation is current and accurate".to_string(),
-                    weight: 0.7,
-                    evidence_requirements: vec!["documentation_review".to_string()],
-                },
-                RubricItem {
-                    id: "DOC-002".to_string(),
-                    description: "Deployment and operational docs exist".to_string(),
-                    weight: 0.8,
-                    evidence_requirements: vec!["deployment_docs".to_string()],
-                },
-            ],
-            reliability_items: vec![
-                RubricItem {
-                    id: "RELIABILITY-001".to_string(),
-                    description: "System meets uptime and performance SLAs".to_string(),
-                    weight: 0.9,
-                    evidence_requirements: vec!["sla_definitions".to_string()],
-                },
-                RubricItem {
-                    id: "RELIABILITY-002".to_string(),
-                    description: "Error handling and recovery mechanisms implemented".to_string(),
-                    weight: 0.85,
-                    evidence_requirements: vec!["error_handling_review".to_string()],
-                },
-            ],
-        }
+impl QualityRubric {
+    /// Build the rubric using RubricBuilder
+    pub fn build() -> Vec<RubricItem> {
+        RubricBuilder::new()
+            .add_items(vec![
+                RubricItemBuilder::new(
+                    "TEST-001",
+                    "Comprehensive test coverage for all critical paths",
+                    0.9,
+                    vec!["test_coverage_report".to_string()],
+                ),
+                RubricItemBuilder::new(
+                    "TEST-002",
+                    "Acceptance criteria validated through automated tests",
+                    0.85,
+                    vec!["acceptance_tests".to_string()],
+                ),
+            ])
+            .add_items(vec![
+                RubricItemBuilder::new(
+                    "REQ-001",
+                    "All requirements have clear, testable acceptance criteria",
+                    0.8,
+                    vec!["requirements_traceability".to_string()],
+                ),
+                RubricItemBuilder::new(
+                    "REQ-002",
+                    "Requirements are complete and unambiguous",
+                    0.75,
+                    vec!["requirements_review".to_string()],
+                ),
+            ])
+            .add_items(vec![
+                RubricItemBuilder::new(
+                    "DOC-001",
+                    "API and user documentation is current and accurate",
+                    0.7,
+                    vec!["documentation_review".to_string()],
+                ),
+                RubricItemBuilder::new(
+                    "DOC-002",
+                    "Deployment and operational docs exist",
+                    0.8,
+                    vec!["deployment_docs".to_string()],
+                ),
+            ])
+            .add_items(vec![
+                RubricItemBuilder::new(
+                    "RELIABILITY-001",
+                    "System meets uptime and performance SLAs",
+                    0.9,
+                    vec!["sla_definitions".to_string()],
+                ),
+                RubricItemBuilder::new(
+                    "RELIABILITY-002",
+                    "Error handling and recovery mechanisms implemented",
+                    0.85,
+                    vec!["error_handling_review".to_string()],
+                ),
+            ])
+            .build()
     }
 }
 
@@ -126,128 +124,31 @@ impl QualityEvaluator {
     pub fn new(engine: Arc<dyn JudgeEngine>) -> Self {
         Self {
             engine,
-            rubric: QualityRubric::default(),
         }
     }
 
     /// Build the complete quality rubric
     fn build_rubric(&self) -> Vec<RubricItem> {
-        let mut rubric = Vec::new();
-        rubric.extend(self.rubric.testing_items.clone());
-        rubric.extend(self.rubric.requirements_items.clone());
-        rubric.extend(self.rubric.documentation_items.clone());
-        rubric.extend(self.rubric.reliability_items.clone());
-        rubric
+        QualityRubric::build()
     }
 
     /// Build LLM prompt for quality analysis
-    fn build_prompt(&self, ctx: &ReviewContext) -> JudgePrompt {
+    fn build_prompt_impl(&self, ctx: &ReviewContext) -> JudgePrompt {
         let rubric = self.build_rubric();
 
         JudgePrompt {
             role: JudgeType::Quality,
             objective: "Evaluate the testing completeness, requirements coverage, documentation quality, and reliability characteristics of this implementation. Assess test coverage, acceptance criteria validation, documentation adequacy, and system reliability.".to_string(),
             rubric,
-            evidence: WorkingSpecEvidence {
-                spec_text: format!("{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
-                    ctx.working_spec.title,
-                    ctx.working_spec.description,
-                    ctx.working_spec.goals.join("\n- "),
-                    ctx.working_spec.acceptance_criteria.iter()
-                        .map(|ac| format!("{}: Given {}, When {}, Then {}", ac.id, ac.given, ac.when, ac.then))
-                        .collect::<Vec<_>>()
-                        .join("\n")
-                ),
-                acceptance_criteria: ctx.working_spec.acceptance_criteria.iter()
-                    .map(|ac| format!("{}: {}", ac.id, ac.then))
-                    .collect(),
-                risk_tier: ctx.working_spec.risk_tier.to_string(),
-                context: serde_json::to_value(&ctx.working_spec.context).unwrap_or(serde_json::Value::Null),
-            },
-            output_schema: r#"{
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "type": "object",
-                "required": ["score", "label", "rationale", "violations", "evidence_refs"],
-                "properties": {
-                    "score": {"type": "number", "minimum": 0.0, "maximum": 1.0},
-                    "label": {"type": "string", "enum": ["Pass", "Fail", "NeedsInfo", "Conditional"]},
-                    "rationale": {"type": "string"},
-                    "violations": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "required": ["rule_id", "severity", "waivable", "description"],
-                            "properties": {
-                                "rule_id": {"type": "string"},
-                                "severity": {"type": "string", "enum": ["Info", "Low", "Medium", "High", "Critical"]},
-                                "waivable": {"type": "boolean"},
-                                "description": {"type": "string"}
-                            }
-                        }
-                    },
-                    "evidence_refs": {"type": "array", "items": {"type": "string"}}
-                }
-            }"#.to_string(),
+            evidence: EvidenceBuilder::from_context(ctx),
+            output_schema: JUDGE_OUTPUT_SCHEMA.to_string(),
         }
-    }
-}
-
-#[async_trait]
-impl Judge for QualityEvaluator {
-    #[instrument(skip(self, ctx), fields(judge = "quality", spec_id = %ctx.working_spec.id))]
-    async fn review_spec(&self, ctx: &ReviewContext) -> CouncilResult<JudgeVerdict> {
-        debug!("📊 Quality Evaluator reviewing spec {}", ctx.working_spec.id);
-
-        // STEP 1: Run deterministic quality checks
-        let quality_violations = self.run_deterministic_checks(ctx);
-
-        // STEP 2: Check for blocking quality violations
-        if JudgeUtils::has_blocking_violations(&quality_violations) {
-            debug!("🚫 Quality Evaluator: Blocking violations detected");
-            return Ok(JudgeVerdict {
-                label: VerdictLabel::Fail,
-                score: 0.0,
-                rationale: format!(
-                    "Rejected due to critical quality violations: {}",
-                    quality_violations.iter()
-                        .map(|v| v.description.as_str())
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                ),
-                violations: quality_violations,
-                evidence_refs: vec!["quality_analysis".to_string()],
-            });
-        }
-
-        // STEP 3: Build LLM prompt for quality analysis
-        let prompt = self.build_prompt(ctx);
-
-        // STEP 4: Execute engine
-        let req = JudgeUtils::build_request(prompt, 256);
-        let llm_verdict = self.engine.complete(req).await
-            .map_err(|e| CouncilError::Engine(e))?;
-
-        // STEP 5: Merge findings
-        let merged_verdict = JudgeUtils::merge_verdicts(quality_violations, llm_verdict.parsed);
-
-        debug!(
-            "📊 Quality Evaluator verdict: {} (score: {:.2})",
-            match merged_verdict.label {
-                VerdictLabel::Pass => "PASS",
-                VerdictLabel::Fail => "FAIL",
-                VerdictLabel::NeedsInfo => "NEEDS INFO",
-                VerdictLabel::Conditional => "CONDITIONAL",
-            },
-            merged_verdict.score
-        );
-
-        Ok(merged_verdict)
     }
 }
 
 impl QualityEvaluator {
     /// Run deterministic quality checks
-    fn run_deterministic_checks(&self, ctx: &ReviewContext) -> Vec<Violation> {
+    fn run_deterministic_checks_impl(&self, ctx: &ReviewContext) -> Vec<Violation> {
         let mut violations = vec![];
 
         let spec_text = format!("{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
@@ -301,5 +202,54 @@ impl QualityEvaluator {
         }
 
         violations
+    }
+}
+
+#[async_trait]
+impl super::common::Judge for QualityEvaluator {
+    fn judge_type(&self) -> JudgeType {
+        JudgeType::Quality
+    }
+
+    fn rubric(&self) -> Vec<RubricItem> {
+        self.build_rubric()
+    }
+
+    fn build_prompt(&self, ctx: &ReviewContext) -> JudgePrompt {
+        self.build_prompt_impl(ctx)
+    }
+
+    fn run_deterministic_checks(&self, ctx: &ReviewContext) -> Vec<Violation> {
+        self.run_deterministic_checks_impl(ctx)
+    }
+
+    async fn execute_llm_evaluation(
+        &self,
+        ctx: &ReviewContext,
+        prompt: JudgePrompt,
+        violations: Vec<Violation>,
+    ) -> CouncilResult<JudgeVerdict> {
+        debug!("📊 Quality Evaluator reviewing spec {}", ctx.working_spec.id);
+
+        // STEP 4: Execute engine
+        let req = JudgeUtils::build_request(prompt, 256);
+        let llm_verdict = self.engine.complete(req).await
+            .map_err(|e| CouncilError::Engine(e))?;
+
+        // STEP 5: Merge findings
+        let merged_verdict = JudgeUtils::merge_verdicts(violations, llm_verdict.parsed);
+
+        debug!(
+            "📊 Quality Evaluator verdict: {} (score: {:.2})",
+            match merged_verdict.label {
+                VerdictLabel::Pass => "PASS",
+                VerdictLabel::Fail => "FAIL",
+                VerdictLabel::NeedsInfo => "NEEDS INFO",
+                VerdictLabel::Conditional => "CONDITIONAL",
+            },
+            merged_verdict.score
+        );
+
+        Ok(merged_verdict)
     }
 }

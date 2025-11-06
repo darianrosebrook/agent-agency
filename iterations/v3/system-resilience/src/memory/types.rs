@@ -4,6 +4,7 @@
 //! and memory analysis used throughout the memory management system.
 
 use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
 
 /// Object reference for garbage collection
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -156,7 +157,7 @@ pub struct TaskAllocationStats {
 }
 
 /// Memory limit configuration for monitoring and enforcement
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryLimitConfig {
     /// Maximum heap memory usage in MB
     pub max_heap_mb: u64,
@@ -206,16 +207,22 @@ pub struct FragmentationStats {
 /// Memory compaction analysis and planning
 #[derive(Debug, Clone)]
 pub struct CompactionAnalysis {
-    /// Estimated space that can be reclaimed through compaction
-    pub estimated_savings_bytes: usize,
-    /// Number of memory blocks that need to be moved
-    pub blocks_to_move: usize,
+    /// Fragmentation level before compaction (0.0-1.0)
+    pub fragmentation_before: f64,
+    /// Fragmentation level after compaction (0.0-1.0)
+    pub fragmentation_after: f64,
+    /// Bytes that can be recovered through compaction
+    pub bytes_recoverable: usize,
+    /// Compaction efficiency (0.0-1.0, higher is better)
+    pub compaction_efficiency: f64,
     /// Compaction strategy recommended
     pub recommended_strategy: CompactionStrategy,
-    /// Estimated time to perform compaction (in microseconds)
-    pub estimated_duration_us: u64,
-    /// Risk assessment (0.0-1.0, higher means riskier)
-    pub risk_assessment: f64,
+    /// Detailed compaction plan (actions to perform)
+    pub compaction_plan: Vec<CompactionAction>,
+    /// Estimated duration in milliseconds
+    pub estimated_duration_ms: u64,
+    /// Memory layout after compaction
+    pub compacted_layout: Vec<crate::memory::types::MemoryBlock>,
 }
 
 /// Result of a compaction operation
@@ -274,6 +281,10 @@ pub struct CompactionAction {
     pub size: usize,
     /// Priority of this action (higher = more important)
     pub priority: i32,
+    /// Object reference for this action
+    pub object_ref: ObjectRef,
+    /// Estimated cost of performing this action
+    pub cost_estimate: u64,
 }
 
 /// Statistics provider trait for memory-managed objects

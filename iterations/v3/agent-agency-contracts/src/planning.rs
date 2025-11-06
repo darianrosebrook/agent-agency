@@ -17,9 +17,7 @@ use crate::ExecutionPlan;
 use crate::types::planning::PlanningStrategy;
 use crate::PlanState;
 // Use unified validation types
-use crate::types::validation::{
-    ValidationIssue, ValidationSeverity, ValidationCategory, ValidationCategoryEnum, ValidationResult,
-};
+use crate::types::validation::ValidationResult;
 
 /// Core planning engine trait
 /// Defines the interface for planning engines that can generate and execute plans
@@ -511,11 +509,17 @@ pub enum ExecutionEventType {
     /// Plan execution started
     PlanStarted,
 
+    /// Batch execution started
+    BatchStarted,
+
     /// Milestone execution started
     MilestoneStarted,
 
     /// Milestone execution completed
     MilestoneCompleted,
+
+    /// Batch execution completed
+    BatchCompleted,
 
     /// Milestone execution failed
     MilestoneFailed,
@@ -532,8 +536,17 @@ pub enum ExecutionEventType {
     /// Worker assigned to milestone
     WorkerAssigned,
 
+    /// Worker completed milestone
+    WorkerCompleted,
+
     /// Evidence collected
     EvidenceCollected,
+
+    /// Timeline updated
+    TimelineUpdated,
+
+    /// Risk assessed
+    RiskAssessed,
 
     /// Plan execution completed
     PlanCompleted,
@@ -545,9 +558,76 @@ pub enum ExecutionEventType {
     Custom(String),
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+impl From<&str> for ExecutionEventType {
+    fn from(s: &str) -> Self {
+        match s {
+            "PlanStarted" => ExecutionEventType::PlanStarted,
+            "BatchStarted" => ExecutionEventType::BatchStarted,
+            "MilestoneStarted" => ExecutionEventType::MilestoneStarted,
+            "MilestoneCompleted" => ExecutionEventType::MilestoneCompleted,
+            "BatchCompleted" => ExecutionEventType::BatchCompleted,
+            "MilestoneFailed" => ExecutionEventType::MilestoneFailed,
+            "DependencyResolved" => ExecutionEventType::DependencyResolved,
+            "QualityGateValidated" => ExecutionEventType::QualityGateValidated,
+            "CouncilReviewCompleted" => ExecutionEventType::CouncilReviewCompleted,
+            "WorkerAssigned" => ExecutionEventType::WorkerAssigned,
+            "WorkerCompleted" => ExecutionEventType::WorkerCompleted,
+            "EvidenceCollected" => ExecutionEventType::EvidenceCollected,
+            "TimelineUpdated" => ExecutionEventType::TimelineUpdated,
+            "RiskAssessed" => ExecutionEventType::RiskAssessed,
+            "PlanCompleted" => ExecutionEventType::PlanCompleted,
+            "PlanFailed" => ExecutionEventType::PlanFailed,
+            _ => ExecutionEventType::Custom(s.to_string()),
+        }
+    }
+}
+
+/// Plan status enumeration (alias for PlanState for compatibility)
+pub type PlanStatus = crate::PlanState;
+
+/// Plan priority levels for execution scheduling
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub enum PlanPriority {
+    /// Low priority - execute when resources available
+    Low,
+
+    /// Normal priority - standard execution priority
+    Normal,
+
+    /// Medium priority - elevated execution priority
+    Medium,
+
+    /// High priority - expedited execution
+    High,
+
+    /// Critical priority - immediate execution required
+    Critical,
+}
+
+/// Plan execution state for detailed tracking
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub enum PlanExecutionState {
+    /// Plan is queued for execution
+    Queued,
+
+    /// Plan is being prepared for execution
+    Preparing,
+
+    /// Plan is actively executing
+    Executing,
+
+    /// Plan execution is paused
+    Paused,
+
+    /// Plan execution completed successfully
+    Completed,
+
+    /// Plan execution failed
+    Failed,
+
+    /// Plan execution was cancelled
+    Cancelled,
+}
 
     #[test]
     fn test_planning_capabilities_serialization() {
@@ -598,5 +678,4 @@ mod tests {
         assert_eq!(event.event_type, ExecutionEventType::PlanStarted);
         assert!(event.milestone_id.is_none());
         assert_eq!(event.description, "Plan execution initiated");
-    }
 }

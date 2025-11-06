@@ -478,12 +478,15 @@ mod tests {
             Some("agent1"),
         ).unwrap();
         assert!(matches!(result1, ConcurrencyResult::Success));
-        
-        // Second change with precondition fails
+
+        // Simulate another change happening (making the precondition stale)
+        manager.file_states.insert("test.txt".to_string(), Digest::from_bytes([3; 32]));
+
+        // Second change with stale precondition should fail
         let result2 = manager.record_change(
             "test.txt",
             digest2,
-            Some(digest1), // Expecting digest1
+            Some(digest1), // Precondition is now stale
             ChangeSource::AgentIteration {
                 iteration: 2,
                 agent_id: "agent2".to_string(),
@@ -491,7 +494,7 @@ mod tests {
             "session2",
             Some("agent2"),
         ).unwrap();
-        
+
         assert!(matches!(result2, ConcurrencyResult::Conflict(_)));
     }
 
@@ -513,11 +516,14 @@ mod tests {
             user_id: "user1".to_string(),
         };
         
-        // Agent vs agent conflict
+        // First, simulate another agent changing the file
+        manager.file_states.insert("test.txt".to_string(), Digest::from_bytes([5; 32]));
+
+        // Now try to change with stale precondition - this should create a conflict
         let result = manager.record_change(
             "test.txt",
             Digest::from_bytes([4; 32]),
-            Some(digest),
+            Some(digest), // This precondition is now stale
             agent_source,
             "session1",
             Some("agent1"),

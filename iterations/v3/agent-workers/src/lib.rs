@@ -72,6 +72,7 @@ pub mod worker_errors;
 pub mod parallel_types;
 pub mod error;
 pub mod worker;
+pub mod workers_common;
 
 // Refactored modules for better organization
 pub mod learning_system;

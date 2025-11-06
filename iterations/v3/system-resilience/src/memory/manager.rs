@@ -31,6 +31,10 @@ pub struct MemoryManagementConfig {
     pub enable_allocation_tracking: bool,
     /// Memory limit configuration
     pub limits: MemoryLimitConfig,
+    /// Monitor configuration (alias for limits for backward compatibility)
+    pub monitor_config: MemoryLimitConfig,
+    /// Leak detection threshold in MB
+    pub leak_detection_threshold_mb: u64,
 }
 
 /// Central memory manager
@@ -75,12 +79,12 @@ impl MemoryManager {
         self.monitor.register_pressure_callback(MemoryPressure::High, |pressure| {
             warn!("Memory pressure is HIGH: {:?}", pressure);
             // In production, you might trigger GC, reduce cache sizes, etc.
-        });
+        }).await;
 
         self.monitor.register_pressure_callback(MemoryPressure::Critical, |pressure| {
             error!("Memory pressure is CRITICAL: {:?}", pressure);
             // Emergency measures: aggressive GC, cache clearing, etc.
-        });
+        }).await;
 
         // Start monitoring
         // self.monitor.start_monitoring();
@@ -109,7 +113,7 @@ impl MemoryManager {
         F: Fn() -> T + Send + Sync + 'static,
     {
         let pool = ObjectPool::new(factory, max_size);
-        let mut pools = self.pools.write().await.unwrap();
+        let mut pools = self.pools.write().await;
         pools.insert(name.to_string(), Box::new(pool));
     }
 
@@ -118,7 +122,7 @@ impl MemoryManager {
     where
         T: Send + Sync + 'static,
     {
-        let pools = self.pools.read().await.unwrap();
+        let pools = self.pools.read().await;
         if let Some(pool_box) = pools.get(name) {
             // Attempt type-safe downcast to ObjectPool<T>
             // Note: This uses Any downcasting which provides runtime type safety
@@ -166,7 +170,7 @@ impl MemoryManager {
 
     /// Get pool stats for a specific pool using trait-based collection
     pub async fn get_pool_stats(&self, name: &str) -> Option<PoolStats> {
-        let pools = self.pools.read().await.unwrap();
+        let pools = self.pools.read().await;
         if let Some(pool_box) = pools.get(name) {
             // Use trait-based statistics collection with runtime polymorphism
             // This provides compile-time type safety while allowing runtime flexibility
@@ -207,7 +211,7 @@ impl MemoryManager {
     /// Get memory usage history
     pub async fn get_memory_history(&self, _duration: Duration) -> Vec<(Instant, MemoryStats)> {
         // Get recent history from the monitor
-        let history = self.monitor.stats_history.read().await.unwrap();
+        let history = self.monitor.get_stats_history().await;
         history.clone()
     }
 
