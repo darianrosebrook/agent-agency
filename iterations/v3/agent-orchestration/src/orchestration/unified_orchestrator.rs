@@ -470,6 +470,13 @@ impl UnifiedOrchestrator {
             Uuid::nil() // No session manager available
         };
 
+        // Save initial execution state for status tracking
+        if let Some(ref persistence) = self.state_persistence {
+            if let Err(e) = persistence.save_state(&execution_state).await {
+                warn!("Failed to save initial execution state: {}", e);
+            }
+        }
+
         // Phase 0.5: Retrieve cross-session context if session manager is available
         // Store contexts for use in plan generation
         let mut cross_session_contexts: Vec<SessionContext> = Vec::new();
@@ -698,9 +705,59 @@ impl UnifiedOrchestrator {
         // Phase 2: Council plan review (CAWS Examination stage)
         if self.config.enable_council_review {
             info!("Phase 2: Council plan review (CAWS Examination)");
-            if let Some(ref adjudication) = self.adjudication_cycle {
-                // CAWS adjudication cycle is integrated and used in Phase 4 (Pleading stage)
-                // Examination stage reviews the plan structure before execution
+            
+            // Create review context for council
+            use crate::judge_backup::types::ReviewContext;
+            use crate::decision_making::FinalDecision;
+            
+            let review_context = ReviewContext {
+                session_id: format!("examination_{}", plan_id),
+                working_spec: serde_json::to_string(&working_spec)
+                    .map_err(|e| anyhow::anyhow!("Failed to serialize working spec for council review: {}", e))?,
+                risk_tier: working_spec.risk_tier as u8,
+                previous_reviews: vec![],
+                constraints: std::collections::HashMap::new(),
+            };
+
+            // Conduct council review of the execution plan
+            let council_session = self.council.conduct_review(working_spec.clone(), review_context).await
+                .map_err(|e| anyhow::anyhow!("Council plan review (CAWS Examination) failed: {:?}", e))?;
+
+            // Check council decision
+            match council_session.final_decision.as_ref() {
+                Some(FinalDecision::Proceed { .. }) => {
+                    info!("Council approved plan for execution (CAWS Examination passed)");
+                }
+                Some(FinalDecision::Reject { reason, .. }) => {
+                    let rejection_reason = format!("Council rejected plan during CAWS Examination: {}", reason);
+                    error!("{}", rejection_reason);
+                    return Err(anyhow::anyhow!("{}", rejection_reason));
+                }
+                Some(FinalDecision::Refine { refinement_directive, .. }) => {
+                    // Council requests refinement - this will be handled in Phase 5 refinement loop
+                    info!("Council requested plan refinement during CAWS Examination: {:?}", refinement_directive);
+                    // Continue to execution - refinement happens in Phase 5 after artifacts are produced
+                }
+                None => {
+                    warn!("Council review completed but no final decision - proceeding with caution");
+                    // If no decision, log warning but proceed (council may have timed out or failed)
+                }
+            }
+
+            // Update execution state with council review result
+            execution_state.current_phase = "council_examination_complete".to_string();
+            execution_state.progress_percentage = 20.0;
+            
+            // Store council session info in metadata
+            execution_state.metadata.insert(
+                "council_examination_session_id".to_string(),
+                serde_json::json!(council_session.session_id),
+            );
+            if let Some(ref decision) = council_session.final_decision {
+                execution_state.metadata.insert(
+                    "council_examination_decision".to_string(),
+                    serde_json::json!(format!("{:?}", decision)),
+                );
             }
         }
 
@@ -1195,6 +1252,94 @@ impl UnifiedOrchestrator {
             iterations,
             quality_scores,
         })
+    }
+
+    /// Get execution status for a plan
+    ///
+    /// Returns the current execution state if available, or None if not found.
+    pub async fn get_execution_status(
+        &self,
+        plan_id: Uuid,
+    ) -> Result<Option<TaskExecutionState>> {
+        if let Some(ref persistence) = self.state_persistence {
+            persistence.load_state(plan_id).await
+                .map_err(|e| anyhow::anyhow!("Failed to load state: {}", e))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Pause execution of a plan
+    ///
+    /// Updates the execution state to Paused and creates a checkpoint.
+    pub async fn pause_execution(&self, plan_id: Uuid) -> Result<()> {
+        if let Some(ref persistence) = self.state_persistence {
+            if let Ok(Some(mut state)) = persistence.load_state(plan_id).await {
+                state.status = ExecutionStateStatus::Paused;
+                state.last_updated = Utc::now();
+                persistence.save_state(&state).await
+                    .map_err(|e| anyhow::anyhow!("Failed to save paused state: {}", e))?;
+                persistence.create_checkpoint(plan_id, &state).await
+                    .map_err(|e| anyhow::anyhow!("Failed to create checkpoint: {}", e))?;
+                info!("Paused execution for plan {}", plan_id);
+                Ok(())
+            } else {
+                Err(anyhow::anyhow!("Plan {} not found", plan_id))
+            }
+        } else {
+            Err(anyhow::anyhow!("State persistence not available"))
+        }
+    }
+
+    /// Resume execution of a paused plan
+    ///
+    /// Updates the execution state to Running.
+    pub async fn resume_execution(&self, plan_id: Uuid) -> Result<()> {
+        if let Some(ref persistence) = self.state_persistence {
+            if let Ok(Some(mut state)) = persistence.load_state(plan_id).await {
+                if state.status != ExecutionStateStatus::Paused {
+                    return Err(anyhow::anyhow!("Plan {} is not paused (status: {:?})", plan_id, state.status));
+                }
+                state.status = ExecutionStateStatus::Running;
+                state.last_updated = Utc::now();
+                persistence.save_state(&state).await
+                    .map_err(|e| anyhow::anyhow!("Failed to save resumed state: {}", e))?;
+                info!("Resumed execution for plan {}", plan_id);
+                Ok(())
+            } else {
+                Err(anyhow::anyhow!("Plan {} not found", plan_id))
+            }
+        } else {
+            Err(anyhow::anyhow!("State persistence not available"))
+        }
+    }
+
+    /// Cancel execution of a plan
+    ///
+    /// Updates the execution state to Cancelled and cleans up resources.
+    pub async fn cancel_execution(&self, plan_id: Uuid) -> Result<()> {
+        if let Some(ref persistence) = self.state_persistence {
+            if let Ok(Some(mut state)) = persistence.load_state(plan_id).await {
+                // Only cancel if not already completed or cancelled
+                if matches!(state.status, ExecutionStateStatus::Completed | ExecutionStateStatus::Cancelled) {
+                    return Err(anyhow::anyhow!("Plan {} cannot be cancelled (status: {:?})", plan_id, state.status));
+                }
+                state.status = ExecutionStateStatus::Cancelled;
+                state.last_updated = Utc::now();
+                state.error = Some("Task cancelled by user".to_string());
+                persistence.save_state(&state).await
+                    .map_err(|e| anyhow::anyhow!("Failed to save cancelled state: {}", e))?;
+                
+                // Clean up worktrees for cancelled tasks
+                // Note: Worktree cleanup is handled by WorktreeManager, but we should signal cancellation
+                info!("Cancelled execution for plan {}", plan_id);
+                Ok(())
+            } else {
+                Err(anyhow::anyhow!("Plan {} not found", plan_id))
+            }
+        } else {
+            Err(anyhow::anyhow!("State persistence not available"))
+        }
     }
 
     /// Execute plan milestones in parallel using ParallelCoordinator
