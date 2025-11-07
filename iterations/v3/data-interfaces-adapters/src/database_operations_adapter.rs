@@ -11,6 +11,7 @@ use anyhow::{anyhow, Result};
 use uuid::Uuid;
 use chrono::Utc;
 use tracing::{warn, info};
+use sqlx;
 
 use agent_orchestration::planning::data_infrastructure_types::{
     DatabaseOperations, CreateExecutionPlan, UpdateExecutionPlan,
@@ -77,30 +78,163 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
     }
 
     async fn create_audit_trail_entry(&self, entry: CreateAuditTrailEntry) -> Result<models::AuditTrailEntry> {
-        // Use data-infrastructure audit logging if available
-        // For now, create entry without persisting to database
-        warn!("create_audit_trail_entry() not yet implemented - entry not persisted");
+        // Convert agent-orchestration CreateAuditTrailEntry to data-infrastructure format
+        // Extract task_id from metadata if available, otherwise use a default
+        let task_id = entry.metadata.get("task_id")
+            .and_then(|v| v.as_str())
+            .and_then(|s| Uuid::parse_str(s).ok())
+            .unwrap_or_else(|| Uuid::new_v4());
+
+        // Convert to data-infrastructure format
+        let db_entry = data_infrastructure::database_operations::CreateAuditTrailEntry {
+            entity_type: "task".to_string(),
+            entity_id: task_id,
+            action: entry.event_type.clone(),
+            details: serde_json::json!({
+                "description": entry.description,
+                "metadata": entry.metadata,
+            }),
+            user_id: entry.metadata.get("user_id")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            ip_address: entry.metadata.get("ip_address")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            timestamp: Some(Utc::now()),
+        };
+
+        // Use DatabaseClient's pool to execute SQL directly
+        let pool = self.db_client.pool();
+        let id = Uuid::new_v4();
+        let timestamp = db_entry.timestamp.unwrap_or_else(|| Utc::now());
+        
+        // Insert audit trail entry
+        sqlx::query(
+            r#"
+            INSERT INTO audit_trail_entries (
+                id, entity_type, entity_id, action, details,
+                user_id, ip_address, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            "#
+        )
+        .bind(id)
+        .bind(&db_entry.entity_type)
+        .bind(db_entry.entity_id)
+        .bind(&db_entry.action)
+        .bind(&db_entry.details)
+        .bind(&db_entry.user_id)
+        .bind(&db_entry.ip_address)
+        .bind(timestamp)
+        .execute(pool)
+        .await
+        .map_err(|e| anyhow!("Failed to persist audit trail entry: {}", e))?;
+        
+        // Retrieve the persisted entry
+        let db_result = sqlx::query_as::<_, data_infrastructure::models::AuditTrailEntry>(
+            r#"
+            SELECT id, entity_type, entity_id, action, details, user_id, ip_address, created_at
+            FROM audit_trail_entries
+            WHERE id = $1
+            "#
+        )
+        .bind(id)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| anyhow!("Failed to retrieve persisted audit trail entry: {}", e))?;
+
+        // Convert back to agent-orchestration format
         Ok(models::AuditTrailEntry {
-            id: Uuid::new_v4(),
-            event_type: entry.event_type,
-            description: entry.description,
-            timestamp: Utc::now(),
-            metadata: entry.metadata,
+            id: db_result.id,
+            event_type: db_result.action,
+            description: db_result.details.get("description")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| "".to_string()),
+            timestamp: db_result.created_at,
+            metadata: db_result.details.get("metadata")
+                .and_then(|v| v.as_object())
+                .map(|obj| {
+                    obj.iter()
+                        .map(|(k, v)| (k.clone(), v.clone()))
+                        .collect()
+                })
+                .unwrap_or_default(),
         })
     }
 
     async fn get_audit_trail_entries(&self, task_id: Uuid) -> Result<Vec<models::AuditTrailEntry>> {
-        // PLACEHOLDER: Query audit trail entries from database
-        // TODO: Implement audit_trail table query filtered by task_id
-        warn!("get_audit_trail_entries() not yet implemented - returning empty list");
-        Ok(vec![])
+        // Query audit trail entries directly via SQL
+        let pool = self.db_client.pool();
+        let db_results = sqlx::query_as::<_, data_infrastructure::models::AuditTrailEntry>(
+            r#"
+            SELECT id, entity_type, entity_id, action, details, user_id, ip_address, created_at
+            FROM audit_trail_entries
+            WHERE entity_id = $1 AND entity_type = 'task'
+            ORDER BY created_at DESC
+            "#
+        )
+        .bind(task_id)
+        .fetch_all(pool)
+        .await
+        .map_err(|e| anyhow!("Failed to query audit trail entries: {}", e))?;
+
+        // Convert to agent-orchestration format
+        Ok(db_results.into_iter().map(|db_entry| {
+            models::AuditTrailEntry {
+                id: db_entry.id,
+                event_type: db_entry.action,
+                description: db_entry.details.get("description")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| "".to_string()),
+                timestamp: db_entry.created_at,
+                metadata: db_entry.details.get("metadata")
+                    .and_then(|v| v.as_object())
+                    .map(|obj| {
+                        obj.iter()
+                            .map(|(k, v)| (k.clone(), v.clone()))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+            }
+        }).collect())
     }
 
     async fn get_audit_trail_entry(&self, id: Uuid) -> Result<Option<models::AuditTrailEntry>> {
-        // PLACEHOLDER: Query audit trail entry from database
-        // TODO: Implement audit_trail table query by id
-        warn!("get_audit_trail_entry() not yet implemented - returning None");
-        Ok(None)
+        // Query audit trail entry directly via SQL
+        let pool = self.db_client.pool();
+        let db_result = sqlx::query_as::<_, data_infrastructure::models::AuditTrailEntry>(
+            r#"
+            SELECT id, entity_type, entity_id, action, details, user_id, ip_address, created_at
+            FROM audit_trail_entries
+            WHERE id = $1
+            "#
+        )
+        .bind(id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| anyhow!("Failed to query audit trail entry: {}", e))?;
+
+        // Convert to agent-orchestration format
+        Ok(db_result.map(|db_entry| {
+            models::AuditTrailEntry {
+                id: db_entry.id,
+                event_type: db_entry.action,
+                description: db_entry.details.get("description")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| "".to_string()),
+                timestamp: db_entry.created_at,
+                metadata: db_entry.details.get("metadata")
+                    .and_then(|v| v.as_object())
+                    .map(|obj| {
+                        obj.iter()
+                            .map(|(k, v)| (k.clone(), v.clone()))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+            }
+        }))
     }
 
     async fn create_planning_session(&self, session: CreatePlanningSession) -> Result<models::PlanningSession> {

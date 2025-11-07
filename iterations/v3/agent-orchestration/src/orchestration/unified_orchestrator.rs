@@ -1047,7 +1047,12 @@ impl UnifiedOrchestrator {
                 
                 let spec_refiner: Option<Arc<dyn SpecRefiner>> = Some(Arc::new(UnifiedSpecRefiner));
                 
-                let progress_tracker: Arc<dyn ProgressTracker> = Arc::new(UnifiedProgressTracker);
+                // Use RealTimeProgressTracker for actual progress tracking
+                let base_progress_tracker: Arc<dyn crate::progress_tracker::ProgressTracker> = 
+                    Arc::new(crate::progress_tracker::RealTimeProgressTracker::new(None));
+                let progress_tracker: Arc<dyn ProgressTracker> = Arc::new(UnifiedProgressTracker {
+                    base_tracker: base_progress_tracker,
+                });
 
                 // Execute refinement loop
                 let refinement_result = refinement_coordinator.execute_refinement_loop(
@@ -1355,51 +1360,39 @@ impl UnifiedOrchestrator {
         let parallel_result = self.parallel_coordinator.execute_plan_parallel(&mut plan_for_execution).await?;
         
         info!(
-            "ParallelCoordinator completed: {} successful, {} failed, {} scope conflicts",
+            "ParallelCoordinator completed: {} successful, {} failed, {} scope conflicts, {} artifacts collected",
             parallel_result.successful_milestones,
             parallel_result.failed_milestones,
-            parallel_result.scope_conflicts
+            parallel_result.scope_conflicts,
+            parallel_result.artifacts.len()
         );
         
-        // Collect artifacts from completed milestones
-        // Since ParallelCoordinator uses PlanExecutor internally which doesn't return artifacts directly,
-        // we create ExecutionArtifacts from milestone execution state and evidence
-        let mut artifacts = Vec::new();
-        
-        for milestone in &plan_for_execution.contract_plan.milestones {
-            if matches!(milestone.state, agent_agency_contracts::planning_io::MilestoneState::Completed) {
-                // Create ExecutionArtifacts from milestone state
-                // Extract worker_id from assigned_workers or use milestone ID as fallback
-                let worker_id_str = milestone.assigned_workers.first()
-                    .map(|id| id.to_string())
-                    .unwrap_or_else(|| milestone.id.clone());
-                
-                // Create artifact from milestone completion
-                // Note: This is a simplified artifact - in production, artifacts should be collected
-                // during execution and stored in ExecutionPlan state
-                // Use default() and update key fields
-                let mut artifact = ExecutionArtifacts::default();
-                artifact.task_id = plan_for_execution.contract_plan.id;
-                artifact.working_spec_id = plan_for_execution.contract_plan.working_spec_id.clone();
-                artifact.provenance.worker_id = Some(worker_id_str.clone());
-                artifact.provenance.completed_at = Some(chrono::Utc::now());
-                artifact.metadata = Some(agent_agency_contracts::execution_artifacts::ArtifactMetadata {
-                    compression_applied: None,
-                    storage_location: None,
-                    retention_policy: None,
-                    tags: vec![],
-                });
-                
-                artifacts.push(artifact);
+        // Use artifacts collected during execution from ParallelCoordinator
+        let artifacts = if !parallel_result.artifacts.is_empty() {
+            parallel_result.artifacts
+        } else if parallel_result.successful_milestones > 0 {
+            // Fallback: If no artifacts collected but milestones were successful, create minimal artifacts
+            // This should not happen in production, but provides safety fallback
+            warn!("No artifacts collected from ParallelCoordinator execution - creating minimal artifacts from milestone state");
+            let mut fallback_artifacts = Vec::new();
+            for milestone in &plan_for_execution.contract_plan.milestones {
+                if matches!(milestone.state, agent_agency_contracts::planning_io::MilestoneState::Completed) {
+                    let worker_id_str = milestone.assigned_workers.first()
+                        .map(|id| id.to_string())
+                        .unwrap_or_else(|| milestone.id.clone());
+                    
+                    let mut artifact = ExecutionArtifacts::default();
+                    artifact.task_id = plan_for_execution.contract_plan.id;
+                    artifact.working_spec_id = plan_for_execution.contract_plan.working_spec_id.clone();
+                    artifact.provenance.worker_id = Some(worker_id_str);
+                    artifact.provenance.completed_at = Some(chrono::Utc::now());
+                    fallback_artifacts.push(artifact);
+                }
             }
-        }
-        
-        // If no artifacts collected but milestones were successful, create at least one artifact
-        // to ensure council review can proceed
-        if artifacts.is_empty() && parallel_result.successful_milestones > 0 {
-            warn!("No artifacts collected from ParallelCoordinator execution - creating minimal artifact");
-            artifacts.push(ExecutionArtifacts::default());
-        }
+            fallback_artifacts
+        } else {
+            Vec::new()
+        };
         
         Ok(artifacts)
     }
@@ -1594,49 +1587,122 @@ impl SpecRefiner for UnifiedSpecRefiner {
     }
 }
 
-/// Progress tracker implementation
-struct UnifiedProgressTracker;
+/// Progress tracker implementation that delegates to RealTimeProgressTracker
+struct UnifiedProgressTracker {
+    base_tracker: Arc<dyn crate::progress_tracker::ProgressTracker>,
+}
 
 #[async_trait::async_trait]
 impl ProgressTracker for UnifiedProgressTracker {
     async fn update_task_progress(
         &self,
-        _task_id: Uuid,
-        _progress: f32,
-        _message: Option<String>,
+        task_id: Uuid,
+        progress: f32,
+        message: Option<String>,
     ) -> Result<()> {
-        // No-op for now - can be extended with actual progress tracking
+        // Delegate to RealTimeProgressTracker
+        let execution_progress = crate::progress_tracker::ExecutionProgress {
+            task_id,
+            progress_percentage: progress,
+            current_phase: message.clone().unwrap_or_else(|| "executing".to_string()),
+            milestones_completed: 0,
+            total_milestones: 0,
+            estimated_completion: None,
+            last_updated: chrono::Utc::now(),
+            quality_score: None,
+            errors: Vec::new(),
+            warnings: Vec::new(),
+        };
+        
+        self.base_tracker.update_progress(task_id, execution_progress).await
+            .map_err(|e| anyhow!("Failed to update progress: {}", e))?;
+        
         Ok(())
     }
 
     async fn update_task_status(
         &self,
-        _task_id: Uuid,
-        _status: ExecutionStatus,
-        _message: Option<String>,
+        task_id: Uuid,
+        status: ExecutionStatus,
+        message: Option<String>,
     ) -> Result<()> {
-        // No-op for now
-        Ok(())
+        // Update progress with status information
+        let progress = match status {
+            ExecutionStatus::Pending => 0.0,
+            ExecutionStatus::Running => 50.0,
+            ExecutionStatus::Completed => 100.0,
+            ExecutionStatus::Failed => 0.0,
+            ExecutionStatus::Cancelled => 0.0,
+        };
+        
+        self.update_task_progress(task_id, progress, message).await
     }
 
     async fn track_iteration_progress(
         &self,
-        _task_id: Uuid,
-        _iteration: u32,
-        _quality_score: f64,
-        _improvement_delta: f64,
+        task_id: Uuid,
+        iteration: u32,
+        quality_score: f64,
+        improvement_delta: f64,
     ) -> Result<()> {
-        // No-op for now
+        // Update progress with iteration information
+        let progress = (iteration as f32 * 10.0).min(90.0); // Cap at 90% until final
+        let message = format!("Iteration {}: quality={:.2}, improvement={:.2}", iteration, quality_score, improvement_delta);
+        
+        let execution_progress = crate::progress_tracker::ExecutionProgress {
+            task_id,
+            progress_percentage: progress,
+            current_phase: message.clone(),
+            milestones_completed: iteration,
+            total_milestones: 0,
+            estimated_completion: None,
+            last_updated: chrono::Utc::now(),
+            quality_score: Some(quality_score),
+            errors: Vec::new(),
+            warnings: Vec::new(),
+        };
+        
+        self.base_tracker.update_progress(task_id, execution_progress).await
+            .map_err(|e| anyhow!("Failed to track iteration progress: {}", e))?;
+        
         Ok(())
     }
 
     async fn detect_and_report_plateaus(
         &self,
-        _task_id: Uuid,
-        _quality_scores: &[f64],
-        _iteration: u32,
+        task_id: Uuid,
+        quality_scores: &[f64],
+        iteration: u32,
     ) -> Result<()> {
-        // No-op for now
+        // Use turn-level tracker if available to detect plateaus
+        // For now, just log if quality scores are stagnant
+        if quality_scores.len() >= 3 {
+            let recent_scores = &quality_scores[quality_scores.len().saturating_sub(3)..];
+            let avg_recent: f64 = recent_scores.iter().sum::<f64>() / recent_scores.len() as f64;
+            let variance: f64 = recent_scores.iter()
+                .map(|s| (s - avg_recent).powi(2))
+                .sum::<f64>() / recent_scores.len() as f64;
+            
+            if variance < 0.01 {
+                warn!("Plateau detected at iteration {}: quality variance={:.4}", iteration, variance);
+                // Update progress with plateau warning
+                let execution_progress = crate::progress_tracker::ExecutionProgress {
+                    task_id,
+                    progress_percentage: (iteration as f32 * 10.0).min(90.0),
+                    current_phase: format!("Iteration {}: Plateau detected (quality variance={:.4})", iteration, variance),
+                    milestones_completed: iteration,
+                    total_milestones: 0,
+                    estimated_completion: None,
+                    last_updated: chrono::Utc::now(),
+                    quality_score: Some(avg_recent),
+                    errors: Vec::new(),
+                    warnings: vec!["Quality plateau detected - consider refinement".to_string()],
+                };
+                
+                let _ = self.base_tracker.update_progress(task_id, execution_progress).await;
+            }
+        }
+        
         Ok(())
     }
 }

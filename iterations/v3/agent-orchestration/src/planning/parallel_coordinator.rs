@@ -146,6 +146,10 @@ pub struct ParallelExecutionResult {
 
     /// Emergency stops
     pub emergency_stops: usize,
+
+    /// Collected execution artifacts from milestone execution
+    pub artifacts: Vec<agent_agency_contracts::execution_artifacts::ExecutionArtifacts>,
+
 }
 
 impl ParallelCoordinator {
@@ -207,6 +211,7 @@ impl ParallelCoordinator {
         let mut scope_conflicts = 0;
         let mut council_interventions = 0;
         let mut emergency_stops = 0;
+        let mut all_artifacts = Vec::new();
 
         // Collect batch indices first to avoid borrowing issues
         let batch_indices: Vec<usize> = (0..plan.execution_context.parallel_batches.len()).collect();
@@ -223,6 +228,7 @@ impl ParallelCoordinator {
             total_failed += batch_result.failed;
             scope_conflicts += batch_result.scope_conflicts;
             council_interventions += batch_result.council_interventions;
+            all_artifacts.extend(batch_result.artifacts);
 
             // Check for emergency stop after batch
             if self.config.emergency_stop_on_violation && batch_result.emergency_stop {
@@ -248,6 +254,7 @@ impl ParallelCoordinator {
             scope_conflicts,
             council_interventions,
             emergency_stops,
+            artifacts: all_artifacts,
         })
     }
 
@@ -310,16 +317,22 @@ impl ParallelCoordinator {
             }
         };
 
-        // Process results
+        // Process results and collect artifacts
         let mut successful = 0;
         let mut failed = 0;
         let mut scope_conflicts = 0;
         let mut council_interventions = 0;
         let mut emergency_stop = false;
+        let mut collected_artifacts = Vec::new();
 
         for result in results {
             match result {
                 Ok((milestone_index, Ok(milestone_result))) => {
+                    // Collect artifacts if available
+                    if let Some(artifacts) = milestone_result.artifacts {
+                        collected_artifacts.push(artifacts);
+                    }
+
                     // Update milestone in plan
                     if let Some(milestone) = plan.contract_plan.milestones.iter_mut()
                         .find(|m| m.id == batch.milestone_ids[milestone_index]) {
@@ -371,6 +384,7 @@ impl ParallelCoordinator {
             scope_conflicts,
             council_interventions,
             emergency_stop,
+            artifacts: collected_artifacts,
         })
     }
 
@@ -436,12 +450,13 @@ impl ParallelCoordinator {
                                 council_interventions,
                                 emergency_stop,
                                 error_message: Some("Emergency stop requested by council".to_string()),
+                                artifacts: None,
                             });
                         }
                     }
                 }
 
-                // Execute milestone
+                // Execute milestone - now returns ExecutionArtifacts
                 let result = self.plan_executor.execute_milestone_impl(&milestone).await;
 
                 // Release scope locks
@@ -491,13 +506,14 @@ impl ParallelCoordinator {
         }
 
         match execution_result {
-            Ok(_) => Ok(MilestoneExecutionResult {
+            Ok(artifacts) => Ok(MilestoneExecutionResult {
                 success: true,
                 execution_time_ms: milestone_start.elapsed().as_millis() as u64,
                 scope_conflicts,
                 council_interventions,
                 emergency_stop,
                 error_message: None,
+                artifacts: Some(artifacts),
             }),
             Err(e) => Ok(MilestoneExecutionResult {
                 success: false,
@@ -506,6 +522,7 @@ impl ParallelCoordinator {
                 council_interventions,
                 emergency_stop,
                 error_message: Some(e.to_string()),
+                artifacts: None,
             }),
         }
     }
@@ -570,14 +587,15 @@ impl ParallelCoordinator {
                 // Release scope
                 let _ = self.release_milestone_scope(milestone).await;
 
-                return match execution_result {
-                    Ok(_) => Ok(Some(MilestoneExecutionResult {
+                return                 match execution_result {
+                    Ok(artifacts) => Ok(Some(MilestoneExecutionResult {
                         success: true,
                         execution_time_ms: 0, // Time already counted in original attempt
                         scope_conflicts: attempt,
                         council_interventions: 0,
                         emergency_stop: false,
                         error_message: None,
+                        artifacts: Some(artifacts),
                     })),
                     Err(e) => Ok(Some(MilestoneExecutionResult {
                         success: false,
@@ -586,6 +604,7 @@ impl ParallelCoordinator {
                         council_interventions: 0,
                         emergency_stop: false,
                         error_message: Some(e.to_string()),
+                        artifacts: None,
                     })),
                 };
             }
@@ -682,6 +701,7 @@ struct MilestoneExecutionResult {
     council_interventions: usize,
     emergency_stop: bool,
     error_message: Option<String>,
+    artifacts: Option<agent_agency_contracts::execution_artifacts::ExecutionArtifacts>,
 }
 
 /// Batch execution result
@@ -693,6 +713,7 @@ pub struct BatchExecutionResult {
     scope_conflicts: usize,
     council_interventions: usize,
     emergency_stop: bool,
+    artifacts: Vec<agent_agency_contracts::execution_artifacts::ExecutionArtifacts>,
 }
 
 impl Clone for ParallelCoordinator {

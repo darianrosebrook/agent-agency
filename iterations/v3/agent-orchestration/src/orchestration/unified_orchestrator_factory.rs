@@ -251,8 +251,8 @@ impl UnifiedOrchestratorFactory {
             manager: audit_trail_manager.clone(),
         }) as Arc<dyn crate::planning::plan_executor::AuditTrail>;
 
-        // Create PlanExecutor for UnifiedOrchestrator
-        let plan_executor = Arc::new(PlanExecutor::new(
+        // Create PlanExecutor for UnifiedOrchestrator with WorkerExecutionBridge and WorktreeManager
+        let plan_executor = Arc::new(PlanExecutor::with_lifecycle_manager(
             ExecutionPlan::default(),
             executor_worker_pool,
             planning_components.evidence_collector.clone(),
@@ -263,6 +263,9 @@ impl UnifiedOrchestratorFactory {
             audit_trail,
             Some(audit_trail_manager),
             planning_components.todo_integration.clone(),
+            None, // worker_lifecycle_manager - will be set separately
+            Some(worker_bridge.clone()), // Pass WorkerExecutionBridge for real execution
+            Some(worktree_manager.clone()), // Pass WorktreeManager for worktree path resolution
             ExecutionConfig::default(),
         ));
 

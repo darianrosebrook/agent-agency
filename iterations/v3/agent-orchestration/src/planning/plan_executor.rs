@@ -31,7 +31,10 @@ use crate::planning::{
     scope_guard::ScopeGuard,
     council_monitor::CouncilMonitor,
     worker_lifecycle_manager::WorkerLifecycleManager,
+    worktree_manager::WorktreeManager,
 };
+use crate::workers::execution_bridge::WorkerExecutionBridge;
+use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
 use crate::audit_trail::AuditTrailManager;
 use agent_agency_contracts::planning::{QualityMetrics, CoverageMetrics, TestQualityMetrics, CodeQualityMetrics, DocumentationQualityMetrics};
 
@@ -115,6 +118,12 @@ pub struct PlanExecutor {
 
     /// Worker lifecycle manager for tracking worker assignments and completions
     worker_lifecycle_manager: Option<Arc<WorkerLifecycleManager>>,
+
+    /// Worker execution bridge for real worker execution
+    worker_bridge: Option<Arc<WorkerExecutionBridge>>,
+
+    /// Worktree manager for git worktree isolation
+    worktree_manager: Option<Arc<WorktreeManager>>,
 
     /// Parallel execution limit semaphore
     parallel_limit: Arc<Semaphore>,
@@ -428,6 +437,8 @@ impl PlanExecutor {
             audit_trail_manager,
             todo_integration,
             None, // worker_lifecycle_manager - optional
+            None, // worker_bridge - optional
+            None, // worktree_manager - optional
             config,
         )
     }
@@ -445,6 +456,8 @@ impl PlanExecutor {
         audit_trail_manager: Option<Arc<AuditTrailManager>>,
         todo_integration: Arc<dyn TodoInterface>,
         worker_lifecycle_manager: Option<Arc<WorkerLifecycleManager>>,
+        worker_bridge: Option<Arc<WorkerExecutionBridge>>,
+        worktree_manager: Option<Arc<WorktreeManager>>,
         config: ExecutionConfig,
     ) -> Self {
         Self::with_determinism(
@@ -459,6 +472,8 @@ impl PlanExecutor {
             audit_trail_manager,
             todo_integration,
             worker_lifecycle_manager,
+            worker_bridge,
+            worktree_manager,
             config,
             #[cfg(feature = "evaluation")]
             Arc::new(crate::evaluation::determinism::SystemClock),
@@ -483,6 +498,8 @@ impl PlanExecutor {
         audit_trail_manager: Option<Arc<AuditTrailManager>>,
         todo_integration: Arc<dyn TodoInterface>,
         worker_lifecycle_manager: Option<Arc<WorkerLifecycleManager>>,
+        worker_bridge: Option<Arc<WorkerExecutionBridge>>,
+        worktree_manager: Option<Arc<WorktreeManager>>,
         config: ExecutionConfig,
         clock: Arc<dyn crate::evaluation::determinism::Clock>,
         rng_source: Arc<crate::evaluation::determinism::ThreadSafeRngSource>,
@@ -499,6 +516,8 @@ impl PlanExecutor {
             audit_trail_manager,
             todo_integration,
             worker_lifecycle_manager,
+            worker_bridge,
+            worktree_manager,
             parallel_limit: Arc::new(Semaphore::new(config.max_parallel_milestones.max(1))),
             failure_oracle: Arc::new(FailureOracle::new(42)), // Fixed seed for deterministic testing
             clock,
@@ -520,6 +539,8 @@ impl PlanExecutor {
         audit_trail_manager: Option<Arc<AuditTrailManager>>,
         todo_integration: Arc<dyn TodoInterface>,
         worker_lifecycle_manager: Option<Arc<WorkerLifecycleManager>>,
+        worker_bridge: Option<Arc<WorkerExecutionBridge>>,
+        worktree_manager: Option<Arc<WorktreeManager>>,
         config: ExecutionConfig,
     ) -> Self {
         Self {
@@ -534,6 +555,8 @@ impl PlanExecutor {
             audit_trail_manager,
             todo_integration,
             worker_lifecycle_manager,
+            worker_bridge,
+            worktree_manager,
             parallel_limit: Arc::new(Semaphore::new(config.max_parallel_milestones.max(1))),
             failure_oracle: Arc::new(FailureOracle::new(42)), // Fixed seed for deterministic testing
             config,
@@ -1111,11 +1134,8 @@ impl PlanExecutor {
         }
     }
 
-    /// Execute milestone implementation using real worker system
-    pub async fn execute_milestone_impl(&self, milestone: &agent_agency_contracts::planning_io::Milestone) -> Result<()> {
-        // Create worker context from milestone
-        let worker_context = self.create_worker_context(milestone)?;
-
+    /// Execute milestone implementation using real worker system via WorkerExecutionBridge
+    pub async fn execute_milestone_impl(&self, milestone: &agent_agency_contracts::planning_io::Milestone) -> Result<ExecutionArtifacts> {
         // Find suitable worker for this milestone with chain-of-thought recording
         let worker_id = self.worker_assigner.assign_worker(milestone).await?;
 
@@ -1156,38 +1176,55 @@ impl PlanExecutor {
             ]),
         ).await?;
 
-        // Get worker reference from pool
-        let worker_pool = self.worker_pool.available_workers().await?;
-        let worker = worker_pool.iter()
-            .find(|w| w.id == worker_id)
-            .ok_or_else(|| anyhow!("Assigned worker {} not found in pool", worker_id))?;
+        // Get worktree path for this milestone
+        let worktree_path = if let Some(ref worktree_manager) = self.worktree_manager {
+            // Try to get existing worktree for this worker
+            match worktree_manager.get_worktree_path(worker_id).await {
+                Ok(path) => path,
+                Err(_) => {
+                    // Worktree doesn't exist yet - create one
+                    // Note: This should ideally be created by ParallelCoordinator before calling execute_milestone_impl
+                    // For now, we'll use a fallback path
+                    tracing::warn!("No worktree found for worker {}, using fallback path", worker_id);
+                    std::path::PathBuf::from(".")
+                }
+            }
+        } else {
+            // No worktree manager - use current directory
+            std::path::PathBuf::from(".")
+        };
 
-        // Execute using worker (simplified - would use actual worker trait)
-        let execution_result = self.execute_with_worker(worker, &worker_context).await;
-
-        // Handle worker completion or failure via lifecycle manager
-        if let Some(ref lifecycle_manager) = self.worker_lifecycle_manager {
-            match &execution_result {
-                Ok(_) => {
-                    // Create a minimal artifact for completion tracking
-                    use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
-                    let artifact = ExecutionArtifacts::default(); // Minimal artifact for lifecycle tracking
-                    
-                    if let Err(e) = lifecycle_manager.handle_completion(worker_id, artifact).await {
-                        tracing::warn!("Failed to handle worker completion via lifecycle manager: {}", e);
+        // Execute using WorkerExecutionBridge if available, otherwise fall back to simulation
+        let artifacts = if let Some(ref worker_bridge) = self.worker_bridge {
+            // Real execution via WorkerExecutionBridge
+            tracing::info!("Executing milestone {} via WorkerExecutionBridge with worker {}", milestone.id, worker_id);
+            
+            match worker_bridge.execute_milestone(milestone, &worktree_path, worker_id).await {
+                Ok(artifacts) => {
+                    // Handle worker completion via lifecycle manager
+                    if let Some(ref lifecycle_manager) = self.worker_lifecycle_manager {
+                        if let Err(e) = lifecycle_manager.handle_completion(worker_id, artifacts.clone()).await {
+                            tracing::warn!("Failed to handle worker completion via lifecycle manager: {}", e);
+                        }
                     }
+                    artifacts
                 }
                 Err(e) => {
+                    // Handle worker failure via lifecycle manager
                     if let Some(ref lifecycle_manager) = self.worker_lifecycle_manager {
                         if let Err(lifecycle_err) = lifecycle_manager.handle_failure(worker_id, e.to_string()).await {
                             tracing::warn!("Failed to handle worker failure via lifecycle manager: {}", lifecycle_err);
                         }
                     }
+                    return Err(anyhow!("Worker execution failed: {}", e));
                 }
             }
-        }
+        } else {
+            // Fallback: No bridge available - return error (should not happen in production)
+            return Err(anyhow!("WorkerExecutionBridge not available - cannot execute milestone"));
+        };
 
-        execution_result
+        Ok(artifacts)
     }
 
     /// Create worker context from milestone
