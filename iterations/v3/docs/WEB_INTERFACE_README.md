@@ -2,6 +2,40 @@
 
 🎉 **Welcome to Agent Agency V3!** This guide will get your complete AI orchestration platform running with a beautiful web interface.
 
+## ⚠️ CRITICAL: Observational API Design
+
+**The API is designed for OBSERVATION, not manipulation.**
+
+The API acts as a "doctor's MRI machine" - it observes what's happening inside
+the orchestrator without directly controlling execution. This preserves research
+integrity by ensuring the orchestrator maintains full autonomy over its execution
+lifecycle.
+
+### Design Principles
+
+1. **Observation Only**: All endpoints observe orchestrator state, never manipulate it directly
+2. **Request-Based Control**: Control operations (pause/resume/cancel) are requests that
+   are logged in chain-of-thought, but the orchestrator decides whether to honor them
+3. **Research Integrity**: No direct manipulation of execution state - orchestrator maintains
+   full control over its own execution lifecycle
+4. **Agent Autonomy**: Agents use their own connections to task execution, not through the API
+
+### What This Means
+
+- **Task Submission**: Requests orchestrator to start a task (orchestrator handles execution)
+- **State Observation**: Query task status, chain of thought, council decisions, worker actions
+- **Control Requests**: Request pause/resume/cancel (orchestrator decides if safe)
+- **Never Manipulate**: Never directly change execution state - only observe and request
+
+### Why This Matters
+
+Direct manipulation of orchestrator execution state would compromise research integrity.
+By maintaining strict observation boundaries, we ensure that:
+- Orchestrator decisions are autonomous and reproducible
+- Research results are not contaminated by external manipulation
+- The orchestrator's chain of thought accurately reflects its own reasoning
+- Agents maintain their own execution connections independently
+
 ## 🚀 Quick Start (5 minutes)
 
 ### Prerequisites
