@@ -144,6 +144,36 @@ pub trait WorkspaceFactory: Send + Sync {
     ) -> FileResult<Box<dyn Workspace>>;
 }
 
+/// File metadata information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileMetadata {
+    /// File path
+    pub path: String,
+    /// File size in bytes
+    pub size: u64,
+    /// Whether it's a directory
+    pub is_directory: bool,
+    /// Last modified timestamp
+    pub modified: Option<chrono::DateTime<chrono::Utc>>,
+    /// File permissions (Unix-style, if available)
+    pub permissions: Option<u32>,
+}
+
+/// Directory entry information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DirectoryEntry {
+    /// Entry name
+    pub name: String,
+    /// Full path
+    pub path: String,
+    /// Whether it's a directory
+    pub is_directory: bool,
+    /// File size (0 for directories)
+    pub size: u64,
+    /// Last modified timestamp
+    pub modified: Option<chrono::DateTime<chrono::Utc>>,
+}
+
 /// File operations service interface
 #[async_trait]
 pub trait FileOperationsService: Send + Sync + std::fmt::Debug {
@@ -164,6 +194,34 @@ pub trait FileOperationsService: Send + Sync + std::fmt::Debug {
 
     /// Get workspace status
     async fn get_workspace_status(&self, task_id: &str) -> FileResult<WorkspaceStatus>;
+
+    /// Read file content with security checks
+    async fn read_file(
+        &self,
+        file_path: &Path,
+        max_size: Option<u64>,
+    ) -> FileResult<Vec<u8>>;
+
+    /// Check if a file or directory exists
+    async fn file_exists(&self, file_path: &Path) -> FileResult<bool>;
+
+    /// Get file metadata
+    async fn get_file_metadata(&self, file_path: &Path) -> FileResult<FileMetadata>;
+
+    /// List directory contents
+    async fn list_directory(&self, dir_path: &Path) -> FileResult<Vec<DirectoryEntry>>;
+
+    /// Create a directory (and parent directories if needed)
+    async fn create_directory(&self, dir_path: &Path) -> FileResult<()>;
+
+    /// Delete a file or directory
+    async fn delete_file(&self, file_path: &Path) -> FileResult<()>;
+
+    /// Move/rename a file or directory
+    async fn move_file(&self, from: &Path, to: &Path) -> FileResult<()>;
+
+    /// Copy a file or directory
+    async fn copy_file(&self, from: &Path, to: &Path) -> FileResult<()>;
 }
 
 /// Status of a workspace
