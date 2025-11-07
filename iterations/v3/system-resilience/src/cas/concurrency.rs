@@ -478,7 +478,7 @@ mod tests {
             Some("agent1"),
         ).unwrap();
         assert!(matches!(result1, ConcurrencyResult::Success));
-
+        
         // Simulate another change happening (making the precondition stale)
         manager.file_states.insert("test.txt".to_string(), Digest::from_bytes([3; 32]));
 
@@ -494,7 +494,7 @@ mod tests {
             "session2",
             Some("agent2"),
         ).unwrap();
-
+        
         assert!(matches!(result2, ConcurrencyResult::Conflict(_)));
     }
 

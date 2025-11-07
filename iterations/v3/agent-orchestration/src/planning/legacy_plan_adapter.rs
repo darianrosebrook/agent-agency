@@ -35,7 +35,7 @@ impl LegacyPlanAdapter {
     /// Adapt working spec to legacy plan format
     pub async fn adapt_working_spec(&self, working_spec: WorkingSpec) -> Result<ContractExecutionPlan> {
         // Placeholder implementation
-        // In real implementation, this would:
+        // In a real implementation, this would:
         // 1. Extract task description from working spec
         // 2. Use planning agent to decompose into subtasks
         // 3. Convert back to execution plan format

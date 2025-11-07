@@ -21,6 +21,7 @@
 import { getContextInfo, getFilesToCheck } from "./file-scope-manager.mjs";
 
 import fs from "fs";
+import yaml from "js-yaml";
 import path, { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { checkFunctionalDuplication } from "./check-functional-duplication.mjs";
@@ -91,6 +92,7 @@ class QualityGateRunner {
     this.startTime = Date.now();
     this.gateTimings = {};
     this.debugLog = [];
+    this.activeWaivers = [];
 
     try {
       this.context = this.determineContext();
@@ -128,6 +130,11 @@ class QualityGateRunner {
           `File scoping command: ${this.contextInfo.gitCommand || "unknown"}`
         );
       }
+
+      // Clear caches if we have files to check (indicates changes)
+      if (this.filesToCheck.length > 0) {
+        this.clearCachesOnFileChanges();
+      }
     } catch (error) {
       console.error(
         "Failed to get files for context, using empty set:",
@@ -140,6 +147,23 @@ class QualityGateRunner {
         );
       }
     }
+
+    // Load active waivers
+    try {
+      this.activeWaivers = this.loadActiveWaivers();
+      if (DEBUG_MODE) {
+        this.debugLog.push(`Loaded ${this.activeWaivers.length} active waivers`);
+      }
+    } catch (error) {
+      console.warn("Warning: Could not load waivers:", error.message);
+      this.activeWaivers = [];
+      if (DEBUG_MODE) {
+        this.debugLog.push(`Waiver loading failed: ${error.message}`);
+      }
+    }
+
+    // Set up cleanup handlers for crashes/unexpected termination
+    this.setupCleanupHandlers();
   }
 
   acquireLock() {
@@ -278,6 +302,224 @@ class QualityGateRunner {
         return []; // Empty array as last resort
       }
     }
+  }
+
+  clearCachesOnFileChanges() {
+    try {
+      // Find project root
+      let projectRoot = process.cwd();
+      let attempts = 0;
+      while (attempts < 10) {
+        const cawsDir = path.join(projectRoot, ".caws");
+        const workingSpecPath = path.join(cawsDir, "working-spec.yaml");
+
+        if (fs.existsSync(cawsDir) && fs.existsSync(workingSpecPath)) {
+          break;
+        }
+
+        const parentDir = path.dirname(projectRoot);
+        if (parentDir === projectRoot) {
+          break;
+        }
+        projectRoot = parentDir;
+        attempts++;
+      }
+
+      const cacheFiles = [
+        path.join(projectRoot, ".caws", "duplication-cache.json"),
+        path.join(projectRoot, ".caws", "naming-exceptions.json"),
+        path.join(projectRoot, ".caws", "canonical-map.yaml"),
+      ];
+
+      let clearedCount = 0;
+      for (const cacheFile of cacheFiles) {
+        if (fs.existsSync(cacheFile)) {
+          try {
+            fs.unlinkSync(cacheFile);
+            clearedCount++;
+            if (DEBUG_MODE) {
+              this.debugLog.push(
+                `Cleared cache: ${path.relative(projectRoot, cacheFile)}`
+              );
+            }
+          } catch (error) {
+            console.warn(`Warning: Could not clear cache ${cacheFile}:`, error.message);
+          }
+        }
+      }
+
+      if (clearedCount > 0 && !QUIET_MODE) {
+        console.log(`   Cleared ${clearedCount} cache files`);
+      }
+    } catch (error) {
+      console.warn("Warning: Could not clear caches:", error.message);
+    }
+  }
+
+  setupCleanupHandlers() {
+    const cleanup = () => {
+      try {
+        // Release lock
+        this.releaseLock();
+
+        // Clear caches on crash (since analysis may be incomplete)
+        if (this.filesToCheck && this.filesToCheck.length > 0) {
+          this.clearCachesOnFileChanges();
+        }
+
+        if (DEBUG_MODE) {
+          console.error("Quality gates cleanup completed");
+        }
+      } catch (error) {
+        console.error("Warning: Cleanup failed:", error.message);
+      }
+    };
+
+    // Handle common termination signals
+    process.on("SIGINT", cleanup);
+    process.on("SIGTERM", cleanup);
+    process.on("uncaughtException", (error) => {
+      console.error("Uncaught exception:", error);
+      cleanup();
+      process.exit(1);
+    });
+    process.on("unhandledRejection", (reason, promise) => {
+      console.error("Unhandled rejection at:", promise, "reason:", reason);
+      cleanup();
+      process.exit(1);
+    });
+
+    if (DEBUG_MODE) {
+      this.debugLog.push("Cleanup handlers installed");
+    }
+  }
+
+  /**
+   * Loads active waivers from `.caws/waivers/active-waivers.yaml`.
+   *
+   * Waivers allow temporary bypassing of quality gate violations for
+   * documented reasons (e.g., emergency hotfixes, planned refactoring).
+   *
+   * Waiver validation:
+   * - Must have `id`, `gates`, and `expires_at` fields
+   * - Only non-expired waivers are loaded
+   * - Invalid waivers are skipped with warnings
+   *
+   * @returns {Array} Array of active, non-expired waivers
+   */
+  loadActiveWaivers() {
+    // Find project root (go up until we find .caws directory with working-spec.yaml)
+    let projectRoot = process.cwd();
+    let attempts = 0;
+    while (attempts < 10) {
+      const cawsDir = path.join(projectRoot, ".caws");
+      const workingSpecPath = path.join(cawsDir, "working-spec.yaml");
+
+      // Look for .caws directory with working-spec.yaml (indicates project root)
+      if (fs.existsSync(cawsDir) && fs.existsSync(workingSpecPath)) {
+        break;
+      }
+
+      const parentDir = path.dirname(projectRoot);
+      if (parentDir === projectRoot) {
+        // Hit filesystem root
+        break;
+      }
+      projectRoot = parentDir;
+      attempts++;
+    }
+
+    const activeWaiversPath = path.join(
+      projectRoot,
+      ".caws",
+      "waivers",
+      "active-waivers.yaml"
+    );
+
+    if (DEBUG_MODE) {
+      this.debugLog.push(`Project root detected: ${projectRoot}`);
+      this.debugLog.push(`Checking waivers path: ${activeWaiversPath}`);
+      this.debugLog.push(`Waivers file exists: ${fs.existsSync(activeWaiversPath)}`);
+    }
+
+    // Check if active waivers file exists
+    if (!fs.existsSync(activeWaiversPath)) {
+      if (DEBUG_MODE) {
+        this.debugLog.push("Active waivers file does not exist");
+      }
+      return [];
+    }
+
+    try {
+      const content = fs.readFileSync(activeWaiversPath, "utf8");
+      const activeWaiversConfig = yaml.load(content);
+
+      if (!activeWaiversConfig || !activeWaiversConfig.waivers) {
+        if (DEBUG_MODE) {
+          this.debugLog.push("No waivers found in active-waivers.yaml");
+        }
+        return [];
+      }
+
+      const waivers = [];
+      const now = new Date();
+
+      // Process each waiver in the config
+      for (const [waiverId, waiver] of Object.entries(activeWaiversConfig.waivers)) {
+        try {
+          // Validate waiver structure
+          if (!waiver.id || !waiver.gates || !waiver.expires_at) {
+            console.warn(`Warning: Invalid waiver structure for ${waiverId}`);
+            continue;
+          }
+
+          // Check if waiver is active and not expired
+          if (new Date(waiver.expires_at) > now) {
+            waivers.push(waiver);
+            if (DEBUG_MODE) {
+              this.debugLog.push(
+                `Loaded active waiver: ${waiver.id} for gates: ${Array.isArray(waiver.gates) ? waiver.gates.join(", ") : waiver.gates}`
+              );
+            }
+          } else if (DEBUG_MODE) {
+            this.debugLog.push(`Skipped expired waiver: ${waiver.id}`);
+          }
+        } catch (error) {
+          console.warn(`Warning: Could not process waiver ${waiverId}: ${error.message}`);
+        }
+      }
+
+      return waivers;
+    } catch (error) {
+      console.warn("Warning: Could not load active waivers file:", error.message);
+      return [];
+    }
+  }
+
+  /**
+   * Checks if a violation is covered by an active waiver.
+   *
+   * Waiver matching logic:
+   * - Gate name must match (or waiver applies to '*' for all gates)
+   * - Waiver must not be expired
+   * - Mutates violation object to add waiver metadata if waived
+   *
+   * @param {Object} violation - Violation to check against waivers
+   * @returns {boolean} True if violation is waived, false otherwise
+   */
+  isViolationWaived(violation) {
+    for (const waiver of this.activeWaivers) {
+      // Check if this waiver applies to the gate
+      const waiverGates = Array.isArray(waiver.gates) ? waiver.gates : [waiver.gates];
+      if (waiverGates.includes(violation.gate) || waiverGates.includes("*")) {
+        // Add waiver information to violation for reporting
+        violation.waivedBy = waiver.id;
+        violation.waiverTitle = waiver.title || waiver.description;
+        violation.waiverExpires = waiver.expires_at;
+        return true;
+      }
+    }
+    return false;
   }
 
   async runGateWithTimeout(gateName, gateFunction, timeoutMs = 30000) {
@@ -1251,6 +1493,29 @@ class QualityGateRunner {
       console.log("=".repeat(50));
     }
 
+    // Check waivers for each violation
+    for (const violation of this.violations) {
+      this.isViolationWaived(violation);
+    }
+
+    // Separate waived and blocking violations
+    const waivedViolations = this.violations.filter((v) => v.waivedBy);
+    const blockingViolations = this.violations.filter((v) => !v.waivedBy);
+
+    // Report active waivers
+    if (this.activeWaivers.length > 0 && !QUIET_MODE && !JSON_MODE) {
+      console.log(`\n🔖 ACTIVE WAIVERS (${this.activeWaivers.length}):`);
+      for (const waiver of this.activeWaivers) {
+        const daysLeft = Math.ceil(
+          (new Date(waiver.expires_at) - new Date()) / (1000 * 60 * 60 * 24)
+        );
+        console.log(`   ${waiver.id}: ${waiver.title || waiver.description} (${daysLeft} days left)`);
+        const gates = Array.isArray(waiver.gates) ? waiver.gates : [waiver.gates];
+        console.log(`      Gates: ${gates.join(", ")}`);
+        console.log(`      Reason: ${waiver.reason || waiver.description}`);
+      }
+    }
+
     // Report warnings
     if (this.warnings.length > 0 && !QUIET_MODE && !JSON_MODE) {
       console.log(`\nWARNINGS (${this.warnings.length}):`);
@@ -1259,18 +1524,29 @@ class QualityGateRunner {
       }
     }
 
-    // Report violations
-    if (this.violations.length > 0) {
+    // Report waived violations
+    if (waivedViolations.length > 0 && !QUIET_MODE && !JSON_MODE) {
+      console.log(`\n✅ WAIVED VIOLATIONS (${waivedViolations.length}) - ALLOWED:`);
+      for (const violation of waivedViolations) {
+        console.log(`${violation.gate.toUpperCase()}: ${violation.type.toUpperCase()}`);
+        console.log(`   ${violation.message}`);
+        console.log(`   Waived by: ${violation.waivedBy} (${violation.waiverTitle})`);
+        console.log(`   Expires: ${violation.waiverExpires}`);
+        if (violation.file) {
+          console.log(`   File: ${violation.file}`);
+        }
+        console.log("");
+      }
+    }
+
+    // Report blocking violations
+    if (blockingViolations.length > 0) {
       if (!QUIET_MODE && !JSON_MODE) {
-        console.log(
-          `\nVIOLATIONS (${this.violations.length}) - COMMIT BLOCKED:`
-        );
+        console.log(`\n❌ BLOCKING VIOLATIONS (${blockingViolations.length}) - COMMIT BLOCKED:`);
         console.log("");
 
-        for (const violation of this.violations) {
-          console.log(
-            `${violation.gate.toUpperCase()}: ${violation.type.toUpperCase()}`
-          );
+        for (const violation of blockingViolations) {
+          console.log(`${violation.gate.toUpperCase()}: ${violation.type.toUpperCase()}`);
           console.log(`   ${violation.message}`);
           if (violation.file) {
             console.log(`   File: ${violation.file}`);
@@ -1291,8 +1567,15 @@ class QualityGateRunner {
       }
     } else {
       if (!QUIET_MODE && !JSON_MODE) {
-        console.log("\nALL QUALITY GATES PASSED");
+        const statusMsg =
+          waivedViolations.length > 0
+            ? `QUALITY GATES PASSED (${waivedViolations.length} violations waived)`
+            : "ALL QUALITY GATES PASSED";
+        console.log(`\n✅ ${statusMsg}`);
         console.log("Commit allowed - quality maintained!");
+
+        // Clear temporary caches on successful exit
+        this.clearTemporaryCaches();
       }
     }
 
@@ -1308,6 +1591,16 @@ class QualityGateRunner {
         files_scoped: this.filesToCheck.length,
         warnings: this.warnings,
         violations: this.violations,
+        waivers: {
+          active: this.activeWaivers.length,
+          applied: waivedViolations.length,
+          details: this.activeWaivers.map((w) => ({
+            id: w.id,
+            title: w.title || w.description,
+            gates: Array.isArray(w.gates) ? w.gates : [w.gates],
+            expires_at: w.expires_at,
+          })),
+        },
         performance: {
           total_execution_time_ms: Date.now() - this.startTime,
           gate_timings: this.gateTimings,
@@ -1370,7 +1663,42 @@ class QualityGateRunner {
       }
     } catch {}
 
-    process.exit(this.violations.length ? 1 : 0);
+    // Only block commit if there are non-waived violations
+    const nonWaivedViolations = this.violations.filter((v) => !v.waivedBy);
+    process.exit(nonWaivedViolations.length ? 1 : 0);
+  }
+
+  clearTemporaryCaches() {
+    try {
+      // Clear temporary analysis caches that are safe to regenerate
+      const tempCacheFiles = [
+        path.join(__dirname, "docs-status", "quality-gates-report.json"),
+        // Add other temporary cache files here
+      ];
+
+      let clearedCount = 0;
+      for (const cacheFile of tempCacheFiles) {
+        if (fs.existsSync(cacheFile)) {
+          try {
+            fs.unlinkSync(cacheFile);
+            clearedCount++;
+            if (DEBUG_MODE) {
+              this.debugLog.push(
+                `Cleared temporary cache: ${path.relative(process.cwd(), cacheFile)}`
+              );
+            }
+          } catch (error) {
+            // Don't warn for temporary cache cleanup failures
+          }
+        }
+      }
+
+      if (clearedCount > 0 && DEBUG_MODE) {
+        console.log(`   Cleared ${clearedCount} temporary cache files`);
+      }
+    } catch (error) {
+      // Don't warn for temporary cache cleanup failures
+    }
   }
 }
 

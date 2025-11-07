@@ -30,6 +30,7 @@ use crate::planning::{
     worker_assignment::WorkerAssignmentStrategy,
     scope_guard::ScopeGuard,
     council_monitor::CouncilMonitor,
+    worker_lifecycle_manager::WorkerLifecycleManager,
 };
 use crate::audit_trail::AuditTrailManager;
 use agent_agency_contracts::planning::{QualityMetrics, CoverageMetrics, TestQualityMetrics, CodeQualityMetrics, DocumentationQualityMetrics};
@@ -111,6 +112,9 @@ pub struct PlanExecutor {
 
     /// TODO integration for quality gate enforcement
     todo_integration: Arc<dyn TodoInterface>,
+
+    /// Worker lifecycle manager for tracking worker assignments and completions
+    worker_lifecycle_manager: Option<Arc<WorkerLifecycleManager>>,
 
     /// Parallel execution limit semaphore
     parallel_limit: Arc<Semaphore>,
@@ -412,6 +416,37 @@ impl PlanExecutor {
         todo_integration: Arc<dyn TodoInterface>,
         config: ExecutionConfig,
     ) -> Self {
+        Self::with_lifecycle_manager(
+            plan,
+            worker_pool,
+            evidence_collector,
+            worker_assigner,
+            scope_guard,
+            council_monitor,
+            parallel_coordinator,
+            audit_trail,
+            audit_trail_manager,
+            todo_integration,
+            None, // worker_lifecycle_manager - optional
+            config,
+        )
+    }
+
+    /// Create new plan executor with lifecycle manager
+    pub fn with_lifecycle_manager(
+        plan: ExecutionPlan,
+        worker_pool: Arc<dyn WorkerPool>,
+        evidence_collector: Arc<EvidenceCollector>,
+        worker_assigner: Arc<WorkerAssignmentStrategy>,
+        scope_guard: Arc<ScopeGuard>,
+        council_monitor: Arc<CouncilMonitor>,
+        parallel_coordinator: std::sync::Weak<ParallelCoordinator>,
+        audit_trail: Arc<dyn AuditTrail>,
+        audit_trail_manager: Option<Arc<AuditTrailManager>>,
+        todo_integration: Arc<dyn TodoInterface>,
+        worker_lifecycle_manager: Option<Arc<WorkerLifecycleManager>>,
+        config: ExecutionConfig,
+    ) -> Self {
         Self::with_determinism(
             plan,
             worker_pool,
@@ -423,6 +458,7 @@ impl PlanExecutor {
             audit_trail,
             audit_trail_manager,
             todo_integration,
+            worker_lifecycle_manager,
             config,
             #[cfg(feature = "evaluation")]
             Arc::new(crate::evaluation::determinism::SystemClock),
@@ -446,6 +482,7 @@ impl PlanExecutor {
         audit_trail: Arc<dyn AuditTrail>,
         audit_trail_manager: Option<Arc<AuditTrailManager>>,
         todo_integration: Arc<dyn TodoInterface>,
+        worker_lifecycle_manager: Option<Arc<WorkerLifecycleManager>>,
         config: ExecutionConfig,
         clock: Arc<dyn crate::evaluation::determinism::Clock>,
         rng_source: Arc<crate::evaluation::determinism::ThreadSafeRngSource>,
@@ -461,6 +498,7 @@ impl PlanExecutor {
             audit_trail,
             audit_trail_manager,
             todo_integration,
+            worker_lifecycle_manager,
             parallel_limit: Arc::new(Semaphore::new(config.max_parallel_milestones.max(1))),
             failure_oracle: Arc::new(FailureOracle::new(42)), // Fixed seed for deterministic testing
             clock,
@@ -481,6 +519,7 @@ impl PlanExecutor {
         audit_trail: Arc<dyn AuditTrail>,
         audit_trail_manager: Option<Arc<AuditTrailManager>>,
         todo_integration: Arc<dyn TodoInterface>,
+        worker_lifecycle_manager: Option<Arc<WorkerLifecycleManager>>,
         config: ExecutionConfig,
     ) -> Self {
         Self {
@@ -494,6 +533,7 @@ impl PlanExecutor {
             audit_trail,
             audit_trail_manager,
             todo_integration,
+            worker_lifecycle_manager,
             parallel_limit: Arc::new(Semaphore::new(config.max_parallel_milestones.max(1))),
             failure_oracle: Arc::new(FailureOracle::new(42)), // Fixed seed for deterministic testing
             config,
@@ -1079,6 +1119,14 @@ impl PlanExecutor {
         // Find suitable worker for this milestone with chain-of-thought recording
         let worker_id = self.worker_assigner.assign_worker(milestone).await?;
 
+        // Handle worker assignment via lifecycle manager
+        if let Some(ref lifecycle_manager) = self.worker_lifecycle_manager {
+            if let Err(e) = lifecycle_manager.handle_assignment(worker_id, milestone).await {
+                tracing::warn!("Failed to handle worker assignment via lifecycle manager: {}", e);
+                // Continue execution even if lifecycle tracking fails
+            }
+        }
+
         // Record worker assignment decision for individual milestone execution
         self.record_decision_point(
             crate::chain_of_thought::DecisionType::WorkerAssignment,
@@ -1115,7 +1163,31 @@ impl PlanExecutor {
             .ok_or_else(|| anyhow!("Assigned worker {} not found in pool", worker_id))?;
 
         // Execute using worker (simplified - would use actual worker trait)
-        self.execute_with_worker(worker, &worker_context).await
+        let execution_result = self.execute_with_worker(worker, &worker_context).await;
+
+        // Handle worker completion or failure via lifecycle manager
+        if let Some(ref lifecycle_manager) = self.worker_lifecycle_manager {
+            match &execution_result {
+                Ok(_) => {
+                    // Create a minimal artifact for completion tracking
+                    use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
+                    let artifact = ExecutionArtifacts::default(); // Minimal artifact for lifecycle tracking
+                    
+                    if let Err(e) = lifecycle_manager.handle_completion(worker_id, artifact).await {
+                        tracing::warn!("Failed to handle worker completion via lifecycle manager: {}", e);
+                    }
+                }
+                Err(e) => {
+                    if let Some(ref lifecycle_manager) = self.worker_lifecycle_manager {
+                        if let Err(lifecycle_err) = lifecycle_manager.handle_failure(worker_id, e.to_string()).await {
+                            tracing::warn!("Failed to handle worker failure via lifecycle manager: {}", lifecycle_err);
+                        }
+                    }
+                }
+            }
+        }
+
+        execution_result
     }
 
     /// Create worker context from milestone
@@ -1312,6 +1384,7 @@ impl PlanExecutor {
             audit_trail_manager: self.audit_trail_manager.clone(),
             parallel_limit: self.parallel_limit.clone(),
             failure_oracle: self.failure_oracle.clone(),
+            worker_lifecycle_manager: self.worker_lifecycle_manager.clone(),
             #[cfg(feature = "evaluation")]
             clock: self.clock.clone(),
             #[cfg(feature = "evaluation")]

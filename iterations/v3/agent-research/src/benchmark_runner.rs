@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize) ]
 pub struct ExecutionTelemetry {
     execution_id: Uuid,
+    #[serde(skip, default = "std::time::Instant::now")]
     start_time: std::time::Instant,
     model_name: String,
     task_type: String,
@@ -124,6 +125,12 @@ impl ExecutionTelemetry {
     fn estimate_tokens_processed(&self, output: &str) -> u64 {
         // Rough estimation: ~4 characters per token
         (output.len() / 4).max(1) as u64
+    }
+}
+
+impl Default for ExecutionTelemetry {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

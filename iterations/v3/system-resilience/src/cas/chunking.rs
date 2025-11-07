@@ -458,14 +458,14 @@ mod tests {
         let repeated_base = base_content.repeat(100); // Repeat many times to make it large
         let content1 = [repeated_base.as_slice(), b" First version of the document."].concat();
         let content2 = [repeated_base.as_slice(), b" Second version of the document."].concat();
-
+        
         let chunk_list1 = chunker.chunk_content(&content1).unwrap();
         let chunk_list2 = chunker.chunk_content(&content2).unwrap();
-
+        
         // Should have some shared chunks from the common base content
         let chunks1: std::collections::HashSet<Digest> = chunk_list1.chunks.iter().map(|c| c.digest).collect();
         let chunks2: std::collections::HashSet<Digest> = chunk_list2.chunks.iter().map(|c| c.digest).collect();
-
+        
         let intersection: std::collections::HashSet<_> = chunks1.intersection(&chunks2).collect();
         assert!(!intersection.is_empty(), "Expected shared chunks between similar content, but found none");
     }

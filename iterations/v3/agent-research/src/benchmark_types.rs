@@ -14,7 +14,7 @@ pub struct ModelSpecification {
     pub parameters: ModelParameters,
     pub capabilities: Vec<Capability>,
     pub constraints: Vec<ModelConstraint>,
-    pub performance_metrics: Option<crate::scoring_system::PerformanceMetrics>,
+    pub performance_metrics: Option<crate::scoring_system::ModelBenchmarkingMetrics>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize) ]

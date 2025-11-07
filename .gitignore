@@ -292,3 +292,5 @@ test-image*.png
  whisper.cpp/
 tmp/
  venv venv-py39
+
+*/**/true/**

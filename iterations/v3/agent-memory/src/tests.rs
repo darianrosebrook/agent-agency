@@ -7,13 +7,16 @@ mod tests {
     use super::*;
     use crate::memory_types::*;
     use crate::memory_manager::MemoryManager;
+    #[cfg(feature = "context-offloading")]
     use crate::context_offloading::ContextOffloadingService;
+    #[cfg(feature = "provenance-tracking")]
     use crate::provenance::{ProvenanceTracker, ProvenanceRecord, ProvenanceOperation, ProvenanceContext};
     use std::collections::HashMap;
     use chrono::Utc;
     use uuid::Uuid;
 
     // Mock MemoryService for testing context offloading
+    #[derive(Debug)]
     struct MockMemoryService {
         records: std::sync::Arc<tokio::sync::RwLock<HashMap<String, system_common_interfaces::memory::MemoryRecord>>>,
     }
@@ -28,27 +31,30 @@ mod tests {
 
     #[async_trait::async_trait]
     impl system_common_interfaces::memory::MemoryService for MockMemoryService {
-        async fn create(&self, record: system_common_interfaces::memory::MemoryRecord) -> Result<system_common_interfaces::memory::MemoryRecord, Box<dyn std::error::Error + Send + Sync>> {
+        async fn create(&self, record: system_common_interfaces::memory::MemoryRecord) -> std::result::Result<system_common_interfaces::memory::MemoryRecord, system_common_interfaces::memory::MemoryError> {
             let id = record.id.0.clone();
             let mut records = self.records.write().await;
             records.insert(id.clone(), record.clone());
             Ok(record)
         }
 
-        async fn get(&self, id: &system_common_interfaces::memory::MemoryId) -> Result<Option<system_common_interfaces::memory::MemoryRecord>, Box<dyn std::error::Error + Send + Sync>> {
+        async fn update(&self, record: system_common_interfaces::memory::MemoryRecord) -> std::result::Result<system_common_interfaces::memory::MemoryRecord, system_common_interfaces::memory::MemoryError> {
+            let id = record.id.0.clone();
+            let mut records = self.records.write().await;
+            records.insert(id.clone(), record.clone());
+            Ok(record)
+        }
+
+        async fn get(&self, id: &system_common_interfaces::memory::MemoryId) -> std::result::Result<Option<system_common_interfaces::memory::MemoryRecord>, system_common_interfaces::memory::MemoryError> {
             let records = self.records.read().await;
             Ok(records.get(&id.0).cloned())
         }
 
-        async fn touch(&self, _id: &system_common_interfaces::memory::MemoryId, _timestamp: chrono::DateTime<Utc>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-            Ok(())
-        }
-
-        async fn query(&self, _query: system_common_interfaces::memory::MemoryQuery) -> Result<Vec<system_common_interfaces::memory::MemoryRecord>, Box<dyn std::error::Error + Send + Sync>> {
+        async fn search(&self, _query: system_common_interfaces::memory::MemoryQuery) -> std::result::Result<Vec<system_common_interfaces::memory::ScoredMemory>, system_common_interfaces::memory::MemoryError> {
             Ok(vec![])
         }
 
-        async fn delete(&self, _id: &system_common_interfaces::memory::MemoryId) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        async fn touch(&self, _id: &system_common_interfaces::memory::MemoryId, _timestamp: chrono::DateTime<Utc>) -> std::result::Result<(), system_common_interfaces::memory::MemoryError> {
             Ok(())
         }
     }
@@ -73,6 +79,7 @@ mod tests {
             id: Uuid::new_v4(),
             agent_id: "test-agent".to_string(),
             task_id: "test-task".to_string(),
+            content: "Test experience content".to_string(),
             context: ExperienceContext {
                 description: "Test experience".to_string(),
                 domain: vec!["testing".to_string()],
@@ -107,7 +114,9 @@ mod tests {
             agent_id: "test-agent".to_string(),
             task_type: "unit_test".to_string(),
             description: "Test task context".to_string(),
-            metadata: HashMap::new(),
+            keywords: vec![],
+            entities: vec![],
+            timestamp: Utc::now(),
         }
     }
 
@@ -161,6 +170,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(feature = "context-offloading")]
     async fn test_context_offloading() {
         // Test: ContextOffloadingService can offload and retrieve context
         let mock_service = std::sync::Arc::new(MockMemoryService::new());
@@ -187,6 +197,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(feature = "context-offloading")]
     async fn test_context_offloading_not_found() {
         // Test: ContextOffloadingService handles missing context gracefully
         let mock_service = std::sync::Arc::new(MockMemoryService::new());
@@ -197,12 +208,13 @@ mod tests {
         
         assert!(result.is_err());
         match result.unwrap_err() {
-            MemoryError::NotFound(_) => {}, // Expected
+            crate::MemoryError::NotFound(_) => {}, // Expected
             _ => panic!("Expected NotFound error"),
         }
     }
 
     #[tokio::test]
+    #[cfg(feature = "provenance-tracking")]
     async fn test_provenance_tracking() {
         // Test: ProvenanceTracker can record and retrieve provenance
         let tracker = ProvenanceTracker::new();
@@ -235,6 +247,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(feature = "provenance-tracking")]
     async fn test_provenance_record_structure() {
         // Test: ProvenanceRecord can be created and serialized
         let memory_id = Uuid::new_v4();
@@ -266,6 +279,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(feature = "provenance-tracking")]
     async fn test_provenance_operations() {
         // Test: All provenance operation types are valid
         let operations = vec![
@@ -309,6 +323,7 @@ mod tests {
                 id: Uuid::new_v4(),
                 agent_id: "test-agent".to_string(),
                 task_id: "test-task".to_string(),
+                content: "Test content".to_string(),
                 context: ExperienceContext {
                     description: "Test".to_string(),
                     domain: vec![],
@@ -335,16 +350,6 @@ mod tests {
             let serialized = serde_json::to_string(&experience).unwrap();
             let deserialized: AgentExperience = serde_json::from_str(&serialized).unwrap();
             assert_eq!(experience.memory_type, deserialized.memory_type);
-        }
-    }
-}
-
-impl Default for ProvenanceContext {
-    fn default() -> Self {
-        Self {
-            task_id: None,
-            decision_reasoning: None,
-            confidence_score: None,
         }
     }
 }

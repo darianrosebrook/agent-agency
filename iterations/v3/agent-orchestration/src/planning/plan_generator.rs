@@ -655,7 +655,7 @@ mod tests {
     #[test]
     fn test_plan_generation_context() {
         let context = PlanGenerationContext {
-            working_spec: Box::new(MockWorkingSpecProvider),
+            working_spec_provider: Box::new(MockWorkingSpecProvider),
             task_descriptor: Box::new(MockTaskDescriptorProvider),
             resource_inventory: ResourceInventory {
                 available_cpu_cores: 4,
@@ -684,6 +684,27 @@ mod tests {
                 },
             },
             historical_data: None,
+            planning_constraints: PlanningConstraints {
+                max_planning_time_ms: 30000,
+                max_complexity: 10,
+                risk_tolerance: RiskTolerance::Balanced,
+                cost_limits: None,
+                quality_requirements: QualityRequirements {
+                    min_coverage: 0.8,
+                    min_mutation_score: 0.5,
+                    security_scan_required: true,
+                    manual_review_required: false,
+                    council_approval_required: true,
+                },
+                parallel_preferences: ParallelPreferences {
+                    max_parallelism: 3,
+                    prefer_parallel: true,
+                    allow_resource_contention: false,
+                    load_balancing: LoadBalancingStrategy::Even,
+                },
+            },
+            execution_mode: agent_agency_contracts::types::planning::ExecutionMode::Auto,
+            planning_strategy: crate::planning::plan_types::PlanGenerationStrategy::AIAssisted,
         };
 
         assert_eq!(context.resource_inventory.available_cpu_cores, 4);
@@ -719,35 +740,99 @@ mod tests {
     struct MockWorkingSpecProvider;
     struct MockTaskDescriptorProvider;
 
-    // Temporarily disabled due to API changes
-    // #[async_trait]
-    // impl WorkingSpecProvider for MockWorkingSpecProvider {
-    //     async fn get_working_spec(&self) -> Result<WorkingSpec, anyhow::Error> {
-    //         Ok(WorkingSpec {
-    //             id: "test-spec".to_string(),
-    //             title: "Test Spec".to_string(),
-    //             risk_tier: 2,
-    //             acceptance: vec![],
-    //             scope: Default::default(),
-    //             constraints: Default::default(),
-    //             context: Default::default(),
-    //             metadata: Default::default(),
-    //         })
-    //     }
-    // }
+    #[async_trait::async_trait]
+    impl crate::planning::plan_types::WorkingSpecProvider for MockWorkingSpecProvider {
+        async fn get_working_spec(&self) -> Result<agent_agency_contracts::WorkingSpec, anyhow::Error> {
+            use agent_agency_contracts::{WorkingSpec, WorkingSpecConstraints, TestPlan, RollbackPlan, WorkingSpecContext, task_request::Environment};
+            use chrono::Utc;
+            
+            Ok(WorkingSpec {
+                version: "1.0".to_string(),
+                id: "test-spec".to_string(),
+                title: "Test Spec".to_string(),
+                description: "Test description".to_string(),
+                goals: vec![],
+                risk_tier: 2,
+                constraints: WorkingSpecConstraints {
+                    max_duration_minutes: None,
+                    max_iterations: None,
+                    budget_limits: None,
+                    scope_restrictions: None,
+                },
+                acceptance_criteria: vec![],
+                test_plan: TestPlan {
+                    unit_tests: vec![],
+                    integration_tests: vec![],
+                    e2e_scenarios: vec![],
+                    coverage_targets: None,
+                },
+                rollback_plan: RollbackPlan::default(),
+                context: WorkingSpecContext {
+                    workspace_root: "/tmp".to_string(),
+                    git_branch: "main".to_string(),
+                    recent_changes: vec![],
+                    dependencies: std::collections::HashMap::new(),
+                    environment: Environment::Development,
+                },
+                non_functional_requirements: None,
+                validation_results: None,
+                quality_gates: None,
+                scope: vec![],
+                metadata: None,
+                milestones: vec![],
+                change_budget: agent_agency_contracts::planning_io::ChangeBudget {
+                    max_files: 10,
+                    max_loc: 100,
+                    max_migrations: 0,
+                    allow_breaking_changes: false,
+                    allow_new_dependencies: false,
+                    enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+                },
+                file_changes: vec![],
+                coverage_targets: None,
+                overview: "Test overview".to_string(),
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            })
+        }
+    }
 
-    // #[async_trait]
-    // impl TaskDescriptorProvider for MockTaskDescriptorProvider {
-    //     async fn get_task_descriptor(&self) -> Result<TaskDescriptor, anyhow::Error> {
-    //         Ok(TaskDescriptor {
-    //             task_id: "test-task".to_string(),
-    //             description: "Test task".to_string(),
-    //             priority: Default::default(),
-    //             dependencies: vec![],
-    //             metadata: HashMap::new(),
-    //         })
-    //     }
-    // }
+    #[async_trait::async_trait]
+    impl crate::planning::plan_types::TaskDescriptorProvider for MockTaskDescriptorProvider {
+        async fn get_task_descriptor(&self) -> Result<agent_agency_contracts::types::planning::TaskDescriptor, anyhow::Error> {
+            use agent_agency_contracts::types::planning::TaskDescriptor;
+            use agent_agency_contracts::types::planning::{TaskPriority, ExecutionMode};
+            use agent_agency_contracts::planning_io::ChangeBudget;
+            use agent_agency_contracts::task_request::ScopeRestrictions;
+            
+            Ok(TaskDescriptor {
+                task_id: uuid::Uuid::new_v4(),
+                description: "Test task".to_string(),
+                change_budget: ChangeBudget {
+                    max_files: 10,
+                    max_loc: 100,
+                    max_migrations: 0,
+                    allow_breaking_changes: false,
+                    allow_new_dependencies: false,
+                    enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+                },
+                priority: TaskPriority::Normal,
+                execution_mode: ExecutionMode::Auto,
+                risk_tier: Some(agent_agency_contracts::types::planning::RiskTier::Tier2),
+                blast_radius: agent_agency_contracts::types::planning::BlastRadius {
+                    modules: vec![],
+                    data_migration: false,
+                    external_deps: vec![],
+                },
+                scope_in: ScopeRestrictions {
+                    allowed_paths: vec![],
+                    blocked_paths: vec![],
+                },
+                scope_out: None,
+                acceptance: None,
+            })
+        }
+    }
 
     // Import missing types
     use agent_agency_contracts::{WorkingSpec, TaskDescriptor};

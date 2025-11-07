@@ -1,10 +1,9 @@
 use crate::decomposition::DecompositionStage;
 use crate::disambiguation::DisambiguationStage;
-// use crate::MultiModalVerificationEngine; // Temporarily disabled
 use crate::qualification::QualificationStage;
 use crate::extraction_types::VerifiedClaim;
 use crate::extraction_types::*;
-// VerificationStage is not defined in verification module - removing this import
+use crate::verification::MultiModalVerificationEngine;
 use anyhow::Result;
 use serde::{Serialize, Deserialize};
 use schemars::JsonSchema;
@@ -18,8 +17,7 @@ pub struct ClaimExtractionProcessor {
     disambiguation_stage: DisambiguationStage,
     qualification_stage: QualificationStage,
     decomposition_stage: DecompositionStage,
-    // verification_stage: MultiModalVerificationEngine, // Temporarily disabled
-    // multi_modal_verifier: MultiModalVerificationEngine, // Temporarily disabled
+    verification_engine: MultiModalVerificationEngine,
 }
 
 impl ClaimExtractionProcessor {
@@ -29,8 +27,7 @@ impl ClaimExtractionProcessor {
             disambiguation_stage: DisambiguationStage::minimal(),
             qualification_stage: QualificationStage::new(),
             decomposition_stage: DecompositionStage::new(),
-            // verification_stage: MultiModalVerificationEngine::new(), // Temporarily disabled
-            // multi_modal_verifier: MultiModalVerificationEngine::new(), // Temporarily disabled
+            verification_engine: MultiModalVerificationEngine::new(),
         }
     }
 
@@ -69,78 +66,65 @@ impl ClaimExtractionProcessor {
             .await
             .map_err(|e| ClaimExtractionError::DecompositionFailed(e.to_string()))?;
 
-        // TODO: Re-enable verification stage when verification module is available
-        // - [ ] Integrate verification module from agent-research
-        // - [ ] Run verification on atomic claims
-        // - [ ] Collect verification evidence
-        // - [ ] Calculate verification confidence scores
-        // - [ ] Add unit tests with mock verification module
-        // - [ ] Add integration tests with real verification
-        // Stage 4: Verification (Temporarily disabled - awaiting verification module)
-        debug!("Stage 4: Verification - Skipped (temporarily disabled)");
-        let _verification_result: Vec<Evidence> = Vec::new(); // Placeholder empty result
-
-        // TODO: Re-enable multi-modal verification when multi-modal verifier is available
-        // - [ ] Integrate multi-modal verification module
-        // - [ ] Run verification on claims with multiple modalities
-        // - [ ] Collect multi-modal evidence
-        // - [ ] Combine verification results from different modalities
-        // - [ ] Add unit tests with mock multi-modal verifier
-        // - [ ] Add integration tests with real multi-modal verification
-        // Stage 5: Multi-Modal Verification (Temporarily disabled - awaiting multi-modal verifier)
-        debug!("Stage 5: Multi-Modal Verification - Skipped (temporarily disabled)");
+        // Stage 4: Verification - Multi-modal verification of atomic claims
+        debug!("Stage 4: Verification - Running multi-modal verification");
         let atomic_claims = decomposition_result.atomic_claims.clone();
-        // Placeholder: create basic verified claims without actual verification
-        let verified_claims = crate::extraction_types::VerificationResult {
-            verified_claims: atomic_claims.into_iter().map(|claim| {
-                crate::extraction_types::VerifiedClaim {
-                    id: claim.id,
-                    claim_text: claim.claim_text.clone(),
-                    verification_status: crate::extraction_types::VerificationStatus::Unverified,
-                    confidence: 0.5,
-                    evidence: Vec::new(),
-                    timestamp: chrono::Utc::now(),
-                    original_claim: claim.claim_text,
-                    verification_results: crate::extraction_types::VerificationStatus::Unverified,
-                    overall_confidence: 0.5,
-                    verification_timestamp: chrono::Utc::now(),
-                }
-            }).collect(),
-            evidence: Vec::new(),
-            verification_confidence: 0.5,
-            council_verification: crate::extraction_types::CouncilVerificationResult {
-                submitted_claims: vec![],
-                // TODO: Get actual council verdict from verification
-                // - [ ] Submit claims to council for verification
-                // - [ ] Retrieve council verdict and reasoning
-                // - [ ] Include council evidence in verification result
-                // - [ ] Add unit tests with mock council
-                // - [ ] Add integration tests with real council verification
-                council_verdict: "placeholder".to_string(),
-                additional_evidence: vec![],
+        let verification_results = self
+            .verification_engine
+            .verify_claims(&atomic_claims)
+            .await
+            .map_err(|e| ClaimExtractionError::VerificationFailed(e.to_string()))?;
+
+        info!(
+            "Verification completed: {}/{} claims verified successfully",
+            verification_results.successful_verifications,
+            verification_results.total_processed
+        );
+
+        // Convert VerificationResults to VerificationResult format
+        let verified_claims = VerificationResult {
+            verified_claims: verification_results.verified_claims.clone(),
+            evidence: verification_results.verified_claims.iter()
+                .flat_map(|vc| vc.evidence.clone())
+                .collect(),
+            verification_confidence: if verification_results.total_processed > 0 {
+                verification_results.successful_verifications as f64 
+                    / verification_results.total_processed as f64
+            } else {
+                0.0
+            },
+            council_verification: CouncilVerificationResult {
+                submitted_claims: atomic_claims.iter()
+                    .map(|c| c.id)
+                    .collect(),
+                council_verdict: format!(
+                    "Verified {}/{} claims with multi-modal analysis",
+                    verification_results.successful_verifications,
+                    verification_results.total_processed
+                ),
+                additional_evidence: verification_results.verified_claims.iter()
+                    .flat_map(|vc| vc.evidence.clone())
+                    .collect(),
                 verification_timestamp: chrono::Utc::now(),
             },
-            overall_confidence: 0.5,
+            overall_confidence: if verification_results.total_processed > 0 {
+                verification_results.verified_claims.iter()
+                    .map(|vc| vc.overall_confidence)
+                    .sum::<f64>() / verification_results.total_processed as f64
+            } else {
+                0.0
+            },
         };
 
         let processing_time = start_time.elapsed().as_millis() as u64;
         info!("Claim extraction completed in {}ms", processing_time);
 
-        // Combine evidence from both verification stages
-        let mut all_evidence = Vec::new();
+        // Combine evidence from verification stage
+        let mut all_evidence = verified_claims.evidence.clone();
 
-        // Add evidence from multi-modal verification
+        // Add evidence from verified claims
         for verified_claim in &verified_claims.verified_claims {
-            // Convert verification results to evidence
-            if let Some(math_evidence) = self.create_mathematical_evidence(verified_claim) {
-                all_evidence.push(math_evidence);
-            }
-            if let Some(code_evidence) = self.create_code_behavior_evidence(verified_claim) {
-                all_evidence.push(code_evidence);
-            }
-            if let Some(semantic_evidence) = self.create_semantic_evidence(verified_claim) {
-                all_evidence.push(semantic_evidence);
-            }
+            all_evidence.extend(verified_claim.evidence.clone());
         }
 
         let claims_count = decomposition_result.atomic_claims.len();
@@ -169,81 +153,4 @@ impl ClaimExtractionProcessor {
         })
     }
 
-    /// Create mathematical evidence from verification results
-    fn create_mathematical_evidence(&self, verified_claim: &VerifiedClaim) -> Option<Evidence> {
-        match &verified_claim.verification_results {
-            VerificationStatus::Verified => {
-                Some(Evidence {
-                    id: uuid::Uuid::new_v4(),
-                    claim_id: uuid::Uuid::new_v4(), // Generate a new ID since original_claim is a String
-                    evidence_type: EvidenceType::CodeAnalysis, // Mathematical analysis
-                    content: format!(
-                        "Mathematical verification: claim validated with confidence {:.2}",
-                        verified_claim.overall_confidence
-                    ),
-                    source: EvidenceSource::CodeAnalysis {
-                        location: "MultiModalVerificationEngine".to_string(),
-                        authority: "MathematicalValidator".to_string(),
-                        freshness: chrono::Utc::now(),
-                    },
-                    confidence: verified_claim.overall_confidence,
-                    relevance: 0.9, // High relevance for mathematical verification
-                    timestamp: chrono::Utc::now(),
-                })
-            }
-            _ => None,
-        }
-    }
-
-    /// Create code behavior evidence from verification results
-    fn create_code_behavior_evidence(&self, verified_claim: &VerifiedClaim) -> Option<Evidence> {
-        match &verified_claim.verification_results {
-            VerificationStatus::Verified => {
-                Some(Evidence {
-                    id: uuid::Uuid::new_v4(),
-                    claim_id: uuid::Uuid::new_v4(), // Generate a new ID since original_claim is a String
-                    evidence_type: EvidenceType::CodeAnalysis,
-                    content: format!(
-                        "Code behavior analysis: claim validated with confidence {:.2}",
-                        verified_claim.overall_confidence
-                    ),
-                    source: EvidenceSource::CodeAnalysis {
-                        location: "MultiModalVerificationEngine".to_string(),
-                        authority: "CodeBehaviorAnalyzer".to_string(),
-                        freshness: verified_claim.verification_timestamp,
-                    },
-                    confidence: verified_claim.overall_confidence,
-                    relevance: 0.8, // High relevance for code behavior analysis
-                    timestamp: verified_claim.verification_timestamp,
-                })
-            }
-            _ => None,
-        }
-    }
-
-    /// Create semantic evidence from verification results
-    fn create_semantic_evidence(&self, verified_claim: &VerifiedClaim) -> Option<Evidence> {
-        match &verified_claim.verification_results {
-            VerificationStatus::Verified => {
-                Some(Evidence {
-                    id: uuid::Uuid::new_v4(),
-                    claim_id: uuid::Uuid::new_v4(), // Generate claim ID
-                    evidence_type: EvidenceType::CodeAnalysis, // Semantic analysis
-                    content: format!(
-                        "Semantic analysis: claim validated with confidence {:.2}",
-                        verified_claim.overall_confidence
-                    ),
-                    source: EvidenceSource::CodeAnalysis {
-                        location: "multi_modal_verification".to_string(),
-                        authority: "Multi-Modal Verifier".to_string(),
-                        freshness: chrono::Utc::now(),
-                    },
-                    confidence: verified_claim.overall_confidence,
-                    relevance: 0.85, // High relevance for semantic analysis
-                    timestamp: chrono::Utc::now(),
-                })
-            }
-            _ => None,
-        }
-    }
 }

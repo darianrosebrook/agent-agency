@@ -20,6 +20,9 @@ use crate::planning::{
 };
 
 use agent_agency_contracts::*;
+use agent_agency_contracts::planning_io as planning_io;
+use agent_agency_contracts::types;
+use agent_agency_contracts::task_request;
 use crate::planning::plan_types::{ExecutionPlan, PlanGenerationContext};
 
 /// Planning storage with dual persistence strategy
@@ -675,23 +678,145 @@ mod tests {
     }
 
     fn create_test_execution_plan() -> ExecutionPlan {
-        use crate::planning::plan_types::{OrchestrationMetadata, ResourceInventory};
+        use crate::planning::plan_types::{OrchestrationMetadata, ResourceInventory, ExecutionContext as PlanExecutionContext};
 
         ExecutionPlan {
             contract_plan: agent_agency_contracts::planning_io::ExecutionPlan {
                 id: Uuid::new_v4(),
                 session_id: Uuid::new_v4(),
                 working_spec_id: "test-spec".to_string(),
+                contract_plan: WorkingSpec {
+                    version: "1.0".to_string(),
+                    id: "test-spec".to_string(),
+                    title: "Test Spec".to_string(),
+                    description: "Test description".to_string(),
+                    goals: vec![],
+                    risk_tier: 2,
+                    constraints: WorkingSpecConstraints {
+                        max_duration_minutes: None,
+                        max_iterations: None,
+                        budget_limits: None,
+                        scope_restrictions: None,
+                    },
+                    acceptance_criteria: vec![],
+                    test_plan: TestPlan {
+                        unit_tests: vec![],
+                        integration_tests: vec![],
+                        e2e_scenarios: vec![],
+                        coverage_targets: None,
+                    },
+                    rollback_plan: RollbackPlan {
+                        strategy: RollbackStrategy::GitRevert,
+                        automated_steps: vec![],
+                        manual_steps: vec![],
+                        data_impact: DataImpact::None,
+                        downtime_required: None,
+                        rollback_window_minutes: None,
+                    },
+                    context: WorkingSpecContext {
+                        workspace_root: "/tmp".to_string(),
+                        git_branch: "main".to_string(),
+                        recent_changes: vec![],
+                        dependencies: HashMap::new(),
+                        environment: task_request::Environment::Development,
+                    },
+                    non_functional_requirements: None,
+                    validation_results: None,
+                    quality_gates: None,
+                    scope: vec![],
+                    metadata: None,
+                    milestones: vec![],
+                    change_budget: planning_io::ChangeBudget {
+                        max_files: 10,
+                        max_loc: 100,
+                        max_migrations: 0,
+                        allow_breaking_changes: false,
+                        allow_new_dependencies: false,
+                        enforcement_mode: planning_io::BudgetEnforcement::Strict,
+                    },
+                    file_changes: vec![],
+                    coverage_targets: None,
+                    overview: "Test overview".to_string(),
+                    created_at: Utc::now(),
+                    updated_at: Utc::now(),
+                },
                 title: "Test Plan".to_string(),
                 overview: "Test overview".to_string(),
                 state: agent_agency_contracts::planning_io::PlanState::Draft,
                 milestones: vec![],
-                dependency_graph: Default::default(),
-                change_budget: Default::default(),
-                quality_gates: Default::default(),
+                dependency_graph: planning_io::DependencyGraph {
+                    nodes: HashMap::new(),
+                    edges: vec![],
+                    critical_path: vec![],
+                    parallel_groups: vec![],
+                    has_cycles: false,
+                    cycles: vec![],
+                },
+                change_budget: planning_io::ChangeBudget {
+                    max_files: 10,
+                    max_loc: 100,
+                    max_migrations: 0,
+                    allow_breaking_changes: false,
+                    allow_new_dependencies: false,
+                    enforcement_mode: planning_io::BudgetEnforcement::Strict,
+                },
+                quality_gates: planning_io::QualityGates {
+                    coverage_requirements: HashMap::new(),
+                    mutation_requirements: planning_io::MutationRequirements {
+                        required: false,
+                        min_score: 0.0,
+                        operators: vec![],
+                    },
+                    security_requirements: planning_io::SecurityRequirements {
+                        scan_required: false,
+                        max_issues_by_severity: HashMap::new(),
+                        required_controls: vec![],
+                    },
+                    performance_requirements: planning_io::PerformanceRequirements {
+                        max_regressions: 0,
+                        required_benchmarks: vec![],
+                        slas: vec![],
+                    },
+                    documentation_requirements: planning_io::DocumentationRequirements {
+                        api_docs_required: false,
+                        code_docs_required: false,
+                        architecture_docs_required: false,
+                        required_formats: vec![],
+                        required_types: vec![],
+                        min_coverage: 0.0,
+                        quality_checks: vec![],
+                    },
+                    requires_manual_review: false,
+                    requires_council_approval: false,
+                    min_coverage: None,
+                    min_mutation_score_percent: None,
+                },
                 evidence_requirements: vec![],
                 active_waivers: vec![],
-                metadata: Default::default(),
+                metadata: planning_io::PlanMetadata {
+                    created_at: Utc::now(),
+                    updated_at: Utc::now(),
+                    approved_at: None,
+                    completed_at: None,
+                    created_by: planning_io::PlanCreator::AI {
+                        model: "test-model".to_string(),
+                        version: "1.0".to_string(),
+                    },
+                    version: "1.0".to_string(),
+                    source: "test".to_string(),
+                    confidence_score: Some(0.5),
+                    generation_time_ms: Some(100),
+                    model_used: Some("test-model".to_string()),
+                    fallback_used: false,
+                    strategy: types::planning::PlanningStrategy::AIAssisted,
+                    confidence: 0.5,
+                    estimated_duration_ms: 0,
+                    estimated_cost_cents: 0,
+                    adaptive: false,
+                    engine_version: "1.0".to_string(),
+                    additional_metadata: HashMap::new(),
+                },
+                execution_context: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
                 approved_at: None,
@@ -705,7 +830,7 @@ mod tests {
                 planning_engine: "test-engine".to_string(),
                 planning_version: "1.0.0".to_string(),
             },
-            execution_context: ExecutionContext {
+            execution_context: PlanExecutionContext {
                 session_start: Utc::now(),
                 working_directory: "/tmp".to_string(),
                 environment: std::collections::HashMap::new(),

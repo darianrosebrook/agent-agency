@@ -15,6 +15,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
+#[cfg(feature = "research")]
+use agent_research::performance_tracker::PerformanceTracker;
+
 /// Worker assignment strategy with real implementation
 pub struct WorkerAssignmentStrategy {
     /// Database operations for worker access
@@ -34,6 +37,10 @@ pub struct WorkerAssignmentStrategy {
 
     /// Audit trail manager for chain-of-thought recording
     audit_trail_manager: Option<std::sync::Arc<crate::audit_trail::AuditTrailManager>>,
+
+    /// Performance tracker for benchmark results (optional)
+    #[cfg(feature = "research")]
+    performance_tracker: Option<std::sync::Arc<PerformanceTracker>>,
 
     /// Clock for deterministic time (feature-gated)
     #[cfg(feature = "evaluation")]
@@ -226,15 +233,30 @@ impl Default for AssignmentConfig {
 impl WorkerAssignmentStrategy {
     /// Create new worker assignment strategy with real implementation
     pub fn new(db_ops: std::sync::Arc<dyn DatabaseOperations>) -> Self {
-        Self::with_config(db_ops, AssignmentConfig::default())
+        Self::with_config_and_audit(db_ops, AssignmentConfig::default(), None)
     }
 
-    /// Create with custom configuration
-    pub fn with_config(
+    /// Create with performance tracker for benchmark-driven assignment
+    #[cfg(feature = "research")]
+    pub fn with_performance_tracker(
         db_ops: std::sync::Arc<dyn DatabaseOperations>,
         config: AssignmentConfig,
+        performance_tracker: std::sync::Arc<PerformanceTracker>,
     ) -> Self {
-        Self::with_config_and_audit(db_ops, config, None)
+        let load_balancing_config = config.load_balancing.clone();
+        Self {
+            db_ops,
+            assignment_storage: None,
+            config,
+            performance_cache: std::sync::Arc::new(tokio::sync::RwLock::new(HashMap::new())),
+            load_balancer: LoadBalancingStrategy::new(load_balancing_config),
+            audit_trail_manager: None,
+            performance_tracker: Some(performance_tracker),
+            #[cfg(feature = "evaluation")]
+            clock: None,
+            #[cfg(feature = "evaluation")]
+            rng_source: None,
+        }
     }
 
     /// Create with custom configuration and audit trail manager
@@ -271,6 +293,8 @@ impl WorkerAssignmentStrategy {
             performance_cache: std::sync::Arc::new(tokio::sync::RwLock::new(HashMap::new())),
             load_balancer: LoadBalancingStrategy::new(load_balancing_config),
             audit_trail_manager,
+            #[cfg(feature = "research")]
+            performance_tracker: None,
             clock,
             rng_source,
         }
@@ -290,6 +314,8 @@ impl WorkerAssignmentStrategy {
             performance_cache: std::sync::Arc::new(tokio::sync::RwLock::new(HashMap::new())),
             load_balancer: LoadBalancingStrategy::new(load_balancing_config),
             audit_trail_manager,
+            #[cfg(feature = "research")]
+            performance_tracker: None,
         }
     }
 
@@ -339,6 +365,8 @@ impl WorkerAssignmentStrategy {
             performance_cache: std::sync::Arc::new(tokio::sync::RwLock::new(HashMap::new())),
             load_balancer: LoadBalancingStrategy::new(load_balancing_config),
             audit_trail_manager,
+            #[cfg(feature = "research")]
+            performance_tracker: None,
             clock,
             rng_source,
         }
@@ -359,6 +387,8 @@ impl WorkerAssignmentStrategy {
             performance_cache: std::sync::Arc::new(tokio::sync::RwLock::new(HashMap::new())),
             load_balancer: LoadBalancingStrategy::new(load_balancing_config),
             audit_trail_manager,
+            #[cfg(feature = "research")]
+            performance_tracker: None,
         }
     }
 
@@ -974,13 +1004,41 @@ impl WorkerAssignmentStrategy {
         Ok(load_factor)
     }
 
-    /// Get worker performance score from cache
+    /// Get worker performance score from cache and benchmark results
     async fn get_performance_score(&self, worker_id: Uuid) -> f64 {
         let cache = self.performance_cache.read().await;
-        cache
+        let base_score = cache
             .get(&worker_id)
             .map(|p| p.performance_score)
-            .unwrap_or(0.8) // Default performance score
+            .unwrap_or(0.8); // Default performance score
+
+        // Enhance with benchmark results if available
+        #[cfg(feature = "research")]
+        {
+            if let Some(ref tracker) = self.performance_tracker {
+                // Get historical benchmark results for this worker's model
+                // Note: In a full implementation, we'd map worker_id to model_id
+                // For now, we'll use a simplified approach
+                match tracker.get_historical_performance(worker_id).await {
+                    Ok(historical_results) => {
+                        if !historical_results.is_empty() {
+                            // Calculate average benchmark score
+                            let avg_benchmark_score = historical_results.iter()
+                                .map(|r| r.score)
+                                .sum::<f64>() / historical_results.len() as f64;
+                            
+                            // Blend base score with benchmark score (70% base, 30% benchmark)
+                            return (base_score * 0.7) + (avg_benchmark_score * 0.3);
+                        }
+                    }
+                    Err(_) => {
+                        // Benchmark data unavailable, use base score
+                    }
+                }
+            }
+        }
+
+        base_score
     }
 
     /// Record assignment in database
@@ -1389,13 +1447,15 @@ mod tests {
             scope: agent_agency_contracts::planning_io::MilestoneScope {
                 files: vec![],
                 directories: vec![],
+                included_paths: vec![],
+                excluded_paths: vec![],
                 will_modify: false,
                 allowed_operations: vec!["read".to_string(), "write".to_string()],
                 parallelism: Some(1),
                 resource_requirements: std::collections::HashMap::new(),
             },
-            interfaces: serde_json::Value::Array(vec![]),
-            tests: serde_json::Value::Array(vec![]),
+            interfaces: vec![],
+            tests: vec![],
             evidence_gate: agent_agency_contracts::planning_io::EvidenceGate {
                 min_coverage: 0.0,
                 min_branch_coverage: 0.0,
@@ -1405,8 +1465,10 @@ mod tests {
                 required_artifacts: vec![],
                 custom_validations: vec![],
             },
+            quality_gates: vec![],
+            dependencies: vec![],
+            estimated_duration: None,
             rollback_plan: "No rollback".to_string(),
-            dependencies: serde_json::Value::Array(vec![]),
             state: agent_agency_contracts::planning_io::MilestoneState::Pending,
             assigned_workers: vec![],
             estimated_effort: 1.0,
@@ -1427,6 +1489,7 @@ mod tests {
             capabilities: serde_json::json!(["read", "write", "execute"]),
             performance_history: serde_json::json!({}),
             is_active: true,
+            metadata: std::collections::HashMap::new(),
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
         };

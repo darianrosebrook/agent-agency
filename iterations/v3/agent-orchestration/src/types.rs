@@ -42,10 +42,10 @@ struct MemoryInformedDecision {
 
 // TaskExecutionResult is now in agent_agency_contracts::task_executor::TaskExecutionResult
 // Use agent_agency_contracts::task_executor::TaskExecutionResult instead
-// WorkingSpec, ExecutionArtifacts, and QualityReport should be stored/retrieved separately
-
 // ExecutionArtifacts is now imported from agent_agency_contracts
 // Use agent_agency_contracts::ExecutionArtifacts
+// WorkingSpec and AcceptanceCriterion are now in agent_agency_contracts
+// Use agent_agency_contracts::WorkingSpec and agent_agency_contracts::AcceptanceCriterion
 
 /// Execution status for tasks
 #[derive(Debug, Clone, PartialEq, JsonSchema, Serialize, Deserialize)]
@@ -181,56 +181,9 @@ pub enum TaskType {
     Maintenance,
 }
 
-/// Working specification for tasks
-/// 
-/// # Deprecation Notice
-/// This local type is being phased out in favor of `agent_agency_contracts::WorkingSpec`.
-/// Use the type adapters in `crate::planning::type_adapters` for conversion during migration.
-/// 
-/// # Migration
-/// ```rust
-/// // Old (deprecated):
-/// use crate::types::WorkingSpec;
-/// 
-/// // New (preferred):
-/// use agent_agency_contracts::WorkingSpec;
-/// // or
-/// use agent_agency_contracts::working_spec::WorkingSpec;
-/// ```
-#[derive(Debug, Clone)]
-#[deprecated(note = "Use agent_agency_contracts::WorkingSpec instead. See type_adapters for migration.")]
-pub struct WorkingSpec {
-    /// Specification ID
-    pub id: String,
-    /// Specification title
-    pub title: String,
-    /// Risk tier (1-3)
-    pub risk_tier: u8,
-    /// Mode (feature, refactor, fix, etc.)
-    pub mode: String,
-    /// Change budget (uses contracts ChangeBudget)
-    pub change_budget: ContractsChangeBudget,
-    /// Blast radius
-    pub blast_radius: BlastRadius,
-    /// Scope definition
-    pub scope: TaskScope,
-    /// Acceptance criteria
-    pub acceptance_criteria: Vec<AcceptanceCriterion>,
-}
-
-/// Acceptance criterion for tasks
-
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct AcceptanceCriterion {
-    /// Criterion ID
-    pub id: String,
-    /// Given condition
-    pub given: String,
-    /// When condition
-    pub when: String,
-    /// Then expected outcome
-    pub then: String,
-}
+// WorkingSpec and AcceptanceCriterion have been removed.
+// Use agent_agency_contracts::WorkingSpec and agent_agency_contracts::AcceptanceCriterion instead.
+// Type adapters in crate::planning::type_adapters can be used for migration if needed.
 
 /// Diff statistics for change tracking
 
@@ -304,12 +257,4 @@ pub struct MultimodalProcessingResult {
     pub error: Option<String>,
 }
 
-/// Working specification scope
-
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct WorkingSpecScope {
-    /// Files and directories included in scope
-    pub in_scope: Vec<String>,
-    /// Files and directories excluded from scope
-    pub out_scope: Vec<String>,
-}
+// WorkingSpecScope removed - use agent_agency_contracts::types::planning::TaskScope instead

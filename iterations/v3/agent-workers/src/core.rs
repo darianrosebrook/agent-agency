@@ -455,7 +455,7 @@ impl MCPWorkerPool {
 /// Error types for worker operations
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, thiserror::Error)]
-enum WorkerError {
+pub enum WorkerError {
     #[error("No suitable worker available for task")]
     NoSuitableWorker,
 

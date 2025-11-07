@@ -1,308 +1,219 @@
 <!-- 0a97ccac-5af9-4b10-8213-d92b6cca5d77 1c91f573-18fd-4e55-a409-90b8a30157cd -->
-# Orchestration Realignment Plan
+# Orchestration Cleanup & Completion Plan
 
-## Current State Assessment
+## Current Status Summary
 
-### Fragmentation Issues Identified
+### ✅ Completed Components
 
-1. **Multiple Execution Paths** (5+ orchestrators):
+- UnifiedOrchestrator (skeleton with TODOs)
+- CouncilIntegration trait (fully implemented)
+- WorktreeManager (structure complete, git commands simulated)
+- WorkerLifecycleManager (complete)
+- CawsAdjudicationCycle (5 stages defined, 2 incomplete)
+- CawsDebateScorer (complete but not integrated)
+- RefinementLoopCoordinator (complete but not integrated)
+- WorkerExecutionBridge (complete)
 
-   - `PlanExecutor` - Plan-based execution (KEEP as core)
-   - `AutonomousExecutor` - Autonomous task execution (EXTRACT refinement loop, then DEPRECATE)
-   - `ParallelCoordinator` - Parallel milestone execution (KEEP as coordinator layer)
-   - `AuditedOrchestrator` - Legacy orchestrator (CULL)
-   - `MultimodalOrchestrator` - Multimodal processing (ASSESS if needed)
-   - `OrchestratorPlanningIntegration` - Planning integration (KEEP but refactor)
+### ❌ Missing Integrations
 
-2. **Scattered Council Integration** (3+ integration points):
+1. CawsDebateScorer not integrated into CawsAdjudicationCycle deliberation stage
+2. RefinementLoopCoordinator not integrated into UnifiedOrchestrator
+3. ParallelCoordinator not used in UnifiedOrchestrator (sequential execution only)
+4. WorkerAssignmentStrategy not used in UnifiedOrchestrator
+5. PlanExecutor doesn't use WorkerLifecycleManager
+6. ParallelCoordinator doesn't use WorktreeManager
 
-   - `planning/council_review.rs` - Plan review (KEEP)
-   - `planning/council_monitor.rs` - Execution monitoring (KEEP)
-   - `autonomous_executor.rs` - Refinement loop council calls (EXTRACT to unified trait)
-   - `council.rs` - Main council (KEEP)
+### ⚠️ Incomplete Implementations
 
-3. **Worker Management Fragmentation**:
+1. WorktreeManager: Git commands are TODOs (lines 124, 183, 217, 253)
+2. CawsAdjudicationCycle: Deliberation stage missing debate integration (line 178)
+3. CawsAdjudicationCycle: Publication stage missing merge logic (line 222)
+4. UnifiedOrchestrator: Merge logic is TODO (line 285)
+5. UnifiedOrchestrator: ParallelCoordinator integration TODO (line 311)
+6. UnifiedOrchestrator: WorkerAssignmentStrategy integration TODO (line 358)
 
-   - `planning/worker_assignment.rs` - Assignment strategy (KEEP)
-   - `planning/plan_executor.rs` - Worker execution (KEEP)
-   - `planning/parallel_coordinator.rs` - Parallel coordination (KEEP)
-   - Missing: Worker lifecycle manager (BUILD)
+### 🔧 Type Consolidation Needed
 
-4. **CAWS Integration Partial**:
+1. `src/types.rs`: Still contains deprecated `WorkingSpec`, `AcceptanceCriterion` (marked deprecated but still present)
+2. `src/council_types.rs`: Duplicate `ChangeBudget` definition
+3. Need to audit imports to ensure contracts types are used everywhere
 
-   - `planning/caws_integration.rs` - Working spec validation (KEEP)
-   - `planning/waiver_integration.rs` - Waiver system (KEEP)
-   - Missing: Full CAWS Adjudication Cycle implementation (BUILD)
+### 🐛 Compilation Issues
 
-### Missing Critical Components
+- 64 errors in deprecated modules (expected, but should be fixed or removed)
+- Mostly in `audited_orchestrator.rs` (missing DatabaseClient, TaskDescriptor.id field)
 
-1. **Git Worktree Management**: Completely missing (required for parallel isolation)
-2. **Unified Orchestrator**: No single entry point coordinating all components
-3. **Worker Completion → Council Flow**: No explicit presentation step
-4. **CAWS Adjudication Cycle**: Partial implementation, missing Pleading/Publication stages
-5. **Claim Extraction Integration**: Exists in `agent-research` but not integrated with orchestration
-6. **Refinement Loop Coordinator**: Exists in autonomous_executor but not reusable
-7. **MCP Integration**: MCP server exists but not integrated with UnifiedOrchestrator
-8. **Model Performance Benchmarking**: Exists in `agent-research` but not used for worker routing
-9. **Reflexive Learning**: Basic progress tracker exists but lacks turn-level RL capabilities
+## Cleanup Tasks
 
-## Refactoring Strategy
+### Phase 1: Complete Core Integrations
 
-### Phase 1: Consolidate Execution Paths
+#### Task 1.1: Integrate CawsDebateScorer into CawsAdjudicationCycle
 
-**Goal**: Single unified execution flow through `UnifiedOrchestrator`
+**File**: `src/planning/caws_adjudication_cycle.rs`
 
-**Actions**:
+- Add `CawsDebateScorer` as dependency to `CawsAdjudicationCycle`
+- Implement `stage_deliberation` to use `CawsDebateScorer.score_debate()` when multiple artifacts present
+- Update constructor to accept `CawsDebateScorer`
 
-1. Create `src/orchestration/unified_orchestrator.rs`:
+#### Task 1.2: Integrate RefinementLoopCoordinator into UnifiedOrchestrator
 
-   - Coordinates: PlanGenerator → Council → PlanExecutor → ParallelCoordinator
-   - Manages: Worktree lifecycle → Worker execution → Council presentation → Refinement → Merge
-   - Single entry point: `execute_plan(working_spec: WorkingSpec) -> Result<ExecutionResult>`
+**File**: `src/orchestration/unified_orchestrator.rs`
 
-2. Extract refinement loop from `autonomous_executor.rs`:
+- Complete refinement loop integration (line 276)
+- Create trait implementations for `OrchestrationExecutor`, `ArtifactValidator`, `CouncilReviewer`, `SpecRefiner`, `ProgressTracker`
+- Wire up refinement loop when `needs_refinement` is true
 
-   - Create `src/planning/refinement_loop.rs`
-   - Extract lines 1282-1532 from autonomous_executor.rs
-   - Make it reusable by PlanExecutor and UnifiedOrchestrator
+#### Task 1.3: Integrate ParallelCoordinator into UnifiedOrchestrator
 
-3. Deprecate redundant orchestrators:
+**File**: `src/orchestration/unified_orchestrator.rs`
 
-   - Mark `AuditedOrchestrator` as deprecated (replace with UnifiedOrchestrator)
-   - Assess `MultimodalOrchestrator` - if needed, integrate into UnifiedOrchestrator
-   - Keep `AutonomousExecutor` temporarily for backward compatibility, mark deprecated
+- Replace sequential execution (line 311) with `ParallelCoordinator.execute_parallel()`
+- Group milestones by dependencies
+- Handle parallel execution results
 
-**Files to Modify**:
+#### Task 1.4: Integrate WorkerAssignmentStrategy into UnifiedOrchestrator
 
-- `src/lib.rs` - Export UnifiedOrchestrator as primary entry point
-- `src/autonomous_executor.rs` - Extract refinement loop, mark deprecated
-- `src/audited_orchestrator.rs` - Mark deprecated
-- `src/planning/plan_executor.rs` - Add worker completion callback hook
+**File**: `src/orchestration/unified_orchestrator.rs`
 
-### Phase 2: Unify Council Integration
+- Add `WorkerAssignmentStrategy` as dependency
+- Replace placeholder worker assignment (line 358) with strategy-based assignment
+- Use strategy to select appropriate worker for each milestone
 
-**Goal**: Single `CouncilIntegration` trait for all council interactions
+### Phase 2: Complete WorktreeManager Git Integration
 
-**Actions**:
+#### Task 2.1: Implement Git Worktree Commands
 
-1. Create `src/council/integration.rs`:
-   ```rust
-   pub trait CouncilIntegration {
-       async fn review_plan(&self, plan: &ExecutionPlan) -> Result<CouncilReviewResult>;
-       async fn review_completed_work(&self, artifacts: &ExecutionArtifacts) -> Result<CouncilReviewResult>;
-       async fn monitor_execution(&self, context: &ExecutionContext) -> Result<CouncilOversight>;
-   }
-   ```
+**File**: `src/planning/worktree_manager.rs`
 
-2. Implement trait for existing council integrations:
+- Implement `create_worktree`: Execute `git worktree add <path> <branch>` (line 124)
+- Implement `merge_worktree`: Execute `git merge` with conflict detection (line 183)
+- Implement `resolve_conflicts`: Execute conflict resolution strategies (line 217)
+- Implement `cleanup_worktree`: Execute `git worktree remove` (line 253)
+- Use `git2` crate or `std::process::Command` for git operations
+- Add error handling for git command failures
 
-   - `planning/council_review.rs` - Implement `review_plan`
-   - `planning/council_monitor.rs` - Implement `monitor_execution`
-   - Create `planning/council_presentation.rs` - Implement `review_completed_work`
+#### Task 2.2: Integrate WorktreeManager into ParallelCoordinator
 
-3. Update all council call sites to use unified trait
+**File**: `src/planning/parallel_coordinator.rs`
 
-**Files to Create**:
+- Add `WorktreeManager` as dependency
+- Create worktree before milestone execution
+- Pass worktree path to execution context
+- Cleanup worktree on completion or failure
 
-- `src/council/integration.rs` - Unified CouncilIntegration trait
-- `src/planning/council_presentation.rs` - Work presentation to council
+### Phase 3: Complete CAWS Adjudication Cycle
 
-**Files to Modify**:
+#### Task 3.1: Implement Publication Stage Merge Logic
 
-- `src/planning/council_review.rs` - Implement CouncilIntegration trait
-- `src/planning/council_monitor.rs` - Implement CouncilIntegration trait
-- `src/autonomous_executor.rs` - Use CouncilIntegration trait instead of direct calls
+**File**: `src/planning/caws_adjudication_cycle.rs`
 
-### Phase 3: Implement Git Worktree Management
+- Implement `stage_publication` merge logic (line 222)
+- Integrate with `WorktreeManager.merge_worktree()`
+- Handle merge conflicts and present to council if needed
+- Commit verdict to git with CAWS-VERDICT-ID trailer
 
-**Goal**: Complete worktree isolation per worker
+#### Task 3.2: Complete UnifiedOrchestrator Merge Logic
 
-**Actions**:
+**File**: `src/orchestration/unified_orchestrator.rs`
 
-1. Create `src/planning/worktree_manager.rs`:
-   ```rust
-   pub struct WorktreeManager {
-       base_repo: PathBuf,
-       worktrees: HashMap<Uuid, WorktreeHandle>,
-   }
-   
-   impl WorktreeManager {
-       async fn create_worktree(&self, worker_id: Uuid, branch: &str) -> Result<WorktreeHandle>;
-       async fn cleanup_worktree(&self, worker_id: Uuid) -> Result<()>;
-       async fn merge_worktree(&self, worker_id: Uuid, target_branch: &str) -> Result<MergeResult>;
-   }
-   ```
+- Implement merge logic (line 285)
+- Merge all worktrees back to main branch
+- Handle conflicts and rollback on failure
+- Update progress tracking
 
-2. Integrate with ParallelCoordinator:
+### Phase 4: Integrate WorkerLifecycleManager into PlanExecutor
 
-   - Create worktree before worker assignment
-   - Pass worktree path to worker execution context
-   - Cleanup on completion or failure
+#### Task 4.1: Add WorkerLifecycleManager to PlanExecutor
 
-3. Add merge conflict resolution:
+**File**: `src/planning/plan_executor.rs`
 
-   - Detect conflicts during merge
-   - Present conflicts to council for resolution
-   - Implement automatic conflict resolution strategies
+- Add `WorkerLifecycleManager` as optional dependency
+- Call `handle_assignment` when milestone starts
+- Call `handle_completion` when milestone completes
+- Call `handle_failure` on milestone failure
 
-**Files to Create**:
+### Phase 5: Type Consolidation
 
-- `src/planning/worktree_manager.rs` - Complete worktree lifecycle management
+#### Task 5.1: Audit and Remove Duplicate Types
 
-**Files to Modify**:
+**Files**: `src/types.rs`, `src/council_types.rs`
 
-- `src/planning/parallel_coordinator.rs` - Integrate worktree creation/cleanup
-- `src/planning/plan_executor.rs` - Pass worktree context to workers
+- Review all usages of deprecated `WorkingSpec` in `types.rs`
+- Replace with `agent_agency_contracts::WorkingSpec`
+- Remove duplicate `ChangeBudget` from `council_types.rs` (use contracts version)
+- Update all imports to use contracts types
+- Remove type adapters if no longer needed
 
-### Phase 4: Complete CAWS Adjudication Cycle
+#### Task 5.2: Update All Imports
 
-**Goal**: Full implementation of Pleading → Examination → Deliberation → Verdict → Publication
+- Search for imports of `crate::types::WorkingSpec`
+- Replace with `agent_agency_contracts::WorkingSpec`
+- Search for imports of `crate::council_types::ChangeBudget`
+- Replace with `agent_agency_contracts::planning_io::ChangeBudget`
 
-**Actions**:
+### Phase 6: Fix Deprecated Module Compilation Errors
 
-1. Create `src/caws/adjudication_cycle.rs`:
+#### Task 6.1: Fix audited_orchestrator.rs Compilation Errors
 
-   - Implement all 5 stages as explicit functions
-   - Map each stage to enforcement mechanisms (Rust validators, local plugins, git integration)
-   - Track CAWS-VERDICT-ID through git trailers
+**File**: `src/audited_orchestrator.rs`
 
-2. Integrate with UnifiedOrchestrator:
+- Fix `DatabaseClient` not found errors (lines 847, 865)
+- Option A: Remove database-dependent code paths
+- Option B: Add placeholder type for deprecated module
+- Fix `TaskDescriptor.id` field access (line 84)
+- Use correct field name from contracts type
+- Comment out or stub problematic code paths since module is deprecated
 
-   - Worker completion triggers Pleading stage
-   - Examination checks CAWS budgets and structural diffs
-   - Deliberation runs verifier tests and collects gate metrics
-   - Verdict issues PASS/FAIL/WAIVER_REQUIRED
-   - Publication commits verdict + provenance to git
+#### Task 6.2: Ensure Deprecated Modules Compile
 
-3. Implement CAWS Debate scoring:
+- Fix compilation errors in `autonomous_executor.rs` if any
+- Fix compilation errors in `multimodal_orchestrator.rs` if any
+- Add `#[allow(dead_code)]` where appropriate for deprecated code
 
-   - Extract scoring logic from theory.md (S = 0.4E + 0.3B + 0.2G + 0.1P)
-   - Apply when multiple workers propose competing solutions
-   - Log superseded submissions
+### Phase 7: Integration Test Updates
 
-**Files to Create**:
+#### Task 7.1: Update Integration Tests
 
-- `src/caws/adjudication_cycle.rs` - Complete CAWS Adjudication Cycle
-- `src/caws/debate_scorer.rs` - CAWS Debate scoring logic
+**File**: `tests/integration_unified_orchestrator.rs`
 
-**Files to Modify**:
-
-- `src/orchestration/unified_orchestrator.rs` - Integrate adjudication cycle
-- `src/council.rs` - Add CAWS clause citation to judge prompts
-
-### Phase 5: Worker Lifecycle Management
-
-**Goal**: Unified worker lifecycle: assignment → execution → completion → presentation
-
-**Actions**:
-
-1. Create `src/planning/worker_lifecycle.rs`:
-   ```rust
-   pub struct WorkerLifecycleManager {
-       assignment_strategy: Arc<WorkerAssignmentStrategy>,
-       worktree_manager: Arc<WorktreeManager>,
-       council_integration: Arc<dyn CouncilIntegration>,
-   }
-   
-   impl WorkerLifecycleManager {
-       async fn assign_worker(&self, milestone: &Milestone) -> Result<WorkerAssignment>;
-       async fn execute_milestone(&self, assignment: &WorkerAssignment) -> Result<ExecutionArtifacts>;
-       async fn on_completion(&self, artifacts: ExecutionArtifacts) -> Result<CouncilReviewResult>;
-   }
-   ```
-
-2. Integrate with PlanExecutor:
-
-   - Replace scattered worker management with lifecycle manager
-   - Add completion callback: `on_milestone_completion(artifacts) -> Result<()>`
-
-**Files to Create**:
-
-- `src/planning/worker_lifecycle.rs` - Unified worker lifecycle management
-
-**Files to Modify**:
-
-- `src/planning/plan_executor.rs` - Use WorkerLifecycleManager
-- `src/planning/parallel_coordinator.rs` - Delegate to WorkerLifecycleManager
-
-### Phase 6: Cleanup & Deprecation
-
-**Goal**: Remove deprecated code and consolidate remaining fragments
-
-**Actions**:
-
-1. Mark deprecated modules:
-
-   - `src/audited_orchestrator.rs` - Add `#[deprecated]` attribute
-   - `src/autonomous_executor.rs` - Mark as deprecated, keep for migration period
-   - `src/multimodal_orchestrator.rs` - Assess if still needed, otherwise deprecate
-
-2. Consolidate duplicate types:
-
-   - Review `src/types.rs` vs `agent_agency_contracts` types
-   - Remove duplicates, use contracts as source of truth
-   - Update all imports to use contracts types
-
-3. Remove unused code:
-
-   - Search for unused functions/modules
-   - Remove commented-out code blocks
-   - Clean up TODO comments that reference removed features
-
-**Files to Modify**:
-
-- `src/lib.rs` - Update exports, mark deprecated modules
-- `src/types.rs` - Remove duplicates, use contracts
-- All files importing deprecated types - Update to contracts
+- Update test setup to use real `WorkerAssignmentStrategy`
+- Update test setup to use real `CawsDebateScorer`
+- Add tests for parallel execution
+- Add tests for refinement loop
+- Add tests for worktree merge
 
 ## Implementation Order
 
-1. **Week 1: Foundation** (Phases 1-2)
-
-   - Create AgentOrchestrator skeleton
-   - Extract refinement loop
-   - Create CouncilIntegration trait
-   - Create CouncilPresentation component
-
-2. **Week 2: Core Integration** (Phases 3-4)
-
-   - Implement WorktreeManager
-   - Complete CAWS Adjudication Cycle
-   - Integrate with UnifiedOrchestrator
-
-3. **Week 3: Lifecycle & Cleanup** (Phases 5-6)
-
-   - Create WorkerLifecycleManager
-   - Deprecate old orchestrators
-   - Consolidate types and remove duplicates
+1. **Phase 1** (Core Integrations) - Highest priority, enables full workflow
+2. **Phase 2** (Worktree Git Integration) - Required for parallel isolation
+3. **Phase 3** (CAWS Completion) - Completes adjudication cycle
+4. **Phase 4** (PlanExecutor Integration) - Completes worker lifecycle
+5. **Phase 5** (Type Consolidation) - Cleanup and consistency
+6. **Phase 6** (Deprecated Module Fixes) - Ensure codebase compiles
+7. **Phase 7** (Test Updates) - Verify everything works
 
 ## Success Criteria
 
-- Single entry point: `AgentOrchestrator::execute_plan()` handles full workflow
-- Complete CAWS Adjudication Cycle: All 5 stages implemented and tested
-- Git worktree isolation: Each worker operates in isolated worktree
-- Unified council integration: All council interactions go through CouncilIntegration trait
-- No duplicate execution paths: Deprecated orchestrators removed or clearly marked
-- Full end-to-end flow: Plan → Council → Workers → Council → Refine → Merge
+- ✅ All TODOs in UnifiedOrchestrator resolved
+- ✅ All TODOs in WorktreeManager resolved (real git commands)
+- ✅ All TODOs in CawsAdjudicationCycle resolved
+- ✅ CawsDebateScorer integrated into deliberation stage
+- ✅ RefinementLoopCoordinator integrated into UnifiedOrchestrator
+- ✅ ParallelCoordinator used for parallel execution
+- ✅ WorkerAssignmentStrategy used for worker selection
+- ✅ PlanExecutor uses WorkerLifecycleManager
+- ✅ ParallelCoordinator uses WorktreeManager
+- ✅ No duplicate types (all use contracts)
+- ✅ All deprecated modules compile (even if stubbed)
+- ✅ Integration tests pass with real components
 
 ## Risk Mitigation
 
-- Keep deprecated modules temporarily for backward compatibility with a clear re
-- Add feature flags for new unified flow vs legacy paths
-- Comprehensive integration tests before removing deprecated code
-- Migration guide documenting changes for existing users
+- Git integration: Test with real git repository, handle edge cases
+- Parallel execution: Ensure proper dependency handling
+- Type consolidation: Use type adapters during migration, verify no breakage
+- Deprecated modules: Keep stubbed for backward compatibility during transition
 
 ### To-dos
 
-- [ ] Create AgentOrchestrator as single entry point coordinating PlanGenerator → Council → PlanExecutor → ParallelCoordinator → WorktreeManager → CouncilPresentation → RefinementLoop → MergeManager
-- [ ] Extract refinement loop from autonomous_executor.rs (lines 1282-1532) into planning/refinement_loop.rs as reusable component
-- [ ] Create CouncilIntegration trait unifying council_review.rs, council_monitor.rs, and new council_presentation.rs into single interface
-- [ ] Create planning/council_presentation.rs component for presenting completed work artifacts to council for review
-- [ ] Create planning/worktree_manager.rs with create_worktree, cleanup_worktree, and merge_worktree methods for git worktree isolation
-- [ ] Add worker completion callback to PlanExecutor that triggers council presentation and refinement loop integration
-- [ ] Create caws/adjudication_cycle.rs implementing full Pleading → Examination → Deliberation → Verdict → Publication workflow with git integration
-- [ ] Implement CAWS Debate scoring (S = 0.4E + 0.3B + 0.2G + 0.1P) for evaluating competing worker submissions
-- [ ] Create planning/worker_lifecycle.rs unifying worker assignment → execution → completion → presentation flow
-- [ ] Mark AuditedOrchestrator and AutonomousExecutor as deprecated, update lib.rs exports to prioritize UnifiedOrchestrator
-- [ ] Remove duplicate types from src/types.rs, ensure all code uses agent_agency_contracts types as source of truth
-- [ ] Create comprehensive integration tests for full end-to-end flow: Plan → Council → Workers → Council → Refine → Merge
+- [x] Integrate WorkerAssignmentStrategy into UnifiedOrchestrator.assign_worker_to_milestone()

@@ -1,6 +1,6 @@
 //! Orchestrator Integration - Hook Planning System into Orchestrator Workflow
 //!
-//! Integrates the planning system into orchestrator.plan_task() and autonomous_executor.
+//! Integrates the planning system into orchestrator.plan_task() and UnifiedOrchestrator.
 //! Provides planning-aware task submission and execution with full CAWS compliance.
 //!
 //! @author @darianrosebrook
@@ -851,29 +851,154 @@ mod tests {
         // Test that PlanningTaskResult can be created
         let task_id = Uuid::new_v4();
         let execution_plan = crate::planning::plan_types::ExecutionPlan {
-            id: Uuid::new_v4(),
-            contract_plan: agent_agency_contracts::planning::ExecutionPlan {
-                id: "test-plan".to_string(),
+            contract_plan: agent_agency_contracts::planning_io::ExecutionPlan {
+                id: Uuid::new_v4(),
+                session_id: Uuid::new_v4(),
+                working_spec_id: "test-plan".to_string(),
+                contract_plan: agent_agency_contracts::WorkingSpec {
+                    version: "1.0".to_string(),
+                    id: "TEST-001".to_string(),
+                    title: "Test Plan".to_string(),
+                    description: "Test execution plan".to_string(),
+                    goals: vec![],
+                    risk_tier: 2,
+                    constraints: agent_agency_contracts::WorkingSpecConstraints {
+                        max_duration_minutes: None,
+                        max_iterations: None,
+                        budget_limits: None,
+                        scope_restrictions: None,
+                    },
+                    acceptance_criteria: vec![],
+                    test_plan: agent_agency_contracts::TestPlan {
+                        unit_tests: vec![],
+                        integration_tests: vec![],
+                        e2e_scenarios: vec![],
+                        coverage_targets: None,
+                    },
+                    rollback_plan: agent_agency_contracts::RollbackPlan {
+                        strategy: agent_agency_contracts::RollbackStrategy::GitRevert,
+                        automated_steps: vec![],
+                        manual_steps: vec![],
+                        data_impact: agent_agency_contracts::DataImpact::None,
+                        downtime_required: None,
+                        rollback_window_minutes: None,
+                    },
+                    context: agent_agency_contracts::WorkingSpecContext {
+                        workspace_root: ".".to_string(),
+                        git_branch: "main".to_string(),
+                        recent_changes: vec![],
+                        dependencies: std::collections::HashMap::new(),
+                        environment: agent_agency_contracts::task_request::Environment::Development,
+                    },
+                    non_functional_requirements: None,
+                    validation_results: None,
+                    quality_gates: None,
+                    scope: vec![],
+                    metadata: None,
+                    milestones: vec![],
+                    change_budget: agent_agency_contracts::planning_io::ChangeBudget {
+                        max_files: 10,
+                        max_loc: 100,
+                        max_migrations: 0,
+                        allow_breaking_changes: false,
+                        allow_new_dependencies: false,
+                        enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+                    },
+                    file_changes: vec![],
+                    coverage_targets: None,
+                    overview: "Test plan".to_string(),
+                    created_at: chrono::Utc::now(),
+                    updated_at: chrono::Utc::now(),
+                },
                 title: "Test Plan".to_string(),
-                description: "Test execution plan".to_string(),
+                overview: "Test execution plan".to_string(),
+                state: agent_agency_contracts::planning_io::PlanState::Draft,
                 milestones: vec![],
-                constraints: vec![],
+                dependency_graph: agent_agency_contracts::planning_io::DependencyGraph {
+                    nodes: std::collections::HashMap::new(),
+                    edges: vec![],
+                    critical_path: vec![],
+                    parallel_groups: vec![],
+                    has_cycles: false,
+                    cycles: vec![],
+                },
+                change_budget: agent_agency_contracts::planning_io::ChangeBudget {
+                    max_files: 10,
+                    max_loc: 100,
+                    max_migrations: 0,
+                    allow_breaking_changes: false,
+                    allow_new_dependencies: false,
+                    enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+                },
+                quality_gates: agent_agency_contracts::planning_io::QualityGates {
+                    coverage_requirements: std::collections::HashMap::new(),
+                    mutation_requirements: agent_agency_contracts::planning_io::MutationRequirements {
+                        required: false,
+                        min_score: 0.0,
+                        operators: vec![],
+                    },
+                    security_requirements: agent_agency_contracts::planning_io::SecurityRequirements {
+                        scan_required: false,
+                        max_issues_by_severity: std::collections::HashMap::new(),
+                        required_controls: vec![],
+                    },
+                    performance_requirements: agent_agency_contracts::planning_io::PerformanceRequirements {
+                        max_regressions: 0,
+                        required_benchmarks: vec![],
+                        slas: vec![],
+                    },
+                    documentation_requirements: agent_agency_contracts::planning_io::DocumentationRequirements {
+                        api_docs_required: false,
+                        code_docs_required: false,
+                        architecture_docs_required: false,
+                        required_formats: vec![],
+                        required_types: vec![],
+                        min_coverage: 0.0,
+                        quality_checks: vec![],
+                    },
+                    requires_manual_review: false,
+                    requires_council_approval: false,
+                    min_coverage: None,
+                    min_mutation_score_percent: None,
+                },
+                evidence_requirements: vec![],
+                active_waivers: vec![],
+                metadata: agent_agency_contracts::planning_io::PlanMetadata {
+                    created_at: chrono::Utc::now(),
+                    updated_at: chrono::Utc::now(),
+                    approved_at: None,
+                    completed_at: None,
+                    created_by: agent_agency_contracts::planning_io::PlanCreator::AI {
+                        model: "test-model".to_string(),
+                        version: "1.0".to_string(),
+                    },
+                    version: "1.0".to_string(),
+                    source: "test".to_string(),
+                    confidence_score: Some(0.8),
+                    generation_time_ms: None,
+                    model_used: None,
+                    fallback_used: false,
+                    strategy: agent_agency_contracts::types::planning::PlanningStrategy::AIAssisted,
+                    confidence: 0.8,
+                    estimated_duration_ms: 1000,
+                    estimated_cost_cents: 0,
+                    adaptive: false,
+                    engine_version: "1.0".to_string(),
+                    additional_metadata: std::collections::HashMap::new(),
+                },
+                execution_context: None,
                 created_at: chrono::Utc::now(),
                 updated_at: chrono::Utc::now(),
-                status: agent_agency_contracts::planning::PlanStatus::Draft,
-                priority: agent_agency_contracts::planning::PlanPriority::Medium,
-                owner: "test-user".to_string(),
-                tags: vec![],
-                metadata: std::collections::HashMap::new(),
+                approved_at: None,
+                completed_at: None,
             },
-            milestones: vec![],
-            state: crate::planning::plan_types::PlanState::Draft,
-            created_at: chrono::Utc::now(),
-            updated_at: chrono::Utc::now(),
+            orchestration_meta: Default::default(),
+            execution_context: Default::default(),
+            execution_state: None,
         };
 
         let execution_result = agent_agency_contracts::planning::PlanExecutionResult {
-            plan_id: execution_plan.id,
+            plan_id: execution_plan.contract_plan.id,
             success: true,
             milestones_completed: 0,
             total_duration_ms: 0,
@@ -884,19 +1009,36 @@ mod tests {
                 council_reviews: vec![],
             },
             metrics: agent_agency_contracts::planning::ExecutionMetrics {
-                total_execution_time_ms: 0,
-                milestone_execution_times: std::collections::HashMap::new(),
-                resource_usage: std::collections::HashMap::new(),
-                quality_metrics: agent_agency_contracts::QualityMetrics {
-                    test_coverage: 0.8,
-                    mutation_score: 70.0,
-                    lint_errors: 0,
-                    type_errors: 0,
-                    security_vulnerabilities: 0,
+                total_milestones: 0,
+                successful_milestones: 0,
+                failed_milestones: 0,
+                skipped_milestones: 0,
+                avg_milestone_time_ms: 0.0,
+                parallel_time_saved_ms: 0,
+                resource_utilization: agent_agency_contracts::planning::ResourceUtilization {
+                    cpu_utilization: 0.0,
+                    memory_utilization: 0.0,
+                    network_io_bytes: 0,
+                    disk_io_bytes: 0,
+                    worker_utilization: std::collections::HashMap::new(),
+                },
+                quality_metrics: agent_agency_contracts::planning::QualityMetrics {
+                    avg_coverage: 0.8,
+                    avg_mutation_score: 70.0,
+                    security_issues_found: 0,
+                    performance_regressions: 0,
+                    code_quality_score: 0.0,
+                },
+                performance_metrics: agent_agency_contracts::planning::PerformanceMetrics {
+                    total_time_ms: 0,
+                    dependency_wait_time_ms: 0,
+                    parallel_execution_time_ms: 0,
+                    sequential_execution_time_ms: 0,
+                    efficiency_ratio: 0.0,
                 },
             },
-            final_state: agent_agency_contracts::planning::PlanExecutionState::Completed,
-            error_message: None,
+            final_state: agent_agency_contracts::planning_io::PlanState::Completed,
+            timeline: vec![],
         };
 
         let result = PlanningTaskResult {
@@ -908,7 +1050,7 @@ mod tests {
         };
 
         assert_eq!(result.task_id, task_id);
-        assert_eq!(result.execution_plan.id, execution_plan.id);
+        assert_eq!(result.execution_plan.contract_plan.id, execution_plan.contract_plan.id);
         assert_eq!(result.execution_result.plan_id, execution_result.plan_id);
         assert_eq!(result.quality_verified, true);
         assert_eq!(result.evidence_count, 0);
@@ -922,7 +1064,7 @@ mod tests {
         let status = PlanningStatus {
             task_id,
             plan_id,
-            state: crate::planning::plan_types::PlanState::Draft,
+            state: agent_agency_contracts::planning_io::PlanState::Draft,
             progress: 0.0,
             quality_verified: false,
             evidence_count: 0,

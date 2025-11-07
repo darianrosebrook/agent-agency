@@ -1541,33 +1541,33 @@ impl CouncilSession {
     /// or Council.review_working_spec() to populate final_decision. If the session hasn't been reviewed yet,
     /// use Council.review_working_spec() instead.
     #[cfg(feature = "api-server")]
-    pub async fn review_task(&self, task: &crate::OrchestratedTask) -> CouncilResult<crate::autonomous_executor::ConsensusResult> {
+    pub async fn review_task(&self, task: &crate::OrchestratedTask) -> CouncilResult<crate::council_types::ConsensusResult> {
         // If session already has a final decision, convert it to ConsensusResult
         if let Some(ref decision) = self.final_decision {
             match decision {
                 FinalDecision::Proceed { confidence, .. } => {
-                    return Ok(crate::autonomous_executor::ConsensusResult {
+                    return Ok(crate::council_types::ConsensusResult {
                         approved: true,
                         confidence: *confidence,
                         reason: format!("Task approved by council with {:.1}% confidence", confidence * 100.0),
                     });
                 },
                 FinalDecision::Refine { refinement_directive, .. } => {
-                    return Ok(crate::autonomous_executor::ConsensusResult {
+                    return Ok(crate::council_types::ConsensusResult {
                         approved: false,
                         confidence: 0.5,
                         reason: format!("Task requires refinement: {} changes required", refinement_directive.required_changes.len()),
                     });
                 },
                 FinalDecision::Reject { reason, .. } => {
-                    return Ok(crate::autonomous_executor::ConsensusResult {
+                    return Ok(crate::council_types::ConsensusResult {
                         approved: false,
                         confidence: 0.2,
                         reason: reason.clone(),
                     });
                 },
                 FinalDecision::Escalate { reason, .. } => {
-                    return Ok(crate::autonomous_executor::ConsensusResult {
+                    return Ok(crate::council_types::ConsensusResult {
                         approved: false,
                         confidence: 0.3,
                         reason: reason.clone(),
@@ -1593,7 +1593,7 @@ impl CouncilSession {
         
         // Fallback: return basic approval if session status indicates completion
         if matches!(self.status, SessionStatus::Completed) {
-            Ok(crate::autonomous_executor::ConsensusResult {
+            Ok(crate::council_types::ConsensusResult {
                 approved: true,
                 confidence: 0.8,
                 reason: format!("Session {} completed without explicit decision", self.session_id),

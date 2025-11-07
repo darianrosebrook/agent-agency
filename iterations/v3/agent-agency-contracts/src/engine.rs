@@ -144,7 +144,7 @@ impl TokenUsage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use schemars::JsonSchema;
+    use crate::{JudgeType, WorkingSpecEvidence};
     use crate::judge_io::{JudgeVerdict, VerdictLabel, Violation, Severity};
 
     #[test]

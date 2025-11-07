@@ -603,10 +603,16 @@ struct EvidenceArtifact {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
 
     #[test]
     fn test_tool_chain_bridge_creation() {
-        let bridge = ToolChainBridge::new();
+        use crate::planning::tool_chain_types::{ToolChainPlanner, SchemaRegistry, ToolRegistry};
+        let bridge = ToolChainBridge::new(
+            Arc::new(ToolChainPlanner::default()),
+            Arc::new(SchemaRegistry::default()),
+            Arc::new(ToolRegistry::default()),
+        );
         // Bridge created successfully
         assert!(true);
     }

@@ -375,24 +375,30 @@ mod tests {
         // Simulate problem characteristics based on requirements
         let problem_chars = if requirements.contains(&"fast".to_string()) {
             ProblemCharacteristics {
-                complexity: crate::reflexive_types::ComplexityLevel::Low,
-                data_size: crate::reflexive_types::DataSize::Small,
-                features: vec!["speed".to_string(), "low_latency".to_string()],
-                constraints: vec![],
+                feature_count: 10,
+                sample_count: 100,
+                class_count: Some(2),
+                has_missing_values: false,
+                is_regression: false,
+                estimated_complexity: 0.3,
             }
         } else if requirements.contains(&"accurate".to_string()) {
             ProblemCharacteristics {
-                complexity: crate::reflexive_types::ComplexityLevel::High,
-                data_size: crate::reflexive_types::DataSize::Large,
-                features: vec!["accuracy".to_string(), "complex_patterns".to_string()],
-                constraints: vec![],
+                feature_count: 50,
+                sample_count: 1000,
+                class_count: Some(10),
+                has_missing_values: false,
+                is_regression: false,
+                estimated_complexity: 0.8,
             }
         } else {
             ProblemCharacteristics {
-                complexity: crate::reflexive_types::ComplexityLevel::Medium,
-                data_size: crate::reflexive_types::DataSize::Medium,
-                features: vec!["balanced".to_string()],
-                constraints: vec![],
+                feature_count: 25,
+                sample_count: 500,
+                class_count: Some(5),
+                has_missing_values: false,
+                is_regression: false,
+                estimated_complexity: 0.5,
             }
         };
 
@@ -401,10 +407,11 @@ mod tests {
         // For now, we test that the orchestrator can be created and has expected structure
 
         assert!(!orchestrator.algorithms.is_empty());
-        assert!(orchestrator.performance_tracker.is_some());
-        assert!(orchestrator.characteristics_analyzer.is_some());
-        assert!(orchestrator.ensemble_analytics.is_some());
-        assert!(orchestrator.health_monitor.is_some());
+        // These fields are always present (not Options)
+        let _tracker = &orchestrator.performance_tracker;
+        let _analyzer = &orchestrator.characteristics_analyzer;
+        let _analytics = &orchestrator.ensemble_analytics;
+        let _health = &orchestrator.health_monitor;
 
         // Verify expected algorithm selection from golden fixture
         let expected_algorithm = task_spec["expected_algorithm_selection"].as_str().unwrap();
@@ -423,7 +430,7 @@ mod tests {
         let orchestrator = LearningOrchestrator::new();
 
         // Test that health monitoring works
-        let health = orchestrator.health_monitor.as_ref().unwrap();
+        let health = &orchestrator.health_monitor;
         assert!(health.algorithm_count >= 0);
         assert!(health.total_training_sessions >= 0);
 

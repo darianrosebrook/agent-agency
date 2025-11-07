@@ -610,7 +610,84 @@ mod tests {
     //     async fn get_waivers(&self, _status: Option<String>) -> Result<Vec<crate::planning::models::Waiver>> { Ok(vec![]) }
     //     async fn create_waiver(&self, _waiver: crate::planning::CreateWaiver) -> Result<crate::planning::models::Waiver> { Err(anyhow!("Not implemented")) }
     //     async fn update_waiver(&self, _id: Uuid, _update: crate::planning::UpdateWaiver) -> Result<crate::planning::models::Waiver> { Err(anyhow!("Not implemented")) }
-    // }
+    // Mock database operations
+    struct MockDbOps;
+
+    #[async_trait::async_trait]
+    impl crate::planning::DatabaseOperations for MockDbOps {
+        async fn create_execution_plan(&self, _plan: crate::planning::data_infrastructure_types::CreateExecutionPlan) -> Result<crate::planning::data_infrastructure_types::models::ExecutionPlan, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn get_execution_plan(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::ExecutionPlan>, anyhow::Error> {
+            Ok(None)
+        }
+        async fn get_execution_plans(&self) -> Result<Vec<crate::planning::data_infrastructure_types::models::ExecutionPlan>, anyhow::Error> {
+            Ok(vec![])
+        }
+        async fn update_execution_plan(&self, _id: Uuid, _update: crate::planning::data_infrastructure_types::UpdateExecutionPlan) -> Result<crate::planning::data_infrastructure_types::models::ExecutionPlan, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn create_audit_trail_entry(&self, _entry: crate::planning::data_infrastructure_types::CreateAuditTrailEntry) -> Result<crate::planning::data_infrastructure_types::models::AuditTrailEntry, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn get_audit_trail_entries(&self, _task_id: Uuid) -> Result<Vec<crate::planning::data_infrastructure_types::models::AuditTrailEntry>, anyhow::Error> {
+            Ok(vec![])
+        }
+        async fn get_audit_trail_entry(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::AuditTrailEntry>, anyhow::Error> {
+            Ok(None)
+        }
+        async fn create_planning_session(&self, _session: crate::planning::data_infrastructure_types::CreatePlanningSession) -> Result<crate::planning::data_infrastructure_types::models::PlanningSession, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn get_planning_session(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::PlanningSession>, anyhow::Error> {
+            Ok(None)
+        }
+        async fn update_planning_session(&self, _id: Uuid, _session: crate::planning::data_infrastructure_types::UpdatePlanningSession) -> Result<(), anyhow::Error> {
+            Ok(())
+        }
+        async fn create_planning_telemetry(&self, _telemetry: crate::planning::data_infrastructure_types::CreatePlanningTelemetry) -> Result<crate::planning::data_infrastructure_types::models::PlanningTelemetry, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn get_planning_telemetry(&self, _plan_id: Uuid, _metric_type: Option<String>) -> Result<Vec<crate::planning::data_infrastructure_types::models::PlanningTelemetry>, anyhow::Error> {
+            Ok(vec![])
+        }
+        async fn create_planning_audit_event(&self, _event: crate::planning::data_infrastructure_types::CreatePlanningAuditEvent) -> Result<(), anyhow::Error> {
+            Ok(())
+        }
+        async fn get_planning_audit_events(&self, _plan_id: Uuid) -> Result<Vec<crate::planning::data_infrastructure_types::models::PlanningAuditEvent>, anyhow::Error> {
+            Ok(vec![])
+        }
+        async fn delete_execution_plan(&self, _id: Uuid) -> Result<(), anyhow::Error> {
+            Ok(())
+        }
+        async fn create_judge(&self, _judge: crate::planning::data_infrastructure_types::CreateJudge) -> Result<crate::planning::data_infrastructure_types::models::Judge, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn get_judge(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::Judge>, anyhow::Error> {
+            Ok(None)
+        }
+        async fn get_judges(&self) -> Result<Vec<crate::planning::data_infrastructure_types::models::Judge>, anyhow::Error> {
+            Ok(vec![])
+        }
+        async fn create_judge_evaluation(&self, _evaluation: crate::planning::data_infrastructure_types::CreateJudgeEvaluation) -> Result<crate::planning::data_infrastructure_types::models::JudgeEvaluation, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn get_judge_evaluations(&self, _task_id: Uuid) -> Result<Vec<crate::planning::data_infrastructure_types::models::JudgeEvaluation>, anyhow::Error> {
+            Ok(vec![])
+        }
+        async fn get_workers(&self) -> Result<Vec<crate::planning::data_infrastructure_types::models::Worker>, anyhow::Error> {
+            Ok(vec![])
+        }
+        async fn get_waivers(&self, _status: Option<String>) -> Result<Vec<crate::planning::data_infrastructure_types::models::Waiver>, anyhow::Error> {
+            Ok(vec![])
+        }
+        async fn create_waiver(&self, _waiver: crate::planning::data_infrastructure_types::CreateWaiver) -> Result<crate::planning::data_infrastructure_types::models::Waiver, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn update_waiver(&self, _id: Uuid, _update: crate::planning::data_infrastructure_types::UpdateWaiver) -> Result<crate::planning::data_infrastructure_types::models::Waiver, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+    }
 
     #[test]
     fn test_todo_integration_creation() {
@@ -637,27 +714,142 @@ mod tests {
         let integration = TodoIntegration::new(todo_system, db_ops);
 
         // Test hook execution (should not fail)
-        let result = integration.on_plan_started(&agent_agency_contracts::planning_io::ExecutionPlan {
+        let execution_plan = agent_agency_contracts::planning_io::ExecutionPlan {
             id: Uuid::new_v4(),
             session_id: Uuid::new_v4(),
             working_spec_id: "test".to_string(),
-            contract_plan: Default::default(),
+            contract_plan: agent_agency_contracts::WorkingSpec {
+                version: "1.0".to_string(),
+                id: "TEST-001".to_string(),
+                title: "Test".to_string(),
+                description: "Test".to_string(),
+                goals: vec![],
+                risk_tier: 2,
+                constraints: agent_agency_contracts::WorkingSpecConstraints {
+                    max_duration_minutes: None,
+                    max_iterations: None,
+                    budget_limits: None,
+                    scope_restrictions: None,
+                },
+                acceptance_criteria: vec![],
+                test_plan: agent_agency_contracts::TestPlan {
+                    unit_tests: vec![],
+                    integration_tests: vec![],
+                    e2e_scenarios: vec![],
+                    coverage_targets: None,
+                },
+                rollback_plan: agent_agency_contracts::RollbackPlan::default(),
+                context: agent_agency_contracts::WorkingSpecContext {
+                    workspace_root: ".".to_string(),
+                    git_branch: "main".to_string(),
+                    recent_changes: vec![],
+                    dependencies: std::collections::HashMap::new(),
+                    environment: agent_agency_contracts::task_request::Environment::Development,
+                },
+                non_functional_requirements: None,
+                validation_results: None,
+                quality_gates: None,
+                scope: vec![],
+                metadata: None,
+                milestones: vec![],
+                change_budget: agent_agency_contracts::planning_io::ChangeBudget {
+                    max_files: 10,
+                    max_loc: 100,
+                    max_migrations: 0,
+                    allow_breaking_changes: false,
+                    allow_new_dependencies: false,
+                    enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+                },
+                file_changes: vec![],
+                coverage_targets: None,
+                overview: "Test".to_string(),
+                created_at: chrono::Utc::now(),
+                updated_at: chrono::Utc::now(),
+            },
             title: "Test".to_string(),
             overview: "Test".to_string(),
             state: agent_agency_contracts::planning_io::PlanState::Draft,
             milestones: vec![],
-            dependency_graph: Default::default(),
-            change_budget: Default::default(),
-            quality_gates: Default::default(),
+            dependency_graph: agent_agency_contracts::planning_io::DependencyGraph {
+                nodes: std::collections::HashMap::new(),
+                edges: vec![],
+                critical_path: vec![],
+                parallel_groups: vec![],
+                has_cycles: false,
+                cycles: vec![],
+            },
+            change_budget: agent_agency_contracts::planning_io::ChangeBudget {
+                max_files: 10,
+                max_loc: 100,
+                max_migrations: 0,
+                allow_breaking_changes: false,
+                allow_new_dependencies: false,
+                enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+            },
+            quality_gates: agent_agency_contracts::planning_io::QualityGates {
+                coverage_requirements: std::collections::HashMap::new(),
+                mutation_requirements: agent_agency_contracts::planning_io::MutationRequirements {
+                    required: false,
+                    min_score: 0.0,
+                    operators: vec![],
+                },
+                security_requirements: agent_agency_contracts::planning_io::SecurityRequirements {
+                    scan_required: false,
+                    max_issues_by_severity: std::collections::HashMap::new(),
+                    required_controls: vec![],
+                },
+                performance_requirements: agent_agency_contracts::planning_io::PerformanceRequirements {
+                    max_regressions: 0,
+                    required_benchmarks: vec![],
+                    slas: vec![],
+                },
+                documentation_requirements: agent_agency_contracts::planning_io::DocumentationRequirements {
+                    api_docs_required: false,
+                    code_docs_required: false,
+                    architecture_docs_required: false,
+                    required_formats: vec![],
+                    required_types: vec![],
+                    min_coverage: 0.0,
+                    quality_checks: vec![],
+                },
+                requires_manual_review: false,
+                requires_council_approval: false,
+                min_coverage: None,
+                min_mutation_score_percent: None,
+            },
             evidence_requirements: vec![],
             active_waivers: vec![],
-            metadata: Default::default(),
+            metadata: agent_agency_contracts::planning_io::PlanMetadata {
+                created_at: chrono::Utc::now(),
+                updated_at: chrono::Utc::now(),
+                approved_at: None,
+                completed_at: None,
+                created_by: agent_agency_contracts::planning_io::PlanCreator::AI {
+                    model: "test-model".to_string(),
+                    version: "1.0".to_string(),
+                },
+                version: "1.0".to_string(),
+                source: "test".to_string(),
+                confidence_score: Some(0.8),
+                generation_time_ms: Some(1000),
+                model_used: Some("test-model".to_string()),
+                fallback_used: false,
+                strategy: agent_agency_contracts::types::planning::PlanningStrategy::AIAssisted,
+                confidence: 0.8,
+                estimated_duration_ms: 1000,
+                estimated_cost_cents: 0,
+                adaptive: false,
+                engine_version: "1.0".to_string(),
+                additional_metadata: std::collections::HashMap::new(),
+            },
             execution_context: None,
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
             approved_at: None,
             completed_at: None,
-        }).await;
+        };
+        
+        let result = integration.on_plan_started(&execution_plan).await;
 
         assert!(result.is_ok());
     }

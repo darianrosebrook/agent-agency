@@ -217,6 +217,7 @@ dependencies = [
  "agent-evaluation",
  "agent-memory",
  "agent-research",
+ "agent-workers",
  "anyhow",
  "async-trait",
  "axum",

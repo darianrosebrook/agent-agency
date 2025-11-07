@@ -2,6 +2,8 @@
 //!
 //! Provides real-time progress tracking with persistence and event emission
 //! for monitoring task execution across the agent orchestration system.
+//!
+//! @author @darianrosebrook
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -10,6 +12,24 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+
+pub mod turn_level;
+pub mod trajectory_analyzer;
+pub mod credit_assignment;
+
+pub use turn_level::{
+    TurnLevelTracker, TurnLevelProgressTracker, TurnProgress, AgentAction, TurnOutcome,
+    CreditAssignment, TurnTrajectory, TaskOutcome, ProgressUpdate,
+};
+
+pub use trajectory_analyzer::{
+    TrajectoryAnalyzer, TrajectoryInsights, TrajectoryPattern, DetectedPattern,
+    QualityTrend, TrendDirection, PerformanceMetrics, ActionSequenceAnalysis,
+};
+
+pub use credit_assignment::{
+    AdvancedCreditAssigner, TdLearningConfig, ValueFunction,
+};
 
 /// Progress tracking trait for task execution
 #[async_trait::async_trait]

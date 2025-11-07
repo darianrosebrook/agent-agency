@@ -1272,7 +1272,30 @@ mod tests {
 
     #[test]
     fn test_council_review_creation() {
-        let council = Arc::new(MockCouncilCoordinator);
+        use std::sync::Arc;
+        use crate::council::{Council, CouncilConfig};
+        use crate::verdict_aggregation::create_verdict_aggregator;
+        use crate::decision_making::{create_decision_engine, ConsensusStrategy, RiskThresholds};
+        use crate::council::JudgeSelectionStrategy;
+        
+        let council = Arc::new(Council::new(
+            CouncilConfig {
+                session_timeout_seconds: 300,
+                min_judges_required: 1,
+                max_judges_per_session: 5,
+                judge_selection_strategy: JudgeSelectionStrategy::RoundRobin,
+                consensus_strategy: ConsensusStrategy::Majority,
+                risk_thresholds: RiskThresholds::default(),
+                enable_parallel_reviews: true,
+                judge_timeout_seconds: 30,
+                enable_circuit_breakers: false,
+                enable_graceful_degradation: true,
+                enable_error_recovery: true,
+            },
+            vec![], // No judges for test
+            Arc::new(create_verdict_aggregator()),
+            create_decision_engine(),
+        ));
         let db_ops = Arc::new(crate::test_utils::MockDatabaseOps);
         let review = CouncilPlanReview::new(council, db_ops);
         // Should create successfully

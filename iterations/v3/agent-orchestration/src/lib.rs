@@ -26,7 +26,8 @@ extern crate tracing;
 // ============================================================================
 
 pub mod progress_tracker;
-mod consensus_coordinator;
+pub mod learning;
+pub mod consensus_coordinator;
 mod quality_gates;
 
 // Re-export types for convenience - use contracts types
@@ -71,7 +72,91 @@ pub mod restored_examples;
 
 // Test utilities
 #[cfg(test)]
-pub mod test_utils;
+mod test_utils {
+    use std::sync::Arc;
+    use async_trait::async_trait;
+    use uuid::Uuid;
+    use crate::planning::DatabaseOperations;
+
+    // Mock database operations for testing
+    pub struct MockDatabaseOps;
+
+    #[async_trait]
+    impl DatabaseOperations for MockDatabaseOps {
+        async fn create_execution_plan(&self, _plan: crate::planning::data_infrastructure_types::CreateExecutionPlan) -> Result<crate::planning::data_infrastructure_types::models::ExecutionPlan, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn get_execution_plan(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::ExecutionPlan>, anyhow::Error> {
+            Ok(None)
+        }
+        async fn get_execution_plans(&self) -> Result<Vec<crate::planning::data_infrastructure_types::models::ExecutionPlan>, anyhow::Error> {
+            Ok(vec![])
+        }
+        async fn update_execution_plan(&self, _id: Uuid, _update: crate::planning::data_infrastructure_types::UpdateExecutionPlan) -> Result<crate::planning::data_infrastructure_types::models::ExecutionPlan, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn create_audit_trail_entry(&self, _entry: crate::planning::data_infrastructure_types::CreateAuditTrailEntry) -> Result<crate::planning::data_infrastructure_types::models::AuditTrailEntry, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn get_audit_trail_entries(&self, _task_id: Uuid) -> Result<Vec<crate::planning::data_infrastructure_types::models::AuditTrailEntry>, anyhow::Error> {
+            Ok(vec![])
+        }
+        async fn get_audit_trail_entry(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::AuditTrailEntry>, anyhow::Error> {
+            Ok(None)
+        }
+        async fn create_planning_session(&self, _session: crate::planning::data_infrastructure_types::CreatePlanningSession) -> Result<crate::planning::data_infrastructure_types::models::PlanningSession, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn get_planning_session(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::PlanningSession>, anyhow::Error> {
+            Ok(None)
+        }
+        async fn update_planning_session(&self, _id: Uuid, _session: crate::planning::data_infrastructure_types::UpdatePlanningSession) -> Result<(), anyhow::Error> {
+            Ok(())
+        }
+        async fn create_planning_telemetry(&self, _telemetry: crate::planning::data_infrastructure_types::CreatePlanningTelemetry) -> Result<crate::planning::data_infrastructure_types::models::PlanningTelemetry, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn get_planning_telemetry(&self, _plan_id: Uuid, _metric_type: Option<String>) -> Result<Vec<crate::planning::data_infrastructure_types::models::PlanningTelemetry>, anyhow::Error> {
+            Ok(vec![])
+        }
+        async fn create_planning_audit_event(&self, _event: crate::planning::data_infrastructure_types::CreatePlanningAuditEvent) -> Result<(), anyhow::Error> {
+            Ok(())
+        }
+        async fn get_planning_audit_events(&self, _plan_id: Uuid) -> Result<Vec<crate::planning::data_infrastructure_types::models::PlanningAuditEvent>, anyhow::Error> {
+            Ok(vec![])
+        }
+        async fn delete_execution_plan(&self, _id: Uuid) -> Result<(), anyhow::Error> {
+            Ok(())
+        }
+        async fn create_judge(&self, _judge: crate::planning::data_infrastructure_types::CreateJudge) -> Result<crate::planning::data_infrastructure_types::models::Judge, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn get_judge(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::Judge>, anyhow::Error> {
+            Ok(None)
+        }
+        async fn get_judges(&self) -> Result<Vec<crate::planning::data_infrastructure_types::models::Judge>, anyhow::Error> {
+            Ok(vec![])
+        }
+        async fn create_judge_evaluation(&self, _evaluation: crate::planning::data_infrastructure_types::CreateJudgeEvaluation) -> Result<crate::planning::data_infrastructure_types::models::JudgeEvaluation, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn get_judge_evaluations(&self, _task_id: Uuid) -> Result<Vec<crate::planning::data_infrastructure_types::models::JudgeEvaluation>, anyhow::Error> {
+            Ok(vec![])
+        }
+        async fn get_workers(&self) -> Result<Vec<crate::planning::data_infrastructure_types::models::Worker>, anyhow::Error> {
+            Ok(vec![])
+        }
+        async fn get_waivers(&self, _status: Option<String>) -> Result<Vec<crate::planning::data_infrastructure_types::models::Waiver>, anyhow::Error> {
+            Ok(vec![])
+        }
+        async fn create_waiver(&self, _waiver: crate::planning::data_infrastructure_types::CreateWaiver) -> Result<crate::planning::data_infrastructure_types::models::Waiver, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn update_waiver(&self, _id: Uuid, _update: crate::planning::data_infrastructure_types::UpdateWaiver) -> Result<crate::planning::data_infrastructure_types::models::Waiver, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+    }
+}
 
 // TODO: These modules were moved during refactor - need to locate or recreate
 // pub mod models;
@@ -122,7 +207,6 @@ pub mod frontier;
 // pub mod arbiter;
 // pub mod cqrs_router;
 // pub mod artifacts;
-pub mod autonomous_executor;
 pub mod autonomous_file_editor;
 pub mod autonomous_integration;
 // pub mod caws_runtime;
@@ -143,6 +227,9 @@ pub mod coreml;
 // pub mod enrichers;
 pub mod audit_trail;
 pub mod chain_of_thought;
+pub mod workers;
+pub mod orchestration;
+pub mod optimization;
 
 // Evaluation framework (feature-gated)
 #[cfg(feature = "evaluation")]
@@ -150,9 +237,6 @@ pub mod evaluation;
 
 #[cfg(feature = "evaluation")]
 pub use evaluation::{run_scenario, EvaluationReport, EvaluationEngine, AgentEvaluation, EvaluationDimensions, EvaluationScenario};
-// audited_orchestrator module removed - functionality integrated into multimodal_orchestration
-// pub mod enhanced_executor;
-pub mod multimodal_orchestrator;
 
 // ============================================================================
 // RE-EXPORTS - Council (Decision Making)
@@ -181,6 +265,8 @@ pub use error_handling::{
     DegradationLevel, RecoveryOrchestrator, SystemHealth, HealthStatus,
     error_factory,
 };
+// Council types including ConsensusResult
+pub use council_types::{ConsensusResult, FinalVerdict, Task, ChangeBudget};
 // Items from restored modules are available through their module declarations above
 
 // Frontier items are available through the module declaration above
@@ -199,11 +285,6 @@ pub use error_handling::{
 // Multimodal orchestration exports
 pub use multimodal_orchestration::{
     MultimodalOrchestrator, ProcessingResult, ProcessingStatus, ProcessingStats,
-};
-
-// Autonomous executor exports
-pub use autonomous_executor::{
-    AutonomousExecutor, AutonomousExecutorConfig, TaskExecutionState,
 };
 
 // Autonomous file editor exports
@@ -227,8 +308,6 @@ pub use audit_trail::{
     AuditQuery, AuditError,
 };
 
-// Audited orchestrator functionality integrated into MultimodalOrchestrator
-
 // Restored frontier exports (now available)
 pub use frontier::{
     Frontier, FrontierConfig, FrontierStats, TaskEntry, TaskStatus,
@@ -241,17 +320,7 @@ pub use frontier::{
 //     WorkerOutput, EvidenceManifest, DebateResult, ArbiterError,
 // };
 
-// Multimodal Orchestrator
-pub use multimodal_orchestrator::{
-    KimiK2MultimodalOrchestrator, OrchestratorPerformanceStats, OrchestratorError,
-};
-pub use types::{MultimodalTask, MultimodalProcessingResult, OrchestratorConfig};
-
-// Council types
-pub use council_types::{FinalVerdict, Task, ChangeBudget};
-// BlastRadius is now from agent_agency_contracts::types::planning (exported above)
-// ExecutionMode is now exported from agent_agency_contracts::types::prelude above
-pub use types::DiffStats;
+pub use types::{MultimodalTask, MultimodalProcessingResult, OrchestratorConfig, DiffStats};
 
 // ============================================================================
 // CONDITIONAL EXPORTS - API Server
@@ -284,12 +353,6 @@ pub use types::DiffStats;
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 struct AgentOrchestrationService {
-    /// Council for decision making and arbitration
-    // pub council: council::Council,
-    /// Multimodal orchestrator for task execution
-    // pub orchestrator: multimodal_orchestration::MultimodalOrchestrator,
-    /// Autonomous executor for self-directed task execution
-    // pub autonomous_executor: autonomous_executor::AutonomousExecutor,
     /// Audit trail manager for tracking all operations
     pub audit_trail: audit_trail::AuditTrailManager,
 }
@@ -298,84 +361,24 @@ struct AgentOrchestrationService {
 impl AgentOrchestrationService {
     /// Create a new Agent Orchestration Service
     pub async fn new(config: OrchestrationConfig) -> Result<Self, OrchestrationError> {
-        // TODO: Make council components configurable
-        // - [ ] Load judges from configuration or registry
-        // - [ ] Support multiple judge types (technical, ethical, operational)
-        // - [ ] Allow judge selection based on task requirements
-        // - [ ] Add validation for judge configuration
-        // - [ ] Add unit tests with configured judges
-        // - [ ] Add integration tests with real judge panels
         // Create basic council components - TODO: make configurable
         let available_judges: Vec<Arc<dyn crate::judge_backup::Judge>> = vec![]; // Empty for now
         let verdict_aggregator = Arc::new(crate::verdict_aggregation::create_verdict_aggregator());
         let decision_engine = crate::decision_making::create_decision_engine();
 
-        let council = council::Council::new(
+        let _council = council::Council::new(
             config.council_config,
             available_judges,
             verdict_aggregator,
             decision_engine
         );
         
-        let orchestrator = multimodal_orchestration::MultimodalOrchestrator::new().await
+        let _orchestrator = multimodal_orchestration::MultimodalOrchestrator::new().await
             .map_err(|e| OrchestrationError::ExecutionError(Box::new(e)))?;
-        
-        let executor_config = config.executor_config;
-        let progress_tracker = Arc::new(progress_tracker::RealTimeProgressTracker::new(None));
-        let autonomous_executor = autonomous_executor::AutonomousExecutor::new(
-            executor_config,
-            Some(progress_tracker.clone()), // progress_tracker
-            // TODO: Replace placeholder runtime validator with real implementation
-            // - [ ] Integrate caws-runtime-validator crate
-            // - [ ] Create real CawsRuntimeValidator instance
-            // - [ ] Configure validator with CAWS rules and settings
-            // - [ ] Add unit tests with mock validators
-            // - [ ] Add integration tests with real CAWS validation
-            // PLACEHOLDER: runtime_validator - proper implementation needed
-            Arc::new(MockCawsRuntimeValidator),
-            None, // consensus_coordinator
-            // TODO: Replace placeholder verdict writer with real implementation
-            // - [ ] Integrate verdict storage system (database, file system, etc.)
-            // - [ ] Implement verdict persistence with proper error handling
-            // - [ ] Add verdict retrieval and query capabilities
-            // - [ ] Add unit tests with mock verdict storage
-            // - [ ] Add integration tests with real verdict persistence
-            // PLACEHOLDER: verdict_writer - proper implementation needed
-            Arc::new(MockVerdictWriter {}),
-            Arc::new(OrchestrationProvenanceEmitter::new()), // provenance_emitter
-            None, // cache
-            None, // metrics
-            {
-                // Create TaskExecutor factory with proper dependency injection
-                let factory = || -> Arc<dyn agent_agency_contracts::TaskExecutor> {
-                    // Use TaskExecutorFactory to create instances with proper configuration
-                    let executor_factory = planning::task_executor_factory::TaskExecutorFactory::new();
-
-                    // For now, create a basic executor without complex dependencies
-                    // TODO: Integrate with worker pool and task queue when available
-                    match executor_factory.create_default_executor() {
-                        Ok(executor) => executor,
-                        Err(e) => {
-                            tracing::warn!("Failed to create TaskExecutor: {}, using mock", e);
-                            // Fallback to mock executor for development
-                            use agent_agency_contracts::task_executor_provider::tests::MockTaskExecutorProvider;
-                            MockTaskExecutorProvider::new().create_executor()
-                        }
-                    }
-                };
-                agent_agency_contracts::task_executor_provider::TaskExecutorProvider::new(factory)
-            }, // task_executor_provider - Now using TaskExecutorFactory
-            #[cfg(feature = "memory")]
-            None, // memory_system
-            None, // planning_integration
-        );
         
         let audit_trail = audit_trail::AuditTrailManager::new(config.audit_config);
 
         Ok(Self {
-            // council,
-            // orchestrator,
-            // autonomous_executor,
             audit_trail,
         })
     }
@@ -490,7 +493,7 @@ impl AgentOrchestrationService {
     }
 
     /// Convert ConsensusResult to CouncilDecision
-    fn convert_consensus_to_decision(&self, consensus: &crate::autonomous_executor::ConsensusResult) -> verdict_aggregation::CouncilDecision {
+    fn convert_consensus_to_decision(&self, consensus: &crate::council_types::ConsensusResult) -> verdict_aggregation::CouncilDecision {
         if consensus.approved {
             verdict_aggregation::CouncilDecision::Approve {
                 confidence: consensus.confidence as f64,
@@ -524,7 +527,6 @@ impl AgentOrchestrationService {
 struct OrchestrationConfig {
     pub council_config: council::CouncilConfig,
     pub orchestrator_config: crate::types::OrchestratorConfig,
-    pub executor_config: autonomous_executor::AutonomousExecutorConfig,
     pub audit_config: audit_trail::AuditConfig,
 }
 

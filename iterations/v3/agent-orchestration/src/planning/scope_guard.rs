@@ -444,8 +444,10 @@ mod tests {
 
         // Valid scope
         let valid_scope = MilestoneScope {
-            files: vec![PathBuf::from("src/main.rs")],
+            files: vec!["src/main.rs".to_string()],
             directories: vec![],
+            included_paths: vec![],
+            excluded_paths: vec![],
             will_modify: true,
             allowed_operations: vec!["read".to_string(), "write".to_string()],
             parallelism: Some(1),
@@ -457,8 +459,10 @@ mod tests {
 
         // Invalid scope (system file)
         let invalid_scope = MilestoneScope {
-            files: vec![PathBuf::from("/etc/passwd")],
+            files: vec!["/etc/passwd".to_string()],
             directories: vec![],
+            included_paths: vec![],
+            excluded_paths: vec![],
             will_modify: false,
             allowed_operations: vec!["read".to_string()],
             parallelism: Some(1),

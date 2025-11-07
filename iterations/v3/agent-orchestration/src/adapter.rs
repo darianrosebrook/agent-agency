@@ -66,7 +66,7 @@ impl LegacyOrchestratorAdapter {
     /// Initialize memory system for use across components
     /// 
     /// This helper function creates a MemorySystem instance that can be shared
-    /// between Council, AutonomousExecutor, and other components that need memory.
+    /// between Council, UnifiedOrchestrator, and other components that need memory.
     #[cfg(feature = "memory")]
     async fn init_memory_system() -> Result<Arc<agent_memory::MemorySystem>> {
         let memory_config = agent_memory::MemoryConfig::default();
@@ -88,7 +88,7 @@ impl LegacyOrchestratorAdapter {
 
     /// Get the memory system instance (if memory feature is enabled)
     /// 
-    /// This can be used to wire memory into other components like AutonomousExecutor
+    /// This can be used to wire memory into other components like UnifiedOrchestrator
     #[cfg(feature = "memory")]
     pub fn get_memory_system(&self) -> Option<Arc<agent_memory::MemorySystem>> {
         self.memory_system.clone()
@@ -238,7 +238,7 @@ impl LegacyOrchestratorAdapter {
         // - [ ] Add unit tests with mock council reviews
         // - [ ] Add integration tests with real council review flow
         // For now, approve with medium confidence since start_session doesn't populate final_decision
-        let consensus_result = crate::autonomous_executor::ConsensusResult {
+        let consensus_result = crate::council_types::ConsensusResult {
             approved: true,
             confidence: 0.7,
             reason: format!("Council session {} initialized", council_session.session_id),
@@ -545,7 +545,7 @@ impl LegacyOrchestratorAdapter {
     /// Returns TaskExecutionResult (contract type) - artifacts should be stored separately
     fn combine_verdicts(
         &self,
-        council_result: crate::autonomous_executor::ConsensusResult,
+        council_result: crate::council_types::ConsensusResult,
         artifact_verdict: ArtifactVerdict,
         artifacts: Vec<ExecutionArtifacts>,
     ) -> TaskExecutionResult {

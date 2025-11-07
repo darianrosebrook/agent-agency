@@ -365,7 +365,7 @@ impl Default for NormalizationSettings {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize) ]
-pub enum NormalizationMethodd {
+pub enum NormalizationMethod {
     MinMax,
     ZScore,
     Robust,

@@ -13,6 +13,12 @@ pub mod processor;
 pub mod qualification;
 pub mod extraction_types;
 pub mod verification;
+pub mod benchmarking;
+pub mod benchmark_types;
+pub mod benchmark_runner;
+pub mod performance_tracker;
+pub mod scoring_system;
+pub mod sla_validator;
 
 // Multimodal retriever modules
 pub mod multimodal_retriever;
