@@ -91,7 +91,7 @@ pub struct DefaultIndexingStage {
     fulltext_indexer: FullTextIndexer,
     vector_indexer: VectorIndexer,
     entity_indexer: EntityIndexer,
-    job_scheduler: JobScheduler,
+    _job_scheduler: JobScheduler,
 }
 
 impl DefaultIndexingStage {
@@ -101,7 +101,7 @@ impl DefaultIndexingStage {
             fulltext_indexer: FullTextIndexer::new().await?,
             vector_indexer: VectorIndexer::new().await?,
             entity_indexer: EntityIndexer::new().await?,
-            job_scheduler: JobScheduler::new(),
+            _job_scheduler: JobScheduler::new(),
         })
     }
 }
@@ -492,7 +492,6 @@ impl FullTextIndexer {
     ) -> f64 {
         const K1: f64 = 1.2;
         const B: f64 = 0.75;
-        const K2: f64 = 100.0;
         
         let mut score = 0.0;
         
@@ -742,11 +741,11 @@ impl VectorIndexer {
 /// Relationship record for indexing
 #[derive(Debug, Clone, JsonSchema)]
 struct RelationshipRecord {
-    source_entity: String,
-    target_entity: String,
+    _source_entity: String,
+    _target_entity: String,
     relationship_type: String,
     confidence: f64,
-    context: Option<String>,
+    _context: Option<String>,
     processing_id: ProcessingId,
 }
 
@@ -809,11 +808,11 @@ impl EntityIndexer {
         
         for relationship in relationships {
             let record = RelationshipRecord {
-                source_entity: relationship.source_entity.clone(),
-                target_entity: relationship.target_entity.clone(),
+                _source_entity: relationship.source_entity.clone(),
+                _target_entity: relationship.target_entity.clone(),
                 relationship_type: format!("{:?}", relationship.relationship_type),
                 confidence: relationship.confidence,
-                context: relationship.evidence.first().cloned(),
+                _context: relationship.evidence.first().cloned(),
                 processing_id: id.clone(),
             };
             
@@ -972,19 +971,7 @@ impl EntityIndexer {
     }
 }
 
-
-/// Calculate cosine similarity between two vectors
-fn cosine_similarity(a: &[f32], b: &[f32]) -> f64 {
-    let dot_product: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
-    let norm_a: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
-    let norm_b: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
-
-    if norm_a == 0.0 || norm_b == 0.0 {
-        0.0
-    } else {
-        (dot_product / (norm_a * norm_b)) as f64
-    }
-}
+// Removed unused cosine_similarity function - will be re-added in v4 if needed
 
 /// Consolidated indexer implementations from indexers crate
 
@@ -1418,7 +1405,7 @@ impl HnswIndexer {
 /// Database connection pool for indexers
 #[derive(Debug)]
 pub struct DatabasePool {
-    pool: sqlx::Pool<sqlx::Postgres>,
+    _pool: sqlx::Pool<sqlx::Postgres>,
 }
 
 impl DatabasePool {
@@ -1441,7 +1428,7 @@ impl DatabasePool {
             max_connections
         );
 
-        Ok(Self { pool })
+        Ok(Self { _pool: pool })
     }
 
     /// Get number of idle connections
@@ -1460,12 +1447,12 @@ impl DatabasePool {
 /// Vector store for database persistence
 #[derive(Debug)]
 pub struct VectorStore {
-    pool: DatabasePool,
+    _pool: DatabasePool,
 }
 
 impl VectorStore {
     pub fn new(pool: DatabasePool) -> Self {
-        Self { pool }
+        Self { _pool: pool }
     }
 
     /// Store a vector record

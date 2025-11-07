@@ -10,7 +10,6 @@ use axum::{
 };
 use serde_json;
 use tracing::{info, error};
-use uuid::Uuid;
 
 use crate::api::ApiState;
 
@@ -70,7 +69,7 @@ pub async fn link_provenance_to_commit(
     }
 
     match state.api.db_client.link_provenance_to_commit(&provenance_uuid, commit_hash).await {
-        Ok(record) => {
+        Ok(_record) => {
             info!("Linked provenance record {} to commit {}", provenance_id, commit_hash);
             Ok(Json(serde_json::json!({
                 "provenance_id": provenance_id,

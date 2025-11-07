@@ -9,12 +9,30 @@ pub mod storage;
  * @author @darianrosebrook
  */
 pub mod state_types;
+pub mod events;
+pub mod unified;
+pub mod builder;
+pub mod context_generator;
+pub mod file_watcher_adapter;
+pub mod file_watcher_trait;
 
 // Re-export main types and functionality
 pub use state_manager::WorkspaceStateManager;
 pub use rollback::{RollbackManager, RollbackResult, ViewMetadata, WorkspaceViewManager};
 pub use storage::{DatabaseStorage, FileStorage, MemoryStorage};
 pub use state_types::*;
+pub use events::{WorkspaceStateEvent, ContextType};
+pub use unified::{
+    UnifiedWorkspaceStateManager, UnifiedWorkspaceConfig,
+    FileWatchConfig, ContextGenerationConfig, MetricsConfig,
+    WorkspaceMetrics, WatcherMetrics, SnapshotMetrics,
+    ContextMetrics, EmbeddingMetrics, MemoryMetrics,
+};
+pub use builder::UnifiedWorkspaceStateManagerBuilder;
+pub use context_generator::{
+    ContextGenerator, WorkspaceContext, ContextFile, FileMetadata,
+    ContextMetadata, ContextCriteria,
+};
 
 /// Create a new workspace state manager with file-based storage
 pub fn create_file_manager(
@@ -43,6 +61,25 @@ pub fn create_database_manager(
 ) -> WorkspaceStateManager {
     let storage = Box::new(DatabaseStorage::new(pool));
     WorkspaceStateManager::new(workspace_root, config, storage)
+}
+
+/// Create a new unified workspace state manager with file-based storage
+pub fn create_unified_file_manager(
+    workspace_root: impl AsRef<std::path::Path>,
+    config: UnifiedWorkspaceConfig,
+) -> UnifiedWorkspaceStateManager {
+    let storage_path = workspace_root.as_ref().join(".workspace-state");
+    let storage = Box::new(FileStorage::new(&storage_path, config.state_config.compress_states));
+    UnifiedWorkspaceStateManager::new(workspace_root, config, storage)
+}
+
+/// Create a new unified workspace state manager with in-memory storage (for testing)
+pub fn create_unified_memory_manager(
+    workspace_root: impl AsRef<std::path::Path>,
+    config: UnifiedWorkspaceConfig,
+) -> UnifiedWorkspaceStateManager {
+    let storage = Box::new(MemoryStorage::new());
+    UnifiedWorkspaceStateManager::new(workspace_root, config, storage)
 }
 
 #[cfg(test)]

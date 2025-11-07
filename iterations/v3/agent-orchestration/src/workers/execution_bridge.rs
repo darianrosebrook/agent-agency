@@ -489,19 +489,26 @@ impl WorkerExecutionBridge {
                     coverage_report_path = Some(path.to_string());
                 }
 
-                // Extract uncovered lines
+                // Extract uncovered lines - group by file
                 if let Some(uncovered) = cov_obj.get("uncovered_lines").and_then(|v| v.as_array()) {
+                    use std::collections::HashMap;
+                    let mut lines_by_file: HashMap<String, Vec<u32>> = HashMap::new();
                     for item in uncovered {
                         if let Some(line_obj) = item.as_object() {
                             if let Some(file) = line_obj.get("file").and_then(|v| v.as_str()) {
                                 if let Some(line) = line_obj.get("line").and_then(|v| v.as_u64()) {
-                                    uncovered_lines.push(agent_agency_contracts::execution_artifacts::UncoveredLine {
-                                        file_path: file.to_string(),
-                                        line_number: line as u32,
-                                    });
+                                    lines_by_file.entry(file.to_string())
+                                        .or_insert_with(Vec::new)
+                                        .push(line as u32);
                                 }
                             }
                         }
+                    }
+                    for (file, lines) in lines_by_file {
+                        uncovered_lines.push(agent_agency_contracts::execution_artifacts::UncoveredLines {
+                            file,
+                            lines,
+                        });
                     }
                 }
             }
@@ -558,37 +565,53 @@ impl WorkerExecutionBridge {
                         if let Some(result_obj) = result.as_object() {
                             if let Some(file_path) = result_obj.get("filePath").and_then(|v| v.as_str()) {
                                 if let Some(messages) = result_obj.get("messages").and_then(|v| v.as_array()) {
-                                    let mut file_errors = 0u32;
-                                    let mut file_warnings = 0u32;
-                                    let mut file_info = 0u32;
-
+                                    let mut file_issues = Vec::new();
                                     for message in messages {
                                         if let Some(msg_obj) = message.as_object() {
-                                            if let Some(severity) = msg_obj.get("severity").and_then(|v| v.as_u64()) {
-                                                match severity {
-                                                    1 => warnings += 1,
-                                                    2 => errors += 1,
-                                                    _ => info += 1,
+                                            let severity = msg_obj.get("severity").and_then(|v| v.as_u64());
+                                            let line = msg_obj.get("line").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+                                            let column = msg_obj.get("column").and_then(|v| v.as_u64()).map(|v| v as u32);
+                                            let code = msg_obj.get("ruleId").or_else(|| msg_obj.get("code"))
+                                                .and_then(|v| v.as_str())
+                                                .unwrap_or("unknown")
+                                                .to_string();
+                                            let message_text = msg_obj.get("message").and_then(|v| v.as_str())
+                                                .unwrap_or("")
+                                                .to_string();
+                                            
+                                            let issue_severity = match severity {
+                                                Some(2) => {
+                                                    errors += 1;
+                                                    agent_agency_contracts::execution_artifacts::IssueSeverity::Error
                                                 }
-                                                match severity {
-                                                    1 => file_warnings += 1,
-                                                    2 => file_errors += 1,
-                                                    _ => file_info += 1,
+                                                Some(1) => {
+                                                    warnings += 1;
+                                                    agent_agency_contracts::execution_artifacts::IssueSeverity::Warning
                                                 }
-                                            }
+                                                _ => {
+                                                    info += 1;
+                                                    agent_agency_contracts::execution_artifacts::IssueSeverity::Info
+                                                }
+                                            };
+                                            
+                                            file_issues.push(agent_agency_contracts::execution_artifacts::LintingIssue {
+                                                line,
+                                                column,
+                                                severity: issue_severity,
+                                                code,
+                                                message: message_text,
+                                                suggestion: None,
+                                            });
                                         }
                                     }
-
-                                    if file_errors > 0 || file_warnings > 0 || file_info > 0 {
-                                        issues_by_file.insert(file_path.to_string(), agent_agency_contracts::execution_artifacts::FileLintingIssues {
-                                            errors: file_errors,
-                                            warnings: file_warnings,
-                                            info: file_info,
-                                        });
+                                    
+                                    if !file_issues.is_empty() {
+                                        issues_by_file.insert(file_path.to_string(), file_issues);
                                     }
                                 }
                             }
-                }
+                        }
+                    }
                 }
 
                 // Parse Rust clippy-style results

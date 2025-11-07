@@ -13,7 +13,7 @@ use crate::ane::ane_errors::{ANEError, Result};
 use crate::ane::compat::hardening::*;
 use crate::ane::compat::coreml::coreml::{detect_coreml_capabilities, load_model};
 use crate::ane::compat::registry::ModelRef;
-use crate::ane::compat::testing::{BenchmarkRunner, BenchmarkConfig, PerformanceMetrics, InferenceTestResults};
+use crate::ane::compat::testing::PerformanceMetrics;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -609,7 +609,7 @@ pub mod agent_integration {
 
             // Calculate speedup
             metrics.acceleration_speedup = if metrics.accelerated_judgments > 0 {
-                (metrics.total_judgments as f64 / metrics.accelerated_judgments as f64)
+                metrics.total_judgments as f64 / metrics.accelerated_judgments as f64
             } else {
                 1.0
             };

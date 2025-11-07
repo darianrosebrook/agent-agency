@@ -49,6 +49,7 @@ pub fn coreml_unavailable_error() -> ANEError {
 // FFI declarations needed for tokenizer operations
 extern "C" {
     /// Optional Swift/ObjC shim (returning true iff CoreML APIs are usable on this OS)
+    #[allow(dead_code)] // Will be used in v4
     fn coreml_can_load_models() -> bool;
 }
 

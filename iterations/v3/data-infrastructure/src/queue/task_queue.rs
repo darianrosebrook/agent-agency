@@ -9,7 +9,7 @@ use tokio::sync::{RwLock, Notify};
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use serde::{Deserialize, Serialize};
-use tracing::{info, warn, error, debug};
+use tracing::{info, error, debug};
 use sqlx::Row;
 
 use crate::DatabaseClient;
@@ -206,7 +206,7 @@ impl TaskQueueService {
     }
 
     /// Acknowledge task completion
-    pub async fn acknowledge_task(&self, task_id: Uuid, ack_token: &str, success: bool) -> Result<(), TaskQueueError> {
+    pub async fn acknowledge_task(&self, task_id: Uuid, _ack_token: &str, success: bool) -> Result<(), TaskQueueError> {
         debug!("Acknowledging task: {} (success: {})", task_id, success);
 
         let new_status = if success { TaskStatus::Completed } else { TaskStatus::Failed };

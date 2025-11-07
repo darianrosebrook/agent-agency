@@ -1014,7 +1014,7 @@ impl ChangesetApplicationEngine {
         }
 
         // Check that all referenced files are either being modified or exist
-        for (file, deps) in &file_dependencies {
+        for (_file, deps) in &file_dependencies {
             for dep in deps {
                 if !files_modified.contains(dep) {
                     // In a real implementation, check if file exists in workspace

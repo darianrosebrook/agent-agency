@@ -1,0 +1,66 @@
+// Color Design Tokens
+// Primary palette
+$color-primary: #2563eb;
+$color-primary-dark: #1d4ed8;
+$color-primary-light: #3b82f6;
+$color-primary-lighter: #60a5fa;
+
+// Semantic colors
+$color-success: #10b981;
+$color-success-dark: #059669;
+$color-success-light: #34d399;
+
+$color-warning: #f59e0b;
+$color-warning-dark: #d97706;
+$color-warning-light: #fbbf24;
+
+$color-error: #ef4444;
+$color-error-dark: #dc2626;
+$color-error-light: #f87171;
+
+$color-info: #3b82f6;
+$color-info-dark: #2563eb;
+$color-info-light: #60a5fa;
+
+// Neutral grays
+$color-gray-50: #f9fafb;
+$color-gray-100: #f3f4f6;
+$color-gray-200: #e5e7eb;
+$color-gray-300: #d1d5db;
+$color-gray-400: #9ca3af;
+$color-gray-500: #6b7280;
+$color-gray-600: #4b5563;
+$color-gray-700: #374151;
+$color-gray-800: #1f2937;
+$color-gray-900: #111827;
+
+// Text colors
+$color-text-primary: $color-gray-900;
+$color-text-secondary: $color-gray-600;
+$color-text-tertiary: $color-gray-500;
+$color-text-inverse: #ffffff;
+
+// Background colors
+$color-bg-primary: #ffffff;
+$color-bg-secondary: $color-gray-50;
+$color-bg-tertiary: $color-gray-100;
+$color-bg-overlay: rgba(0, 0, 0, 0.5);
+
+// Border colors
+$color-border-light: $color-gray-200;
+$color-border-medium: $color-gray-300;
+$color-border-dark: $color-gray-400;
+
+// Status colors (task states, health indicators)
+$color-status-pending: $color-gray-500;
+$color-status-running: $color-info;
+$color-status-completed: $color-success;
+$color-status-failed: $color-error;
+$color-status-paused: $color-warning;
+$color-status-cancelled: $color-gray-600;
+
+$color-health-healthy: $color-success;
+$color-health-warning: $color-warning;
+$color-health-error: $color-error;
+$color-health-unknown: $color-gray-500;
+

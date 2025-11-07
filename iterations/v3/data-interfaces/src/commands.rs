@@ -169,7 +169,7 @@ impl CliInterface {
     pub async fn execute_command(
         &mut self,
         command: &str,
-        args: &[String],
+        _args: &[String],
     ) -> Result<CliResponse, InterfaceError> {
         match command {
             "help" => Ok(CliResponse {

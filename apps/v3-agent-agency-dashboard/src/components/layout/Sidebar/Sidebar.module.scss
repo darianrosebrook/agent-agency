@@ -1,0 +1,67 @@
+@use '../../../styles/_tokens' as *;
+
+.sidebar {
+  width: 240px;
+  height: 100vh;
+  background-color: $color-gray-900;
+  color: $color-text-inverse;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  left: 0;
+  top: 0;
+  border-right: 1px solid $color-gray-800;
+}
+
+.header {
+  padding: $spacing-lg;
+  border-bottom: 1px solid $color-gray-800;
+}
+
+.logo {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  margin: 0;
+  color: $color-text-inverse;
+}
+
+.nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: $spacing-md 0;
+}
+
+.navList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md $spacing-lg;
+  color: $color-gray-300;
+  text-decoration: none;
+  transition: background-color $transition-fast, color $transition-fast;
+
+  &:hover {
+    background-color: $color-gray-800;
+    color: $color-text-inverse;
+  }
+
+  &--active {
+    background-color: $color-primary;
+    color: $color-text-inverse;
+  }
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+

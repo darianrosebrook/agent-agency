@@ -286,7 +286,8 @@ impl ToolRegistry {
 
         // Register file editing tools
         use crate::tools::create_file_editing_tools;
-        let file_tools = create_file_editing_tools(self.file_ops.clone());
+        let file_ops = self.file_ops.read().unwrap().clone();
+        let file_tools = create_file_editing_tools(file_ops);
         for tool in file_tools {
             self.register_tool(tool).await?;
         }
@@ -669,49 +670,50 @@ impl ToolRegistry {
 
         // Route to appropriate file operation based on tool name
         let params = serde_json::to_value(&request.parameters).unwrap_or(serde_json::Value::Null);
+        let executor = self.file_editing_executor.read().unwrap().clone();
         match tool.name.as_str() {
             "file_read" => {
-                self.file_editing_executor.execute_file_read(params).await
+                executor.execute_file_read(params).await
                     .map_err(|e| anyhow::anyhow!("File read error: {}", e))
             },
             "file_write" => {
-                self.file_editing_executor.execute_file_write(params).await
+                executor.execute_file_write(params).await
                     .map_err(|e| anyhow::anyhow!("File write error: {}", e))
             },
             "file_edit" => {
-                self.file_editing_executor.execute_file_edit(params).await
+                executor.execute_file_edit(params).await
                     .map_err(|e| anyhow::anyhow!("File edit error: {}", e))
             },
             "workspace_status" => {
-                self.file_editing_executor.execute_workspace_status(params).await
+                executor.execute_workspace_status(params).await
                     .map_err(|e| anyhow::anyhow!("Workspace status error: {}", e))
             },
             "file_delete" => {
-                self.file_editing_executor.execute_file_delete(params).await
+                executor.execute_file_delete(params).await
                     .map_err(|e| anyhow::anyhow!("File delete error: {}", e))
             },
             "file_move" => {
-                self.file_editing_executor.execute_file_move(params).await
+                executor.execute_file_move(params).await
                     .map_err(|e| anyhow::anyhow!("File move error: {}", e))
             },
             "file_copy" => {
-                self.file_editing_executor.execute_file_copy(params).await
+                executor.execute_file_copy(params).await
                     .map_err(|e| anyhow::anyhow!("File copy error: {}", e))
             },
             "list_directory" => {
-                self.file_editing_executor.execute_list_directory(params).await
+                executor.execute_list_directory(params).await
                     .map_err(|e| anyhow::anyhow!("List directory error: {}", e))
             },
             "file_exists" => {
-                self.file_editing_executor.execute_file_exists(params).await
+                executor.execute_file_exists(params).await
                     .map_err(|e| anyhow::anyhow!("File exists check error: {}", e))
             },
             "create_directory" => {
-                self.file_editing_executor.execute_create_directory(params).await
+                executor.execute_create_directory(params).await
                     .map_err(|e| anyhow::anyhow!("Create directory error: {}", e))
             },
             "get_file_metadata" => {
-                self.file_editing_executor.execute_get_file_metadata(params).await
+                executor.execute_get_file_metadata(params).await
                     .map_err(|e| anyhow::anyhow!("Get file metadata error: {}", e))
             },
             _ => {

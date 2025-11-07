@@ -8,6 +8,7 @@ edition = "2021"
 agent-orchestration = { path = "../agent-orchestration", optional = true }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 data-infrastructure = { path = "../data-infrastructure" }
+data-interfaces-adapters = { path = "../data-interfaces-adapters", optional = true }
 system-common-interfaces = { path = "../system-common-interfaces" }
 system-quality-security = { path = "../system-quality-security" }
 system-observability = { path = "../system-observability" }
@@ -46,5 +47,5 @@ schemars = { version = "0.8", features = ["derive"] }
 
 [features]
 default = []
-full = ["agent-research", "system-federated-ml", "agent-orchestration"]
+full = ["agent-research", "system-federated-ml", "agent-orchestration", "data-interfaces-adapters"]
 e2e = []

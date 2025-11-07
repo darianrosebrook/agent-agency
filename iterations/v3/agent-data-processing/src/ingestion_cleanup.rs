@@ -63,14 +63,14 @@ impl IndexCleanup for NoOpCleanup {
 /// Real cleanup implementation that removes indexed content
 pub struct IndexCleanupHandler {
     path_registry: Arc<PathRegistry>,
-    indexing_stage: Arc<crate::indexing::DefaultIndexingStage>,
+    _indexing_stage: Arc<crate::indexing::DefaultIndexingStage>,
 }
 
 impl IndexCleanupHandler {
     pub fn new(path_registry: Arc<PathRegistry>, indexing_stage: Arc<crate::indexing::DefaultIndexingStage>) -> Self {
         Self {
             path_registry,
-            indexing_stage,
+            _indexing_stage: indexing_stage,
         }
     }
 }

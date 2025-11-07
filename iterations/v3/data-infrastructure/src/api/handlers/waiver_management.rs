@@ -143,7 +143,7 @@ pub async fn approve_waiver(
         .and_then(|v| v.as_str())
         .ok_or(StatusCode::BAD_REQUEST)?;
     
-    let approval_notes = approval_data.get("approval_notes")
+    let _approval_notes = approval_data.get("approval_notes")
         .and_then(|v| v.as_str())
         .unwrap_or("");
 
@@ -370,7 +370,7 @@ pub async fn get_waiver_audit_trail(
 
 /// Validate waiver data
 pub async fn validate_waiver(
-    State(state): State<ApiState>,
+    State(_state): State<ApiState>,
     Json(waiver_data): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     let mut validation_errors = Vec::new();

@@ -6,7 +6,6 @@
 use schemars::JsonSchema;
 use std::ptr::NonNull;
 use std::collections::HashMap;
-use std::ffi::CString;
 
 // Import functions needed for method implementations
 use super::model::{coreml_runtime_available, coreml_unavailable_error};

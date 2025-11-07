@@ -1,0 +1,32 @@
+@use '../../../src/styles/_tokens' as *;
+
+.system {
+  max-width: 1400px;
+  margin: 0 auto;
+
+  h1 {
+    font-size: $font-size-3xl;
+    font-weight: $font-weight-semibold;
+    margin-bottom: $spacing-lg;
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: $spacing-lg;
+}
+
+.section {
+  h2 {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-semibold;
+    margin-bottom: $spacing-sm;
+  }
+
+  p {
+    color: $color-text-secondary;
+    margin-bottom: $spacing-lg;
+  }
+}
+

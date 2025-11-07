@@ -8,10 +8,9 @@
 
 use crate::context::types::*;
 use crate::{DataProcessingResult, DataProcessingError};
-use chrono::{DateTime, Utc, Duration};
+use chrono::{Utc, Duration};
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};
 use serde_json;
-use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::io::Write;
@@ -1077,7 +1076,7 @@ impl ContextManager {
         let archived_params: Vec<&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)> = vec![];
         if let Ok(rows) = self.db_client.query(archived_query, &archived_params).await {
             if !rows.is_empty() {
-                let archived_count: i64 = rows[0].get("archived_count");
+                let _archived_count: i64 = rows[0].get("archived_count");
                 // Note: This should be tracked separately if needed
             }
         }

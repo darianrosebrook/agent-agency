@@ -186,3 +186,4 @@ Observational design ensures:
 
 The API is your window into the orchestrator - use it to observe, monitor, and request, but never to directly control. This design preserves research integrity and ensures the orchestrator maintains full autonomy over its execution lifecycle.
 
+

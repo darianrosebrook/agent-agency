@@ -1,0 +1,48 @@
+@use '../../../styles/_tokens' as *;
+
+.tableWrapper {
+  overflow-x: auto;
+  border: 1px solid $color-border-light;
+  border-radius: 8px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: $color-bg-primary;
+}
+
+.header {
+  padding: $spacing-md $spacing-lg;
+  text-align: left;
+  font-weight: $font-weight-semibold;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  background-color: $color-bg-secondary;
+  border-bottom: 2px solid $color-border-medium;
+  white-space: nowrap;
+}
+
+.cell {
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid $color-border-light;
+  font-size: $font-size-base;
+  color: $color-text-primary;
+}
+
+.clickableRow {
+  cursor: pointer;
+  transition: background-color $transition-fast;
+
+  &:hover {
+    background-color: $color-bg-secondary;
+  }
+}
+
+.empty {
+  padding: $spacing-xl;
+  text-align: center;
+  color: $color-text-tertiary;
+  font-style: italic;
+}
+

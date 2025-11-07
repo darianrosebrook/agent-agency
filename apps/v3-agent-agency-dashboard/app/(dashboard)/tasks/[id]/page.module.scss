@@ -1,0 +1,77 @@
+@use '../../../../src/styles/_tokens' as *;
+
+.task {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: $spacing-lg;
+  gap: $spacing-lg;
+
+  h1 {
+    font-size: $font-size-3xl;
+    font-weight: $font-weight-semibold;
+    margin: 0 0 $spacing-sm 0;
+  }
+}
+
+.status {
+  display: inline-block;
+}
+
+.actions {
+  display: flex;
+  gap: $spacing-md;
+  flex-shrink: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $spacing-lg;
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.section {
+  h2 {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-semibold;
+    margin-bottom: $spacing-lg;
+  }
+}
+
+.details {
+  display: grid;
+  gap: $spacing-md;
+
+  div {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: $spacing-md;
+    align-items: start;
+  }
+
+  dt {
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+  }
+
+  dd {
+    margin: 0;
+    color: $color-text-primary;
+    word-break: break-word;
+  }
+}
+
+.mono {
+  font-family: $font-family-mono;
+  font-size: $font-size-sm;
+}
+

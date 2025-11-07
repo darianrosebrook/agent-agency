@@ -12,18 +12,13 @@
 
 use std::time::Instant;
 use std::path::PathBuf;
-use std::sync::Arc;
-use tracing::{info, error};
-use tempfile::TempDir;
-use tokio::fs;
 use tokio::process::Command;
+use tracing::error;
+use tempfile::TempDir;
 
 #[cfg(feature = "full")]
 use agent_orchestration::{
     AutonomousFileEditor,
-};
-use agent_agency_contracts::{
-    FileChange, ChangeType,
 };
 use data_infrastructure::file_operations_service::create_file_operations_service;
 use system_common_interfaces::{

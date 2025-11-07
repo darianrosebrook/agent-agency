@@ -18,7 +18,6 @@ use tracing::{info, warn};
 use uuid::Uuid;
 use chrono::Utc;
 use std::sync::Mutex;
-use std::sync::Arc;
 
 #[cfg(feature = "coreml")]
 use system_acceleration::ane::infer::{
@@ -193,7 +192,7 @@ pub struct DetectedObject {
 /// ASR Enricher - Consolidated from enrichers crate
 #[derive(Debug)]
 pub struct AsrEnricher {
-    config: EnrichmentCircuitBreakerConfig,
+    _config: EnrichmentCircuitBreakerConfig,
     circuit_breaker: Mutex<CircuitBreaker>,
     #[cfg(feature = "coreml")]
     whisper_model_path: Option<std::path::PathBuf>,
@@ -208,7 +207,7 @@ impl AsrEnricher {
             config.request_timeout_secs,
         );
         Self {
-            config,
+            _config: config,
             circuit_breaker: Mutex::new(circuit_breaker),
             #[cfg(feature = "coreml")]
             whisper_model_path: None,
@@ -584,7 +583,7 @@ impl AsrEnricher {
 /// Vision Enricher - Consolidated from enrichers crate
 #[derive(Debug)]
 pub struct VisionEnricher {
-    config: EnrichmentCircuitBreakerConfig,
+    _config: EnrichmentCircuitBreakerConfig,
     circuit_breaker: Mutex<CircuitBreaker>,
 }
 
@@ -596,7 +595,7 @@ impl VisionEnricher {
             config.success_threshold,
             config.request_timeout_secs,
         );
-        Self { config, circuit_breaker: Mutex::new(circuit_breaker) }
+        Self { _config: config, circuit_breaker: Mutex::new(circuit_breaker) }
     }
 
     /// Perform vision enrichment with OCR and object detection
@@ -899,7 +898,7 @@ impl VisionEnricher {
 /// Entity Enricher - Consolidated from enrichers crate
 #[derive(Debug)]
 pub struct EntityEnricher {
-    config: EnrichmentCircuitBreakerConfig,
+    _config: EnrichmentCircuitBreakerConfig,
     circuit_breaker: Mutex<CircuitBreaker>,
 }
 
@@ -911,7 +910,7 @@ impl EntityEnricher {
             config.success_threshold,
             config.request_timeout_secs,
         );
-        Self { config, circuit_breaker: Mutex::new(circuit_breaker) }
+        Self { _config: config, circuit_breaker: Mutex::new(circuit_breaker) }
     }
 
     /// Perform entity extraction and topic modeling
@@ -1205,7 +1204,7 @@ impl EntityEnricher {
 /// Visual Captioning Enricher - Consolidated from enrichers crate
 #[derive(Debug)]
 pub struct VisualCaptioningEnricher {
-    config: EnrichmentCircuitBreakerConfig,
+    _config: EnrichmentCircuitBreakerConfig,
     circuit_breaker: Mutex<CircuitBreaker>,
 }
 
@@ -1217,7 +1216,7 @@ impl VisualCaptioningEnricher {
             config.success_threshold,
             config.request_timeout_secs,
         );
-        Self { config, circuit_breaker: Mutex::new(circuit_breaker) }
+        Self { _config: config, circuit_breaker: Mutex::new(circuit_breaker) }
     }
 
     /// Generate captions and tags for images
@@ -1553,7 +1552,7 @@ pub struct CircuitBreaker {
     failure_threshold: u64,
     recovery_timeout_secs: u64,
     success_threshold: u64,
-    request_timeout_secs: u64,
+    _request_timeout_secs: u64,
     state: CircuitState,
     failures: u64,
     successes: u64,
@@ -1573,7 +1572,7 @@ impl CircuitBreaker {
             failure_threshold,
             recovery_timeout_secs,
             success_threshold,
-            request_timeout_secs,
+            _request_timeout_secs: request_timeout_secs,
             state: CircuitState::Closed,
             failures: 0,
             successes: 0,
@@ -1662,7 +1661,7 @@ pub struct UnifiedEnrichmentStage {
     vision_enricher: VisionEnricher,
     entity_enricher: EntityEnricher,
     visual_captioning_enricher: VisualCaptioningEnricher,
-    circuit_breaker_config: EnrichmentCircuitBreakerConfig,
+    _circuit_breaker_config: EnrichmentCircuitBreakerConfig,
 }
 
 impl UnifiedEnrichmentStage {
@@ -1672,7 +1671,7 @@ impl UnifiedEnrichmentStage {
             vision_enricher: VisionEnricher::new(circuit_breaker_config.clone()),
             entity_enricher: EntityEnricher::new(circuit_breaker_config.clone()),
             visual_captioning_enricher: VisualCaptioningEnricher::new(circuit_breaker_config.clone()),
-            circuit_breaker_config,
+            _circuit_breaker_config: circuit_breaker_config,
         }
     }
 

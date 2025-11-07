@@ -5,7 +5,7 @@
 
 use schemars::JsonSchema;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tokio::sync::RwLock;
 use parking_lot::RwLock as SyncRwLock;
 
@@ -37,11 +37,11 @@ pub struct ANEManager {
     /// ANE device capabilities
     device_capabilities: ANEDeviceCapabilities,
     /// Tokenizers for different model types
-    tokenizers: ANETokenizers,
+    _tokenizers: ANETokenizers,
     /// Performance tracker for EWMA metrics
     performance_tracker: Arc<RwLock<PerformanceTracker>>,
     /// Loaded ANE framework symbols
-    ane_symbols: SyncRwLock<ANESymbols>,
+    _ane_symbols: SyncRwLock<ANESymbols>,
 }
 
 /// ANE model representation
@@ -224,13 +224,13 @@ impl ANEManager {
                 max_concurrent_operations: 4,
                 compute_units: 16,
             },
-            tokenizers: ANETokenizers {
+            _tokenizers: ANETokenizers {
                 bpe_tokenizer: None,
                 wordpiece_tokenizer: None,
                 sentencepiece_tokenizer: None,
             },
             performance_tracker: Arc::new(RwLock::new(PerformanceTracker::new())),
-            ane_symbols: SyncRwLock::new(ANESymbols::default()),
+            _ane_symbols: SyncRwLock::new(ANESymbols::default()),
         })
     }
     
@@ -251,13 +251,13 @@ impl ANEManager {
             resource_pool: Arc::new(resource_pool),
             performance_metrics: Arc::new(RwLock::new(HashMap::new())),
             device_capabilities: capabilities,
-            tokenizers: ANETokenizers {
+            _tokenizers: ANETokenizers {
                 bpe_tokenizer: None,
                 wordpiece_tokenizer: None,
                 sentencepiece_tokenizer: None,
             },
             performance_tracker: Arc::new(RwLock::new(PerformanceTracker::new())),
-            ane_symbols: SyncRwLock::new(ANESymbols::default()),
+            _ane_symbols: SyncRwLock::new(ANESymbols::default()),
         })
     }
 

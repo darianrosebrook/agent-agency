@@ -243,7 +243,7 @@ impl ModelRef {
 
 /// Internal function to save a model using its raw handle
 fn save_model_to_path(model_handle: u64, path: &std::path::Path) -> crate::ane::ane_errors::Result<()> {
-    use std::ffi::CString;
+    
     use crate::ane::ane_errors::ANEError;
 
     // Get model information from the FFI layer

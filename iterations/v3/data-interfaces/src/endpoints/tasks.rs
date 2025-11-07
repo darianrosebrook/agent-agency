@@ -3,7 +3,6 @@
 //! REST API endpoints for task management and monitoring.
 
 use crate::{ApiRequest, ApiResponse, InterfaceError};
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;

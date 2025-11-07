@@ -1,0 +1,17 @@
+// Animation Design Tokens
+
+// Durations
+$duration-fast: 150ms;
+$duration-normal: 250ms;
+$duration-slow: 350ms;
+
+// Easing functions
+$ease-in: cubic-bezier(0.4, 0, 1, 1);
+$ease-out: cubic-bezier(0, 0, 0.2, 1);
+$ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+// Transitions
+$transition-fast: $duration-fast $ease-out;
+$transition-normal: $duration-normal $ease-out;
+$transition-slow: $duration-slow $ease-out;
+

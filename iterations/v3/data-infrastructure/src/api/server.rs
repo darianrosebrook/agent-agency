@@ -21,7 +21,7 @@ use super::types::{
     DashboardTaskSummary, DashboardDiffSummary
 };
 use agent_agency_contracts::{ExecutionArtifacts, WorkingSpec, QualityReport};
-use crate::{DatabaseClient, TaskStoreTrait};
+use crate::DatabaseClient;
 
 // Stub types for compilation
 

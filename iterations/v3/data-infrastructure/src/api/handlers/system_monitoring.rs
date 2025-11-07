@@ -9,8 +9,7 @@ use axum::{
     Json,
 };
 use serde_json;
-use tracing::{info, error};
-use uuid::Uuid;
+use tracing::error;
 
 use crate::api::ApiState;
 
@@ -159,7 +158,7 @@ pub async fn get_metrics(
     State(state): State<ApiState>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     match state.api.db_client.get_system_metrics().await {
-        Ok(metrics) => {
+        Ok(_metrics) => {
             Ok(Json(serde_json::json!({
                 "timestamp": chrono::Utc::now(),
                 "metrics": {
@@ -216,11 +215,11 @@ pub async fn get_diff_summary(
     State(_state): State<ApiState>,
     Json(diff_data): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    let old_content = diff_data.get("old_content")
+    let _old_content = diff_data.get("old_content")
         .and_then(|v| v.as_str())
         .ok_or(StatusCode::BAD_REQUEST)?;
     
-    let new_content = diff_data.get("new_content")
+    let _new_content = diff_data.get("new_content")
         .and_then(|v| v.as_str())
         .ok_or(StatusCode::BAD_REQUEST)?;
     

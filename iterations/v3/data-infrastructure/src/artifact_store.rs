@@ -948,7 +948,7 @@ impl ArtifactStorage for DatabaseArtifactStorage {
                     );
 
                     // Create audit log entry for the integrity violation
-                    let audit_entry = CreateAuditTrailEntry {
+                    let _audit_entry = CreateAuditTrailEntry {
                         entity_type: "artifact".to_string(),
                         entity_id: artifact_id,
                         action: "integrity_check".to_string(),
@@ -1004,7 +1004,7 @@ impl ArtifactStorage for DatabaseArtifactStorage {
             );
 
             // Create audit log entry for the collection integrity violation
-            let audit_entry = CreateAuditTrailEntry {
+            let _audit_entry = CreateAuditTrailEntry {
                 entity_type: "artifact".to_string(),
                 entity_id: task_id,
                 action: "integrity_check".to_string(),

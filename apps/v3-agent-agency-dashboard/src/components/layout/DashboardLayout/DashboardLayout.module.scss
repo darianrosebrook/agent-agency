@@ -1,0 +1,21 @@
+@use '../../../styles/_tokens' as *;
+
+.dashboard {
+  display: flex;
+  min-height: 100vh;
+  background-color: $color-bg-secondary;
+}
+
+.main {
+  flex: 1;
+  margin-left: 240px; // Sidebar width
+  display: flex;
+  flex-direction: column;
+}
+
+.content {
+  flex: 1;
+  padding: $spacing-lg;
+  overflow-y: auto;
+}
+

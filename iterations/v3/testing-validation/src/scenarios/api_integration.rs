@@ -5,7 +5,6 @@
 //! error handling, and audit logging.
 
 use std::time::Instant;
-use std::collections::HashMap;
 use tracing::{info, error};
 use serde_json::json;
 use uuid::Uuid;

@@ -867,7 +867,7 @@ impl MemoryMonitor {
 
     /// Emergency handle cleanup (clear all tracked handles without cleanup)
     pub async fn emergency_handle_cleanup(&self) {
-        let mut registry = self.handle_registry.write().await;
+        let registry = self.handle_registry.write().await;
         // In a real emergency, we'd try to clean up but for now just clear tracking
         // Note: HandleRegistry doesn't have a clear method, so we use emergency cleanup
         warn!("Emergency handle cleanup completed - all handle tracking cleared");

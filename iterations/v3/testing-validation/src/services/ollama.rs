@@ -3,7 +3,7 @@
 //! Manages local Ollama instance for model inference in autonomous testing.
 
 use std::process::{Command, Stdio};
-use tracing::{info, warn, error};
+use tracing::{info, warn};
 
 /// Service for managing local Ollama instance with multiple models
 pub struct OllamaService {

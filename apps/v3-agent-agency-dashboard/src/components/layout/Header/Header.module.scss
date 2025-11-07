@@ -1,0 +1,33 @@
+@use '../../../styles/_tokens' as *;
+
+.header {
+  height: 64px;
+  background-color: $color-bg-primary;
+  border-bottom: 1px solid $color-border-light;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.content {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 $spacing-lg;
+  margin-left: 240px; // Sidebar width
+}
+
+.title {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+  margin: 0;
+  color: $color-text-primary;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+

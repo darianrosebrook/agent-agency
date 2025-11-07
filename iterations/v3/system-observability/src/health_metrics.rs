@@ -98,7 +98,7 @@ impl MetricsCollector {
         // Use sysinfo to calculate real network IO across all interfaces
         system.refresh_all();
 
-        let mut total_bytes = 0u64;
+        let total_bytes = 0u64;
 
         // TODO: Re-enable network monitoring when sysinfo API is stabilized
         // - [ ] Update sysinfo dependency to version with stable network API

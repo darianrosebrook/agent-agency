@@ -6,7 +6,7 @@
 use anyhow::{Context, Result};
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::sync::Arc;
-use tracing::{debug, error, warn};
+use tracing::debug;
 use uuid::Uuid;
 
 use crate::{TelemetryData, TelemetryDataType, TelemetryBatch, TelemetryError};

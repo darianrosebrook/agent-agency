@@ -1,0 +1,111 @@
+@use '../../../styles/_tokens' as *;
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-lg;
+
+  h2 {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-semibold;
+    margin: 0;
+  }
+}
+
+.count {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.entries {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.entry {
+  border: 1px solid $color-border-light;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.entryHeader {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-md $spacing-lg;
+  background-color: $color-bg-secondary;
+  cursor: pointer;
+  transition: background-color $transition-fast;
+  text-align: left;
+
+  &:hover {
+    background-color: $color-bg-tertiary;
+  }
+}
+
+.entryMeta {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.actor {
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.timestamp {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.toggle {
+  font-size: $font-size-xl;
+  color: $color-text-secondary;
+  font-weight: $font-weight-bold;
+}
+
+.entryContent {
+  padding: $spacing-lg;
+  background-color: $color-bg-primary;
+}
+
+.thought {
+  margin: 0 0 $spacing-md 0;
+  color: $color-text-primary;
+  white-space: pre-wrap;
+  line-height: $line-height-relaxed;
+}
+
+.context {
+  margin-top: $spacing-md;
+  padding-top: $spacing-md;
+  border-top: 1px solid $color-border-light;
+
+  summary {
+    cursor: pointer;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-sm;
+  }
+
+  pre {
+    margin: $spacing-sm 0 0 0;
+    padding: $spacing-md;
+    background-color: $color-bg-secondary;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: $font-size-sm;
+    font-family: $font-family-mono;
+  }
+}
+
+.empty {
+  padding: $spacing-xl;
+  text-align: center;
+  color: $color-text-tertiary;
+}
+

@@ -170,7 +170,7 @@ impl OrchestratorService {
         info!("Executing task {}: {}", task_id, description.chars().take(100).collect::<String>());
 
         // Create initial task state
-        let mut task_state = TaskExecutionState {
+        let task_state = TaskExecutionState {
             task_id,
             description: description.clone(),
             status: TaskStatus::Pending,

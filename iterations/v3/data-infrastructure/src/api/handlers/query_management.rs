@@ -3,16 +3,9 @@
 //! This module contains all API handlers related to query management,
 //! including saved queries and query execution.
 
-use axum::{
-    extract::{Path, State, Query},
-    http::StatusCode,
-    Json,
-};
 use serde_json;
-use tracing::{info, error};
 use sqlx::Row;
 
-use crate::api::ApiState;
 
 /// List saved queries
 pub async fn list_saved_queries(
@@ -24,8 +17,8 @@ pub async fn list_saved_queries(
     let user_id = params.get("user_id");
 
     // Build query with optional user filter
-    let limit_ref: &(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync) = &limit;
-    let offset_ref: &(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync) = &offset;
+    let _limit_ref: &(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync) = &limit;
+    let _offset_ref: &(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync) = &offset;
 
     let (query, params_vec): (String, Vec<Box<dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync>>) = if let Some(user_id) = user_id {
         let user_id_str = user_id.as_str().to_string();

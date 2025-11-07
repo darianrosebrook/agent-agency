@@ -7,11 +7,8 @@
 //! - Performance requirements
 //! - Scope compliance
 
-use std::collections::HashMap;
-use tracing::{info, warn, error};
+use tracing::{info, error};
 use regex::Regex;
-use anyhow::Result;
-use futures::future::join_all;
 
 // ML/NLP imports for advanced assertion generation
 #[cfg(feature = "full")]

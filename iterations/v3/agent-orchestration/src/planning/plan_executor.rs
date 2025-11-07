@@ -1422,6 +1422,8 @@ impl PlanExecutor {
             parallel_limit: self.parallel_limit.clone(),
             failure_oracle: self.failure_oracle.clone(),
             worker_lifecycle_manager: self.worker_lifecycle_manager.clone(),
+            worker_bridge: self.worker_bridge.clone(),
+            worktree_manager: self.worktree_manager.clone(),
             #[cfg(feature = "evaluation")]
             clock: self.clock.clone(),
             #[cfg(feature = "evaluation")]

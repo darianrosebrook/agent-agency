@@ -1,0 +1,58 @@
+@use '../../../src/styles/_tokens' as *;
+
+.database {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-lg;
+
+  h1 {
+    font-size: $font-size-3xl;
+    font-weight: $font-weight-semibold;
+    margin: 0;
+  }
+}
+
+.queryLink {
+  padding: $spacing-md $spacing-lg;
+  background-color: $color-primary;
+  color: $color-text-inverse;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: $font-weight-medium;
+  transition: background-color $transition-fast;
+
+  &:hover {
+    background-color: $color-primary-dark;
+  }
+}
+
+.section {
+  h2 {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-semibold;
+    margin-bottom: $spacing-lg;
+  }
+}
+
+.link {
+  color: $color-primary;
+  text-decoration: none;
+  font-weight: $font-weight-medium;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.empty {
+  padding: $spacing-xl;
+  text-align: center;
+  color: $color-text-tertiary;
+}
+

@@ -1210,6 +1210,63 @@ impl UnifiedOrchestrator {
             }
         }
 
+        // Process learning outcomes via ReflexiveLearner (if available)
+        if let Some(ref reflexive_learner) = self.reflexive_learner {
+            info!("Processing learning outcomes via ReflexiveLearner");
+            
+            // Process each completed milestone with its artifact
+            // Match artifacts to milestones by index (artifacts are returned in milestone order)
+            for (milestone_index, milestone) in execution_plan.contract_plan.milestones.iter().enumerate() {
+                // Only process completed milestones
+                if !matches!(milestone.state, agent_agency_contracts::planning_io::MilestoneState::Completed) {
+                    continue;
+                }
+                
+                // Get corresponding artifact (if available)
+                let artifact = artifacts.get(milestone_index).or_else(|| {
+                    // Try to find artifact by worker_id match
+                    milestone.assigned_workers.first().and_then(|&worker_id| {
+                        artifacts.iter().find(|a| {
+                            a.provenance.worker_id.as_ref()
+                                .and_then(|wid| Uuid::parse_str(wid).ok())
+                                .map(|wid| wid == worker_id)
+                                .unwrap_or(false)
+                        })
+                    })
+                });
+                
+                if let Some(artifact) = artifact {
+                    // Extract worker_id from milestone or artifact
+                    let worker_id = milestone.assigned_workers.first()
+                        .copied()
+                        .or_else(|| {
+                            artifact.provenance.worker_id.as_ref()
+                                .and_then(|wid| Uuid::parse_str(wid).ok())
+                        })
+                        .unwrap_or_else(Uuid::new_v4);
+                    
+                    // Process outcome
+                    match reflexive_learner.process_outcome(artifact, milestone, worker_id).await {
+                        Ok(adjustments) => {
+                            if !adjustments.is_empty() {
+                                info!("ReflexiveLearner generated {} routing adjustments for milestone {}", 
+                                    adjustments.len(), milestone.id);
+                                for adjustment in &adjustments {
+                                    debug!("Routing adjustment: worker_id={}, performance_adjustment={:.2}, reason={}", 
+                                        adjustment.worker_id, adjustment.performance_adjustment, adjustment.reason);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            warn!("Failed to process learning outcome for milestone {}: {}", milestone.id, e);
+                        }
+                    }
+                } else {
+                    debug!("No artifact found for milestone {} - skipping ReflexiveLearner processing", milestone.id);
+                }
+            }
+        }
+
         // Update session context after execution completes (multi-session continuity)
         if let Some(ref session_mgr) = self.session_manager {
             // Get session_id from the beginning of the function

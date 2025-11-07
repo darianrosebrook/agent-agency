@@ -19,10 +19,8 @@ use agent_memory::graph_engine::RelationshipType;
 use governor::{Quota, RateLimiter};
 use nonzero_ext::nonzero;
 use backoff::{ExponentialBackoff, future::retry};
-use parking_lot::Mutex;
 use moka::future::Cache;
 use std::sync::Arc;
-use futures::{stream, StreamExt};
 // Use workspace sqlx instead of rusqlite to avoid conflicts
 // use deadpool_sqlite::{Config, Pool, Runtime};
 

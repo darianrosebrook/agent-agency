@@ -4,13 +4,13 @@ use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
 use tokio::sync::{broadcast, Mutex};
 use moka::future::Cache;
-use tracing::{info, warn, error};
+use tracing::{info, error};
 
 use crate::{
     data_processing_types::*,
     ingestion::DefaultIngestionStage,
     pipeline::PipelineStage,
-    DataProcessingResult, DataProcessingError,
+    DataProcessingResult,
 };
 
 /// Commands for the ingestion runtime

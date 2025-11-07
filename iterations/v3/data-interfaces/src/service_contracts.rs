@@ -9,8 +9,6 @@ use agent_agency_contracts::{
     TaskRequest, TaskResponse, WorkingSpec, TaskExecutionResult,
     TaskSpec, TaskRequirements, TaskContext as ContractsTaskContext,
 };
-use std::sync::Arc;
-use uuid::Uuid;
 
 /// Research service for task planning and execution
 #[async_trait]

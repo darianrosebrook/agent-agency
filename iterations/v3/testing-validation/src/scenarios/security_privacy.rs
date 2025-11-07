@@ -25,8 +25,6 @@ use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceMana
 use system_quality_security::input_validation::{validate_string_input, validate_sql_safe};
 use system_quality_security::keystore::{Keystore, ProductionKeystore, KeyType, KeyPermission};
 use chrono::Utc;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 /// Run the security & privacy E2E test
 pub async fn run_security_test(

@@ -5,9 +5,7 @@
 
 use schemars::JsonSchema;
 use crate::ane::ane_errors::{ANEError, Result};
-use crate::ane::TensorSpec;
 use candle_core::Device;
-use std::marker::PhantomData;
 use std::ptr::NonNull;
 use std::ffi::CString;
 use std::path::Path;
@@ -24,7 +22,6 @@ use super::registry::{CoreMlHandle, ModelRef};
 use super::registry::registry;
 
 // Import safety utilities
-use super::safety::io_safety;
 
 // Import Tensor type
 use super::safety::Tensor;
@@ -75,7 +72,7 @@ pub fn compile_model(source_path: &Path) -> Result<std::path::PathBuf> {
 
         let output_path_str = output_path.to_str()
             .ok_or_else(|| ANEError::InvalidInput("Invalid output path encoding".to_string()))?;
-        let output_path_cstr = CString::new(output_path_str)
+        let _output_path_cstr = CString::new(output_path_str)
             .map_err(|e| ANEError::InvalidInput(format!("Invalid output path: {}", e)))?;
 
         // Create model configuration JSON
@@ -255,10 +252,11 @@ pub fn detect_coreml_capabilities() -> CoreMLCapabilities {
 }
 
 /// Create input features for Core ML inference
+#[allow(dead_code)] // Will be used in v4
 fn create_input_features(
     _input_name: &str,
-    input_data: &[f32],
-    input_shape: &[i32],
+    _input_data: &[f32],
+    _input_shape: &[i32],
 ) -> Result<MLFeatureProvider> {
     #[cfg(target_os = "macos")]
     {
@@ -298,7 +296,8 @@ fn create_input_features(
 }
 
 /// Extract output tensor from prediction results
-fn extract_output_tensor(prediction: &MLFeatureProvider) -> Result<Tensor> {
+#[allow(dead_code)] // Will be used in v4
+fn extract_output_tensor(_prediction: &MLFeatureProvider) -> Result<Tensor> {
     #[cfg(target_os = "macos")]
     {
         // Extract output tensor from MLFeatureProvider using agentbridge framework
@@ -307,7 +306,7 @@ fn extract_output_tensor(prediction: &MLFeatureProvider) -> Result<Tensor> {
 
         let result = unsafe {
             agentbridge_dict_provider_destroy(
-                prediction.ptr() as u64,
+                _prediction.ptr() as u64,
             )
         };
 

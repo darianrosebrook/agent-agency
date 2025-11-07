@@ -8,7 +8,7 @@
 //! - Device matrix support and capability detection
 
 use crate::ane::ane_errors::{ANEError, Result};
-use crate::ane::compat::coreml::coreml::{CoreMLCapabilities, detect_coreml_capabilities};
+use crate::ane::compat::coreml::coreml::detect_coreml_capabilities;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -268,6 +268,7 @@ impl HardenedInferenceExecutor {
     }
 
     /// Attempt fallback inference (simplified - would need actual implementation)
+    #[allow(dead_code)] // Will be used in v4
     async fn attempt_fallback_inference<F, Fut, T>(&self, _operation: F) -> Result<T>
     where
         F: FnOnce() -> Fut,
@@ -582,7 +583,7 @@ pub enum HealthStatus {
         consecutive_failures: AtomicU64,
         total_operations: AtomicU64,
         last_health_check: AtomicU64,
-        health_check_interval: Duration,
+        _health_check_interval: Duration,
     }
 
     impl HealthMonitor {
@@ -592,7 +593,7 @@ pub enum HealthStatus {
                 consecutive_failures: AtomicU64::new(0),
                 total_operations: AtomicU64::new(0),
                 last_health_check: AtomicU64::new(0),
-                health_check_interval: Duration::from_secs(60),
+                _health_check_interval: Duration::from_secs(60),
             }
         }
 
@@ -661,7 +662,7 @@ pub mod resource_management {
 
     /// Resource manager for Core ML operations
     pub struct ResourceManager {
-        active_models: AtomicU64,
+        _active_models: AtomicU64,
         memory_usage_bytes: AtomicU64,
         max_memory_bytes: u64,
         cleanup_threshold: f64,
@@ -671,7 +672,7 @@ pub mod resource_management {
         /// Create a new resource manager
         pub fn new(max_memory_gb: usize) -> Self {
             Self {
-                active_models: AtomicU64::new(0),
+                _active_models: AtomicU64::new(0),
                 memory_usage_bytes: AtomicU64::new(0),
                 max_memory_bytes: (max_memory_gb * 1024 * 1024 * 1024) as u64,
                 cleanup_threshold: 0.8, // 80% of max memory

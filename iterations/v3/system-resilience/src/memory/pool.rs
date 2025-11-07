@@ -235,7 +235,7 @@ impl<T: Send + Sync + 'static> PooledObject<T> {
     /// Register orphaned object for deferred cleanup when no runtime available
     fn register_orphaned_object(&self, obj: T) {
         // Try to register the object for later cleanup
-        if let Ok(mut orphaned) = crate::memory::ORPHANED_OBJECTS.lock() {
+        if let Ok(orphaned) = crate::memory::ORPHANED_OBJECTS.lock() {
             // In a real implementation, this would use a proper cleanup queue
             // For now, we just log the issue and drop the object
             warn!("Object pool unavailable for return - object will be dropped. Consider increasing pool capacity.");

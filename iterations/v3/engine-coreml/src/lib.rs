@@ -17,13 +17,11 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 
-use arc_swap::ArcSwap;
 use async_trait::async_trait;
 use blake3::Hash;
 use dashmap::DashMap;
-use enum_map::EnumMap;
 use serde_json;
-use tracing::{debug, info, instrument, warn};
+use tracing::{info, warn};
 
 use agent_agency_contracts::{
     JudgeEngine, EngineRequest, EngineResponse, EngineError, EngineCaps, TokenUsage,

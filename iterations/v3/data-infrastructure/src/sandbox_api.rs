@@ -46,7 +46,7 @@ pub async fn execute_command(
     axum::extract::ConnectInfo(addr): axum::extract::ConnectInfo<std::net::SocketAddr>,
     Json(request): Json<ExecuteRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, StatusCode> {
-    let audit_context = extract_audit_context(&headers, Some(addr));
+    let _audit_context = extract_audit_context(&headers, Some(addr));
 
     // Create sandbox context
     let context = SandboxContext {

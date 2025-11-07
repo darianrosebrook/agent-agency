@@ -9,7 +9,7 @@
 use crate::database_config::DatabaseConfig;
 use crate::simple_client::DatabaseClient;
 use anyhow::{Context, Result};
-use sqlx::{PgPool, postgres::PgPoolOptions};
+use sqlx::PgPool;
 use std::path::Path;
 use tracing::{info, warn, error};
 
@@ -33,7 +33,6 @@ fn split_sql_statements(sql: &str) -> Vec<String> {
             if !in_dollar_quote {
                 // Check if this starts a dollar quote
                 let mut tag = String::new();
-                let mut is_dollar_quote = false;
                 
                 // Peek ahead to see if this is $$ or $tag$
                 if let Some(&next_ch) = chars.peek() {
@@ -43,7 +42,6 @@ fn split_sql_statements(sql: &str) -> Vec<String> {
                         current_statement.push('$');
                         in_dollar_quote = true;
                         dollar_tag = Some(String::new()); // Empty tag for $$
-                        is_dollar_quote = true;
                     } else if next_ch.is_alphanumeric() || next_ch == '_' {
                         // Tagged case: $tag$
                         while let Some(&peek_ch) = chars.peek() {
@@ -52,7 +50,6 @@ fn split_sql_statements(sql: &str) -> Vec<String> {
                                 current_statement.push('$');
                                 in_dollar_quote = true;
                                 dollar_tag = Some(tag.clone());
-                                is_dollar_quote = true;
                                 break;
                             } else if peek_ch.is_alphanumeric() || peek_ch == '_' {
                                 tag.push(chars.next().unwrap());
@@ -66,7 +63,6 @@ fn split_sql_statements(sql: &str) -> Vec<String> {
                 // Inside dollar quote - check if this ends it
                 let expected_tag = dollar_tag.as_deref().unwrap_or("");
                 let mut tag = String::new();
-                let mut found_end = false;
                 
                 // Read tag characters
                 while let Some(&next_ch) = chars.peek() {
@@ -77,7 +73,6 @@ fn split_sql_statements(sql: &str) -> Vec<String> {
                         if tag == expected_tag {
                             in_dollar_quote = false;
                             dollar_tag = None;
-                            found_end = true;
                         }
                         break;
                     } else if next_ch.is_alphanumeric() || next_ch == '_' {

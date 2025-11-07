@@ -1,0 +1,97 @@
+@use '../../../styles/_tokens' as *;
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg;
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  line-height: 1;
+  border-radius: 4px;
+  transition: background-color $transition-fast, border-color $transition-fast,
+    color $transition-fast;
+  cursor: pointer;
+  border: 1px solid transparent;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &--primary {
+    background-color: $color-primary;
+    color: $color-text-inverse;
+    border-color: $color-primary;
+
+    &:hover:not(:disabled) {
+      background-color: $color-primary-dark;
+      border-color: $color-primary-dark;
+    }
+  }
+
+  &--secondary {
+    background-color: $color-bg-secondary;
+    color: $color-text-primary;
+    border-color: $color-border-medium;
+
+    &:hover:not(:disabled) {
+      background-color: $color-bg-tertiary;
+      border-color: $color-border-dark;
+    }
+  }
+
+  &--danger {
+    background-color: $color-error;
+    color: $color-text-inverse;
+    border-color: $color-error;
+
+    &:hover:not(:disabled) {
+      background-color: $color-error-dark;
+      border-color: $color-error-dark;
+    }
+  }
+
+  &--sm {
+    padding: $spacing-sm $spacing-md;
+    font-size: $font-size-sm;
+  }
+
+  &--md {
+    padding: $spacing-md $spacing-lg;
+    font-size: $font-size-base;
+  }
+
+  &--lg {
+    padding: $spacing-lg $spacing-xl;
+    font-size: $font-size-lg;
+  }
+
+  &--loading {
+    position: relative;
+    pointer-events: none;
+  }
+}
+
+.content {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+

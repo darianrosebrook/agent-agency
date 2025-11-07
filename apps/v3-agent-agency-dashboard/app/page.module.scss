@@ -1,0 +1,109 @@
+@use '../src/styles/_tokens' as *;
+
+.dashboard {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: $font-size-3xl;
+  font-weight: $font-weight-semibold;
+  margin-bottom: $spacing-xl;
+  color: $color-text-primary;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: $spacing-lg;
+}
+
+.card {
+  min-height: 200px;
+}
+
+.cardHeader {
+  margin-bottom: $spacing-md;
+
+  h2 {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    margin: 0;
+  }
+}
+
+.cardBody {
+  // Styles for card body content
+}
+
+.healthStatus {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.status {
+  display: inline-block;
+  padding: $spacing-sm $spacing-md;
+  border-radius: 4px;
+  font-weight: $font-weight-medium;
+  text-transform: capitalize;
+
+  &--healthy {
+    background-color: $color-success-light;
+    color: $color-success-dark;
+  }
+
+  &--degraded {
+    background-color: $color-warning-light;
+    color: $color-warning-dark;
+  }
+
+  &--unhealthy {
+    background-color: $color-error-light;
+    color: $color-error-dark;
+  }
+}
+
+.timestamp {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin: 0;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.listItem {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: $spacing-md 0;
+  border-bottom: 1px solid $color-border-light;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.taskTitle,
+.projectName {
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.taskStatus {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  text-transform: capitalize;
+}
+
+.taskTime,
+.projectTime {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+

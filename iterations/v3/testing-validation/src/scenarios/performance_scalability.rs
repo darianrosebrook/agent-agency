@@ -137,7 +137,7 @@ async fn test_resource_utilization(_env: &TestEnvironment, _services: &LocalServ
     let mut system = System::new_all();
     
     // Collect real system metrics during operation
-    for i in 0..3 {
+    for _ in 0..3 {
         // Simulate some work
         simulate_cpu_work(10).await?;
         

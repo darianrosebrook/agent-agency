@@ -4,7 +4,6 @@
 //! and external API response types, ensuring type safety and consistency.
 
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 use serde_json::Value;
 
 use crate::api::api_types::WaiverResponse;

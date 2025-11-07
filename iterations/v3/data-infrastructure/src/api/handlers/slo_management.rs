@@ -10,7 +10,6 @@ use axum::{
 };
 use serde_json;
 use tracing::{info, error};
-use uuid::Uuid;
 
 use crate::api::ApiState;
 

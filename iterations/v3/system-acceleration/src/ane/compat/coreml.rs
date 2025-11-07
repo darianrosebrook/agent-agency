@@ -3,17 +3,6 @@
 //! This module provides a safe interface to Core ML framework functionality
 //! for Apple Neural Engine operations, avoiding direct private framework usage.
 
-use schemars::JsonSchema;
-use crate::ane::ane_errors::{ANEError, Result};
-use crate::ane::TensorSpec;
-use candle_core::Device;
-use cocoa_foundation::base::nil;
-use std::marker::PhantomData;
-use std::ptr::NonNull;
-use std::ffi::CString;
-use std::path::Path;
-use std::collections::HashMap;
-
 // Re-export types from the types module
 pub use crate::ane::compat::types::*;
 

@@ -1,0 +1,36 @@
+@use '../../../src/styles/_tokens' as *;
+
+.tasks {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-lg;
+
+  h1 {
+    font-size: $font-size-3xl;
+    font-weight: $font-weight-semibold;
+    margin: 0;
+  }
+}
+
+.link {
+  color: $color-primary;
+  text-decoration: none;
+  font-family: monospace;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.empty {
+  padding: $spacing-xl;
+  text-align: center;
+  color: $color-text-tertiary;
+}
+

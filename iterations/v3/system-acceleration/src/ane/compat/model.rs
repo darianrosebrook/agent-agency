@@ -4,14 +4,10 @@
 //! including loading, saving, prediction, and resource management.
 
 use super::types::*;
-use crate::ane::ane_errors::{ANEError, Result};
-use schemars::JsonSchema;
+use crate::ane::ane_errors::ANEError;
 use std::ffi::CString;
-use std::path::Path;
-use std::ptr::NonNull;
 
 // Import the coreml_module for FFI access
-use super::coreml_module as coreml;
 
 // FFI declarations for agentbridge functions
 #[cfg(target_os = "macos")]
@@ -107,6 +103,7 @@ extern "C" {
 #[cfg(target_os = "macos")]
 extern "C" {
     /// Optional Swift/ObjC shim (returning true iff CoreML APIs are usable on this OS)
+    #[allow(dead_code)] // Will be used in v4
     fn coreml_can_load_models() -> bool;
 }
 
@@ -292,7 +289,7 @@ impl MLModel {
             return Err("Core ML not available on this platform".to_string());
         }
 
-        use std::ffi::CString;
+        
 
         // Get model information from the FFI layer
         let mut info_ptr: *mut std::ffi::c_char = std::ptr::null_mut();

@@ -1,0 +1,85 @@
+@use '../../../styles/_tokens' as *;
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: $color-bg-overlay;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: $spacing-lg;
+}
+
+.modal {
+  background-color: $color-bg-primary;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+
+  &--sm {
+    width: 100%;
+    max-width: 400px;
+  }
+
+  &--md {
+    width: 100%;
+    max-width: 600px;
+  }
+
+  &--lg {
+    width: 100%;
+    max-width: 800px;
+  }
+
+  &--xl {
+    width: 100%;
+    max-width: 1200px;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-lg;
+  border-bottom: 1px solid $color-border-light;
+}
+
+.title {
+  margin: 0;
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: $font-size-3xl;
+  line-height: 1;
+  color: $color-text-secondary;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color $transition-fast;
+
+  &:hover {
+    background-color: $color-bg-secondary;
+  }
+}
+
+.body {
+  padding: $spacing-lg;
+}
+

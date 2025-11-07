@@ -18,15 +18,16 @@
 //!
 //! @author @darianrosebrook
 
+#![allow(dead_code)] // Test code often has unused variables for future test cases
+
 pub mod fixtures;
 pub mod harness;
 pub mod services;
 pub mod scenarios;
 pub mod test_helpers;
 pub mod database_lifecycle;
+pub mod e2e_orchestration_test;
 
-use std::sync::Arc;
-use tokio::sync::Mutex;
 use tracing::{info, error};
 
 use harness::{TestEnvironment, LocalServiceManager};

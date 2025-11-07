@@ -343,7 +343,7 @@ impl ServiceFailoverManager {
     }
 
     /// Check message queue health
-    async fn check_queue_health(&self, service: &ApiServiceInstance) -> bool {
+    async fn check_queue_health(&self, _service: &ApiServiceInstance) -> bool {
         // TODO: Implement real message queue health check
         // - [ ] Integrate with queue technology (Redis, RabbitMQ, etc.)
         // - [ ] Check queue connection and availability
@@ -357,7 +357,7 @@ impl ServiceFailoverManager {
     }
 
     /// Check cache health
-    async fn check_cache_health(&self, service: &ApiServiceInstance) -> bool {
+    async fn check_cache_health(&self, _service: &ApiServiceInstance) -> bool {
         // TODO: Implement real cache health check
         // - [ ] Integrate with cache technology (Redis, Memcached, etc.)
         // - [ ] Check cache connection and availability

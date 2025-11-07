@@ -8,7 +8,6 @@ use crate::{WebSocketConfig, InterfaceError};
 #[derive(Debug)]
 pub struct WebSocketManager {
     config: Option<WebSocketConfig>,
-    connections: std::collections::HashMap<String, WebSocketConnection>,
 }
 
 #[derive(Debug)]
@@ -21,7 +20,6 @@ impl WebSocketManager {
     pub fn new() -> Result<Self, InterfaceError> {
         Ok(Self {
             config: None,
-            connections: std::collections::HashMap::new(),
         })
     }
 

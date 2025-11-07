@@ -17,7 +17,7 @@ use crate::ane::models::yolo_model::{
 };
 use crate::ane::compat::coreml::{coreml, ModelRef};
 use system_configuration::geometry::BoundingBox;
-use crate::ane::infer::execute::{execute_inference, InferenceOptions, InferenceResult};
+use crate::ane::infer::execute::InferenceOptions;
 use image::{DynamicImage, ImageBuffer, Rgb};
 use std::time::Instant;
 
@@ -54,7 +54,7 @@ impl YOLOInferenceExecutor {
         };
 
         // Create input specification for YOLO model
-        let input_spec = crate::ane::TensorSpec {
+        let _input_spec = crate::ane::TensorSpec {
             name: "image".to_string(),
             dtype: "F32".to_string(),
             shape: vec![1, 3, self.model.config.input_size.1 as usize, self.model.config.input_size.0 as usize], // [batch, channels, height, width]
@@ -63,7 +63,7 @@ impl YOLOInferenceExecutor {
         };
 
         // Create output specification
-        let output_spec = crate::ane::TensorSpec {
+        let _output_spec = crate::ane::TensorSpec {
             name: "output".to_string(),
             dtype: "F32".to_string(),
             shape: vec![1, 255, 13, 13], // YOLOv3 output shape for 416x416 input
@@ -146,7 +146,7 @@ impl YOLOInferenceExecutor {
         }
 
         // Create tensor with shape [1, 3, height, width]
-        let shape = vec![1, channels, height, width];
+        let _shape = vec![1, channels, height, width];
         let tensor = candle_core::Tensor::new(&*tensor_data, &candle_core::Device::Cpu)?;
 
         Ok(tensor)

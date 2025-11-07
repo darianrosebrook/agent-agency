@@ -11,7 +11,7 @@ use system_configuration::{SequentialPipeline, SequentialPipelineConfig, Pipelin
 use system_configuration::PipelineResult as SystemPipelineResult;
 use std::default::Default;
 use std::collections::HashMap; 
-use tracing::{debug, info, warn}; 
+use tracing::warn; 
 
 // Local pipeline stage trait for domain-specific stages
 #[async_trait]
@@ -445,8 +445,8 @@ impl DataProcessingCompositeStage {
 /// The main data processing pipeline
 /// Now wraps SequentialPipeline with domain-specific functionality
 pub struct DataPipeline {
-    config: PipelineConfig,
-    sequential_pipeline: Arc<SequentialPipeline<DataInput>>,
+    _config: PipelineConfig,
+    _sequential_pipeline: Arc<SequentialPipeline<DataInput>>,
     /// Keep domain-specific stages for backward compatibility
     domain_stages: Vec<Box<dyn PipelineStage>>,
     stages: Vec<Box<dyn PipelineStage>>,
@@ -471,8 +471,8 @@ impl DataPipeline {
         sequential_pipeline.add_stage(Box::new(adapter)).await;
 
         Ok(Self {
-            config: config.clone(),
-            sequential_pipeline: Arc::new(sequential_pipeline),
+            _config: config.clone(),
+            _sequential_pipeline: Arc::new(sequential_pipeline),
             domain_stages: vec![], // Empty since stages are moved to composite_stage
             stages: vec![], // Empty since stages are moved to composite_stage
             composite_stage: DataProcessingCompositeStage { stages: Self::create_default_stages(&config).await? },
@@ -971,8 +971,8 @@ pub fn create_custom_pipeline(
     let sequential_pipeline = SequentialPipeline::new(sequential_config);
     
     DataPipeline {
-        config,
-        sequential_pipeline: Arc::new(sequential_pipeline),
+        _config: config,
+        _sequential_pipeline: Arc::new(sequential_pipeline),
         domain_stages: stages, // Use the provided stages directly
         stages: vec![], // Empty since we're not using this field
         composite_stage, // Remove clone since it's moved

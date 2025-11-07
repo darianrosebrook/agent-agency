@@ -19,7 +19,6 @@ use sha2::{Sha256, Digest};
 use mime::Mime;
 use tokio_util::io::ReaderStream;
 use futures::StreamExt;
-use tokio::sync::mpsc;
 use sqlx::TypeInfo;
 
 /// Result from ingestion operations
@@ -82,10 +81,7 @@ where
     }
 }
 
-/// Content type normalization helper
-fn normalize_content_type(declared: Option<ContentType>, sniffed: Option<ContentType>) -> ContentType {
-    declared.or(sniffed).unwrap_or(ContentType::Unknown)
-}
+// Removed unused normalize_content_type function - will be re-added in v4 if needed
 
 /// Check if content is SVG by looking for opening SVG tag
 fn is_svg(content: &[u8]) -> bool {
@@ -1122,13 +1118,7 @@ impl DiagramsIngestor {
         Self
     }
 
-    /// Check if content is SVG by looking for opening SVG tag
-    fn is_svg(&self, content: &[u8]) -> bool {
-        // Skip BOM if present
-        let start = if content.len() >= 3 && &content[0..3] == b"\xef\xbb\xbf" { 3 } else { 0 };
-        let content_str = String::from_utf8_lossy(&content[start..]);
-        content_str.trim_start().to_lowercase().starts_with("<svg")
-    }
+    // Removed unused is_svg method - will be re-added in v4 if needed
 
     /// Basic SVG analysis - count nodes and edges
     fn analyze_svg(&self, content: &[u8]) -> Result<(usize, usize, Vec<String>), DataProcessingError> {
@@ -1700,7 +1690,7 @@ impl UnifiedIngestor {
         }
     }
 
-    pub fn new_with_db_client(db_client: Arc<crate::context::manager::DatabaseClient>) -> Self {
+    pub fn new_with_db_client(_db_client: Arc<crate::context::manager::DatabaseClient>) -> Self {
         Self {
             captions_ingestor: CaptionsIngestor::new(),
             diagrams_ingestor: DiagramsIngestor::new(),

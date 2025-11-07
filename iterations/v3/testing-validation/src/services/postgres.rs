@@ -3,7 +3,6 @@
 //! Provides real database integration with local PostgreSQL instance.
 //! NO mocks - actual database connections, queries, and transactions.
 
-use std::process::{Command, Stdio};
 use std::sync::Arc;
 use tokio_postgres::{Client, NoTls};
 use tracing::{info, warn, error};
@@ -11,7 +10,6 @@ use std::time::Duration;
 use bb8::{Pool, PooledConnection};
 use bb8_postgres::PostgresConnectionManager;
 use refinery::embed_migrations;
-use refinery::config::Config;
 
 // Embed migrations from the migrations directory
 embed_migrations!("migrations");

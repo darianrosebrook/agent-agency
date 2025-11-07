@@ -8,7 +8,6 @@
 //! - CAWS verdict generation and provenance
 
 use std::time::Instant;
-use std::collections::HashSet;
 use tracing::{info, error};
 use serde_json::json;
 
@@ -137,7 +136,7 @@ pub async fn run_caws_governance_test(
 }
 
 /// Test working spec validation
-async fn test_working_spec_validation(env: &TestEnvironment) -> Result<TestSubResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_working_spec_validation(_env: &TestEnvironment) -> Result<TestSubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing working spec validation");
 
     let mut compliance_checks = 0;
@@ -280,7 +279,7 @@ fn validate_working_spec(spec: &serde_json::Value) -> Result<ValidationResult, B
 }
 
 /// Test budget enforcement
-async fn test_budget_enforcement(env: &TestEnvironment) -> Result<TestSubResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_budget_enforcement(_env: &TestEnvironment) -> Result<TestSubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing budget enforcement");
 
     let mut waiver_requests = 0;

@@ -43,14 +43,12 @@ use schemars::JsonSchema;
 pub use commands::*;
 
 // Re-export API functionality
-pub use api::*;
 pub use endpoints::*;
 
 // Re-export WebSocket functionality
 pub use websocket::*;
 
 // Re-export contract functionality
-pub use contracts::*;
 pub use serialization::*;
 
 /// Main data interfaces service

@@ -6,7 +6,6 @@
 use crate::ane::ane_errors::{ANEError, Result};
 use crate::ane::compat::types::{KvStateHandle, MLFeatureProvider};
 use crate::ane::compat::registry::ModelRef;
-use crate::ane::compat::coreml;
 
 // FFI declarations for KV cache functions
 #[cfg(target_os = "macos")]

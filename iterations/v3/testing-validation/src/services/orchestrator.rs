@@ -3,10 +3,7 @@
 //! Manages the Mistral CoreML model instance used for task orchestration
 //! in autonomous testing scenarios.
 
-use std::process::{Command, Stdio};
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use tracing::{info, warn, error};
+use tracing::{info, warn};
 #[cfg(feature = "full")]
 use agent_orchestration::coreml::{CoreMLManager, CoreMLModelType};
 use std::path::PathBuf;

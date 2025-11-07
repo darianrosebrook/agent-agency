@@ -6,7 +6,6 @@
 
 use crate::ane::ane_errors::{ANEError, Result};
 use std::time::{Duration, Instant};
-use super::types::*;
 
 /// Phase 3B inference testing results
 #[derive(Debug, Clone)]
@@ -220,7 +219,7 @@ where
 
 /// Test data generation utilities
 pub mod test_data {
-    use crate::ane::compat::types::{MLMultiArray, MLFeatureProvider, MLDictionaryFeatureProvider};
+    use crate::ane::compat::types::{MLMultiArray, MLDictionaryFeatureProvider};
     use std::collections::HashMap;
 
     /// Generate random test data for benchmarking

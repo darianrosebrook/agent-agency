@@ -1,0 +1,76 @@
+@use '../../../../src/styles/_tokens' as *;
+
+.query {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  margin-bottom: $spacing-lg;
+
+  h1 {
+    font-size: $font-size-3xl;
+    font-weight: $font-weight-semibold;
+    margin: 0;
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $spacing-lg;
+}
+
+.section {
+  h2 {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-semibold;
+    margin-bottom: $spacing-lg;
+  }
+}
+
+.editor {
+  width: 100%;
+  padding: $spacing-md;
+  font-family: $font-family-mono;
+  font-size: $font-size-sm;
+  border: 1px solid $color-border-medium;
+  border-radius: 4px;
+  background-color: $color-bg-primary;
+  color: $color-text-primary;
+  resize: vertical;
+  margin-bottom: $spacing-md;
+
+  &:focus {
+    outline: none;
+    border-color: $color-primary;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+}
+
+.actions {
+  display: flex;
+  gap: $spacing-md;
+}
+
+.error {
+  margin-top: $spacing-md;
+  padding: $spacing-md;
+  background-color: $color-error-light;
+  color: $color-error-dark;
+  border-radius: 4px;
+  font-size: $font-size-sm;
+}
+
+.time {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-normal;
+  color: $color-text-secondary;
+}
+
+.empty {
+  padding: $spacing-xl;
+  text-align: center;
+  color: $color-text-tertiary;
+}
+

@@ -3,7 +3,6 @@
 //! REST API endpoints for system management and configuration.
 
 use crate::{ApiRequest, ApiResponse, InterfaceError};
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
