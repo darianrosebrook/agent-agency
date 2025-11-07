@@ -12,6 +12,7 @@ async-trait.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 thiserror.workspace = true
 uuid.workspace = true
 chrono.workspace = true
@@ -42,7 +43,14 @@ agent-workers = { path = "../agent-workers" }
 agent-orchestration = { path = "../agent-orchestration" }
 agent-research = { path = "../agent-research" }
 agent-memory = { path = "../agent-memory" }
-data-infrastructure = { path = "../data-infrastructure" }
+data-infrastructure = { path = "../data-infrastructure", features = ["orchestration"] }
+agent-mcp = { path = "../agent-mcp" }
+agent-data-processing = { path = "../agent-data-processing", features = ["coreml"] }
+
+[features]
+default = ["orchestration"]
+orchestration = []
+memory = ["agent-orchestration/memory"]  # Enable memory feature for UnifiedOrchestrator
 
 [[bin]]
 name = "agent-agency-api-server"

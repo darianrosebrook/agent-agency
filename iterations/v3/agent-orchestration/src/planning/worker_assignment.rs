@@ -15,7 +15,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
-#[cfg(feature = "research")]
 use agent_research::performance_tracker::PerformanceTracker;
 
 /// Worker assignment strategy with real implementation
@@ -38,8 +37,7 @@ pub struct WorkerAssignmentStrategy {
     /// Audit trail manager for chain-of-thought recording
     audit_trail_manager: Option<std::sync::Arc<crate::audit_trail::AuditTrailManager>>,
 
-    /// Performance tracker for benchmark results (optional)
-    #[cfg(feature = "research")]
+    /// Performance tracker for benchmark results (always-on when available)
     performance_tracker: Option<std::sync::Arc<PerformanceTracker>>,
 
     /// Clock for deterministic time (feature-gated)
@@ -1012,33 +1010,36 @@ impl WorkerAssignmentStrategy {
             .map(|p| p.performance_score)
             .unwrap_or(0.8); // Default performance score
 
-        // Enhance with benchmark results if available
-        #[cfg(feature = "research")]
-        {
-            if let Some(ref tracker) = self.performance_tracker {
-                // Get historical benchmark results for this worker's model
-                // Note: In a full implementation, we'd map worker_id to model_id
-                // For now, we'll use a simplified approach
-                match tracker.get_historical_performance(worker_id).await {
-                    Ok(historical_results) => {
-                        if !historical_results.is_empty() {
-                            // Calculate average benchmark score
-                            let avg_benchmark_score = historical_results.iter()
-                                .map(|r| r.score)
-                                .sum::<f64>() / historical_results.len() as f64;
-                            
-                            // Blend base score with benchmark score (70% base, 30% benchmark)
-                            return (base_score * 0.7) + (avg_benchmark_score * 0.3);
-                        }
+        // Enhance with benchmark results if available (always-on)
+        if let Some(ref tracker) = self.performance_tracker {
+            // Get historical benchmark results for this worker's model
+            // Note: In a full implementation, we'd map worker_id to model_id
+            // For now, we'll use a simplified approach
+            match tracker.get_historical_performance(worker_id).await {
+                Ok(historical_results) => {
+                    if !historical_results.is_empty() {
+                        // Calculate average benchmark score
+                        let avg_benchmark_score = historical_results.iter()
+                            .map(|r| r.score)
+                            .sum::<f64>() / historical_results.len() as f64;
+                        
+                        // Blend base score with benchmark score (70% base, 30% benchmark)
+                        return (base_score * 0.7) + (avg_benchmark_score * 0.3);
                     }
-                    Err(_) => {
-                        // Benchmark data unavailable, use base score
-                    }
+                }
+                Err(_) => {
+                    // Benchmark data unavailable, use base score
                 }
             }
         }
 
         base_score
+    }
+
+    /// Get performance cache (for external monitoring)
+    pub async fn get_performance_cache(&self) -> Result<std::collections::HashMap<Uuid, WorkerPerformance>> {
+        let cache = self.performance_cache.read().await;
+        Ok(cache.clone())
     }
 
     /// Record assignment in database

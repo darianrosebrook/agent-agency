@@ -51,16 +51,53 @@ let adapter = ResearchServiceAdapter::with_defaults();
 let result = adapter.execute_task(task_request).await?;
 ```
 
-### OrchestrationServiceAdapter
+### OrchestrationServiceAdapter (UnifiedOrchestratorAdapter)
 
-Implements `OrchestrationService` using `agent-orchestration`'s `OrchestrationAdapter`:
+Implements `OrchestrationService` using `agent-orchestration`'s `UnifiedOrchestrator`:
+
+- **Factory Pattern**: `create_with_dependencies()` initializes all required components
+- **Dependency Injection**: Accepts optional `DatabaseClient` for persistence
+- **Database Adapter**: Uses `DatabaseOperationsAdapter` to bridge database operations (partial implementation)
+- **Orchestrator Access**: Exposes `orchestrator()` method for creating `UnifiedOrchestratorTaskExecutor`
 
 ```rust
-use data_interfaces_adapters::OrchestrationServiceAdapter;
+use data_interfaces_adapters::UnifiedOrchestratorAdapter;
 
-let adapter = OrchestrationServiceAdapter::with_defaults();
-let result = adapter.orchestrate_task(task_id).await?;
+// Create adapter with database client
+let adapter = UnifiedOrchestratorAdapter::create_with_dependencies(Some(db_client)).await?;
+
+// Execute task
+let result = adapter.orchestrate_task(working_spec, task_context).await?;
+
+// Access underlying orchestrator for TaskExecutor bridge
+let orchestrator = adapter.orchestrator();
 ```
+
+### UnifiedOrchestratorTaskExecutor
+
+Implements `TaskExecutor` trait (from `data-infrastructure`) to bridge `OrchestratorService` with `UnifiedOrchestrator`:
+
+- **Type Conversion**: Converts `TaskDescriptor` → `WorkingSpec`
+- **Execution**: Delegates to `UnifiedOrchestrator::execute_plan()`
+- **Result Extraction**: Extracts `ExecutionArtifacts` from `ExecutionResult`
+
+```rust
+use data_interfaces_adapters::UnifiedOrchestratorTaskExecutor;
+
+let executor = Arc::new(UnifiedOrchestratorTaskExecutor::new(orchestrator));
+let orchestrator_service = OrchestratorService::new(db_client)
+    .with_task_executor(executor);
+```
+
+### DatabaseOperationsAdapter
+
+Adapts `data-infrastructure::DatabaseClient` to `agent-orchestration::DatabaseOperations` trait:
+
+- **Partial Implementation**: Core methods implemented, some marked as PLACEHOLDER
+- **Type Mapping**: Maps between agent-orchestration types and data-infrastructure types
+- **Future Work**: Database queries for execution plans, audit trails, workers, judges, waivers
+
+**Status**: Partial implementation - basic structure in place, database queries pending
 
 ### MemoryServiceAdapter
 
@@ -122,7 +159,7 @@ cargo run --bin agent-agency-cli -- --help
 
 ### agent-agency-api-server
 
-REST API server:
+REST API server providing comprehensive observation endpoints for the orchestrator:
 
 ```bash
 cargo run --bin agent-agency-api-server \
@@ -130,6 +167,42 @@ cargo run --bin agent-agency-api-server \
     --port 8080 \
     --enable-cors
 ```
+
+#### CRITICAL: Observational API Design
+
+**This API is designed for OBSERVATION, not manipulation.**
+
+The API acts as a "doctor's MRI machine" - it observes what's happening inside
+the orchestrator without directly controlling execution. This preserves research
+integrity by ensuring the orchestrator maintains full autonomy over its execution
+lifecycle.
+
+**Design Principles:**
+
+1. **Observation Only**: All endpoints observe orchestrator state, never manipulate it directly
+2. **Request-Based Control**: Control operations (pause/resume/cancel) are requests that
+   are logged in chain-of-thought, but the orchestrator decides whether to honor them
+3. **Research Integrity**: No direct manipulation of execution state - orchestrator maintains
+   full control over its own execution lifecycle
+4. **Agent Autonomy**: Agents use their own connections to task execution, not through the API
+
+**What This Means:**
+
+- **Task Submission**: Requests orchestrator to start a task (orchestrator handles execution)
+- **State Observation**: Query task status, chain of thought, council decisions, worker actions
+- **Control Requests**: Request pause/resume/cancel (orchestrator decides if safe)
+- **Never Manipulate**: Never directly change execution state - only observe and request
+
+**Why This Matters:**
+
+Direct manipulation of orchestrator execution state would compromise research integrity.
+By maintaining strict observation boundaries, we ensure that:
+- Orchestrator decisions are autonomous and reproducible
+- Research results are not contaminated by external manipulation
+- The orchestrator's chain of thought accurately reflects its own reasoning
+- Agents maintain their own execution connections independently
+
+See the API server source code (`src/bin/api-server.rs`) for detailed documentation.
 
 ## Dependencies
 

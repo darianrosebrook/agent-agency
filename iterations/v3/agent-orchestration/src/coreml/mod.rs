@@ -30,6 +30,7 @@ use system_acceleration::ane::infer::{
     YOLOInferenceExecutor, create_yolo_executor,
     MistralInferenceOptions,
 };
+use system_acceleration::ane::infer::mistral::generate_text as mistral_generate_text;
 use system_acceleration::ane::models::whisper_model::WhisperInferenceOptions as WhisperInferenceOpts;
 use system_acceleration::ane::models::yolo_model::YOLOInferenceOptions as YOLOInferenceOpts;
 use system_acceleration::ane::infer::mistral::{deliberate_constitution, ConstitutionalVerdict};
@@ -92,10 +93,10 @@ pub struct CoreMLModel {
     pub metadata: ModelMetadata,
     /// Path to compiled model file
     pub model_path: PathBuf,
-    /// Mistral model instance (if Language model)
+    /// Mistral model instance (if Language model) - wrapped in mutex for thread-safe inference
     #[serde(skip)]
     #[schemars(skip)]
-    pub mistral_model: Option<Arc<MistralModel>>,
+    pub mistral_model: Option<Arc<tokio::sync::Mutex<MistralModel>>>,
     /// Whisper model instance (if SpeechToText model)
     #[serde(skip)]
     #[schemars(skip)]
@@ -209,7 +210,7 @@ impl CoreMLManager {
                 let coreml_model = CoreMLModel {
                     metadata,
                     model_path: model_path.clone(),
-                    mistral_model: Some(Arc::new(mistral_model)),
+                    mistral_model: Some(Arc::new(tokio::sync::Mutex::new(mistral_model))),
                     whisper_model: None,
                     yolo_model: None,
                 };
@@ -365,12 +366,41 @@ impl CoreMLManager {
 
     /// Get Mistral model instance for direct inference
     /// 
-    /// Returns the Arc-wrapped Mistral model. For inference, use `deliberate_constitution()` 
-    /// from `system_acceleration::ane::infer::mistral` module directly.
-    pub async fn get_mistral_model(&self, name: &str) -> Option<Arc<MistralModel>> {
+    /// Returns the Arc-wrapped, mutex-protected Mistral model for thread-safe inference.
+    /// Use `generate_text()` method for general text generation, or lock the mutex
+    /// and use `deliberate_constitution()` from `system_acceleration::ane::infer::mistral` module.
+    pub async fn get_mistral_model(&self, name: &str) -> Option<Arc<tokio::sync::Mutex<MistralModel>>> {
         self.get_model(CoreMLModelType::Language, name)
             .await
             .and_then(|model| model.mistral_model.clone())
+    }
+
+    /// Generate text using Mistral model
+    /// 
+    /// This is a general-purpose text generation method that can be used for planning,
+    /// reasoning, and other text generation tasks. The model is automatically locked
+    /// for thread-safe inference.
+    /// 
+    /// # Arguments
+    /// * `model_name` - Name of the Mistral model to use (e.g., "mistral-7b-instruct")
+    /// * `prompt` - The text prompt to generate from
+    /// * `options` - Inference options (max_tokens, temperature, etc.)
+    /// 
+    /// # Returns
+    /// Generated text string, or error if model not loaded or inference fails
+    pub async fn generate_text(
+        &self,
+        model_name: &str,
+        prompt: &str,
+        options: &MistralInferenceOptions,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        let model_arc = self.get_mistral_model(model_name).await
+            .ok_or_else(|| format!("Mistral model '{}' not loaded", model_name))?;
+        
+        let mut model_guard = model_arc.lock().await;
+        
+        mistral_generate_text(&mut *model_guard, prompt, options).await
+            .map_err(|e| format!("Mistral inference failed: {}", e).into())
     }
 
     /// Get Whisper model instance for direct inference

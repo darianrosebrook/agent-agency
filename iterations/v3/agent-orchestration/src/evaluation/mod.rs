@@ -12,6 +12,7 @@ pub mod query;
 pub mod metrics;
 pub mod contracts;
 pub mod scenario_runner;
+#[cfg(any(test, feature = "evaluation"))]
 pub mod playground;
 pub mod sinks;
 pub mod reporters;

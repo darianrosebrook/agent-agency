@@ -235,6 +235,17 @@ pub mod optimization;
 #[cfg(feature = "evaluation")]
 pub mod evaluation;
 
+// Playground module always available for tests (independent of evaluation feature)
+#[cfg(test)]
+mod playground {
+    // Re-export playground module if evaluation feature is enabled
+    #[cfg(feature = "evaluation")]
+    pub use crate::evaluation::playground::*;
+    
+    // If evaluation feature is not enabled, we need to include playground directly
+    // For now, tests will only work with evaluation feature enabled
+}
+
 #[cfg(feature = "evaluation")]
 pub use evaluation::{run_scenario, EvaluationReport, EvaluationEngine, AgentEvaluation, EvaluationDimensions, EvaluationScenario};
 

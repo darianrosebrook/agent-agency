@@ -135,7 +135,7 @@ impl SuccessCriteriaReport {
     
     pub fn print_report(&self) {
         println!("Evaluation Framework Success Criteria Verification Report\n");
-        println!("=" .repeat(70));
+        println!("{}", "=".repeat(70));
         
         let mut pass_count = 0;
         let mut partial_count = 0;
@@ -158,7 +158,7 @@ impl SuccessCriteriaReport {
             }
         }
         
-        println!("\n" + &"=".repeat(70));
+        println!("\n{}", "=".repeat(70));
         println!("\nSummary:");
         println!("  ✅ Pass: {}", pass_count);
         println!("  ⚠️  Partial: {}", partial_count);

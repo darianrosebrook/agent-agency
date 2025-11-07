@@ -52,16 +52,80 @@ The system is organized into 17 focused crates with clear responsibilities:
 
 ## Task Execution System
 
+### System Architecture & Connection Flow
+
+The system implements a layered architecture with clear separation between interfaces, adapters, and core orchestration:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    API Layer (REST/CLI)                      │
+│  POST /api/v1/tasks → OrchestratorService                    │
+└───────────────────────┬─────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│              OrchestratorService (Observational API)          │
+│  - Task state management                                     │
+│  - Chain-of-thought tracking                                 │
+│  - Council decision logging                                  │
+│  - Worker action observation                                 │
+└───────────────────────┬─────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│         UnifiedOrchestratorTaskExecutor (Bridge)             │
+│  - Converts TaskDescriptor → WorkingSpec                    │
+│  - Delegates to UnifiedOrchestrator                         │
+│  - Returns ExecutionArtifacts                               │
+└───────────────────────┬─────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│              UnifiedOrchestrator (Core Engine)               │
+│  - Plan generation                                          │
+│  - Council review (CAWS Examination stage)                   │
+│  - Plan execution via WorkerExecutionBridge                 │
+│  - Refinement loops                                          │
+│  - Git worktree management                                   │
+└───────────────────────┬─────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│         WorkerExecutionBridge (Type Conversion)              │
+│  - Converts Milestone → TaskDefinition                       │
+│  - Delegates to MCPWorkerPool                                │
+│  - Converts TaskResult → ExecutionArtifacts                 │
+└───────────────────────┬─────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│              MCPWorkerPool (Worker Management)               │
+│  - Worker registration and capability matching              │
+│  - Task execution via MCPIntegration                         │
+│  - Shared memory system integration                          │
+│  - HTTP fallback for distributed workers                    │
+└───────────────────────┬─────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│         MCPIntegration (Tool Execution)                      │
+│  - MCP protocol communication                                │
+│  - Tool registry management                                  │
+│  - Execution via MCP tools                                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
 ### Execution Pipeline
 
 The system implements a constitutional task execution pipeline with the following components:
 
 1. **Task Submission**: CLI and REST API interfaces for task creation
-2. **Council Governance**: Four-judge constitutional oversight (Constitutional, Technical, Quality, Integration) with hybrid CAWS + LLM reasoning
-3. **Autonomous File Editing**: Safe, Git-integrated file operations with rollback capabilities
-4. **Worker Execution**: Parallel task processing with MCP-based worker management
-5. **Progress Monitoring**: Real-time status tracking and intervention capabilities
-6. **Provenance Tracking**: Git-based audit trails and change attribution
+2. **OrchestratorService**: Observational API that tracks task state without direct manipulation
+3. **UnifiedOrchestrator**: Core orchestration engine coordinating planning, council review, and execution
+4. **Council Governance**: Four-judge constitutional oversight (Constitutional, Technical, Quality, Integration) with hybrid CAWS + LLM reasoning
+5. **Worker Execution**: Parallel task processing with MCP-based worker management
+6. **Progress Monitoring**: Real-time status tracking and intervention capabilities
+7. **Provenance Tracking**: Git-based audit trails and change attribution
 
 ### Execution Modes
 

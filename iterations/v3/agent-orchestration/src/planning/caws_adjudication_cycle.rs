@@ -65,11 +65,8 @@ pub struct CawsAdjudicationCycle {
     council_integration: Arc<dyn CouncilIntegration>,
     debate_scorer: Arc<CawsDebateScorer>,
     worktree_manager: Option<Arc<WorktreeManager>>,
-    /// Claim extraction processor for factual verification
-    #[cfg(feature = "research")]
+    /// Claim extraction processor for factual verification (always-on)
     claim_extractor: Option<Arc<agent_research::ClaimExtractionProcessor>>,
-    #[cfg(not(feature = "research"))]
-    claim_extractor: Option<()>, // Placeholder when research feature disabled
     /// CAWS tool registry for dynamic tool discovery and invocation
     #[cfg(feature = "mcp")]
     tool_registry: Option<Arc<CawsToolRegistry>>,
@@ -107,10 +104,7 @@ impl CawsAdjudicationCycle {
             council_integration,
             debate_scorer,
             worktree_manager,
-            #[cfg(feature = "research")]
             claim_extractor: Some(Arc::new(agent_research::ClaimExtractionProcessor::new())),
-            #[cfg(not(feature = "research"))]
-            claim_extractor: None,
             #[cfg(feature = "mcp")]
             tool_registry: None,
             #[cfg(not(feature = "mcp"))]
@@ -133,17 +127,13 @@ impl CawsAdjudicationCycle {
             council_integration,
             debate_scorer,
             worktree_manager,
-            #[cfg(feature = "research")]
             claim_extractor: Some(Arc::new(agent_research::ClaimExtractionProcessor::new())),
-            #[cfg(not(feature = "research"))]
-            claim_extractor: None,
             tool_registry,
             quality_gates_executor: None,
         }
     }
 
     /// Create new CAWS adjudication cycle with claim extractor
-    #[cfg(feature = "research")]
     pub fn with_claim_extractor(
         council: Arc<Council>,
         council_integration: Arc<dyn CouncilIntegration>,
@@ -156,7 +146,12 @@ impl CawsAdjudicationCycle {
             council_integration,
             debate_scorer,
             worktree_manager,
-            claim_extractor,
+            claim_extractor: claim_extractor.or_else(|| Some(Arc::new(agent_research::ClaimExtractionProcessor::new()))),
+            #[cfg(feature = "mcp")]
+            tool_registry: None,
+            #[cfg(not(feature = "mcp"))]
+            tool_registry: None,
+            quality_gates_executor: None,
         }
     }
 
@@ -307,16 +302,66 @@ impl CawsAdjudicationCycle {
                     quality_tools.len()
                 );
 
-                // Use tools for validation (in a full implementation, we would invoke them)
-                // For now, we just log their availability
+                // Invoke compliance checking tools for validation
                 for tool in &compliance_tools {
-                    debug!("Available compliance tool: {} ({})", tool.name, tool.tool_id);
-                    registry.increment_usage(&tool.tool_id).await;
+                    debug!("Invoking compliance tool: {} ({})", tool.name, tool.tool_id);
+                    
+                    // Prepare tool parameters from execution plan and artifacts
+                    let mut parameters = std::collections::HashMap::new();
+                    parameters.insert("working_spec_id".to_string(), serde_json::json!(working_spec.id));
+                    parameters.insert("execution_plan_id".to_string(), serde_json::json!(execution_plan.id.to_string()));
+                    parameters.insert("artifact_count".to_string(), serde_json::json!(artifacts.len()));
+                    
+                    // Invoke tool
+                    match registry.invoke_tool(&tool.tool_id, parameters).await {
+                        Ok(result) => {
+                            if !result.success {
+                                warn!("Compliance tool {} failed: {:?}", tool.name, result.error);
+                                // Continue with other tools, but log the failure
+                            } else if !result.caws_compliant {
+                                warn!("Compliance tool {} reported non-compliance", tool.name);
+                                // Continue but note the violation
+                            } else {
+                                debug!("Compliance tool {} passed validation", tool.name);
+                            }
+                            registry.increment_usage(&tool.tool_id).await;
+                        }
+                        Err(e) => {
+                            warn!("Failed to invoke compliance tool {}: {}", tool.name, e);
+                            // Continue with other tools even if one fails
+                        }
+                    }
                 }
 
+                // Invoke quality gate tools for validation
                 for tool in &quality_tools {
-                    debug!("Available quality gate tool: {} ({})", tool.name, tool.tool_id);
-                    registry.increment_usage(&tool.tool_id).await;
+                    debug!("Invoking quality gate tool: {} ({})", tool.name, tool.tool_id);
+                    
+                    // Prepare tool parameters
+                    let mut parameters = std::collections::HashMap::new();
+                    parameters.insert("working_spec_id".to_string(), serde_json::json!(working_spec.id));
+                    parameters.insert("risk_tier".to_string(), serde_json::json!(working_spec.risk_tier));
+                    parameters.insert("artifact_count".to_string(), serde_json::json!(artifacts.len()));
+                    
+                    // Invoke tool
+                    match registry.invoke_tool(&tool.tool_id, parameters).await {
+                        Ok(result) => {
+                            if !result.success {
+                                warn!("Quality gate tool {} failed: {:?}", tool.name, result.error);
+                                // Continue with other tools
+                            } else if !result.caws_compliant {
+                                warn!("Quality gate tool {} reported violations", tool.name);
+                                // Continue but note the violation
+                            } else {
+                                debug!("Quality gate tool {} passed validation", tool.name);
+                            }
+                            registry.increment_usage(&tool.tool_id).await;
+                        }
+                        Err(e) => {
+                            warn!("Failed to invoke quality gate tool {}: {}", tool.name, e);
+                            // Continue with other tools even if one fails
+                        }
+                    }
                 }
             }
         }
@@ -380,49 +425,47 @@ impl CawsAdjudicationCycle {
             }
         }
 
-        #[cfg(feature = "research")]
-        {
-            if let Some(ref claim_extractor) = self.claim_extractor {
-                debug!("Running claim extraction on artifacts");
+        // Claim extraction is always-on (research feature is in default features)
+        if let Some(ref claim_extractor) = self.claim_extractor {
+            debug!("Running claim extraction on artifacts");
+            
+            for artifact in artifacts {
+                // Extract text content from artifact for claim extraction
+                let text_content = self.extract_text_from_artifact(artifact);
                 
-                for artifact in artifacts {
-                    // Extract text content from artifact for claim extraction
-                    let text_content = self.extract_text_from_artifact(artifact);
-                    
-                    if !text_content.is_empty() {
-                        let processing_context = agent_research::ProcessingContext {
-                            task_id: artifact.task_id,
-                            working_spec_id: working_spec.id.clone(),
-                            source_file: None,
-                            line_number: None,
-                            surrounding_context: String::new(),
-                            domain_hints: vec![],
-                            metadata: artifact.metadata.clone().unwrap_or_default(),
-                            input_text: text_content.clone(),
-                            language: None,
-                        };
+                if !text_content.is_empty() {
+                    let processing_context = agent_research::ProcessingContext {
+                        task_id: artifact.task_id,
+                        working_spec_id: working_spec.id.clone(),
+                        source_file: None,
+                        line_number: None,
+                        surrounding_context: String::new(),
+                        domain_hints: vec![],
+                        metadata: artifact.metadata.clone().unwrap_or_default(),
+                        input_text: text_content.clone(),
+                        language: None,
+                    };
 
-                        // Run claim extraction
-                        match claim_extractor.run(&text_content, &processing_context).await {
-                            Ok(extraction_result) => {
-                                total_claims += extraction_result.atomic_claims.len();
-                                verified_claims += extraction_result.atomic_claims.iter()
-                                    .filter(|c| matches!(c.verification_status, agent_research::VerificationStatus::Verified))
-                                    .count();
-                                evidence_count += extraction_result.verification_evidence.len();
-                                
-                                // Calculate average confidence
-                                if !extraction_result.atomic_claims.is_empty() {
-                                    let avg_confidence = extraction_result.atomic_claims.iter()
-                                        .map(|c| c.confidence)
-                                        .sum::<f64>() / extraction_result.atomic_claims.len() as f64;
-                                    total_confidence += avg_confidence;
-                                }
+                    // Run claim extraction
+                    match claim_extractor.run(&text_content, &processing_context).await {
+                        Ok(extraction_result) => {
+                            total_claims += extraction_result.atomic_claims.len();
+                            verified_claims += extraction_result.atomic_claims.iter()
+                                .filter(|c| matches!(c.verification_status, agent_research::VerificationStatus::Verified))
+                                .count();
+                            evidence_count += extraction_result.verification_evidence.len();
+                            
+                            // Calculate average confidence
+                            if !extraction_result.atomic_claims.is_empty() {
+                                let avg_confidence = extraction_result.atomic_claims.iter()
+                                    .map(|c| c.confidence)
+                                    .sum::<f64>() / extraction_result.atomic_claims.len() as f64;
+                                total_confidence += avg_confidence;
                             }
-                            Err(e) => {
-                                debug!("Claim extraction failed for artifact {}: {}", artifact.task_id, e);
-                                // Continue with other artifacts even if one fails
-                            }
+                        }
+                        Err(e) => {
+                            debug!("Claim extraction failed for artifact {}: {}", artifact.task_id, e);
+                            // Continue with other artifacts even if one fails
                         }
                     }
                 }

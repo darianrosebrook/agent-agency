@@ -16,6 +16,7 @@ use jsonrpc_http_server::{RequestMiddlewareAction, ServerBuilder};
 use jsonrpc_ws_server::ws;
 use jsonrpc_ws_server::ServerBuilder as WsServerBuilder;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 use tokio::sync::{Mutex, RwLock, oneshot};
@@ -1299,7 +1300,19 @@ impl MCPServer {
 
         let slo_tracker = SLOTracker::new(Arc::new(DatabaseClient::new()));
 
+        // Create FileOperationsService for file tools
+        #[cfg(feature = "file-operations")]
+        let file_ops = {
+            use data_infrastructure::file_operations_service::create_file_operations_service;
+            let repo_path = std::env::current_dir()
+                .unwrap_or_else(|_| PathBuf::from("."));
+            create_file_operations_service(repo_path)
+        };
+        
         // Create tool registry without memory system
+        #[cfg(feature = "file-operations")]
+        let tool_registry = ToolRegistry::with_file_ops(file_ops);
+        #[cfg(not(feature = "file-operations"))]
         let tool_registry = ToolRegistry::new();
 
         Self {
@@ -1382,7 +1395,9 @@ impl MCPServer {
         };
 
         // Create tool registry with memory system if provided
+        // FileOperationsService will be injected via set_file_operations_service() if needed
         let mut tool_registry = ToolRegistry::new();
+        
         #[cfg(feature = "memory")]
         if let Some(ref memory_system) = memory_system {
             tool_registry.set_memory_system(Arc::clone(memory_system));
@@ -2157,6 +2172,17 @@ impl MCPServer {
     pub async fn register_tool_for_testing(&self, tool: MCPTool) -> Result<()> {
         info!("Registering tool for testing: {}", tool.name);
         self.tool_registry.register_tool(tool).await
+    }
+
+    /// Set the CoreML ingestion executor for CoreML tools
+    /// 
+    /// This allows wiring up real CoreML enrichers from agent-data-processing
+    /// to enable CoreML-powered MCP tools (transcribe_audio, detect_objects, etc.)
+    /// 
+    /// Note: These tools are ONLY available via MCP protocol, NOT via REST API
+    pub fn set_coreml_executor(&self, executor: Arc<dyn crate::tools::CoreMLIngestionExecutor>) {
+        self.tool_registry.set_coreml_executor(executor);
+        info!("CoreML ingestion executor configured for MCP tools");
     }
 
     /// Start HTTP server

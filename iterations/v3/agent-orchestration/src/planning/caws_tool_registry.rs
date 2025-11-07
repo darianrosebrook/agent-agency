@@ -378,5 +378,53 @@ impl CawsToolRegistry {
             .cloned()
             .collect()
     }
+
+    /// Invoke a CAWS tool for validation
+    #[cfg(feature = "mcp")]
+    pub async fn invoke_tool(
+        &self,
+        tool_id: &Uuid,
+        parameters: std::collections::HashMap<String, serde_json::Value>,
+    ) -> Result<ToolInvocationResult> {
+        use agent_mcp::{ToolExecutionRequest, ExecutionPriority};
+        use chrono::Utc;
+
+        // Create execution request
+        let request = ToolExecutionRequest {
+            id: Uuid::new_v4(),
+            tool_id: *tool_id,
+            parameters,
+            context: None,
+            priority: ExecutionPriority::Normal,
+            timeout_seconds: Some(30), // 30 second timeout for validation tools
+            created_at: Utc::now(),
+            requested_by: Some("caws_adjudication_cycle".to_string()),
+        };
+
+        // Execute tool via MCP registry
+        let result = self.mcp_registry.execute_tool(request).await?;
+
+        // Convert to our result type
+        Ok(ToolInvocationResult {
+            tool_id: *tool_id,
+            success: matches!(result.status, agent_mcp::ExecutionStatus::Completed),
+            output: result.output,
+            error: result.error,
+            caws_compliant: result.caws_compliance_result
+                .as_ref()
+                .map(|r| matches!(r.status, agent_mcp::CawsComplianceStatus::Compliant))
+                .unwrap_or(true), // Assume compliant if no compliance check
+        })
+    }
+}
+
+/// Result of tool invocation
+#[derive(Debug, Clone)]
+pub struct ToolInvocationResult {
+    pub tool_id: Uuid,
+    pub success: bool,
+    pub output: Option<serde_json::Value>,
+    pub error: Option<String>,
+    pub caws_compliant: bool,
 }
 

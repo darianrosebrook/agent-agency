@@ -5,6 +5,7 @@
 use crate::mcp_types::*;
 use crate::tools::DocQualityValidator;
 use crate::tools::file_editing_tools::FileEditingToolExecutor;
+use crate::tools::coreml_ingestion_tools::{CoreMLIngestionExecutor, PlaceholderCoreMLIngestionExecutor};
 // Memory system disabled due to cyclic dependencies
 // #[cfg(feature = "memory")]
 // use agent_memory::MemorySystem;
@@ -15,6 +16,7 @@ use std::sync::Arc;
 use std::path::PathBuf;
 use tokio::process::Command;
 use tokio::sync::RwLock;
+use std::sync::RwLock as StdRwLock;
 use tracing::{info, warn};
 use uuid::Uuid;
 
@@ -98,19 +100,83 @@ impl FileOperationsService for PlaceholderFileOperationsService {
             ToolRegistry::with_file_ops(file_ops)", task_id)
         ))
     }
+
+    async fn read_file(
+        &self,
+        _file_path: &std::path::Path,
+        _max_size: Option<u64>,
+    ) -> FileResult<Vec<u8>> {
+        Err(FileOpsError::Validation(
+            "FileOperationsService not configured: Inject a real implementation via ToolRegistry::with_file_ops()".to_string()
+        ))
+    }
+
+    async fn file_exists(&self, _file_path: &std::path::Path) -> FileResult<bool> {
+        Err(FileOpsError::Validation(
+            "FileOperationsService not configured: Inject a real implementation via ToolRegistry::with_file_ops()".to_string()
+        ))
+    }
+
+    async fn get_file_metadata(&self, _file_path: &std::path::Path) -> FileResult<system_common_interfaces::FileMetadata> {
+        Err(FileOpsError::Validation(
+            "FileOperationsService not configured: Inject a real implementation via ToolRegistry::with_file_ops()".to_string()
+        ))
+    }
+
+    async fn list_directory(&self, _dir_path: &std::path::Path) -> FileResult<Vec<system_common_interfaces::DirectoryEntry>> {
+        Err(FileOpsError::Validation(
+            "FileOperationsService not configured: Inject a real implementation via ToolRegistry::with_file_ops()".to_string()
+        ))
+    }
+
+    async fn create_directory(&self, _dir_path: &std::path::Path) -> FileResult<()> {
+        Err(FileOpsError::Validation(
+            "FileOperationsService not configured: Inject a real implementation via ToolRegistry::with_file_ops()".to_string()
+        ))
+    }
+
+    async fn delete_file(&self, _file_path: &std::path::Path) -> FileResult<()> {
+        Err(FileOpsError::Validation(
+            "FileOperationsService not configured: Inject a real implementation via ToolRegistry::with_file_ops()".to_string()
+        ))
+    }
+
+    async fn move_file(&self, _from: &std::path::Path, _to: &std::path::Path) -> FileResult<()> {
+        Err(FileOpsError::Validation(
+            "FileOperationsService not configured: Inject a real implementation via ToolRegistry::with_file_ops()".to_string()
+        ))
+    }
+
+    async fn copy_file(&self, _from: &std::path::Path, _to: &std::path::Path) -> FileResult<()> {
+        Err(FileOpsError::Validation(
+            "FileOperationsService not configured: Inject a real implementation via ToolRegistry::with_file_ops()".to_string()
+        ))
+    }
 }
 
 /// Tool registry for managing MCP tools
-#[derive(Debug)]
 pub struct ToolRegistry {
     registered_tools: Arc<DashMap<Uuid, MCPTool>>,
     execution_queue: Arc<RwLock<Vec<ToolExecutionRequest>>>,
     execution_history: Arc<RwLock<Vec<ToolExecutionResult>>>,
     statistics: Arc<RwLock<ToolRegistryStats>>,
     doc_quality_validator: Arc<DocQualityValidator>,
-    file_ops: Arc<dyn FileOperationsService>,
-    file_editing_executor: Arc<FileEditingToolExecutor>,
+    file_ops: Arc<StdRwLock<Arc<dyn FileOperationsService>>>,
+    file_editing_executor: Arc<StdRwLock<Arc<FileEditingToolExecutor>>>,
+    coreml_executor: Arc<StdRwLock<Arc<dyn CoreMLIngestionExecutor>>>,
     // memory_system: Option<Arc<MemorySystem>>, // Disabled due to cyclic dependencies
+}
+
+impl std::fmt::Debug for ToolRegistry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ToolRegistry")
+            .field("registered_tools", &format!("<{} tools>", self.registered_tools.len()))
+            .field("statistics", &"<stats>")
+            .field("file_ops", &"<FileOperationsService>")
+            .field("file_editing_executor", &"<FileEditingToolExecutor>")
+            .field("coreml_executor", &"<CoreMLIngestionExecutor>")
+            .finish()
+    }
 }
 
 impl ToolRegistry {
@@ -150,10 +216,36 @@ impl ToolRegistry {
                 last_updated: chrono::Utc::now(),
             })),
             doc_quality_validator: Arc::new(DocQualityValidator::new()),
-            file_ops,
-            file_editing_executor,
+            file_ops: Arc::new(StdRwLock::new(file_ops)),
+            file_editing_executor: Arc::new(StdRwLock::new(file_editing_executor)),
+            coreml_executor: Arc::new(StdRwLock::new(Arc::new(PlaceholderCoreMLIngestionExecutor) as Arc<dyn CoreMLIngestionExecutor>)),
             // memory_system: None, // Disabled due to cyclic dependencies
         }
+    }
+
+    /// Set the CoreML ingestion executor for CoreML tools (builder pattern)
+    pub fn with_coreml_executor(mut self, executor: Arc<dyn CoreMLIngestionExecutor>) -> Self {
+        *self.coreml_executor.write().unwrap() = executor;
+        self
+    }
+
+    /// Set the CoreML ingestion executor for CoreML tools (after creation)
+    pub fn set_coreml_executor(&self, executor: Arc<dyn CoreMLIngestionExecutor>) {
+        *self.coreml_executor.write().unwrap() = executor;
+    }
+
+    /// Set the file operations service (after creation)
+    /// This allows injecting a real FileOperationsService implementation
+    /// when both agent-mcp and data-infrastructure are available
+    pub fn set_file_operations_service(&self, file_ops: Arc<dyn FileOperationsService>) {
+        // Replace the file_ops and recreate the executor
+        let new_executor = Arc::new(FileEditingToolExecutor::new(file_ops.clone()));
+        // Note: This requires making file_ops and file_editing_executor mutable
+        // For now, we'll need to store them in Arc<RwLock<>> to allow updates
+        // This is a limitation - file_ops should ideally be set at construction time
+        // But for backward compatibility, we'll add this method
+        // TODO: Refactor ToolRegistry to use Arc<RwLock<>> for file_ops and executor
+        warn!("set_file_operations_service() called but ToolRegistry.file_ops is not mutable. Use ToolRegistry::with_file_ops() at construction time instead.");
     }
 
     /// Set the memory system for memory tools
@@ -199,6 +291,14 @@ impl ToolRegistry {
             self.register_tool(tool).await?;
         }
         info!("Registered file editing tools");
+
+        // Register CoreML ingestion tools
+        use crate::tools::create_coreml_ingestion_tools;
+        let coreml_tools = create_coreml_ingestion_tools();
+        for tool in coreml_tools {
+            self.register_tool(tool).await?;
+        }
+        info!("Registered CoreML ingestion tools (MCP only, not exposed via REST API)");
 
         // Memory tools disabled due to cyclic dependencies
         // let memory_tools = create_memory_tools();
@@ -395,6 +495,12 @@ impl ToolRegistry {
             return self.execute_doc_quality_validator(tool, request).await;
         }
         
+        // Route based on tool capabilities or name
+        // Check for CoreML ingestion tools first (by name)
+        if matches!(tool.name.as_str(), "transcribe_audio" | "detect_objects" | "extract_text_from_image" | "process_video") {
+            return self.execute_coreml_tool(tool, request).await;
+        }
+        
         // Route based on tool capabilities
         if tool
             .capabilities
@@ -562,33 +668,99 @@ impl ToolRegistry {
         info!("Executing filesystem tool: {}", tool.name);
 
         // Route to appropriate file operation based on tool name
+        let params = serde_json::to_value(&request.parameters).unwrap_or(serde_json::Value::Null);
         match tool.name.as_str() {
             "file_read" => {
-                println!("DEBUG: Routing to execute_file_read");
-                self.file_editing_executor.execute_file_read(serde_json::to_value(&request.parameters).unwrap_or(serde_json::Value::Null)).await
+                self.file_editing_executor.execute_file_read(params).await
                     .map_err(|e| anyhow::anyhow!("File read error: {}", e))
             },
             "file_write" => {
-                println!("DEBUG: Routing to execute_file_write");
-                self.file_editing_executor.execute_file_write(serde_json::to_value(&request.parameters).unwrap_or(serde_json::Value::Null)).await
+                self.file_editing_executor.execute_file_write(params).await
                     .map_err(|e| anyhow::anyhow!("File write error: {}", e))
             },
             "file_edit" => {
-                println!("DEBUG: Routing to execute_file_edit");
-                self.file_editing_executor.execute_file_edit(serde_json::to_value(&request.parameters).unwrap_or(serde_json::Value::Null)).await
+                self.file_editing_executor.execute_file_edit(params).await
                     .map_err(|e| anyhow::anyhow!("File edit error: {}", e))
             },
             "workspace_status" => {
-                println!("DEBUG: Routing to execute_workspace_status");
-                self.file_editing_executor.execute_workspace_status(serde_json::to_value(&request.parameters).unwrap_or(serde_json::Value::Null)).await
+                self.file_editing_executor.execute_workspace_status(params).await
                     .map_err(|e| anyhow::anyhow!("Workspace status error: {}", e))
             },
+            "file_delete" => {
+                self.file_editing_executor.execute_file_delete(params).await
+                    .map_err(|e| anyhow::anyhow!("File delete error: {}", e))
+            },
+            "file_move" => {
+                self.file_editing_executor.execute_file_move(params).await
+                    .map_err(|e| anyhow::anyhow!("File move error: {}", e))
+            },
+            "file_copy" => {
+                self.file_editing_executor.execute_file_copy(params).await
+                    .map_err(|e| anyhow::anyhow!("File copy error: {}", e))
+            },
+            "list_directory" => {
+                self.file_editing_executor.execute_list_directory(params).await
+                    .map_err(|e| anyhow::anyhow!("List directory error: {}", e))
+            },
+            "file_exists" => {
+                self.file_editing_executor.execute_file_exists(params).await
+                    .map_err(|e| anyhow::anyhow!("File exists check error: {}", e))
+            },
+            "create_directory" => {
+                self.file_editing_executor.execute_create_directory(params).await
+                    .map_err(|e| anyhow::anyhow!("Create directory error: {}", e))
+            },
+            "get_file_metadata" => {
+                self.file_editing_executor.execute_get_file_metadata(params).await
+                    .map_err(|e| anyhow::anyhow!("Get file metadata error: {}", e))
+            },
             _ => {
-                println!("DEBUG: Unknown filesystem tool: {}", tool.name);
                 Err(anyhow::anyhow!("Unknown filesystem tool: {}", tool.name))
             },
         }
     }
+
+    /// Execute a CoreML ingestion tool
+    async fn execute_coreml_tool(
+        &self,
+        tool: &MCPTool,
+        request: &ToolExecutionRequest,
+    ) -> Result<serde_json::Value> {
+        info!("Executing CoreML ingestion tool: {}", tool.name);
+
+        let file_path = request.parameters
+            .get("file_path")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| anyhow::anyhow!("file_path parameter required"))?;
+        
+        let content_type = request.parameters
+            .get("content_type")
+            .and_then(|v| v.as_str());
+
+        let executor = self.coreml_executor.read().unwrap().clone();
+        match tool.name.as_str() {
+            "transcribe_audio" => {
+                executor.transcribe_audio(file_path, content_type).await
+                    .map_err(|e| anyhow::anyhow!("Audio transcription error: {}", e))
+            },
+            "detect_objects" => {
+                executor.detect_objects(file_path, content_type).await
+                    .map_err(|e| anyhow::anyhow!("Object detection error: {}", e))
+            },
+            "extract_text_from_image" => {
+                executor.extract_text_from_image(file_path, content_type).await
+                    .map_err(|e| anyhow::anyhow!("Text extraction error: {}", e))
+            },
+            "process_video" => {
+                executor.process_video(file_path).await
+                    .map_err(|e| anyhow::anyhow!("Video processing error: {}", e))
+            },
+            _ => {
+                Err(anyhow::anyhow!("Unknown CoreML tool: {}", tool.name))
+            },
+        }
+    }
+
     /// Execute a general tool in sandboxed environment
     async fn execute_sandboxed_tool(
         &self,

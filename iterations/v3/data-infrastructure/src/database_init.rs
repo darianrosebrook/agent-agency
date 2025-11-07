@@ -13,6 +13,132 @@ use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::path::Path;
 use tracing::{info, warn, error};
 
+/// Split SQL into individual statements, handling dollar-quoted strings
+/// 
+/// This function splits SQL by semicolons while respecting dollar-quoted strings
+/// (e.g., $$ ... $$, $tag$ ... $tag$) which are commonly used in PostgreSQL
+/// function definitions.
+fn split_sql_statements(sql: &str) -> Vec<String> {
+    let mut statements = Vec::new();
+    let mut current_statement = String::new();
+    let mut in_dollar_quote = false;
+    let mut dollar_tag: Option<String> = None;
+    let mut chars = sql.chars().peekable();
+    
+    while let Some(ch) = chars.next() {
+        current_statement.push(ch);
+        
+        // Track dollar-quoted strings (e.g., $$ ... $$ or $tag$ ... $tag$)
+        if ch == '$' {
+            if !in_dollar_quote {
+                // Check if this starts a dollar quote
+                let mut tag = String::new();
+                let mut is_dollar_quote = false;
+                
+                // Peek ahead to see if this is $$ or $tag$
+                if let Some(&next_ch) = chars.peek() {
+                    if next_ch == '$' {
+                        // Simple $$ case
+                        chars.next();
+                        current_statement.push('$');
+                        in_dollar_quote = true;
+                        dollar_tag = Some(String::new()); // Empty tag for $$
+                        is_dollar_quote = true;
+                    } else if next_ch.is_alphanumeric() || next_ch == '_' {
+                        // Tagged case: $tag$
+                        while let Some(&peek_ch) = chars.peek() {
+                            if peek_ch == '$' {
+                                chars.next();
+                                current_statement.push('$');
+                                in_dollar_quote = true;
+                                dollar_tag = Some(tag.clone());
+                                is_dollar_quote = true;
+                                break;
+                            } else if peek_ch.is_alphanumeric() || peek_ch == '_' {
+                                tag.push(chars.next().unwrap());
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Inside dollar quote - check if this ends it
+                let expected_tag = dollar_tag.as_deref().unwrap_or("");
+                let mut tag = String::new();
+                let mut found_end = false;
+                
+                // Read tag characters
+                while let Some(&next_ch) = chars.peek() {
+                    if next_ch == '$' {
+                        chars.next();
+                        current_statement.push('$');
+                        // Compare with expected tag
+                        if tag == expected_tag {
+                            in_dollar_quote = false;
+                            dollar_tag = None;
+                            found_end = true;
+                        }
+                        break;
+                    } else if next_ch.is_alphanumeric() || next_ch == '_' {
+                        tag.push(chars.next().unwrap());
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Split on semicolons that are not inside dollar quotes
+        if ch == ';' && !in_dollar_quote {
+            // Check if this semicolon is at the end of a statement
+            // (followed by whitespace, newline, or comment)
+            let mut is_end = false;
+            let mut peek_iter = chars.clone();
+            
+            // Skip whitespace
+            while let Some(&next_ch) = peek_iter.peek() {
+                match next_ch {
+                    ' ' | '\t' | '\n' | '\r' => {
+                        peek_iter.next();
+                        is_end = true;
+                    }
+                    '-' => {
+                        peek_iter.next();
+                        if let Some(&'-') = peek_iter.peek() {
+                            // Line comment - end of statement
+                            is_end = true;
+                        }
+                        break;
+                    }
+                    _ => break,
+                }
+            }
+            
+            // Also end if we're at end of string
+            if chars.peek().is_none() {
+                is_end = true;
+            }
+            
+            if is_end {
+                let trimmed = current_statement.trim();
+                if !trimmed.is_empty() && !trimmed.starts_with("--") {
+                    statements.push(trimmed.to_string());
+                }
+                current_statement.clear();
+            }
+        }
+    }
+    
+    // Add remaining statement if any
+    let trimmed = current_statement.trim();
+    if !trimmed.is_empty() && !trimmed.starts_with("--") {
+        statements.push(trimmed.to_string());
+    }
+    
+    statements
+}
+
 /// Initialize database with migrations
 pub async fn initialize_database(config: DatabaseConfig) -> Result<DatabaseClient> {
     info!("Initializing database connection...");
@@ -113,8 +239,31 @@ pub async fn run_migrations(pool: &PgPool) -> Result<()> {
         // Execute migration in a transaction
         let mut tx = pool.begin().await?;
         
-        match sqlx::query(&sql).execute(&mut *tx).await {
-            Ok(_) => {
+        // Split SQL into individual statements and execute each one
+        // This handles migrations with multiple SQL commands
+        let statements = split_sql_statements(&sql);
+        
+        let mut migration_success = true;
+        for (idx, statement) in statements.iter().enumerate() {
+            let trimmed = statement.trim();
+            if trimmed.is_empty() || trimmed.starts_with("--") {
+                continue; // Skip empty statements and comments
+            }
+            
+            match sqlx::query(trimmed).execute(&mut *tx).await {
+                Ok(_) => {
+                    info!("Migration {} statement {} executed successfully", version, idx + 1);
+                }
+                Err(e) => {
+                    error!("Migration {} statement {} failed: {}", version, idx + 1, e);
+                    migration_success = false;
+                    break;
+                }
+            }
+        }
+        
+        match migration_success {
+            true => {
                 // Record migration
                 sqlx::query(
                     "INSERT INTO migration_log (version, description) VALUES ($1, $2)"
@@ -128,9 +277,9 @@ pub async fn run_migrations(pool: &PgPool) -> Result<()> {
                 executed_count += 1;
                 info!("Migration {} applied successfully", version);
             }
-            Err(e) => {
+            false => {
                 tx.rollback().await?;
-                error!("Migration {} failed: {}", version, e);
+                error!("Migration {} failed, rolled back", version);
                 // Continue with other migrations instead of failing completely
                 warn!("Continuing with remaining migrations...");
             }

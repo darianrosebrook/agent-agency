@@ -148,7 +148,14 @@ impl McpServer {
 
         // Create service components
         let tool_discovery = Arc::new(ToolDiscovery::new());
-        let tool_registry = Arc::new(ToolRegistry::new());
+        
+        // Create FileOperationsService for file tools
+        use std::path::PathBuf;
+        let repo_path = std::env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."));
+        let file_ops = crate::file_operations_service::create_file_operations_service(repo_path);
+        let tool_registry = Arc::new(ToolRegistry::with_file_ops(file_ops));
+        
         let caws_integration = Arc::new(CawsIntegration::new());
 
         Ok(Self {

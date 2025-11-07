@@ -49,6 +49,30 @@ This worker orchestration platform consolidates multiple execution capabilities:
 
 ## Architecture
 
+### Connection to Agent Orchestration
+
+The `MCPWorkerPool` connects to `agent-orchestration` via `WorkerExecutionBridge`:
+
+- **Entry Point**: `MCPWorkerPool::execute_task()` receives `TaskDefinition` from orchestrator
+- **MCP Integration**: Tasks are executed via `MCPIntegration` using registered MCP tools
+- **Shared Memory**: All workers share a single `MemorySystem` instance for context awareness
+- **HTTP Fallback**: Distributed workers can be accessed via HTTP endpoints (configurable via environment variables)
+- **Result Conversion**: `TaskResult` is converted back to `ExecutionArtifacts` by the bridge
+
+**Connection Flow**:
+```
+WorkerExecutionBridge::execute_milestone()
+  → MCPWorkerPool::execute_task()
+  → MCPIntegration::execute_tool()
+  → MCP Tools (file editing, code analysis, etc.)
+```
+
+**Worker Endpoint Configuration**:
+- Environment variable: `WORKER_{UUID}_ENDPOINT` for specific worker endpoints
+- Pattern variable: `WORKER_ENDPOINT_PATTERN` for generic endpoint patterns
+- Default: `http://worker-{id}.local:8080` (for distributed HTTP workers)
+- Database query: PLACEHOLDER - will query worker registry when implemented
+
 ```mermaid
 graph TB
     subgraph "Core Layer"

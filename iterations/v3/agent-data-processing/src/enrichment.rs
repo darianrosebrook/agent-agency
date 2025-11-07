@@ -14,10 +14,22 @@ use crate::{DataProcessingResult, DataProcessingError};
 use std::collections::HashMap;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use tracing::info;
+use tracing::{info, warn};
 use uuid::Uuid;
 use chrono::Utc;
 use std::sync::Mutex;
+use std::sync::Arc;
+
+#[cfg(feature = "coreml")]
+use system_acceleration::ane::infer::{
+    WhisperInferenceExecutor, create_whisper_executor,
+    YOLOInferenceExecutor, create_yolo_executor,
+};
+#[cfg(feature = "coreml")]
+use system_acceleration::ane::models::{
+    whisper_model::{LoadedWhisperModel, WhisperInferenceOptions},
+    yolo_model::{LoadedYOLOModel, YOLOInferenceOptions},
+};
 
 /// Result from enrichment operations
 pub type EnrichmentResult = DataProcessingResult<ProcessingOutput>;
@@ -183,6 +195,8 @@ pub struct DetectedObject {
 pub struct AsrEnricher {
     config: EnrichmentCircuitBreakerConfig,
     circuit_breaker: Mutex<CircuitBreaker>,
+    #[cfg(feature = "coreml")]
+    whisper_model_path: Option<std::path::PathBuf>,
 }
 
 impl AsrEnricher {
@@ -193,7 +207,18 @@ impl AsrEnricher {
             config.success_threshold,
             config.request_timeout_secs,
         );
-        Self { config, circuit_breaker: Mutex::new(circuit_breaker) }
+        Self {
+            config,
+            circuit_breaker: Mutex::new(circuit_breaker),
+            #[cfg(feature = "coreml")]
+            whisper_model_path: None,
+        }
+    }
+
+    #[cfg(feature = "coreml")]
+    pub fn with_whisper_model_path(mut self, model_path: std::path::PathBuf) -> Self {
+        self.whisper_model_path = Some(model_path);
+        self
     }
 
     /// Perform ASR enrichment with circuit breaker protection
@@ -259,7 +284,17 @@ impl AsrEnricher {
     async fn perform_asr(&self, audio_data: &[u8], content_type: &str) -> Result<AsrEnrichmentResult, anyhow::Error> {
         info!("Performing ASR enrichment on {} bytes of {} audio", audio_data.len(), content_type);
 
-        // Basic audio analysis and transcription simulation
+        // Try to use Whisper if available
+        #[cfg(feature = "coreml")]
+        if let Some(ref model_path) = self.whisper_model_path {
+            if let Ok(result) = self.transcribe_with_whisper(audio_data, content_type, model_path).await {
+                return Ok(result);
+            } else {
+                warn!("Whisper transcription failed, falling back to simulated transcription");
+            }
+        }
+
+        // Fallback to simulated transcription
         let duration = self.estimate_audio_duration(audio_data, content_type)?;
         let language = self.detect_language(audio_data, content_type)?;
         let transcription = self.generate_transcription(audio_data, content_type, &language)?;
@@ -273,6 +308,130 @@ impl AsrEnricher {
             speakers,
             duration: duration as f32,
         })
+    }
+
+    #[cfg(feature = "coreml")]
+    async fn transcribe_with_whisper(
+        &self,
+        audio_data: &[u8],
+        content_type: &str,
+        model_path: &std::path::Path,
+    ) -> Result<AsrEnrichmentResult, anyhow::Error> {
+        use system_acceleration::ane::models::whisper_model::{load_whisper_model, WhisperConfig};
+        use system_acceleration::telemetry::TelemetryCollector;
+        use system_acceleration::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
+        
+        // Convert audio bytes to f32 samples
+        // TODO: Add proper audio decoding for WAV, MP3, etc.
+        // For now, attempt simple WAV decoding or fall back to simulated behavior
+        let (audio_samples, sample_rate) = self.decode_audio_to_samples(audio_data, content_type)?;
+        
+        // Load Whisper model (this is inefficient - should cache, but works for now)
+        let config = WhisperConfig::default();
+        let mut telemetry = TelemetryCollector::new();
+        let circuit_breaker = CircuitBreaker::new(CircuitBreakerConfig::default());
+        let whisper_model = load_whisper_model(model_path, config, telemetry, circuit_breaker)
+            .map_err(|e| anyhow::anyhow!("Failed to load Whisper model: {}", e))?;
+        
+        // Create Whisper executor
+        let mut executor = create_whisper_executor(whisper_model);
+        
+        // Create inference options
+        let options = WhisperInferenceOptions {
+            timeout_ms: 10000,
+            use_greedy: false, // Use beam search for better quality
+            max_tokens: 448,   // Maximum Whisper tokens
+            suppress_blank: true,
+            suppress_tokens: vec![-1], // Default suppress tokens
+            without_timestamps: false,
+            max_initial_timestamp_index: 50,
+            hallucination_threshold: 0.5,
+        };
+        
+        // Transcribe audio
+        let transcription_result = executor.transcribe_audio(&audio_samples, sample_rate, &options).await
+            .map_err(|e| anyhow::anyhow!("Whisper transcription failed: {}", e))?;
+        
+        // Convert Whisper transcription to AsrEnrichmentResult
+        let speakers = transcription_result.segments.iter()
+            .map(|seg| SpeakerSegment {
+                speaker_id: "speaker_0".to_string(), // Whisper doesn't do diarization by default
+                start_time: seg.start_time,
+                end_time: seg.end_time,
+                text: seg.text.clone(),
+            })
+            .collect();
+        
+        Ok(AsrEnrichmentResult {
+            transcription: transcription_result.text,
+            confidence: transcription_result.confidence,
+            language: Some(transcription_result.language),
+            speakers,
+            duration: transcription_result.segments.last()
+                .map(|seg| seg.end_time)
+                .unwrap_or(0.0),
+        })
+    }
+
+    #[cfg(feature = "coreml")]
+    fn decode_audio_to_samples(&self, audio_data: &[u8], content_type: &str) -> Result<(Vec<f32>, usize), anyhow::Error> {
+        // TODO: Implement proper audio decoding for various formats
+        // For now, attempt simple WAV decoding or return error to fall back to simulated behavior
+        // This is a placeholder - in production, use a proper audio decoding library
+        
+        if content_type == "audio/wav" || content_type == "audio/x-wav" {
+            // Simple WAV header parsing (minimal implementation)
+            // In production, use hound or similar library
+            if audio_data.len() < 44 {
+                return Err(anyhow::anyhow!("WAV file too short"));
+            }
+            
+            // Extract sample rate from WAV header (bytes 24-27)
+            let sample_rate = u32::from_le_bytes([
+                audio_data[24], audio_data[25], audio_data[26], audio_data[27]
+            ]) as usize;
+            
+            // Extract bits per sample (bytes 34-35)
+            let bits_per_sample = u16::from_le_bytes([audio_data[34], audio_data[35]]) as usize;
+            
+            // Extract data chunk size (bytes 40-43)
+            let data_size = u32::from_le_bytes([
+                audio_data[40], audio_data[41], audio_data[42], audio_data[43]
+            ]) as usize;
+            
+            // Skip WAV header (44 bytes) and decode samples
+            let audio_start = 44;
+            let audio_end = (audio_start + data_size).min(audio_data.len());
+            let raw_samples = &audio_data[audio_start..audio_end];
+            
+            // Convert bytes to f32 samples
+            let samples = match bits_per_sample {
+                16 => {
+                    raw_samples.chunks_exact(2)
+                        .map(|chunk| {
+                            let sample = i16::from_le_bytes([chunk[0], chunk[1]]) as f32;
+                            sample / 32768.0 // Normalize to [-1, 1]
+                        })
+                        .collect()
+                }
+                32 => {
+                    raw_samples.chunks_exact(4)
+                        .map(|chunk| {
+                            let sample = i32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]) as f32;
+                            sample / 2147483648.0 // Normalize to [-1, 1]
+                        })
+                        .collect()
+                }
+                _ => {
+                    return Err(anyhow::anyhow!("Unsupported bits per sample: {}", bits_per_sample));
+                }
+            };
+            
+            Ok((samples, sample_rate))
+        } else {
+            // For other formats, return error to trigger fallback
+            Err(anyhow::anyhow!("Audio format {} not yet supported for CoreML transcription", content_type))
+        }
     }
 
     /// Estimate audio duration based on file size and format

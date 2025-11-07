@@ -70,6 +70,9 @@ use crate::planning::{
     council_review::CouncilPlanReview,
     orchestrator_integration::OrchestratorPlanningIntegration,
 };
+use crate::coreml::CoreMLManager;
+use std::path::PathBuf;
+use tracing::{info, warn};
 
 /// Planning system factory for creating fully configured integrations
 pub struct PlanningSystemFactory;
@@ -136,11 +139,45 @@ impl PlanningSystemFactory {
         council: Arc<crate::council::Council>,
         db_ops: Arc<dyn DatabaseOperations>,
     ) -> Result<PlanningSystemComponents> {
-        // Create plan generator with tool chain integration
+        // Initialize CoreML manager for AI-assisted planning
+        let coreml_manager = {
+            let model_path = std::env::var("COREML_MODELS_PATH")
+                .map(|p| PathBuf::from(p))
+                .unwrap_or_else(|_| {
+                    // Default to project models directory
+                    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                        .parent()
+                        .and_then(|p| p.parent())
+                        .and_then(|p| p.parent())
+                        .map(|p| p.join("models").join("coreml"))
+                        .unwrap_or_else(|| PathBuf::from("/models/coreml"))
+                });
+            
+            let manager = Arc::new(CoreMLManager::new(model_path.clone()));
+            
+            // Try to load models asynchronously
+            let manager_clone = manager.clone();
+            tokio::spawn(async move {
+                match manager_clone.load_available_models().await {
+                    Ok(_) => {
+                        info!("CoreML models loaded successfully for orchestrator planning");
+                    }
+                    Err(e) => {
+                        warn!("Failed to load CoreML models for orchestrator planning: {}", e);
+                        warn!("Planning will continue without AI assistance");
+                    }
+                }
+            });
+            
+            Some(manager)
+        };
+
+        // Create plan generator with tool chain integration and CoreML manager
         let plan_generator = Arc::new(PlanGenerator::new(
             crate::planning::plan_types::PlanningConstraints::default(),
             None, // tool_chain_bridge
             None, // legacy_adapter
+            coreml_manager, // CoreML manager for AI-assisted planning
         ));
 
         // Create planning storage

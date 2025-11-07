@@ -24,6 +24,10 @@ use crate::planning::{
     WorkingSpecProvider,
     TaskDescriptorProvider,
 };
+use crate::coreml::CoreMLManager;
+use std::sync::Arc;
+use system_acceleration::ane::infer::MistralInferenceOptions;
+use tracing::{info, warn};
 
 /// AI-assisted plan generator
 #[derive(Debug)]
@@ -39,6 +43,9 @@ pub struct PlanGenerator {
 
     /// Planning constraints
     constraints: PlanningConstraints,
+
+    /// CoreML manager for AI-assisted planning (optional)
+    coreml_manager: Option<Arc<CoreMLManager>>,
 }
 
 /// Plan generation strategy
@@ -64,12 +71,14 @@ impl PlanGenerator {
         constraints: PlanningConstraints,
         tool_chain_bridge: Option<ToolChainBridge>,
         legacy_adapter: Option<LegacyPlanAdapter>,
+        coreml_manager: Option<Arc<CoreMLManager>>,
     ) -> Self {
         Self {
             caws_bridge: CawsPlanBridge::new(),
             tool_chain_bridge,
             legacy_adapter,
             constraints,
+            coreml_manager,
         }
     }
 
@@ -202,6 +211,20 @@ impl PlanGenerator {
         let complexity = self.analyze_task_complexity(task_descriptor)?;
         let dependencies = self.analyze_dependencies(&contract_plan)?;
 
+        // Use AI to enhance milestone decomposition if CoreML is available
+        if let Some(ref coreml_manager) = self.coreml_manager {
+            if let Ok(_ai_suggestions) = self.generate_milestone_decomposition_prompt(
+                task_descriptor,
+                &contract_plan,
+                &complexity,
+                coreml_manager,
+            ).await {
+                info!("AI-assisted milestone decomposition completed");
+            } else {
+                warn!("AI-assisted milestone decomposition failed, using fallback");
+            }
+        }
+
         // Decompose into optimal milestones
         let milestones = self.decompose_into_milestones(
             &contract_plan,
@@ -305,8 +328,22 @@ impl PlanGenerator {
     ) -> Result<Vec<ContractMilestone>> {
         let mut milestones = vec![];
 
-        // Create milestones based on acceptance criteria from working spec
+        // Use AI to suggest optimal milestone breakdown if CoreML is available
         let working_spec = context.working_spec_provider.get_working_spec().await?;
+        let task_descriptor = context.task_descriptor.get_task_descriptor().await?;
+        
+        if let Some(ref coreml_manager) = self.coreml_manager {
+            if let Ok(_ai_suggestions) = self.generate_milestone_suggestions_prompt(
+                &task_descriptor,
+                &working_spec,
+                complexity,
+                coreml_manager,
+            ).await {
+                info!("Using AI suggestions for milestone decomposition");
+            }
+        }
+
+        // Create milestones based on acceptance criteria from working spec
         for criterion in &working_spec.acceptance_criteria {
             let milestone = self.create_milestone_from_criterion(
                 criterion,
@@ -589,6 +626,108 @@ impl PlanGenerator {
     fn identify_parallel_groups(&self, _nodes: &HashMap<String, DependencyNode>, _edges: &[DependencyEdge]) -> Result<Vec<Vec<String>>> {
         // Simplified parallel group identification
         Ok(vec![])
+    }
+
+    /// Generate milestone decomposition prompt and call AI
+    async fn generate_milestone_decomposition_prompt(
+        &self,
+        task_descriptor: &TaskDescriptor,
+        plan: &ContractExecutionPlan,
+        complexity: &TaskComplexity,
+        coreml_manager: &CoreMLManager,
+    ) -> Result<String> {
+        let prompt = format!(
+            r#"You are an AI planning assistant. Analyze this task and suggest optimal milestone decomposition.
+
+TASK: {}
+DESCRIPTION: {}
+
+COMPLEXITY: {:?}
+ACCEPTANCE CRITERIA COUNT: {}
+
+CURRENT PLAN:
+- Milestones: {}
+- Dependencies: {}
+
+REQUIREMENTS:
+- Break down into logical, testable milestones
+- Identify dependencies between milestones
+- Suggest optimal execution order
+- Consider parallel execution opportunities
+
+Provide your analysis and milestone suggestions in a structured format."#,
+            task_descriptor.task_id,
+            task_descriptor.description,
+            complexity,
+            plan.contract_plan.acceptance_criteria.len(),
+            plan.milestones.len(),
+            plan.dependency_graph.edges.len(),
+        );
+
+        let options = MistralInferenceOptions {
+            max_tokens: 1024,
+            temperature: Some(0.3), // Lower temperature for more deterministic planning
+            top_p: Some(0.9),
+            timeout_ms: 30000,
+            use_kv_cache: true,
+        };
+
+        coreml_manager.generate_text("mistral-7b-instruct", &prompt, &options).await
+            .map_err(|e| anyhow!("CoreML inference failed: {}", e))
+    }
+
+    /// Generate milestone suggestions prompt and call AI
+    async fn generate_milestone_suggestions_prompt(
+        &self,
+        task_descriptor: &TaskDescriptor,
+        working_spec: &WorkingSpec,
+        complexity: &TaskComplexity,
+        coreml_manager: &CoreMLManager,
+    ) -> Result<String> {
+        let acceptance_criteria_text: Vec<String> = working_spec.acceptance_criteria.iter()
+            .map(|c| format!("- {}: {} → {} → {}", c.id, c.given, c.when, c.then))
+            .collect();
+
+        let prompt = format!(
+            r#"You are an AI planning assistant. Suggest optimal milestone breakdown for this task.
+
+TASK: {}
+DESCRIPTION: {}
+
+COMPLEXITY: {:?}
+RISK TIER: {}
+
+ACCEPTANCE CRITERIA:
+{}
+
+REQUIREMENTS:
+- Create logical milestones that map to acceptance criteria
+- Identify dependencies and execution order
+- Suggest optimal parallelization opportunities
+- Consider risk tier and complexity in milestone sizing
+
+Provide milestone suggestions in a structured format with:
+- Milestone IDs and objectives
+- Dependencies between milestones
+- Suggested execution order
+- Parallel execution opportunities"#,
+            task_descriptor.task_id,
+            task_descriptor.description,
+            complexity,
+            working_spec.risk_tier,
+            acceptance_criteria_text.join("\n"),
+        );
+
+        let options = MistralInferenceOptions {
+            max_tokens: 1024,
+            temperature: Some(0.3),
+            top_p: Some(0.9),
+            timeout_ms: 30000,
+            use_kv_cache: true,
+        };
+
+        coreml_manager.generate_text("mistral-7b-instruct", &prompt, &options).await
+            .map_err(|e| anyhow!("CoreML inference failed: {}", e))
     }
 }
 

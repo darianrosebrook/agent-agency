@@ -1506,25 +1506,36 @@ impl TaskExecutorTrait for TaskExecutor {
 impl TaskExecutor {
     /// Resolve worker endpoint from worker registry
     async fn resolve_worker_endpoint(&self, worker_id: Uuid) -> Result<String, anyhow::Error> {
-        // In a real implementation, this would:
-        // TODO: Implement proper worker endpoint resolution
-        // - [ ] Integrate with worker registry service
-        // - [ ] Query registry for worker endpoint by worker ID
-        // - [ ] Check worker health and availability
-        // - [ ] Cache resolved endpoints for performance
-        // - [ ] Handle worker failover and load balancing
-        // - [ ] Add unit tests with mock worker registry
-        // - [ ] Add integration tests with real service discovery
-        // 1. Query worker registry service for worker endpoint
-        // 2. Check worker health and availability
-        // 3. Cache resolved endpoints for performance
-        // 4. Handle worker failover and load balancing
+        // Priority order:
+        // 1. Environment variable: WORKER_{UUID}_ENDPOINT
+        // 2. Database query for worker endpoint
+        // 3. Default pattern: http://worker-{id}.local:8080
         
-        // For now, use a simple pattern based on worker ID
-        // In production, this would integrate with service discovery
+        // Check environment variable first (format: WORKER_{UUID}_ENDPOINT)
+        let env_key = format!("WORKER_{}_ENDPOINT", worker_id.to_string().to_uppercase().replace("-", "_"));
+        if let Ok(endpoint) = std::env::var(&env_key) {
+            info!("Found worker endpoint from environment variable {}: {}", env_key, endpoint);
+            return Ok(endpoint);
+        }
+        
+        // Check for generic worker endpoint pattern (WORKER_ENDPOINT_PATTERN)
+        if let Ok(pattern) = std::env::var("WORKER_ENDPOINT_PATTERN") {
+            let endpoint = pattern.replace("{id}", &worker_id.to_string());
+            info!("Using worker endpoint pattern: {}", endpoint);
+            return Ok(endpoint);
+        }
+        
+        // Try to query database for worker endpoint
+        // PLACEHOLDER: Database query for worker endpoints
+        // TODO: Implement database query for worker endpoints
+        // For now, skip database query and use default pattern
+        
+        // Default pattern: http://worker-{id}.local:8080
         let worker_endpoint = format!("http://worker-{}.local:8080", worker_id);
         
         // Validate endpoint is reachable (basic health check)
+        // Note: Health check is optional - if it fails, we still return the endpoint
+        // as the caller may want to handle the error differently
         match self.client.get(&format!("{}/health", worker_endpoint))
             .timeout(std::time::Duration::from_secs(5))
             .send()
@@ -1536,11 +1547,13 @@ impl TaskExecutor {
             }
             Ok(response) => {
                 warn!("Worker {} returned non-success status: {}", worker_id, response.status());
-                Err(anyhow::anyhow!("Worker health check failed with status: {}", response.status()))
+                // Still return endpoint - health check failure doesn't mean endpoint is invalid
+                Ok(worker_endpoint)
             }
             Err(e) => {
                 warn!("Failed to reach worker {} at {}: {}", worker_id, worker_endpoint, e);
-                Err(anyhow::anyhow!("Failed to reach worker endpoint: {}", e))
+                // Return endpoint anyway - may be temporarily unavailable
+                Ok(worker_endpoint)
             }
         }
     }

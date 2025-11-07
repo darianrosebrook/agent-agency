@@ -55,6 +55,44 @@ This platform combines data capabilities:
 - Pub/Sub: Publish-subscribe messaging patterns
 - Connection Management: Connection pooling and lifecycle management
 
+### Orchestrator Service
+- **Observational API**: Purely observational interface for orchestrator monitoring
+- **Request-Based Control**: Control operations are requests, not commands
+- **Research Integrity**: No direct manipulation of execution state
+- **Chain of Thought**: Full visibility into orchestrator reasoning process
+- **Task Management**: Submit tasks, observe status, request control operations
+
+### Connection to UnifiedOrchestrator
+
+The `OrchestratorService` connects to `UnifiedOrchestrator` via `UnifiedOrchestratorTaskExecutor`:
+
+- **TaskExecutor Trait**: Defines the interface for task execution (allows dependency injection)
+- **UnifiedOrchestratorTaskExecutor**: Implements `TaskExecutor` trait, wraps `UnifiedOrchestrator`
+- **Type Conversion**: Converts `TaskDescriptor` → `WorkingSpec` for orchestrator
+- **Execution Flow**: `OrchestratorService::execute_task()` → `TaskExecutor::execute_task()` → `UnifiedOrchestrator::execute_plan()`
+
+**Connection Flow**:
+```
+POST /api/v1/tasks
+  → OrchestratorService::execute_task()
+  → UnifiedOrchestratorTaskExecutor::execute_task()
+  → UnifiedOrchestrator::execute_plan()
+  → WorkerExecutionBridge → MCPWorkerPool → MCP Tools
+```
+
+**Initialization** (in `api-server.rs`):
+```rust
+// Create UnifiedOrchestratorAdapter
+let adapter = UnifiedOrchestratorAdapter::create_with_dependencies(db_client).await?;
+
+// Create TaskExecutor bridge
+let executor = Arc::new(UnifiedOrchestratorTaskExecutor::new(adapter.orchestrator()));
+
+// Wire to OrchestratorService
+let orchestrator_service = OrchestratorService::new(db_client)
+    .with_task_executor(executor);
+```
+
 ## Architecture
 
 ```mermaid
@@ -749,6 +787,64 @@ event_stream.publish("agent.updates", AgentUpdateEvent {
 - Batch Processing: 1000+ embeddings per minute
 - Similarity Search: Sub-10ms search across millions of vectors
 - Model Switching: Sub-second model switching with caching
+
+## Orchestrator Service
+
+### Observational API Design
+
+**CRITICAL: The Orchestrator Service is designed for OBSERVATION, not manipulation.**
+
+The service acts as a "doctor's MRI machine" - it observes what's happening inside
+the orchestrator without directly controlling execution. This preserves research
+integrity by ensuring the orchestrator maintains full autonomy over its execution
+lifecycle.
+
+#### Design Principles
+
+1. **Observation Only**: All methods observe orchestrator state, never manipulate it directly
+2. **Request-Based Control**: Control operations (pause/resume/cancel) are requests that
+   are logged in chain-of-thought, but the orchestrator decides whether to honor them
+3. **Research Integrity**: No direct manipulation of execution state - orchestrator maintains
+   full control over its own execution lifecycle
+4. **Agent Autonomy**: Agents use their own connections to task execution, not through the API
+
+#### Usage Pattern
+
+```rust
+use data_infrastructure::OrchestratorService;
+
+// Create service
+let service = OrchestratorService::new(db_client.clone());
+
+// Submit task (orchestrator handles execution)
+let task_id = service.execute_task(
+    "Implement user authentication".to_string(),
+    Some("auto".to_string()),
+    None
+).await?;
+
+// Observe task status (read-only)
+let status = service.get_task_status(task_id).await?;
+
+// Observe chain of thought (read-only)
+let chain = service.get_chain_of_thought(task_id).await?;
+
+// Request pause (orchestrator decides if safe)
+service.request_pause_task(task_id).await?;
+
+// Never directly manipulate execution state
+```
+
+#### Why This Matters
+
+Direct manipulation of orchestrator execution state would compromise research integrity.
+By maintaining strict observation boundaries, we ensure that:
+- Orchestrator decisions are autonomous and reproducible
+- Research results are not contaminated by external manipulation
+- The orchestrator's chain of thought accurately reflects its own reasoning
+- Agents maintain their own execution connections independently
+
+See `src/orchestrator_service.rs` for detailed implementation documentation.
 
 ## Integration Examples
 

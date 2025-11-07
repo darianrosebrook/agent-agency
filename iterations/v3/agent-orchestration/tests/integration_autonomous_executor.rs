@@ -122,7 +122,7 @@ fn create_test_executor() -> AutonomousExecutor {
 
 fn create_test_task(description: &str) -> TaskDescriptor {
     TaskDescriptor {
-        task_id: Uuid::new_v4().to_string(),
+        task_id: Uuid::new_v4(),
         description: description.to_string(),
         change_budget: ChangeBudget {
             max_files: 10,

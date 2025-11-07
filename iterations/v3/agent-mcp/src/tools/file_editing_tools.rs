@@ -23,6 +23,13 @@ pub fn create_file_editing_tools(file_ops: Arc<dyn FileOperationsService>) -> Ve
         create_file_write_tool(file_ops.clone()),
         create_file_edit_tool(file_ops.clone()),
         create_workspace_status_tool(file_ops.clone()),
+        create_file_delete_tool(file_ops.clone()),
+        create_file_move_tool(file_ops.clone()),
+        create_file_copy_tool(file_ops.clone()),
+        create_list_directory_tool(file_ops.clone()),
+        create_file_exists_tool(file_ops.clone()),
+        create_create_directory_tool(file_ops.clone()),
+        create_get_file_metadata_tool(file_ops.clone()),
     ]
 }
 
@@ -515,6 +522,527 @@ pub fn create_workspace_status_tool(file_ops: Arc<dyn FileOperationsService>) ->
     }
 }
 
+/// Create file delete tool
+pub fn create_file_delete_tool(_file_ops: Arc<dyn FileOperationsService>) -> MCPTool {
+    MCPTool {
+        id: Uuid::new_v4(),
+        name: "file_delete".to_string(),
+        description: "Delete a file or directory".to_string(),
+        version: "1.0.0".to_string(),
+        author: "Agent Agency".to_string(),
+        tool_type: ToolType::Utility,
+        capabilities: vec![ToolCapability::FileWrite, ToolCapability::FileSystemAccess],
+        parameters: ToolParameters {
+            required: vec![
+                ParameterDefinition {
+                    name: "path".to_string(),
+                    parameter_type: ParameterType::String,
+                    description: "Path to the file or directory to delete".to_string(),
+                    default_value: None,
+                    validation_rules: vec![
+                        ValidationRule {
+                            rule_type: crate::mcp_types::ValidationRuleType::NotEmpty,
+                            parameters: std::collections::HashMap::new(),
+                            error_message: "Path parameter cannot be empty".to_string(),
+                        },
+                    ],
+                },
+            ],
+            optional: vec![],
+            constraints: vec![],
+        },
+        output_schema: serde_json::json!({
+            "type": "object",
+            "properties": {
+                "success": {"type": "boolean"},
+                "path": {"type": "string"},
+                "deleted": {"type": "boolean"}
+            }
+        }),
+        endpoint: "/tools/file_delete".to_string(),
+        manifest: ToolManifest {
+            name: "file_delete".to_string(),
+            version: "1.0.0".to_string(),
+            description: "Delete a file or directory".to_string(),
+            author: "Agent Agency".to_string(),
+            tool_type: ToolType::Utility,
+            entry_point: "file_delete".to_string(),
+            dependencies: vec![],
+            capabilities: vec![ToolCapability::FileWrite, ToolCapability::FileSystemAccess],
+            parameters: ToolParameters {
+                required: vec![
+                    ParameterDefinition {
+                        name: "path".to_string(),
+                        parameter_type: ParameterType::String,
+                        description: "Path to delete".to_string(),
+                        default_value: None,
+                        validation_rules: vec![],
+                    },
+                ],
+                optional: vec![],
+                constraints: vec![],
+            },
+            output_schema: serde_json::json!({}),
+            endpoint: Some("/tools/file_delete".to_string()),
+            caws_compliance: None,
+            metadata: std::collections::HashMap::new(),
+            configuration_schema: serde_json::json!({}),
+        },
+        caws_compliance: CawsComplianceStatus::Compliant,
+        registration_time: chrono::Utc::now(),
+        last_updated: chrono::Utc::now(),
+        usage_count: 0,
+        metadata: std::collections::HashMap::new(),
+    }
+}
+
+/// Create file move tool
+pub fn create_file_move_tool(_file_ops: Arc<dyn FileOperationsService>) -> MCPTool {
+    MCPTool {
+        id: Uuid::new_v4(),
+        name: "file_move".to_string(),
+        description: "Move or rename a file or directory".to_string(),
+        version: "1.0.0".to_string(),
+        author: "Agent Agency".to_string(),
+        tool_type: ToolType::Utility,
+        capabilities: vec![ToolCapability::FileWrite, ToolCapability::FileSystemAccess],
+        parameters: ToolParameters {
+            required: vec![
+                ParameterDefinition {
+                    name: "from".to_string(),
+                    parameter_type: ParameterType::String,
+                    description: "Source path".to_string(),
+                    default_value: None,
+                    validation_rules: vec![],
+                },
+                ParameterDefinition {
+                    name: "to".to_string(),
+                    parameter_type: ParameterType::String,
+                    description: "Destination path".to_string(),
+                    default_value: None,
+                    validation_rules: vec![],
+                },
+            ],
+            optional: vec![],
+            constraints: vec![],
+        },
+        output_schema: serde_json::json!({
+            "type": "object",
+            "properties": {
+                "success": {"type": "boolean"},
+                "from": {"type": "string"},
+                "to": {"type": "string"}
+            }
+        }),
+        endpoint: "/tools/file_move".to_string(),
+        manifest: ToolManifest {
+            name: "file_move".to_string(),
+            version: "1.0.0".to_string(),
+            description: "Move or rename a file or directory".to_string(),
+            author: "Agent Agency".to_string(),
+            tool_type: ToolType::Utility,
+            entry_point: "file_move".to_string(),
+            dependencies: vec![],
+            capabilities: vec![ToolCapability::FileWrite, ToolCapability::FileSystemAccess],
+            parameters: ToolParameters {
+                required: vec![
+                    ParameterDefinition {
+                        name: "from".to_string(),
+                        parameter_type: ParameterType::String,
+                        description: "Source path".to_string(),
+                        default_value: None,
+                        validation_rules: vec![],
+                    },
+                    ParameterDefinition {
+                        name: "to".to_string(),
+                        parameter_type: ParameterType::String,
+                        description: "Destination path".to_string(),
+                        default_value: None,
+                        validation_rules: vec![],
+                    },
+                ],
+                optional: vec![],
+                constraints: vec![],
+            },
+            output_schema: serde_json::json!({}),
+            endpoint: Some("/tools/file_move".to_string()),
+            caws_compliance: None,
+            metadata: std::collections::HashMap::new(),
+            configuration_schema: serde_json::json!({}),
+        },
+        caws_compliance: CawsComplianceStatus::Compliant,
+        registration_time: chrono::Utc::now(),
+        last_updated: chrono::Utc::now(),
+        usage_count: 0,
+        metadata: std::collections::HashMap::new(),
+    }
+}
+
+/// Create file copy tool
+pub fn create_file_copy_tool(_file_ops: Arc<dyn FileOperationsService>) -> MCPTool {
+    MCPTool {
+        id: Uuid::new_v4(),
+        name: "file_copy".to_string(),
+        description: "Copy a file to a new location".to_string(),
+        version: "1.0.0".to_string(),
+        author: "Agent Agency".to_string(),
+        tool_type: ToolType::Utility,
+        capabilities: vec![ToolCapability::FileRead, ToolCapability::FileWrite, ToolCapability::FileSystemAccess],
+        parameters: ToolParameters {
+            required: vec![
+                ParameterDefinition {
+                    name: "from".to_string(),
+                    parameter_type: ParameterType::String,
+                    description: "Source file path".to_string(),
+                    default_value: None,
+                    validation_rules: vec![],
+                },
+                ParameterDefinition {
+                    name: "to".to_string(),
+                    parameter_type: ParameterType::String,
+                    description: "Destination file path".to_string(),
+                    default_value: None,
+                    validation_rules: vec![],
+                },
+            ],
+            optional: vec![],
+            constraints: vec![],
+        },
+        output_schema: serde_json::json!({
+            "type": "object",
+            "properties": {
+                "success": {"type": "boolean"},
+                "from": {"type": "string"},
+                "to": {"type": "string"}
+            }
+        }),
+        endpoint: "/tools/file_copy".to_string(),
+        manifest: ToolManifest {
+            name: "file_copy".to_string(),
+            version: "1.0.0".to_string(),
+            description: "Copy a file to a new location".to_string(),
+            author: "Agent Agency".to_string(),
+            tool_type: ToolType::Utility,
+            entry_point: "file_copy".to_string(),
+            dependencies: vec![],
+            capabilities: vec![ToolCapability::FileRead, ToolCapability::FileWrite, ToolCapability::FileSystemAccess],
+            parameters: ToolParameters {
+                required: vec![
+                    ParameterDefinition {
+                        name: "from".to_string(),
+                        parameter_type: ParameterType::String,
+                        description: "Source path".to_string(),
+                        default_value: None,
+                        validation_rules: vec![],
+                    },
+                    ParameterDefinition {
+                        name: "to".to_string(),
+                        parameter_type: ParameterType::String,
+                        description: "Destination path".to_string(),
+                        default_value: None,
+                        validation_rules: vec![],
+                    },
+                ],
+                optional: vec![],
+                constraints: vec![],
+            },
+            output_schema: serde_json::json!({}),
+            endpoint: Some("/tools/file_copy".to_string()),
+            caws_compliance: None,
+            metadata: std::collections::HashMap::new(),
+            configuration_schema: serde_json::json!({}),
+        },
+        caws_compliance: CawsComplianceStatus::Compliant,
+        registration_time: chrono::Utc::now(),
+        last_updated: chrono::Utc::now(),
+        usage_count: 0,
+        metadata: std::collections::HashMap::new(),
+    }
+}
+
+/// Create list directory tool
+pub fn create_list_directory_tool(_file_ops: Arc<dyn FileOperationsService>) -> MCPTool {
+    MCPTool {
+        id: Uuid::new_v4(),
+        name: "list_directory".to_string(),
+        description: "List contents of a directory".to_string(),
+        version: "1.0.0".to_string(),
+        author: "Agent Agency".to_string(),
+        tool_type: ToolType::Utility,
+        capabilities: vec![ToolCapability::FileRead, ToolCapability::FileSystemAccess],
+        parameters: ToolParameters {
+            required: vec![
+                ParameterDefinition {
+                    name: "path".to_string(),
+                    parameter_type: ParameterType::String,
+                    description: "Path to the directory to list".to_string(),
+                    default_value: None,
+                    validation_rules: vec![],
+                },
+            ],
+            optional: vec![],
+            constraints: vec![],
+        },
+        output_schema: serde_json::json!({
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+                "entries": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string"},
+                            "path": {"type": "string"},
+                            "is_directory": {"type": "boolean"},
+                            "size": {"type": "number"},
+                            "modified": {"type": "string", "nullable": true}
+                        }
+                    }
+                }
+            }
+        }),
+        endpoint: "/tools/list_directory".to_string(),
+        manifest: ToolManifest {
+            name: "list_directory".to_string(),
+            version: "1.0.0".to_string(),
+            description: "List directory contents".to_string(),
+            author: "Agent Agency".to_string(),
+            tool_type: ToolType::Utility,
+            entry_point: "list_directory".to_string(),
+            dependencies: vec![],
+            capabilities: vec![ToolCapability::FileRead, ToolCapability::FileSystemAccess],
+            parameters: ToolParameters {
+                required: vec![
+                    ParameterDefinition {
+                        name: "path".to_string(),
+                        parameter_type: ParameterType::String,
+                        description: "Directory path".to_string(),
+                        default_value: None,
+                        validation_rules: vec![],
+                    },
+                ],
+                optional: vec![],
+                constraints: vec![],
+            },
+            output_schema: serde_json::json!({}),
+            endpoint: Some("/tools/list_directory".to_string()),
+            caws_compliance: None,
+            metadata: std::collections::HashMap::new(),
+            configuration_schema: serde_json::json!({}),
+        },
+        caws_compliance: CawsComplianceStatus::Compliant,
+        registration_time: chrono::Utc::now(),
+        last_updated: chrono::Utc::now(),
+        usage_count: 0,
+        metadata: std::collections::HashMap::new(),
+    }
+}
+
+/// Create file exists tool
+pub fn create_file_exists_tool(_file_ops: Arc<dyn FileOperationsService>) -> MCPTool {
+    MCPTool {
+        id: Uuid::new_v4(),
+        name: "file_exists".to_string(),
+        description: "Check if a file or directory exists".to_string(),
+        version: "1.0.0".to_string(),
+        author: "Agent Agency".to_string(),
+        tool_type: ToolType::Utility,
+        capabilities: vec![ToolCapability::FileRead, ToolCapability::FileSystemAccess],
+        parameters: ToolParameters {
+            required: vec![
+                ParameterDefinition {
+                    name: "path".to_string(),
+                    parameter_type: ParameterType::String,
+                    description: "Path to check".to_string(),
+                    default_value: None,
+                    validation_rules: vec![],
+                },
+            ],
+            optional: vec![],
+            constraints: vec![],
+        },
+        output_schema: serde_json::json!({
+            "type": "object",
+            "properties": {
+                "exists": {"type": "boolean"},
+                "path": {"type": "string"}
+            }
+        }),
+        endpoint: "/tools/file_exists".to_string(),
+        manifest: ToolManifest {
+            name: "file_exists".to_string(),
+            version: "1.0.0".to_string(),
+            description: "Check if file or directory exists".to_string(),
+            author: "Agent Agency".to_string(),
+            tool_type: ToolType::Utility,
+            entry_point: "file_exists".to_string(),
+            dependencies: vec![],
+            capabilities: vec![ToolCapability::FileRead, ToolCapability::FileSystemAccess],
+            parameters: ToolParameters {
+                required: vec![
+                    ParameterDefinition {
+                        name: "path".to_string(),
+                        parameter_type: ParameterType::String,
+                        description: "Path to check".to_string(),
+                        default_value: None,
+                        validation_rules: vec![],
+                    },
+                ],
+                optional: vec![],
+                constraints: vec![],
+            },
+            output_schema: serde_json::json!({}),
+            endpoint: Some("/tools/file_exists".to_string()),
+            caws_compliance: None,
+            metadata: std::collections::HashMap::new(),
+            configuration_schema: serde_json::json!({}),
+        },
+        caws_compliance: CawsComplianceStatus::Compliant,
+        registration_time: chrono::Utc::now(),
+        last_updated: chrono::Utc::now(),
+        usage_count: 0,
+        metadata: std::collections::HashMap::new(),
+    }
+}
+
+/// Create create directory tool
+pub fn create_create_directory_tool(_file_ops: Arc<dyn FileOperationsService>) -> MCPTool {
+    MCPTool {
+        id: Uuid::new_v4(),
+        name: "create_directory".to_string(),
+        description: "Create a directory (and parent directories if needed)".to_string(),
+        version: "1.0.0".to_string(),
+        author: "Agent Agency".to_string(),
+        tool_type: ToolType::Utility,
+        capabilities: vec![ToolCapability::FileWrite, ToolCapability::FileSystemAccess],
+        parameters: ToolParameters {
+            required: vec![
+                ParameterDefinition {
+                    name: "path".to_string(),
+                    parameter_type: ParameterType::String,
+                    description: "Path of the directory to create".to_string(),
+                    default_value: None,
+                    validation_rules: vec![],
+                },
+            ],
+            optional: vec![],
+            constraints: vec![],
+        },
+        output_schema: serde_json::json!({
+            "type": "object",
+            "properties": {
+                "success": {"type": "boolean"},
+                "path": {"type": "string"}
+            }
+        }),
+        endpoint: "/tools/create_directory".to_string(),
+        manifest: ToolManifest {
+            name: "create_directory".to_string(),
+            version: "1.0.0".to_string(),
+            description: "Create a directory".to_string(),
+            author: "Agent Agency".to_string(),
+            tool_type: ToolType::Utility,
+            entry_point: "create_directory".to_string(),
+            dependencies: vec![],
+            capabilities: vec![ToolCapability::FileWrite, ToolCapability::FileSystemAccess],
+            parameters: ToolParameters {
+                required: vec![
+                    ParameterDefinition {
+                        name: "path".to_string(),
+                        parameter_type: ParameterType::String,
+                        description: "Directory path".to_string(),
+                        default_value: None,
+                        validation_rules: vec![],
+                    },
+                ],
+                optional: vec![],
+                constraints: vec![],
+            },
+            output_schema: serde_json::json!({}),
+            endpoint: Some("/tools/create_directory".to_string()),
+            caws_compliance: None,
+            metadata: std::collections::HashMap::new(),
+            configuration_schema: serde_json::json!({}),
+        },
+        caws_compliance: CawsComplianceStatus::Compliant,
+        registration_time: chrono::Utc::now(),
+        last_updated: chrono::Utc::now(),
+        usage_count: 0,
+        metadata: std::collections::HashMap::new(),
+    }
+}
+
+/// Create get file metadata tool
+pub fn create_get_file_metadata_tool(_file_ops: Arc<dyn FileOperationsService>) -> MCPTool {
+    MCPTool {
+        id: Uuid::new_v4(),
+        name: "get_file_metadata".to_string(),
+        description: "Get metadata about a file or directory (size, modified time, permissions, etc.)".to_string(),
+        version: "1.0.0".to_string(),
+        author: "Agent Agency".to_string(),
+        tool_type: ToolType::Utility,
+        capabilities: vec![ToolCapability::FileRead, ToolCapability::FileSystemAccess],
+        parameters: ToolParameters {
+            required: vec![
+                ParameterDefinition {
+                    name: "path".to_string(),
+                    parameter_type: ParameterType::String,
+                    description: "Path to the file or directory".to_string(),
+                    default_value: None,
+                    validation_rules: vec![],
+                },
+            ],
+            optional: vec![],
+            constraints: vec![],
+        },
+        output_schema: serde_json::json!({
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+                "size": {"type": "number"},
+                "is_directory": {"type": "boolean"},
+                "modified": {"type": "string", "nullable": true},
+                "permissions": {"type": "number", "nullable": true}
+            }
+        }),
+        endpoint: "/tools/get_file_metadata".to_string(),
+        manifest: ToolManifest {
+            name: "get_file_metadata".to_string(),
+            version: "1.0.0".to_string(),
+            description: "Get file metadata".to_string(),
+            author: "Agent Agency".to_string(),
+            tool_type: ToolType::Utility,
+            entry_point: "get_file_metadata".to_string(),
+            dependencies: vec![],
+            capabilities: vec![ToolCapability::FileRead, ToolCapability::FileSystemAccess],
+            parameters: ToolParameters {
+                required: vec![
+                    ParameterDefinition {
+                        name: "path".to_string(),
+                        parameter_type: ParameterType::String,
+                        description: "File path".to_string(),
+                        default_value: None,
+                        validation_rules: vec![],
+                    },
+                ],
+                optional: vec![],
+                constraints: vec![],
+            },
+            output_schema: serde_json::json!({}),
+            endpoint: Some("/tools/get_file_metadata".to_string()),
+            caws_compliance: None,
+            metadata: std::collections::HashMap::new(),
+            configuration_schema: serde_json::json!({}),
+        },
+        caws_compliance: CawsComplianceStatus::Compliant,
+        registration_time: chrono::Utc::now(),
+        last_updated: chrono::Utc::now(),
+        usage_count: 0,
+        metadata: std::collections::HashMap::new(),
+    }
+}
+
 /// File editing tool executor
 #[derive(Clone)]
 pub struct FileEditingToolExecutor {
@@ -536,10 +1064,7 @@ impl FileEditingToolExecutor {
 
     /// Execute file read operation
     /// 
-    /// DEPENDENCY: FileOperationsService interface needs a `read_file` method added
-    /// to support secure file reading with validation and size limits.
-    /// Currently, this method requires direct filesystem access which bypasses
-    /// security controls. Once the interface method is added, this should use it.
+    /// Uses FileOperationsService for secure file reading with validation and size limits.
     pub async fn execute_file_read(&self, params: serde_json::Value) -> Result<serde_json::Value, String> {
         let path: String = serde_json::from_value(params.get("path").cloned().ok_or("Missing path parameter")?)
             .map_err(|e| format!("Invalid path parameter: {}", e))?;
@@ -549,47 +1074,46 @@ impl FileEditingToolExecutor {
             .unwrap_or("utf-8")
             .to_string();
 
-        let max_size: usize = params.get("max_size")
+        let max_size: u64 = params.get("max_size")
             .and_then(|v| v.as_u64())
-            .unwrap_or(1048576) as usize;
-
-        // Implementation note: Currently uses std::fs directly for file reading.
-        // Future enhancement: Add read_file method to FileOperationsService interface
-        // for centralized security controls. Current implementation includes:
-        // - File size validation against max_size limit
-        // - Basic encoding validation (utf-8, ascii)
-        // - Error handling with descriptive messages
-        use std::path::Path;
-        let file_path = Path::new(&path);
-        
-        // Validate file size before reading
-        let metadata = std::fs::metadata(file_path)
-            .map_err(|e| format!("Failed to read file metadata: {}", e))?;
-        
-        if metadata.len() > max_size as u64 {
-            return Err(format!("File size {} exceeds maximum allowed size {}", metadata.len(), max_size));
-        }
-
-        // Read file content
-        let content = std::fs::read_to_string(file_path)
-            .map_err(|e| format!("Failed to read file: {}", e))?;
+            .unwrap_or(1048576);
 
         // Validate encoding - supports utf-8 and ascii
-        // Future enhancement: Add proper encoding detection using encoding_rs or similar
         if encoding != "utf-8" && encoding != "ascii" {
             return Err(format!("Unsupported encoding: {}", encoding));
         }
+
+        use std::path::Path;
+        let file_path = Path::new(&path);
+        
+        // Read file using FileOperationsService
+        let file_bytes = self.file_ops.read_file(file_path, Some(max_size)).await
+            .map_err(|e| format!("Failed to read file: {}", e))?;
+
+        // Get file metadata for modified time
+        let metadata = self.file_ops.get_file_metadata(file_path).await
+            .map_err(|e| format!("Failed to get file metadata: {}", e))?;
+
+        // Convert bytes to string based on encoding
+        let content = match encoding.as_str() {
+            "utf-8" => String::from_utf8(file_bytes)
+                .map_err(|e| format!("File is not valid UTF-8: {}", e))?,
+            "ascii" => {
+                // Validate ASCII and convert
+                if file_bytes.iter().any(|&b| b > 127) {
+                    return Err("File contains non-ASCII characters".to_string());
+                }
+                String::from_utf8(file_bytes)
+                    .map_err(|e| format!("Failed to convert to string: {}", e))?
+            },
+            _ => return Err(format!("Unsupported encoding: {}", encoding)),
+        };
 
         Ok(serde_json::json!({
             "content": content,
             "encoding": encoding,
             "size": content.len(),
-            "modified": metadata.modified()
-                .ok()
-                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-                .map(|d| chrono::DateTime::from_timestamp(d.as_secs() as i64, 0))
-                .flatten()
-                .unwrap_or_else(chrono::Utc::now)
+            "modified": metadata.modified.unwrap_or_else(chrono::Utc::now)
         }))
     }
 
@@ -853,5 +1377,142 @@ impl FileEditingToolExecutor {
             }
             Err(e) => Err(format!("Failed to get workspace status: {}", e)),
         }
+    }
+
+    /// Execute file delete operation
+    pub async fn execute_file_delete(&self, params: serde_json::Value) -> Result<serde_json::Value, String> {
+        let path: String = serde_json::from_value(params.get("path").cloned().ok_or("Missing path parameter")?)
+            .map_err(|e| format!("Invalid path parameter: {}", e))?;
+
+        use std::path::Path;
+        let file_path = Path::new(&path);
+
+        self.file_ops.delete_file(file_path).await
+            .map_err(|e| format!("Failed to delete file: {}", e))?;
+
+        Ok(serde_json::json!({
+            "success": true,
+            "path": path,
+            "deleted": true
+        }))
+    }
+
+    /// Execute file move operation
+    pub async fn execute_file_move(&self, params: serde_json::Value) -> Result<serde_json::Value, String> {
+        let from: String = serde_json::from_value(params.get("from").cloned().ok_or("Missing from parameter")?)
+            .map_err(|e| format!("Invalid from parameter: {}", e))?;
+        let to: String = serde_json::from_value(params.get("to").cloned().ok_or("Missing to parameter")?)
+            .map_err(|e| format!("Invalid to parameter: {}", e))?;
+
+        use std::path::Path;
+        let from_path = Path::new(&from);
+        let to_path = Path::new(&to);
+
+        self.file_ops.move_file(from_path, to_path).await
+            .map_err(|e| format!("Failed to move file: {}", e))?;
+
+        Ok(serde_json::json!({
+            "success": true,
+            "from": from,
+            "to": to
+        }))
+    }
+
+    /// Execute file copy operation
+    pub async fn execute_file_copy(&self, params: serde_json::Value) -> Result<serde_json::Value, String> {
+        let from: String = serde_json::from_value(params.get("from").cloned().ok_or("Missing from parameter")?)
+            .map_err(|e| format!("Invalid from parameter: {}", e))?;
+        let to: String = serde_json::from_value(params.get("to").cloned().ok_or("Missing to parameter")?)
+            .map_err(|e| format!("Invalid to parameter: {}", e))?;
+
+        use std::path::Path;
+        let from_path = Path::new(&from);
+        let to_path = Path::new(&to);
+
+        self.file_ops.copy_file(from_path, to_path).await
+            .map_err(|e| format!("Failed to copy file: {}", e))?;
+
+        Ok(serde_json::json!({
+            "success": true,
+            "from": from,
+            "to": to
+        }))
+    }
+
+    /// Execute list directory operation
+    pub async fn execute_list_directory(&self, params: serde_json::Value) -> Result<serde_json::Value, String> {
+        let path: String = serde_json::from_value(params.get("path").cloned().ok_or("Missing path parameter")?)
+            .map_err(|e| format!("Invalid path parameter: {}", e))?;
+
+        use std::path::Path;
+        let dir_path = Path::new(&path);
+
+        let entries = self.file_ops.list_directory(dir_path).await
+            .map_err(|e| format!("Failed to list directory: {}", e))?;
+
+        Ok(serde_json::json!({
+            "path": path,
+            "entries": entries.into_iter().map(|e| serde_json::json!({
+                "name": e.name,
+                "path": e.path,
+                "is_directory": e.is_directory,
+                "size": e.size,
+                "modified": e.modified
+            })).collect::<Vec<_>>()
+        }))
+    }
+
+    /// Execute file exists check
+    pub async fn execute_file_exists(&self, params: serde_json::Value) -> Result<serde_json::Value, String> {
+        let path: String = serde_json::from_value(params.get("path").cloned().ok_or("Missing path parameter")?)
+            .map_err(|e| format!("Invalid path parameter: {}", e))?;
+
+        use std::path::Path;
+        let file_path = Path::new(&path);
+
+        let exists = self.file_ops.file_exists(file_path).await
+            .map_err(|e| format!("Failed to check file existence: {}", e))?;
+
+        Ok(serde_json::json!({
+            "exists": exists,
+            "path": path
+        }))
+    }
+
+    /// Execute create directory operation
+    pub async fn execute_create_directory(&self, params: serde_json::Value) -> Result<serde_json::Value, String> {
+        let path: String = serde_json::from_value(params.get("path").cloned().ok_or("Missing path parameter")?)
+            .map_err(|e| format!("Invalid path parameter: {}", e))?;
+
+        use std::path::Path;
+        let dir_path = Path::new(&path);
+
+        self.file_ops.create_directory(dir_path).await
+            .map_err(|e| format!("Failed to create directory: {}", e))?;
+
+        Ok(serde_json::json!({
+            "success": true,
+            "path": path
+        }))
+    }
+
+    /// Execute get file metadata operation
+    pub async fn execute_get_file_metadata(&self, params: serde_json::Value) -> Result<serde_json::Value, String> {
+        let path: String = serde_json::from_value(params.get("path").cloned().ok_or("Missing path parameter")?)
+            .map_err(|e| format!("Invalid path parameter: {}", e))?;
+
+        use std::path::Path;
+        let file_path = Path::new(&path);
+
+        let metadata = self.file_ops.get_file_metadata(file_path).await
+            .map_err(|e| format!("Failed to get file metadata: {}", e))?;
+
+        Ok(serde_json::json!({
+            "path": metadata.path,
+            "size": metadata.size,
+            "is_directory": metadata.is_directory,
+            "modified": metadata.modified,
+            "permissions": metadata.permissions
+        }))
     }
 }

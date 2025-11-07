@@ -48,6 +48,7 @@ pub mod rto_rpo_monitor;
 pub mod sandbox_api;
 pub mod service_failover;
 pub mod system_observability;
+pub mod orchestrator_service;
 
 // Data infrastructure modules (from consolidated caching, embedding-service, file_ops crates)
 pub mod caching;
@@ -59,6 +60,9 @@ pub mod file_operations_service;
 pub use database_config::DatabaseConfig;
 pub use simple_client::DatabaseClient;
 pub use simple_client::ProvenanceClientAdapter;
+
+// Export orchestrator service
+pub use orchestrator_service::{OrchestratorService, TaskExecutor};
 
 // Export database operations factory
 pub use database_operations::{create_database_operations, create_database_audit_operations, DatabaseOperations};

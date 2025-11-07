@@ -96,6 +96,26 @@ The orchestration service follows the **CAWS Adjudication Cycle** for all arbitr
 - **Reflexive Learning**: Turn-level reward assignment and credit allocation for long-horizon tasks
 - **Model Performance Tracking**: Continuous benchmarking and preference for high-performing models
 
+### Worker Execution Bridge
+
+The `WorkerExecutionBridge` connects `UnifiedOrchestrator` with `agent-workers` for task execution:
+
+- **Type Conversion**: Converts `Milestone` objects from orchestrator to `TaskDefinition` objects for workers
+- **Execution Delegation**: Delegates milestone execution to `MCPWorkerPool` for parallel processing
+- **Result Conversion**: Converts `TaskResult` from workers back to `ExecutionArtifacts` for orchestrator
+- **Worktree Integration**: Passes worktree paths to workers for isolated execution
+- **Parallel Execution**: Supports parallel milestone execution via `ParallelCoordinator`
+
+**Connection Flow**:
+```
+UnifiedOrchestrator::execute_plan()
+  → PlanExecutor::execute_milestone()
+  → WorkerExecutionBridge::execute_milestone()
+  → MCPWorkerPool::execute_task()
+  → MCPIntegration::execute_tool()
+  → MCP Tools
+```
+
 ### CAWS MCP Server Integration
 - **Tool Discovery**: Dynamic discovery of CAWS-compliant tools via Model Context Protocol
 - **Modular Extension**: New CAWS tools added without model retraining or hardcoded tool lists

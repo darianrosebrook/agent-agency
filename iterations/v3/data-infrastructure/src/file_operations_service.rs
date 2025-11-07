@@ -9,9 +9,11 @@ use async_trait::async_trait;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tokio::fs;
 use system_common_interfaces::{
     FileOperationsService, Workspace as SystemWorkspace, WorkspaceFactory, WorkspaceStatus, WorkspaceState,
     FileResult, FileOpsError, Changeset, AllowList, Budgets, ChangesetId,
+    FileMetadata, DirectoryEntry,
 };
 use crate::file_operations::{
     Workspace as DataInfraWorkspace, GitWorktreeWorkspace, TempMirrorWorkspace,
@@ -223,6 +225,204 @@ impl FileOperationsService for DataInfrastructureFileOperationsService {
         } else {
             Err(FileOpsError::WorkspaceNotFound(task_id.to_string()))
         }
+    }
+
+    async fn read_file(
+        &self,
+        file_path: &Path,
+        max_size: Option<u64>,
+    ) -> FileResult<Vec<u8>> {
+        // Resolve path relative to default repo path
+        let full_path = if file_path.is_absolute() {
+            file_path.to_path_buf()
+        } else {
+            self.default_repo_path.join(file_path)
+        };
+
+        // Check file size before reading
+        let metadata = fs::metadata(&full_path).await
+            .map_err(|e| FileOpsError::Io(e))?;
+        
+        if let Some(max) = max_size {
+            if metadata.len() > max {
+                return Err(FileOpsError::Validation(
+                    format!("File size {} exceeds maximum allowed size {}", metadata.len(), max)
+                ));
+            }
+        }
+
+        // Read file content
+        fs::read(&full_path).await
+            .map_err(|e| FileOpsError::Io(e))
+    }
+
+    async fn file_exists(&self, file_path: &Path) -> FileResult<bool> {
+        let full_path = if file_path.is_absolute() {
+            file_path.to_path_buf()
+        } else {
+            self.default_repo_path.join(file_path)
+        };
+
+        match fs::metadata(&full_path).await {
+            Ok(_) => Ok(true),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+            Err(e) => Err(FileOpsError::Io(e)),
+        }
+    }
+
+    async fn get_file_metadata(&self, file_path: &Path) -> FileResult<FileMetadata> {
+        let full_path = if file_path.is_absolute() {
+            file_path.to_path_buf()
+        } else {
+            self.default_repo_path.join(file_path)
+        };
+
+        let metadata = fs::metadata(&full_path).await
+            .map_err(|e| FileOpsError::Io(e))?;
+
+        let modified = metadata.modified()
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| chrono::DateTime::from_timestamp(d.as_secs() as i64, 0))
+            .flatten();
+
+        #[cfg(unix)]
+        let permissions = {
+            use std::os::unix::fs::PermissionsExt;
+            Some(metadata.permissions().mode())
+        };
+        #[cfg(not(unix))]
+        let permissions = None;
+
+        Ok(FileMetadata {
+            path: file_path.to_string_lossy().to_string(),
+            size: metadata.len(),
+            is_directory: metadata.is_dir(),
+            modified,
+            permissions,
+        })
+    }
+
+    async fn list_directory(&self, dir_path: &Path) -> FileResult<Vec<DirectoryEntry>> {
+        let full_path = if dir_path.is_absolute() {
+            dir_path.to_path_buf()
+        } else {
+            self.default_repo_path.join(dir_path)
+        };
+
+        let mut entries = Vec::new();
+        let mut dir = fs::read_dir(&full_path).await
+            .map_err(|e| FileOpsError::Io(e))?;
+
+        while let Some(entry) = dir.next_entry().await
+            .map_err(|e| FileOpsError::Io(e))? {
+            let metadata = entry.metadata().await
+                .map_err(|e| FileOpsError::Io(e))?;
+
+            let modified = metadata.modified()
+                .ok()
+                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|d| chrono::DateTime::from_timestamp(d.as_secs() as i64, 0))
+                .flatten();
+
+            entries.push(DirectoryEntry {
+                name: entry.file_name().to_string_lossy().to_string(),
+                path: entry.path().to_string_lossy().to_string(),
+                is_directory: metadata.is_dir(),
+                size: if metadata.is_dir() { 0 } else { metadata.len() },
+                modified,
+            });
+        }
+
+        Ok(entries)
+    }
+
+    async fn create_directory(&self, dir_path: &Path) -> FileResult<()> {
+        let full_path = if dir_path.is_absolute() {
+            dir_path.to_path_buf()
+        } else {
+            self.default_repo_path.join(dir_path)
+        };
+
+        fs::create_dir_all(&full_path).await
+            .map_err(|e| FileOpsError::Io(e))
+    }
+
+    async fn delete_file(&self, file_path: &Path) -> FileResult<()> {
+        let full_path = if file_path.is_absolute() {
+            file_path.to_path_buf()
+        } else {
+            self.default_repo_path.join(file_path)
+        };
+
+        let metadata = fs::metadata(&full_path).await
+            .map_err(|e| FileOpsError::Io(e))?;
+
+        if metadata.is_dir() {
+            fs::remove_dir_all(&full_path).await
+        } else {
+            fs::remove_file(&full_path).await
+        }
+        .map_err(|e| FileOpsError::Io(e))
+    }
+
+    async fn move_file(&self, from: &Path, to: &Path) -> FileResult<()> {
+        let from_path = if from.is_absolute() {
+            from.to_path_buf()
+        } else {
+            self.default_repo_path.join(from)
+        };
+
+        let to_path = if to.is_absolute() {
+            to.to_path_buf()
+        } else {
+            self.default_repo_path.join(to)
+        };
+
+        // Ensure parent directory exists
+        if let Some(parent) = to_path.parent() {
+            fs::create_dir_all(parent).await
+                .map_err(|e| FileOpsError::Io(e))?;
+        }
+
+        fs::rename(&from_path, &to_path).await
+            .map_err(|e| FileOpsError::Io(e))
+    }
+
+    async fn copy_file(&self, from: &Path, to: &Path) -> FileResult<()> {
+        let from_path = if from.is_absolute() {
+            from.to_path_buf()
+        } else {
+            self.default_repo_path.join(from)
+        };
+
+        let to_path = if to.is_absolute() {
+            to.to_path_buf()
+        } else {
+            self.default_repo_path.join(to)
+        };
+
+        // Ensure parent directory exists
+        if let Some(parent) = to_path.parent() {
+            fs::create_dir_all(parent).await
+                .map_err(|e| FileOpsError::Io(e))?;
+        }
+
+        let metadata = fs::metadata(&from_path).await
+            .map_err(|e| FileOpsError::Io(e))?;
+
+        if metadata.is_dir() {
+            // For directories, we need recursive copy
+            // This is a simplified implementation - for production, consider using a crate like fs_extra
+            return Err(FileOpsError::Validation(
+                "Directory copy not yet implemented. Use workspace/changeset for complex operations.".to_string()
+            ));
+        }
+
+        fs::copy(&from_path, &to_path).await
+            .map_err(|e| FileOpsError::Io(e))?;
+
+        Ok(())
     }
 }
 

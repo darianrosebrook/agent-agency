@@ -92,6 +92,8 @@ system-resilience = { path = "../system-resilience", optional = true }
 # Data infrastructure (includes embedding functionality)
 data-infrastructure = { path = "../data-infrastructure", optional = true }
 
+# CoreML acceleration for audio transcription and object detection
+system-acceleration = { path = "../system-acceleration", optional = true }
 
 # Database client (avoid circular dependency - database functionality stays in database crate)
 
@@ -109,6 +111,7 @@ default = ["workspace-integration"]
 memory-integration = []  # Feature flag for memory integration (currently disabled)
 workspace-integration = ["system-resilience"]
 embeddings = ["data-infrastructure"] # Re-enabled for conditional compilation
+coreml = ["system-acceleration"] # CoreML model integration for audio transcription and object detection
 
 [dev-dependencies]
 tokio-test = "0.4"
