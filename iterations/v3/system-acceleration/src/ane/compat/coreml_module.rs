@@ -374,10 +374,6 @@ pub fn run_inference(
 
     #[cfg(target_os = "macos")]
     {
-        // Get the raw model handle from the registry
-        let model_handle = registry::get_model_handle(model_ref)
-            .ok_or_else(|| ANEError::InvalidInput("Model not found in registry".to_string()))?;
-
         // Convert input shape to i32 array for Core ML
         let shape_i32: Vec<i32> = input_shape.iter().map(|&x| x as i32).collect();
 
@@ -393,18 +389,20 @@ pub fn run_inference(
         let input_provider = MLDictionaryFeatureProvider::from_dictionary(&input_features)
             .map_err(|e| ANEError::Internal(format!("Failed to create input provider: {}", e)))?;
 
-        // Run inference
+        // Run inference using scoped handle access
         let mut output_provider_ref: u64 = 0;
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
-        let inference_result = unsafe {
-            agentbridge_model_run_inference(
-                model_handle.as_ptr() as u64,
-                input_provider.ptr() as u64,
-                &mut output_provider_ref,
-                &mut error_ptr,
-            )
-        };
+        let inference_result = registry::with_model_handle(model_ref, |model_handle| {
+            unsafe {
+                agentbridge_model_run_inference(
+                    model_handle.as_ptr() as u64,
+                    input_provider.ptr() as u64,
+                    &mut output_provider_ref,
+                    &mut error_ptr,
+                )
+            }
+        }).ok_or_else(|| ANEError::InvalidInput("Model not found in registry".to_string()))?;
 
         if inference_result != 0 {
             let error_msg = if !error_ptr.is_null() {

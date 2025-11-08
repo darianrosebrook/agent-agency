@@ -1,18 +1,21 @@
 // Analytics API endpoints
-import { apiClient } from './client';
-import type { TaskAnalytics, PerformanceAnalytics, SuccessRates } from '@/types';
+import { serverApi } from "./server";
+import type {
+  TaskAnalytics,
+  PerformanceAnalytics,
+  SuccessRates,
+} from "@/types";
 
 export const analyticsApi = {
   async getTaskAnalytics(): Promise<TaskAnalytics> {
-    return apiClient.get<TaskAnalytics>('/api/v1/analytics/tasks');
+    return serverApi.get<TaskAnalytics>("/api/v1/analytics/tasks");
   },
 
   async getPerformanceAnalytics(): Promise<PerformanceAnalytics> {
-    return apiClient.get<PerformanceAnalytics>('/api/v1/analytics/performance');
+    return serverApi.get<PerformanceAnalytics>("/api/v1/analytics/performance");
   },
 
   async getSuccessRates(): Promise<SuccessRates> {
-    return apiClient.get<SuccessRates>('/api/v1/analytics/success-rates');
+    return serverApi.get<SuccessRates>("/api/v1/analytics/success-rates");
   },
 };
-

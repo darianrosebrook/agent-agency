@@ -1,8 +1,12 @@
 // Base API client with authentication
-import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
-import type { ApiResponse, ApiError } from '@/types';
+import axios, {
+  AxiosInstance,
+  AxiosError,
+  InternalAxiosRequestConfig,
+} from "axios";
+import type { ApiError } from "@/types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 class ApiClient {
   private client: AxiosInstance;
@@ -13,7 +17,7 @@ class ApiClient {
     this.client = axios.create({
       baseURL: API_URL,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       timeout: 30000,
     });
@@ -53,12 +57,12 @@ class ApiClient {
     try {
       // Use admin credentials from environment
       // In production, these should be server-side only
-      const username = process.env.NEXT_PUBLIC_API_ADMIN_USERNAME || 'admin';
-      const password = process.env.NEXT_PUBLIC_API_ADMIN_PASSWORD || '';
+      const username = process.env.NEXT_PUBLIC_API_ADMIN_USERNAME || "admin";
+      const password = process.env.NEXT_PUBLIC_API_ADMIN_PASSWORD || "";
 
       // Use proxy API route to handle authentication server-side
       // This prevents exposing credentials to the client
-      const response = await axios.post('/api/auth/login', {
+      const response = await axios.post("/api/auth/login", {
         username,
         password,
       });
@@ -69,7 +73,7 @@ class ApiClient {
         this.tokenExpiry = Date.now() + 24 * 60 * 60 * 1000;
       }
     } catch (error) {
-      console.error('Authentication failed:', error);
+      console.error("Authentication failed:", error);
       // Don't throw in client-side - allow API calls to fail gracefully
       // The API proxy will handle authentication
     }
@@ -84,20 +88,22 @@ class ApiClient {
   private handleError(error: AxiosError): ApiError {
     if (error.response) {
       return {
-        message: (error.response.data as { message?: string })?.message || error.message,
+        message:
+          (error.response.data as { message?: string })?.message ||
+          error.message,
         code: error.response.status.toString(),
         details: error.response.data as Record<string, unknown>,
       };
     }
     if (error.request) {
       return {
-        message: 'Network error: Unable to reach the API server',
-        code: 'NETWORK_ERROR',
+        message: "Network error: Unable to reach the API server",
+        code: "NETWORK_ERROR",
       };
     }
     return {
-      message: error.message || 'An unexpected error occurred',
-      code: 'UNKNOWN_ERROR',
+      message: error.message || "An unexpected error occurred",
+      code: "UNKNOWN_ERROR",
     };
   }
 
@@ -114,7 +120,11 @@ class ApiClient {
     return response.data;
   }
 
-  async post<T>(url: string, data?: unknown, config?: InternalAxiosRequestConfig): Promise<T> {
+  async post<T>(
+    url: string,
+    data?: unknown,
+    config?: InternalAxiosRequestConfig
+  ): Promise<T> {
     // Use proxy route for client-side requests
     const proxyUrl = `/api/proxy${url}`;
     const response = await axios.post<T>(proxyUrl, data, {
@@ -127,7 +137,11 @@ class ApiClient {
     return response.data;
   }
 
-  async put<T>(url: string, data?: unknown, config?: InternalAxiosRequestConfig): Promise<T> {
+  async put<T>(
+    url: string,
+    data?: unknown,
+    config?: InternalAxiosRequestConfig
+  ): Promise<T> {
     const proxyUrl = `/api/proxy${url}`;
     const response = await axios.put<T>(proxyUrl, data, {
       ...config,
@@ -139,7 +153,10 @@ class ApiClient {
     return response.data;
   }
 
-  async delete<T>(url: string, config?: InternalAxiosRequestConfig): Promise<T> {
+  async delete<T>(
+    url: string,
+    config?: InternalAxiosRequestConfig
+  ): Promise<T> {
     const proxyUrl = `/api/proxy${url}`;
     const response = await axios.delete<T>(proxyUrl, {
       ...config,
@@ -153,4 +170,3 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient();
-

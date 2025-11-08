@@ -1,10 +1,10 @@
-import React from 'react';
-import { notFound } from 'next/navigation';
-import { Card, Table, Badge } from '@/components/ui';
-import { projectsApi, tasksApi } from '@/lib/api';
-import { formatDate, formatRelativeTime } from '@/lib/utils';
-import type { Task } from '@/types';
-import styles from './page.module.scss';
+import React from "react";
+import { notFound } from "next/navigation";
+import { Card, Table, Badge } from "@/components/ui";
+import { projectsApi } from "@/lib/api";
+import { formatDate, formatRelativeTime } from "@/lib/utils";
+import type { Task } from "@/types";
+import styles from "./page.module.scss";
 
 export default async function ProjectDetailPage({
   params,
@@ -20,7 +20,7 @@ export default async function ProjectDetailPage({
       projectsApi.getProjectTasks(params.id).catch(() => []),
     ]);
   } catch (error) {
-    console.error('Failed to fetch project:', error);
+    console.error("Failed to fetch project:", error);
     notFound();
   }
 
@@ -30,8 +30,8 @@ export default async function ProjectDetailPage({
 
   const taskColumns = [
     {
-      key: 'title',
-      header: 'Title',
+      key: "title",
+      header: "Title",
       render: (task: Task) => (
         <a href={`/tasks/${task.id}`} className={styles.link}>
           {task.title}
@@ -39,18 +39,18 @@ export default async function ProjectDetailPage({
       ),
     },
     {
-      key: 'status',
-      header: 'Status',
+      key: "status",
+      header: "Status",
       render: (task: Task) => (
         <Badge
           variant={
-            task.status === 'completed'
-              ? 'success'
-              : task.status === 'failed'
-              ? 'error'
-              : task.status === 'running'
-              ? 'info'
-              : 'default'
+            task.status === "completed"
+              ? "success"
+              : task.status === "failed"
+              ? "error"
+              : task.status === "running"
+              ? "info"
+              : "default"
           }
         >
           {task.status}
@@ -58,8 +58,8 @@ export default async function ProjectDetailPage({
       ),
     },
     {
-      key: 'created_at',
-      header: 'Created',
+      key: "created_at",
+      header: "Created",
       render: (task: Task) => formatDate(task.created_at),
     },
   ];
@@ -91,7 +91,11 @@ export default async function ProjectDetailPage({
               </div>
               <div>
                 <dt>Updated</dt>
-                <dd>{project.updated_at ? formatRelativeTime(project.updated_at) : 'N/A'}</dd>
+                <dd>
+                  {project.updated_at
+                    ? formatRelativeTime(project.updated_at)
+                    : "N/A"}
+                </dd>
               </div>
             </dl>
           </div>
@@ -111,4 +115,3 @@ export default async function ProjectDetailPage({
     </div>
   );
 }
-

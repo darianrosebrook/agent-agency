@@ -61,24 +61,23 @@ impl KvStateHandle {
             return Err(coreml_unavailable_error());
         }
 
-        // Get the raw model handle from the registry
-        let model_handle = super::registry::registry::get_model_handle(*model_ref)
-            .ok_or_else(|| ANEError::Internal("Model not found in registry".to_string()))?;
-
+        // Use scoped handle access to prevent ownership issues
         let mut state_ref: u64 = 0;
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
-        let result = unsafe {
-            agentbridge_kv_state_create(
-                model_handle.as_ptr() as u64,
-                n_layers as i32,
-                n_kv_heads as i32,
-                head_dim as i32,
-                max_seq_len as i32,
-                &mut state_ref,
-                &mut error_ptr,
-            )
-        };
+        let result = super::registry::registry::with_model_handle(*model_ref, |model_handle| {
+            unsafe {
+                agentbridge_kv_state_create(
+                    model_handle.as_ptr() as u64,
+                    n_layers as i32,
+                    n_kv_heads as i32,
+                    head_dim as i32,
+                    max_seq_len as i32,
+                    &mut state_ref,
+                    &mut error_ptr,
+                )
+            }
+        }).ok_or_else(|| ANEError::Internal("Model not found in registry".to_string()))?;
 
         if result != 0 {
             let error_msg = if !error_ptr.is_null() {

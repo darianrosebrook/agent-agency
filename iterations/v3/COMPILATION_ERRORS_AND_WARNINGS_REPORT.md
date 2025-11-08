@@ -26,9 +26,17 @@
 - **system-acceleration**: 16 warnings (deprecated function usage - intentional)
 
 ### 🔄 Remaining (Intentional/Non-Critical)
-- **data-infrastructure**: 10 non-deprecated warnings (mostly unused variables in test/example code)
-- **system-acceleration**: 21 warnings (deprecated `get_model_handle` function - intentional, still used in 2 places)
-- **Note**: All remaining warnings are either intentional deprecations (Ollama → CoreML migration, `get_model_handle` → `with_model_handle`) or non-critical unused code
+- **data-infrastructure**: ~10 non-deprecated warnings (mostly unused variables in test/example code)
+- **system-acceleration**: ~7 warnings (non-deprecated, mostly unused code)
+- **Note**: All remaining warnings are non-critical unused code. Deprecated code (`OllamaEmbeddingProvider`, `get_model_handle`) has been successfully removed.
+
+### ✅ Deprecated Code Removal (Latest Session)
+- **Removed `OllamaEmbeddingProvider`**: Entire struct and implementation removed from `data-infrastructure/src/embedding/provider.rs` (~98 lines)
+- **Removed `get_model_handle`**: Deprecated function removed from `system-acceleration/src/ane/compat/registry.rs`
+- **Migrated to `with_model_handle`**: Updated 3 usages:
+  - `system-acceleration/src/ane/compat/coreml_module.rs` - inference function
+  - `system-acceleration/src/ane/compat/kv_cache.rs` - KV state creation
+  - `system-acceleration/src/ane/models/mistral_model.rs` - `SafeModelHandle::with_handle` method
 
 ## Compilation Errors (43 total)
 

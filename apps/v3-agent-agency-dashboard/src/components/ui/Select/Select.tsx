@@ -1,14 +1,15 @@
-'use client';
+"use client";
 
-import React from 'react';
-import styles from './Select.module.scss';
+import React, { useId } from "react";
+import styles from "./Select.module.scss";
 
 export interface SelectOption {
   value: string;
   label: string;
 }
 
-export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+export interface SelectProps
+  extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   error?: string;
   options: SelectOption[];
@@ -18,11 +19,12 @@ export const Select: React.FC<SelectProps> = ({
   label,
   error,
   options,
-  className = '',
+  className = "",
   id,
   ...props
 }) => {
-  const selectId = id || `select-${Math.random().toString(36).substr(2, 9)}`;
+  const generatedId = useId();
+  const selectId = id || generatedId;
 
   return (
     <div className={styles.wrapper}>
@@ -33,7 +35,9 @@ export const Select: React.FC<SelectProps> = ({
       )}
       <select
         id={selectId}
-        className={`${styles.select} ${error ? styles['select--error'] : ''} ${className}`}
+        className={`${styles.select} ${
+          error ? styles["select--error"] : ""
+        } ${className}`}
         {...props}
       >
         {options.map((option) => (
@@ -46,4 +50,3 @@ export const Select: React.FC<SelectProps> = ({
     </div>
   );
 };
-

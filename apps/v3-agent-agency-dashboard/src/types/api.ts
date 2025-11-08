@@ -1,5 +1,5 @@
 // API response types
-import type { CouncilVerdict } from './models';
+import type { CouncilVerdict } from "./models";
 
 export interface ApiResponse<T> {
   data?: T;
@@ -58,7 +58,7 @@ export interface TaskLogs {
 
 export interface LogEntry {
   timestamp: string;
-  level: 'debug' | 'info' | 'warn' | 'error';
+  level: "debug" | "info" | "warn" | "error";
   message: string;
   context?: Record<string, unknown>;
 }
@@ -73,12 +73,17 @@ export interface TaskProgress {
 
 export interface TaskAnalytics {
   total_tasks: number;
-  completed_tasks: number;
-  failed_tasks: number;
-  success_rate: number;
-  average_execution_time_ms: number;
-  tasks_by_status: Record<string, number>;
-  tasks_by_worker: Record<string, number>;
+  completed: number;
+  failed: number;
+  in_progress?: number;
+  paused?: number;
+  success_rate: number | string;
+  average_execution_time_ms?: number;
+  average_chain_of_thought_entries?: number;
+  average_council_decisions?: number;
+  average_worker_actions?: number;
+  tasks_by_status?: Record<string, number>;
+  tasks_by_worker?: Record<string, number>;
 }
 
 export interface PerformanceAnalytics {
@@ -94,12 +99,15 @@ export interface PerformanceAnalytics {
 }
 
 export interface SuccessRates {
-  overall_success_rate: number;
-  success_rate_by_worker: Record<string, number>;
-  success_rate_by_task_type: Record<string, number>;
-  trend: Array<{
+  total_tasks?: number;
+  completed?: number;
+  failed?: number;
+  overall_success_rate: number | string;
+  success_rate?: string;
+  success_rate_by_worker?: Record<string, number | string>;
+  success_rate_by_task_type?: Record<string, number>;
+  trend?: Array<{
     date: string;
     success_rate: number;
   }>;
 }
-

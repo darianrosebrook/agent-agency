@@ -5,6 +5,22 @@
   margin: 0 auto;
 }
 
+.tableLinks {
+  margin-top: $spacing-base;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.link {
+  color: $color-primary;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 .header {
   display: flex;
   justify-content: space-between;

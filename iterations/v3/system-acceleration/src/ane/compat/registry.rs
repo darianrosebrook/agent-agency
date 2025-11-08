@@ -408,16 +408,4 @@ pub mod registry {
         })
     }
 
-    /// DEPRECATED: Use with_model_handle instead to prevent ownership issues
-    /// Get the raw handle for a model reference
-    /// Returns None if called on wrong thread or reference doesn't exist
-    #[deprecated(note = "Use with_model_handle for scoped access to prevent ownership issues")]
-    pub fn get_model_handle(id: ModelRef) -> Option<NonNull<std::ffi::c_void>> {
-        MODEL_REGISTRY.with(|registry| {
-            registry.borrow().get_handle(id).map(|rc_handle| {
-                // SAFETY: rc_handle.as_ptr() is guaranteed to be non-null as it's from Rc
-                unsafe { NonNull::new_unchecked(rc_handle.as_ptr()) }
-            })
-        })
-    }
 }

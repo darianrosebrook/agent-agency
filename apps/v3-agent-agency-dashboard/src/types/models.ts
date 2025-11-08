@@ -2,12 +2,12 @@
 // Based on iterations/v3/data-infrastructure/src/models.rs
 
 export type TaskStatus =
-  | 'pending'
-  | 'running'
-  | 'completed'
-  | 'failed'
-  | 'paused'
-  | 'cancelled';
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "paused"
+  | "cancelled";
 
 export interface Task {
   id: string;
@@ -167,13 +167,16 @@ export interface Milestone {
 }
 
 export interface SystemHealth {
-  status: 'healthy' | 'degraded' | 'unhealthy';
-  components: Record<string, ComponentHealth>;
+  status: "healthy" | "degraded" | "unhealthy" | string;
+  components?: Record<string, ComponentHealth>;
+  database?: {
+    status: string;
+  };
   timestamp: string;
 }
 
 export interface ComponentHealth {
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: "healthy" | "degraded" | "unhealthy";
   message?: string;
   last_check?: string;
 }
@@ -191,6 +194,7 @@ export interface SystemMetrics {
 
 export interface DatabaseTable {
   name: string;
+  schema?: string;
   row_count?: number;
   size_bytes?: number;
 }
@@ -220,4 +224,3 @@ export interface DatabaseQueryResult {
   row_count: number;
   execution_time_ms?: number;
 }
-

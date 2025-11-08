@@ -34,14 +34,15 @@ impl SafeModelHandle {
     where
         F: FnOnce(&crate::ane::compat::coreml::CoreMlHandle) -> R,
     {
-        if let Some(ptr) = crate::ane::compat::coreml::registry::get_model_handle(self.0) {
+        crate::ane::compat::coreml::registry::with_model_handle(self.0, |ptr| {
             if let Some(handle) = crate::ane::compat::coreml::CoreMlHandle::new(ptr.as_ptr()) {
-                return Some(f(&handle));
+                f(&handle)
+            } else {
+                // If CoreMlHandle::new fails, we can't call the closure
+                // This should not happen in practice, but we need to handle it
+                panic!("Failed to create CoreMlHandle from valid pointer");
             }
-        }
-        
-        // No fabricated handle - return None if model not available on this thread
-        None
+        })
     }
 }
 

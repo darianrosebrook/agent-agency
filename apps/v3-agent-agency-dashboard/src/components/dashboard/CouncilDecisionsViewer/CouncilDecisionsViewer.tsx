@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Card, Badge } from '@/components/ui';
-import { formatDateTime } from '@/lib/utils';
-import type { CouncilDecisions } from '@/types';
-import styles from './CouncilDecisionsViewer.module.scss';
+import React from "react";
+import { Card, Badge } from "@/components/ui";
+import { formatDateTime } from "@/lib/utils";
+import type { CouncilDecisions } from "@/types";
+import styles from "./CouncilDecisionsViewer.module.scss";
 
 export interface CouncilDecisionsViewerProps {
   decisions: CouncilDecisions;
@@ -15,10 +15,10 @@ export const CouncilDecisionsViewer: React.FC<CouncilDecisionsViewerProps> = ({
 }) => {
   const getVerdictVariant = (verdict: string) => {
     const lower = verdict.toLowerCase();
-    if (lower.includes('approve') || lower.includes('pass')) return 'success';
-    if (lower.includes('reject') || lower.includes('fail')) return 'error';
-    if (lower.includes('review') || lower.includes('pending')) return 'warning';
-    return 'default';
+    if (lower.includes("approve") || lower.includes("pass")) return "success";
+    if (lower.includes("reject") || lower.includes("fail")) return "error";
+    if (lower.includes("review") || lower.includes("pending")) return "warning";
+    return "default";
   };
 
   return (
@@ -35,11 +35,13 @@ export const CouncilDecisionsViewer: React.FC<CouncilDecisionsViewerProps> = ({
         {decisions.verdicts.length === 0 ? (
           <p className={styles.empty}>No council decisions available</p>
         ) : (
-          decisions.verdicts.map((verdict, index) => (
+          decisions.verdicts.map((verdict) => (
             <div key={verdict.id} className={styles.verdict}>
               <div className={styles.verdictHeader}>
                 <div className={styles.verdictMeta}>
-                  <span className={styles.judgeName}>Judge: {verdict.judge_id}</span>
+                  <span className={styles.judgeName}>
+                    Judge: {verdict.judge_id}
+                  </span>
                   <span className={styles.timestamp}>
                     {formatDateTime(verdict.created_at)}
                   </span>
@@ -64,4 +66,3 @@ export const CouncilDecisionsViewer: React.FC<CouncilDecisionsViewerProps> = ({
     </Card>
   );
 };
-

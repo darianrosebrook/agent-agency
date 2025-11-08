@@ -1,8 +1,8 @@
-import React from 'react';
-import { Card, Table } from '@/components/ui';
-import { analyticsApi } from '@/lib/api';
-import { formatPercentage, formatDuration } from '@/lib/utils';
-import styles from './page.module.scss';
+import React from "react";
+import { Card } from "@/components/ui";
+import { analyticsApi } from "@/lib/api";
+import { formatPercentage, formatDuration } from "@/lib/utils";
+import styles from "./page.module.scss";
 
 export default async function AnalyticsPage() {
   let taskAnalytics;
@@ -14,11 +14,13 @@ export default async function AnalyticsPage() {
       analyticsApi.getSuccessRates(),
     ]);
   } catch (error) {
-    console.error('Failed to fetch analytics:', error);
+    console.error("Failed to fetch analytics:", error);
   }
 
-  const analytics = taskAnalytics?.status === 'fulfilled' ? taskAnalytics.value : null;
-  const rates = successRates?.status === 'fulfilled' ? successRates.value : null;
+  const analytics =
+    taskAnalytics?.status === "fulfilled" ? taskAnalytics.value : null;
+  const rates =
+    successRates?.status === "fulfilled" ? successRates.value : null;
 
   return (
     <div className={styles.analytics}>
@@ -37,41 +39,64 @@ export default async function AnalyticsPage() {
                   </div>
                   <div>
                     <dt>Completed</dt>
-                    <dd>{analytics.completed_tasks}</dd>
+                    <dd>{analytics.completed ?? 0}</dd>
                   </div>
                   <div>
                     <dt>Failed</dt>
-                    <dd>{analytics.failed_tasks}</dd>
+                    <dd>{analytics.failed ?? 0}</dd>
                   </div>
+                  {analytics.in_progress !== undefined && (
+                    <div>
+                      <dt>In Progress</dt>
+                      <dd>{analytics.in_progress}</dd>
+                    </div>
+                  )}
+                  {analytics.paused !== undefined && (
+                    <div>
+                      <dt>Paused</dt>
+                      <dd>{analytics.paused}</dd>
+                    </div>
+                  )}
                   <div>
                     <dt>Success Rate</dt>
-                    <dd>{formatPercentage(analytics.success_rate)}</dd>
-                  </div>
-                  <div>
-                    <dt>Avg Execution Time</dt>
                     <dd>
-                      {formatDuration(analytics.average_execution_time_ms)}
+                      {typeof analytics.success_rate === "string"
+                        ? analytics.success_rate
+                        : formatPercentage(analytics.success_rate)}
                     </dd>
                   </div>
+                  {analytics.average_execution_time_ms && (
+                    <div>
+                      <dt>Avg Execution Time</dt>
+                      <dd>
+                        {formatDuration(analytics.average_execution_time_ms)}
+                      </dd>
+                    </div>
+                  )}
                 </dl>
               </div>
             </Card>
 
-            {analytics.tasks_by_status && Object.keys(analytics.tasks_by_status).length > 0 && (
-              <Card>
-                <div className={styles.section}>
-                  <h2>Tasks by Status</h2>
-                  <ul className={styles.list}>
-                    {Object.entries(analytics.tasks_by_status).map(([status, count]) => (
-                      <li key={status} className={styles.listItem}>
-                        <span className={styles.status}>{status}</span>
-                        <span className={styles.count}>{count as number}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </Card>
-            )}
+            {analytics.tasks_by_status &&
+              Object.keys(analytics.tasks_by_status).length > 0 && (
+                <Card>
+                  <div className={styles.section}>
+                    <h2>Tasks by Status</h2>
+                    <ul className={styles.list}>
+                      {Object.entries(analytics.tasks_by_status).map(
+                        ([status, count]) => (
+                          <li key={status} className={styles.listItem}>
+                            <span className={styles.status}>{status}</span>
+                            <span className={styles.count}>
+                              {count as number}
+                            </span>
+                          </li>
+                        )
+                      )}
+                    </ul>
+                  </div>
+                </Card>
+              )}
           </>
         )}
 
@@ -82,7 +107,13 @@ export default async function AnalyticsPage() {
               <dl className={styles.stats}>
                 <div>
                   <dt>Overall Success Rate</dt>
-                  <dd>{formatPercentage(rates.overall_success_rate)}</dd>
+                  <dd>
+                    {rates.overall_success_rate !== undefined
+                      ? typeof rates.overall_success_rate === "string"
+                        ? rates.overall_success_rate
+                        : formatPercentage(rates.overall_success_rate)
+                      : "N/A"}
+                  </dd>
                 </div>
               </dl>
               {rates.success_rate_by_worker &&
@@ -90,12 +121,18 @@ export default async function AnalyticsPage() {
                   <div className={styles.workerRates}>
                     <h3>By Worker</h3>
                     <ul className={styles.list}>
-                      {Object.entries(rates.success_rate_by_worker).map(([worker, rate]) => (
-                        <li key={worker} className={styles.listItem}>
-                          <span className={styles.worker}>{worker}</span>
-                          <span className={styles.rate}>{formatPercentage(rate as number)}</span>
-                        </li>
-                      ))}
+                      {Object.entries(rates.success_rate_by_worker).map(
+                        ([worker, rate]) => (
+                          <li key={worker} className={styles.listItem}>
+                            <span className={styles.worker}>{worker}</span>
+                            <span className={styles.rate}>
+                              {typeof rate === "string"
+                                ? rate
+                                : formatPercentage(rate)}
+                            </span>
+                          </li>
+                        )
+                      )}
                     </ul>
                   </div>
                 )}
@@ -106,4 +143,3 @@ export default async function AnalyticsPage() {
     </div>
   );
 }
-
