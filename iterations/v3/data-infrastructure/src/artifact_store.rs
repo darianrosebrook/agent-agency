@@ -150,7 +150,7 @@ pub trait ArtifactStorage: Send + Sync {
 #[derive(Clone)]
 pub struct DatabaseArtifactStorage {
     pool: Arc<PgPool>,
-    client: Arc<DatabaseClient>,
+    _client: Arc<DatabaseClient>,
 }
 
 impl DatabaseArtifactStorage {
@@ -354,7 +354,7 @@ impl DatabaseArtifactStorage {
 
         Ok(Self {
             pool,
-            client: Arc::new(client),
+            _client: Arc::new(client),
         })
     }
 
@@ -364,7 +364,7 @@ impl DatabaseArtifactStorage {
 
         Self {
             pool,
-            client,
+            _client: client,
         }
     }
 

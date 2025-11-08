@@ -287,6 +287,9 @@ impl<T> WorkspaceResult<T> {
 pub enum WorkspaceError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
+    
+    #[error("Embedding error: {0}")]
+    Embedding(String),
 
     #[error("Git error: {0}")]
     Git(#[from] git2::Error),

@@ -15,6 +15,7 @@ pub mod builder;
 pub mod context_generator;
 pub mod file_watcher_adapter;
 pub mod file_watcher_trait;
+pub mod embedding_trait;
 
 // Re-export main types and functionality
 pub use state_manager::WorkspaceStateManager;
@@ -33,6 +34,7 @@ pub use context_generator::{
     ContextGenerator, WorkspaceContext, ContextFile, FileMetadata,
     ContextMetadata, ContextCriteria,
 };
+pub use embedding_trait::{EmbeddingServiceTrait, EmbeddingServiceWrapper};
 
 /// Create a new workspace state manager with file-based storage
 pub fn create_file_manager(

@@ -41,7 +41,7 @@ pub struct EmbeddingServiceImpl {
     provider: Arc<dyn EmbeddingProvider>,
     cache: EmbeddingCache,
     index: Arc<EmbeddingIndex>,
-    config: EmbeddingConfig,
+    _config: EmbeddingConfig,
 }
 
 impl EmbeddingServiceImpl {
@@ -50,7 +50,7 @@ impl EmbeddingServiceImpl {
             provider,
             cache: EmbeddingCache::new(config.cache_size),
             index: Arc::new(EmbeddingIndex::new()),
-            config,
+            _config: config,
         }
     }
 

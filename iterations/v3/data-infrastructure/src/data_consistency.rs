@@ -139,7 +139,7 @@ pub struct DataConsistencyManager {
     transactions: Arc<RwLock<HashMap<String, DistributedTransaction>>>,
     consistency_checks: Arc<RwLock<Vec<ConsistencyCheckResult>>>,
     recovery_actions: Arc<RwLock<Vec<RecoveryAction>>>,
-    consistency_level: ConsistencyLevel,
+    _consistency_level: ConsistencyLevel,
 }
 
 impl DataConsistencyManager {
@@ -150,7 +150,7 @@ impl DataConsistencyManager {
             transactions: Arc::new(RwLock::new(HashMap::new())),
             consistency_checks: Arc::new(RwLock::new(Vec::new())),
             recovery_actions: Arc::new(RwLock::new(Vec::new())),
-            consistency_level,
+            _consistency_level: consistency_level,
         }
     }
 

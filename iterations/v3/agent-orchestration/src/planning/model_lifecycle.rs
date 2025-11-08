@@ -17,8 +17,42 @@ use std::collections::HashMap;
 use chrono::Utc;
 
 use crate::planning::worker_assignment::{WorkerAssignmentStrategy, WorkerPerformance};
-use agent_model_management::deployment::DeploymentOrchestrator;
-use agent_model_management::types::{HotSwapStrategy, HotSwapResult};
+// PLACEHOLDER: agent_model_management module not available in v3
+// Will be re-added in v4 when model management is implemented
+// use agent_model_management::deployment::DeploymentOrchestrator;
+// use agent_model_management::types::{HotSwapStrategy, HotSwapResult};
+
+// Placeholder types for v3 compatibility
+#[derive(Debug, Clone)]
+pub enum HotSwapStrategy {
+    Immediate,
+    Gradual { steps: u32, interval_secs: u64 },
+}
+
+#[derive(Debug)]
+pub struct HotSwapResult {
+    pub success: bool,
+    pub message: String,
+}
+
+pub struct DeploymentOrchestrator;
+
+impl DeploymentOrchestrator {
+    /// PLACEHOLDER: Perform hot-swap of model version for a worker
+    /// This is a stub implementation for v3. Real implementation will be in v4.
+    pub async fn perform_hot_swap(
+        &self,
+        _model_id: &str,
+        _new_version: &str,
+        _strategy: HotSwapStrategy,
+    ) -> Result<HotSwapResult> {
+        warn!("DeploymentOrchestrator::perform_hot_swap called but not implemented in v3");
+        Ok(HotSwapResult {
+            success: false,
+            message: "Hot-swap not implemented in v3. Will be available in v4.".to_string(),
+        })
+    }
+}
 
 /// Model lifecycle manager configuration
 #[derive(Debug, Clone)]

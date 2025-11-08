@@ -487,6 +487,7 @@ fn service_type_as_string(service_type: ServiceType) -> &'static str {
     }
 }
 
+#[allow(dead_code)]
 fn calculate_compliance_percentage(violations: &[ComplianceViolation], violation_type: ViolationType) -> f64 {
     let relevant_violations = violations.iter()
         .filter(|v| v.violation_type == violation_type)
@@ -500,6 +501,7 @@ fn calculate_compliance_percentage(violations: &[ComplianceViolation], violation
     }
 }
 
+#[allow(dead_code)]
 fn generate_service_breakdown(service_status: &HashMap<String, ServiceComplianceStatus>) -> HashMap<String, ServiceComplianceSummary> {
     service_status.iter().map(|(service_type, status)| {
         (service_type.clone(), ServiceComplianceSummary {
@@ -517,6 +519,7 @@ fn generate_service_breakdown(service_status: &HashMap<String, ServiceCompliance
     }).collect()
 }
 
+#[allow(dead_code)]
 fn identify_top_issues(violations: &[ComplianceViolation]) -> Vec<String> {
     let mut issue_counts = HashMap::new();
 
@@ -531,6 +534,7 @@ fn identify_top_issues(violations: &[ComplianceViolation]) -> Vec<String> {
     issues.into_iter().take(5).map(|(issue, count)| format!("{} ({} occurrences)", issue, count)).collect()
 }
 
+#[allow(dead_code)]
 fn generate_recommendations(status: &ComplianceStatus, violations: &[ComplianceViolation]) -> Vec<String> {
     let mut recommendations = Vec::new();
 

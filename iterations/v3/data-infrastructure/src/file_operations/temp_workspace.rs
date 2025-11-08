@@ -41,7 +41,7 @@ pub struct ChangesetApplicationEngine {
     /// Completed changeset applications for rollback
     completed_applications: RwLock<HashMap<ChangeSetId, CompletedChangesetApplication>>,
     /// Changeset dependencies and ordering
-    dependency_graph: RwLock<HashMap<ChangeSetId, Vec<ChangeSetId>>>,
+    _dependency_graph: RwLock<HashMap<ChangeSetId, Vec<ChangeSetId>>>,
     /// Performance metrics for changeset operations
     metrics: RwLock<ChangesetMetrics>,
 }
@@ -596,7 +596,7 @@ impl ChangesetApplicationEngine {
         Self {
             active_applications: RwLock::new(HashMap::new()),
             completed_applications: RwLock::new(HashMap::new()),
-            dependency_graph: RwLock::new(HashMap::new()),
+            _dependency_graph: RwLock::new(HashMap::new()),
             metrics: RwLock::new(ChangesetMetrics {
                 total_applications: 0,
                 successful_applications: 0,
@@ -883,7 +883,7 @@ impl ChangesetApplicationEngine {
 
         Ok(AtomicApplicationResult {
             successful_patches,
-            total_patches: changeset.patches.len(),
+            _total_patches: changeset.patches.len(),
             application_time_ms: start_time.elapsed().as_millis() as u64,
             io_operations,
         })
@@ -1395,7 +1395,7 @@ impl ChangesetApplicationEngine {
 #[derive(Debug)]
 struct AtomicApplicationResult {
     successful_patches: usize,
-    total_patches: usize,
+    _total_patches: usize,
     application_time_ms: u64,
     io_operations: u64,
 }

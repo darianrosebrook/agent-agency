@@ -66,7 +66,7 @@ pub trait TaskExecutor: Send + Sync {
 #[derive(Clone)]
 pub struct OrchestratorService {
     /// Database client for persistence
-    db_client: Arc<DatabaseClient>,
+    _db_client: Arc<DatabaseClient>,
     
     /// Task executor (optional - can be injected when available)
     task_executor: Option<Arc<dyn TaskExecutor>>,
@@ -140,7 +140,7 @@ impl OrchestratorService {
     /// Create a new orchestrator service
     pub fn new(db_client: Arc<DatabaseClient>) -> Self {
         Self {
-            db_client,
+            _db_client: db_client,
             task_executor: None,
             active_tasks: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
         }

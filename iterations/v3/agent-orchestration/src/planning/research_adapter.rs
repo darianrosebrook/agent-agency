@@ -79,7 +79,7 @@ impl ResearchEvidenceCollector for ResearchEvidenceAdapter {
 
         // Collect evidence using the real research collector
         let research_evidence = self.evidence_collector.collect_evidence(&atomic_claim, &processing_context).await
-            .map_err(|e| agent_agency_contracts::errors::ContractError::ServiceUnavailable {
+            .map_err(|e| agent_agency_contracts::ContractError::ServiceUnavailable {
                 service: "research".to_string()
             })?;
 

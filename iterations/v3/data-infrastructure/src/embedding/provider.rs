@@ -77,7 +77,7 @@ pub struct OllamaEmbeddingProvider {
     base_url: String,
     model_name: String,
     dimension: usize,
-    timeout: std::time::Duration,
+    _timeout: std::time::Duration,
 }
 
 impl OllamaEmbeddingProvider {
@@ -94,7 +94,7 @@ impl OllamaEmbeddingProvider {
             base_url: "http://localhost:11434".to_string(), // Placeholder URL - Ollama deprecated
             model_name: config.model_name.clone(),
             dimension: config.dimension,
-            timeout: std::time::Duration::from_millis(config.timeout_ms),
+            _timeout: std::time::Duration::from_millis(config.timeout_ms),
         }
     }
 }
@@ -187,7 +187,7 @@ pub struct CoreMLEmbeddingProvider {
     /// Maximum sequence length
     max_length: usize,
     /// Whether ANE acceleration is available
-    ane_available: bool,
+    _ane_available: bool,
 }
 
 impl CoreMLEmbeddingProvider {
@@ -244,7 +244,7 @@ impl CoreMLEmbeddingProvider {
             dimension,
             tokenizer,
             max_length: max_length.unwrap_or(512),
-            ane_available,
+            _ane_available: ane_available,
         })
     }
 
@@ -841,9 +841,9 @@ pub enum ClipModelVariant {
 
 /// CLIP embedding provider for text and image embeddings
 pub struct ClipEmbeddingProvider {
-    model: Option<ClipModelPlaceholder>, // Placeholder - would be Some(model) when loaded
+    _model: Option<ClipModelPlaceholder>, // Placeholder - would be Some(model) when loaded
     tokenizer: tokenizers::Tokenizer,
-    device: DevicePlaceholder,
+    _device: DevicePlaceholder,
     variant: ClipModelVariant,
     model_name: String,
     dimension: usize,
@@ -915,9 +915,9 @@ impl ClipEmbeddingProvider {
         };
 
         Ok(Self {
-            model: None, // Placeholder - would be Some(model) when loaded
+            _model: None, // Placeholder - would be Some(model) when loaded
             tokenizer,
-            device,
+            _device: device,
             variant,
             model_name,
             dimension,

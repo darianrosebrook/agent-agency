@@ -4,11 +4,13 @@
 //! into a single cohesive interface for workspace state management.
 
 use super::context_generator::{ContextGenerator, ContextCriteria, WorkspaceContext};
+use super::embedding_trait::{EmbeddingServiceTrait, EmbeddingServiceWrapper};
 use super::events::{ContextType, WorkspaceStateEvent};
 use super::state_manager::WorkspaceStateManager;
 use super::state_types::{StateId, WorkspaceConfig, WorkspaceError, WorkspaceResult, WorkspaceState, WorkspaceDiff};
 use super::StateStorage;
 use chrono::{DateTime, Utc};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
@@ -222,6 +224,10 @@ pub struct UnifiedWorkspaceStateManager {
     file_watcher_handler: Option<Arc<super::file_watcher_trait::FileWatcherEventHandler>>,
     file_watcher_handle: Option<tokio::task::JoinHandle<()>>,
     
+    /// Embedding service (optional)
+    embedding_service: Option<Arc<EmbeddingServiceWrapper>>,
+    embedding_debounce_map: Arc<RwLock<HashMap<PathBuf, std::time::Instant>>>,
+    
     /// Metrics collection
     metrics: Arc<RwLock<WorkspaceMetrics>>,
     metrics_handle: Option<tokio::task::JoinHandle<()>>,
@@ -283,6 +289,8 @@ impl UnifiedWorkspaceStateManager {
             context_generator,
             file_watcher_handler,
             file_watcher_handle: None,
+            embedding_service: None,
+            embedding_debounce_map: Arc::new(RwLock::new(HashMap::new())),
             metrics: Arc::new(RwLock::new(WorkspaceMetrics::default())),
             metrics_handle: None,
             event_sender,
@@ -290,6 +298,12 @@ impl UnifiedWorkspaceStateManager {
             workspace_root: workspace_root.as_ref().to_path_buf(),
             initialized: false,
         }
+    }
+    
+    /// Set embedding service (external integration)
+    pub fn with_embedding_service(mut self, service: Box<dyn EmbeddingServiceTrait>) -> Self {
+        self.embedding_service = Some(Arc::new(EmbeddingServiceWrapper::new(service)));
+        self
     }
     
     /// Initialize all enabled components
@@ -580,6 +594,311 @@ impl UnifiedWorkspaceStateManager {
                 m.memory.external_bytes = 0;
             }
         }));
+    }
+    
+    /// Start file watching (internal method)
+    /// Note: This sets up the event handler. The actual file watcher should be
+    /// provided externally and connected to the handler via `file_watcher_handler()`.
+    async fn start_file_watching_internal(&mut self) -> Result<(), WorkspaceError> {
+        let watch_config = self.config.watch_config.as_ref()
+            .ok_or_else(|| WorkspaceError::Configuration("File watching config not found".to_string()))?;
+        
+        let handler = self.file_watcher_handler.as_ref()
+            .ok_or_else(|| WorkspaceError::Configuration("File watcher handler not initialized".to_string()))?;
+        
+        // Start event processing task
+        let state_manager = Arc::clone(&self.state_manager);
+        let watch_config_clone = watch_config.clone();
+        let event_sender_clone = handler.event_sender.clone(); // Clone sender before moving
+        let embedding_extensions: Vec<String> = watch_config.embedding_extensions.iter().cloned().collect(); // Clone vector
+        let workspace_root = self.workspace_root.clone();
+        let embedding_service = self.embedding_service.clone();
+        let embedding_debounce_map = Arc::clone(&self.embedding_debounce_map);
+        let metrics = Arc::clone(&self.metrics);
+        let event_sender = self.event_sender.clone();
+        
+        self.file_watcher_handle = Some(tokio::spawn(async move {
+            // Subscribe to file events from handler
+            let mut event_receiver = event_sender_clone.subscribe();
+            
+            // Process file events
+            while let Ok(event) = event_receiver.recv().await {
+                match event {
+                    WorkspaceStateEvent::FileCreated { path, state_id: _ } |
+                    WorkspaceStateEvent::FileModified { path, state_id: _ } => {
+                        let full_path = workspace_root.join(&path);
+                        
+                        // Capture state if auto-capture enabled
+                        // Use spawn_blocking since git2 operations aren't Send-safe
+                        if watch_config_clone.auto_capture_state {
+                            let state_manager_clone = Arc::clone(&state_manager);
+                            tokio::task::spawn_blocking(move || {
+                                // Note: capture_state is async, but we need to handle it in blocking context
+                                // For now, we'll skip auto-capture in spawned tasks to avoid Send issues
+                                // TODO: Refactor capture_state to use spawn_blocking internally for git operations
+                                tracing::debug!("Auto-capture skipped in async context (git2 Send safety)");
+                            });
+                        }
+                        
+                        // Check if we should generate embedding
+                        let path_ext = path.extension()
+                            .and_then(|e| e.to_str())
+                            .map(|e| e.to_lowercase());
+                        let should_embed = watch_config_clone.generate_embeddings &&
+                            path_ext.as_ref().map_or(false, |ext| {
+                                embedding_extensions.iter().any(|e| e.to_lowercase() == *ext)
+                            });
+                        
+                        if should_embed {
+                            if let Some(embedding_svc) = embedding_service.clone() {
+                                // Spawn embedding generation task to avoid blocking
+                                let path_clone = path.clone();
+                                let full_path_clone = full_path.clone();
+                                let watch_config_debounce = watch_config_clone.debounce_ms;
+                                let embedding_debounce_map_clone = Arc::clone(&embedding_debounce_map);
+                                let metrics_clone = Arc::clone(&metrics);
+                                let event_sender_task = event_sender.clone();
+                                
+                                tokio::spawn(async move {
+                                    // Check debounce
+                                    let debounce_duration = std::time::Duration::from_millis(watch_config_debounce);
+                                    let now = std::time::Instant::now();
+                                    
+                                    let should_process = {
+                                        let mut debounce_map = embedding_debounce_map_clone.write().await;
+                                        if let Some(last_time) = debounce_map.get(&path_clone) {
+                                            if now.duration_since(*last_time) < debounce_duration {
+                                                false // Still in debounce period
+                                            } else {
+                                                debounce_map.insert(path_clone.clone(), now);
+                                                true
+                                            }
+                                        } else {
+                                            debounce_map.insert(path_clone.clone(), now);
+                                            true
+                                        }
+                                    };
+                                    
+                                    if should_process {
+                                        // Generate and store embedding
+                                        if let Ok(content) = tokio::fs::read_to_string(&full_path_clone).await {
+                                            let text_for_embedding = format!("File: {}\n\n{}", path_clone.display(), content);
+                                            
+                                            let start_time = std::time::Instant::now();
+                                            let embedding_result = embedding_svc.generate_embedding(&text_for_embedding).await;
+                                            match embedding_result {
+                                                Ok(embedding) => {
+                                                    let metadata = serde_json::json!({
+                                                        "source": "workspace_file",
+                                                        "file_path": path_clone.to_string_lossy(),
+                                                        "file_type": path_clone.extension().and_then(|e| e.to_str()).unwrap_or("unknown"),
+                                                        "content_length": content.len(),
+                                                        "generated_at": Utc::now().to_rfc3339(),
+                                                    });
+                                                    
+                                                    let store_result = embedding_svc.store_file_embedding(
+                                                        path_clone.clone(),
+                                                        &content,
+                                                        embedding,
+                                                        Some(metadata),
+                                                    ).await;
+                                                    
+                                                    if let Err(e) = store_result {
+                                                        tracing::warn!("Failed to store embedding for {}: {}", path_clone.display(), e);
+                                                        let mut m = metrics_clone.write().await;
+                                                        m.embeddings.embeddings_failed += 1;
+                                                    } else {
+                                                        let duration_ms = start_time.elapsed().as_millis() as u64;
+                                                        // Record metrics
+                                                        let mut m = metrics_clone.write().await;
+                                                        let total = m.embeddings.embeddings_generated;
+                                                        m.embeddings.embeddings_generated += 1;
+                                                        m.embeddings.files_embedded += 1;
+                                                        m.embeddings.last_embedding_time = Some(Utc::now());
+                                                        m.embeddings.average_generation_time_ms = 
+                                                            (m.embeddings.average_generation_time_ms * total as f64 + duration_ms as f64) / 
+                                                            (total + 1) as f64;
+                                                        
+                                                        // Emit event
+                                                        let _ = event_sender_task.send(WorkspaceStateEvent::EmbeddingGenerated {
+                                                            path: path_clone.clone(),
+                                                            success: true,
+                                                            duration_ms,
+                                                        });
+                                                    }
+                                                }
+                                                Err(e) => {
+                                                    tracing::warn!("Failed to generate embedding for {}: {}", path_clone.display(), e);
+                                                    let mut m = metrics_clone.write().await;
+                                                    m.embeddings.embeddings_failed += 1;
+                                                    
+                                                    // Emit failure event
+                                                    let _ = event_sender_task.send(WorkspaceStateEvent::EmbeddingGenerated {
+                                                        path: path_clone.clone(),
+                                                        success: false,
+                                                        duration_ms: 0,
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                    }
+                    WorkspaceStateEvent::FileDeleted { path: _, state_id: _ } => {
+                        // TODO: Handle file deletion (remove embedding from block_vectors)
+                    }
+                    _ => {}
+                }
+            }
+        }));
+        
+        info!("File watcher event handler initialized");
+        Ok(())
+    }
+    
+    /// Get file watcher event handler for external file watcher integration
+    pub fn file_watcher_handler(&self) -> Option<Arc<super::file_watcher_trait::FileWatcherEventHandler>> {
+        self.file_watcher_handler.clone()
+    }
+    
+    /// Generate embedding for a file
+    pub async fn generate_file_embedding(&self, file_path: &Path) -> Result<Vec<f32>, WorkspaceError> {
+        let embedding_service = self.embedding_service.as_ref()
+            .ok_or_else(|| WorkspaceError::Configuration("Embedding service not configured".to_string()))?;
+        
+        // Read file content
+        let full_path = self.workspace_root.join(file_path);
+        let content = tokio::fs::read_to_string(&full_path).await
+            .map_err(|e| WorkspaceError::Io(e))?;
+        
+        // Prepare text for embedding (add file path context)
+        let text_for_embedding = format!("File: {}\n\n{}", file_path.display(), content);
+        
+        // Generate embedding
+        let start_time = std::time::Instant::now();
+        let embedding = embedding_service.generate_embedding(&text_for_embedding).await
+            .map_err(|e| WorkspaceError::Embedding(e))?;
+        let duration_ms = start_time.elapsed().as_millis() as u64;
+        
+        // Record metrics
+        self.record_embedding_generation(true, duration_ms).await;
+        
+        // Emit event
+        let _ = self.event_sender.send(WorkspaceStateEvent::EmbeddingGenerated {
+            path: file_path.to_path_buf(),
+            success: true,
+            duration_ms,
+        });
+        
+        Ok(embedding)
+    }
+    
+    /// Generate and store embedding for a file
+    pub async fn generate_and_store_file_embedding(&self, file_path: &Path) -> Result<(), WorkspaceError> {
+        let embedding_service = self.embedding_service.as_ref()
+            .ok_or_else(|| WorkspaceError::Configuration("Embedding service not configured".to_string()))?;
+        
+        // Read file content
+        let full_path = self.workspace_root.join(file_path);
+        let content = tokio::fs::read_to_string(&full_path).await
+            .map_err(|e| WorkspaceError::Io(e))?;
+        
+        // Prepare text for embedding
+        let text_for_embedding = format!("File: {}\n\n{}", file_path.display(), content);
+        
+        // Generate embedding
+        let start_time = std::time::Instant::now();
+        let embedding = embedding_service.generate_embedding(&text_for_embedding).await
+            .map_err(|e| WorkspaceError::Embedding(e))?;
+        let duration_ms = start_time.elapsed().as_millis() as u64;
+        
+        // Create metadata
+        let metadata = serde_json::json!({
+            "source": "workspace_file",
+            "file_path": file_path.to_string_lossy(),
+            "file_type": file_path.extension().and_then(|e| e.to_str()).unwrap_or("unknown"),
+            "content_length": content.len(),
+            "generated_at": Utc::now().to_rfc3339(),
+        });
+        
+        // Store embedding
+        embedding_service.store_file_embedding(
+            file_path.to_path_buf(),
+            &content,
+            embedding,
+            Some(metadata),
+        ).await
+            .map_err(|e| WorkspaceError::Embedding(e))?;
+        
+        // Record metrics
+        self.record_embedding_generation(true, duration_ms).await;
+        
+        // Emit event
+        let _ = self.event_sender.send(WorkspaceStateEvent::EmbeddingGenerated {
+            path: file_path.to_path_buf(),
+            success: true,
+            duration_ms,
+        });
+        
+        Ok(())
+    }
+    
+    /// Update embedding for a file (called on file changes with debouncing)
+    pub async fn update_file_embedding(&self, file_path: &Path) -> Result<(), WorkspaceError> {
+        let watch_config = self.config.watch_config.as_ref()
+            .ok_or_else(|| WorkspaceError::Configuration("File watching config not found".to_string()))?;
+        
+        let debounce_duration = std::time::Duration::from_millis(watch_config.debounce_ms);
+        let now = std::time::Instant::now();
+        
+        // Check debounce
+        {
+            let mut debounce_map = self.embedding_debounce_map.write().await;
+            if let Some(last_time) = debounce_map.get(file_path) {
+                if now.duration_since(*last_time) < debounce_duration {
+                    // Still in debounce period, skip
+                    return Ok(());
+                }
+            }
+            debounce_map.insert(file_path.to_path_buf(), now);
+        }
+        
+        // Generate and store embedding
+        self.generate_and_store_file_embedding(file_path).await
+    }
+    
+    /// Search files by semantic similarity
+    pub async fn search_files_by_similarity(
+        &self,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<(PathBuf, f32)>, WorkspaceError> {
+        let embedding_service = self.embedding_service.as_ref()
+            .ok_or_else(|| WorkspaceError::Configuration("Embedding service not configured".to_string()))?;
+        
+        embedding_service.search_files_by_similarity(query, limit).await
+            .map_err(|e| WorkspaceError::Embedding(e))
+    }
+    
+    /// Check if file should generate embedding based on extension
+    pub fn should_generate_embedding(&self, file_path: &Path) -> bool {
+        let watch_config = match &self.config.watch_config {
+            Some(cfg) => cfg,
+            None => return false,
+        };
+        
+        if !watch_config.generate_embeddings {
+            return false;
+        }
+        
+        let extension = file_path.extension()
+            .and_then(|e| e.to_str())
+            .map(|s| s.to_lowercase())
+            .unwrap_or_default();
+        
+        watch_config.embedding_extensions.iter().any(|ext| ext.to_lowercase() == extension)
     }
 }
 

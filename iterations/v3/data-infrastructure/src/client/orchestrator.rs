@@ -1309,27 +1309,27 @@ impl DatabaseOperations for DatabaseClient {
         let mut update_fields = Vec::new();
         let mut param_count = 1u32;
         
-        if let Some(ref title) = update.title {
+        if let Some(ref _title) = update.title {
             update_fields.push(format!("title = ${}", param_count));
             param_count += 1;
         }
-        if let Some(ref description) = update.description {
+        if let Some(ref _description) = update.description {
             update_fields.push(format!("description = ${}", param_count));
             param_count += 1;
         }
-        if let Some(ref mitigation_plan) = update.mitigation_plan {
+        if let Some(ref _mitigation_plan) = update.mitigation_plan {
             update_fields.push(format!("mitigation_plan = ${}", param_count));
             param_count += 1;
         }
-        if let Some(expires_at) = update.expires_at {
+        if let Some(_expires_at) = update.expires_at {
             update_fields.push(format!("expires_at = ${}", param_count));
             param_count += 1;
         }
-        if let Some(ref status) = update.status {
+        if let Some(ref _status) = update.status {
             update_fields.push(format!("status = ${}", param_count));
             param_count += 1;
         }
-        if let Some(ref metadata) = update.metadata {
+        if let Some(ref _metadata) = update.metadata {
             update_fields.push(format!("metadata = ${}", param_count));
             param_count += 1;
         }

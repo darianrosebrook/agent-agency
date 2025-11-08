@@ -201,6 +201,16 @@ venv.bak/
 *.sqlite
 *.sqlite3
 
+# PostgreSQL data directory - runtime database files (should not be versioned)
+iterations/v3/data/postgres/
+data/postgres/
+**/data/postgres/
+*.pid
+pg_wal/
+pg_xact/
+pg_multixact/
+pg_subtrans/
+
 # Temporary files
 *.tmp
 *.temp

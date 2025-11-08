@@ -59,7 +59,7 @@ pub struct DatabaseHealthMonitor {
     metrics: Arc<DatabaseMetrics>,
     health_check_interval: std::time::Duration,
     last_health_check: std::sync::RwLock<Option<DateTime<Utc>>>,
-    consecutive_failures: std::sync::atomic::AtomicU64,
+    _consecutive_failures: std::sync::atomic::AtomicU64,
 }
 
 impl DatabaseHealthMonitor {
@@ -69,7 +69,7 @@ impl DatabaseHealthMonitor {
             metrics,
             health_check_interval: std::time::Duration::from_secs(30), // Check every 30 seconds
             last_health_check: std::sync::RwLock::new(None),
-            consecutive_failures: std::sync::atomic::AtomicU64::new(0),
+            _consecutive_failures: std::sync::atomic::AtomicU64::new(0),
         }
     }
 

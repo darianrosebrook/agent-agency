@@ -51,7 +51,7 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinator for CouncilCoord
         // The council doesn't have explicit session management, so we'll just validate
         // that the task can be reviewed by attempting a dry-run evaluation
         let _dry_run_result = self.council.evaluate(&review_context).await
-            .map_err(|e| agent_agency_contracts::errors::ContractError::ServiceUnavailable {
+            .map_err(|e| agent_agency_contracts::ContractError::ServiceUnavailable {
                 service: "council".to_string()
             })?;
 
@@ -68,7 +68,7 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinator for CouncilCoord
 
         // Perform the actual evaluation
         let final_decision = self.council.evaluate(&review_context).await
-            .map_err(|e| agent_agency_contracts::errors::ContractError::ServiceUnavailable {
+            .map_err(|e| agent_agency_contracts::ContractError::ServiceUnavailable {
                 service: "council".to_string()
             })?;
 

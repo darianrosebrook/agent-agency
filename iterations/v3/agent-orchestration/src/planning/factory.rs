@@ -23,7 +23,7 @@ use crate::planning::DatabaseOperations;
 use crate::planning::memory_adapter::MemorySystemAdapter;
 
 #[cfg(feature = "research")]
-use crate::planning::research_adapter::ResearchEvidenceCollectorAdapter;
+use crate::planning::research_adapter::ResearchEvidenceAdapter;
 #[cfg(feature = "research")]
 use agent_research::evidence::collector::EvidenceCollector as ResearchEvidenceCollector;
 
@@ -205,7 +205,7 @@ impl PlanningSystemFactory {
 
         // Create evidence collector with research integration
         #[cfg(feature = "research")]
-        let research_adapter = Arc::new(ResearchEvidenceCollectorAdapter::new(research_evidence_collector.clone()));
+        let research_adapter = Arc::new(ResearchEvidenceAdapter::new(research_evidence_collector.clone()));
         #[cfg(feature = "research")]
         let evidence_collector = Arc::new(EvidenceCollector::new(research_adapter));
         #[cfg(not(feature = "research"))]
@@ -317,7 +317,7 @@ impl PlanningSystemFactory {
             #[cfg(feature = "memory")]
             memory_system: Arc::new(MemorySystemAdapter::new(memory_system)),
             #[cfg(feature = "research")]
-            research_evidence_collector: Arc::new(ResearchEvidenceCollectorAdapter::new(research_evidence_collector)),
+            research_evidence_collector: Arc::new(ResearchEvidenceAdapter::new(research_evidence_collector)),
             // NOTE: When dependencies are added back, uncomment these:
             // #[cfg(feature = "tool-chain")]
             // tool_chain_planner: Arc::new(ToolChainPlannerAdapter::new(tool_chain_planner)),

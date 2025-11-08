@@ -68,7 +68,7 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
 
         // Plan the tool chain using the real planner
         let tool_chain = self.planner.plan_chain(&planning_context, &constraints).await
-            .map_err(|e| agent_agency_contracts::errors::ContractError::ServiceUnavailable {
+            .map_err(|e| agent_agency_contracts::ContractError::ServiceUnavailable {
                 service: "tool-chain".to_string()
             })?;
 

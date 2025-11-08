@@ -30,6 +30,9 @@ pub mod learning;
 pub mod consensus_coordinator;
 mod quality_gates;
 
+#[cfg(any(feature = "data-processing", feature = "memory"))]
+pub mod workspace_integration;
+
 // Re-export types for convenience - use contracts types
 pub use agent_agency_contracts::types::prelude::{
     TaskDescriptor, ExecutionMode, BlastRadius, ExecutionContext,

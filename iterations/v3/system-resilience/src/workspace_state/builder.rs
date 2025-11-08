@@ -3,6 +3,7 @@
 //! Provides a fluent API for constructing UnifiedWorkspaceStateManager instances
 //! with optional components (file watching, embeddings, context generation).
 
+use super::embedding_trait::EmbeddingServiceTrait;
 use super::unified::{
     UnifiedWorkspaceStateManager, UnifiedWorkspaceConfig,
     FileWatchConfig, ContextGenerationConfig, MetricsConfig,
@@ -16,6 +17,7 @@ pub struct UnifiedWorkspaceStateManagerBuilder {
     workspace_root: PathBuf,
     config: UnifiedWorkspaceConfig,
     state_storage: Option<Box<dyn StateStorage>>,
+    embedding_service: Option<Box<dyn EmbeddingServiceTrait>>,
 }
 
 impl UnifiedWorkspaceStateManagerBuilder {
@@ -25,6 +27,7 @@ impl UnifiedWorkspaceStateManagerBuilder {
             workspace_root: workspace_root.as_ref().to_path_buf(),
             config: UnifiedWorkspaceConfig::default(),
             state_storage: None,
+            embedding_service: None,
         }
     }
     
@@ -58,8 +61,14 @@ impl UnifiedWorkspaceStateManagerBuilder {
         self
     }
     
+    /// Set embedding service
+    pub fn with_embedding_service(mut self, service: Box<dyn EmbeddingServiceTrait>) -> Self {
+        self.embedding_service = Some(service);
+        self
+    }
+    
     /// Build the unified workspace state manager
-    pub fn build(self) -> Result<UnifiedWorkspaceStateManager, WorkspaceError> {
+    pub fn build(mut self) -> Result<UnifiedWorkspaceStateManager, WorkspaceError> {
         // Use provided storage or create default file storage
         let storage = if let Some(storage) = self.state_storage {
             storage
@@ -69,11 +78,18 @@ impl UnifiedWorkspaceStateManagerBuilder {
             Box::new(FileStorage::new(&storage_path, self.config.state_config.compress_states))
         };
         
-        Ok(UnifiedWorkspaceStateManager::new(
+        let mut manager = UnifiedWorkspaceStateManager::new(
             &self.workspace_root,
             self.config,
             storage,
-        ))
+        );
+        
+        // Set embedding service if provided
+        if let Some(service) = self.embedding_service {
+            manager = manager.with_embedding_service(service);
+        }
+        
+        Ok(manager)
     }
 }
 

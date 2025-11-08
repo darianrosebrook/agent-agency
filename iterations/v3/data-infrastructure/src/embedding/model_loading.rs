@@ -16,8 +16,8 @@ pub trait EmbeddingModel: Send + Sync {
 /// SafeTensors model implementation
 pub struct SafeTensorsModel {
     data: Vec<u8>,
-    dimension: usize,
-    vocab_size: usize,
+    _dimension: usize,
+    _vocab_size: usize,
 }
 
 impl SafeTensorsModel {
@@ -44,8 +44,8 @@ impl SafeTensorsModel {
 
         Ok(Self {
             data,
-            dimension: dimension as usize,
-            vocab_size: vocab_size as usize,
+            _dimension: dimension as usize,
+            _vocab_size: vocab_size as usize,
         })
     }
 

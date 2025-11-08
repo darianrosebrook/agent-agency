@@ -13,7 +13,7 @@ use uuid::Uuid;
 #[derive(Debug)]
 pub struct EmbeddingStorage {
     pool: PgPool,
-    config: DatabaseConfig,
+    _config: DatabaseConfig,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
@@ -33,7 +33,7 @@ impl EmbeddingStorage {
             .connect(&config.database_url)
             .await?;
 
-        Ok(Self { pool, config })
+        Ok(Self { pool, _config: config })
     }
 
     /// Store embedding record

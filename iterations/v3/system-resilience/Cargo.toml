@@ -67,11 +67,9 @@ system-configuration = { path = "../system-configuration" }
 
 # Local crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
-agent-data-processing = { path = "../agent-data-processing", optional = true }
 
 [features]
 default = []
-file-watching = ["agent-data-processing"]
 
 [dev-dependencies]
 tokio-test = "0.4"

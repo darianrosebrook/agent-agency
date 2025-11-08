@@ -121,3 +121,6 @@ node_modules/
 temp/
 *.tmp
 *.swp
+# PostgreSQL data directory - runtime database files
+iterations/v3/data/postgres/**
+data/postgres/**

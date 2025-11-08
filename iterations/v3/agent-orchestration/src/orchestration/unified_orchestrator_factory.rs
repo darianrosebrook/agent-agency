@@ -142,6 +142,7 @@ impl UnifiedOrchestratorFactory {
         };
 
         // Create planning components - requires both research and memory features
+        // Create planning components - requires both research and memory features
         #[cfg(all(feature = "research", feature = "memory"))]
         let planning_components = PlanningSystemFactory::create_planning_components(
             research_collector,
@@ -150,11 +151,11 @@ impl UnifiedOrchestratorFactory {
             db_ops.clone(),
         ).await?;
 
-        #[cfg(all(feature = "research", not(feature = "memory")))]
+        #[cfg(not(all(feature = "research", feature = "memory")))]
         {
             return Err(anyhow::anyhow!(
-                "Memory feature required for UnifiedOrchestrator initialization. \
-                 Enable memory feature in Cargo.toml or use LegacyOrchestratorAdapter."
+                "Both research and memory features required for UnifiedOrchestrator initialization. \
+                 Enable both features in Cargo.toml or use LegacyOrchestratorAdapter."
             ));
         }
 
@@ -252,6 +253,7 @@ impl UnifiedOrchestratorFactory {
         }) as Arc<dyn crate::planning::plan_executor::AuditTrail>;
 
         // Create PlanExecutor for UnifiedOrchestrator with WorkerExecutionBridge and WorktreeManager
+        #[cfg(all(feature = "research", feature = "memory"))]
         let plan_executor = Arc::new(PlanExecutor::with_lifecycle_manager(
             ExecutionPlan::default(),
             executor_worker_pool,
@@ -273,6 +275,7 @@ impl UnifiedOrchestratorFactory {
         let state_persistence = Arc::new(InMemoryTaskStatePersistence::new());
 
         // Create UnifiedOrchestrator
+        #[cfg(all(feature = "research", feature = "memory"))]
         let orchestrator = Arc::new(UnifiedOrchestrator::new(
             config,
             planning_components.plan_generator,
@@ -296,8 +299,11 @@ impl UnifiedOrchestratorFactory {
             None, // federated_learning - optional
         ));
 
-        info!("UnifiedOrchestrator created successfully");
-        Ok(orchestrator)
+        #[cfg(all(feature = "research", feature = "memory"))]
+        {
+            info!("UnifiedOrchestrator created successfully");
+            Ok(orchestrator)
+        }
     }
 }
 

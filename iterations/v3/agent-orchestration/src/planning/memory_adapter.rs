@@ -60,7 +60,7 @@ impl MemorySystem for MemorySystemAdapter {
 
         // Store the experience using the real memory system
         let memory_id = self.memory_system.store_experience(memory_experience).await
-            .map_err(|e| agent_agency_contracts::errors::ContractError::ServiceUnavailable {
+            .map_err(|e| agent_agency_contracts::ContractError::ServiceUnavailable {
                 service: "memory".to_string()
             })?;
 
@@ -84,7 +84,7 @@ impl MemorySystem for MemorySystemAdapter {
 
         // Retrieve temporal contexts using the real memory system
         let contexts = self.memory_system.retrieve_temporal_context(temporal_query).await
-            .map_err(|e| agent_agency_contracts::errors::ContractError::ServiceUnavailable {
+            .map_err(|e| agent_agency_contracts::ContractError::ServiceUnavailable {
                 service: "memory".to_string()
             })?;
 
@@ -120,7 +120,7 @@ impl MemorySystem for MemorySystemAdapter {
 
         // Record the outcome using the real memory system
         self.memory_system.record_outcome(memory_id.0, memory_outcome).await
-            .map_err(|e| agent_agency_contracts::errors::ContractError::ServiceUnavailable {
+            .map_err(|e| agent_agency_contracts::ContractError::ServiceUnavailable {
                 service: "memory".to_string()
             })
     }
@@ -128,7 +128,7 @@ impl MemorySystem for MemorySystemAdapter {
     async fn retrieve_experience(&self, memory_id: MemoryId) -> MemoryResult<Experience> {
         // Retrieve the experience using the real memory system
         let memory_experience = self.memory_system.retrieve_experience(memory_id.0).await
-            .map_err(|e| agent_agency_contracts::errors::ContractError::ServiceUnavailable {
+            .map_err(|e| agent_agency_contracts::ContractError::ServiceUnavailable {
                 service: "memory".to_string()
             })?;
 

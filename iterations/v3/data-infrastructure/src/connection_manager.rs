@@ -87,7 +87,7 @@ pub struct PoolStats {
 pub struct ConnectionPoolManager {
     pool: Arc<PgPool>,
     config: DatabaseConnectionConfig,
-    stats: Arc<RwLock<PoolStats>>,
+    _stats: Arc<RwLock<PoolStats>>,
 }
 
 /// Global instance of the connection pool manager
@@ -151,7 +151,7 @@ impl ConnectionPoolManager {
         Ok(Self {
             pool: Arc::new(pool),
             config,
-            stats,
+            _stats: stats,
         })
     }
 

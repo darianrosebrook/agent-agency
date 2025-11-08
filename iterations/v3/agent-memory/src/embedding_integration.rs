@@ -270,6 +270,12 @@ impl EmbeddingIntegration {
         Ok(results)
     }
 
+    /// Generate embedding for arbitrary text (for workspace file embeddings)
+    pub async fn generate_text_embedding(&self, text: &str) -> MemoryResult<Vec<f32>> {
+        self.embedding_service.generate_embedding(text).await
+            .map_err(|e| MemoryError::Embedding(e.to_string()))
+    }
+    
     /// Semantic search for general text queries
     pub async fn semantic_search_text(&self, query: &str, limit: usize) -> MemoryResult<Vec<(MemoryId, f32)>> {
         // Generate embedding via HTTP call
@@ -432,6 +438,132 @@ impl EmbeddingIntegration {
         self.embedding_service.health_check().await
             .map_err(|e| MemoryError::Embedding(e.to_string()))
     }
+
+    /// Store file embedding in block_vectors table
+    pub async fn store_file_embedding(
+        &self,
+        file_path: &std::path::Path,
+        content: &str,
+        embedding: Vec<f32>,
+        metadata: Option<serde_json::Value>,
+    ) -> MemoryResult<()> {
+        use uuid::Uuid;
+        
+        // Generate block_id from file path hash for consistency
+        let path_str = file_path.to_string_lossy();
+        let block_id = Uuid::new_v5(
+            &Uuid::NAMESPACE_URL,
+            path_str.as_bytes(),
+        );
+        
+        // Determine file type/modality
+        let modality = match file_path.extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.to_lowercase())
+            .as_deref() {
+            Some("md") | Some("txt") | Some("rs") | Some("ts") | Some("js") | Some("py") | Some("go") | Some("java") | Some("cpp") | Some("c") | Some("h") => "text",
+            Some("png") | Some("jpg") | Some("jpeg") | Some("gif") | Some("svg") | Some("webp") => "image",
+            Some("mp3") | Some("wav") | Some("ogg") | Some("flac") => "audio",
+            Some("mp4") | Some("avi") | Some("mov") | Some("webm") => "video",
+            _ => "text", // Default to text
+        };
+        
+        let embedding_model_id = std::env::var("EMBEDDING_MODEL_NAME")
+            .unwrap_or_else(|_| "embeddinggemma".to_string());
+        
+        let metadata_json = metadata.unwrap_or_else(|| serde_json::json!({}));
+        
+        // Insert or update embedding in block_vectors
+        // First check if block_id exists, then update or insert
+        let existing = sqlx::query(
+            "SELECT id FROM block_vectors WHERE block_id = $1 LIMIT 1"
+        )
+        .bind(block_id)
+        .fetch_optional(self.db_client.pool())
+        .await?;
+        
+        if existing.is_some() {
+            // Update existing
+            sqlx::query(
+                r#"
+                UPDATE block_vectors SET
+                    content = $2,
+                    embedding = $3,
+                    metadata = $4,
+                    updated_at = NOW()
+                WHERE block_id = $1
+                "#,
+            )
+            .bind(block_id)
+            .bind(content)
+            .bind(&embedding)
+            .bind(&metadata_json)
+            .execute(self.db_client.pool())
+            .await?;
+        } else {
+            // Insert new
+            sqlx::query(
+                r#"
+                INSERT INTO block_vectors (
+                    block_id, content, modality, embedding_model_id, embedding, metadata
+                ) VALUES ($1, $2, $3, $4, $5, $6)
+                "#,
+            )
+            .bind(block_id)
+            .bind(content)
+            .bind(modality)
+            .bind(&embedding_model_id)
+            .bind(&embedding)
+            .bind(&metadata_json)
+            .execute(self.db_client.pool())
+            .await?;
+        }
+        
+        debug!("Stored file embedding for: {}", file_path.display());
+        Ok(())
+    }
+    
+    /// Search files by semantic similarity using block_vectors
+    pub async fn search_files_by_similarity(
+        &self,
+        query: &str,
+        limit: usize,
+    ) -> MemoryResult<Vec<(std::path::PathBuf, f32)>> {
+        // Generate query embedding
+        let query_embedding = self.generate_text_embedding(query).await?;
+        
+        // Search block_vectors table
+        let rows = sqlx::query(
+            r#"
+            SELECT block_id, content, metadata, embedding <=> $1 as similarity
+            FROM block_vectors
+            WHERE modality = 'text'
+            ORDER BY embedding <=> $1 ASC
+            LIMIT $2
+            "#,
+        )
+        .bind(&query_embedding)
+        .bind(limit as i32)
+        .fetch_all(self.db_client.pool())
+        .await?;
+        
+        let mut results = Vec::new();
+        for row in rows {
+            let metadata: serde_json::Value = row.try_get("metadata")?;
+            let similarity: f32 = 1.0 - row.try_get::<f64, _>("similarity")? as f32;
+            
+            // Extract file_path from metadata
+            if let Some(file_path_str) = metadata.get("file_path")
+                .and_then(|v| v.as_str()) {
+                let file_path = std::path::PathBuf::from(file_path_str);
+                results.push((file_path, similarity));
+            }
+        }
+        
+        results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        Ok(results)
+    }
+}
 
 /// Embedding statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]

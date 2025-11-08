@@ -22,7 +22,7 @@ pub trait FileWatcherTrait: Send + Sync {
 
 /// File watcher event handler
 pub struct FileWatcherEventHandler {
-    event_sender: broadcast::Sender<WorkspaceStateEvent>,
+    pub(crate) event_sender: broadcast::Sender<WorkspaceStateEvent>,
     workspace_root: PathBuf,
 }
 
