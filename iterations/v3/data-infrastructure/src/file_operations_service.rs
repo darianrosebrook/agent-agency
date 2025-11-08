@@ -429,12 +429,12 @@ impl FileOperationsService for DataInfrastructureFileOperationsService {
 /// Workspace factory implementation
 #[derive(Debug)]
 pub struct DataInfrastructureWorkspaceFactory {
-    default_repo_path: PathBuf,
+    _default_repo_path: PathBuf,
 }
 
 impl DataInfrastructureWorkspaceFactory {
     pub fn new(default_repo_path: PathBuf) -> Self {
-        Self { default_repo_path }
+        Self { _default_repo_path: default_repo_path }
     }
 }
 

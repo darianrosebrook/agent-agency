@@ -33,14 +33,14 @@ struct ClientLimits {
     #[schemars(with = "String")]
     requests: Vec<Instant>,
     #[schemars(with = "String")]
-    last_reset: Instant,
+    _last_reset: Instant,
 }
 
 impl ClientLimits {
     fn new() -> Self {
         Self {
             requests: Vec::new(),
-            last_reset: Instant::now(),
+            _last_reset: Instant::now(),
         }
     }
     

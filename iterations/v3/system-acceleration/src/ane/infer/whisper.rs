@@ -17,7 +17,7 @@ pub struct WhisperInferenceExecutor {
     model: LoadedWhisperModel,
     audio_config: AudioPreprocessingConfig,
     #[cfg(target_os = "macos")]
-    coreml_model_handle: crate::ane::compat::coreml::ModelRef,
+    _coreml_model_handle: crate::ane::compat::coreml::ModelRef,
 }
 
 impl WhisperInferenceExecutor {
@@ -33,13 +33,13 @@ impl WhisperInferenceExecutor {
         };
 
         #[cfg(target_os = "macos")]
-        let coreml_model_handle = model.coreml_model_handle;
+        let _coreml_model_handle = model.coreml_model_handle;
 
         Self {
             model,
             audio_config,
             #[cfg(target_os = "macos")]
-            coreml_model_handle,
+            _coreml_model_handle,
         }
     }
 

@@ -100,7 +100,7 @@ pub mod iokit {
             .output()
             .ok()?;
 
-        let output_str = String::from_utf8(output.stdout).ok()?;
+        let _output_str = String::from_utf8(output.stdout).ok()?;
 
         // Parse battery info for discharge rate
         // Example: "Now drawing from 'Battery Power' - discharging (time remaining: 4:23)"

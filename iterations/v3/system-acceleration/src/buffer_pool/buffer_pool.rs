@@ -25,7 +25,7 @@ pub struct BufferPoolStats {
 /// Buffer pool for managing GPU/ANE memory
 #[derive(Debug)]
 pub struct BufferPool {
-    config: BufferPoolConfig,
+    _config: BufferPoolConfig,
     stats: BufferPoolStats,
 }
 
@@ -40,7 +40,7 @@ impl BufferPool {
             used_memory_mb: 0,
         };
 
-        Self { config, stats }
+        Self { _config: config, stats }
     }
 
     /// Allocate a buffer

@@ -123,7 +123,7 @@ impl VisualIndexer {
     }
 
     /// Extract visual features from image data
-    pub fn extract_features(&self, image_data: &[u8], format: &ImageFormat) -> Result<VisualFeatures> {
+    pub fn extract_features(&self, _image_data: &[u8], _format: &ImageFormat) -> Result<VisualFeatures> {
         // Placeholder - would use actual computer vision libraries
         Ok(VisualFeatures {
             color_histogram: vec![0.1, 0.2, 0.3], // Placeholder
@@ -208,19 +208,19 @@ pub struct ImageProcessor;
 
 impl ImageProcessor {
     /// Resize image to standard dimensions
-    pub fn resize_image(image_data: &[u8], target_width: u32, target_height: u32) -> Result<Vec<u8>> {
+    pub fn resize_image(image_data: &[u8], _target_width: u32, _target_height: u32) -> Result<Vec<u8>> {
         // Placeholder - would use image processing library
         Ok(image_data.to_vec())
     }
 
     /// Convert image to RGB format
-    pub fn convert_to_rgb(image_data: &[u8], format: &ImageFormat) -> Result<Vec<u8>> {
+    pub fn convert_to_rgb(image_data: &[u8], _format: &ImageFormat) -> Result<Vec<u8>> {
         // Placeholder - would use image processing library
         Ok(image_data.to_vec())
     }
 
     /// Extract dominant colors
-    pub fn extract_dominant_colors(image_data: &[u8]) -> Result<Vec<(u8, u8, u8)>> {
+    pub fn extract_dominant_colors(_image_data: &[u8]) -> Result<Vec<(u8, u8, u8)>> {
         // Placeholder - would use color analysis
         Ok(vec![(255, 0, 0), (0, 255, 0), (0, 0, 255)])
     }

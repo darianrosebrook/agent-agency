@@ -59,7 +59,8 @@ pub struct MistralModel {
     pub kv_cache: Arc<tokio::sync::Mutex<KVCache>>,
     /// Telemetry collector (assumed thread-safe)
     pub telemetry: TelemetryCollector,
-    /// Circuit breaker for resilience
+    /// Circuit breaker for resilience (used in inference, not accessed in manager)
+    #[allow(dead_code)]
     pub circuit_breaker: CircuitBreaker,
     /// Model load time
     pub loaded_at: Instant,

@@ -26,9 +26,9 @@
 - **system-acceleration**: 16 warnings (deprecated function usage - intentional)
 
 ### 🔄 Remaining (Intentional/Non-Critical)
-- **data-infrastructure**: ~10 non-deprecated warnings (mostly unused variables in test/example code)
-- **system-acceleration**: ~7 warnings (non-deprecated, mostly unused code)
-- **Note**: All remaining warnings are non-critical unused code. Deprecated code (`OllamaEmbeddingProvider`, `get_model_handle`) has been successfully removed.
+- **data-infrastructure**: 0 warnings (all fixed)
+- **system-acceleration**: ~7 warnings (informational Swift bridge messages + cfg warnings - non-critical)
+- **Note**: All non-deprecated warnings have been fixed. Remaining warnings are informational build messages or intentional cfg attributes.
 
 ### ✅ Deprecated Code Removal (Latest Session)
 - **Removed `OllamaEmbeddingProvider`**: Entire struct and implementation removed from `data-infrastructure/src/embedding/provider.rs` (~98 lines)

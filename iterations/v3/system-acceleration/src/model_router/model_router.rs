@@ -8,7 +8,7 @@ use anyhow::Result;
 /// Model router
 #[derive(Debug)]
 pub struct ModelRouter {
-    device_id: DeviceId,
+    _device_id: DeviceId,
 }
 
 /// Model variant
@@ -56,7 +56,7 @@ impl ModelRouter {
     /// Create a new model router
     pub fn new() -> Self {
         Self {
-            device_id: "router".to_string(),
+            _device_id: "router".to_string(),
         }
     }
 

@@ -48,7 +48,7 @@ pub struct Pool {
     /// Currently used memory in MB (protected by mutex)
     mem_used_mb: Mutex<usize>,
     /// Pool configuration
-    config: PoolConfig,
+    _config: PoolConfig,
     /// Pool statistics
     stats: Mutex<PoolStats>,
 }
@@ -89,7 +89,7 @@ impl Pool {
             inner: Arc::new(tokio::sync::Semaphore::new(max_concurrent)),
             mem_total_mb,
             mem_used_mb: Mutex::new(0),
-            config: PoolConfig {
+            _config: PoolConfig {
                 max_concurrent,
                 mem_total_mb,
             },
@@ -161,7 +161,7 @@ impl Pool {
                 inner: self.inner.clone(),
                 mem_total_mb: self.mem_total_mb,
                 mem_used_mb: Mutex::new(*self.mem_used_mb.lock()),
-                config: self.config().clone(),
+                _config: self.config().clone(),
                 stats: Mutex::new(self.stats.lock().clone()),
             }),
         })

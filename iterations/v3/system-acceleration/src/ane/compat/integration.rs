@@ -655,7 +655,7 @@ pub mod production_readiness {
             resource_management_configured: diagnostic.memory_usage_percent >= 0.0,
             error_handling_robust: true, // Assumed based on hardening implementation
             monitoring_integrated: true, // Assumed based on metrics implementation
-            agent_integration_ready: diagnostic.loaded_models >= 0, // Can load models
+            agent_integration_ready: diagnostic.loaded_models > 0, // Can load models
         };
 
         let ready_items = [
