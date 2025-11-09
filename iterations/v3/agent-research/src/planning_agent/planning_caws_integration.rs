@@ -129,48 +129,22 @@ pub trait CawsValidator: Send + Sync {
 }
 
 /// Default CAWS validator implementation
+/// Uses development-tools CAWS validator for real validation
 pub struct DefaultCawsValidator {
-    // TODO: Implement CAWS service client integration
-    //       Currently empty struct; should hold CAWS service client, configuration, and cached validation rules.
-    //
-    // COMPLETION CHECKLIST:
-    // [ ] Add CAWS service client field
-    // [ ] Add configuration field for CAWS settings
-    // [ ] Add cached validation rules field
-    // [ ] Initialize client in constructor
-    // [ ] Load and cache validation rules
-    // [ ] Handle client connection errors
-    // [ ] Add unit tests with mock CAWS client
-    // [ ] Add integration tests with real CAWS service
-    // [ ] Performance: Client initialization should complete in <1s
-    // [ ] Documentation: Document CAWS integration
-    //
-    // ACCEPTANCE CRITERIA:
-    // - CAWS service client is initialized properly
-    // - Configuration is loaded and validated
-    // - Validation rules are cached for performance
-    // - Client connection errors are handled gracefully
-    // - Cached rules are refreshed appropriately
-    //
-    // DEPENDENCIES:
-    // - CAWS service client library (Required)
-    // - Configuration management (Required)
-    // - Caching mechanism (Required)
-    //
-    // ESTIMATED EFFORT: 5-7 hours (medium confidence)
-    // PRIORITY: Medium
-    // BLOCKING: No
-    //
-    // GOVERNANCE:
-    // - CAWS Tier: 2 (CAWS integration feature)
-    // - Change Budget: ~200 LOC
-    // - Reviewer Requirements: CAWS service expertise
+    validator: std::sync::Arc<development_tools::validator::CawsValidator>,
+    policy: std::sync::Arc<development_tools::policy::CawsPolicy>,
 }
 
 impl DefaultCawsValidator {
     /// Create a new default CAWS validator
     pub fn new() -> Self {
-        Self {}
+        let policy = std::sync::Arc::new(development_tools::policy::CawsPolicy::default());
+        let validator = std::sync::Arc::new(development_tools::validator::CawsValidator::new((*policy).clone()));
+        
+        Self {
+            validator,
+            policy,
+        }
     }
 }
 
@@ -181,66 +155,105 @@ impl CawsValidator for DefaultCawsValidator {
         working_spec: &agent_agency_contracts::working_spec::WorkingSpec,
         context: &ValidationContext,
     ) -> Result<CawsValidationResult, CawsValidationError> {
-        // TODO: Implement comprehensive CAWS validation integration
-        //       Currently uses basic implementation; should integrate with CAWS service for full validation.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Send working spec to CAWS service for analysis
-        // [ ] Apply risk-tier specific validation rules
-        // [ ] Run static analysis on the specification
-        // [ ] Check for compliance with coding standards
-        // [ ] Validate test coverage requirements
-        // [ ] Assess security implications
-        // [ ] Add unit tests with mock CAWS responses
-        // [ ] Add integration tests with real CAWS service
-        // [ ] Performance: Validation should complete in <5s
-        // [ ] Documentation: Document CAWS integration
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Full CAWS validation is performed
-        // - Risk-tier rules are properly applied
-        // - Static analysis results are incorporated
-        // - Compliance checks are comprehensive
-        //
-        // DEPENDENCIES:
-        // - CAWS service client (Required)
-        // - Working spec format (Required)
-        //
-        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
-        // PRIORITY: High
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 1 (validation integration feature)
-        // - Change Budget: ~200 LOC
-        // - Reviewer Requirements: CAWS and validation expertise
-        // In practice, this would:
-        // 1. Send the working spec to CAWS service for analysis
-        // 2. Apply risk-tier specific validation rules
-        // 3. Run static analysis on the specification
-        // 4. Check for compliance with coding standards
-        // 5. Validate test coverage requirements
-        // 6. Assess security implications
+        use development_tools::validator::{ValidationContext as DevToolsContext, DiffStats};
+        use tracing::warn;
 
+        // Convert WorkingSpec to JSON for validation
+        let spec_json = serde_json::to_value(working_spec)
+            .map_err(|e| CawsValidationError::Serialization(format!("Failed to serialize working spec: {}", e)))?;
+
+        // Convert risk tier to string format expected by development-tools validator
+        let risk_tier_str = match working_spec.risk_tier {
+            1 => "high",
+            2 => "medium",
+            3 => "low",
+            _ => "medium",
+        };
+
+        // Extract task ID from working spec
+        let task_id = working_spec.id.clone();
+
+        // Build validation context for development-tools validator
+        let validation_context = DevToolsContext {
+            task_id: task_id.clone(),
+            risk_tier: risk_tier_str.to_string(),
+            working_spec: spec_json.clone(),
+            diff_stats: DiffStats {
+                files_changed: 0, // Will be populated from actual changes if available
+                lines_added: 0,
+                lines_deleted: 0,
+                files_modified: vec![],
+            },
+            test_results: None,
+            security_scan: None,
+        };
+
+        // Perform validation using real CAWS validator
+        let validation_result = self.validator.validate(validation_context).await;
+
+        // Convert development-tools violations to our ValidationViolation format
         let mut violations = Vec::new();
-        let mut suggestions = Vec::new();
-        let mut quality_indicators = Vec::new();
+        for v in &validation_result.violations {
+            violations.push(ValidationViolation {
+                code: v.rule_id.clone(),
+                severity: match v.severity {
+                    development_tools::policy::ViolationSeverity::Info => ViolationSeverity::Info,
+                    development_tools::policy::ViolationSeverity::Warning => ViolationSeverity::Warning,
+                    development_tools::policy::ViolationSeverity::Error => ViolationSeverity::Error,
+                    development_tools::policy::ViolationSeverity::Critical => ViolationSeverity::Error,
+                },
+                message: v.message.clone(),
+                location: v.location.as_ref().and_then(|l| {
+                    l.file.as_ref().map(|f| {
+                        if let Some(line) = l.line {
+                            format!("{}:{}", f, line)
+                        } else {
+                            f.clone()
+                        }
+                    })
+                }),
+            });
+        }
 
-        // Basic validation checks
-        self.validate_basic_structure(working_spec, &mut violations)?;
-        self.validate_risk_tier_compliance(working_spec, context, &mut violations)?;
-        self.validate_acceptance_criteria(working_spec, &mut violations, &mut suggestions)?;
-        self.validate_test_plan(working_spec, context, &mut violations, &mut suggestions)?;
-
-        // Calculate compliance score
-        let compliance_score = self.calculate_compliance_score(&violations, working_spec.risk_tier);
+        // Extract suggestions from remediation hints
+        let mut suggestions: Vec<String> = validation_result.violations
+            .iter()
+            .filter_map(|v| v.remediation.clone())
+            .collect();
 
         // Generate quality indicators
+        let mut quality_indicators = Vec::new();
+        
+        quality_indicators.push(QualityIndicator {
+            name: "caws_compliance".to_string(),
+            score: validation_result.compliance_score as f64,
+            evidence: format!("CAWS compliance score: {:.2}", validation_result.compliance_score),
+        });
+
         quality_indicators.push(QualityIndicator {
             name: "structural_completeness".to_string(),
             score: if violations.is_empty() { 1.0 } else { 0.7 },
             evidence: format!("Working spec has {} violations", violations.len()),
         });
+
+        // Additional validation checks for working spec structure
+        let mut basic_violations = Vec::new();
+        self.validate_basic_structure(working_spec, &mut basic_violations)?;
+        self.validate_risk_tier_compliance(working_spec, context, &mut basic_violations)?;
+        self.validate_acceptance_criteria(working_spec, &mut basic_violations, &mut suggestions)?;
+        self.validate_test_plan(working_spec, context, &mut basic_violations, &mut suggestions)?;
+
+        // Merge basic violations with CAWS violations
+        violations.extend(basic_violations);
+
+        // Calculate overall compliance score
+        let compliance_score = if violations.is_empty() {
+            validation_result.compliance_score as f64
+        } else {
+            // Reduce score based on violation count
+            let violation_penalty = violations.len() as f64 * 0.05;
+            (validation_result.compliance_score as f64 - violation_penalty).max(0.0)
+        };
 
         quality_indicators.push(QualityIndicator {
             name: "test_coverage".to_string(),
@@ -254,7 +267,7 @@ impl CawsValidator for DefaultCawsValidator {
             evidence: "Rollback strategy defined".to_string(),
         });
 
-        let compliant = violations.iter().all(|v| v.severity != ViolationSeverity::Error);
+        let compliant = validation_result.passed && violations.iter().all(|v| v.severity != ViolationSeverity::Error);
 
         Ok(CawsValidationResult {
             compliant,

@@ -282,34 +282,44 @@ The system is organized into 17 specialized crates with clear responsibilities:
 - **Auto Mode**: Automatic execution with CAWS quality gate validation
 - **Dry-Run Mode**: Safe testing without filesystem modifications
 
-## CLI Commands
+## API Usage
+
+**Note**: CLI binaries are temporarily disabled. Use the REST API instead.
 
 ### Task Execution
 ```bash
-# Execute task in different modes
-cargo run --bin agent-agency-cli execute "Implement user auth" --mode strict
-cargo run --bin agent-agency-cli execute "Add payment system" --mode auto
-cargo run --bin agent-agency-cli execute "Test deployment" --mode dry-run
+# Execute task in different modes via API
+curl -X POST http://localhost:8080/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"task": "Implement user auth", "execution_mode": "strict"}'
+
+curl -X POST http://localhost:8080/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"task": "Add payment system", "execution_mode": "auto"}'
+
+curl -X POST http://localhost:8080/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"task": "Test deployment", "execution_mode": "dry-run"}'
 
 # Monitor and intervene
-cargo run --bin agent-agency-cli intervene pause task-123
-cargo run --bin agent-agency-cli intervene resume task-123
-cargo run --bin agent-agency-cli intervene cancel task-123
+curl -X POST http://localhost:8080/api/v1/tasks/task-123/pause
+curl -X POST http://localhost:8080/api/v1/tasks/task-123/resume
+curl -X POST http://localhost:8080/api/v1/tasks/task-123/cancel
 ```
 
-### Waiver Management
+### Available Binaries
 ```bash
-# Create and approve waivers
-cargo run --bin agent-agency-cli waiver create --title "Emergency fix" --reason emergency_hotfix
-cargo run --bin agent-agency-cli waiver approve waiver-id-123
-```
+# Start API server
+cargo run --bin agent-agency-api-server
 
-### Provenance Tracking
-```bash
-# Install Git hooks and manage provenance
-cargo run --bin agent-agency-cli provenance install-hooks
-cargo run --bin agent-agency-cli provenance generate
-cargo run --bin agent-agency-cli provenance verify commit-hash
+# Start orchestration service
+cargo run --bin agent-orchestration-server
+
+# Start worker service
+cargo run --bin agent-workers
+
+# System recovery tools
+cargo run --bin system-resilience-cli
 ```
 
 ## System Capabilities

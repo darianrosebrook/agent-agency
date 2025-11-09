@@ -26,11 +26,12 @@ cd agent-agency/iterations/v3
 cargo build --workspace
 npm install
 
-# Initialize CAWS
-cargo run --bin caws -- init --interactive
+# Initialize CAWS (Node.js tool)
+cd apps/tools/caws
+node cli.js init --interactive
 
 # Verify installation
-cargo run --bin system-health-check
+cargo check --workspace
 ```
 
 ## Core Workflows
@@ -181,22 +182,22 @@ cargo run --bin test-runner -- \
 #### Code Quality Gates
 
 ```bash
-# Run CAWS validation
-cargo run --bin caws -- validate \
-  --working-spec .caws/working-spec.yaml \
-  --auto-fix
+# Run CAWS validation (Node.js tool)
+cd apps/tools/caws
+node validate.js .caws/working-spec.yaml
 
 # Run linting and formatting
-cargo run --bin quality-gates -- \
-  --lint \
-  --format \
-  --type-check
+cargo clippy --workspace -- -D warnings
+cargo fmt --check
 
-# Run security scan
-cargo run --bin security-scanner -- \
-  --scan-code \
-  --scan-dependencies \
-  --report-format json
+# Run type checking
+cargo check --workspace
+
+# Run security scan (if security-scanner binary exists)
+# Note: Verify binary availability before use
+# Alternative: Use cargo-audit for dependency scanning
+cargo install cargo-audit
+cargo audit
 ```
 
 #### Performance Testing
@@ -272,17 +273,13 @@ cargo run --bin log-monitor -- \
 #### Local Model Setup
 
 ```bash
-# Download and configure local model
-cargo run --bin model-manager -- \
-  --download "llama3.1:8b" \
-  --quantization "q4_0" \
-  --optimization "coreml"
+# Download and configure local model (if model-manager binary exists)
+# Note: Verify binary availability before use
+# Alternative: Use API endpoints or manual model configuration
 
-# Test model performance
-cargo run --bin model-benchmark -- \
-  --model "llama3.1:8b" \
-  --benchmark "inference-speed" \
-  --iterations 100
+# Test model performance (if model-benchmark binary exists)
+# Note: Verify binary availability before use
+# Use API endpoints for model operations when binaries unavailable
 ```
 
 #### Model Hot-Swapping
@@ -441,27 +438,24 @@ agents:
 #### Agent Execution Failures
 
 ```bash
-# Check agent status
-cargo run --bin agent-status -- --agent-id "agent-001"
+# Check agent status via API
+curl http://localhost:8080/api/v1/tasks/agent-001/status
 
-# View agent logs
-cargo run --bin log-viewer -- --agent-id "agent-001" --tail 100
+# View agent logs via API
+curl http://localhost:8080/api/v1/tasks/agent-001/logs?tail=100
 
-# Restart failed agent
-cargo run --bin agent-manager -- restart --agent-id "agent-001"
+# Restart failed agent via API
+curl -X POST http://localhost:8080/api/v1/tasks/agent-001/restart
 ```
 
 #### Model Loading Issues
 
 ```bash
-# Check model status
-cargo run --bin model-status -- --model "llama3.1:8b"
+# Check model status via API
+curl http://localhost:8080/api/v1/models/llama3.1:8b/status
 
-# Test model connectivity
-cargo run --bin model-tester -- --model "llama3.1:8b" --test "ping"
-
-# Reload model
-cargo run --bin model-manager -- reload --model "llama3.1:8b"
+# Test model connectivity (if model-tester binary exists)
+# Note: Verify binary availability before use
 ```
 
 #### Workspace Issues

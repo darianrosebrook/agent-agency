@@ -2,7 +2,7 @@
 
 ## System Overview
 
-The Core ML acceleration system provides high-performance AI inference on Apple Silicon hardware through a modular, fault-tolerant architecture implemented in Rust. The system achieves measured performance improvements of 3.00x speedup and 85.0% ANE dispatch rate against validated targets.
+The Core ML acceleration system provides high-performance AI inference on Apple Silicon hardware through a modular, fault-tolerant architecture implemented in Rust. The system targets 2.8x ANE speedup and 70% ANE dispatch rate. Benchmark results show performance improvements meeting or exceeding targets (see `docs-status/CoreML_BENCHMARK_RESULTS.md` for measured results).
 
 ## Architecture Components
 
@@ -163,8 +163,8 @@ struct CoreMLAccelerationSystem {
 #### Performance Validation
 
 **Target Metrics**:
-- ANE Speedup: 2.8x target (3.00x achieved)
-- Dispatch Rate: 70% target (85.0% achieved)
+- ANE Speedup: 2.8x target (benchmark results show targets met or exceeded)
+- Dispatch Rate: 70% target (real-time tracking implementation in progress)
 - Latency P95: < 250ms target (< 70ms achieved)
 
 **Validation Process**:
@@ -266,8 +266,8 @@ Health Update (HealthMonitor)
 ### Measured Performance
 
 **ANE Acceleration Results**:
-- **Speedup Ratio**: 3.00x vs CPU baseline
-- **Dispatch Rate**: 85.0% of inferences use ANE
+- **Speedup Ratio**: Target 2.8x vs CPU baseline (actual results vary by model and workload)
+- **Dispatch Rate**: Target 70% of inferences use ANE (real-time tracking in progress)
 - **Latency P95**: < 70ms for typical workloads
 - **Memory Efficiency**: < 60MB per model instance
 

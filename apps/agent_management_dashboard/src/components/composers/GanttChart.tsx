@@ -1,14 +1,28 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { TimelineTask, ZoomLevel } from "../TaskTimeline";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip";
+
+export type ZoomLevel = "day" | "week" | "month" | "quarter";
+
+export interface TimelineTask {
+  id: string;
+  title: string;
+  startDate: Date;
+  endDate: Date;
+  workerId: string;
+  worker: string;
+  status: "backlog" | "todo" | "in-progress" | "done";
+  tags?: string[];
+  progress?: number;
+}
 
 interface GanttChartProps {
   tasks: TimelineTask[];

@@ -1320,14 +1320,7 @@ impl MCPServer {
             tool_registry: Arc::new(tool_registry),
             tool_discovery: Arc::new(ToolDiscovery::new()),
             caws_integration: Arc::new(CawsIntegration::new()),
-            // TODO: Replace placeholder CAWS runtime validator with real implementation
-            // - [ ] Integrate real CAWS runtime validation logic
-            // - [ ] Validate working specs against CAWS rules
-            // - [ ] Check compliance with change budgets and scope boundaries
-            // - [ ] Add error handling for validation failures
-            // - [ ] Add unit tests with mock validators
-            // - [ ] Add integration tests with real CAWS validation
-            caws_runtime_validator: Arc::new(McpCawsIntegration::default()), // Placeholder
+            caws_runtime_validator: Arc::new(McpCawsIntegration::new()),
             status: Arc::new(RwLock::new(MCPServerStatus::Starting)),
             connections: Arc::new(RwLock::new(Vec::new())),
             http_handle: Arc::new(RwLock::new(None)),

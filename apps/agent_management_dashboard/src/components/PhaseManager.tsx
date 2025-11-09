@@ -337,8 +337,8 @@ export function PhaseManager({
       <div className="mb-6">
         <h2 className="text-2xl text-white mb-2">Project Plan</h2>
         <p className="text-zinc-400 mb-4">
-          Here&apos;s a comprehensive plan for building your multi-modal RAG search
-          UI tool
+          Here&apos;s a comprehensive plan for building your multi-modal RAG
+          search UI tool
         </p>
 
         {/* Action buttons */}

@@ -21,7 +21,7 @@ Four specialized AI judges provide governance oversight:
 ### Real-time Control
 - **Intervention API**: Pause, resume, cancel, and override running tasks
 - **Progress Tracking**: Real-time task status and metrics
-- **CLI Tools**: Command-line interface for task management
+- **REST API**: HTTP endpoints for task management (CLI binaries temporarily removed)
 - **Web Dashboard**: Live monitoring and database exploration
 
 ## Key Features

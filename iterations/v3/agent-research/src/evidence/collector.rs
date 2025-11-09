@@ -13,12 +13,14 @@ use crate::extraction_types::{AtomicClaim, ClaimType, Evidence, EvidenceType, Ev
 use crate::evidence::evidence_types::VerificationMethod;
 use anyhow::Result;
 use tracing::{debug, info, warn};
+use std::sync::Arc;
+use system_quality_security::provenance_service::ProvenanceService;
 
 /// Main evidence collector that orchestrates evidence collection from multiple sources
 
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Serialize, Deserialize) ]
 pub struct EvidenceCollector {
     config: EvidenceCollectorConfig,
     code_analyzer: CodeAnalysisCollector,
@@ -28,6 +30,8 @@ pub struct EvidenceCollector {
     security_scanner: SecurityCollector,
     constitutional_checker: ConstitutionalCollector,
     evidence_filter: EvidenceFilter,
+    #[serde(skip)]
+    provenance_service: Option<Arc<ProvenanceService>>,
 }
 
 impl EvidenceCollector {
@@ -42,6 +46,7 @@ impl EvidenceCollector {
             security_scanner: SecurityCollector::new(),
             constitutional_checker: ConstitutionalCollector::new(),
             evidence_filter: EvidenceFilter::new(),
+            provenance_service: None,
         }
     }
 
@@ -56,7 +61,28 @@ impl EvidenceCollector {
             security_scanner: SecurityCollector::with_config(config.clone()),
             constitutional_checker: ConstitutionalCollector::with_config(config.clone()),
             evidence_filter: EvidenceFilter::with_config(config),
+            provenance_service: None,
         }
+    }
+
+    /// Create a new evidence collector with provenance service
+    pub fn with_provenance_service(provenance_service: Arc<ProvenanceService>) -> Self {
+        Self {
+            config: EvidenceCollectorConfig::default(),
+            code_analyzer: CodeAnalysisCollector::new(),
+            test_executor: TestExecutionCollector::new(Default::default()),
+            doc_reviewer: DocumentationCollector::new(),
+            performance_analyzer: PerformanceCollector::new(),
+            security_scanner: SecurityCollector::new(),
+            constitutional_checker: ConstitutionalCollector::new(),
+            evidence_filter: EvidenceFilter::new(),
+            provenance_service: Some(provenance_service),
+        }
+    }
+
+    /// Set provenance service (for dependency injection)
+    pub fn set_provenance_service(&mut self, provenance_service: Arc<ProvenanceService>) {
+        self.provenance_service = Some(provenance_service);
     }
 
     /// Main entry point: collect evidence for a single atomic claim
@@ -217,55 +243,121 @@ impl EvidenceCollector {
     pub async fn collect_caws_provenance_evidence(&self, claim: &AtomicClaim) -> Result<Vec<Evidence>> {
         debug!("Collecting CAWS provenance evidence for claim: {}", claim.id);
 
-        // TODO: Implement comprehensive CAWS provenance evidence collection
-        //       Currently returns placeholder evidence; should implement comprehensive collection that integrates with CAWS provenance tracking, converts provenance entries to evidence format, and calculates evidence relevance and confidence.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - CAWS provenance tracking is integrated
-        // - Provenance entries are converted to evidence format
-        // - Evidence relevance and confidence are calculated
-        // - Evidence collection handles missing provenance gracefully
-        //
-        // DEPENDENCIES:
-        // - CAWS provenance tracking integration (Required)
-        // - Evidence format conversion utilities (Required)
-        // - Relevance and confidence calculation (Required)
-        //
-        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (evidence collection functionality)
-        // - Change Budget: ~250 LOC
-        // - Reviewer Requirements: Provenance tracking and evidence collection expertise
-        Ok(vec![Evidence {
-            id: uuid::Uuid::new_v4(),
-            claim_id: claim.id,
-            evidence_type: EvidenceType::Supporting,
-            content: "CAWS provenance evidence collection not yet implemented".to_string(),
-            source: EvidenceSource::General {
-                location: "caws".to_string(),
-                authority: "caws".to_string(),
-                freshness: chrono::Utc::now(),
-            },
-            confidence: 0.6,
-            relevance: 0.7,
-            timestamp: chrono::Utc::now(),
-        }])
+        // Extract task_id from claim scope
+        // working_spec_id might be a UUID string or a plan ID like "PLAN-123"
+        // Try parsing as UUID first, then try to extract from plan ID format
+        let task_id = claim.scope.working_spec_id
+            .parse::<uuid::Uuid>()
+            .ok()
+            .or_else(|| {
+                // If working_spec_id is in format "PLAN-{uuid}", extract the UUID part
+                if claim.scope.working_spec_id.starts_with("PLAN-") {
+                    claim.scope.working_spec_id
+                        .strip_prefix("PLAN-")
+                        .and_then(|s| s.parse::<uuid::Uuid>().ok())
+                } else {
+                    None
+                }
+            });
+
+        // If no provenance service available, return empty evidence with warning
+        let provenance_service = match &self.provenance_service {
+            Some(service) => service,
+            None => {
+                warn!("ProvenanceService not available - cannot collect CAWS provenance evidence");
+                return Ok(vec![]);
+            }
+        };
+
+        // If no task_id available, try to query by claim text or return empty
+        let task_id = match task_id {
+            Some(id) => id,
+            None => {
+                warn!("Cannot extract task_id from claim scope - skipping provenance evidence collection");
+                return Ok(vec![]);
+            }
+        };
+
+        // Query provenance chain for this task
+        let provenance_chain = match provenance_service.get_provenance_chain(task_id).await {
+            Ok(chain) => chain,
+            Err(e) => {
+                warn!("Failed to query provenance chain for task {}: {}", task_id, e);
+                return Ok(vec![]);
+            }
+        };
+
+        // Convert provenance entries to evidence
+        let mut evidence_items = Vec::new();
+        
+        for record in provenance_chain.entries {
+            // Extract CAWS compliance information
+            let caws_compliance = &record.caws_compliance;
+            
+            // Build evidence content from provenance record
+            let mut content_parts = Vec::new();
+            content_parts.push(format!("CAWS Compliance Score: {:.2}", caws_compliance.compliance_score));
+            content_parts.push(format!("Compliant: {}", caws_compliance.is_compliant));
+            
+            if !caws_compliance.violations.is_empty() {
+                content_parts.push(format!("Violations: {}", caws_compliance.violations.len()));
+                for violation in &caws_compliance.violations {
+                    let severity_str = format!("{:?}", violation.severity);
+                    content_parts.push(format!("  - [{}] {}", severity_str, violation.description));
+                }
+            }
+            
+            if !caws_compliance.waivers_used.is_empty() {
+                content_parts.push(format!("Waivers Used: {}", caws_compliance.waivers_used.len()));
+            }
+            
+            // Calculate relevance based on claim type and provenance data
+            let relevance = if matches!(claim.claim_type, ClaimType::Constitutional) {
+                0.9 // High relevance for constitutional claims
+            } else if caws_compliance.is_compliant {
+                0.7 // Medium relevance for compliant records
+            } else {
+                0.5 // Lower relevance for non-compliant records
+            };
+            
+            // Calculate confidence based on compliance score and chain integrity
+            let confidence = if provenance_chain.integrity_verified {
+                caws_compliance.compliance_score as f64
+            } else {
+                caws_compliance.compliance_score as f64 * 0.8 // Reduce confidence if chain integrity not verified
+            };
+            
+            // Determine evidence type based on compliance status
+            let evidence_type = if caws_compliance.is_compliant {
+                EvidenceType::ConstitutionalReference
+            } else {
+                EvidenceType::Supporting
+            };
+            
+            evidence_items.push(Evidence {
+                id: record.id,
+                claim_id: claim.id,
+                evidence_type,
+                content: content_parts.join("\n"),
+                source: EvidenceSource::General {
+                    location: format!("provenance:{}", record.id),
+                    authority: "CAWS Provenance System".to_string(),
+                    freshness: record.timestamp,
+                },
+                confidence,
+                relevance,
+                timestamp: record.timestamp,
+            });
+        }
+        
+        info!(
+            "Collected {} CAWS provenance evidence items for claim {} from task {}",
+            evidence_items.len(),
+            claim.id,
+            task_id
+        );
+        
+        Ok(evidence_items)
     }
 }
 

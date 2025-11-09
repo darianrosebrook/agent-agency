@@ -339,7 +339,7 @@ Response Enhancement
 
 ---
 
-*This document describes the implemented architecture as of the Core ML acceleration system completion. All claims are backed by working code and validated through automated testing.*
+*This document describes the implemented architecture. Claims reflect current implementation status based on codebase analysis. Test coverage varies by component - see individual component READMEs for specific test status.*
 
 
 

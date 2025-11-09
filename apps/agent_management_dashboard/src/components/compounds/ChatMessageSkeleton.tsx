@@ -1,7 +1,7 @@
-import { Bot } from 'lucide-react';
-import { Skeleton } from '../ui/skeleton';
-import { TaskTimeline } from '../TaskTimeline';
-import type { Task } from '../composers/Chat';
+import { Bot } from "lucide-react";
+import { Skeleton } from "../ui/skeleton";
+import { TaskTimeline } from "../TaskTimeline";
+import type { Task } from "../composers/Chat";
 
 interface ChatMessageSkeletonProps {
   tasks?: Task[];
@@ -44,11 +44,22 @@ export function ChatMessageSkeleton({ tasks = [] }: ChatMessageSkeletonProps) {
               {/* Pulsing Indicator */}
               <div className="flex items-center gap-2 pt-2">
                 <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></div>
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '150ms' }}></div>
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '300ms' }}></div>
+                  <div
+                    className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"
+                    style={{ animationDelay: "0ms" }}
+                  ></div>
+                  <div
+                    className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"
+                    style={{ animationDelay: "150ms" }}
+                  ></div>
+                  <div
+                    className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"
+                    style={{ animationDelay: "300ms" }}
+                  ></div>
                 </div>
-                <span className="text-xs text-gray-500">Generating response...</span>
+                <span className="text-xs text-gray-500">
+                  Generating response...
+                </span>
               </div>
             </div>
           </div>

@@ -16,54 +16,54 @@ This system combines multiple memory technologies:
 
 ## Key Features
 
-### 🗄️ **Database Persistence**
+### **Database Persistence**
 - **PostgreSQL Integration**: Full persistence with connection pooling and health monitoring
 - **Migration System**: Automatic schema updates with rollback support
 - **Multi-Tenancy**: Row Level Security (RLS) for tenant isolation
 - **Transaction Safety**: ACID compliance for memory operations
 - **Backup Integration**: Memory data included in system backups
 
-### 🧠 **Multi-Modal Memory**
+### **Multi-Modal Memory**
 - **Episodic Memory**: Specific events and experiences with full context
 - **Semantic Memory**: General knowledge and facts with cross-linking
 - **Procedural Memory**: Task execution patterns and capabilities
 - **Working Memory**: Temporary context for current task execution
 
-### 🔄 **Automated Memory Management**
+### **Automated Memory Management**
 - **Decay Scheduler**: Background task for configurable forgetting curves
 - **Context Offloading**: Strategic memory compression and external storage
 - **Lifecycle Management**: Automatic archival, consolidation, and cleanup
 - **Importance Weighting**: Access patterns and significance scoring
 - **Maintenance Automation**: Self-regulating memory health and optimization
 
-### 🔍 **Intelligent Retrieval**
+### **Intelligent Retrieval**
 - **Hybrid Search**: Combines vector similarity with graph traversal
 - **Multi-Hop Reasoning**: Follows relationship chains up to N hops
 - **Context-Aware Retrieval**: Retrieves memories based on current task context
 - **Temporal Weighting**: Prioritizes recent, relevant memories
 - **Importance Scoring**: Memory strength based on access patterns and significance
 
-### ⏰ **Temporal Intelligence**
+### **Temporal Intelligence**
 - **Decay Management**: Configurable forgetting curves (exponential, power-law, logarithmic)
 - **Importance Boosting**: Recent access and successful outcomes increase memory strength
 - **Change Point Detection**: Identifies significant shifts in agent performance
 - **Causality Analysis**: Discovers cause-effect relationships in experiences
 - **Trend Forecasting**: Predicts future performance based on historical patterns
 
-### 🏗️ **Knowledge Architecture**
+### **Knowledge Architecture**
 - **Entity Deduplication**: Merges similar entities with confidence scoring
 - **Relationship Mining**: Automatic extraction of entity relationships from experiences
 - **Graph Traversal**: Efficient navigation of complex knowledge networks
 - **Cross-Modal Linking**: Connects different memory types (episodic ↔ semantic)
 
-### 🔗 **Service Integration**
+### **Service Integration**
 - **Chat Service**: Memory-enhanced conversation with context persistence
 - **Context Manager**: Database-backed context preservation and retrieval
 - **Ingestors**: File and data ingestion with automatic memory storage
 - **API Server**: REST endpoints for memory operations with authentication
 - **File Watcher**: Real-time ingestion triggers with notify crate integration
 
-### 📊 **Observability & Analytics**
+### **Observability & Analytics**
 - **Memory Health Metrics**: Usage statistics, decay patterns, retrieval performance
 - **Performance Analytics**: Agent capability evolution and learning trends
 - **Provenance Tracking**: Complete audit trail of memory operations

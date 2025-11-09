@@ -1,8 +1,8 @@
 function Frame1() {
   return (
     <div className="content-stretch flex gap-[8px] items-start relative shrink-0">
-      <Componentstatusbadge />
-      <Componentstatusbadge1 />
+      <ComponentStatusBadge />
+      <ComponentStatusBadge />
     </div>
   );
 }
@@ -11,7 +11,7 @@ function Frame2() {
   return (
     <div className="content-stretch flex items-start justify-between relative shrink-0 w-full">
       <Frame1 />
-      <Icon />
+      <ComponentStatusBadge />
     </div>
   );
 }
@@ -31,7 +31,7 @@ function ComponentStatusBadge() {
   return (
     <div className="relative rounded-[2px] shrink-0" data-name=".component status badge">
       <div className="box-border content-stretch flex items-center overflow-clip px-[4px] py-[2px] relative rounded-[inherit]">
-        <Icon1 />
+        <div className="w-2 h-2 bg-[#cacaca] rounded" />
         <div className="flex flex-col font-['Inter:Bold',sans-serif] font-bold justify-center leading-[0] not-italic relative shrink-0 text-[#cacaca] text-[8px] text-nowrap text-right tracking-[0.12px]">
           <p className="leading-none whitespace-pre">12 tasks</p>
         </div>

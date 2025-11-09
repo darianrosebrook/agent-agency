@@ -1,6 +1,6 @@
 # CoreML Safety Architecture
 
-**Status**: Implemented | **Last Updated**: October 23, 2025
+**Status**: Implemented | **Last Updated**: January 2025
 
 ## Overview
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Folder } from "lucide-react";
 import svgPaths from "../../imports/svg-jzcqnicw4t";
 import { ChatSidebar } from "./ChatSidebar";
 import WorkspacePanel from "../../imports/WorkspacePanel";

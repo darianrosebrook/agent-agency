@@ -16,32 +16,32 @@ This worker orchestration platform consolidates multiple execution capabilities:
 
 ## Key Features
 
-### 🔧 **MCP Tool Integration**
+### **MCP Tool Integration**
 - **Tool-Based Execution**: Extensible tool system using Model Context Protocol
 - **Dynamic Tool Discovery**: Runtime tool registration and capability negotiation
 - **Tool Orchestration**: Complex workflows composed from simple tools
 - **Tool Versioning**: Tool compatibility and version management
 
-### ⚡ **Parallel Task Execution**
+### **Parallel Task Execution**
 - **Task Decomposition**: Intelligent breakdown of complex tasks into parallel subtasks
 - **Execution Coordination**: Synchronization and result aggregation across parallel tasks
 - **Load Balancing**: Optimal worker utilization and task distribution
 - **Dependency Management**: Complex task dependencies and execution ordering
 
-### 👥 **Specialized Worker Types**
+### **Specialized Worker Types**
 - **Compilation Specialist**: Code compilation, optimization, and build management
 - **Testing Specialist**: Comprehensive testing execution and result analysis
 - **Refactoring Specialist**: Code restructuring and improvement operations
 - **Documentation Specialist**: Automated documentation generation and maintenance
 - **Custom Specialists**: Extensible framework for domain-specific workers
 
-### ✅ **Quality Assurance**
+### **Quality Assurance**
 - **CAWS Compliance**: Constitutional AI worker standards validation
 - **Quality Gates**: Automated quality checks at each execution stage
 - **Artifact Validation**: Result verification and integrity checking
 - **Execution Auditing**: Complete audit trails and provenance tracking
 
-### 🧠 **Intelligent Routing**
+### **Intelligent Routing**
 - **Capability Matching**: Task routing based on worker capabilities and expertise
 - **Load Balancing**: Optimal distribution across available workers
 - **Performance Optimization**: Worker selection based on historical performance
@@ -71,7 +71,7 @@ WorkerExecutionBridge::execute_milestone()
 - Environment variable: `WORKER_{UUID}_ENDPOINT` for specific worker endpoints
 - Pattern variable: `WORKER_ENDPOINT_PATTERN` for generic endpoint patterns
 - Default: `http://worker-{id}.local:8080` (for distributed HTTP workers)
-- Database query: PLACEHOLDER - will query worker registry when implemented
+- Database query: Worker registry querying via database (implementation status: see codebase)
 
 ```mermaid
 graph TB

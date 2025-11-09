@@ -2,7 +2,9 @@
 
 ## Overview
 
-The Model Context Protocol (MCP) Tool Ecosystem provides **14 specialized AI-powered tools** for governance, policy enforcement, conflict resolution, evidence collection, quality assurance, and workflow optimization. These tools enable constitutional AI agents to operate with real-time oversight and automated quality control.
+This document describes the planned Model Context Protocol (MCP) Tool Ecosystem, which will provide **14 specialized AI-powered tools** for governance, policy enforcement, conflict resolution, evidence collection, quality assurance, and workflow optimization. These tools are designed to enable constitutional AI agents to operate with real-time oversight and automated quality control.
+
+**Current Status**: The MCP server implementation supports programmatic tool registration (file editing, CoreML ingestion, memory tools). The specialized governance tools described below are planned for future implementation.
 
 ## Tool Categories
 

@@ -138,7 +138,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   const getTasks = (projectId: string) => {
     const project = projects.find((p) => p.id === projectId);
-    return project?.tasks || [];
+    return project?.tasks ?? [];
   };
 
   return (

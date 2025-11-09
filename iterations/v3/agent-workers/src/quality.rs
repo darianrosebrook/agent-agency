@@ -6,12 +6,13 @@
 use schemars::JsonSchema;
 use crate::worker_types::*;
 use crate::execution::ExecutionResult;
-use agent_agency_council::CAWSValidator;
+use crate::caws_checker::CawsChecker;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// Quality validator for task results
 pub struct QualityValidator {
-    caws_validator: Option<CAWSValidator>,
+    caws_checker: Arc<CawsChecker>,
     quality_thresholds: HashMap<String, f64>,
 }
 
@@ -25,7 +26,21 @@ impl QualityValidator {
         thresholds.insert("code-generation".to_string(), 0.85);
 
         Self {
-            caws_validator: None, // Would be injected
+            caws_checker: Arc::new(CawsChecker::new()),
+            quality_thresholds: thresholds,
+        }
+    }
+
+    /// Create a new quality validator with custom CAWS checker
+    pub fn with_caws_checker(caws_checker: Arc<CawsChecker>) -> Self {
+        let mut thresholds = HashMap::new();
+        thresholds.insert("react-component".to_string(), 0.8);
+        thresholds.insert("file-editing".to_string(), 0.9);
+        thresholds.insert("research".to_string(), 0.7);
+        thresholds.insert("code-generation".to_string(), 0.85);
+
+        Self {
+            caws_checker,
             quality_thresholds: thresholds,
         }
     }
@@ -96,81 +111,76 @@ impl QualityValidator {
 
     /// Validate CAWS compliance
     async fn validate_caws_compliance(&self, result: &ExecutionResult) -> Result<ValidationResult, QualityError> {
-        // TODO: Implement CAWS validator integration
-        //       Currently returns basic compliance check; should use CAWS validator for comprehensive compliance checking.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Integrate with CAWS validator service
-        // [ ] Validate working spec against CAWS rules
-        // [ ] Generate detailed violation reports
-        // [ ] Calculate accurate compliance scores
-        // [ ] Handle validator service errors
-        // [ ] Add unit tests with mock CAWS validation
-        // [ ] Add integration tests with real CAWS compliance checking
-        // [ ] Performance: Validation should complete in <500ms
-        // [ ] Documentation: Document CAWS validation integration
-        //
-        // ACCEPTANCE CRITERIA:
-        // - CAWS validator is integrated properly
-        // - Working spec is validated against CAWS rules
-        // - Violation reports are detailed and actionable
-        // - Compliance scores are accurate
-        // - Validator errors are handled gracefully
-        //
-        // DEPENDENCIES:
-        // - CAWS validator service (Required)
-        // - CAWS rules definition (Required)
-        // - Validation result processing (Required)
-        //
-        // ESTIMATED EFFORT: 5-7 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (quality gate feature)
-        // - Change Budget: ~200 LOC
-        // - Reviewer Requirements: CAWS expertise
-        //
-        // TODO: Implement comprehensive CAWS working spec validation
-        //       Currently returns basic compliance check; should implement comprehensive validation that integrates with CAWS validator service, validates working spec against CAWS rules, and generates detailed violation reports with compliance scores.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - CAWS validator service is integrated
-        // - Working spec is validated against CAWS rules
-        // - Violation reports are detailed and actionable
-        // - Compliance scores are accurate
-        //
-        // DEPENDENCIES:
-        // - CAWS validator service (Required)
-        // - CAWS rules definition (Required)
-        // - Validation result processing (Required)
-        //
-        // ESTIMATED EFFORT: 5-7 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (quality gate feature)
-        // - Change Budget: ~200 LOC
-        // - Reviewer Requirements: CAWS expertise
-        Ok(ValidationResult {
-            score: 0.9,
-            violations: vec![],
-            recommendations: vec![],
-        })
+        use serde_json::json;
+        use tracing::warn;
+
+        // Build task specification from execution result
+        // Extract task information from result output or construct minimal spec
+        let task_spec = if let Some(output) = &result.output {
+            // Try to extract task spec from output if it contains one
+            if let Some(spec) = output.get("task_spec").or_else(|| output.get("working_spec")) {
+                // If output contains a task spec, serialize it
+                serde_json::to_string(spec)
+                    .unwrap_or_else(|_| {
+                        // Fallback: construct minimal spec from available data
+                        json!({
+                            "id": output.get("task_id").or_else(|| output.get("id")),
+                            "tool_id": result.tool_id.name.clone(),
+                            "success": result.success,
+                            "execution_time_ms": result.execution_time_ms,
+                        }).to_string()
+                    })
+            } else {
+                // Construct minimal spec from execution result
+                json!({
+                    "id": output.get("task_id").or_else(|| output.get("id")).and_then(|v| v.as_str()).unwrap_or("unknown"),
+                    "tool_id": result.tool_id.name.clone(),
+                    "success": result.success,
+                    "execution_time_ms": result.execution_time_ms,
+                    "risk_tier": "medium", // Default to medium risk
+                }).to_string()
+            }
+        } else {
+            // No output available, construct minimal spec
+            json!({
+                "id": "unknown",
+                "tool_id": result.tool_id.name.clone(),
+                "success": result.success,
+                "execution_time_ms": result.execution_time_ms,
+                "risk_tier": "medium",
+            }).to_string()
+        };
+
+        // Use CawsChecker to validate compliance
+        match self.caws_checker.check_compliance(&task_spec).await {
+            Ok(check_result) => {
+                // Convert CawsCheckResult to ValidationResult
+                let score = if check_result.compliant {
+                    0.95 // High score for compliant tasks
+                } else if check_result.violations.is_empty() {
+                    0.85 // Medium-high score if no violations but not explicitly compliant
+                } else {
+                    // Calculate score based on violation count
+                    // Start at 0.8 and reduce by 0.1 per violation, minimum 0.3
+                    (0.8 - (check_result.violations.len() as f64 * 0.1)).max(0.3)
+                };
+
+                Ok(ValidationResult {
+                    score,
+                    violations: check_result.violations,
+                    recommendations: check_result.recommendations,
+                })
+            }
+            Err(e) => {
+                warn!("CAWS compliance check failed: {}", e);
+                // Return a warning-level result instead of failing completely
+                Ok(ValidationResult {
+                    score: 0.7, // Reduced score for validation errors
+                    violations: vec![format!("CAWS validation error: {}", e)],
+                    recommendations: vec!["Review task specification and retry validation".to_string()],
+                })
+            }
+        }
     }
 
     /// Validate React component generation content

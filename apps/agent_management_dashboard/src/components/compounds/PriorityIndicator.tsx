@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 export interface PriorityConfig {
   label: string;
@@ -14,10 +14,10 @@ export interface PriorityIndicatorProps {
 }
 
 export function PriorityIndicator({
-  priority,
+  priority: _priority, // eslint-disable-line @typescript-eslint/no-unused-vars, no-unused-vars
   config,
   onClick,
-  className = '',
+  className = "",
 }: PriorityIndicatorProps) {
   const content = (
     <>
@@ -38,6 +38,7 @@ export function PriorityIndicator({
     );
   }
 
-  return <div className={`flex items-center gap-2 ${className}`}>{content}</div>;
+  return (
+    <div className={`flex items-center gap-2 ${className}`}>{content}</div>
+  );
 }
-

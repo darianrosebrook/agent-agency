@@ -82,6 +82,8 @@ data-infrastructure = { path = "../data-infrastructure" }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 system-configuration = { path = "../system-configuration" }
 system-observability = { path = "../system-observability" }
+system-quality-security = { path = "../system-quality-security" }
+development-tools = { path = "../development-tools" }
 
 [features]
 default = []

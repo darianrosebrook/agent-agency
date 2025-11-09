@@ -26,11 +26,12 @@ cd agent-agency/iterations/v3
 cargo build --workspace
 npm install
 
-# Initialize CAWS
-cargo run --bin caws -- init --interactive
+# Initialize CAWS (Node.js tool)
+cd apps/tools/caws
+node cli.js init --interactive
 
 # Verify installation
-cargo run --bin system-health-check
+cargo check --workspace
 ```
 
 ## Core Workflows
@@ -42,17 +43,22 @@ The primary workflow for running autonomous agents on development tasks.
 #### Basic Task Execution
 
 ```bash
-# Execute a single task
-cargo run --bin cli -- execute-task \
-  --task "Add user authentication to the API" \
-  --scope "src/api/,tests/api/" \
-  --risk-tier 2
+# Execute a task via API (CLI binary temporarily disabled)
+curl -X POST http://localhost:8080/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task": "Add user authentication to the API",
+    "scope": {"in": ["src/api/", "tests/api/"]},
+    "risk_tier": 2
+  }'
 
-# Execute with specific model
-cargo run --bin cli -- execute-task \
-  --task "Implement caching layer" \
-  --model "coreml:mistral-7b" \
-  --execution-mode auto
+# Execute with specific execution mode
+curl -X POST http://localhost:8080/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task": "Implement caching layer",
+    "execution_mode": "auto"
+  }'
 ```
 
 #### Task Configuration
@@ -94,26 +100,35 @@ acceptance:
 
 **Strict Mode** (Human-in-the-loop):
 ```bash
-cargo run --bin cli -- execute-task \
-  --task "Refactor database layer" \
-  --execution-mode strict \
-  --require-approval
+curl -X POST http://localhost:8080/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task": "Refactor database layer",
+    "execution_mode": "strict",
+    "require_approval": true
+  }'
 ```
 
 **Autonomous Mode** (Fully automated):
 ```bash
-cargo run --bin cli -- execute-task \
-  --task "Add unit tests for user service" \
-  --execution-mode auto \
-  --max-iterations 5
+curl -X POST http://localhost:8080/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task": "Add unit tests for user service",
+    "execution_mode": "auto",
+    "max_iterations": 5
+  }'
 ```
 
 **Dry Run Mode** (Planning only):
 ```bash
-cargo run --bin cli -- execute-task \
-  --task "Implement new feature" \
-  --execution-mode dry-run \
-  --output-plan
+curl -X POST http://localhost:8080/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task": "Implement new feature",
+    "execution_mode": "dry-run",
+    "output_plan": true
+  }'
 ```
 
 ### 2. Multi-Agent Orchestration
@@ -123,38 +138,48 @@ For complex tasks requiring multiple specialized agents.
 #### Worker Pool Management
 
 ```bash
-# Start worker pool
-cargo run --bin worker-pool -- start \
-  --workers 4 \
-  --specialties "frontend,backend,database,testing"
+# Start worker service
+cargo run --bin agent-workers
 
-# Submit orchestrated task
-cargo run --bin orchestrator -- submit \
-  --task "Build full-stack application" \
-  --coordination-strategy "sequential" \
-  --quality-gates "all"
+# Submit orchestrated task via API
+curl -X POST http://localhost:8080/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task": "Build full-stack application",
+    "coordination_strategy": "sequential",
+    "quality_gates": "all"
+  }'
 ```
 
 #### Specialized Agent Execution
 
 ```bash
-# Frontend specialist
-cargo run --bin cli -- execute-task \
-  --task "Implement React components" \
-  --specialty frontend \
-  --framework react
+# Submit tasks with specific requirements via API
+curl -X POST http://localhost:8080/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task": "Implement React components",
+    "required_tools": ["frontend"],
+    "metadata": {"framework": "react"}
+  }'
 
 # Backend specialist  
-cargo run --bin cli -- execute-task \
-  --task "Design API endpoints" \
-  --specialty backend \
-  --framework rust
+curl -X POST http://localhost:8080/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task": "Design API endpoints",
+    "required_tools": ["backend"],
+    "metadata": {"framework": "rust"}
+  }'
 
 # Database specialist
-cargo run --bin cli -- execute-task \
-  --task "Design database schema" \
-  --specialty database \
-  --engine postgresql
+curl -X POST http://localhost:8080/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task": "Design database schema",
+    "required_tools": ["database"],
+    "metadata": {"engine": "postgresql"}
+  }'
 ```
 
 ### 3. Quality Assurance Workflows
@@ -181,22 +206,16 @@ cargo run --bin test-runner -- \
 #### Code Quality Gates
 
 ```bash
-# Run CAWS validation
-cargo run --bin caws -- validate \
-  --working-spec .caws/working-spec.yaml \
-  --auto-fix
+# Run CAWS validation (Node.js tool)
+cd apps/tools/caws
+node validate.js .caws/working-spec.yaml
 
 # Run linting and formatting
-cargo run --bin quality-gates -- \
-  --lint \
-  --format \
-  --type-check
+cargo clippy --workspace -- -D warnings
+cargo fmt --check
 
-# Run security scan
-cargo run --bin security-scanner -- \
-  --scan-code \
-  --scan-dependencies \
-  --report-format json
+# Run type checking
+cargo check --workspace
 ```
 
 #### Performance Testing
@@ -272,11 +291,9 @@ cargo run --bin log-monitor -- \
 #### Local Model Setup
 
 ```bash
-# Download and configure local model
-cargo run --bin model-manager -- \
-  --download "llama3.1:8b" \
-  --quantization "q4_0" \
-  --optimization "coreml"
+# Download and configure local model (if model-manager binary exists)
+# Note: Verify binary availability before use
+# Alternative: Use API endpoints or manual model configuration
 
 # Test model performance
 cargo run --bin model-benchmark -- \
@@ -441,27 +458,27 @@ agents:
 #### Agent Execution Failures
 
 ```bash
-# Check agent status
-cargo run --bin agent-status -- --agent-id "agent-001"
+# Check agent status via API
+curl http://localhost:8080/api/v1/tasks/agent-001/status
 
-# View agent logs
-cargo run --bin log-viewer -- --agent-id "agent-001" --tail 100
+# View agent logs via API
+curl http://localhost:8080/api/v1/tasks/agent-001/logs?tail=100
 
-# Restart failed agent
-cargo run --bin agent-manager -- restart --agent-id "agent-001"
+# Restart failed agent via API
+curl -X POST http://localhost:8080/api/v1/tasks/agent-001/restart
 ```
 
 #### Model Loading Issues
 
 ```bash
-# Check model status
-cargo run --bin model-status -- --model "llama3.1:8b"
+# Check model status via API
+curl http://localhost:8080/api/v1/models/llama3.1:8b/status
 
-# Test model connectivity
-cargo run --bin model-tester -- --model "llama3.1:8b" --test "ping"
+# Test model connectivity (if model-tester binary exists)
+# Note: Verify binary availability before use
 
-# Reload model
-cargo run --bin model-manager -- reload --model "llama3.1:8b"
+# Reload model via API (if endpoint exists)
+curl -X POST http://localhost:8080/api/v1/models/llama3.1:8b/reload
 ```
 
 #### Workspace Issues

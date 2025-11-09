@@ -1,59 +1,117 @@
 //! CAWS Integration
 //!
-//! DEPRECATION NOTICE: CawsIntegration migrating to caws-runtime-validator
-//! See: iterations/v3/caws/runtime-validator/src/integration.rs
-//! TODO: Remove after migration complete (target: Phase 2.2)
-//!
 //! Integrates CAWS compliance checking with MCP tools and execution.
-
-// Re-export from runtime-validator (primary implementation)
-// pub use caws_runtime_validator::integration::{
-//     McpIntegration, DefaultMcpIntegration, McpValidationResult,
-//     ToolExecutionContext, ToolExecutionRecord, McpIntegrationError, McpCawsIntegration
-// };
+//! Uses development-tools CAWS validator for real validation.
 
 use schemars::JsonSchema;
 use crate::mcp_types::*;
 use anyhow::Result;
-use std::fs;
+use std::sync::Arc;
 use std::path::Path;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::fs;
+use development_tools::validator::{CawsValidator, ValidationContext, DiffStats};
+use development_tools::policy::CawsPolicy;
+use tracing::{info, warn, debug};
+use tokio::sync::RwLock;
+use uuid::Uuid;
 
-/// Placeholder CAWS integration implementation
-#[derive(Debug, Clone, Default, JsonSchema)]
+/// CAWS runtime validator integration for MCP
+#[derive(Debug, Clone)]
 pub struct McpCawsIntegration {
-    // Placeholder fields
+    validator: Arc<CawsValidator>,
+    policy: Arc<CawsPolicy>,
+}
+
+impl Default for McpCawsIntegration {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl McpCawsIntegration {
     pub fn new() -> Self {
-        Self::default()
+        let policy = Arc::new(CawsPolicy::default());
+        let validator = Arc::new(CawsValidator::new((*policy).clone()));
+        
+        Self {
+            validator,
+            policy,
+        }
     }
 
-    pub async fn validate_tool_manifest(&self, _manifest: &serde_json::Value) -> Result<CawsComplianceResult> {
-        // TODO: Implement real CAWS tool manifest validation
-        // - [ ] Integrate with caws-runtime-validator crate
-        // - [ ] Validate tool manifest against CAWS rules
-        // - [ ] Check compliance with change budgets and scope boundaries
-        // - [ ] Generate detailed violation reports
-        // - [ ] Calculate accurate compliance scores
-        // - [ ] Add unit tests with mock tool manifests
-        // - [ ] Add integration tests with real CAWS validation
-        // Placeholder implementation
+    pub async fn validate_tool_manifest(&self, manifest: &serde_json::Value) -> Result<CawsComplianceResult> {
+        info!("Validating tool manifest for CAWS compliance");
+        
+        // Extract tool information from manifest
+        let tool_name = manifest.get("name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown")
+            .to_string();
+        
+        // Extract risk tier from manifest or default to medium
+        let risk_tier = manifest.get("risk_tier")
+            .and_then(|v| v.as_str())
+            .unwrap_or("medium")
+            .to_string();
+        
+        // Build validation context from manifest
+        let validation_context = ValidationContext {
+            task_id: tool_name.clone(),
+            risk_tier: risk_tier.clone(),
+            working_spec: manifest.clone(),
+            diff_stats: DiffStats {
+                files_changed: 0, // Tool manifests don't have file changes
+                lines_added: 0,
+                lines_deleted: 0,
+                files_modified: vec![],
+            },
+            test_results: None,
+            security_scan: None,
+        };
+        
+        // Perform validation
+        let validation_result = self.validator.validate(validation_context).await;
+        
+        // Convert validation result to CawsComplianceResult
+        let violations: Vec<CawsViolation> = validation_result.violations
+            .into_iter()
+            .map(|v| CawsViolation {
+                rule_id: v.rule_id,
+                rule_name: v.message.clone(),
+                severity: match v.severity {
+                    development_tools::policy::ViolationSeverity::Info => ViolationSeverity::Info,
+                    development_tools::policy::ViolationSeverity::Warning => ViolationSeverity::Warning,
+                    development_tools::policy::ViolationSeverity::Error => ViolationSeverity::Error,
+                    development_tools::policy::ViolationSeverity::Critical => ViolationSeverity::Critical,
+                },
+                description: v.message,
+                suggestion: v.remediation,
+                line_number: v.location.as_ref().and_then(|l| l.line),
+                column_number: v.location.as_ref().and_then(|l| l.column),
+                file_path: v.location.as_ref().and_then(|l| l.file.clone()),
+            })
+            .collect();
+        
+        // Calculate compliance score (already calculated in validation_result)
+        let compliance_score = validation_result.compliance_score;
+        let is_compliant = validation_result.passed;
+        
+        info!(
+            "Tool manifest validation completed: compliant={}, score={:.2}, violations={}",
+            is_compliant,
+            compliance_score,
+            violations.len()
+        );
+        
         Ok(CawsComplianceResult {
-            is_compliant: true,
-            violations: vec![],
-            compliance_score: 1.0,
-            checked_at: chrono::Utc::now(),
-            rulebook_version: "placeholder".to_string(),
+            is_compliant,
+            violations,
+            compliance_score,
+            checked_at: validation_result.validated_at,
+            rulebook_version: "1.0".to_string(), // TODO: Get from policy
         })
     }
 }
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use tracing::{debug, info};
-use uuid::Uuid;
 
 /// CAWS integration service
 #[deprecated(note = "Use caws_runtime_validator::integration::McpCawsIntegration")]

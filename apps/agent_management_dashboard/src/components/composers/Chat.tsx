@@ -352,7 +352,7 @@ export function Chat() {
           <PromptBox />
         </div>
 
-        <FileDropzone
+        <FileDropzoneModal
           open={isModalOpen}
           onOpenChange={setIsModalOpen}
           onFilesAdded={handleFilesAdded}

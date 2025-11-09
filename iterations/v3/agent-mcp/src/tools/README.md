@@ -1,15 +1,17 @@
 # MCP Tools Directory
 
-This directory contains tool manifests that can be automatically discovered and used by the Agent Agency V3 MCP (Model Context Protocol) system.
+This directory contains tool implementations that are programmatically registered with the Agent Agency V3 MCP (Model Context Protocol) system.
 
-## How Tool Discovery Works
+## How Tool Registration Works
 
-The MCP server automatically discovers tools by:
+The MCP server registers tools programmatically:
 
-1. **Scanning configured paths** for manifest files (`.json` or `.toml` files)
-2. **Parsing manifest files** to extract tool definitions
-3. **Validating tools** against CAWS compliance rules
-4. **Registering tools** in the MCP registry for execution
+1. **Factory Functions**: Tools are created via factory functions (`create_file_editing_tools`, `create_coreml_ingestion_tools`)
+2. **Programmatic Registration**: Tools are registered in the `ToolRegistry` during initialization
+3. **CAWS Validation**: All tools are validated against CAWS compliance rules during registration
+4. **Runtime Availability**: Registered tools are immediately available for execution
+
+**Note**: Manifest-based discovery is planned for future external tool integration, but current tools are programmatically created.
 
 ## Tool Manifest Format
 

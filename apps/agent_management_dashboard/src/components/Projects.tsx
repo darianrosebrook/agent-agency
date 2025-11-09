@@ -38,7 +38,6 @@ type SortOrder = "asc" | "desc";
 export function Projects() {
   const {
     projects,
-    currentProjectId,
     getCurrentProject,
     createProject,
     selectProject,
@@ -106,8 +105,8 @@ export function Projects() {
 
   // Sort and paginate projects for table
   const sortedProjects = [...filteredProjects].sort((a, b) => {
-    let aValue: any = a[sortField];
-    let bValue: any = b[sortField];
+    let aValue: string | Date = a[sortField];
+    let bValue: string | Date = b[sortField];
 
     if (sortField === "createdAt" || sortField === "lastAccessed") {
       aValue = aValue.getTime();
@@ -375,7 +374,7 @@ export function Projects() {
                       </div>
                     </TableCell>
                     <TableCell className="text-gray-400 max-w-md truncate">
-                      {project.summary || "—"}
+                      {project.summary ?? "—"}
                     </TableCell>
                     <TableCell className="text-gray-400">
                       {formatDate(project.createdAt)}

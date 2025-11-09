@@ -14,10 +14,7 @@ import {
   Moon,
   ChevronDown,
   FolderPlus,
-  X,
 } from "lucide-react";
-
-import { Button } from "../ui/button";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {

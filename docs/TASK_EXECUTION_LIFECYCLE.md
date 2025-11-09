@@ -57,14 +57,16 @@ Content-Type: application/json
 }
 ```
 
-**CLI Interface**:
+**API Interface** (CLI temporarily disabled):
 ```bash
-agent-agency-cli task create \
-  --description "Implement user authentication" \
-  --mode auto \
-  --priority high \
-  --requirements secure,scalable,tested \
-  --deadline 2024-12-31
+curl -X POST http://localhost:8080/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Implement user authentication",
+    "execution_mode": "auto",
+    "priority": "high",
+    "requirements": ["secure", "scalable", "tested"]
+  }'
 ```
 
 **Programmatic API**:

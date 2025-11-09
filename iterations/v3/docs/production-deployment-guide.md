@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide covers the complete production deployment of Agent Agency V3, a production-ready autonomous AI development platform. The system includes constitutional AI governance, autonomous execution, and comprehensive safety controls.
+This guide covers production deployment procedures for Agent Agency V3, an autonomous AI development platform in active development. The system includes constitutional AI governance, autonomous execution, and comprehensive safety controls.
 
 ## Architecture Overview
 
@@ -56,7 +56,7 @@ This guide covers the complete production deployment of Agent Agency V3, a produ
 - **Rust**: 1.75+
 - **Node.js**: 18+
 - **pnpm**: 8+
-- **CAWS CLI**: Latest version
+- **CAWS CLI**: Node.js tool (located at `apps/tools/caws/cli.js`)
 
 ## Deployment Options
 

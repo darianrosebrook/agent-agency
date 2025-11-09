@@ -5,13 +5,13 @@ export async function simulateAIResponse(
   messages: Message[],
   updateMessageInCurrentChat: (
     messageId: string,
-    updates: Partial<Message>,
+    updates: Partial<Message>
   ) => void,
-  addMessageToCurrentChat: (message: Message) => void,
+  addMessageToCurrentChat: (message: Message) => void
 ) {
   // Check if this is the first user message - if so, generate a plan
   // Count only user messages (excluding the current assistant response being generated)
-  const userMessages = messages.filter(m => m.role === 'user');
+  const userMessages = messages.filter((m) => m.role === "user");
   const isFirstMessage = userMessages.length === 1;
 
   if (isFirstMessage) {
@@ -49,17 +49,15 @@ export async function simulateAIResponse(
           idx === i
             ? { ...t, status: "in-progress" as const }
             : idx < i
-              ? { ...t, status: "completed" as const }
-              : t,
+            ? { ...t, status: "completed" as const }
+            : t
         ),
       });
 
       await new Promise((resolve) => setTimeout(resolve, 1200));
       updateMessageInCurrentChat(messageId, {
         tasks: tasks.map((t, idx) =>
-          idx <= i
-            ? { ...t, status: "completed" as const }
-            : t,
+          idx <= i ? { ...t, status: "completed" as const } : t
         ),
       });
     }
@@ -121,17 +119,15 @@ Let me create a comprehensive project plan that breaks this down into manageable
           idx === i
             ? { ...t, status: "in-progress" as const }
             : idx < i
-              ? { ...t, status: "completed" as const }
-              : t,
+            ? { ...t, status: "completed" as const }
+            : t
         ),
       });
 
       await new Promise((resolve) => setTimeout(resolve, 1200));
       updateMessageInCurrentChat(messageId, {
         tasks: tasks.map((t, idx) =>
-          idx <= i
-            ? { ...t, status: "completed" as const }
-            : t,
+          idx <= i ? { ...t, status: "completed" as const } : t
         ),
       });
     }

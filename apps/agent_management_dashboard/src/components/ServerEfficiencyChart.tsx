@@ -1,5 +1,5 @@
-import { BentoPanel } from './compounds';
-import { ArrowUpRight } from 'lucide-react';
+import { BentoPanel } from "./compounds";
+import { ArrowUpRight } from "lucide-react";
 
 interface ServerEfficiencyChartProps {
   title?: string;
@@ -8,7 +8,7 @@ interface ServerEfficiencyChartProps {
 
 export function ServerEfficiencyChart({
   title = "Server Efficiency Analysis",
-  efficiency = 55
+  efficiency = 55,
 }: ServerEfficiencyChartProps) {
   // Generate bar data with varying heights
   const bars = [
@@ -19,7 +19,7 @@ export function ServerEfficiencyChart({
     { height: 85 },
     { height: 40 },
     { height: 70 },
-    { height: 90 }
+    { height: 90 },
   ];
 
   return (
@@ -35,9 +35,7 @@ export function ServerEfficiencyChart({
 
         {/* Efficiency Metric */}
         <div className="mb-6">
-          <div className="text-white text-4xl">
-            +{efficiency}%
-          </div>
+          <div className="text-white text-4xl">+{efficiency}%</div>
         </div>
 
         {/* Bar Chart */}

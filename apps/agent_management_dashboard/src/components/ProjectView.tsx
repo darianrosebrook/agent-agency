@@ -82,7 +82,7 @@ export function ProjectView({
             {/* Tabs */}
             <div className="h-[35.994px] relative shrink-0">
               <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[35.994px] relative flex gap-[24px] items-start">
-                {tabs.map((tab, index) => (
+                {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}

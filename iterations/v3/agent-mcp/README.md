@@ -17,42 +17,43 @@ This MCP implementation combines multiple critical capabilities:
 
 ## Key Features
 
-### 🛠️ **MCP Server Implementation**
+### **MCP Server Implementation**
 - **JSON-RPC 2.0**: Full compliance with MCP specification
 - **Multiple Transports**: HTTP REST API and WebSocket real-time communication
 - **Authentication**: API key-based authentication with configurable security
 - **Rate Limiting**: Configurable request rate limits with burst handling
 - **Compression**: Optional gzip compression for bandwidth optimization
 
-### 🔍 **Tool Discovery System**
-- **Automatic Discovery**: Scan configured paths for tool manifests
-- **Manifest Validation**: Validate tool definitions against MCP and CAWS schemas
-- **Hot Reloading**: Dynamic tool registration without server restart
-- **Dependency Resolution**: Resolve tool dependencies and compatibility requirements
-- **Health Checking**: Automatic health validation for discovered tools
+### **Tool Registration System**
+- **Programmatic Registration**: Tools are registered via factory functions (`create_file_editing_tools`, `create_coreml_ingestion_tools`)
+- **CAWS Compliance**: All tools validated against CAWS standards during registration
+- **Dynamic Registration**: Tools can be registered at runtime without server restart
+- **Dependency Management**: Tool dependencies managed through programmatic configuration
+- **Health Checking**: Automatic health validation for registered tools
+- **Future**: Manifest-based discovery planned for external tool integration
 
-### 🛡️ **CAWS Integration & Compliance**
+### **CAWS Integration & Compliance**
 - **CAWS Compliance Checking**: Validate tools against CAWS standards and invariants
 - **Workflow Integration**: Seamlessly integrate with CAWS working specifications
 - **Quality Assurance**: Automated testing and validation of tool behavior
 - **Provenance Tracking**: Track tool usage and performance for continuous improvement
 - **Invariant Enforcement**: Ensure tools respect CAWS safety and reliability constraints
 
-### 📋 **Tool Registry & Orchestration**
+### **Tool Registry & Orchestration**
 - **Centralized Registry**: Single source of truth for all registered tools
 - **Categorization**: Organize tools by type, capability, and domain
 - **Version Management**: Handle tool versioning and backward compatibility
 - **Load Balancing**: Distribute tool execution across multiple instances
 - **Monitoring**: Comprehensive metrics and health monitoring for all tools
 
-### 🔒 **Security & Reliability**
+### **Security & Reliability**
 - **Circuit Breaker Protection**: Prevent cascading failures from tool outages
 - **Request Validation**: Comprehensive input validation and sanitization
 - **Audit Logging**: Complete audit trail of all tool interactions
 - **Resource Limits**: Configurable CPU, memory, and execution time limits
 - **Error Isolation**: Contain tool failures to prevent system-wide impacts
 
-### 🔌 **Extensible Architecture**
+### **Extensible Architecture**
 - **Plugin System**: Custom tool types and integrations via plugin architecture
 - **Event System**: Publish-subscribe model for tool lifecycle events
 - **Custom Protocols**: Support for domain-specific communication protocols

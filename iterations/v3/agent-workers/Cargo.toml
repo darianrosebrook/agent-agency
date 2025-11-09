@@ -11,6 +11,7 @@ tokio.workspace = true
 async-trait.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+serde_yaml = "0.9"
 anyhow.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
@@ -22,6 +23,9 @@ agent-mcp = { path = "../agent-mcp" }
 
 # Contracts for task definitions
 agent-agency-contracts = { path = "../agent-agency-contracts" }
+
+# CAWS runtime validator
+development-tools = { path = "../development-tools" }
 
 # Resilience patterns
 system-resilience = { path = "../system-resilience" }
