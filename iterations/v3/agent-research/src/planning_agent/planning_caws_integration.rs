@@ -130,8 +130,41 @@ pub trait CawsValidator: Send + Sync {
 
 /// Default CAWS validator implementation
 pub struct DefaultCawsValidator {
-    // In a real implementation, this would hold CAWS service client,
-    // configuration, and cached validation rules
+    // TODO: Implement CAWS service client integration
+    //       Currently empty struct; should hold CAWS service client, configuration, and cached validation rules.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Add CAWS service client field
+    // [ ] Add configuration field for CAWS settings
+    // [ ] Add cached validation rules field
+    // [ ] Initialize client in constructor
+    // [ ] Load and cache validation rules
+    // [ ] Handle client connection errors
+    // [ ] Add unit tests with mock CAWS client
+    // [ ] Add integration tests with real CAWS service
+    // [ ] Performance: Client initialization should complete in <1s
+    // [ ] Documentation: Document CAWS integration
+    //
+    // ACCEPTANCE CRITERIA:
+    // - CAWS service client is initialized properly
+    // - Configuration is loaded and validated
+    // - Validation rules are cached for performance
+    // - Client connection errors are handled gracefully
+    // - Cached rules are refreshed appropriately
+    //
+    // DEPENDENCIES:
+    // - CAWS service client library (Required)
+    // - Configuration management (Required)
+    // - Caching mechanism (Required)
+    //
+    // ESTIMATED EFFORT: 5-7 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (CAWS integration feature)
+    // - Change Budget: ~200 LOC
+    // - Reviewer Requirements: CAWS service expertise
 }
 
 impl DefaultCawsValidator {
@@ -148,7 +181,40 @@ impl CawsValidator for DefaultCawsValidator {
         working_spec: &agent_agency_contracts::working_spec::WorkingSpec,
         context: &ValidationContext,
     ) -> Result<CawsValidationResult, CawsValidationError> {
-        // This is a simplified implementation. In practice, this would:
+        // TODO: Implement comprehensive CAWS validation integration
+        //       Currently uses basic implementation; should integrate with CAWS service for full validation.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Send working spec to CAWS service for analysis
+        // [ ] Apply risk-tier specific validation rules
+        // [ ] Run static analysis on the specification
+        // [ ] Check for compliance with coding standards
+        // [ ] Validate test coverage requirements
+        // [ ] Assess security implications
+        // [ ] Add unit tests with mock CAWS responses
+        // [ ] Add integration tests with real CAWS service
+        // [ ] Performance: Validation should complete in <5s
+        // [ ] Documentation: Document CAWS integration
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Full CAWS validation is performed
+        // - Risk-tier rules are properly applied
+        // - Static analysis results are incorporated
+        // - Compliance checks are comprehensive
+        //
+        // DEPENDENCIES:
+        // - CAWS service client (Required)
+        // - Working spec format (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (validation integration feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: CAWS and validation expertise
+        // In practice, this would:
         // 1. Send the working spec to CAWS service for analysis
         // 2. Apply risk-tier specific validation rules
         // 3. Run static analysis on the specification

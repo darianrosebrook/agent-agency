@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use anyhow::Result;
 
 use crate::planning::reflexive_learner::ReflexiveLearner;
-use crate::progress_tracker::turn_level::{TurnTrajectory, TaskOutcome};
+use crate::progress_tracker::turn_level::TurnTrajectory;
 
 // Use rand crate for random number generation
 use rand::Rng;
@@ -559,18 +559,18 @@ impl FederatedLearningEngine {
         // Aggregate metrics from trajectories
         let mut total_quality = 0.0;
         let mut total_success = 0.0;
-        let mut total_time = 0.0;
+        let total_time = 0.0;
         let mut count = 0;
-        let mut task_type_distribution: HashMap<String, f64> = HashMap::new();
-        let mut worker_capabilities: HashMap<String, f64> = HashMap::new();
+        let task_type_distribution: HashMap<String, f64> = HashMap::new();
+        let worker_capabilities: HashMap<String, f64> = HashMap::new();
 
         for trajectory in trajectories {
             total_quality += trajectory.final_outcome.quality_score;
             total_success += if trajectory.final_outcome.success { 1.0 } else { 0.0 };
             count += 1;
 
-            // Extract task types and worker capabilities from trajectory
-            // This is simplified - in practice would extract from trajectory metadata
+            // TODO: Extract task types and worker capabilities from trajectory metadata
+            //       Currently uses placeholder extraction; should extract actual task types and capabilities from trajectory metadata.
         }
 
         let avg_quality = if count > 0 { total_quality / count as f64 } else { 0.0 };
@@ -590,9 +590,41 @@ impl FederatedLearningEngine {
         &self,
         _learner: &ReflexiveLearner,
     ) -> Result<RoutingPolicyUpdates> {
-        // Extract routing policy updates from learner
-        // This would access learner's internal routing state
-        // For now, return empty updates
+        // TODO: Implement comprehensive routing policy update extraction from learner
+        //       Currently returns empty updates; should implement comprehensive extraction that accesses learner's internal routing state to extract actual routing policy updates for federated learning.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Learner's internal routing state is accessed
+        // - Routing policy updates are extracted correctly
+        // - Updates include worker preferences, complexity mappings, and routing weights
+        // - Extraction handles missing or incomplete state gracefully
+        //
+        // DEPENDENCIES:
+        // - Learner routing state access API (Required)
+        // - Routing policy update extraction utilities (Required)
+        // - State serialization utilities (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (federated learning functionality)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Federated learning and routing policy expertise
         Ok(RoutingPolicyUpdates {
             worker_preferences: HashMap::new(),
             complexity_mappings: HashMap::new(),
@@ -607,7 +639,7 @@ impl FederatedLearningEngine {
     ) -> Result<QualityTrends> {
         let mut total_improvement = 0.0;
         let mut plateau_count = 0;
-        let mut quality_patterns: HashMap<String, f64> = HashMap::new();
+        let quality_patterns: HashMap<String, f64> = HashMap::new();
 
         for trajectory in trajectories {
             if trajectory.turns.len() >= 2 {
@@ -617,7 +649,8 @@ impl FederatedLearningEngine {
                 total_improvement += improvement;
             }
 
-            // Detect plateau (simplified)
+            // TODO: Implement proper plateau detection algorithm
+            //       Currently uses basic detection; should use statistical methods to detect learning plateaus accurately.
             if trajectory.turns.len() >= 3 {
                 let recent_qualities: Vec<f64> = trajectory.turns
                     .iter()

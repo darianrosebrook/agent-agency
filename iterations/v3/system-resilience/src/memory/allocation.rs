@@ -137,7 +137,8 @@ impl AllocationSiteTracker {
             }
         }
 
-        // Calculate frequency based on recent allocations (simplified)
+        // TODO: Implement proper frequency calculation from allocation history
+        //       Currently uses basic estimate; should calculate frequency from actual allocation timestamps and history.
         stats.frequency = stats.total_allocations as f64 / 60.0; // per minute estimate
 
         debug!("Recorded allocation at {}:{} ({} bytes)", site.file, site.line, size);

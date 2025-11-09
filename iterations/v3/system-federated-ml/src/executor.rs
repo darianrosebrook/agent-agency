@@ -4,20 +4,19 @@
 //! for safe, concurrent tool chain execution with circuit breakers.
 
 use schemars::JsonSchema;
-use petgraph::graph::{Graph, NodeIndex};
+use petgraph::graph::NodeIndex;
 use petgraph::visit::{Topo, EdgeRef};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{Semaphore, mpsc};
+use tokio::sync::Semaphore;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn, error};
 use std::time::{Duration, Instant};
 
-use crate::tool_chain_planner::{ToolChain, ToolNode, ToolEdge, ChainResult};
-use crate::tool_execution::{ToolExecutor, ToolInvocation, ToolResult};
+use crate::tool_chain_planner::{ToolChain, ToolNode};
+use crate::tool_execution::{ToolExecutor, ToolInvocation};
 use crate::schema_registry::{SchemaRegistry, Converter};
-use crate::tool_registry::ToolRegistry;
 
 /// Chain execution result
 #[derive(Clone, Debug, JsonSchema)]

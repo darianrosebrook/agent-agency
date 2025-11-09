@@ -130,23 +130,30 @@ impl ScopeGuard {
 
         // Handle conflicts
         if !conflicts.is_empty() {
-            // TODO: Implement proper conflict resolution
-            // - [ ] Implement conflict resolution strategies (wait, queue, retry)
-            // - [ ] Support conflict negotiation between milestones
-            // - [ ] Add timeout handling for conflict resolution
-            // - [ ] Log conflict resolution attempts and outcomes
-            // - [ ] Handle deadlock detection and prevention
-            // - [ ] Add unit tests with various conflict scenarios
-            // - [ ] Add integration tests with real conflict resolution
-            // For now, fail if there are conflicts (simplified implementation)
-            let conflict_details = conflicts.into_iter()
+            // Log detailed conflict information
+            let conflict_details: Vec<_> = conflicts.iter()
+                .map(|(path, lock)| {
+                    format!("{} (held by {}, mode: {:?}, acquired: {})", 
+                        path, lock.milestone_id, lock.mode, lock.acquired_at)
+                })
+                .collect();
+            
+            tracing::error!(
+                milestone_id = %milestone_id,
+                conflicts = ?conflict_details,
+                requested_files = ?scope.files,
+                will_modify = %scope.will_modify,
+                "Scope conflict detected - files locked by other milestones"
+            );
+            
+            let conflict_summary = conflicts.into_iter()
                 .map(|(path, lock)| format!("{} (held by {})", path, lock.milestone_id))
                 .collect::<Vec<_>>()
                 .join(", ");
 
                 return Err(anyhow!(
                     "Scope conflict for milestone {}: files locked by other milestones: {}",
-                    milestone_id, conflict_details
+                    milestone_id, conflict_summary
                 ));
         }
 
@@ -219,9 +226,27 @@ impl ScopeGuard {
 
     /// Check if scope is valid (within allowed boundaries)
     pub async fn validate_scope(&self, milestone_id: &str, scope: &MilestoneScope) -> Result<bool> {
-        // For now, basic validation - check that paths are absolute or relative to project root
-        // In a real implementation, this would validate against CAWS working spec scope
-
+        // TODO: Validate scope against CAWS working spec:
+        // 1. Spec validation: Validate scope against working spec
+        //    - Retrieve working spec for milestone
+        //    - Compare scope against spec.scope.in boundaries
+        //    - Verify scope doesn't exceed spec.scope.out exclusions
+        // 2. Path validation: Validate file paths in scope
+        //    - Check paths are within allowed boundaries
+        //    - Verify paths don't access excluded directories
+        //    - Handle relative and absolute paths correctly
+        // 3. Scope constraints: Enforce scope constraints
+        //    - Check file count limits if specified
+        //    - Validate scope size constraints
+        //    - Handle scope validation errors appropriately
+        // ACCEPTANCE CRITERIA:
+        // - Scope is validated against working spec boundaries
+        // - File paths are checked against allowed/excluded paths
+        // - Scope constraints are enforced correctly
+        // DEPENDENCIES:
+        // - Working spec retrieval (Required)
+        // - CAWS scope validation utilities (Required)
+        // PRIORITY: High
         for file_path in &scope.files {
             // Check if path is safe (not trying to access system files)
             let path_buf = PathBuf::from(file_path);
@@ -251,11 +276,23 @@ impl ScopeGuard {
         eprintln!("SCOPE VIOLATION in milestone {}: attempted to access files: {:?}",
                  milestone_id, violated_files);
 
-        // In a real implementation, this might:
-        // 1. Block the milestone execution
-        // 2. Notify the council
-        // 3. Create an audit trail entry
-        // 4. Potentially revoke the milestone
+        // TODO: Implement scope violation handling with the following requirements:
+        // 1. Execution blocking: Block milestone execution when violations detected
+        //    - Prevent further execution of violating milestone
+        //    - Clean up any partial state changes
+        //    - Return appropriate error to caller
+        // 2. Council notification: Notify council of scope violations
+        //    - Send violation event to council coordinator
+        //    - Include violation details and context
+        //    - Handle notification failures gracefully
+        // 3. Audit trail creation: Create persistent audit trail entry
+        //    - Record violation details with timestamp
+        //    - Store violation context and attempted files
+        //    - Ensure audit trail is queryable
+        // 4. Milestone revocation: Potentially revoke violating milestone
+        //    - Evaluate violation severity
+        //    - Revoke milestone if violation is critical
+        //    - Update milestone status appropriately
 
         Err(anyhow!(
             "Scope violation detected for milestone {}: attempted to access {} unauthorized files",

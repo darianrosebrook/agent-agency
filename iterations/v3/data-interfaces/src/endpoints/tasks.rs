@@ -161,7 +161,41 @@ impl TaskHandler {
         match request.path.as_str() {
             "/api/tasks" => {
                 if request.method == "GET" {
-                    // For now, ignore query params and return all tasks
+                    // TODO: Implement comprehensive query parameter handling for task listing
+                    //       Currently ignores query params and returns all tasks; should implement comprehensive query parameter parsing and filtering for pagination, filtering, and sorting of task results.
+                    //
+                    // COMPLETION CHECKLIST:
+                    // [ ] Primary functionality implemented
+                    // [ ] API/data structures defined & stable
+                    // [ ] Error handling + validation aligned with error taxonomy
+                    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                    // [ ] Integration tests for external systems/contracts
+                    // [ ] Documentation: public API + system behavior
+                    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                    // [ ] Configurability and feature flags defined if relevant
+                    // [ ] Failure-mode cards documented (degradation paths)
+                    //
+                    // ACCEPTANCE CRITERIA:
+                    // - Query parameters are parsed correctly
+                    // - Pagination parameters are supported
+                    // - Filtering parameters work correctly
+                    // - Sorting parameters are implemented
+                    //
+                    // DEPENDENCIES:
+                    // - Query parameter parsing utilities (Required)
+                    // - Task filtering logic (Required)
+                    // - Pagination utilities (Required)
+                    //
+                    // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+                    // PRIORITY: Medium
+                    // BLOCKING: No
+                    //
+                    // GOVERNANCE:
+                    // - CAWS Tier: 2 (API endpoint enhancement)
+                    // - Change Budget: ~150 LOC
+                    // - Reviewer Requirements: API design and query parameter handling expertise
                     let response = self.list_tasks(None, None).await?;
                     Ok(ApiResponse {
                         status_code: 200,

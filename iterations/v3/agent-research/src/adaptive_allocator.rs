@@ -477,7 +477,7 @@ impl AdaptiveResourceAllocator {
         let memory_pressure = avg_memory / window_metrics[0].memory_total_gb;
         let time_factor = (chrono::Utc::now().timestamp() % 86400) as f64 / 86400.0;
 
-        vec![avg_cpu / 100.0, memory_pressure, 0.0, time_factor, 1.0] // Simplified features
+        vec![avg_cpu / 100.0, memory_pressure, 0.0, time_factor, 1.0] // TODO: Extract comprehensive feature set from system metrics
     }
 
     fn suggest_resource_increase(&self, current: &ResourceAllocation) -> ResourceAllocation {

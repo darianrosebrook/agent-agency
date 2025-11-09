@@ -72,8 +72,8 @@ impl GlobalTypeRegistry {
             type_id,
             schema_version,
             serializer: |value| {
-                // For now, we'll skip the type checking and just try to serialize
-                // This is a simplified implementation
+                // TODO: Implement proper type checking before serialization
+                //       Currently skips type checking; should validate types before serialization for type safety.
                 serde_json::to_vec(&())
                     .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
             },

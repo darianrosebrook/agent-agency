@@ -251,7 +251,41 @@ pub async fn get_diff_summary(
     // - Structured output parsing
     // - Error handling and fallback mechanisms
     //
-    // For now, return error indicating dependency is not available
+    // TODO: Implement comprehensive AI-powered diff summary generation
+    //       Currently returns error indicating dependency not available; should implement comprehensive generation that integrates AI service client, implements prompt engineering for diff analysis, parses structured output, and handles errors with fallback mechanisms.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - AI service client is integrated (OpenAI, Anthropic, or local LLM)
+    // - Prompt engineering for diff analysis is implemented
+    // - Structured output is parsed correctly
+    // - Error handling and fallback mechanisms work properly
+    //
+    // DEPENDENCIES:
+    // - AI service client integration (Required)
+    // - Prompt engineering utilities (Required)
+    // - Structured output parsing (Required)
+    //
+    // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (AI integration functionality)
+    // - Change Budget: ~250 LOC
+    // - Reviewer Requirements: AI service integration and prompt engineering expertise
     error!("Diff summary generation requested but AI service not available. Context: {}", context.chars().take(100).collect::<String>());
     
     Err(StatusCode::NOT_IMPLEMENTED)

@@ -129,8 +129,8 @@ impl RidgeRegression {
     }
 
     pub fn train(&mut self, features: ArrayView2<f64>, targets: ArrayView1<f64>) -> Result<(), String> {
-        // Ridge regression modifies the gradient descent to include L2 penalty
-        // This is a simplified implementation - in practice, you'd modify the training loop
+        // TODO: Implement proper ridge regression with L2 penalty in training loop
+        //       Currently uses basic implementation; should modify training loop to include L2 penalty for proper ridge regression.
         self.base_model.train(features, targets)
     }
 

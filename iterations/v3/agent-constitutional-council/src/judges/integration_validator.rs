@@ -21,17 +21,15 @@
 
 use std::sync::Arc;
 use async_trait::async_trait;
-use tracing::{debug, instrument};
-use serde_json;
+use tracing::debug;
 
 use agent_agency_contracts::{
     JudgeEngine, JudgeVerdict, JudgePrompt, JudgeType, VerdictLabel,
-    Violation, judge_io::Severity, RubricItem, WorkingSpecEvidence,
-    working_spec::WorkingSpec,
+    Violation, judge_io::Severity, RubricItem,
 };
 
 use crate::{ReviewContext, CouncilResult, CouncilError};
-use super::common::{Judge, JudgeUtils, RubricBuilder, EvidenceBuilder, RubricItemBuilder, JUDGE_OUTPUT_SCHEMA};
+use super::common::{JudgeUtils, RubricBuilder, EvidenceBuilder, RubricItemBuilder, JUDGE_OUTPUT_SCHEMA};
 
 // CAWS integration for runtime validation
 use agent_orchestration::planning::caws_integration::CawsPlanBridge;

@@ -651,7 +651,7 @@ impl ProvenanceStorage for InMemoryProvenanceStorage {
             .map(|(rule, count)| ViolationStats {
                 rule: rule.clone(),
                 count: *count as u64,
-                severity_distribution: HashMap::new(), // Simplified for this implementation
+                severity_distribution: HashMap::new(), // TODO: Calculate actual severity distribution from violation data
                 average_resolution_time_ms: 0.0,
             })
             .collect::<Vec<_>>();

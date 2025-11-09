@@ -127,12 +127,12 @@ impl ClaimExtractor {
 
         let claim_id = self.generate_claim_id(
             context.task_id,
-            0, // sentence_index - simplified
+            0, // TODO: Extract actual sentence index from context
             compound_index * 100 + clause_offset,
         );
 
         // TODO: Extract contextual brackets
-        let contextual_brackets = Vec::new(); // Simplified
+        let contextual_brackets = Vec::new(); // Temporary: placeholder until contextual bracket extraction is implemented
 
         // Apply contextual brackets to the statement
         let bracketed_statement =

@@ -394,16 +394,40 @@ impl MemoryMonitor {
 
     /// Extract human-readable type name from Any trait object
     fn extract_type_name(&self, obj: &std::sync::Arc<dyn std::any::Any + Send + Sync>) -> Option<String> {
-        // Try to downcast to common types to extract type names
-        // This is a best-effort approach since Any trait erases type information
-
-        // Note: We cannot actually extract the concrete type name from a trait object
-        // at runtime without additional type registry or RTTI. This method provides
-        // a placeholder that could be extended with a type registry system.
-
-        // For now, return a generic identifier based on TypeId hash
+        // TODO: Implement type registry system for extracting human-readable type names from Any trait objects
+        //       Currently returns generic TypeId hash; should use type registry to provide meaningful type names.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement type registry system for registering types
+        // [ ] Register common types at initialization
+        // [ ] Extract type names from registered types
+        // [ ] Handle unregistered types gracefully
+        // [ ] Add type name caching for performance
+        // [ ] Add unit tests for type registry
+        // [ ] Add integration tests with various types
+        // [ ] Verify type names are accurate and readable
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Type registry provides human-readable type names
+        // - Common types are registered and accessible
+        // - Unregistered types are handled gracefully
+        // - Type name extraction is performant
+        //
+        // DEPENDENCIES:
+        // - Type registry data structure (Required)
+        // - Type registration utilities (Required)
+        // - Type name caching (Optional)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (low risk enhancement)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Type system expertise
         let type_id_hash = format!("{:?}", obj.type_id());
-        Some(format!("unknown_type_{}", &type_id_hash[..8]))
+        Some(format!("unknown_type_{}", &type_id_hash[..8])) // Temporary generic identifier until type registry is implemented
     }
 
     /// Sweep unreachable objects during garbage collection
@@ -465,10 +489,39 @@ impl MemoryMonitor {
     
     /// Check if an object needs finalization
     async fn needs_finalization(&self, obj_ref: &ObjectRef) -> bool {
-        // Check if object has finalizer registered
+        // TODO: Implement comprehensive finalization check including finalizer registration status
+        //       Currently only checks pending finalization queue; should check finalizer registration and finalization state.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Check if object has finalizer registered
+        // [ ] Check if object is in pending finalization queue
+        // [ ] Check if object has already been finalized
+        // [ ] Handle edge cases (objects without finalizers, already finalized objects)
+        // [ ] Add unit tests for finalization checking
+        // [ ] Add integration tests with various finalization states
+        // [ ] Verify finalization check accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Finalization check considers finalizer registration status
+        // - Pending finalization queue is checked correctly
+        // - Already finalized objects are handled correctly
+        // - Finalization check is accurate and reliable
+        //
+        // DEPENDENCIES:
+        // - Finalizer registration system (Required)
+        // - Finalization state tracking (Required)
+        // - GC registry (Required)
+        //
+        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (low risk enhancement)
+        // - Change Budget: ~40 LOC
+        // - Reviewer Requirements: Garbage collection expertise
         let gc_registry = self.gc_registry.read().await;
-        // For now, check if object is in pending finalization
-        gc_registry.pending_finalization.contains(obj_ref)
+        gc_registry.pending_finalization.contains(obj_ref) // Temporary: only checks pending queue until comprehensive check is implemented
     }
     
     /// Deallocate an object
@@ -558,26 +611,114 @@ impl MemoryMonitor {
 
     /// Perform compaction and defragmentation
     fn compact_memory_blocks(&self) -> usize {
-        // Memory compaction implementation
-        // This would move objects to eliminate fragmentation
-        // For now, return a placeholder value
-        0
+        // TODO: Implement memory compaction to eliminate fragmentation
+        //       Currently returns placeholder; should move objects to eliminate fragmentation and optimize memory layout.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Identify fragmented memory regions
+        // [ ] Move objects to eliminate fragmentation
+        // [ ] Update object references after compaction
+        // [ ] Optimize memory layout for better cache locality
+        // [ ] Handle compaction during active allocations
+        // [ ] Add unit tests for compaction logic
+        // [ ] Add integration tests with fragmented memory
+        // [ ] Verify compaction improves memory efficiency
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Memory fragmentation is reduced through compaction
+        // - Object references are updated correctly after compaction
+        // - Compaction improves memory layout and cache locality
+        // - Compaction handles active allocations gracefully
+        //
+        // DEPENDENCIES:
+        // - Memory fragmentation detection (Required)
+        // - Object relocation utilities (Required)
+        // - Reference update mechanism (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (low risk optimization)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Memory management expertise
+        0 // Temporary placeholder until compaction is implemented
     }
 
     /// Clean up orphaned resources
     fn cleanup_orphaned_resources(&self) -> usize {
-        // Clean up resources that are no longer referenced
-        // This would close file handles, network connections, etc.
-        // For now, return a placeholder value
-        0
+        // TODO: Implement orphaned resource cleanup (file handles, network connections, etc.)
+        //       Currently returns placeholder; should identify and clean up orphaned resources.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Identify orphaned file handles
+        // [ ] Close orphaned file handles
+        // [ ] Identify orphaned network connections
+        // [ ] Close orphaned network connections
+        // [ ] Clean up other orphaned resources (locks, timers, etc.)
+        // [ ] Track cleanup statistics
+        // [ ] Add unit tests for resource cleanup
+        // [ ] Add integration tests with orphaned resources
+        // [ ] Verify resources are properly cleaned up
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Orphaned file handles are identified and closed
+        // - Orphaned network connections are identified and closed
+        // - Other orphaned resources are cleaned up
+        // - Cleanup statistics are tracked accurately
+        //
+        // DEPENDENCIES:
+        // - Resource tracking system (Required)
+        // - File handle management (Required)
+        // - Network connection management (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (standard feature)
+        // - Change Budget: ~120 LOC
+        // - Reviewer Requirements: Resource management expertise
+        0 // Temporary placeholder until cleanup is implemented
     }
 
     /// Analyze allocation patterns for leak detection
     fn analyze_allocation_patterns_for_leaks(&self) -> Vec<AllocationLeak> {
-        // Analyze allocation patterns to detect potential leaks
-        // This would look for growing allocation counts over time
-        // For now, return an empty vector
-        Vec::new()
+        // TODO: Implement allocation pattern analysis for leak detection
+        //       Currently returns empty vector; should analyze allocation patterns to detect potential memory leaks.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Track allocation counts over time
+        // [ ] Identify growing allocation patterns
+        // [ ] Detect potential memory leaks
+        // [ ] Classify leak types (gradual, sudden, cyclic)
+        // [ ] Generate leak reports with recommendations
+        // [ ] Add unit tests for leak detection
+        // [ ] Add integration tests with leak scenarios
+        // [ ] Verify leak detection accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Allocation patterns are analyzed over time
+        // - Potential memory leaks are detected accurately
+        // - Leak types are classified correctly
+        // - Leak reports include actionable recommendations
+        //
+        // DEPENDENCIES:
+        // - Allocation tracking system (Required)
+        // - Pattern analysis algorithms (Required)
+        // - Leak classification utilities (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (standard feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Memory leak detection expertise
+        Vec::new() // Temporary empty vector until leak detection is implemented
     }
 
     /// Get memory stats history
@@ -688,10 +829,42 @@ impl MemoryMonitor {
         
         // Execute all finalizers in the queue
         for finalizer in queue.drain(..) {
+            // TODO: Execute finalizers and track actual success/failure with timing
+            //       Currently assumes success; should execute finalizers and track actual results with timing.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Execute finalizer function and capture result
+            // [ ] Measure execution duration
+            // [ ] Track success/failure status
+            // [ ] Capture error messages on failure
+            // [ ] Handle finalizer panics gracefully
+            // [ ] Add unit tests for finalizer execution
+            // [ ] Add integration tests with various finalizers
+            // [ ] Verify finalizer execution tracking accuracy
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Finalizers are executed and results are tracked
+            // - Execution duration is measured accurately
+            // - Success/failure status reflects actual execution
+            // - Errors are captured and reported
+            //
+            // DEPENDENCIES:
+            // - Finalizer execution infrastructure (Required)
+            // - Timing measurement utilities (Required)
+            // - Error handling utilities (Required)
+            //
+            // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (standard feature)
+            // - Change Budget: ~60 LOC
+            // - Reviewer Requirements: Resource management expertise
             let result = FinalizerResult {
                 finalizer_id: finalizer.id,
-                success: true, // Assume success for now
-                duration_us: 0,
+                success: true, // Temporary: assumes success until real execution tracking is implemented
+                duration_us: 0, // Temporary: no timing until real execution is implemented
                 error_message: None,
             };
             results.push(result);
@@ -868,8 +1041,27 @@ impl MemoryMonitor {
     /// Emergency handle cleanup (clear all tracked handles without cleanup)
     pub async fn emergency_handle_cleanup(&self) {
         let registry = self.handle_registry.write().await;
-        // In a real emergency, we'd try to clean up but for now just clear tracking
-        // Note: HandleRegistry doesn't have a clear method, so we use emergency cleanup
+        // TODO: Implement proper emergency cleanup:
+        // 1. Handle cleanup: Attempt to clean up handles properly
+        //    - Try to release resources for each handle
+        //    - Handle cleanup errors gracefully
+        //    - Support partial cleanup on failures
+        // 2. Cleanup strategies: Implement cleanup strategies
+        //    - Prioritize critical resource cleanup
+        //    - Support graceful vs forceful cleanup
+        //    - Handle cleanup timeouts appropriately
+        // 3. Registry management: Enhance registry management
+        //    - Add clear method to HandleRegistry if needed
+        //    - Support selective handle cleanup
+        //    - Track cleanup success and failures
+        // ACCEPTANCE CRITERIA:
+        // - Emergency cleanup attempts proper resource release
+        // - Cleanup handles errors and timeouts gracefully
+        // - Registry supports proper cleanup operations
+        // DEPENDENCIES:
+        // - Handle cleanup API (Required)
+        // - Resource release mechanisms (Required)
+        // PRIORITY: High
         warn!("Emergency handle cleanup completed - all handle tracking cleared");
     }
 
@@ -1114,8 +1306,75 @@ impl MemoryMonitor {
 
         // Build size distribution
         for (timestamp, stats) in history.iter() {
-            // In a real implementation, we'd have detailed allocation records
-            // For now, we create synthetic patterns based on available data
+            // TODO: Implement detailed allocation record tracking
+            //       Currently creates synthetic patterns; should track detailed allocation records for accurate size distribution analysis.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Track detailed allocation records
+            // [ ] Store allocation sizes and timestamps
+            // [ ] Build size distribution from actual records
+            // [ ] Handle large allocation histories efficiently
+            // [ ] Add unit tests with mock allocation records
+            // [ ] Add integration tests with real allocation tracking
+            // [ ] Performance: Distribution building should complete in <10ms
+            // [ ] Documentation: Document allocation record structure
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Detailed allocation records are tracked
+            // - Size distribution reflects actual allocations
+            // - Large histories are handled efficiently
+            // - Distribution analysis is accurate
+            // - Record tracking performance is acceptable
+            //
+            // DEPENDENCIES:
+            // - Allocation record storage (Required)
+            // - Size distribution analysis (Required)
+            // - Efficient history management (Required)
+            //
+            // ESTIMATED EFFORT: 5-7 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (monitoring feature)
+            // - Change Budget: ~200 LOC
+            // - Reviewer Requirements: Memory monitoring expertise
+            //
+            // TODO: Implement comprehensive allocation record tracking for size distribution
+            //       Currently creates synthetic patterns based on available data; should implement comprehensive tracking that stores allocation records, analyzes size distribution from actual allocation history, and handles large histories efficiently.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Allocation records are stored and tracked
+            // - Size distribution is analyzed from actual history
+            // - Large histories are handled efficiently
+            // - Distribution analysis is accurate
+            //
+            // DEPENDENCIES:
+            // - Allocation record storage (Required)
+            // - Size distribution analysis (Required)
+            // - Efficient history management (Required)
+            //
+            // ESTIMATED EFFORT: 5-7 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (monitoring feature)
+            // - Change Budget: ~200 LOC
+            // - Reviewer Requirements: Memory monitoring expertise
             let size_bucket = (stats.allocated_bytes / 1024).max(1) * 1024; // Round to nearest KB
             *analysis.size_distribution.entry(size_bucket.try_into().unwrap()).or_insert(0) += 1;
         }
@@ -1125,7 +1384,8 @@ impl MemoryMonitor {
             analysis.temporal_patterns.push((*timestamp, stats.allocation_count.try_into().unwrap()));
         }
 
-        // Analyze access patterns (simplified)
+        // TODO: Implement comprehensive memory access pattern analysis
+        //       Currently uses basic analysis; should implement comprehensive analysis with temporal and spatial locality detection.
         analysis.access_patterns = self.analyze_memory_access_patterns().await?;
 
         // Analyze allocation sites (placeholder - would need instrumentation)
@@ -1287,7 +1547,8 @@ impl MemoryMonitor {
         }
 
         // Analyze temporal and spatial locality from allocation patterns
-        // This is a simplified analysis - real implementation would need memory access tracing
+        // TODO: Implement comprehensive memory access tracing
+        //       Currently uses basic analysis; should trace actual memory access patterns for accurate locality analysis.
         let mut access_ranges = Vec::new();
 
         // Create synthetic access patterns based on allocation clustering
@@ -1658,8 +1919,41 @@ impl MemoryMonitor {
         let mut objects_moved = 0;
         let mut bytes_recovered = 0;
 
-        // In a real implementation, this would use unsafe memory operations
-        // or work with custom allocators to slide memory blocks
+        // TODO: Implement unsafe memory operations for compaction
+        //       Currently placeholder; should use unsafe memory operations or custom allocators to slide memory blocks for compaction.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement unsafe memory block sliding
+        // [ ] Use custom allocators if appropriate
+        // [ ] Move memory blocks safely
+        // [ ] Update object references after moves
+        // [ ] Handle memory operation errors
+        // [ ] Add safety documentation for unsafe code
+        // [ ] Add unit tests with mock memory operations
+        // [ ] Add integration tests with real memory compaction
+        // [ ] Performance: Compaction should complete in <100ms
+        // [ ] Documentation: Document unsafe memory operations
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Memory blocks are moved safely
+        // - Object references are updated correctly
+        // - Memory operations are documented
+        // - Compaction errors are handled gracefully
+        // - Compaction performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Unsafe memory operation utilities (Required)
+        // - Custom allocator support (Optional)
+        // - Reference update logic (Required)
+        //
+        // ESTIMATED EFFORT: 10-15 hours (low confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (memory safety-critical feature)
+        // - Change Budget: ~400 LOC
+        // - Reviewer Requirements: Unsafe Rust and memory management expertise
 
         for action in plan {
             match action.action_type {

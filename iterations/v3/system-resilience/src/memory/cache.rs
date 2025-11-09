@@ -211,8 +211,41 @@ impl MemoryLeakDetector {
         let recent = &snapshots[snapshots.len() - 1];
         let previous = &snapshots[snapshots.len() - 2];
 
-        // Compare recent vs previous snapshot
-        // For now, implement basic leak detection
+        // TODO: Implement comprehensive memory leak detection
+        //       Currently implements basic leak detection; should implement comprehensive leak detection that uses sophisticated algorithms to identify memory leaks, tracks allocation patterns, and provides detailed leak analysis.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Leak detection uses sophisticated algorithms
+        // - Allocation patterns are tracked and analyzed
+        // - Detailed leak analysis is provided
+        // - False positives are minimized
+        //
+        // DEPENDENCIES:
+        // - Leak detection algorithms (Required)
+        // - Allocation pattern tracking (Required)
+        // - Leak analysis utilities (Required)
+        //
+        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (memory monitoring functionality)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Memory leak detection and analysis expertise
         if recent.1.values().sum::<usize>() > previous.1.values().sum::<usize>() * 2 {
             alerts.push("Potential memory leak detected".to_string());
         }

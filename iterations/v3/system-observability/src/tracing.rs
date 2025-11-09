@@ -262,9 +262,8 @@ impl SpanHandle {
 
 impl Drop for SpanHandle {
     fn drop(&mut self) {
-        // If span wasn't explicitly finished, finish it as unset
-        // Note: This is a simplified implementation. In practice, you'd want
-        // to handle this more carefully to avoid blocking in drop.
+        // TODO: Implement non-blocking span finishing in drop
+        //       Currently uses basic implementation; should handle span finishing more carefully to avoid blocking in drop.
         let tracer = Arc::clone(&self.tracer);
         let span_id = self.span_id.clone();
 

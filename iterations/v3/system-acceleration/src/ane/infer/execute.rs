@@ -218,8 +218,41 @@ fn prepare_input(
     // Handle batch dimension if specified
     if let Some(batch_size) = options.batch_size {
         if batch_size > 1 {
-            // For now, we only support batch size 1
-            // In a full implementation, this would reshape the input
+            // TODO: Implement comprehensive batch processing support
+            //       Currently only supports batch size 1; should implement comprehensive batch processing that reshapes input for batch inference and supports multiple batch sizes efficiently.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Multiple batch sizes are supported
+            // - Input reshaping is correct
+            // - Batch inference is efficient
+            // - Batch processing handles errors gracefully
+            //
+            // DEPENDENCIES:
+            // - Input reshaping utilities (Required)
+            // - Batch processing algorithms (Required)
+            // - Batch size validation (Required)
+            //
+            // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (batch processing functionality)
+            // - Change Budget: ~250 LOC
+            // - Reviewer Requirements: Batch processing and tensor manipulation expertise
             if batch_size != 1 {
                 return Err(ANEError::InvalidInput(
                     "Batch size > 1 not yet supported".to_string()

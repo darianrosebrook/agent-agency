@@ -47,7 +47,6 @@ pub mod caws_quality_gates;
 pub mod model_lifecycle;
 
 // Re-export types for convenience
-pub use types::*;
 pub use orchestrator_integration::*;
 pub use plan_executor::*;
 pub use plan_types::*;
@@ -67,11 +66,7 @@ pub use tool_chain_bridge::*;
 pub use tool_chain_types::*;
 pub use planning_engine_impl::*;
 pub use type_adapters::*;
-pub use memory_adapter::*;
-pub use council_adapter::*;
 pub use research_adapter::*;
-pub use tool_chain_adapter::*;
-pub use data_processing_adapter::*;
 pub use waiver_integration::*;
 pub use caws_integration::*;
 pub use todo_template::*;

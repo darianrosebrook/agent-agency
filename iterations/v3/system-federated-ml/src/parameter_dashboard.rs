@@ -520,8 +520,8 @@ impl ParameterDashboardManager {
     }
 
     fn calculate_hypervolume(&self, points: &[ParetoPoint]) -> f64 {
-        // Simplified hypervolume calculation
-        // In practice, this would use a proper hypervolume algorithm
+        // TODO: Implement proper hypervolume calculation algorithm
+        //       Currently uses basic calculation; should use proper hypervolume algorithm (e.g., Fonseca et al. or Beume et al.) for accurate Pareto front analysis.
         let non_dominated: Vec<_> = points.iter().filter(|p| !p.dominated).collect();
         if non_dominated.is_empty() {
             return 0.0;

@@ -685,7 +685,7 @@ impl ANEManager {
             tokenizer: SafeMistralTokenizer::new(),
             kv_cache: Arc::new(tokio::sync::Mutex::new(KVCache::new(4096))),
             telemetry: TelemetryCollector::new(),
-            circuit_breaker: CircuitBreaker::new(CircuitBreakerConfig::default()), // Used in MistralModel but not accessed here
+            circuit_breaker: CircuitBreaker::new(CircuitBreakerConfig::default()),
             loaded_at: std::time::Instant::now(),
             last_accessed: Arc::new(std::sync::Mutex::new(std::time::Instant::now())),
         });

@@ -33,7 +33,7 @@ impl SourceIntegrityService {
         }
     }
 
-    /// Verify source integrity - simplified implementation
+    /// Verify source integrity
     pub async fn verify_integrity(
         &self,
         source_id: &str,
@@ -41,8 +41,42 @@ impl SourceIntegrityService {
         content: &[u8],
         metadata: Option<serde_json::Value>,
     ) -> Result<IntegrityVerificationResult> {
-        // Simplified implementation - just create a basic record
-        let content_hash = format!("hash_{}", content.len()); // Simple hash placeholder
+        // TODO: Implement proper content hashing and integrity verification
+        //       Currently uses placeholder hash; should compute actual cryptographic hash and verify against stored hash values.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Compute cryptographic hash (SHA-256 or SHA-512) of content
+        // [ ] Retrieve stored hash from database for source_id
+        // [ ] Compare computed hash with stored hash
+        // [ ] Verify hash algorithm matches stored algorithm
+        // [ ] Handle missing stored hash (first verification)
+        // [ ] Add proper error handling for hash computation failures
+        // [ ] Add unit tests with various content types
+        // [ ] Add integration tests with real database operations
+        // [ ] Performance: Hash computation should complete in <10ms for typical content
+        // [ ] Documentation: Document hash algorithm and verification process
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Content hash is computed using configured hash algorithm
+        // - Hash comparison accurately detects content changes
+        // - Integrity status correctly reflects verification result
+        // - First-time verification creates new integrity record
+        // - Subsequent verifications compare against stored hash
+        //
+        // DEPENDENCIES:
+        // - Cryptographic hashing library (Required)
+        // - Database for storing/retrieving hashes (Required)
+        // - Hash algorithm configuration (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (security feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Security and cryptography expertise
+        let content_hash = format!("hash_{}", content.len());
         let content_size = content.len() as i64; // Convert to i64
 
         // Create integrity record
@@ -52,8 +86,29 @@ impl SourceIntegrityService {
             content_hash: content_hash.clone(),
             content_size,
             hash_algorithm: self.config.default_hash_algorithm.clone(),
-            integrity_status: IntegrityStatus::Verified, // Simplified - always verified
-            tampering_indicators: vec![], // Empty for now
+            integrity_status: IntegrityStatus::Verified,
+            // TODO: Implement tampering detection with the following requirements:
+            // 1. Tampering detection: Detect and record tampering indicators
+            //    - Analyze content for signs of modification or corruption
+            //    - Compare against known good baselines or checksums
+            //    - Record detection metadata and confidence scores
+            // 2. Indicator types: Support multiple tampering indicator types
+            //    - Hash mismatches and checksum failures
+            //    - Timestamp anomalies and unexpected modifications
+            //    - Signature validation failures and certificate issues
+            // 3. Detection algorithms: Implement detection algorithms
+            //    - Content integrity verification against stored hashes
+            //    - Metadata consistency checks and validation
+            //    - Pattern-based anomaly detection
+            // ACCEPTANCE CRITERIA:
+            // - Tampering indicators are detected and recorded for modified content
+            // - Multiple indicator types are supported and properly categorized
+            // - Detection algorithms produce accurate results with low false positives
+            // DEPENDENCIES:
+            // - Content hash verification system (Required)
+            // - Baseline storage and comparison system (Required)
+            // PRIORITY: Medium
+            tampering_indicators: vec![],
             verification_metadata: metadata.map(|m| {
                 if let serde_json::Value::Object(map) = m {
                     map.into_iter().collect()

@@ -174,8 +174,42 @@ impl CouncilMonitor {
         };
 
         // Get council decision using contracts interface
-        // For now, use a simplified approach - start session and get basic approval
-        let session_result = self.council.start_session(&agent_agency_contracts::TaskDescriptor {
+        // TODO: Implement comprehensive council decision retrieval
+        //       Currently uses basic approach; should implement comprehensive council decision retrieval with proper session management and decision tracking.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Council decisions are retrieved comprehensively
+        // - Session management works correctly
+        // - Decision tracking is accurate
+        // - Error handling works for council failures
+        //
+        // DEPENDENCIES:
+        // - Council interface (Required)
+        // - Session management utilities (Required)
+        // - Decision tracking infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (council integration feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Council integration expertise
+        let session_result = self.council.start_session(&agent_agency_contracts::TaskDescriptor { // Temporary: basic approach until comprehensive implementation
             task_id: uuid::Uuid::new_v4(),
             description: format!("Monitor intervention for plan {}", context.plan_id),
             change_budget: agent_agency_contracts::ChangeBudget {
@@ -686,8 +720,42 @@ impl CouncilMonitor {
         }
 
         // Check for scope violations (basic file access validation)
-        // For now, we check if the milestone involves files that should be accessible
-        if milestone_id.contains("file") || milestone_id.contains("io") {
+        // TODO: Implement comprehensive scope violation detection
+        //       Currently uses basic file access checks; should implement comprehensive scope violation detection using proper scope analysis and validation.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Scope violations are detected comprehensively
+        // - File access validation is accurate
+        // - Scope analysis considers all violation types
+        // - Violation detection is reliable
+        //
+        // DEPENDENCIES:
+        // - Scope analysis utilities (Required)
+        // - File access validation utilities (Required)
+        // - Violation detection infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (security validation feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Security and scope analysis expertise
+        if milestone_id.contains("file") || milestone_id.contains("io") { // Temporary: basic check until comprehensive detection
             // Basic validation that file-related milestones have proper scope
             if status == "permission_denied" || status == "access_denied" {
                 violations.push(format!("Milestone {} failed due to file access permissions", milestone_id));
@@ -732,9 +800,42 @@ impl CouncilMonitor {
             metadata,
         };
 
-        // Note: In real implementation, this would call db_ops.create_audit_trail_entry
-        // For now, we'll just log it
-        println!("Council decision logged: {}", entry.description);
+        // TODO: Create audit trail entry in database
+        //       Currently only logs; should create audit trail entry in database using db_ops.create_audit_trail_entry.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Audit trail entries are created in database
+        // - Entries include all required information
+        // - Database persistence works correctly
+        // - Error handling works for database failures
+        //
+        // DEPENDENCIES:
+        // - Database operations (db_ops) (Required)
+        // - Audit trail infrastructure (Required)
+        // - Database connection (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (audit trail feature)
+        // - Change Budget: ~60 LOC
+        // - Reviewer Requirements: Database and audit trail expertise
+        println!("Council decision logged: {}", entry.description); // Temporary: log until database audit trail is implemented
 
         Ok(())
     }

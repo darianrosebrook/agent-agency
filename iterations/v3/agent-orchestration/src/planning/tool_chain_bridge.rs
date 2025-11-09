@@ -8,9 +8,8 @@
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};use std::collections::HashMap;
 use anyhow::{anyhow, Result};
-use uuid::Uuid;
 use agent_agency_contracts::{
-    planning_io::{ExecutionPlan as ContractExecutionPlan, Milestone as ContractMilestone, PlanState, MilestoneState, DependencyGraph, EvidenceGate},
+    planning_io::{ExecutionPlan as ContractExecutionPlan, Milestone as ContractMilestone, PlanState, EvidenceGate},
     WorkingSpec,
 };
 use crate::planning::tool_chain_types::{
@@ -182,7 +181,7 @@ impl ToolChainBridge {
 
         // Calculate critical path
         let critical_path = if !roots.is_empty() && !sinks.is_empty() {
-            vec![roots[0].clone(), sinks[0].clone()] // Simplified
+            vec![roots[0].clone(), sinks[0].clone()] // TODO: Implement proper critical path calculation
         } else {
             vec![]
         };
@@ -191,7 +190,7 @@ impl ToolChainBridge {
             nodes,
             edges,
             critical_path,
-            parallel_groups: vec![roots, sinks], // Simplified parallel groups
+            parallel_groups: vec![roots, sinks], // TODO: Implement proper parallel group detection
             has_cycles: false,
             cycles: vec![],
         };

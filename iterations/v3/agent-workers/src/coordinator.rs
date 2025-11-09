@@ -207,8 +207,27 @@ impl ParallelCoordinator {
         let communication_hub = CommunicationHub::new(crate::communication::channels::ChannelConfig::default());
 
         // Initialize learning components with real implementations
-        // TODO: Create proper database config for DatabaseClient::new()
-        // For now, use a placeholder - this will need to be fixed when database integration is complete
+        // TODO: Create proper database config for DatabaseClient::new():
+        // 1. Configuration loading: Load database configuration properly
+        //    - Read database config from environment or config files
+        //    - Validate database connection parameters
+        //    - Handle missing or invalid configuration gracefully
+        // 2. Connection setup: Set up database connections
+        //    - Configure connection pool parameters
+        //    - Set up connection retry logic
+        //    - Handle connection failures appropriately
+        // 3. Integration completion: Complete database integration
+        //    - Ensure all database operations use proper config
+        //    - Test database connectivity and operations
+        //    - Remove placeholder/default configurations
+        // ACCEPTANCE CRITERIA:
+        // - Database configuration is loaded from proper sources
+        // - Database connections are established successfully
+        // - All database operations use proper configuration
+        // DEPENDENCIES:
+        // - Database configuration system (Required)
+        // - Connection pool management (Required)
+        // PRIORITY: High
         let db_config = data_infrastructure::DatabaseConfig::default();
         let db_client = Arc::new(tokio::task::block_in_place(|| {
             tokio::runtime::Handle::current().block_on(async {
@@ -339,8 +358,6 @@ impl ParallelCoordinator {
                     // - [ ] Handle partial failures in parallel execution
                     // - [ ] Add unit tests with various failure scenarios
                     // - [ ] Add integration tests with real failure handling
-                    // For failed subtasks, we could create a failed WorkerResult
-                    // but for now we'll just log the error
                 }
             }
         }

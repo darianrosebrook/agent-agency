@@ -5,13 +5,12 @@
 
 use schemars::JsonSchema;
 use std::sync::Arc;
-use async_trait::async_trait;
 use tracing::{info, instrument, warn};
 
 use agent_agency_contracts::{JudgeEngine, JudgeType, VerdictLabel, JudgeVerdict, WorkingSpec};
 use agent_agency_contracts::judge_io::Severity;
 
-use crate::{Judges, FinalDecision, CouncilError, CouncilMetrics, CouncilResult, VerdictWriter, VerdictWriterConfig};
+use crate::{Judges, FinalDecision, CouncilError, CouncilMetrics, CouncilResult, VerdictWriter};
 use crate::judges::common::Judge;
 
 

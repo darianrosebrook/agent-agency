@@ -4,15 +4,14 @@
 //! evidence synthesis, and consensus building mechanisms.
 
 use schemars::JsonSchema;
-use anyhow::{Result, Context};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, debug, warn};
 
-use crate::tool_registry::{Tool, ToolMetadata, ToolCategory};
-use crate::evidence_collection_tools::EvidenceCollectionTool;
+use crate::tool_registry::Tool;
 
 /// Conflict resolution tool suite
 #[derive(Debug)]
@@ -41,7 +40,7 @@ impl ConflictResolutionTool {
 
     /// Real conflict resolution implementation
     pub async fn resolve_conflicts(&self, conflicts: &serde_json::Value) -> Result<serde_json::Value> {
-        use tracing::{info, warn, error};
+        use tracing::{info, warn};
         
         info!("Resolving conflicts in federated learning system");
         
@@ -399,9 +398,41 @@ impl DebateOrchestrator {
 
     /// Generate argument for a debate participant
     async fn generate_participant_argument(&self, participant: &str, session: &DebateSession, round_num: usize) -> Result<DebateArgument> {
-        // In practice, this would use LLM or reasoning tools to generate arguments
-        // For now, we'll simulate with rule-based generation
-
+        // TODO: Implement comprehensive LLM-based argument generation
+        //       Currently simulates with rule-based generation; should implement comprehensive argument generation that uses LLM or reasoning tools to generate sophisticated arguments for debate participants.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Arguments are generated using LLM or reasoning tools
+        // - Generated arguments are coherent and relevant
+        // - Arguments adapt to debate context and round number
+        // - Generation handles LLM failures gracefully
+        //
+        // DEPENDENCIES:
+        // - LLM integration (Required)
+        // - Reasoning tools integration (Optional)
+        // - Argument generation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 12-16 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (debate and argument generation functionality)
+        // - Change Budget: ~300 LOC
+        // - Reviewer Requirements: LLM integration and argument generation expertise
         let stance = self.determine_participant_stance(participant, session)?;
         let evidence_references = self.select_evidence_for_stance(&stance, &session.evidence);
         let counter_arguments = if round_num > 1 {
@@ -641,8 +672,9 @@ impl ConsensusBuilder {
 
     /// Delphi method consensus (iterative refinement)
     async fn delphi_method_consensus(&self, positions: &[DebatePosition]) -> Result<ConsensusResult> {
-        // Simplified Delphi method - in practice would involve multiple rounds
-        let mut refined_positions = positions.to_vec();
+        // TODO: Implement full Delphi method with multiple rounds
+        //       Currently uses basic implementation; should implement full Delphi method with iterative refinement rounds.
+        let refined_positions = positions.to_vec();
 
         // First round: identify outliers
         let (decision, confidence) = self.analyze_position_distribution(&refined_positions).await?;
@@ -768,7 +800,8 @@ impl EvidenceSynthesizer {
 
     /// Calculate source reliability weight
     async fn calculate_source_reliability(&self, evidence: &EvidenceItem) -> Result<f64> {
-        // Simplified reliability calculation
+        // TODO: Implement comprehensive source reliability calculation
+        //       Currently uses basic calculation; should implement comprehensive reliability scoring based on source history, verification, and trust metrics.
         let mut reliability: f64 = 0.5; // Base reliability
 
         if evidence.tags.contains(&"verified".to_string()) {
@@ -812,7 +845,7 @@ impl EvidenceSynthesizer {
     /// Identify conflicts in evidence
     async fn identify_conflicts(&self, evidence: &[EvidenceItem]) -> Result<ConflictAnalysis> {
         let mut conflicts = Vec::new();
-        let mut resolved = Vec::new();
+        let resolved = Vec::new();
 
         // Simple conflict detection - check for contradictory claims
         for i in 0..evidence.len() {
@@ -837,8 +870,8 @@ impl EvidenceSynthesizer {
 
     /// Check if two evidence items conflict
     fn evidence_conflicts(&self, a: &EvidenceItem, b: &EvidenceItem) -> bool {
-        // Simplified conflict detection - check for opposite boolean claims
-        // In practice, this would use more sophisticated NLP analysis
+        // TODO: Implement sophisticated NLP-based conflict detection
+        //       Currently uses basic boolean claim checking; should use NLP analysis to detect semantic conflicts between evidence items.
 
         let a_text = a.content.to_lowercase();
         let b_text = b.content.to_lowercase();

@@ -8,13 +8,10 @@ use anyhow::Result;
 use uuid::Uuid;
 
 use agent_agency_contracts::WorkingSpec;
-use agent_agency_contracts::types::prelude::*;
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
-use agent_agency_contracts::planning_io::ExecutionPlan as ContractExecutionPlan;
 use agent_agency_contracts::final_verdict::FinalVerdictContract;
 
-use crate::council::{Council, CouncilConfig, CouncilSession};
-use crate::council_types::FinalVerdict;
+use crate::council::{Council, CouncilConfig};
 use crate::planning::plan_types::ExecutionPlan;
 
 /// Unified council integration trait

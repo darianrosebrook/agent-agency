@@ -205,7 +205,8 @@ impl DeepQLearning {
             let hidden_output = self.forward_hidden(state);
             let q_values = self.forward_output(&hidden_output);
             
-            // Calculate target Q-values (simplified - in practice would use target network)
+            // TODO: Implement target network for stable Q-learning
+            //       Currently uses basic Q-value calculation; should use target network for stable deep Q-learning.
             let mut target_q_values = q_values.clone();
             target_q_values[action] = reward;
             

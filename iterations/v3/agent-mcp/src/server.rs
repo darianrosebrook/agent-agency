@@ -1654,15 +1654,39 @@ impl MCPServer {
                             }
                             AUTH_FAILURES_TOTAL.inc();
 
-                            // TODO: Implement comprehensive authentication failure logging
-                            // - [ ] Log user agent information
-                            // - [ ] Log IP address and request details
-                            // - [ ] Log authentication failure reason
-                            // - [ ] Add rate limiting for failed authentication attempts
-                            // - [ ] Add security event tracking
-                            // - [ ] Add unit tests for authentication failure logging
-                            // - [ ] Add integration tests with real authentication failures
-                            // Log failed authentication (simplified for now)
+                            // TODO: Implement comprehensive authentication failure logging and security tracking
+                            //       Currently uses basic logging; should include full security event tracking and rate limiting.
+                            //
+                            // COMPLETION CHECKLIST:
+                            // [ ] Log user agent information
+                            // [ ] Log IP address and request details
+                            // [ ] Log authentication failure reason
+                            // [ ] Add rate limiting for failed authentication attempts
+                            // [ ] Add security event tracking
+                            // [ ] Integrate with security monitoring systems
+                            // [ ] Add unit tests for authentication failure logging
+                            // [ ] Add integration tests with real authentication failures
+                            // [ ] Verify security events are tracked correctly
+                            //
+                            // ACCEPTANCE CRITERIA:
+                            // - Authentication failures are logged with full context
+                            // - Rate limiting prevents brute force attacks
+                            // - Security events are tracked and monitored
+                            // - Failed authentication attempts trigger alerts
+                            //
+                            // DEPENDENCIES:
+                            // - Security event tracking system (Required)
+                            // - Rate limiting infrastructure (Required)
+                            // - IP address extraction utilities (Required)
+                            //
+                            // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+                            // PRIORITY: Medium
+                            // BLOCKING: No
+                            //
+                            // GOVERNANCE:
+                            // - CAWS Tier: 1 (security-critical)
+                            // - Change Budget: ~100 LOC
+                            // - Reviewer Requirements: Security domain expertise
                             let _user_agent = request
                                 .headers()
                                 .get("user-agent")
@@ -1670,7 +1694,37 @@ impl MCPServer {
 
                             true
                         } else {
-                            // Log successful authentication (simplified for now)
+                            // TODO: Implement comprehensive successful authentication logging
+                            //       Currently uses basic logging; should include full authentication success tracking.
+                            //
+                            // COMPLETION CHECKLIST:
+                            // [ ] Log successful authentication events
+                            // [ ] Track user session information
+                            // [ ] Log authentication method used
+                            // [ ] Add metrics for authentication success rates
+                            // [ ] Add unit tests for authentication success logging
+                            // [ ] Add integration tests with real authentication flows
+                            // [ ] Verify authentication events are tracked correctly
+                            //
+                            // ACCEPTANCE CRITERIA:
+                            // - Successful authentications are logged with context
+                            // - Session information is tracked
+                            // - Authentication metrics are collected
+                            // - Authentication events support audit requirements
+                            //
+                            // DEPENDENCIES:
+                            // - Authentication event tracking system (Required)
+                            // - Session management system (Required)
+                            // - Metrics collection infrastructure (Required)
+                            //
+                            // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+                            // PRIORITY: Low
+                            // BLOCKING: No
+                            //
+                            // GOVERNANCE:
+                            // - CAWS Tier: 2 (standard feature)
+                            // - Change Budget: ~60 LOC
+                            // - Reviewer Requirements: Authentication domain expertise
                             false
                         }
                     } else {

@@ -20,10 +20,6 @@ use tempfile::TempDir;
 use agent_orchestration::{
     AutonomousFileEditor,
 };
-use data_infrastructure::file_operations_service::create_file_operations_service;
-use system_common_interfaces::{
-    AllowList, Budgets, ChangesetId,
-};
 
 use crate::{TestResult, TestMetrics};
 

@@ -90,7 +90,40 @@ impl IndexCleanup for IndexCleanupHandler {
         info!("Removing {} indexed entries for path: {:?}", ids_to_remove.len(), path);
         
         // TODO: Implement actual purge methods in DefaultIndexingStage
-        // For now, log what would be removed
+        //       Currently logs what would be removed; should implement comprehensive purge methods that call indexing_stage.purge_by_id() for actual removal of indexed entries.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - purge_by_id() is called for each ProcessingId
+        // - Indexed entries are actually removed from index
+        // - Purge operations handle errors gracefully
+        // - Purge operations are efficient and non-blocking
+        //
+        // DEPENDENCIES:
+        // - DefaultIndexingStage purge_by_id implementation (Required)
+        // - Indexing stage API (Required)
+        // - Error handling for purge failures (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (indexing cleanup functionality)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Indexing and cleanup operations expertise
         for id in &ids_to_remove {
             // Would call: self.indexing_stage.purge_by_id(id).await;
             info!("Would purge ProcessingId: {}", id);

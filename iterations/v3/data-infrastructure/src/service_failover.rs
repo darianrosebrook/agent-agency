@@ -344,29 +344,81 @@ impl ServiceFailoverManager {
 
     /// Check message queue health
     async fn check_queue_health(&self, _service: &ApiServiceInstance) -> bool {
-        // TODO: Implement real message queue health check
-        // - [ ] Integrate with queue technology (Redis, RabbitMQ, etc.)
-        // - [ ] Check queue connection and availability
-        // - [ ] Monitor queue depth and processing rate
-        // - [ ] Handle queue health check errors gracefully
-        // - [ ] Add unit tests with mock queue
-        // - [ ] Add integration tests with real message queue
-        // Implementation would depend on queue technology (Redis, RabbitMQ, etc.)
-        // For now, assume healthy
+        // TODO: Implement comprehensive message queue health checking
+        //       Currently assumes healthy; should implement comprehensive health checking that monitors queue depth, processing rate, and handles health check errors gracefully for queue technologies like Redis or RabbitMQ.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Queue depth and processing rate are monitored
+        // - Health check errors are handled gracefully
+        // - Support for multiple queue technologies (Redis, RabbitMQ)
+        // - Health status accurately reflects queue state
+        //
+        // DEPENDENCIES:
+        // - Queue technology client libraries (Required)
+        // - Health check monitoring utilities (Required)
+        // - Queue metrics collection system (Required)
+        //
+        // ESTIMATED EFFORT: 8-10 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (health monitoring functionality)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Queue systems and health monitoring expertise
         true
     }
 
     /// Check cache health
     async fn check_cache_health(&self, _service: &ApiServiceInstance) -> bool {
-        // TODO: Implement real cache health check
-        // - [ ] Integrate with cache technology (Redis, Memcached, etc.)
-        // - [ ] Check cache connection and availability
-        // - [ ] Monitor cache hit rate and performance
-        // - [ ] Handle cache health check errors gracefully
-        // - [ ] Add unit tests with mock cache
-        // - [ ] Add integration tests with real cache
-        // Implementation would depend on cache technology (Redis, Memcached, etc.)
-        // For now, assume healthy
+        // TODO: Implement comprehensive cache health checking
+        //       Currently assumes healthy; should implement comprehensive health checking that monitors cache hit rate, performance, and handles health check errors gracefully for cache technologies like Redis or Memcached.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Cache hit rate and performance are monitored
+        // - Health check errors are handled gracefully
+        // - Support for multiple cache technologies (Redis, Memcached)
+        // - Health status accurately reflects cache state
+        //
+        // DEPENDENCIES:
+        // - Cache technology client libraries (Required)
+        // - Health check monitoring utilities (Required)
+        // - Cache metrics collection system (Required)
+        //
+        // ESTIMATED EFFORT: 8-10 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (health monitoring functionality)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Cache systems and health monitoring expertise
         true
     }
 

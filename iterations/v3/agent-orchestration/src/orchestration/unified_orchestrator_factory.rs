@@ -12,7 +12,6 @@ use uuid::Uuid;
 use tracing::info;
 
 use crate::orchestration::unified_orchestrator::{UnifiedOrchestrator, UnifiedOrchestratorConfig};
-use crate::planning::factory::PlanningSystemFactory;
 use crate::council::{Council, CouncilConfig};
 use crate::decision_making::{ConsensusStrategy, RiskThresholds};
 use crate::verdict_aggregation::{VerdictAggregator, AggregationConfig, DissentHandling, RiskAggregationStrategy};
@@ -21,18 +20,19 @@ use crate::judge_backup::{Judge, EthicsJudge, quality_judge::QualityAssuranceJud
 use crate::judge_backup::JudgeConfig;
 use crate::judge_backup::backup_types::JudgeType;
 use crate::planning::{
-    plan_generator::PlanGenerator,
     worktree_manager::{WorktreeManager, WorktreeManagerConfig},
-    caws_adjudication_cycle::{CawsAdjudicationCycle, CawsDebateScorer},
+    caws_adjudication_cycle::CawsAdjudicationCycle,
+    caws_debate_scorer::CawsDebateScorer,
     council_integration::{CouncilIntegration, CouncilIntegrationImpl},
     worker_lifecycle_manager::WorkerLifecycleManager,
     worker_assignment::WorkerAssignmentStrategy,
     reflexive_learner::{ReflexiveLearner, LearningConfig},
-    plan_executor::{PlanExecutor, ExecutionConfig, WorkerPool, WorkerInfo, WorkerStatus, WorkerHealth},
+    plan_executor::{WorkerPool, WorkerInfo, WorkerStatus, WorkerHealth, PlanExecutor, ExecutionConfig},
+    factory::PlanningSystemFactory,
+    plan_types::{HistoricalPlan, FailurePattern, HistoricalPlanningData, ExecutionPlan},
 };
 use crate::workers::execution_bridge::WorkerExecutionBridge;
 use crate::orchestration::task_state_persistence::InMemoryTaskStatePersistence;
-use crate::planning::plan_types::ExecutionPlan;
 use crate::planning::DatabaseOperations;
 use agent_workers::{MCPWorkerPool, TaskExecutor, WorkerPoolConfig};
 use async_trait::async_trait;
@@ -146,7 +146,7 @@ impl UnifiedOrchestratorFactory {
         #[cfg(all(feature = "research", feature = "memory"))]
         let planning_components = PlanningSystemFactory::create_planning_components(
             research_collector,
-            memory_system,
+            memory_system.clone(),
             council.clone(),
             db_ops.clone(),
         ).await?;
@@ -203,8 +203,42 @@ impl UnifiedOrchestratorFactory {
         ));
 
         // Create worker bridge
-        let worker_pool = Arc::new(MCPWorkerPool::new(WorkerPoolConfig::default()).await?);
-        let task_executor = Arc::new(TaskExecutor::new().await?);
+        let worker_pool = Arc::new(MCPWorkerPool::new(WorkerPoolConfig::default()).await);
+        // TODO: Pass actual database client when available:
+        // 1. Database client integration: Integrate with actual database client
+        //    - Retrieve database client from configuration or dependency injection
+        //    - Use shared database client instance if available
+        //    - Handle database client creation errors appropriately
+        // 2. Client management: Manage database client lifecycle
+        //    - Share database client across components
+        //    - Handle client connection pooling
+        //    - Support client configuration and setup
+        // 3. Integration completion: Complete database integration
+        //    - Remove stub database client creation
+        //    - Use actual database client for all operations
+        //    - Test database client integration thoroughly
+        // ACCEPTANCE CRITERIA:
+        // - Actual database client is passed to TaskExecutor
+        // - Database client is properly configured and connected
+        // - All database operations use the actual client
+        // DEPENDENCIES:
+        // - Database client configuration (Required)
+        // - Database connection management (Required)
+        // PRIORITY: High
+        // Create database client using DATABASE_URL from environment or default
+        let database_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgresql://localhost/agent_agency_v3".to_string());
+        let db_config = data_infrastructure::DatabaseConfig {
+            database_url: database_url.clone(),
+            pool_max: Some(10),
+            connection_timeout: Some(30),
+            query_timeout: Some(60),
+            ..Default::default()
+        };
+        let db_client = Arc::new(data_infrastructure::DatabaseClient::new(db_config)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to create database client: {}", e))?);
+        let task_executor = Arc::new(TaskExecutor::new(db_client));
         let worker_bridge = Arc::new(WorkerExecutionBridge::new(worker_pool, task_executor));
 
         // Create stub worker pool for PlanExecutor

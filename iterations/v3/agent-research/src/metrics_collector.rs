@@ -333,15 +333,41 @@ impl MetricsCollector {
         success: bool,
         execution_time_ms: u64,
     ) -> Result<()> {
-        // TODO: Implement agent-specific metrics storage
-        // - [ ] Store agent performance metrics in database or metrics system
-        // - [ ] Track success rates, execution times, and error patterns per agent
-        // - [ ] Aggregate metrics for analysis and reporting
-        // - [ ] Support metrics queries and filtering by agent name
-        // - [ ] Add unit tests with mock metrics storage
-        // - [ ] Add integration tests with real metrics persistence
-        // For now, just log the agent task performance
-        // In a full implementation, this would store agent-specific metrics
+        // TODO: Implement comprehensive agent-specific metrics storage
+        //       Currently just logs agent task performance; should implement comprehensive storage that stores agent performance metrics in database or metrics system, tracks success rates and error patterns, and supports metrics queries and filtering.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Agent performance metrics are stored in database or metrics system
+        // - Success rates, execution times, and error patterns are tracked per agent
+        // - Metrics are aggregated for analysis and reporting
+        // - Metrics queries and filtering by agent name are supported
+        //
+        // DEPENDENCIES:
+        // - Metrics storage system (database or metrics system) (Required)
+        // - Metrics aggregation utilities (Required)
+        // - Query and filtering interface (Required)
+        //
+        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (metrics collection functionality)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Metrics storage and aggregation expertise
         if success {
             info!("Agent {} completed task successfully in {}ms", agent_name, execution_time_ms);
         } else {

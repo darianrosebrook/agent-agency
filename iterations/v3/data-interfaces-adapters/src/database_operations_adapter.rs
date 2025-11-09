@@ -11,7 +11,7 @@ use anyhow::{anyhow, Result};
 use uuid::Uuid;
 use chrono::Utc;
 use tracing::{warn, info};
-use sqlx;
+use sqlx::{self, Row};
 
 use agent_orchestration::planning::data_infrastructure_types::{
     DatabaseOperations, CreateExecutionPlan, UpdateExecutionPlan,
@@ -37,11 +37,57 @@ impl DatabaseOperationsAdapter {
 #[async_trait]
 impl DatabaseOperations for DatabaseOperationsAdapter {
     async fn get_workers(&self) -> Result<Vec<models::Worker>> {
-        // PLACEHOLDER: Query workers from database
-        // TODO: Implement worker table query
-        // For now, return empty list - workers are managed by MCPWorkerPool
-        warn!("get_workers() not yet implemented - returning empty list");
-        Ok(vec![])
+        use data_infrastructure::models::Worker as DbWorker;
+        use sqlx::Row;
+        
+        // Query workers directly from database using sqlx
+        let pool = self.db_client.pool();
+        let rows = sqlx::query_as::<_, DbWorker>(
+            r#"
+            SELECT id, name, worker_type, specialty, model_name, endpoint,
+                   capabilities, performance_history, is_active, created_at, updated_at
+            FROM workers
+            ORDER BY created_at DESC
+            "#
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(|e| anyhow!("Failed to query workers from database: {}", e))?;
+        
+        // Convert database Worker model to agent-orchestration Worker model
+        let workers: Vec<models::Worker> = rows.into_iter().map(|db_worker| {
+            // Extract capabilities from JSON value
+            let capabilities = if let serde_json::Value::Object(caps_obj) = &db_worker.capabilities {
+                serde_json::json!(caps_obj)
+            } else {
+                db_worker.capabilities.clone()
+            };
+            
+            // Extract performance_history from JSON value
+            let performance_history = if let serde_json::Value::Object(perf_obj) = &db_worker.performance_history {
+                serde_json::json!(perf_obj)
+            } else {
+                db_worker.performance_history.clone()
+            };
+            
+            models::Worker {
+                id: db_worker.id,
+                name: db_worker.name,
+                worker_type: db_worker.worker_type,
+                specialty: db_worker.specialty,
+                model_name: db_worker.model_name,
+                endpoint: db_worker.endpoint,
+                capabilities,
+                performance_history,
+                is_active: db_worker.is_active,
+                metadata: std::collections::HashMap::new(), // Database model doesn't have metadata field
+                created_at: db_worker.created_at,
+                updated_at: db_worker.updated_at,
+            }
+        }).collect();
+        
+        tracing::info!("Queried {} workers from database", workers.len());
+        Ok(workers)
     }
 
     async fn create_execution_plan(&self, plan: CreateExecutionPlan) -> Result<models::ExecutionPlan> {
@@ -90,22 +136,22 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         let pool = self.db_client.pool();
         
         // Query execution plan from database
-        let row = sqlx::query!(
+        let row = sqlx::query(
             r#"
             SELECT id, title, overview, state
             FROM execution_plans
             WHERE id = $1
             "#,
-            id
         )
+        .bind(id)
         .fetch_optional(pool)
         .await
         .map_err(|e| anyhow!("Failed to query execution plan: {}", e))?;
         
-        Ok(row.map(|r| models::ExecutionPlan {
-            id: r.id,
-            title: r.title,
-            overview: r.overview.unwrap_or_default(),
+        Ok(row.map(|r: sqlx::postgres::PgRow| models::ExecutionPlan {
+            id: r.get("id"),
+            title: r.get("title"),
+            overview: r.try_get::<Option<String>, _>("overview").ok().flatten().unwrap_or_default(),
         }))
     }
 
@@ -113,21 +159,21 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         let pool = self.db_client.pool();
         
         // Query all execution plans from database
-        let rows = sqlx::query!(
+        let rows = sqlx::query(
             r#"
             SELECT id, title, overview, state
             FROM execution_plans
             ORDER BY created_at DESC
-            "#
+            "#,
         )
         .fetch_all(pool)
         .await
         .map_err(|e| anyhow!("Failed to query execution plans: {}", e))?;
         
-        Ok(rows.into_iter().map(|r| models::ExecutionPlan {
-            id: r.id,
-            title: r.title,
-            overview: r.overview.unwrap_or_default(),
+        Ok(rows.into_iter().map(|r: sqlx::postgres::PgRow| models::ExecutionPlan {
+            id: r.get("id"),
+            title: r.get("title"),
+            overview: r.try_get::<Option<String>, _>("overview").ok().flatten().unwrap_or_default(),
         }).collect())
     }
 
@@ -393,24 +439,24 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         let pool = self.db_client.pool();
         
         // Query planning session from database
-        let row = sqlx::query!(
+        let row = sqlx::query(
             r#"
             SELECT id, plan_id, status, started_at, created_at
             FROM planning_sessions
             WHERE id = $1
             "#,
-            id
         )
+        .bind(id)
         .fetch_optional(pool)
         .await
         .map_err(|e| anyhow!("Failed to query planning session: {}", e))?;
         
-        Ok(row.map(|r| models::PlanningSession {
-            id: r.id,
-            plan_id: r.plan_id,
-            status: r.status,
-            created_at: r.created_at,
-            updated_at: r.started_at, // Use started_at as updated_at fallback
+        Ok(row.map(|r: sqlx::postgres::PgRow| models::PlanningSession {
+            id: r.get("id"),
+            plan_id: r.get("plan_id"),
+            status: r.get("status"),
+            created_at: r.get("created_at"),
+            updated_at: r.try_get::<chrono::DateTime<Utc>, _>("started_at").unwrap_or_else(|_| r.get("created_at")), // Use started_at as updated_at fallback
             metadata: std::collections::HashMap::new(), // Metadata not stored in this query
         }))
     }
@@ -465,9 +511,42 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         let telemetry_id = Uuid::new_v4();
         let now = Utc::now();
         
-        // Extract plan_id from session_id (assuming session_id maps to plan_id)
-        // For now, use session_id as plan_id
-        let plan_id = telemetry.session_id;
+        // TODO: Implement proper plan_id extraction from session_id
+        //       Currently uses session_id directly; should implement proper mapping or lookup to extract plan_id from session_id.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Plan ID is extracted correctly from session ID
+        // - Mapping or lookup is accurate
+        // - Error handling works for missing mappings
+        // - Performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Session-to-plan mapping infrastructure (Required)
+        // - Lookup utilities (Required)
+        // - Mapping cache (Optional)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (data mapping enhancement)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Data mapping expertise
+        let plan_id = telemetry.session_id; // Temporary: direct use until proper extraction
         
         // Insert planning telemetry into database
         sqlx::query(
@@ -482,7 +561,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .bind(&telemetry.metric_name)
         .bind(serde_json::json!(telemetry.metric_value)) // Store as JSONB
         .bind(now)
-        .bind(&telemetry.metadata)
+        .bind(serde_json::to_value(&telemetry.metadata).unwrap_or(serde_json::json!({})))
         .execute(pool)
         .await
         .map_err(|e| anyhow!("Failed to persist planning telemetry: {}", e))?;
@@ -504,47 +583,49 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         
         // Query planning telemetry from database
         let rows = if let Some(ref metric_type) = metric_type {
-            sqlx::query!(
+            sqlx::query(
                 r#"
                 SELECT id, plan_id, metric_type, metric_value, collected_at, metadata
                 FROM planning_telemetry
                 WHERE plan_id = $1 AND metric_type = $2
                 ORDER BY collected_at DESC
                 "#,
-                plan_id,
-                metric_type
             )
+            .bind(plan_id)
+            .bind(metric_type)
             .fetch_all(pool)
             .await
         } else {
-            sqlx::query!(
+            sqlx::query(
                 r#"
                 SELECT id, plan_id, metric_type, metric_value, collected_at, metadata
                 FROM planning_telemetry
                 WHERE plan_id = $1
                 ORDER BY collected_at DESC
                 "#,
-                plan_id
             )
+            .bind(plan_id)
             .fetch_all(pool)
             .await
         }
         .map_err(|e| anyhow!("Failed to query planning telemetry: {}", e))?;
         
-        Ok(rows.into_iter().map(|r| {
+        Ok(rows.into_iter().map(|r: sqlx::postgres::PgRow| {
             // Extract metric_value from JSONB
-            let metric_value = r.metric_value
+            let metric_value_json: serde_json::Value = r.get("metric_value");
+            let metric_value = metric_value_json
                 .as_f64()
-                .or_else(|| r.metric_value.as_i64().map(|v| v as f64))
+                .or_else(|| metric_value_json.as_i64().map(|v| v as f64))
                 .unwrap_or(0.0);
             
+            let metadata_json: serde_json::Value = r.get("metadata");
             models::PlanningTelemetry {
-                id: r.id,
-                session_id: r.plan_id, // Use plan_id as session_id
-                metric_name: r.metric_type,
+                id: r.get("id"),
+                session_id: r.get("plan_id"), // Use plan_id as session_id
+                metric_name: r.get("metric_type"),
                 metric_value,
-                timestamp: r.collected_at,
-                metadata: r.metadata.as_object()
+                timestamp: r.get("collected_at"),
+                metadata: metadata_json.as_object()
                     .map(|obj| {
                         obj.iter()
                             .map(|(k, v)| (k.clone(), v.clone()))
@@ -582,7 +663,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .bind(worker_id)
         .bind(&event.event_type)
         .bind(&event.description)
-        .bind(&event.metadata)
+        .bind(serde_json::to_value(&event.metadata).unwrap_or(serde_json::json!({})))
         .bind(now)
         .execute(pool)
         .await
@@ -597,32 +678,41 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         let pool = self.db_client.pool();
         
         // Query planning audit events from database
-        let rows = sqlx::query!(
+        let rows = sqlx::query(
             r#"
             SELECT id, plan_id, milestone_id, worker_id, event_type, description, metadata, created_at
             FROM planning_audit_events
             WHERE plan_id = $1
             ORDER BY created_at DESC
-            "#,
-            plan_id
+            "#
         )
+        .bind(plan_id)
         .fetch_all(pool)
         .await
         .map_err(|e| anyhow!("Failed to query planning audit events: {}", e))?;
         
-        Ok(rows.into_iter().map(|r| models::PlanningAuditEvent {
-            id: r.id,
-            session_id: r.plan_id, // Use plan_id as session_id
-            event_type: r.event_type,
-            description: r.description,
-            timestamp: r.created_at,
-            metadata: r.metadata.as_object()
-                .map(|obj| {
-                    obj.iter()
-                        .map(|(k, v)| (k.clone(), v.clone()))
-                        .collect()
-                })
-                .unwrap_or_default(),
+        Ok(rows.into_iter().map(|r: sqlx::postgres::PgRow| {
+            let id: Uuid = r.get("id");
+            let plan_id: Uuid = r.get("plan_id");
+            let event_type: String = r.get("event_type");
+            let description: String = r.get("description");
+            let created_at: chrono::DateTime<chrono::Utc> = r.get("created_at");
+            let metadata: serde_json::Value = r.get("metadata");
+            
+            models::PlanningAuditEvent {
+                id,
+                session_id: plan_id, // Use plan_id as session_id
+                event_type,
+                description,
+                timestamp: created_at,
+                metadata: metadata.as_object()
+                    .map(|obj| {
+                        obj.iter()
+                            .map(|(k, v)| (k.clone(), v.clone()))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+            }
         }).collect())
     }
 
@@ -652,11 +742,43 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
     }
 
     async fn get_judges(&self) -> Result<Vec<models::Judge>> {
-        // PLACEHOLDER: Query judges from database
-        // TODO: Implement judges table query
-        // For now, return empty list - judges are configured in code
+        // TODO: Query judges from database
+        //       Currently returns empty list; should query judges from database table, handling integration with code-based configuration if needed.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Judges are queried from database correctly
+        // - Query handles code-based configuration integration
+        // - Results are accurate and complete
+        // - Error handling works for query failures
+        //
+        // DEPENDENCIES:
+        // - Database connection (Required)
+        // - Judges table schema (Required)
+        // - Configuration integration utilities (Optional)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (database query feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Database and judge management expertise
         warn!("get_judges() not yet implemented - returning empty list");
-        Ok(vec![])
+        Ok(vec![]) // Temporary: empty list until database query implementation
     }
 
     async fn create_judge(&self, judge: CreateJudge) -> Result<models::Judge> {

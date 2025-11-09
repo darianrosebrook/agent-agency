@@ -5,9 +5,8 @@
 
 use schemars::JsonSchema;
 use std::collections::HashMap;
-use anyhow::{Result, Context};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
 use tracing::info;
 
 use crate::evidence_types::*;

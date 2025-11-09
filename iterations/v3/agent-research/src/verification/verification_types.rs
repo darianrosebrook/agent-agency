@@ -323,7 +323,7 @@ pub struct CheckResult {
     // - [ ] Add evidence ranking and relevance scoring
     // - [ ] Add unit tests with various evidence types
     // - [ ] Add integration tests with real evidence collection
-    pub evidence: Vec<String>, // Simple string evidence for now
+    pub evidence: Vec<String>,
 }
 
 impl CheckResult {

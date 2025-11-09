@@ -33,7 +33,7 @@ anyhow = { workspace = true }
 thiserror = { workspace = true }
 
 # Utilities
-uuid = { workspace = true, features = ["v4", "serde"] }
+uuid = { workspace = true, features = ["v4", "v5", "serde"] }
 regex = "1.10"
 
 # Concurrent data structures
@@ -80,3 +80,4 @@ temporal-analysis = []
 context-offloading = []
 provenance-tracking = []
 database = []  # Now uses direct sqlx, always available
+contracts = []  # Enable memory system adapter for contracts integration

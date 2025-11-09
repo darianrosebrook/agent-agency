@@ -321,11 +321,45 @@ impl AsrEnricher {
         use system_acceleration::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
         
         // Convert audio bytes to f32 samples
-        // TODO: Add proper audio decoding for WAV, MP3, etc.
-        // For now, attempt simple WAV decoding or fall back to simulated behavior
+        // TODO: Implement comprehensive audio decoding for multiple formats
+        //       Currently attempts simple WAV decoding or falls back to simulated behavior; should implement comprehensive audio decoding that supports WAV, MP3, and other common audio formats with proper format detection and decoding.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - WAV format decoding works correctly
+        // - MP3 format decoding is supported
+        // - Other common audio formats are supported
+        // - Format detection is accurate
+        //
+        // DEPENDENCIES:
+        // - Audio decoding libraries (Required)
+        // - Format detection utilities (Required)
+        // - Audio processing utilities (Required)
+        //
+        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (audio processing functionality)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Audio processing and format decoding expertise
         let (audio_samples, sample_rate) = self.decode_audio_to_samples(audio_data, content_type)?;
         
-        // Load Whisper model (this is inefficient - should cache, but works for now)
+        // TODO: Implement Whisper model caching
+        //       Currently loads model on each call; should cache loaded models for efficiency.
         let config = WhisperConfig::default();
         let mut telemetry = TelemetryCollector::new();
         let circuit_breaker = CircuitBreaker::new(CircuitBreakerConfig::default());
@@ -375,8 +409,37 @@ impl AsrEnricher {
     #[cfg(feature = "coreml")]
     fn decode_audio_to_samples(&self, audio_data: &[u8], content_type: &str) -> Result<(Vec<f32>, usize), anyhow::Error> {
         // TODO: Implement proper audio decoding for various formats
-        // For now, attempt simple WAV decoding or return error to fall back to simulated behavior
-        // This is a placeholder - in production, use a proper audio decoding library
+        //       Currently attempts simple WAV decoding; should implement proper audio decoding using production-grade audio library.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Integrate production audio decoding library (hound, rodio, etc.)
+        // [ ] Support WAV, MP3, FLAC, OGG formats
+        // [ ] Handle audio format detection
+        // [ ] Extract sample rate and channel information
+        // [ ] Handle decoding errors gracefully
+        // [ ] Add unit tests for audio decoding
+        // [ ] Add integration tests with various formats
+        // [ ] Verify decoding accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Multiple audio formats are supported
+        // - Audio decoding is accurate
+        // - Sample rate and channels are extracted correctly
+        // - Decoding errors are handled gracefully
+        //
+        // DEPENDENCIES:
+        // - Audio decoding library (Required)
+        // - Format detection utilities (Required)
+        // - Audio processing utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (audio processing feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Audio processing expertise
         
         if content_type == "audio/wav" || content_type == "audio/x-wav" {
             // Simple WAV header parsing (minimal implementation)
@@ -451,7 +514,19 @@ impl AsrEnricher {
     /// Detect language from audio characteristics
     fn detect_language(&self, audio_data: &[u8], content_type: &str) -> Result<String, anyhow::Error> {
         // Basic language detection based on audio characteristics
-        // In a real implementation, this would use language detection models
+        // TODO: Implement language detection models with the following requirements:
+        // 1. Model integration: Use language detection models
+        //    - Load and initialize language detection ML models
+        //    - Process audio features through detection models
+        //    - Support multiple language detection approaches
+        // 2. Feature extraction: Extract language features from audio
+        //    - Extract acoustic features (MFCC, spectral features)
+        //    - Extract linguistic features if available
+        //    - Prepare features for model input
+        // 3. Accuracy improvement: Improve detection accuracy
+        //    - Use ensemble of detection models
+        //    - Handle multilingual audio content
+        //    - Provide confidence scores for detections
         let sample_rate = self.extract_sample_rate(audio_data, content_type)?;
         
         // Simple heuristic: different languages have different frequency characteristics
@@ -1875,15 +1950,39 @@ impl EnrichmentStage for UnifiedEnrichmentStage {
                 created_at: chrono::Utc::now(),
             })
         } else {
-            // TODO: Implement proper enrichment result combination
-            // - [ ] Merge multiple enrichment results intelligently
-            // - [ ] Resolve conflicts between different enrichment sources
-            // - [ ] Weight results by confidence and source reliability
-            // - [ ] Combine metadata from all enrichment sources
-            // - [ ] Add unit tests with multiple enrichment results
-            // - [ ] Add integration tests with real enrichment combinations
-            // Return the first result for now - in practice would combine them
-            Ok(enriched_results.into_iter().next().unwrap())
+            // TODO: Combine metadata from all enrichment sources
+            //       Currently returns first result; should combine metadata from all enrichment sources intelligently.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Merge metadata from multiple enrichment sources
+            // [ ] Resolve conflicts between sources
+            // [ ] Weight sources by confidence or quality
+            // [ ] Combine complementary information
+            // [ ] Handle missing metadata gracefully
+            // [ ] Add unit tests for metadata combination
+            // [ ] Add integration tests with multiple sources
+            // [ ] Verify combination quality
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Metadata from all sources is combined
+            // - Conflicts are resolved appropriately
+            // - Source weighting improves quality
+            // - Combination preserves important information
+            //
+            // DEPENDENCIES:
+            // - Metadata combination utilities (Required)
+            // - Conflict resolution utilities (Required)
+            // - Source weighting utilities (Required)
+            //
+            // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (metadata processing feature)
+            // - Change Budget: ~100 LOC
+            // - Reviewer Requirements: Metadata processing expertise
+            Ok(enriched_results.into_iter().next().unwrap()) // Temporary: return first result until combination is implemented
         }
     }
 

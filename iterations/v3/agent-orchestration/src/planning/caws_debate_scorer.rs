@@ -21,8 +21,7 @@ use tracing::info;
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
 use agent_agency_contracts::WorkingSpec;
 
-use crate::council::{Council, CouncilSession};
-use crate::judge_backup::types::ReviewContext;
+use crate::council::Council;
 use crate::planning::caws_adjudication_cycle::ClaimExtractionResults;
 use crate::planning::caws_quality_gates::CawsQualityGateResult;
 use crate::planning::rubric_engineering::{RubricEngine, TaskSurface, ComponentScores};

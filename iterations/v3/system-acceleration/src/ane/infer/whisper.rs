@@ -151,14 +151,42 @@ impl WhisperInferenceExecutor {
 
     /// Convert audio to mel spectrogram
     fn audio_to_mel_spectrogram(&self, audio: &[f32]) -> Result<Vec<f32>> {
-        // This is a simplified implementation
-        // For production, this should use a proper audio processing library
-
-        // Compute STFT (simplified)
+        // TODO: Implement proper audio processing using production-grade audio library
+        //       Currently uses basic STFT and mel filterbank; should use proper audio processing library.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Integrate production audio processing library (e.g., librosa, torchaudio)
+        // [ ] Implement proper STFT with windowing and overlap
+        // [ ] Implement proper mel filterbank with correct frequency scaling
+        // [ ] Add proper normalization and log scaling
+        // [ ] Handle edge cases (empty audio, very short audio)
+        // [ ] Add unit tests for audio processing accuracy
+        // [ ] Add integration tests with real audio samples
+        // [ ] Verify mel spectrogram matches expected format for Whisper model
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Audio processing uses production-grade audio library
+        // - STFT is computed with proper windowing and overlap
+        // - Mel filterbank uses correct frequency scaling
+        // - Output format matches Whisper model input requirements
+        //
+        // DEPENDENCIES:
+        // - Audio processing library (Required)
+        // - STFT implementation (Required)
+        // - Mel filterbank implementation (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (standard feature)
+        // - Change Budget: ~120 LOC
+        // - Reviewer Requirements: Audio processing domain expertise
+        // Currently uses placeholder STFT and mel filterbank implementations
         let n_frames = (audio.len() - self.audio_config.n_fft) / self.audio_config.hop_length + 1;
         let _spectrogram = vec![0.0f32; self.audio_config.n_fft / 2 * n_frames];
 
-        // Apply mel filterbank (simplified triangular filters)
         let mut mel_spectrogram = vec![0.0f32; self.audio_config.n_mels * n_frames];
 
         // Convert to log scale and normalize
@@ -185,14 +213,40 @@ impl WhisperInferenceExecutor {
         );
 
         // TODO: Verify CoreML bridge integration is working correctly
-        // - [ ] Ensure CoreML inference is actually executing (not placeholder)
-        // - [ ] Validate output tensor matches expected Whisper format
-        // - [ ] Add telemetry for CoreML inference performance
-        // - [ ] Add error handling for CoreML inference failures
-        // - [ ] Add unit tests with mock CoreML outputs
-        // - [ ] Add integration tests with real CoreML Whisper model
+        //       Currently assumes CoreML inference works; should verify integration, validate outputs, and add comprehensive testing.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Ensure CoreML inference is actually executing
+        // [ ] Validate output tensor matches expected Whisper format
+        // [ ] Add telemetry for CoreML inference performance
+        // [ ] Add error handling for CoreML inference failures
+        // [ ] Verify inference results are correct
+        // [ ] Add unit tests with mock CoreML outputs
+        // [ ] Add integration tests with real CoreML Whisper model
+        // [ ] Performance: Verification should complete in <50ms
+        // [ ] Documentation: Document CoreML integration verification
+        //
+        // ACCEPTANCE CRITERIA:
+        // - CoreML inference is verified to be executing
+        // - Output tensor format matches Whisper requirements
+        // - Performance telemetry is collected
+        // - Error handling covers all failure cases
+        // - Integration tests validate end-to-end flow
+        //
+        // DEPENDENCIES:
+        // - CoreML bridge integration (Required)
+        // - Telemetry infrastructure (Required)
+        // - Test infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 5-7 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (core ML integration feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: CoreML integration expertise
         // Run inference through CoreML
-        // Note: This is a placeholder - actual implementation would use the CoreML bridge
         let output_tensor = self.run_coreml_inference(&input_tensor, &inference_options).await?;
 
         Ok(WhisperInferenceResult {
@@ -239,25 +293,45 @@ impl WhisperInferenceExecutor {
             )?;
             */
             
-            // TODO: Replace placeholder decoder output with real Whisper decoder
-            // - [ ] Integrate Whisper decoder model loading
-            // - [ ] Run decoder forward pass on encoder output
-            // - [ ] Generate proper token predictions from decoder
-            // - [ ] Handle decoder errors and edge cases
-            // - [ ] Add unit tests with mock decoder outputs
-            // - [ ] Add integration tests with real Whisper decoder
-            // Placeholder implementation
+            // TODO: Implement proper Whisper decoder integration
+            //       Currently uses placeholder; should integrate Whisper decoder model for token generation from encoder output.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Integrate Whisper decoder model loading
+            // [ ] Run decoder forward pass on encoder output
+            // [ ] Generate proper token predictions from decoder
+            // [ ] Implement beam search decoding with configurable beam width
+            // [ ] Add language model integration for improved transcription accuracy
+            // [ ] Implement timestamp alignment and segmentation
+            // [ ] Add confidence scoring and alternative hypothesis generation
+            // [ ] Handle decoder errors and edge cases
+            // [ ] Add unit tests with mock decoder outputs
+            // [ ] Add integration tests with real Whisper decoder
+            // [ ] Performance: Decoder inference should complete in <100ms
+            // [ ] Documentation: Document decoder integration process
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Whisper decoder model is integrated correctly
+            // - Token generation works from encoder output
+            // - Beam search decoding produces accurate results
+            // - Timestamp alignment is accurate
+            // - Confidence scoring reflects actual model confidence
+            //
+            // DEPENDENCIES:
+            // - Whisper decoder model (Required)
+            // - Beam search implementation (Required)
+            // - Language model integration (Optional)
+            //
+            // ESTIMATED EFFORT: 10-15 hours (low confidence)
+            // PRIORITY: High
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 1 (core ML feature)
+            // - Change Budget: ~400 LOC
+            // - Reviewer Requirements: ML model integration expertise
             let _output_tensor = candle_core::Tensor::new(&[0.0f32], &candle_core::Device::Cpu)?;
-
-            // TODO: Implement proper Whisper decoder integration with acceptance criteria:
-            // - [ ] Integrate Whisper decoder model for token generation from encoder output
-            // - [ ] Implement beam search decoding with configurable beam width
-            // - [ ] Add language model integration for improved transcription accuracy
-            // - [ ] Implement timestamp alignment and segmentation
-            // - [ ] Add confidence scoring and alternative hypothesis generation
-            // The encoder output would be used with a decoder in a full implementation
-            // For now, return placeholder transcription results
-            // In practice, we'd need a decoder model or beam search decoding
+            // Return placeholder transcription results until decoder is implemented
             Ok(WhisperOutputTensor {
                 tokens: vec![50258, 50259, 50359, 50363], // Example token sequence
                 token_logprobs: vec![-0.1, -0.2, -0.1, -0.3],
@@ -302,20 +376,43 @@ impl WhisperInferenceExecutor {
 
     /// Decode token sequence to text
     fn decode_tokens_to_text(&self, _tokens: &[i32]) -> Result<String> {
-        // TODO: Implement Whisper tokenizer integration with acceptance criteria:
-        // - [ ] Integrate Whisper tokenizer for proper token-to-text conversion
-        // - [ ] Handle special tokens (language, timestamps, task indicators)
-        // - [ ] Implement proper text normalization and post-processing
-        // - [ ] Add support for multiple languages and code-switching detection
-        // - [ ] Implement subword merging and detokenization logic
-        // This would use the actual Whisper tokenizer
         // TODO: Implement real transcription from decoder output
-        // - [ ] Decode tokens from decoder output tensor
-        // - [ ] Apply Whisper tokenizer to convert tokens to text
-        // - [ ] Handle special tokens and language markers
-        // - [ ] Add unit tests with mock decoder outputs
-        // - [ ] Add integration tests with real transcription
-        // For now, return placeholder text
+        //       Currently returns placeholder text; should implement actual token-to-text conversion using Whisper tokenizer for real transcription results.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Token sequence is properly decoded to text using Whisper tokenizer
+        // - Special tokens (language, timestamps, task indicators) are handled correctly
+        // - Text normalization and post-processing produce accurate transcriptions
+        // - Multiple languages and code-switching are supported
+        // - Subword merging and detokenization logic works correctly
+        //
+        // DEPENDENCIES:
+        // - Whisper tokenizer integration (Required)
+        // - Decoder output tensor processing (Required)
+        // - Text normalization utilities (Required)
+        // - Language detection and code-switching support (Optional)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (core inference functionality)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: ML inference and tokenizer expertise
         Ok("This is a placeholder transcription result.".to_string())
     }
 
@@ -397,8 +494,41 @@ mod tests {
 
     #[tokio::test]
     async fn test_whisper_inference_executor_creation() {
-        // This test would require a real model file
-        // For now, just test the structure
+        // TODO: Implement comprehensive Whisper inference executor test
+        //       Currently uses basic structure test; should implement full test with real model file for comprehensive executor validation.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Test creates executor with real model file
+        // - Test validates executor initialization and configuration
+        // - Test covers error cases (invalid model file, missing dependencies)
+        // - Test validates executor state and resource management
+        //
+        // DEPENDENCIES:
+        // - Real Whisper model file for testing (Required)
+        // - Test fixtures and model loading utilities (Required)
+        // - Mock or test model infrastructure (Optional)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (test infrastructure enhancement)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Test infrastructure expertise
         assert!(true);
     }
 

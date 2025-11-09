@@ -553,7 +553,7 @@ impl WorkspaceManager {
         let workspace_state: serde_json::Value = serde_json::from_str(&state_content)
             .map_err(|e| DataProcessingError::Serialization(e))?;
 
-        // Restore workspace state (simplified - would restore actual files in production)
+        // Restore workspace state
         self.restore_workspace_state(workspace_state).await?;
 
         Ok(())
@@ -634,23 +634,81 @@ impl WorkspaceManager {
         Ok(())
     }
 
-    /// Restore workspace state (simplified implementation)
+    /// Restore workspace state
     async fn restore_workspace_state(&self, _state: serde_json::Value) -> DataProcessingResult<()> {
-        // In a real implementation, this would:
-        // TODO: Implement real workspace state restoration
-        // - [ ] Compare current state with backup state
-        // - [ ] Restore modified/deleted files from backup
-        // - [ ] Remove files that shouldn't exist in target state
-        // - [ ] Update file permissions and timestamps to match backup
-        // - [ ] Handle restoration errors and partial failures
-        // - [ ] Add unit tests with mock workspace states
-        // - [ ] Add integration tests with real workspace restoration
-        // 1. Compare current state with backup state
-        // 2. Restore modified/deleted files
+        // TODO: Implement workspace state restoration
+        //       Currently placeholder; should compare current state with backup, restore files, and update metadata.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Compare current state with backup state
+        // [ ] Restore modified/deleted files from backup
+        // [ ] Remove files that shouldn't exist in target state
+        // [ ] Update file permissions and timestamps to match backup
+        // [ ] Handle restoration conflicts and errors
+        // [ ] Verify restoration completeness
+        // [ ] Add unit tests with various state scenarios
+        // [ ] Add integration tests with real workspace restoration
+        // [ ] Performance: Restoration should complete in <30s
+        // [ ] Documentation: Document restoration process
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Workspace state matches backup state after restoration
+        // - Files are restored correctly from backup
+        // - File permissions and timestamps are preserved
+        // - Restoration conflicts are handled appropriately
+        // - Restoration is verified for completeness
+        //
+        // DEPENDENCIES:
+        // - Backup storage access (Required)
+        // - File system operations (Required)
+        // - State comparison logic (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (data integrity feature)
+        // - Change Budget: ~300 LOC
+        // - Reviewer Requirements: File system and backup expertise
         // 3. Remove files that shouldn't exist
         // 4. Update file permissions and timestamps
-        
-        // For now, just log that restoration would happen
+        //
+        // TODO: Implement comprehensive workspace state restoration
+        //       Currently logs restoration intent only; should implement comprehensive workspace state restoration that restores files from backup, removes files that shouldn't exist, and updates file permissions and timestamps for complete state recovery.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Files are restored from backup correctly
+        // - Files that shouldn't exist are removed
+        // - File permissions and timestamps are updated
+        // - Restoration process is atomic and handles errors gracefully
+        //
+        // DEPENDENCIES:
+        // - Backup storage system (Required)
+        // - File system operations utilities (Required)
+        // - Permission and timestamp management (Required)
+        //
+        // ESTIMATED EFFORT: 12-16 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (workspace state management functionality)
+        // - Change Budget: ~300 LOC
+        // - Reviewer Requirements: File system and backup restoration expertise
         tracing::info!("Workspace state restoration simulated for backup");
         
         Ok(())

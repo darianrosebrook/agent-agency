@@ -227,8 +227,39 @@ impl CircuitBreakerRegistry {
     pub fn update_config(&self, service_name: &str, config: CircuitBreakerConfig) -> bool {
         let mut breakers = self.breakers.lock().unwrap();
         if let Some(breaker) = breakers.get_mut(service_name) {
-            // Note: In a real implementation, we'd need to update the breaker's config
-            // but since CircuitBreaker doesn't expose mutating config, we'd recreate it
+            // TODO: Implement proper circuit breaker config update
+            //       Currently recreates breaker; should update breaker's config without recreation if possible, or document why recreation is necessary.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Add config update method to CircuitBreaker if possible
+            // [ ] Update breaker config without recreation
+            // [ ] Handle state preservation during config update
+            // [ ] Document why recreation is necessary if update not possible
+            // [ ] Add unit tests with config updates
+            // [ ] Add integration tests with real breaker updates
+            // [ ] Performance: Update should complete in <1ms
+            // [ ] Documentation: Document config update behavior
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Breaker config is updated correctly
+            // - Breaker state is preserved if possible
+            // - Update doesn't reset breaker state unnecessarily
+            // - Config update errors are handled
+            // - Update performance is acceptable
+            //
+            // DEPENDENCIES:
+            // - CircuitBreaker config update API (Optional)
+            // - State preservation logic (Required)
+            //
+            // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+            // PRIORITY: Low
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (circuit breaker feature)
+            // - Change Budget: ~100 LOC
+            // - Reviewer Requirements: Circuit breaker expertise
+            // Note: Since CircuitBreaker doesn't expose mutating config, we recreate it
             *breaker = CircuitBreaker::new(config);
             true
         } else {

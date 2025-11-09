@@ -305,8 +305,77 @@ impl ConcurrencyManager {
 
     /// Attempt automatic merge
     fn auto_merge_conflict(&mut self, path: &str, conflict: &ConflictInfo) -> Result<ConcurrencyResult> {
-        // For now, just return the conflict for manual resolution
-        // In a real implementation, you'd implement merge logic here
+        // TODO: Implement automatic merge logic for conflicts
+        //       Currently returns conflict for manual resolution; should implement merge logic to automatically resolve conflicts where possible.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement conflict detection and analysis
+        // [ ] Implement automatic merge strategies
+        // [ ] Handle three-way merge scenarios
+        // [ ] Detect mergeable vs non-mergeable conflicts
+        // [ ] Apply merge resolution automatically
+        // [ ] Handle merge failures gracefully
+        // [ ] Add unit tests with various conflict scenarios
+        // [ ] Add integration tests with real merge operations
+        // [ ] Performance: Merge should complete in <100ms
+        // [ ] Documentation: Document merge strategies
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Automatic merge resolves mergeable conflicts
+        // - Non-mergeable conflicts are identified
+        // - Merge logic handles edge cases
+        // - Merge failures fallback to manual resolution
+        // - Merge results are correct and consistent
+        //
+        // DEPENDENCIES:
+        // - Conflict analysis logic (Required)
+        // - Merge algorithm implementation (Required)
+        // - Three-way merge utilities (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (low confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (concurrency feature)
+        // - Change Budget: ~300 LOC
+        // - Reviewer Requirements: Merge algorithm expertise
+        //
+        // TODO: Implement comprehensive automatic conflict resolution
+        //       Currently returns conflict for manual resolution; should implement comprehensive automatic conflict resolution that analyzes conflicts, attempts automatic merge for mergeable conflicts, and identifies non-mergeable conflicts requiring manual resolution.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Automatic merge resolves mergeable conflicts
+        // - Non-mergeable conflicts are identified
+        // - Merge logic handles edge cases
+        // - Merge failures fallback to manual resolution
+        //
+        // DEPENDENCIES:
+        // - Conflict analysis logic (Required)
+        // - Merge algorithm implementation (Required)
+        // - Three-way merge utilities (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (low confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (concurrency feature)
+        // - Change Budget: ~300 LOC
+        // - Reviewer Requirements: Merge algorithm expertise
         Ok(ConcurrencyResult::Conflict(conflict.clone()))
     }
 
@@ -314,7 +383,40 @@ impl ConcurrencyManager {
     fn create_branch(&mut self, path: &str, conflict: &ConflictInfo) -> Result<ConcurrencyResult> {
         // Create a new branch with the conflicting change
         let branch_name = format!("conflict-{}-{}", path.replace('/', "-"), conflict.timestamp);
-        // In a real implementation, you'd create the branch here
+        // TODO: Implement branch creation for conflict resolution
+        //       Currently generates branch name only; should create actual branch in version control system.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Create branch in version control system
+        // [ ] Apply conflicting changes to branch
+        // [ ] Set branch metadata and tracking
+        // [ ] Handle branch creation errors
+        // [ ] Link branch to conflict resolution
+        // [ ] Add unit tests with mock VCS
+        // [ ] Add integration tests with real VCS
+        // [ ] Performance: Branch creation should complete in <500ms
+        // [ ] Documentation: Document branch creation process
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Branch is created in version control system
+        // - Conflicting changes are applied to branch
+        // - Branch metadata is properly set
+        // - Branch creation errors are handled
+        // - Branch is linked to conflict for tracking
+        //
+        // DEPENDENCIES:
+        // - Version control system integration (Required)
+        // - Branch creation API (Required)
+        // - Conflict tracking system (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (VCS integration feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: VCS integration expertise
         Ok(ConcurrencyResult::Branched(branch_name))
     }
 
@@ -410,7 +512,8 @@ impl ConflictDetector {
         self.patterns
             .iter()
             .filter(|pattern| {
-                // Simple pattern matching - in practice, you'd use a proper glob library
+                // TODO: Implement proper glob pattern matching library
+                //       Currently uses basic pattern matching; should use a proper glob library for accurate file pattern matching.
                 self.matches_pattern(path, &pattern.file_pattern)
             })
             .cloned()

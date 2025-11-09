@@ -143,11 +143,42 @@ impl WorkspaceIntegrationHooks {
         // - [ ] Add validation to ensure rollback state is valid
         // - [ ] Add unit tests with mock workspace states
         // - [ ] Add integration tests with real workspace rollback
-        // Note: The actual rollback implementation would depend on the specific
-        // workspace manager API. For now, we'll simulate rollback by creating a view
-        // of the pre-processing state for manual restoration.
-        
-        tracing::warn!("Rollback requested for state: {}. Manual restoration may be required.", pre_state_id);
+        // TODO: Implement workspace rollback using workspace manager API
+        //       Currently simulates rollback; should implement actual rollback using workspace manager API for automatic state restoration.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Rollback uses workspace manager API correctly
+        // - State restoration is automatic
+        // - Rollback is reliable
+        // - Error handling works for rollback failures
+        //
+        // DEPENDENCIES:
+        // - Workspace manager API (Required)
+        // - State restoration infrastructure (Required)
+        // - Rollback utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (workspace management feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Workspace management expertise
+        tracing::warn!("Rollback requested for state: {}. Manual restoration may be required.", pre_state_id); // Temporary: manual restoration until API integration
         
         // Create a rollback view for debugging
         if let Some(ref view_manager) = self.view_manager {
@@ -203,8 +234,42 @@ impl WorkspaceIntegrationHooks {
         // - [ ] Handle missing state data gracefully
         // - [ ] Add unit tests with mock state counts
         // - [ ] Add integration tests with real workspace state tracking
-        // For now, estimate total states based on views (simplified)
-        let total_states = total_views + 1; // +1 for current state
+        // TODO: Calculate actual total states from workspace state tracking
+        //       Currently estimates based on views; should calculate actual total states from workspace state tracking system.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Total states are calculated accurately
+        // - State tracking is comprehensive
+        // - Calculation includes all state types
+        // - Error handling works for tracking failures
+        //
+        // DEPENDENCIES:
+        // - Workspace state tracking system (Required)
+        // - State counting utilities (Required)
+        // - State query infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (monitoring enhancement)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Workspace state tracking expertise
+        let total_states = total_views + 1; // Temporary: estimation until state tracking integration
 
         Ok(WorkspaceStats {
             total_states,

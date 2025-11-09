@@ -96,7 +96,41 @@ impl CompilationSpecialist {
     }
 
     fn parse_compilation_task(&self, task: &str) -> Result<CompilationParams, WorkerError> {
-        // Simple parsing - in a real implementation, this would parse structured input
+        // TODO: Implement structured input parsing for compilation tasks
+        //       Currently uses simple parsing; should parse structured input (JSON, YAML, or structured text) for compilation parameters.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement JSON parsing for compilation parameters
+        // [ ] Support YAML format for compilation parameters
+        // [ ] Parse structured text format
+        // [ ] Validate parsed parameters
+        // [ ] Handle parsing errors gracefully
+        // [ ] Support parameter schema validation
+        // [ ] Add unit tests with various input formats
+        // [ ] Add integration tests with real compilation tasks
+        // [ ] Performance: Parsing should complete in <1ms
+        // [ ] Documentation: Document input format specifications
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Structured input is parsed correctly
+        // - Multiple formats are supported (JSON, YAML, text)
+        // - Parameters are validated after parsing
+        // - Parsing errors are clear and actionable
+        // - Parameter schema is enforced
+        //
+        // DEPENDENCIES:
+        // - JSON/YAML parsing libraries (Required)
+        // - Parameter schema definition (Required)
+        // - Validation logic (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (worker feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Parsing and validation expertise
         let mut profile = "debug".to_string();
         let mut features = Vec::new();
         let mut target = None;
@@ -238,7 +272,41 @@ impl RefactoringSpecialist {
     }
 
     fn generate_refactoring_suggestions(&self, params: &RefactoringParams) -> Result<String, WorkerError> {
-        // Simple refactoring suggestions - in a real implementation, this would analyze code
+        // TODO: Implement code analysis for refactoring suggestions
+        //       Currently returns generic suggestions; should analyze actual code to generate specific refactoring suggestions.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement code analysis and parsing
+        // [ ] Analyze code structure and complexity
+        // [ ] Detect code smells and anti-patterns
+        // [ ] Generate specific refactoring suggestions
+        // [ ] Rank suggestions by impact and priority
+        // [ ] Provide code examples for suggestions
+        // [ ] Add unit tests with various code samples
+        // [ ] Add integration tests with real codebases
+        // [ ] Performance: Analysis should complete in <5s
+        // [ ] Documentation: Document refactoring suggestion methodology
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Code is analyzed for refactoring opportunities
+        // - Suggestions are specific and actionable
+        // - Suggestions are ranked by priority
+        // - Code examples are provided
+        // - Analysis performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Code analysis library (Required)
+        // - AST parsing (Required)
+        // - Refactoring pattern detection (Required)
+        //
+        // ESTIMATED EFFORT: 10-15 hours (low confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (code analysis feature)
+        // - Change Budget: ~400 LOC
+        // - Reviewer Requirements: Code analysis expertise
         let suggestions = vec![
             "Consider extracting methods for complex functions (>50 lines)",
             "Use guard clauses instead of deep nesting",

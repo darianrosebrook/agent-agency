@@ -58,9 +58,42 @@ pub mod iokit {
 
         // Look for temperature data in ioreg output
         if output_str.contains("Temperature") {
-            // Simple parsing - look for numeric values near "Temperature"
-            // This is a simplified implementation
-            Some(45.0)
+            // TODO: Parse temperature value properly from ioreg output
+            //       Currently uses placeholder; should parse temperature value properly from ioreg output for accurate temperature monitoring.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Temperature is parsed correctly from ioreg output
+            // - Parsing handles various output formats
+            // - Error handling works for parse failures
+            // - Performance is acceptable
+            //
+            // DEPENDENCIES:
+            // - ioreg output parsing utilities (Required)
+            // - Temperature extraction algorithms (Required)
+            // - Output format handling (Required)
+            //
+            // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+            // PRIORITY: Low
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 3 (monitoring enhancement)
+            // - Change Budget: ~80 LOC
+            // - Reviewer Requirements: System monitoring expertise
+            Some(45.0) // Temporary: placeholder until proper parsing
         } else {
             Some(45.0) // Default temperature
         }
@@ -102,11 +135,42 @@ pub mod iokit {
 
         let _output_str = String::from_utf8(output.stdout).ok()?;
 
-        // Parse battery info for discharge rate
-        // Example: "Now drawing from 'Battery Power' - discharging (time remaining: 4:23)"
-        // We could estimate power usage from discharge rate, but this is complex
-        // For now, return a reasonable default
-        Some(5.0)
+        // TODO: Estimate power usage from battery discharge rate
+        //       Currently returns default; should estimate power usage from battery discharge rate for accurate power monitoring.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Power usage is estimated from discharge rate correctly
+        // - Estimation handles various battery states
+        // - Error handling works for estimation failures
+        // - Performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Battery monitoring APIs (Required)
+        // - Power estimation algorithms (Required)
+        // - Discharge rate calculation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (monitoring enhancement)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Power monitoring expertise
+        Some(5.0) // Temporary: default until discharge rate estimation
     }
 
     /// Get ANE-specific thermal data

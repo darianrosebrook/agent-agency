@@ -31,7 +31,8 @@ impl MetricsCollector {
         } else {
             metrics.failed_queries += 1;
         }
-        // Update averages (simplified)
+        // TODO: Implement proper metric averaging calculation
+        //       Currently uses basic update; should implement proper averaging with time windows and decay factors.
         metrics.last_updated = Utc::now();
     }
 

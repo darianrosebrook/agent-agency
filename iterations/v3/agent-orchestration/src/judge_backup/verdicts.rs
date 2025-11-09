@@ -4,7 +4,7 @@
 //! refinement, and rejection verdicts with associated metadata.
 
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use crate::judge_backup::risk::{RiskAssessment, RiskLevel};
+use serde::{Serialize, Deserialize};use crate::judge_backup::risk::RiskAssessment;
 
 /// Judge verdict on a working specification
 

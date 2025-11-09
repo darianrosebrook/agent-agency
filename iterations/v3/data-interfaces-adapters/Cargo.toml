@@ -14,6 +14,7 @@ serde_json.workspace = true
 tracing.workspace = true
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 thiserror.workspace = true
+anyhow.workspace = true
 uuid.workspace = true
 chrono.workspace = true
 
@@ -49,8 +50,9 @@ agent-data-processing = { path = "../agent-data-processing", features = ["coreml
 
 [features]
 default = ["orchestration"]
-orchestration = []
+orchestration = ["research", "memory"]  # Enable both research and memory for UnifiedOrchestrator
 memory = ["agent-orchestration/memory"]  # Enable memory feature for UnifiedOrchestrator
+research = ["agent-orchestration/research"]  # Enable research feature for UnifiedOrchestrator
 
 [[bin]]
 name = "agent-agency-api-server"

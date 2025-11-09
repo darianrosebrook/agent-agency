@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::collections::HashMap;
 use anyhow::Result;
 use uuid::Uuid;
-use tracing::{info, debug, warn, error};
+use tracing::{info, debug};
 use chrono::Utc;
 
 use agent_agency_contracts::planning_io::Milestone;
@@ -282,7 +282,7 @@ impl StreamingTaskExecutor {
     /// Execute next chunk
     fn execute_next_chunk(&self, task_id: Uuid) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>> {
         Box::pin(async move {
-        let mut execution = {
+        let execution = {
             let mut executions = self.active_executions.write().await;
             executions.get_mut(&task_id).cloned()
         };

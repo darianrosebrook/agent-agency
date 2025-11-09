@@ -153,8 +153,42 @@ impl WriteAheadLog {
     pub fn cleanup_orphaned(&self, orphaned_ids: &[ChangeId]) -> Result<()> {
         for change_id in orphaned_ids {
             debug!("Cleaning up orphaned change: {}", change_id);
-            // In a full implementation, this would delete the corresponding blob files
-            // For now, we just log the cleanup
+            // TODO: Delete corresponding blob files for orphaned changes
+            //       Currently only logs; should delete corresponding blob files for orphaned changes to complete cleanup.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Blob files are deleted correctly
+            // - Cleanup is complete and safe
+            // - Error handling works for deletion failures
+            // - Performance is acceptable
+            //
+            // DEPENDENCIES:
+            // - Blob file management infrastructure (Required)
+            // - File deletion utilities (Required)
+            // - Cleanup tracking infrastructure (Required)
+            //
+            // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (cleanup feature)
+            // - Change Budget: ~80 LOC
+            // - Reviewer Requirements: File system and cleanup expertise
+            // Temporary: logging only until blob file deletion
         }
         Ok(())
     }
@@ -325,9 +359,42 @@ impl CrashSafeWriter {
 
     /// Serialize payload to file
     fn serialize_payload(&self, payload: &ChangePayload, file: &mut File) -> Result<()> {
-        // In a full implementation, this would serialize with PayloadHeader
-        // For now, just serialize as JSON
-        let json = serde_json::to_string(payload)?;
+        // TODO: Serialize with PayloadHeader for proper structure
+        //       Currently serializes as JSON only; should serialize with PayloadHeader for proper payload structure and metadata.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - PayloadHeader is included in serialization
+        // - Structure is correct and complete
+        // - Deserialization works correctly
+        // - Performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - PayloadHeader structure (Required)
+        // - Serialization utilities (Required)
+        // - Payload format infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (serialization feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Serialization expertise
+        let json = serde_json::to_string(payload)?; // Temporary: JSON only until PayloadHeader integration
         file.write_all(json.as_bytes())?;
         Ok(())
     }

@@ -359,7 +359,7 @@ impl AlgorithmicDecisionEngine {
     ) -> CouncilResult<FinalDecision> {
         // Simple majority-based decision making
         match &aggregation_result.council_decision {
-            crate::verdict_aggregation::CouncilDecision::Approve { confidence, quality_score, .. } => {
+            crate::verdict_aggregation::CouncilDecision::Approve { confidence,  .. } => {
                 if *confidence >= 0.5 && self.check_organizational_constraints(context, aggregation_result).await? {
                     Ok(FinalDecision::Proceed {
                         confidence: *confidence,
@@ -718,8 +718,19 @@ impl AlgorithmicDecisionEngine {
 
     /// Extract acceptance criteria from change description and rationale
     fn extract_acceptance_criteria(description: &str, rationale: &str) -> String {
-        // Simple extraction logic - in a real implementation this could use NLP
-        // to parse natural language requirements into structured criteria
+        // TODO: Implement NLP-based acceptance criteria extraction with the following requirements:
+        // 1. NLP parsing: Use NLP to parse natural language requirements
+        //    - Parse natural language descriptions into structured criteria
+        //    - Extract key requirements and constraints
+        //    - Handle ambiguous or incomplete descriptions
+        // 2. Structured criteria: Convert to structured criteria format
+        //    - Identify Given/When/Then patterns
+        //    - Extract acceptance conditions
+        //    - Format criteria according to CAWS standards
+        // 3. Accuracy improvement: Improve extraction accuracy
+        //    - Use language models for better understanding
+        //    - Handle domain-specific terminology
+        //    - Validate extracted criteria for completeness
 
         let mut criteria = Vec::new();
 
@@ -767,8 +778,19 @@ impl AlgorithmicDecisionEngine {
         aggregation_result: &AggregationResult,
         context: &DecisionContext,
     ) -> Vec<HistoricalDecision> {
-        // Simplified: return mock historical data
-        // In a real implementation, this would query a database
+        // TODO: Implement database querying for historical decisions with the following requirements:
+        // 1. Database querying: Query historical decisions from database
+        //    - Connect to historical decisions database
+        //    - Query decisions matching current context
+        //    - Filter by relevance and similarity
+        // 2. Data retrieval: Retrieve relevant historical data
+        //    - Query decisions with similar contexts
+        //    - Retrieve decision outcomes and reasoning
+        //    - Handle database connection and query errors
+        // 3. Result processing: Process and return historical data
+        //    - Rank historical decisions by relevance
+        //    - Limit results to most relevant entries
+        //    - Return structured historical decision data
         context.historical_precedents.clone()
     }
 }

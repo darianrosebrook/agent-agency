@@ -165,8 +165,42 @@ impl ResultReranker {
         let mut max_sim = 0.0f32;
 
         for selected_result in selected {
-            // Calculate similarity based on memory content (simplified)
-            let similarity = self.calculate_content_similarity(candidate, selected_result).await?;
+            // TODO: Implement comprehensive similarity calculation using embeddings
+            //       Currently uses basic content similarity; should use embeddings or other advanced similarity measures for accurate comparison.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Similarity uses embeddings correctly
+            // - Similarity scores are accurate
+            // - Calculation is performant
+            // - Edge cases are handled correctly
+            //
+            // DEPENDENCIES:
+            // - Embedding infrastructure (Required)
+            // - Similarity calculation utilities (Required)
+            // - Vector comparison algorithms (Required)
+            //
+            // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (vector search feature)
+            // - Change Budget: ~100 LOC
+            // - Reviewer Requirements: Vector similarity expertise
+            let similarity = self.calculate_content_similarity(candidate, selected_result).await?; // Temporary: basic similarity until embedding-based calculation
             max_sim = max_sim.max(similarity);
         }
 
@@ -175,9 +209,42 @@ impl ResultReranker {
 
     /// Calculate content similarity between two results
     async fn calculate_content_similarity(&self, a: &SearchResult, b: &SearchResult) -> MemoryResult<f32> {
-        // Simplified similarity calculation based on memory data
-        // In practice, this would use embeddings or other similarity measures
-        if a.memory_data == b.memory_data {
+        // TODO: Implement embedding-based similarity calculation
+        //       Currently uses basic data comparison; should use embeddings or other advanced similarity measures for accurate content similarity.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Similarity uses embeddings correctly
+        // - Similarity scores are accurate
+        // - Calculation is performant
+        // - Edge cases are handled correctly
+        //
+        // DEPENDENCIES:
+        // - Embedding infrastructure (Required)
+        // - Similarity calculation utilities (Required)
+        // - Vector comparison algorithms (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (vector search feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Vector similarity expertise
+        if a.memory_data == b.memory_data { // Temporary: basic comparison until embedding-based calculation
             Ok(1.0)
         } else {
             // Calculate Jaccard similarity on tags if available
@@ -241,9 +308,42 @@ impl ResultReranker {
 
     /// Custom reranking logic
     async fn custom_rerank(&self, mut results: Vec<SearchResult>, _query: &SearchQuery) -> MemoryResult<Vec<SearchResult>> {
-        // Custom reranking logic can be implemented here
-        // For now, just return results as-is
-        results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        // TODO: Implement comprehensive custom reranking logic
+        //       Currently sorts by score only; should implement comprehensive reranking considering query context, relevance signals, and user preferences.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Reranking considers query context
+        // - Relevance signals are weighted correctly
+        // - User preferences are incorporated
+        // - Reranking improves result quality
+        //
+        // DEPENDENCIES:
+        // - Query analysis utilities (Required)
+        // - Relevance signal extraction (Required)
+        // - User preference infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 5-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (search feature enhancement)
+        // - Change Budget: ~120 LOC
+        // - Reviewer Requirements: Search ranking expertise
+        results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal)); // Temporary: score sorting until comprehensive reranking
         Ok(results)
     }
 }

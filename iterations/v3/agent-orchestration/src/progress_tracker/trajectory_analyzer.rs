@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use anyhow::Result;
 
 use crate::progress_tracker::turn_level::{
-    TurnProgress, TurnTrajectory, TaskOutcome, AgentAction, TurnOutcome,
+    TurnProgress, TurnTrajectory, TaskOutcome,
 };
 
 /// Pattern types detected in trajectories

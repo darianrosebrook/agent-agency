@@ -99,8 +99,27 @@ impl SearchCoordinator {
     pub async fn keyword_search(&self, query: &ResearchQuery) -> Result<Vec<ResearchResult>> {
         info!("Performing keyword search for query: {}", query.query);
 
-        // For now, return empty results as the inverted index needs to be populated
-        // In a full implementation, this would search the inverted index
+        // TODO: Implement keyword search with inverted index:
+        // 1. Index population: Populate inverted index from knowledge entries
+        //    - Build inverted index from existing knowledge entries
+        //    - Index terms with document IDs and positions
+        //    - Support incremental index updates
+        // 2. Query processing: Process search queries against index
+        //    - Tokenize and normalize query terms
+        //    - Look up terms in inverted index
+        //    - Combine results from multiple terms
+        // 3. Result ranking: Rank search results by relevance
+        //    - Calculate relevance scores based on term frequency
+        //    - Apply ranking algorithms (TF-IDF, BM25, etc.)
+        //    - Return top-k results sorted by relevance
+        // ACCEPTANCE CRITERIA:
+        // - Inverted index is populated from knowledge entries
+        // - Keyword searches return relevant results from index
+        // - Results are ranked by relevance score
+        // DEPENDENCIES:
+        // - Inverted index data structure (Required)
+        // - Index population mechanism (Required)
+        // PRIORITY: High
         warn!("Keyword search not fully implemented - inverted index needs population");
 
         Ok(Vec::new())
@@ -161,10 +180,31 @@ impl InvertedIndex {
 
         // Check if document already exists
         if !postings.iter().any(|p| p.document_id == document_id) {
+            // TODO: Implement position tracking for term occurrences:
+            // 1. Position tracking: Track character/word positions of terms
+            //    - Record byte offsets or character positions for each term occurrence
+            //    - Support multiple positions per term in a document
+            //    - Enable phrase queries and proximity searches
+            // 2. Position storage: Efficient position storage
+            //    - Use compact data structures for position arrays
+            //    - Compress position data for large documents
+            //    - Support incremental position updates
+            // 3. Position queries: Enable position-based queries
+            //    - Support phrase matching using position data
+            //    - Enable proximity searches (terms within N positions)
+            //    - Support ordered and unordered phrase queries
+            // ACCEPTANCE CRITERIA:
+            // - Term positions are tracked and stored for each document
+            // - Position data enables phrase and proximity queries
+            // - Position storage is efficient and doesn't significantly impact performance
+            // DEPENDENCIES:
+            // - Posting struct extension (Required)
+            // - Position indexing algorithms (Required)
+            // PRIORITY: Medium
             postings.push(Posting {
                 document_id,
-                positions: vec![], // Positions not tracked for now
-                term_frequency: 1, // Simplified
+                positions: vec![],
+                term_frequency: 1, // Temporary: placeholder until position tracking is implemented
             });
         }
     }

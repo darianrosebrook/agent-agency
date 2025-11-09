@@ -12,7 +12,6 @@ use uuid::Uuid;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-use async_trait::async_trait;
 use agent_agency_contracts::planning_io::{Milestone, EvidenceGate};
 // Local type definitions to avoid circular dependency with agent-research
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -29,7 +28,7 @@ pub struct ResearchEvidence {
 
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-enum ResearchEvidenceType {
+pub enum ResearchEvidenceType {
     CodeReview,
     CodeAnalysis, // Alias/synonym for CodeReview
     TestExecution,
@@ -278,29 +277,20 @@ impl EvidenceCollector {
     }
 
     /// Create collection context for research collector
-    fn create_collection_context(&self, milestone: &Milestone) -> Result<ProcessingContext> {
-        #[cfg(feature = "research")]
-        use agent_research::extraction_types::{ProcessingContext, ClaimType};
-
-        #[cfg(feature = "research")]
-        {
-            Ok(ProcessingContext {
-                source_id: milestone.id.clone(),
-                claim_type: ClaimType::Implementation, // Planning milestones are implementation claims
-                context: serde_json::json!({
-                    "milestone_id": milestone.id,
-                    "objective": milestone.objective,
-                    "scope": milestone.scope,
-                    "risk_tier": milestone.risk_tier,
-                }),
-                metadata: HashMap::new(),
-            })
-        }
-
-        #[cfg(not(feature = "research"))]
-        {
-            Err(anyhow::anyhow!("Research feature not enabled - cannot create collection context"))
-        }
+    fn create_collection_context(&self, milestone: &Milestone) -> Result<crate::planning::evidence::ProcessingContext> {
+        use uuid::Uuid;
+        let context_json = serde_json::json!({
+            "milestone_id": milestone.id,
+            "objective": milestone.objective,
+            "scope": milestone.scope,
+            "risk_tier": milestone.risk_tier,
+        });
+        Ok(crate::planning::evidence::ProcessingContext {
+            task_id: Uuid::new_v4(), // Generate task ID for milestone
+            milestone_id: milestone.id.clone(),
+            evidence_types: vec![], // Empty - will be filled by caller if needed
+            priority: milestone.risk_tier.to_string(),
+        })
     }
 
     /// Convert research evidence to planning evidence bundle

@@ -20,11 +20,10 @@
 
 use std::sync::Arc;
 use async_trait::async_trait;
-use tracing::instrument;
 
-use agent_agency_contracts::{JudgeEngine, JudgeVerdict, WorkingSpec, EngineRequest, JudgePrompt, JudgeType, VerdictLabel, judge_io};
+use agent_agency_contracts::{JudgeEngine, JudgeVerdict, EngineRequest, JudgePrompt, VerdictLabel, judge_io};
 
-use crate::{ReviewContext, CouncilResult, CouncilError};
+use crate::{ReviewContext, CouncilResult};
 
 /// The four constitutional judges
 #[derive(Debug)]

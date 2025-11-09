@@ -6,7 +6,7 @@
 //!
 //! @author @darianrosebrook
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::collections::HashMap;
 use std::process::Command;
@@ -181,6 +181,16 @@ impl WorktreeManager {
             .ok_or_else(|| anyhow!("No worktree found for worker {}", worker_id))
     }
 
+    /// Get worktree path for a milestone
+    pub async fn get_worktree_path_by_milestone(&self, milestone_id: &str) -> Result<PathBuf> {
+        let worktrees = self.active_worktrees.read().await;
+        worktrees
+            .values()
+            .find(|w| w.milestone_id == milestone_id && matches!(w.status, WorktreeStatus::Created | WorktreeStatus::InUse))
+            .map(|w| w.worktree_path.clone())
+            .ok_or_else(|| anyhow!("No worktree found for milestone {}", milestone_id))
+    }
+
     /// Mark worktree as in use
     pub async fn mark_in_use(&self, worktree_id: Uuid) -> Result<()> {
         let mut worktrees = self.active_worktrees.write().await;
@@ -278,7 +288,41 @@ impl WorktreeManager {
                                 "Merge would be blocked: {} blocking violations found",
                                 gate_result.blocking_violations
                             );
-                            // For now, warn but continue (could be made stricter)
+                            // TODO: Implement comprehensive quality gate enforcement
+                            //       Currently warns but continues; should implement comprehensive enforcement that blocks merges when quality gates fail for strict quality control.
+                            //
+                            // COMPLETION CHECKLIST:
+                            // [ ] Primary functionality implemented
+                            // [ ] API/data structures defined & stable
+                            // [ ] Error handling + validation aligned with error taxonomy
+                            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                            // [ ] Integration tests for external systems/contracts
+                            // [ ] Documentation: public API + system behavior
+                            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                            // [ ] Configurability and feature flags defined if relevant
+                            // [ ] Failure-mode cards documented (degradation paths)
+                            //
+                            // ACCEPTANCE CRITERIA:
+                            // - Merges are blocked when quality gates fail
+                            // - Blocking violations prevent merge completion
+                            // - Quality gate enforcement is configurable
+                            // - Enforcement provides clear feedback
+                            //
+                            // DEPENDENCIES:
+                            // - Quality gate enforcement system (Required)
+                            // - Merge blocking mechanism (Required)
+                            // - Configuration for strictness levels (Optional)
+                            //
+                            // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+                            // PRIORITY: Medium
+                            // BLOCKING: No
+                            //
+                            // GOVERNANCE:
+                            // - CAWS Tier: 2 (quality gate enforcement functionality)
+                            // - Change Budget: ~150 LOC
+                            // - Reviewer Requirements: Quality gates and merge control expertise
                         }
                     }
                     Err(e) => {

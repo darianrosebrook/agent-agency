@@ -6,12 +6,11 @@
 //! @author @darianrosebrook
 
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use std::path::Path;
+use serde::{Serialize, Deserialize};
 use std::sync::Arc;
-use async_trait::async_trait;
 use system_common_interfaces::{
-    file_operations::{FileOperationsService, AllowList, Budgets, Changeset, ChangesetId},
-    learning::{LearningService, LearningContext, TaskPerformance, ResourceUsage, Priority, SystemMetrics as LearningSystemMetrics, LearningInsights},
+    file_operations::FileOperationsService,
+    learning::{LearningService, LearningContext, TaskPerformance, ResourceUsage, SystemMetrics as LearningSystemMetrics, LearningInsights},
     model_orchestration::{ModelOrchestrator, InferenceRequest, QualityRequirements, PerformanceRequirements, Priority as OrchestratorPriority},
     common::SystemMetrics,
 };
@@ -21,7 +20,7 @@ use tracing::{info, debug, warn, error, instrument};
 // use agent_research::create_learning_service;
 // use agent_model_management::create_model_orchestration_service;
 use crate::autonomous_file_editor::{AutonomousFileEditor, FileChange, ChangeType};
-use agent_agency_contracts::{TaskDescriptor, TaskScope, ChangeBudget, BlastRadius};
+use agent_agency_contracts::TaskDescriptor;
 
 /// Comprehensive autonomous agent integration
 
@@ -337,7 +336,7 @@ VERIFICATION:
         // Apply changes
         match self.file_editor.apply_changes(task_id, changes, &allowlist, &budgets).await {
             Ok(changeset_id) => {
-                info!("Successfully applied changeset {} with {} changes", changeset_id.0, 1); // Simplified count
+                info!("Successfully applied changeset {} with {} changes", changeset_id.0, 1); // TODO: Calculate actual changeset change count
                 Ok(FileExecutionResult {
                     success: true,
                     changes_applied: 1, // Would count actual changes

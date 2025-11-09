@@ -178,8 +178,41 @@ pub mod io_safety {
             };
 
             let expected_bytes = expected_size * bytes_per_element;
+            // TODO: Implement proper tensor data length extraction
+            //       Currently skips validation; should extract actual data length from tensor for proper bounds checking.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Extract actual tensor data length from tensor structure
+            // [ ] Use platform-specific APIs to get tensor metadata
+            // [ ] Validate data length against expected size
+            // [ ] Handle different tensor formats and layouts
+            // [ ] Add proper error handling for extraction failures
+            // [ ] Add unit tests with various tensor types
+            // [ ] Add integration tests with real tensor data
+            // [ ] Performance: Extraction should complete in <10μs
+            // [ ] Documentation: Document tensor data extraction method
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Tensor data length is extracted accurately
+            // - Validation uses actual data length
+            // - Different tensor formats are supported
+            // - Extraction errors are handled gracefully
+            // - Performance impact is minimal
+            //
+            // DEPENDENCIES:
+            // - Tensor metadata APIs (Required)
+            // - Platform-specific tensor access (Required)
+            // - Tensor format handlers (Required)
+            //
+            // ESTIMATED EFFORT: 6-8 hours (low confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 1 (safety-critical feature)
+            // - Change Budget: ~200 LOC
+            // - Reviewer Requirements: Tensor and safety expertise
             // Note: We can't directly access tensor data length, so we'll skip this validation
-            // In a real implementation, we would need to extract the data length differently
 
             // Validate data bounds for safety
             if expected_bytes > 100 * 1024 * 1024 { // 100MB limit

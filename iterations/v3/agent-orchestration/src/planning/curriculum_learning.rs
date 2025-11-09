@@ -14,7 +14,7 @@ use schemars::JsonSchema;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use anyhow::Result;
-use tracing::{info, warn, debug};
+use tracing::{info, warn};
 
 use agent_agency_contracts::WorkingSpec;
 use crate::planning::thinking_budget::TaskComplexity;
@@ -663,9 +663,9 @@ impl CurriculumLearningEngine {
             .filter(|r| r.agent_id == agent_id && r.success)
             .collect();
         
-        // Check if agent has completed prerequisite milestones
-        // This is simplified - in a full implementation, we'd track milestone completions
-        true // For now, assume prerequisites are met if agent has some success history
+        // TODO: Implement proper prerequisite milestone tracking
+        //       Currently assumes prerequisites are met; should track actual milestone completions for accurate prerequisite checking.
+        true // Temporary: basic assumption until milestone tracking is implemented
     }
     
     /// Get skill progression statistics

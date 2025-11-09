@@ -235,8 +235,77 @@ impl RewardFunction {
     /// - [ ] Add integration tests with real performance database
     /// Get expected quality for a parameter set (placeholder)
     fn get_expected_quality(&self, _params: &ParameterSet) -> Option<f64> {
-        // In a real implementation, this would query historical performance data
-        // For now, return None to indicate no historical data
+        // TODO: Implement historical performance data querying
+        //       Currently returns None; should query historical performance data to predict expected quality for parameter sets.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement database query for historical performance data
+        // [ ] Query performance records matching parameter set
+        // [ ] Aggregate historical quality metrics
+        // [ ] Calculate expected quality from historical data
+        // [ ] Handle missing historical data gracefully
+        // [ ] Add caching for frequently queried parameter sets
+        // [ ] Add unit tests with mock historical data
+        // [ ] Add integration tests with real performance database
+        // [ ] Performance: Query should complete in <50ms
+        // [ ] Documentation: Document quality prediction methodology
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Historical performance data is queried from database
+        // - Expected quality is calculated from historical metrics
+        // - Missing data is handled appropriately
+        // - Query performance is acceptable
+        // - Results are cached for performance
+        //
+        // DEPENDENCIES:
+        // - Performance database connection (Required)
+        // - Historical data schema (Required)
+        // - Quality aggregation logic (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (ML optimization feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Database and ML expertise
+        //
+        // TODO: Implement comprehensive historical quality data retrieval
+        //       Currently returns None to indicate no historical data; should implement comprehensive retrieval that queries performance database for historical quality data with proper schema and aggregation logic.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Historical quality data is retrieved from performance database
+        // - Data retrieval uses proper schema and aggregation
+        // - Historical data is accurate and complete
+        // - Retrieval handles missing data gracefully
+        //
+        // DEPENDENCIES:
+        // - Performance database connection (Required)
+        // - Historical data schema (Required)
+        // - Quality aggregation logic (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (ML optimization feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Database and ML expertise
         None
     }
 
@@ -284,8 +353,37 @@ impl RewardFunction {
     ) -> (f64, f64) {
         let reward = self.calculate(outcome, baseline).reward;
         
-        // Simplified confidence interval calculation
-        // In practice, this would use proper statistical methods
+        // TODO: Implement proper confidence interval calculation using statistical methods
+        //       Currently uses placeholder calculation; should use proper statistical methods (t-distribution, bootstrap, etc.) for accurate confidence intervals.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement t-distribution based confidence intervals
+        // [ ] Calculate standard error from sample data
+        // [ ] Handle small sample sizes appropriately
+        // [ ] Support different confidence levels (90%, 95%, 99%)
+        // [ ] Add unit tests with various sample sizes
+        // [ ] Add integration tests with real reward data
+        // [ ] Performance: Confidence interval calculation should complete in <1ms
+        // [ ] Documentation: Document statistical methodology
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Confidence intervals calculated using proper statistical methods
+        // - Accurate intervals for various sample sizes
+        // - Support for different confidence levels
+        // - Handles edge cases (small samples, zero variance)
+        //
+        // DEPENDENCIES:
+        // - Statistical libraries or implementations (Required)
+        // - Sample data (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (statistics feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Statistics expertise
         let margin = 0.1 * reward.abs(); // 10% margin
         let lower = reward - margin;
         let upper = reward + margin;

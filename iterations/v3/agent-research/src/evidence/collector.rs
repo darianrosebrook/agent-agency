@@ -217,15 +217,41 @@ impl EvidenceCollector {
     pub async fn collect_caws_provenance_evidence(&self, claim: &AtomicClaim) -> Result<Vec<Evidence>> {
         debug!("Collecting CAWS provenance evidence for claim: {}", claim.id);
 
-        // TODO: Integrate with CAWS provenance tracking
-        // - [ ] Query CAWS provenance system for relevant evidence
-        // - [ ] Filter provenance entries by claim context
-        // - [ ] Convert provenance entries to evidence format
-        // - [ ] Calculate evidence relevance and confidence
-        // - [ ] Add unit tests with mock provenance system
-        // - [ ] Add integration tests with real CAWS provenance
-        // This would integrate with CAWS provenance tracking
-        // For now, return placeholder evidence
+        // TODO: Implement comprehensive CAWS provenance evidence collection
+        //       Currently returns placeholder evidence; should implement comprehensive collection that integrates with CAWS provenance tracking, converts provenance entries to evidence format, and calculates evidence relevance and confidence.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - CAWS provenance tracking is integrated
+        // - Provenance entries are converted to evidence format
+        // - Evidence relevance and confidence are calculated
+        // - Evidence collection handles missing provenance gracefully
+        //
+        // DEPENDENCIES:
+        // - CAWS provenance tracking integration (Required)
+        // - Evidence format conversion utilities (Required)
+        // - Relevance and confidence calculation (Required)
+        //
+        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (evidence collection functionality)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Provenance tracking and evidence collection expertise
         Ok(vec![Evidence {
             id: uuid::Uuid::new_v4(),
             claim_id: claim.id,

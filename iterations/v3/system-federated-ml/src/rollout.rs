@@ -267,14 +267,82 @@ impl RolloutManager {
 
     /// Check if we have sufficient shadow data
     async fn has_sufficient_shadow_data(&self, _task_type: &str) -> Result<bool> {
-        // Simplified - would check actual logged data
-        Ok(true)
+        // TODO: Check actual logged shadow data
+        //       Currently returns true; should check actual logged shadow data to determine if sufficient data exists for shadow testing.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Shadow data is checked from logged data correctly
+        // - Sufficiency threshold is configurable
+        // - Check handles missing data gracefully
+        // - Performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Shadow data logging infrastructure (Required)
+        // - Data query utilities (Required)
+        // - Threshold configuration (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (shadow testing feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Shadow testing expertise
+        Ok(true) // Temporary: always true until actual data checking
     }
 
     /// Check SLO health
     async fn slo_health_check(&self, _task_type: &str) -> Result<bool> {
-        // Simplified - would check actual SLO metrics
-        Ok(true)
+        // TODO: Check actual SLO metrics
+        //       Currently returns true; should check actual SLO metrics to determine if service level objectives are being met.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - SLO metrics are checked correctly
+        // - Health determination is accurate
+        // - Check handles metric failures gracefully
+        // - Performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - SLO metrics infrastructure (Required)
+        // - Metrics query utilities (Required)
+        // - Health threshold configuration (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (SLO monitoring feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: SLO monitoring expertise
+        Ok(true) // Temporary: always true until actual SLO checking
     }
 
     /// Detect SLO breaches in recent outcomes

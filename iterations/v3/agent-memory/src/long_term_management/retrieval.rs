@@ -114,9 +114,42 @@ impl LongTermRetrievalEngine {
         // - [ ] Add pagination for large result sets
         // - [ ] Add unit tests with mock archival storage
         // - [ ] Add integration tests with real archival retrieval
-        // In practice, this would query the archival storage system
-        // For now, return empty results
-        Ok(Vec::new())
+        // TODO: Query archival storage system for archived memories
+        //       Currently returns empty results; should query archival storage system to retrieve archived memories matching criteria.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Archived memories are retrieved from storage system
+        // - Query criteria are applied correctly
+        // - Retrieval performance is acceptable
+        // - Error handling works for storage failures
+        //
+        // DEPENDENCIES:
+        // - Archival storage system API (Required)
+        // - Storage query utilities (Required)
+        // - Memory retrieval utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (storage integration feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Storage system expertise
+        Ok(Vec::new()) // Temporary: empty results until archival storage query is implemented
     }
 
     /// Filter and rank active memories based on long-term criteria
@@ -229,8 +262,42 @@ impl LongTermRetrievalEngine {
                 1.0
             };
 
-            // In practice, this would modify some relevance score
-            // For now, just mark that boosting was applied
+            // TODO: Modify relevance score based on boosting criteria
+            //       Currently only marks boosting; should modify actual relevance scores based on boosting criteria and weights.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Relevance scores are modified based on boosting criteria
+            // - Boosting weights are applied correctly
+            // - Score modifications improve retrieval quality
+            // - Boosting is configurable and tunable
+            //
+            // DEPENDENCIES:
+            // - Relevance scoring infrastructure (Required)
+            // - Boosting algorithm utilities (Required)
+            // - Score modification utilities (Required)
+            //
+            // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (relevance scoring feature)
+            // - Change Budget: ~80 LOC
+            // - Reviewer Requirements: Relevance scoring expertise
+            // Temporary: mark boosting until relevance score modification is implemented
         }
 
         Ok(boosted)
@@ -255,8 +322,42 @@ impl LongTermRetrievalEngine {
             ttl_seconds: 3600, // 1 hour TTL
         };
 
-        // Note: In practice, this would need to be thread-safe
-        // For now, this is a simplified implementation
+        // TODO: Implement thread-safe cache statistics tracking
+        //       Currently uses basic implementation; should implement thread-safe cache statistics tracking using proper synchronization primitives.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Cache statistics are tracked thread-safely
+        // - Concurrent access is handled correctly
+        // - Statistics are accurate under concurrent operations
+        // - Performance impact is minimal
+        //
+        // DEPENDENCIES:
+        // - Thread-safe data structures (Mutex, RwLock, Atomic) (Required)
+        // - Cache statistics infrastructure (Required)
+        // - Synchronization utilities (Required)
+        //
+        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (concurrency feature)
+        // - Change Budget: ~60 LOC
+        // - Reviewer Requirements: Rust concurrency expertise
+        // Temporary: basic implementation until thread-safe tracking is implemented
     }
 
     /// Calculate cache hit rate

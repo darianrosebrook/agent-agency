@@ -274,8 +274,8 @@ impl SecretProviderTrait for HashiCorpVaultProvider {
     }
 
     async fn needs_rotation(&self, key: &str) -> SecretResult<bool> {
-        // For Vault, we could check metadata for rotation requirements
-        // For simplicity, return false - rotation logic would be provider-specific
+        // TODO: Implement provider-specific rotation logic
+        //       Currently returns false for simplicity; should implement provider-specific rotation logic (e.g., check Vault metadata for rotation requirements).
         Ok(false)
     }
 
@@ -419,8 +419,39 @@ impl SecretProviderTrait for AwsSecretsManagerProvider {
                 message: format!("Failed to list secrets: {}", e)
             })?;
 
-        // Simplified implementation - return empty list for now
-        let secrets = vec![];
+        // TODO: Parse and return actual secrets from response
+        //       Currently returns empty list; should parse response and return actual secrets.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Parse response body for secret list
+        // [ ] Extract secret names and metadata
+        // [ ] Map response format to Secret struct
+        // [ ] Handle pagination if response is paginated
+        // [ ] Handle empty response gracefully
+        // [ ] Add unit tests for secret list parsing
+        // [ ] Add integration tests with real API responses
+        // [ ] Verify secret list parsing accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Secrets are parsed from API response correctly
+        // - Secret names and metadata are extracted accurately
+        // - Pagination is handled if applicable
+        // - Empty responses are handled gracefully
+        //
+        // DEPENDENCIES:
+        // - Response parsing utilities (Required)
+        // - Secret data structures (Required)
+        // - API response format documentation (Required)
+        //
+        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (security feature)
+        // - Change Budget: ~50 LOC
+        // - Reviewer Requirements: Security and API integration expertise
+        let secrets = vec![]; // Temporary: empty list until response parsing is implemented
 
         Ok(secrets)
     }
@@ -519,38 +550,100 @@ impl LocalFileProvider {
     /// Create a new authenticated HashiCorp Vault provider
     /// This demonstrates the pattern for authenticated connections
     async fn create_vault_provider(&self) -> Result<Box<dyn SecretProviderTrait>, SecretError> {
-        // In a real implementation, this would use the HashiCorp Vault SDK:
-        // - Load configuration from self.config (endpoint, auth_token, etc.)
-        // - Create VaultClient with proper authentication (token, AppRole, etc.)
-        // - Test connection and return authenticated provider
-
-        // For now, return a placeholder that demonstrates the pattern
+        // TODO: Implement real HashiCorp Vault authentication and provider creation
+        //       Currently returns placeholder; should use HashiCorp Vault SDK with proper authentication.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Load Vault configuration from self.config (endpoint, auth_token, etc.)
+        // [ ] Create VaultClient with proper authentication (token, AppRole, etc.)
+        // [ ] Test connection to Vault server
+        // [ ] Return authenticated Vault provider
+        // [ ] Handle authentication errors gracefully
+        // [ ] Add unit tests for Vault provider creation
+        // [ ] Add integration tests with real Vault server
+        // [ ] Verify Vault authentication and connection
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Vault client is created with proper authentication
+        // - Connection to Vault server is tested and verified
+        // - Authenticated provider is returned successfully
+        // - Authentication errors are handled gracefully
+        //
+        // DEPENDENCIES:
+        // - HashiCorp Vault SDK (Required)
+        // - Vault configuration structure (Required)
+        // - Authentication utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (security-critical feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Security and Vault expertise
         warn!("Real Vault authentication not implemented - using fallback");
-        Ok(Box::new(LocalFileProvider::new("authenticated_vault_fallback".to_string())))
+        Ok(Box::new(LocalFileProvider::new("authenticated_vault_fallback".to_string()))) // Temporary: placeholder until Vault SDK integration
     }
 
     /// Create a new authenticated AWS Secrets Manager provider
     /// This demonstrates the pattern for authenticated connections
     async fn create_aws_provider(&self) -> Result<Box<dyn SecretProviderTrait>, SecretError> {
-        // In a real implementation, this would use the AWS SDK:
-        // - Load AWS credentials from environment/config
-        // - Create authenticated SecretsManager client
-        // - Test connection and return authenticated provider
-
-        // For now, return a placeholder that demonstrates the pattern
+        // TODO: Implement real AWS Secrets Manager authentication and provider creation
+        //       Currently returns placeholder; should use AWS SDK with proper authentication.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Load AWS credentials from environment/config
+        // [ ] Create authenticated SecretsManager client
+        // [ ] Test connection to AWS Secrets Manager
+        // [ ] Return authenticated AWS provider
+        // [ ] Handle authentication errors gracefully
+        // [ ] Add unit tests for AWS provider creation
+        // [ ] Add integration tests with real AWS Secrets Manager
+        // [ ] Verify AWS authentication and connection
+        //
+        // ACCEPTANCE CRITERIA:
+        // - AWS Secrets Manager client is created with proper authentication
+        // - Connection to AWS Secrets Manager is tested and verified
+        // - Authenticated provider is returned successfully
+        // - Authentication errors are handled gracefully
+        //
+        // DEPENDENCIES:
+        // - AWS SDK (aws-sdk-secretsmanager) (Required)
+        // - AWS credentials configuration (Required)
+        // - Authentication utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (security-critical feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Security and AWS expertise
         warn!("Real AWS authentication not implemented - using fallback");
-        Ok(Box::new(LocalFileProvider::new("authenticated_aws_fallback".to_string())))
+        Ok(Box::new(LocalFileProvider::new("authenticated_aws_fallback".to_string()))) // Temporary: placeholder until AWS SDK integration
     }
 
     /// Create a new authenticated Azure Key Vault provider
     /// This demonstrates the pattern for authenticated connections
     async fn create_azure_provider(&self) -> Result<Box<dyn SecretProviderTrait>, SecretError> {
-        // In a real implementation, this would use the Azure SDK:
-        // - Load Azure credentials (managed identity, service principal, etc.)
-        // - Create authenticated KeyVault client
-        // - Test connection and return authenticated provider
+        // TODO: Implement Azure Key Vault provider with the following requirements:
+        // 1. Azure credential loading: Load Azure credentials from multiple sources
+        //    - Support managed identity authentication
+        //    - Support service principal authentication
+        //    - Support other Azure authentication methods
+        // 2. KeyVault client creation: Create authenticated KeyVault client
+        //    - Initialize Azure Key Vault client with credentials
+        //    - Configure client with appropriate settings
+        //    - Handle client initialization errors
+        // 3. Connection testing: Test and validate connection
+        //    - Test connection to Azure Key Vault
+        //    - Validate authentication and permissions
+        //    - Return authenticated provider on success
 
-        // For now, return a placeholder that demonstrates the pattern
+        // TODO: Implement Azure Key Vault authentication
+        //       Currently uses placeholder fallback; should implement real Azure Key Vault authentication with proper SDK integration.
         warn!("Real Azure authentication not implemented - using fallback");
         Ok(Box::new(LocalFileProvider::new("authenticated_azure_fallback".to_string())))
     }
@@ -558,12 +651,22 @@ impl LocalFileProvider {
     /// Create a new authenticated GCP Secret Manager provider
     /// This demonstrates the pattern for authenticated connections
     async fn create_gcp_provider(&self) -> Result<Box<dyn SecretProviderTrait>, SecretError> {
-        // In a real implementation, this would use the GCP SDK:
-        // - Load GCP credentials (service account, ADC, etc.)
-        // - Create authenticated SecretManager client
-        // - Test connection and return authenticated provider
+        // TODO: Implement GCP Secret Manager provider with the following requirements:
+        // 1. GCP credential loading: Load GCP credentials from multiple sources
+        //    - Support service account authentication
+        //    - Support Application Default Credentials (ADC)
+        //    - Support other GCP authentication methods
+        // 2. SecretManager client creation: Create authenticated SecretManager client
+        //    - Initialize GCP Secret Manager client with credentials
+        //    - Configure client with appropriate settings
+        //    - Handle client initialization errors
+        // 3. Connection testing: Test and validate connection
+        //    - Test connection to GCP Secret Manager
+        //    - Validate authentication and permissions
+        //    - Return authenticated provider on success
 
-        // For now, return a placeholder that demonstrates the pattern
+        // TODO: Implement GCP Secret Manager authentication
+        //       Currently uses placeholder fallback; should implement real GCP Secret Manager authentication with proper SDK integration.
         warn!("Real GCP authentication not implemented - using fallback");
         Ok(Box::new(LocalFileProvider::new("authenticated_gcp_fallback".to_string())))
     }
@@ -571,7 +674,8 @@ impl LocalFileProvider {
 
 // Note: Full provider implementations removed due to SDK API complexity.
 // The create_*_provider methods above demonstrate the authenticated connection patterns.
-// In production, these would be fully implemented with proper SDK integration.
+// TODO: Implement full provider implementations with proper SDK integration
+//       Currently demonstrates authenticated connection patterns; should fully implement providers with production SDK integration.
 
 #[async_trait]
 impl SecretProviderTrait for LocalFileProvider {

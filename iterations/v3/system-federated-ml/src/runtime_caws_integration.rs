@@ -101,11 +101,40 @@ impl CAWSBudgetTracker {
     ) -> Result<WaiverId> {
         let waiver_id = Uuid::new_v4();
         
-        // In a real implementation, this would:
-        // 1. Create a waiver request
-        // 2. Send to approver
-        // 3. Store in database
-        // 4. Return waiver ID
+        // TODO: Implement waiver request creation and approval workflow
+        //       Currently generates ID only; should create waiver request, send to approver, store in database, and return waiver ID.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Create waiver request with all required fields
+        // [ ] Send waiver request to approver
+        // [ ] Store waiver in database
+        // [ ] Track waiver approval status
+        // [ ] Handle approval workflow errors
+        // [ ] Add unit tests with mock approver
+        // [ ] Add integration tests with real waiver workflow
+        // [ ] Performance: Request creation should complete in <100ms
+        // [ ] Documentation: Document waiver workflow
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Waiver request is created with all fields
+        // - Request is sent to approver successfully
+        // - Waiver is stored in database
+        // - Waiver ID is returned correctly
+        // - Approval workflow errors are handled
+        //
+        // DEPENDENCIES:
+        // - Waiver request creation API (Required)
+        // - Approver notification system (Required)
+        // - Database storage (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (waiver management feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Workflow and database expertise
         
         Ok(waiver_id)
     }
@@ -181,8 +210,42 @@ impl CAWSComplianceValidator {
         approver: Option<String>,
     ) -> Result<ComplianceValidationResult> {
         // 1. Check budget constraints
+        // TODO: Calculate actual volume estimate from task parameters
+        //       Currently uses hardcoded value; should calculate actual volume estimate from task parameters for accurate budget checking.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Analyze task parameters to estimate volume
+        // [ ] Calculate token count from task description and context
+        // [ ] Estimate request/response sizes
+        // [ ] Account for model-specific tokenization
+        // [ ] Handle estimation errors gracefully
+        // [ ] Add unit tests with various task parameters
+        // [ ] Add integration tests with real task volumes
+        // [ ] Performance: Estimation should complete in <1ms
+        // [ ] Documentation: Document volume estimation methodology
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Volume estimate reflects actual task parameters
+        // - Token count is calculated accurately
+        // - Request/response sizes are estimated correctly
+        // - Estimation errors are handled gracefully
+        // - Estimation performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Token counting utilities (Required)
+        // - Task parameter analysis (Required)
+        // - Model tokenization info (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (budget management feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Tokenization expertise
         let budget_check = self.budget_tracker
-            .check_budget(task_type, 1000, new_params.max_tokens as u32) // Simplified volume estimate
+            .check_budget(task_type, 1000, new_params.max_tokens as u32) // Hardcoded volume estimate
             .await?;
         
         if !budget_check.within_budget {

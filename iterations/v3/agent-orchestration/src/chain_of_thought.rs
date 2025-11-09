@@ -12,7 +12,6 @@ use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
-use agent_agency_contracts::planning_io::{MilestoneState, PlanState};
 
 /// Decision types for orchestration decisions
 #[non_exhaustive]

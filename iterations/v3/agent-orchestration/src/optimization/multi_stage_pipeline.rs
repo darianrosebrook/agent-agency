@@ -6,11 +6,10 @@
 //! @author @darianrosebrook
 
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use anyhow::Result;
 use uuid::Uuid;
-use tracing::{info, debug, warn};
-use chrono::Utc;
+use tracing::{debug, warn};
 
 use agent_agency_contracts::planning_io::Milestone;
 use crate::planning::worker_assignment::WorkerAssignmentStrategy;
@@ -249,7 +248,8 @@ impl MultiStagePipeline {
         milestone: &Milestone,
         classification: &TaskClassification,
     ) -> Result<Uuid> {
-        // Use worker assignment strategy but with simplified evaluation
+        // TODO: Implement comprehensive worker evaluation
+        //       Currently uses basic evaluation; should implement comprehensive evaluation considering all worker capabilities and constraints.
         self.worker_assignment_strategy.assign_worker(milestone).await
     }
 

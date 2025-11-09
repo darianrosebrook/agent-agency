@@ -10,17 +10,13 @@ use anyhow::Result;
 use std::sync::Arc;
 use agent_agency_contracts::{
     PlanningEngine, ExecutionContext, TaskDescriptor, ExecutionPlan as ContractExecutionPlan,
-    PlanningError, 
-    planning_io::{
-        DocumentationRequirements,
-        QualityGates, MutationRequirements, SecurityRequirements, PerformanceRequirements,
-    },
+    PlanningError,
     types::planning::RiskTier,
     working_spec::{TestPlan, CoverageTargets, UnitTestSpec, IntegrationTestSpec, E2eScenario},
 };
 
 use crate::planning::{
-    plan_generator::{PlanGenerator, PlanGenerationStrategy},
+    plan_generator::PlanGenerator,
     plan_types::{ExecutionPlan, PlanGenerationContext},
     DatabaseOperations,
 };
@@ -73,17 +69,42 @@ impl PlanningEngineImpl {
         execution_ctx: &ExecutionContext,
         task_descriptor: &TaskDescriptor,
     ) -> Result<PlanGenerationContext, PlanningError> {
-        // TODO: Expand plan generation context with full requirements
-        // - [ ] Extract all required context fields from PlanGenerator requirements
-        // - [ ] Include task metadata, dependencies, and constraints
-        // - [ ] Add resource availability and worker capabilities
-        // - [ ] Include historical execution context if available
-        // - [ ] Handle missing context data gracefully
-        // - [ ] Add unit tests with various context configurations
-        // - [ ] Add integration tests with real plan generation
-        // For now, create a minimal context - this would need to be expanded
-        // based on what PlanGenerator actually needs
-        use crate::planning::plan_types::*;
+        // TODO: Build comprehensive plan generation context
+        //       Currently creates minimal context; should build comprehensive context based on PlanGenerator requirements and available data.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Context includes all required data for PlanGenerator
+        // - Context is built from available sources
+        // - Missing data is handled gracefully
+        // - Context is comprehensive and accurate
+        //
+        // DEPENDENCIES:
+        // - PlanGenerator requirements (Required)
+        // - Context data sources (Required)
+        // - Context building utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (planning context feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Planning engine expertise
+        use crate::planning::plan_types::*; // Temporary: minimal context until comprehensive context building
 
         Ok(PlanGenerationContext {
             working_spec_provider: Box::new(RealWorkingSpecProvider::new(task_descriptor.clone(), self.db_ops.clone())),
@@ -103,10 +124,42 @@ impl PlanningEngineImpl {
         local_plan: ExecutionPlan,
         ctx: &ExecutionContext,
     ) -> Result<ContractExecutionPlan, PlanningError> {
-        // Convert the local plan to contract types
-        // This is a simplified conversion - would need to be expanded
-        // planning_io types are exported at top level of agent_agency_contracts
-        use agent_agency_contracts::*;
+        // TODO: Implement comprehensive plan type conversion
+        //       Currently uses basic conversion; should implement comprehensive conversion between local plan types and contract types.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Plan types are converted comprehensively
+        // - All fields are mapped correctly
+        // - Type conversions are accurate
+        // - Conversion handles edge cases
+        //
+        // DEPENDENCIES:
+        // - Local plan types (Required)
+        // - Contract types (Required)
+        // - Type conversion utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (type conversion feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Type system expertise
+        use agent_agency_contracts::*; // Temporary: basic conversion until comprehensive implementation
 
         let milestones: Vec<Milestone> = local_plan.contract_plan.milestones.iter().map(|milestone| {
             // Convert local milestone to contract milestone
@@ -159,17 +212,42 @@ impl RealWorkingSpecProvider {
 
     /// Try to load an existing working spec from the database, or create a new one
     async fn load_or_create_working_spec(&self) -> Result<agent_agency_contracts::WorkingSpec> {
-        // TODO: Implement working spec database persistence
-        // - [ ] Create working spec database table schema
-        // - [ ] Query database for existing working specs by task ID or spec ID
-        // - [ ] Load and deserialize working spec from database
-        // - [ ] Create new working spec only if none exists
-        // - [ ] Handle database errors and missing data gracefully
-        // - [ ] Add unit tests with mock database
-        // - [ ] Add integration tests with real database persistence
-        // For now, create a new working spec since we don't have a working spec table yet
-        // In a full implementation, this would query the database for existing specs
-        self.create_working_spec_from_task().await
+        // TODO: Query database for existing working specs
+        //       Currently creates new spec; should query database for existing working specs before creating new ones.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Existing specs are queried from database
+        // - Specs are retrieved correctly
+        // - Database errors are handled gracefully
+        // - Query performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Database connection (Required)
+        // - Working spec table schema (Required)
+        // - Database query utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (database integration feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Database expertise
+        self.create_working_spec_from_task().await // Temporary: create new until database query is implemented
     }
 
     /// Create a comprehensive working spec from the task descriptor
@@ -456,11 +534,42 @@ impl RealTaskDescriptorProvider {
 
     /// Enhance the task descriptor with additional information from database or external sources
     async fn enhance_task_descriptor(&self) -> Result<agent_agency_contracts::types::planning::TaskDescriptor> {
-        // For now, return the existing descriptor
-        // In a full implementation, this could:
-        // - Load additional context from database
-        // - Validate task requirements
-        // - Enrich with historical data
+        // TODO: Enhance task descriptor with database and external data
+        //       Currently returns existing descriptor; should enhance with additional context from database, validation, and historical data.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Descriptor is enhanced with database context
+        // - Task requirements are validated
+        // - Historical data enriches descriptor
+        // - Enhancement improves task quality
+        //
+        // DEPENDENCIES:
+        // - Database connection (Required)
+        // - External data sources (Optional)
+        // - Historical data infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 5-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (task enhancement feature)
+        // - Change Budget: ~120 LOC
+        // - Reviewer Requirements: Task management expertise
+        // Temporary: return existing until enhancement is implemented
         // - Check for conflicts with other tasks
         Ok(self.task_descriptor.clone())
     }

@@ -183,8 +183,41 @@ impl EnsembleAnalytics {
 
     /// Calculate ensemble stability score
     pub fn calculate_stability_score(&self) -> f64 {
-        // Simplified stability calculation
-        // In a real implementation, this would track prediction consistency over time
+        // TODO: Implement prediction consistency tracking over time
+        //       Currently uses basic calculation; should track prediction consistency over time to measure ensemble stability.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement prediction history tracking
+        // [ ] Track predictions over time windows
+        // [ ] Calculate consistency metrics between time windows
+        // [ ] Measure prediction variance and stability
+        // [ ] Handle time window configuration
+        // [ ] Add metrics for stability score calculation
+        // [ ] Add unit tests with various prediction histories
+        // [ ] Add integration tests with real ensemble predictions
+        // [ ] Performance: Stability calculation should complete in <1ms
+        // [ ] Documentation: Document stability calculation methodology
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Prediction consistency is tracked over time
+        // - Stability score reflects actual prediction variance
+        // - Time windows are configurable
+        // - Score is normalized and comparable across ensembles
+        // - Historical data is efficiently stored and queried
+        //
+        // DEPENDENCIES:
+        // - Prediction history storage (Required)
+        // - Time window management (Required)
+        // - Consistency metrics calculation (Required)
+        //
+        // ESTIMATED EFFORT: 5-7 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (ML ensemble feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: ML metrics expertise
         if self.component_stats.is_empty() {
             0.0
         } else {
@@ -254,8 +287,41 @@ impl ProblemCharacteristicsAnalyzer {
     }
 
     fn compute_characteristics(&self, data: &LearningDataPoint) -> ProblemCharacteristics {
-        // Simplified characteristic computation
-        // In a real implementation, this would analyze the actual data
+        // TODO: Implement actual data analysis for problem characteristics
+        //       Currently uses basic heuristics; should analyze actual data to compute problem characteristics accurately.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement feature analysis from actual data
+        // [ ] Extract statistical characteristics (mean, variance, distribution)
+        // [ ] Analyze data complexity and patterns
+        // [ ] Compute problem difficulty metrics
+        // [ ] Handle different data types appropriately
+        // [ ] Add caching for expensive analyses
+        // [ ] Add unit tests with various data types
+        // [ ] Add integration tests with real learning data
+        // [ ] Performance: Analysis should complete in <10ms
+        // [ ] Documentation: Document characteristic computation methodology
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Problem characteristics reflect actual data analysis
+        // - Statistical features are accurately extracted
+        // - Data complexity is properly measured
+        // - Different data types are handled correctly
+        // - Analysis results are consistent and reproducible
+        //
+        // DEPENDENCIES:
+        // - Statistical analysis libraries (Optional)
+        // - Data type handlers (Required)
+        // - Feature extraction utilities (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (ML analysis feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Data analysis expertise
 
         let feature_count = match &data.input {
             LearningInput::TaskPrediction { .. } => 10,

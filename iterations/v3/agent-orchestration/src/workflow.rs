@@ -8,7 +8,7 @@ use serde::{Serialize, Deserialize};use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 
 use crate::council_errors::{CouncilError, CouncilResult};
-use crate::council::{CouncilSession, SessionStatus};
+use crate::council::CouncilSession;
 use crate::decision_making::FinalDecision;
 
 /// Workflow orchestrator for council sessions

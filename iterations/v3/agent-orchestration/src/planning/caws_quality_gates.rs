@@ -10,7 +10,7 @@ use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 
 /// Quality gates execution result with waiver information
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -8,10 +8,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Semaphore};
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn, error};
-use uuid::Uuid;
+use tracing::{info, error};
 
-use crate::tool_chain_planner::{ToolChain, ToolNode, ToolEdge};
+use crate::tool_chain_planner::{ToolChain, ToolNode};
 use petgraph::visit::EdgeRef;
 use crate::executor::{ChainExecutor, ExecutionResult};
 use crate::tool_execution::{ToolExecutor, ToolResult};
@@ -25,7 +24,6 @@ use agent_workers::{
     Dependency,
     WorkerManager,
     CommunicationHub,
-    worker::DefaultWorkerPool,
     communication::ChannelConfig,
 };
 
@@ -66,13 +64,15 @@ impl ParallelToolCoordinator {
         }
     }
 
-    /// Execute tool chain with parallel workers (stub implementation)
+    /// Execute tool chain with parallel workers
     pub async fn execute_parallel(
         &self,
         chain: &ToolChain,
         _cancel_token: tokio_util::sync::CancellationToken,
     ) -> Result<ExecutionResult, ParallelExecutionError> {
-        info!("Stub: Executing tool chain with simulated parallel workers");
+        // TODO: Implement actual parallel execution with real workers
+        //       Currently uses placeholder implementation; should execute tool chain with actual parallel workers and proper task distribution.
+        info!("Placeholder: Executing tool chain with simulated parallel workers");
 
         // Create mock execution results
         let mut results = HashMap::new();
@@ -139,18 +139,47 @@ impl ParallelToolCoordinator {
             });
         }
 
-        // Create a minimal TaskAnalysis since we don't have a ComplexTask to analyze
-        // In a real implementation, this would convert the ToolChain to a ComplexTask
-        // and use the DecompositionEngine to analyze it properly
+        // TODO: Convert ToolChain to ComplexTask and use DecompositionEngine for proper analysis
+        //       Currently creates minimal TaskAnalysis; should convert ToolChain to ComplexTask and use DecompositionEngine.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Convert ToolChain to ComplexTask structure
+        // [ ] Use DecompositionEngine to analyze task properly
+        // [ ] Extract complexity scores from decomposition
+        // [ ] Extract estimated durations from decomposition
+        // [ ] Identify task patterns from decomposition
+        // [ ] Add unit tests for ToolChain conversion
+        // [ ] Add integration tests with DecompositionEngine
+        // [ ] Verify task analysis accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - ToolChain is converted to ComplexTask correctly
+        // - DecompositionEngine analyzes task properly
+        // - Complexity scores and durations are extracted accurately
+        // - Task patterns are identified correctly
+        //
+        // DEPENDENCIES:
+        // - ComplexTask structure (Required)
+        // - DecompositionEngine (Required)
+        // - ToolChain conversion utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (task analysis feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Task decomposition expertise
         let task_analysis = TaskAnalysis {
             task_id: agent_workers::TaskId::new(),
-            complexity_score: 0.5, // Default complexity score
-            patterns: vec![], // No patterns identified for tool chains
+            complexity_score: 0.5, // Temporary: default until ComplexTask conversion is implemented
+            patterns: vec![], // Temporary: no patterns until DecompositionEngine analysis
             dependencies,
             subtask_scores: agent_workers::SubtaskScores {
                 parallelization_score: if self.can_chain_parallelize(chain) { 0.8 } else { 0.2 },
-                complexity_scores: vec![], // Simplified
-                estimated_durations: vec![], // Simplified
+                complexity_scores: vec![], // Temporary: empty until decomposition analysis
+                estimated_durations: vec![], // Temporary: empty until decomposition analysis
             },
             recommended_workers: self.estimate_worker_requirements(chain),
             should_parallelize: self.can_chain_parallelize(chain),
@@ -276,16 +305,76 @@ impl ParallelToolCoordinator {
         worker_manager: Arc<WorkerManager>,
         communication_hub: Arc<CommunicationHub>,
     ) -> Result<(String, ToolResult), ParallelExecutionError> {
-        // Stub: create a mock worker handle - WorkerHandle requires memory_access but we don't have agent_memory
-        // For now, we'll create a minimal worker handle with a placeholder
-        // TODO: Add agent_memory dependency or refactor WorkerHandle to not require it
-        let _worker = (); // Placeholder - actual WorkerHandle creation requires agent_memory
+        // TODO: Create actual WorkerHandle or refactor to remove agent_memory dependency
+        //       Currently uses placeholder; should create WorkerHandle or refactor to remove agent_memory requirement.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Add agent_memory dependency to this module
+        // [ ] Or refactor WorkerHandle to not require agent_memory
+        // [ ] Create actual WorkerHandle instance
+        // [ ] Integrate WorkerHandle with worker execution
+        // [ ] Handle memory access requirements
+        // [ ] Add unit tests for WorkerHandle creation
+        // [ ] Add integration tests with real workers
+        // [ ] Verify worker execution with WorkerHandle
+        //
+        // ACCEPTANCE CRITERIA:
+        // - WorkerHandle is created successfully
+        // - Worker execution works with WorkerHandle
+        // - Memory access requirements are satisfied
+        // - Worker integration is functional
+        //
+        // DEPENDENCIES:
+        // - agent_memory module (Required if adding dependency)
+        // - WorkerHandle structure (Required)
+        // - Worker execution infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (worker integration feature)
+        // - Change Budget: ~60 LOC
+        // - Reviewer Requirements: Worker infrastructure expertise
+        let _worker = (); // Temporary: placeholder until WorkerHandle creation is implemented
 
         // Create worker task
         let worker_task = WorkerTask {
             task_id: task.task_id.clone(),
             tool_id: task.node.tool_id.clone(),
-            parameters: serde_json::json!({"task": task.task_id, "inputs": []}), // Simplified
+            // TODO: Extract actual parameters from task node
+            //       Currently uses placeholder JSON; should extract actual parameters from task node structure.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Extract parameters from task node structure
+            // [ ] Map task inputs to worker task parameters
+            // [ ] Handle parameter serialization correctly
+            // [ ] Support various parameter types
+            // [ ] Add unit tests for parameter extraction
+            // [ ] Add integration tests with real tasks
+            // [ ] Verify parameter extraction accuracy
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Parameters are extracted from task node correctly
+            // - Task inputs are mapped to worker parameters
+            // - Parameter serialization works correctly
+            // - Various parameter types are supported
+            //
+            // DEPENDENCIES:
+            // - Task node structure (Required)
+            // - Parameter extraction utilities (Required)
+            // - Parameter serialization utilities (Required)
+            //
+            // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (parameter handling feature)
+            // - Change Budget: ~50 LOC
+            // - Reviewer Requirements: Task parameter expertise
+            parameters: serde_json::json!({"task": task.task_id, "inputs": []}), // Temporary: placeholder until parameter extraction is implemented
             timeout_ms: task.estimated_duration_ms * 2,
             priority: 1, // Default priority
         };
@@ -319,9 +408,41 @@ impl ParallelToolCoordinator {
         worker_manager: Arc<WorkerManager>,
         communication_hub: Arc<CommunicationHub>,
     ) -> Result<(String, ToolResult), ParallelExecutionError> {
-        // Stub: create a mock worker handle - WorkerHandle requires memory_access but we don't have agent_memory
-        // For now, we'll create a minimal worker handle with a placeholder
-        // TODO: Add agent_memory dependency or refactor WorkerHandle to not require it
+        // TODO: Implement proper WorkerHandle creation for parallel execution
+        //       Currently uses placeholder; should implement comprehensive WorkerHandle creation that either adds agent_memory dependency or refactors WorkerHandle to not require it for proper parallel execution integration.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - WorkerHandle is created properly for parallel execution
+        // - Memory access dependency is resolved (either added or refactored)
+        // - Worker handle integrates correctly with parallel execution system
+        // - Handle creation handles missing dependencies gracefully
+        //
+        // DEPENDENCIES:
+        // - agent_memory dependency addition OR WorkerHandle refactoring (Required)
+        // - Parallel execution integration (Required)
+        // - Worker handle creation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: Yes – Blocks parallel execution functionality
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (parallel execution integration)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Parallel execution and dependency management expertise
         let _worker = (); // Placeholder - actual WorkerHandle creation requires agent_memory
 
         // Create worker task
@@ -435,7 +556,8 @@ impl ParallelToolCoordinator {
         }
 
         // Find independent subgraphs
-        // This is a simplified implementation
+        // TODO: Implement proper independent subgraph detection
+        //       Currently uses placeholder implementation; should detect truly independent subgraphs using graph algorithms.
         sections.push("independent_subgraphs".to_string());
 
         sections
@@ -467,7 +589,7 @@ impl ParallelToolCoordinator {
 
     /// Compute execution levels (topological levels)
     fn compute_execution_levels(&self, chain: &ToolChain) -> Result<HashMap<usize, Vec<petgraph::graph::NodeIndex>>, ParallelExecutionError> {
-        use petgraph::visit::{Topo, EdgeRef};
+        use petgraph::visit::EdgeRef;
         use std::collections::HashSet;
 
         let mut levels = HashMap::new();

@@ -215,8 +215,40 @@ impl QuantileEstimatorTrait for QuantileEstimator {
     }
 
     fn estimate(&self, quantile: f64) -> Option<f64> {
-        // Note: This requires mutable access for sorting, so we can't implement the trait properly
-        // In a real implementation, we'd use interior mutability
+        // TODO: Implement quantile estimation with interior mutability
+        //       Currently returns None; should use interior mutability (RefCell/Mutex) to allow sorting for quantile estimation.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Use RefCell or Mutex for interior mutability
+        // [ ] Implement sorting for quantile calculation
+        // [ ] Calculate quantile from sorted samples
+        // [ ] Handle empty sample sets
+        // [ ] Handle invalid quantile values
+        // [ ] Add unit tests with various quantile values
+        // [ ] Add integration tests with real data
+        // [ ] Performance: Estimation should complete in <100μs
+        // [ ] Documentation: Document quantile calculation algorithm
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Interior mutability allows sorting
+        // - Quantile is calculated accurately
+        // - Empty sample sets are handled
+        // - Invalid quantile values are rejected
+        // - Estimation performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Interior mutability primitives (RefCell/Mutex) (Required)
+        // - Sorting algorithm (Required)
+        // - Quantile calculation algorithm (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (high confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (statistics feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Statistics and Rust concurrency expertise
         None
     }
 
@@ -282,17 +314,77 @@ impl CKMSQuantileEstimator {
     pub fn insert(&mut self, value: f64) {
         self.n += 1;
 
-        // Simplified CKMS implementation
-        // In a full implementation, this would maintain the invariant
-        // that samples are kept with appropriate deltas
-        self.samples.push((value, self.n, 1));
+        // TODO: Implement full CKMS algorithm with proper delta maintenance
+        //       Currently uses basic implementation; should implement full CKMS algorithm maintaining invariant that samples are kept with appropriate deltas.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement CKMS delta calculation
+        // [ ] Maintain invariant for sample deltas
+        // [ ] Implement proper compression algorithm
+        // [ ] Support configurable compression thresholds
+        // [ ] Handle edge cases in compression
+        // [ ] Add unit tests for CKMS algorithm
+        // [ ] Add integration tests with various data distributions
+        // [ ] Verify CKMS accuracy and performance
+        //
+        // ACCEPTANCE CRITERIA:
+        // - CKMS algorithm maintains proper deltas
+        // - Compression preserves quantile accuracy
+        // - Configurable thresholds are supported
+        // - Algorithm performs efficiently
+        //
+        // DEPENDENCIES:
+        // - CKMS algorithm implementation (Required)
+        // - Delta calculation utilities (Required)
+        // - Compression algorithm utilities (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (low confidence - complex algorithm)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (algorithm enhancement)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Streaming algorithms expertise
+        self.samples.push((value, self.n, 1)); // Temporary: basic push until CKMS implementation
 
         // Sort by value
         self.samples.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
 
-        // Compress if too many samples (simplified)
+        // TODO: Implement proper CKMS compression algorithm
+        //       Currently uses basic compression; should implement proper CKMS compression maintaining quantile accuracy.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement CKMS compression algorithm
+        // [ ] Maintain quantile accuracy during compression
+        // [ ] Use proper delta-based compression
+        // [ ] Support configurable compression ratios
+        // [ ] Handle edge cases in compression
+        // [ ] Add unit tests for compression
+        // [ ] Add integration tests with various sample sizes
+        // [ ] Verify compression accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Compression maintains quantile accuracy
+        // - Delta-based compression works correctly
+        // - Configurable ratios are supported
+        // - Compression is efficient
+        //
+        // DEPENDENCIES:
+        // - CKMS compression algorithm (Required)
+        // - Delta calculation utilities (Required)
+        // - Quantile accuracy validation (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (algorithm enhancement)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Streaming algorithms expertise
         if self.samples.len() > 1000 {
-            // Keep every other sample (very simplified compression)
+            // Temporary: basic compression until proper CKMS compression
             self.samples = self.samples.into_iter()
                 .enumerate()
                 .filter(|(i, _)| i % 2 == 0)
@@ -379,8 +471,35 @@ impl QuantileStats {
         self.count += 1;
         self.mean = old_mean + (value - old_mean) / self.count as f64;
 
-        // Simplified standard deviation calculation
-        // In a full implementation, we'd maintain running variance
+        // TODO: Implement proper running variance calculation for standard deviation
+        //       Currently uses basic calculation; should maintain running variance for accurate standard deviation without storing all samples.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement Welford's online algorithm for running variance
+        // [ ] Calculate standard deviation from running variance
+        // [ ] Handle edge cases (single sample, zero variance)
+        // [ ] Add unit tests with various sample sequences
+        // [ ] Add integration tests with real data streams
+        // [ ] Performance: Variance calculation should complete in O(1)
+        // [ ] Documentation: Document variance calculation algorithm
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Standard deviation calculated from running variance
+        // - No need to store all samples for variance calculation
+        // - Accurate results matching batch calculation
+        // - Handles numerical stability correctly
+        //
+        // DEPENDENCIES:
+        // - Welford's algorithm implementation (Required)
+        //
+        // ESTIMATED EFFORT: 2-3 hours (high confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (statistics feature)
+        // - Change Budget: ~50 LOC
+        // - Reviewer Requirements: Statistics expertise
         if self.count > 1 {
             // Approximate standard deviation
             let variance = (value - self.mean).powi(2) / (self.count - 1) as f64;

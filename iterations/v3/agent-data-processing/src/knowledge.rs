@@ -355,7 +355,28 @@ impl DefaultKnowledgeStage {
                 EntityType::Person | EntityType::Organization | EntityType::Location | EntityType::Event => {
                     concepts.push(entity.name.trim().to_string());
                 }
-                _ => {} // Skip other entity types for now
+                // TODO: Support additional entity types:
+                // 1. Entity type expansion: Support more entity types
+                //    - Add support for Product, Technology, Date, etc.
+                //    - Handle entity type-specific processing
+                //    - Support custom entity type definitions
+                // 2. Entity filtering: Implement entity filtering
+                //    - Filter entities by relevance or importance
+                //    - Support entity type whitelist/blacklist
+                //    - Handle entity quality and confidence scores
+                // 3. Entity processing: Process entities appropriately
+                //    - Extract entity metadata and relationships
+                //    - Support entity normalization and deduplication
+                //    - Handle entity type-specific extraction
+                // ACCEPTANCE CRITERIA:
+                // - Additional entity types are supported
+                // - Entity filtering works correctly
+                // - Entity processing handles all types appropriately
+                // DEPENDENCIES:
+                // - Entity type definitions (Required)
+                // - Entity processing utilities (Required)
+                // PRIORITY: Low
+                _ => {}
             }
         }
 
@@ -840,12 +861,46 @@ pub struct SqliteWordNet {
 
 impl SqliteWordNet {
     pub async fn new() -> DataProcessingResult<Self> {
-        // TODO: Load WordNet data from models/wiki-wordnet/wn3.1.dict.tar.gz
-        // For now, create in-memory database - would need data loading script
+        // TODO: Implement WordNet data loading from archive
+        //       Currently creates in-memory database; should implement comprehensive WordNet data loading from models/wiki-wordnet/wn3.1.dict.tar.gz archive with data loading script and proper schema initialization.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - WordNet data is loaded from tar.gz archive
+        // - Data loading script handles archive extraction
+        // - Database schema is properly initialized with WordNet data
+        // - Loading process is efficient and handles errors gracefully
+        //
+        // DEPENDENCIES:
+        // - Archive extraction utilities (Required)
+        // - WordNet data format parsing (Required)
+        // - Database schema initialization (Required)
+        //
+        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (data loading functionality)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Data loading and archive processing expertise
         let pool = sqlx::SqlitePool::connect("sqlite::memory:").await
             .map_err(DataProcessingError::Database)?;
 
-        // Initialize schema (simplified - would need full WordNet schema)
+        // TODO: Implement full WordNet schema initialization
+        //       Currently uses basic schema; should initialize complete WordNet schema with all relationships.
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS synsets (
                 lemma TEXT PRIMARY KEY,

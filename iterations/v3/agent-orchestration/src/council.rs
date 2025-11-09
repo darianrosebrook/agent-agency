@@ -12,14 +12,17 @@ use uuid::Uuid;
 // use rand::seq::SliceRandom;
 
 use crate::council_errors::{CouncilError, CouncilResult};
-use crate::judge_backup::{Judge, JudgeContribution, JudgeConfig, JudgeHealthMetrics, VerdictSummary};
-use crate::judge_backup::types::{ReviewContext, PreviousReview};
+use crate::judge_backup::{Judge, JudgeContribution};
+use crate::judge_backup::types::ReviewContext;
 use crate::verdict_aggregation::{VerdictAggregator, AggregationResult};
 use crate::decision_making::{DecisionEngine, FinalDecision, DecisionContext, OrganizationalConstraints, ResourceConstraints, HistoricalDecision, EmergencyFlags, ConsensusStrategy, RiskThresholds, ImpactLevel};
-use agent_agency_contracts::{TaskPriority, MemoryType, types::planning::TaskDescriptor};
+use agent_agency_contracts::{MemoryType, types::planning::TaskDescriptor};
 
 #[cfg(feature = "memory")]
 use agent_agency_contracts::types::memory::*;
+
+#[cfg(feature = "memory")]
+use agent_memory::memory_types;
 
 #[cfg(not(feature = "memory"))]
 pub mod memory_types {
@@ -29,10 +32,10 @@ pub mod memory_types {
     pub type ExperienceOutcome = MemoryType;
 }
 
-use crate::error_handling::{AgencyError, CircuitBreaker, ErrorHandlingCircuitBreakerConfig, RecoveryOrchestrator, DegradationManager, DegradationPolicy, DegradationLevel, error_factory};
+use crate::error_handling::{AgencyError, CircuitBreaker, ErrorHandlingCircuitBreakerConfig, RecoveryOrchestrator, DegradationManager, DegradationPolicy, DegradationLevel};
 // use crate::risk_scorer::ComputationalComplexity; // TEMPORARILY DISABLED
 
-use tracing::{debug, info, instrument, warn};
+use tracing::instrument;
 
 /// Worker solution proposal with evidence and rationale
 
@@ -588,8 +591,39 @@ impl Council {
                 }
             },
             JudgeSelectionStrategy::Random => {
-                // Simplified: shuffle and take first N
-                let mut judges = available_judges.clone();
+                // TODO: Implement proper random selection with weighted distribution
+                //       Currently uses simple shuffle; should implement weighted random selection considering judge expertise and availability.
+                //
+                // COMPLETION CHECKLIST:
+                // [ ] Implement weighted random selection algorithm
+                // [ ] Consider judge expertise for weighting
+                // [ ] Factor in judge availability and load
+                // [ ] Support various selection strategies
+                // [ ] Handle edge cases (empty list, single judge)
+                // [ ] Add unit tests for random selection
+                // [ ] Add integration tests with various judge pools
+                // [ ] Verify selection fairness
+                //
+                // ACCEPTANCE CRITERIA:
+                // - Random selection uses weighted distribution
+                // - Judge expertise is considered
+                // - Selection is fair and unbiased
+                // - Various strategies are supported
+                //
+                // DEPENDENCIES:
+                // - Weighted selection algorithm (Required)
+                // - Judge metadata structure (Required)
+                // - Selection utilities (Required)
+                //
+                // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+                // PRIORITY: Low
+                // BLOCKING: No
+                //
+                // GOVERNANCE:
+                // - CAWS Tier: 3 (selection algorithm enhancement)
+                // - Change Budget: ~80 LOC
+                // - Reviewer Requirements: Algorithm expertise
+                let mut judges = available_judges.clone(); // Temporary: simple shuffle until weighted selection
                 use rand::seq::SliceRandom;
                 let mut rng = rand::thread_rng();
                 judges.shuffle(&mut rng);
@@ -888,7 +922,7 @@ impl Council {
                 judge.evaluate(
                     spec_id,
                     &working_spec.title,
-                    &working_spec.title, // Use title as description for now
+                    &working_spec.title,
                     &working_spec.acceptance_criteria.iter().map(|ac| ac.then.clone()).collect::<Vec<_>>(),
                 ).await.map_err(|e| {
                     AgencyError::new(
@@ -919,7 +953,7 @@ impl Council {
                 judge.evaluate(
                     spec_id,
                     &working_spec.title,
-                    &working_spec.title, // Use title as description for now
+                    &working_spec.title,
                     &working_spec.acceptance_criteria.iter().map(|ac| ac.then.clone()).collect::<Vec<_>>(),
                 ).await
             }.map_err(|e| {
@@ -958,7 +992,7 @@ impl Council {
                                 judge.evaluate(
                                     spec_id,
                                     &working_spec.title,
-                                    &working_spec.title, // Use title as description for now
+                                    &working_spec.title,
                                     &working_spec.acceptance_criteria.iter().map(|ac| ac.then.clone()).collect::<Vec<_>>(),
                                 ).await
                             }.map_err(|e| {
@@ -1010,7 +1044,7 @@ impl Council {
             judge.evaluate(
                 spec_id,
                 &working_spec.title,
-                &working_spec.title, // Use title as description for now
+                &working_spec.title, // TODO: Extract proper description from working spec
                 &working_spec.acceptance_criteria.iter().map(|ac| ac.then.clone()).collect::<Vec<_>>(),
             ).await
         }.map_err(|e| CouncilError::JudgeError {
@@ -1196,9 +1230,9 @@ impl Council {
             .count();
 
         let average_response_time = if !self.available_judges.is_empty() {
-            (self.available_judges.iter()
+            self.available_judges.iter()
                 .map(|judge| judge.health_metrics().response_time_avg_ms as u64)
-                .sum::<u64>() / self.available_judges.len() as u64)
+                .sum::<u64>() / self.available_judges.len() as u64
         } else {
             0
         };
@@ -1367,7 +1401,7 @@ impl Council {
                     "final_decision": format!("{:?}", final_decision)
                 })).unwrap_or_else(|_| "{}".to_string()),
                 outcome,
-                memory_type: MemoryType::Episodic,
+                memory_type: agent_memory::memory_types::MemoryType::Episodic,
                 timestamp: chrono::Utc::now(),
                 metadata: std::collections::HashMap::new(),
             };
@@ -1465,7 +1499,7 @@ impl Council {
 
     /// Convert task descriptor to working spec format
     fn convert_task_to_working_spec(&self, task_descriptor: &TaskDescriptor) -> CouncilResult<agent_agency_contracts::WorkingSpec> {
-        use agent_agency_contracts::{WorkingSpec, WorkingSpecConstraints, WorkingSpecContext, WorkingSpecMetadata, TestPlan, RollbackPlan};
+        use agent_agency_contracts::{WorkingSpec, WorkingSpecConstraints, WorkingSpecContext, TestPlan, RollbackPlan};
         use agent_agency_contracts::task_request::Environment;
 
         // Create a basic working spec from task descriptor

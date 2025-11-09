@@ -191,8 +191,41 @@ impl TaskStatePersistence for InMemoryTaskStatePersistence {
 /// This would integrate with a real database for persistent storage
 #[cfg(feature = "database")]
 pub struct DatabaseTaskStatePersistence {
-    // Database connection pool would go here
-    // For now, this is a placeholder
+    // TODO: Implement comprehensive database connection pool for task state persistence
+    //       Currently a placeholder; should implement comprehensive database connection pool integration for persistent task state storage in production environments.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Database connection pool is implemented
+    // - Task state persistence uses real database
+    // - Connection pooling is efficient and scalable
+    // - Database operations are transactional and reliable
+    //
+    // DEPENDENCIES:
+    // - Database connection pool library (Required)
+    // - Database schema for task state (Required)
+    // - Connection management utilities (Required)
+    //
+    // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (database persistence functionality)
+    // - Change Budget: ~250 LOC
+    // - Reviewer Requirements: Database connection pooling and persistence expertise
 }
 
 #[cfg(feature = "database")]

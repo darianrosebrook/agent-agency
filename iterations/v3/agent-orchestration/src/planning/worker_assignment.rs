@@ -5,7 +5,7 @@
 //!
 //! @author @darianrosebrook
 
-use crate::planning::assignment_storage::{AssignmentDatabaseStorage, ResourceAllocation};
+use crate::planning::assignment_storage::AssignmentDatabaseStorage;
 use crate::planning::{models::Worker, DatabaseOperations};
 use agent_agency_contracts::planning_io::Milestone;
 use anyhow::{anyhow, Result};
@@ -194,25 +194,25 @@ struct WorkerCandidate {
 /// Worker performance metrics
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct WorkerPerformance {
+pub struct WorkerPerformance {
     /// Tasks completed
-    tasks_completed: u64,
+    pub tasks_completed: u64,
 
     /// Tasks failed
-    tasks_failed: u64,
+    pub tasks_failed: u64,
 
     /// Average execution time (ms)
-    avg_execution_time_ms: f64,
+    pub avg_execution_time_ms: f64,
 
     /// Success rate (0.0-1.0)
-    success_rate: f64,
+    pub success_rate: f64,
 
     /// Performance score (0.0-1.0)
-    performance_score: f64,
+    pub performance_score: f64,
 
     /// Last updated
     #[schemars(with = "String")]
-    last_updated: chrono::DateTime<chrono::Utc>,
+    pub last_updated: chrono::DateTime<chrono::Utc>,
 }
 
 impl Default for AssignmentConfig {
@@ -743,6 +743,18 @@ impl WorkerAssignmentStrategy {
             Some(&candidates), // Pass candidate details with scores
         ).await?;
 
+        // Log candidate scores for debugging (before filtering consumes candidates)
+        let candidate_count = candidates.len();
+        let candidate_scores: Vec<_> = candidates.iter().map(|c| (c.worker_id, c.capability_score)).collect();
+        let highest_score = candidates.iter().map(|c| c.capability_score).fold(0.0, f64::max);
+        tracing::info!(
+            milestone_id = %milestone.id,
+            candidate_count = candidate_count,
+            min_required_score = self.config.min_capability_score,
+            candidate_scores = ?candidate_scores,
+            "Evaluated worker candidates for milestone"
+        );
+
         // Filter by minimum capability score
         let qualified_candidates: Vec<_> = candidates
             .into_iter()
@@ -750,6 +762,13 @@ impl WorkerAssignmentStrategy {
             .collect();
 
         if qualified_candidates.is_empty() {
+            tracing::warn!(
+                milestone_id = %milestone.id,
+                candidate_count = candidate_count,
+                min_required_score = self.config.min_capability_score,
+                highest_score = highest_score,
+                "No workers meet minimum capability score"
+            );
             self.record_assignment_decision(
                 milestone,
                 "no_qualified_candidates",
@@ -942,45 +961,114 @@ impl WorkerAssignmentStrategy {
     /// Calculate capability match score between milestone and worker
     fn calculate_capability_score(&self, milestone: &Milestone, worker: &Worker) -> f64 {
         // Parse worker capabilities from JSON
-        let worker_capabilities: HashSet<String> =
-            match serde_json::from_value(worker.capabilities.clone().into()) {
-                Ok(capabilities) => capabilities,
-                Err(_) => return 0.0, // No capabilities = no match
-            };
+        // Handle both array format ["cap1", "cap2"] and object format {"cap1": true, "cap2": true}
+        let worker_capabilities: HashSet<String> = match serde_json::from_value(worker.capabilities.clone()) {
+            Ok(capabilities) => capabilities,
+            Err(_) => {
+                // Try parsing as object and extracting keys
+                if let serde_json::Value::Object(map) = &worker.capabilities {
+                    map.keys().cloned().collect()
+                } else {
+                    tracing::warn!(
+                        worker_id = %worker.id,
+                        capabilities = ?worker.capabilities,
+                        "Failed to parse worker capabilities, returning 0.0"
+                    );
+                    return 0.0;
+                }
+            }
+        };
 
         // Milestone requirements from scope operations
         let required_capabilities: HashSet<String> =
             milestone.scope.allowed_operations.iter().cloned().collect();
 
         if required_capabilities.is_empty() {
-            return 1.0; // No requirements = perfect match
+            // No requirements = perfect match (any worker can handle it)
+            tracing::debug!(
+                milestone_id = %milestone.id,
+                "Milestone has no required capabilities, returning perfect match score"
+            );
+            return 1.0;
         }
 
-        // Calculate Jaccard similarity
+        // Check if worker has all required capabilities
+        let has_all_required = required_capabilities.is_subset(&worker_capabilities);
+        
+        if has_all_required {
+            // Worker has all required capabilities - perfect match
+            // Score is based on how many required capabilities match (normalized to 0.0-1.0)
+            // If worker has exactly the required capabilities, score = 1.0
+            // If worker has more capabilities, score is still 1.0 (bonus capabilities don't hurt)
+            let score = 1.0;
+            tracing::debug!(
+                milestone_id = %milestone.id,
+                worker_id = %worker.id,
+                "Worker has all required capabilities, score = 1.0"
+            );
+            return score;
+        }
+
+        // Worker missing some required capabilities - use Jaccard similarity
         let intersection: HashSet<_> = worker_capabilities
             .intersection(&required_capabilities)
+            .cloned()
             .collect();
-        let union: HashSet<_> = worker_capabilities.union(&required_capabilities).collect();
+        let union: HashSet<_> = worker_capabilities.union(&required_capabilities).cloned().collect();
 
-        if union.is_empty() {
+        let score = if union.is_empty() {
             0.0
         } else {
             intersection.len() as f64 / union.len() as f64
-        }
+        };
+
+        tracing::debug!(
+            milestone_id = %milestone.id,
+            worker_id = %worker.id,
+            worker_capabilities = ?worker_capabilities,
+            required_capabilities = ?required_capabilities,
+            intersection = ?intersection,
+            score = score,
+            "Calculated capability score"
+        );
+
+        score
     }
 
     /// Calculate worker load factor
     async fn calculate_load_factor(&self, worker: &Worker) -> Result<f64> {
-        // TODO: Implement real worker load calculation
-        // - [ ] Query worker pool for current active task count
-        // - [ ] Calculate CPU and memory usage from worker metrics
-        // - [ ] Factor in task queue depth for worker
-        // - [ ] Combine metrics into load factor score
-        // - [ ] Handle missing metrics gracefully
-        // - [ ] Add unit tests with mock worker load data
-        // - [ ] Add integration tests with real worker load
-        // For now, use a simple estimation based on worker model
-        // In a real implementation, this would query current task load
+        // TODO: Implement real-time worker load calculation from worker pool metrics
+        //       Currently uses basic estimation based on worker model metadata; should query actual worker metrics.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Query worker pool for current active task count
+        // [ ] Calculate CPU and memory usage from worker metrics
+        // [ ] Factor in task queue depth for worker
+        // [ ] Combine metrics into load factor score
+        // [ ] Handle missing metrics gracefully
+        // [ ] Add unit tests with mock worker load data
+        // [ ] Add integration tests with real worker load
+        // [ ] Verify load factor accuracy improves worker assignment decisions
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Worker load factor is calculated from real-time worker pool metrics
+        // - Load factor accurately reflects current CPU, memory, and queue depth
+        // - Missing metrics are handled gracefully with fallback values
+        // - Load factor improves worker assignment quality
+        //
+        // DEPENDENCIES:
+        // - Worker pool API for querying active tasks (Required)
+        // - Worker metrics collection system (Required)
+        // - Task queue depth tracking (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (standard feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Worker management domain expertise
 
         // Base load from performance history (if available)
         let base_load = match worker.metadata.get("performance_history") {
@@ -1013,8 +1101,42 @@ impl WorkerAssignmentStrategy {
         // Enhance with benchmark results if available (always-on)
         if let Some(ref tracker) = self.performance_tracker {
             // Get historical benchmark results for this worker's model
-            // Note: In a full implementation, we'd map worker_id to model_id
-            // For now, we'll use a simplified approach
+            //
+            // TODO: Implement comprehensive worker-to-model mapping for performance tracking
+            //       Currently uses basic approach with worker_id directly; should implement comprehensive mapping that maps worker_id to model_id for accurate historical performance retrieval.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - worker_id is mapped to model_id correctly
+            // - Historical performance is retrieved using model_id
+            // - Mapping handles missing or invalid mappings gracefully
+            // - Performance tracking is accurate and complete
+            //
+            // DEPENDENCIES:
+            // - Worker-to-model mapping system (Required)
+            // - Model ID lookup utilities (Required)
+            // - Performance tracking database (Required)
+            //
+            // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (performance tracking functionality)
+            // - Change Budget: ~150 LOC
+            // - Reviewer Requirements: Performance tracking and worker-model mapping expertise
             match tracker.get_historical_performance(worker_id).await {
                 Ok(historical_results) => {
                     if !historical_results.is_empty() {

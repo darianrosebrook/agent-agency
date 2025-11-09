@@ -14,15 +14,13 @@
 //! - system-quality-security::policy_audit - For audit logging
 
 use std::time::Instant;
-use tracing::{info, error};
-use uuid::Uuid;
+use tracing::info;
 
 use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceManager}};
 #[cfg(feature = "full")]
 use crate::test_helpers::create_test_autonomous_executor;
 #[cfg(feature = "full")]
 use agent_orchestration::autonomous_executor::{AutonomousExecutor, ExecutionMode};
-use agent_agency_contracts::{TaskDescriptor, TaskScope, ChangeBudget, BlastRadius, ExecutionStatus, TaskPriority};
 
 /// Run the human intervention E2E test
 pub async fn run_human_intervention_test(
@@ -146,7 +144,41 @@ pub async fn run_human_intervention_test(
 async fn test_task_pause_resume(_env: &TestEnvironment, _services: &LocalServiceManager) -> Result<InterventionSubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing task pause and resume with real AutonomousExecutor");
 
-    // For now, skip autonomous executor tests until agent-orchestration is fixed
+    // TODO: Implement comprehensive task pause and resume testing
+    //       Currently skipped due to agent-orchestration compilation errors; should implement comprehensive testing that validates task pause and resume functionality with real AutonomousExecutor once compilation issues are resolved.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Task pause functionality is tested with real AutonomousExecutor
+    // - Task resume functionality is tested with real AutonomousExecutor
+    // - Test validates state preservation during pause/resume
+    // - Test handles edge cases and error conditions
+    //
+    // DEPENDENCIES:
+    // - Agent-orchestration compilation fixes (Required)
+    // - AutonomousExecutor implementation (Required)
+    // - Test infrastructure for pause/resume (Required)
+    //
+    // ESTIMATED EFFORT: 8-10 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: Yes – Blocks human intervention testing functionality
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (integration testing functionality)
+    // - Change Budget: ~200 LOC
+    // - Reviewer Requirements: Integration testing and task orchestration expertise
     info!("Skipping autonomous executor test (agent-orchestration has compilation errors)");
     Ok(InterventionSubResult {
         passed: false,
@@ -251,7 +283,41 @@ enum TaskStatus {
 async fn test_task_cancellation(_env: &TestEnvironment, _services: &LocalServiceManager) -> Result<InterventionSubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing task cancellation with real AutonomousExecutor");
 
-    // For now, skip autonomous executor tests until agent-orchestration is fixed
+    // TODO: Implement comprehensive task cancellation testing
+    //       Currently skipped due to agent-orchestration compilation errors; should implement comprehensive testing that validates task cancellation functionality with real AutonomousExecutor once compilation issues are resolved.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Task cancellation is tested with real AutonomousExecutor
+    // - Test validates proper cleanup after cancellation
+    // - Test handles cancellation during various task states
+    // - Test validates resource cleanup and state consistency
+    //
+    // DEPENDENCIES:
+    // - Agent-orchestration compilation fixes (Required)
+    // - AutonomousExecutor implementation (Required)
+    // - Test infrastructure for cancellation (Required)
+    //
+    // ESTIMATED EFFORT: 8-10 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: Yes – Blocks human intervention testing functionality
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (integration testing functionality)
+    // - Change Budget: ~200 LOC
+    // - Reviewer Requirements: Integration testing and task orchestration expertise
     info!("Skipping autonomous executor test (agent-orchestration has compilation errors)");
     Ok(InterventionSubResult {
         passed: false,

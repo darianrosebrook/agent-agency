@@ -96,8 +96,8 @@ async fn load_diffusion_model(
     telemetry: &TelemetryCollector,
     circuit_breaker: Arc<SecurityCircuitBreaker>,
 ) -> Result<DiffusionModel, Box<dyn std::error::Error>> {
-    // In real implementation, this would load the actual CoreML-Anything model
-    // For now, return a mock/placeholder model
+    // TODO: Load actual CoreML-Anything model
+    //       Currently returns placeholder model; should load actual CoreML-Anything model for real image generation.
 
     println!(" Loading CoreML-Anything model...");
     println!("   Model: CoreML-Anything-V3.1");
@@ -125,8 +125,8 @@ async fn save_diagram_image(
     let output_dir = Path::new("docs/assets/diagrams/generated");
     fs::create_dir_all(output_dir)?;
 
-    // Convert pixel data to image (simplified - would handle actual pixel format)
-    // In real implementation, this would properly decode the generated image
+    // TODO: Implement proper pixel format handling for image conversion
+    //       Currently uses basic conversion; should handle actual pixel format and properly decode the generated image.
     let width = generated_image.pixels.dim().3;
     let height = generated_image.pixels.dim().2;
 
@@ -241,9 +241,41 @@ mod tests {
 
     #[tokio::test]
     async fn test_diagram_generation_workflow() {
-        // This test would run the full workflow with a mock model
-        // For now, just test that the structure is sound
-
+        // TODO: Implement comprehensive diagram generation workflow test
+        //       Currently tests structure only; should implement comprehensive test that runs full workflow with mock model for complete diagram generation validation.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Test runs full workflow with mock model
+        // - Diagram generation is validated end-to-end
+        // - Test covers error cases and edge conditions
+        // - Test validates diagram structure and content
+        //
+        // DEPENDENCIES:
+        // - Mock model infrastructure (Required)
+        // - Diagram generation utilities (Required)
+        // - Test fixtures and data (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (test infrastructure enhancement)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Test infrastructure and diagram generation expertise
         let spec = ArchitectureSpec {
             name: "Test System".to_string(),
             description: "Test architecture for diagram generation".to_string(),

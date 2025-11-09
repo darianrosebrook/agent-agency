@@ -90,9 +90,41 @@ impl SelfPromptingRecovery {
         match self.policy_enforcer.check_session_creation(&session_id)? {
             crate::policy::SessionCheckResult::Allowed => {
                 // TODO: Add session tracking to concurrency manager
-                // For now, we'll track sessions separately
-
-                // Store session metadata
+                //       Currently tracks sessions separately; should add session tracking to concurrency manager for unified session management.
+                //
+                // COMPLETION CHECKLIST:
+                // [ ] Primary functionality implemented
+                // [ ] API/data structures defined & stable
+                // [ ] Error handling + validation aligned with error taxonomy
+                // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                // [ ] Integration tests for external systems/contracts
+                // [ ] Documentation: public API + system behavior
+                // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                // [ ] Configurability and feature flags defined if relevant
+                // [ ] Failure-mode cards documented (degradation paths)
+                //
+                // ACCEPTANCE CRITERIA:
+                // - Sessions are tracked in concurrency manager
+                // - Tracking is unified and consistent
+                // - Error handling works for tracking failures
+                // - Performance is acceptable
+                //
+                // DEPENDENCIES:
+                // - Concurrency manager API (Required)
+                // - Session tracking utilities (Required)
+                // - Unified tracking infrastructure (Required)
+                //
+                // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+                // PRIORITY: Medium
+                // BLOCKING: No
+                //
+                // GOVERNANCE:
+                // - CAWS Tier: 2 (session management feature)
+                // - Change Budget: ~100 LOC
+                // - Reviewer Requirements: Concurrency management expertise
+                // Store session metadata (Temporary: separate tracking until concurrency manager integration)
                 self.session_metadata.insert(session_id.clone(), session_meta);
                 self.current_session = Some(session_ref.clone());
 
@@ -250,8 +282,41 @@ impl SelfPromptingRecovery {
     /// Attempt automatic merge
     fn auto_merge_conflict(&mut self, conflict: &ConflictInfo) -> Result<ChangeResult> {
         // TODO: Implement automatic merge logic
-        // For now, return conflict for manual resolution
-        Ok(ChangeResult::Conflict(conflict.clone()))
+        //       Currently returns conflict for manual resolution; should implement automatic merge logic for conflict resolution.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Automatic merge logic is implemented correctly
+        // - Conflicts are resolved when possible
+        // - Manual resolution is used when automatic merge fails
+        // - Performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Merge algorithms (Required)
+        // - Conflict analysis utilities (Required)
+        // - Resolution infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (conflict resolution feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Merge and conflict resolution expertise
+        Ok(ChangeResult::Conflict(conflict.clone())) // Temporary: manual resolution until automatic merge
     }
 
     /// Create a conflict branch

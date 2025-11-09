@@ -154,9 +154,42 @@ pub fn calculate_coordination_quality(
 /// - Build pre/post-intervention windows around throttling events
 /// - Score increase in throughput or decrease in tail latency within N ticks after intervention
 ///
-/// For now, we analyze coordination events for resource allocation/freeing patterns
-/// and decision points for resource-related reasoning.
-pub fn calculate_resource_adaptation(
+/// TODO: Implement comprehensive resource adaptation calculation
+///       Currently analyzes basic patterns; should build pre/post-intervention windows around throttling events and score throughput/latency improvements.
+//
+// COMPLETION CHECKLIST:
+// [ ] Primary functionality implemented
+// [ ] API/data structures defined & stable
+// [ ] Error handling + validation aligned with error taxonomy
+// [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+// [ ] Integration tests for external systems/contracts
+// [ ] Documentation: public API + system behavior
+// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+// [ ] Security posture reviewed (inputs, authz, sandboxing)
+// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+// [ ] Configurability and feature flags defined if relevant
+// [ ] Failure-mode cards documented (degradation paths)
+//
+// ACCEPTANCE CRITERIA:
+// - Pre/post-intervention windows are built correctly
+// - Throughput and latency improvements are scored accurately
+// - Resource adaptation is measured meaningfully
+// - Calculation handles edge cases
+//
+// DEPENDENCIES:
+// - Throttling event detection (Required)
+// - Performance metrics infrastructure (Required)
+// - Window analysis utilities (Required)
+//
+// ESTIMATED EFFORT: 5-6 hours (medium confidence)
+// PRIORITY: Low
+// BLOCKING: No
+//
+// GOVERNANCE:
+// - CAWS Tier: 3 (metrics enhancement)
+// - Change Budget: ~120 LOC
+// - Reviewer Requirements: Performance metrics expertise
+pub fn calculate_resource_adaptation( // Temporary: basic pattern analysis until comprehensive calculation
     decisions: &[DecisionPoint],
     events: &[CoordinationEvent],
     audit_entries: &[AuditEvent],
@@ -370,8 +403,42 @@ pub fn calculate_recovery_safety(
 /// - Count unique patterns reused across scenarios with minimal parameter changes
 /// - Score = (# successful reuses / # attempts) weighted by scenario dissimilarity
 ///
-/// For now, we analyze decision reasoning patterns and alternative reuse.
-pub fn calculate_solution_generalization(
+/// TODO: Implement comprehensive solution generalization calculation
+///       Currently analyzes basic patterns; should count unique patterns reused across scenarios with minimal parameter changes and score weighted by scenario dissimilarity.
+//
+// COMPLETION CHECKLIST:
+// [ ] Primary functionality implemented
+// [ ] API/data structures defined & stable
+// [ ] Error handling + validation aligned with error taxonomy
+// [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+// [ ] Integration tests for external systems/contracts
+// [ ] Documentation: public API + system behavior
+// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+// [ ] Security posture reviewed (inputs, authz, sandboxing)
+// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+// [ ] Configurability and feature flags defined if relevant
+// [ ] Failure-mode cards documented (degradation paths)
+//
+// ACCEPTANCE CRITERIA:
+// - Pattern reuse is counted accurately
+// - Scenario dissimilarity is weighted correctly
+// - Generalization score reflects actual reuse
+// - Calculation handles various scenarios
+//
+// DEPENDENCIES:
+// - Pattern matching infrastructure (Required)
+// - Scenario analysis utilities (Required)
+// - Similarity calculation utilities (Required)
+//
+// ESTIMATED EFFORT: 5-6 hours (medium confidence)
+// PRIORITY: Low
+// BLOCKING: No
+//
+// GOVERNANCE:
+// - CAWS Tier: 3 (metrics enhancement)
+// - Change Budget: ~120 LOC
+// - Reviewer Requirements: Pattern analysis expertise
+pub fn calculate_solution_generalization( // Temporary: basic pattern analysis until comprehensive calculation
     decisions: &[DecisionPoint],
     _scenario_id: &str,
 ) -> f64 {
@@ -459,8 +526,42 @@ pub fn calculate_solution_generalization(
 /// - Score = net positive impact on success/latency over the *subsequent* K tasks,
 ///   adjusted for noise
 ///
-/// For now, we analyze decision confidence trends and metadata changes.
-pub fn calculate_self_optimization(
+/// TODO: Implement comprehensive self-optimization calculation
+///       Currently analyzes basic trends; should score net positive impact on success/latency over subsequent K tasks adjusted for noise.
+//
+// COMPLETION CHECKLIST:
+// [ ] Primary functionality implemented
+// [ ] API/data structures defined & stable
+// [ ] Error handling + validation aligned with error taxonomy
+// [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+// [ ] Integration tests for external systems/contracts
+// [ ] Documentation: public API + system behavior
+// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+// [ ] Security posture reviewed (inputs, authz, sandboxing)
+// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+// [ ] Configurability and feature flags defined if relevant
+// [ ] Failure-mode cards documented (degradation paths)
+//
+// ACCEPTANCE CRITERIA:
+// - Impact on subsequent tasks is measured correctly
+// - Noise adjustment is applied accurately
+// - Optimization score reflects actual improvements
+// - Calculation handles various task sequences
+//
+// DEPENDENCIES:
+// - Task sequence analysis (Required)
+// - Impact measurement utilities (Required)
+// - Noise adjustment algorithms (Required)
+//
+// ESTIMATED EFFORT: 5-6 hours (medium confidence)
+// PRIORITY: Low
+// BLOCKING: No
+//
+// GOVERNANCE:
+// - CAWS Tier: 3 (metrics enhancement)
+// - Change Budget: ~120 LOC
+// - Reviewer Requirements: Optimization metrics expertise
+pub fn calculate_self_optimization( // Temporary: basic trend analysis until comprehensive calculation
     decisions: &[DecisionPoint],
     events: &[CoordinationEvent],
 ) -> f64 {
@@ -536,8 +637,42 @@ pub fn calculate_self_optimization(
 /// - Re-run a subset of prior scenarios ("spaced repetition set")
 /// - Score = success on repeat / baseline, with decay over time; penalize drift
 ///
-/// For now, we analyze pattern recognition and decision consistency over time.
-pub fn calculate_knowledge_retention(
+/// TODO: Implement comprehensive knowledge retention calculation
+///       Currently analyzes basic patterns; should re-run subset of prior scenarios and score success on repeat with decay over time.
+//
+// COMPLETION CHECKLIST:
+// [ ] Primary functionality implemented
+// [ ] API/data structures defined & stable
+// [ ] Error handling + validation aligned with error taxonomy
+// [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+// [ ] Integration tests for external systems/contracts
+// [ ] Documentation: public API + system behavior
+// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+// [ ] Security posture reviewed (inputs, authz, sandboxing)
+// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+// [ ] Configurability and feature flags defined if relevant
+// [ ] Failure-mode cards documented (degradation paths)
+//
+// ACCEPTANCE CRITERIA:
+// - Prior scenarios are re-run correctly
+// - Success on repeat is scored accurately
+// - Time decay is applied correctly
+// - Retention score reflects actual knowledge
+//
+// DEPENDENCIES:
+// - Scenario replay infrastructure (Required)
+// - Success measurement utilities (Required)
+// - Time decay calculation utilities (Required)
+//
+// ESTIMATED EFFORT: 5-6 hours (medium confidence)
+// PRIORITY: Low
+// BLOCKING: No
+//
+// GOVERNANCE:
+// - CAWS Tier: 3 (metrics enhancement)
+// - Change Budget: ~120 LOC
+// - Reviewer Requirements: Knowledge retention metrics expertise
+pub fn calculate_knowledge_retention( // Temporary: basic pattern analysis until comprehensive calculation
     decisions: &[DecisionPoint],
     _scenario_id: &str,
 ) -> f64 {

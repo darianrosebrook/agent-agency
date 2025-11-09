@@ -24,15 +24,40 @@ pub struct FilesystemSpace {
 pub fn get_filesystem_space<P: AsRef<Path>>(path: P) -> Result<FilesystemSpace> {
     use std::fs;
 
-    // TODO: Implement real filesystem space monitoring
-    // - [ ] Use platform-specific APIs (macOS, Linux, Windows) for disk space
-    // - [ ] Integrate with fs2 crate or similar for accurate space reporting
-    // - [ ] Calculate actual total, available, and used bytes from filesystem
-    // - [ ] Handle filesystem errors gracefully
-    // - [ ] Add unit tests with mock filesystem data
-    // - [ ] Add integration tests with real filesystem monitoring
-    // For now, return dummy values
-    // In a real implementation, use platform-specific APIs or crates like fs2
+    // TODO: Implement platform-specific filesystem space monitoring
+    //       Currently returns dummy values; should use platform-specific APIs or crates like fs2 to get actual filesystem space.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Use platform-specific APIs for filesystem space
+    // [ ] Integrate with fs2 crate or similar
+    // [ ] Query actual total and available space
+    // [ ] Handle filesystem errors gracefully
+    // [ ] Support multiple filesystem types
+    // [ ] Add unit tests with mock filesystem data
+    // [ ] Add integration tests with real filesystem monitoring
+    // [ ] Performance: Query should complete in <10ms
+    // [ ] Documentation: Document platform-specific implementation
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Filesystem space is queried from actual system
+    // - Total and available space are accurate
+    // - Multiple filesystem types are supported
+    // - Query errors are handled gracefully
+    // - Query performance is acceptable
+    //
+    // DEPENDENCIES:
+    // - Platform-specific filesystem APIs (Required)
+    // - fs2 crate or equivalent (Optional)
+    // - Error handling utilities (Required)
+    //
+    // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (system integration feature)
+    // - Change Budget: ~150 LOC
+    // - Reviewer Requirements: Platform-specific API expertise
     let _metadata = fs::metadata(path)?;
 
     Ok(FilesystemSpace {

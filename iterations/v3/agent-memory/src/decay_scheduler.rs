@@ -165,8 +165,41 @@ mod tests {
 
     #[tokio::test]
     async fn test_scheduler_creation() {
-        // This would need a test database
-        // For now, just test configuration
+        // TODO: Implement comprehensive scheduler creation test with database
+        //       Currently tests configuration only; should implement comprehensive test that uses test database for complete scheduler creation validation.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Test uses test database for scheduler creation
+        // - Scheduler is properly initialized with database
+        // - Configuration is validated correctly
+        // - Test covers error cases and edge conditions
+        //
+        // DEPENDENCIES:
+        // - Test database infrastructure (Required)
+        // - Scheduler creation utilities (Required)
+        // - Database setup/teardown utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (test infrastructure enhancement)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Test infrastructure and database testing expertise
         let config = DecaySchedulerConfig::default();
         assert_eq!(config.decay_interval_seconds, 3600);
         assert!(config.enabled);

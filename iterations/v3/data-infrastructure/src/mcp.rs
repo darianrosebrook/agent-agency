@@ -142,7 +142,6 @@ impl McpServer {
         // - [ ] Add database health checks
         // - [ ] Add unit tests with mock database client
         // - [ ] Add integration tests with real database
-        // Create inner MCP server (using stub database client for now)
         let stub_db_client = Arc::new(McpDatabaseClient::new());
         let inner = InnerMCPServer::new(inner_config, stub_db_client);
 
@@ -245,16 +244,41 @@ impl McpServer {
             }
         }
 
-        // TODO: Integrate with actual agent-mcp crate when circular dependencies are resolved
-        // - [ ] Resolve circular dependency issues with agent-mcp crate
-        // - [ ] Integrate with MCP server for tool registration
-        // - [ ] Support MCP protocol for tool discovery and invocation
-        // - [ ] Handle MCP server connection errors
-        // - [ ] Add unit tests with mock MCP server
-        // - [ ] Add integration tests with real MCP server
-        // Register with MCP server
-        // For now, implement basic tool registration in local registry
-
+        // TODO: Implement comprehensive MCP server integration for tool registration
+        //       Currently implements basic tool registration in local registry only; should implement comprehensive integration that registers with actual MCP server, supports MCP protocol for tool discovery and invocation, and handles MCP server connection errors.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Tools are registered with MCP server
+        // - MCP protocol is supported for tool discovery and invocation
+        // - MCP server connection errors are handled gracefully
+        // - Tool registration integrates with MCP protocol correctly
+        //
+        // DEPENDENCIES:
+        // - MCP server integration (agent-mcp crate) (Required)
+        // - MCP protocol implementation (Required)
+        // - Connection error handling (Required)
+        //
+        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (MCP integration functionality)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: MCP protocol and tool registration expertise
         // Store tool in local registry for public API access
         self.tool_registry.register_tool(tool.clone()).await?;
 
@@ -329,7 +353,41 @@ impl McpServer {
 
         // Call shutdown on the inner MCP server if available
         // Note: This assumes the InnerMCPServer has a shutdown method
-        // In a real implementation, this would coordinate with the actual MCP server
+        // TODO: Implement MCP server coordination for shutdown
+        //       Currently assumes shutdown method exists; should coordinate with actual MCP server for graceful shutdown.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement MCP server shutdown coordination
+        // [ ] Call shutdown on inner MCP server instance
+        // [ ] Wait for active operations to complete
+        // [ ] Close all active connections gracefully
+        // [ ] Handle shutdown timeouts and force shutdown
+        // [ ] Verify server state after shutdown
+        // [ ] Add unit tests with mock MCP server
+        // [ ] Add integration tests with real MCP server shutdown
+        // [ ] Performance: Shutdown should complete in <5s
+        // [ ] Documentation: Document shutdown sequence
+        //
+        // ACCEPTANCE CRITERIA:
+        // - MCP server shutdown is coordinated properly
+        // - All active connections are closed gracefully
+        // - Active operations complete before shutdown
+        // - Shutdown handles timeouts appropriately
+        // - Server state is verified after shutdown
+        //
+        // DEPENDENCIES:
+        // - MCP server shutdown API (Required)
+        // - Connection tracking (Required)
+        // - Operation tracking (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (MCP integration feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: MCP protocol expertise
         tracing::debug!("Notifying inner MCP server of shutdown");
 
         // Shutdown tool discovery service
@@ -361,7 +419,36 @@ impl McpServer {
 impl Drop for McpServer {
     fn drop(&mut self) {
         // Note: We can't do async shutdown in Drop, but we can log the issue
-        // In a real implementation, shutdown() should be called explicitly before drop
+        // TODO: Enforce explicit shutdown before drop
+        //       Currently warns on drop without shutdown; should enforce explicit shutdown() call before drop to ensure graceful shutdown.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Add compile-time check or runtime assertion for shutdown state
+        // [ ] Document requirement for explicit shutdown() call
+        // [ ] Add examples showing proper shutdown sequence
+        // [ ] Consider using DropGuard pattern if possible
+        // [ ] Add integration tests verifying shutdown requirement
+        // [ ] Performance: No performance impact (compile-time check)
+        // [ ] Documentation: Document shutdown requirement clearly
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Compile-time or runtime enforcement of shutdown requirement
+        // - Clear error messages if shutdown not called
+        // - Documentation clearly states shutdown requirement
+        // - Examples demonstrate proper usage
+        //
+        // DEPENDENCIES:
+        // - Shutdown state tracking (Required)
+        // - DropGuard pattern (Optional)
+        //
+        // ESTIMATED EFFORT: 2-3 hours (high confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (code quality improvement)
+        // - Change Budget: ~50 LOC
+        // - Reviewer Requirements: Rust drop semantics expertise
         if !self.is_shutting_down() {
             tracing::warn!("MCP server dropped without graceful shutdown - connections may not be properly closed");
         }

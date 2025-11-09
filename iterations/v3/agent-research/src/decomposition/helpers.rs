@@ -178,7 +178,8 @@ impl TextProcessor {
             return false;
         }
 
-        // Look for verb patterns (very simplified)
+        // TODO: Implement comprehensive verb pattern detection using NLP
+        //       Currently uses basic pattern matching; should use NLP techniques for accurate verb pattern detection.
         let verbs = ["is", "are", "was", "were", "has", "have", "had",
                     "does", "do", "did", "can", "could", "will", "would",
                     "should", "may", "might", "must", "shall"];

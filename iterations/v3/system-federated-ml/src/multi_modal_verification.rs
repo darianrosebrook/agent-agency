@@ -5,11 +5,10 @@
 //! images, audio, video) and fuse evidence from multiple sources for robust verification.
 
 use schemars::JsonSchema;
-use anyhow::{Result, Context};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tracing::{info, debug, warn};
 use chrono::{DateTime, Utc};
 
 use crate::tool_registry::{Tool, ToolMetadata, ToolCategory};

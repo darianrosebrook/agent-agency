@@ -7,7 +7,7 @@
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};use crate::council_errors::CouncilResult;
 use std::sync::RwLock;
-use crate::judge_backup::risk::{EthicalAssessment, EthicalConcern, StakeholderImpact, EthicalTradeoff, ConsequenceAssessment, CulturalConsideration, EthicalCategory, EthicalSeverity, TimeHorizon};
+use crate::judge_backup::risk::{EthicalAssessment, EthicalConcern, StakeholderImpact, ConsequenceAssessment, CulturalConsideration, EthicalCategory, EthicalSeverity, TimeHorizon};
 use crate::judge_backup::traits::Judge;
 use crate::judge_backup::types::{JudgeConfig, ReviewContext};
 use crate::judge_backup::backup_types::JudgeHealthMetrics;
@@ -85,7 +85,7 @@ impl EthicsJudge {
         let mut ethical_score = 1.0; // Start with perfect ethics
         let mut concerns = Vec::new();
         let mut stakeholder_impacts = Vec::new();
-        let mut tradeoffs = Vec::new();
+        let tradeoffs = Vec::new();
         let mut consequences = Vec::new();
         let mut cultural_considerations = Vec::new();
         let mut mitigations = Vec::new();

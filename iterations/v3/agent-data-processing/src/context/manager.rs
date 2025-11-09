@@ -70,15 +70,39 @@ impl DatabaseClient {
     }
 
     pub async fn execute(&self, query: &str, params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<(), DataProcessingError> {
-        // TODO: Implement proper parameterized queries with sqlx
-        // - [ ] Use sqlx::query! macro for compile-time query validation
-        // - [ ] Or use sqlx::QueryBuilder for dynamic query construction
-        // - [ ] Support multiple parameter types (string, int, float, etc.)
-        // - [ ] Add SQL injection protection through parameterized queries
-        // - [ ] Handle parameter binding errors gracefully
-        // - [ ] Add unit tests with various parameter types
-        // - [ ] Add integration tests with real database parameterized queries
-        // For now, only support queries without parameters to avoid trait object issues
+        // TODO: Implement proper parameterized queries with sqlx to support SQL injection protection
+        //       Currently only supports queries without parameters; should implement parameterized queries with proper type handling.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Use sqlx::query! macro for compile-time query validation
+        // [ ] Or use sqlx::QueryBuilder for dynamic query construction
+        // [ ] Support multiple parameter types (string, int, float, etc.)
+        // [ ] Add SQL injection protection through parameterized queries
+        // [ ] Handle parameter binding errors gracefully
+        // [ ] Resolve trait object issues with parameter encoding
+        // [ ] Add unit tests with various parameter types
+        // [ ] Add integration tests with real database parameterized queries
+        // [ ] Verify SQL injection protection works correctly
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Parameterized queries are supported with multiple parameter types
+        // - SQL injection protection is enforced through parameterization
+        // - Parameter binding errors are handled gracefully
+        // - Queries execute successfully with parameters
+        //
+        // DEPENDENCIES:
+        // - sqlx parameter encoding traits (Required)
+        // - Query builder utilities (Required)
+        // - Parameter type handling (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (security-critical)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Database security expertise
         if !params.is_empty() {
             return Err(DataProcessingError::Operation("Parameterized queries not yet supported".to_string()));
         }
@@ -91,15 +115,39 @@ impl DatabaseClient {
     }
 
     pub async fn query(&self, query: &str, _params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<Vec<sqlx::postgres::PgRow>, DataProcessingError> {
-        // TODO: Implement proper parameterized queries with sqlx
-        // - [ ] Use sqlx::query! macro for compile-time query validation
-        // - [ ] Or use sqlx::QueryBuilder for dynamic query construction
-        // - [ ] Support multiple parameter types (string, int, float, etc.)
-        // - [ ] Add SQL injection protection through parameterized queries
-        // - [ ] Handle parameter binding errors gracefully
-        // - [ ] Add unit tests with various parameter types
-        // - [ ] Add integration tests with real database parameterized queries
-        // For now, only support queries without parameters to avoid trait object issues
+        // TODO: Implement proper parameterized queries with sqlx to support SQL injection protection
+        //       Currently only supports queries without parameters; should implement parameterized queries with proper type handling.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Use sqlx::query! macro for compile-time query validation
+        // [ ] Or use sqlx::QueryBuilder for dynamic query construction
+        // [ ] Support multiple parameter types (string, int, float, etc.)
+        // [ ] Add SQL injection protection through parameterized queries
+        // [ ] Handle parameter binding errors gracefully
+        // [ ] Resolve trait object issues with parameter encoding
+        // [ ] Add unit tests with various parameter types
+        // [ ] Add integration tests with real database parameterized queries
+        // [ ] Verify SQL injection protection works correctly
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Parameterized queries are supported with multiple parameter types
+        // - SQL injection protection is enforced through parameterization
+        // - Parameter binding errors are handled gracefully
+        // - Query results are returned correctly with parameters
+        //
+        // DEPENDENCIES:
+        // - sqlx parameter encoding traits (Required)
+        // - Query builder utilities (Required)
+        // - Parameter type handling (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (security-critical)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Database security expertise
         if !_params.is_empty() {
             return Err(DataProcessingError::Operation("Parameterized queries not yet supported".to_string()));
         }
@@ -659,7 +707,38 @@ impl ContextManager {
         } else if importance_score < self.config.folding.importance_threshold {
             Ok(FoldingStrategy::Compress)
         } else {
-            Ok(FoldingStrategy::Compress) // Default to compression for now
+            // TODO: Implement intelligent folding strategy selection based on context analysis
+            //       Currently defaults to compression; should analyze context characteristics to select optimal folding strategy.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Analyze context size, access patterns, and importance
+            // [ ] Implement strategy selection algorithm (compress, archive, delete)
+            // [ ] Consider context relationships and dependencies
+            // [ ] Factor in storage costs and retrieval performance
+            // [ ] Add unit tests for strategy selection logic
+            // [ ] Add integration tests with real context data
+            // [ ] Verify selected strategy optimizes storage and performance
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Folding strategy is selected based on context analysis
+            // - Strategy selection considers size, access patterns, and importance
+            // - Optimal strategy balances storage costs and retrieval performance
+            // - Strategy selection is deterministic and testable
+            //
+            // DEPENDENCIES:
+            // - Context analysis utilities (Required)
+            // - Folding strategy definitions (Required)
+            // - Storage cost models (Optional)
+            //
+            // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+            // PRIORITY: Low
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 3 (low risk optimization)
+            // - Change Budget: ~80 LOC
+            // - Reviewer Requirements: Context management domain expertise
+            Ok(FoldingStrategy::Compress) // Temporary default until intelligent strategy selection is implemented
         }
     }
 

@@ -8,7 +8,7 @@
 //! - CAWS verdict generation and provenance
 
 use std::time::Instant;
-use tracing::{info, error};
+use tracing::info;
 use serde_json::json;
 
 use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceManager}};

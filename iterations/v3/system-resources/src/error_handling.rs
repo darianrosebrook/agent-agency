@@ -442,13 +442,41 @@ impl ErrorHandler {
         let alert_key = format!("{}:{}", error.component, error.error_type);
         let now = std::time::Instant::now();
 
-        // In a real implementation, this would integrate with:
-        // - Prometheus Alertmanager for alert routing
-        // - PagerDuty/ServiceNow for incident management
-        // - Slack/Discord webhooks for team notifications
-        // - Email/SMS for critical alerts
-
-        // For now, we just log with structured information for monitoring systems to pick up
+        // TODO: Integrate with external alerting systems (Prometheus Alertmanager, PagerDuty, Slack, etc.)
+        //       Currently only logs structured errors; should route alerts to appropriate external systems.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Integrate with Prometheus Alertmanager for alert routing
+        // [ ] Add PagerDuty/ServiceNow integration for incident management
+        // [ ] Add Slack/Discord webhook integration for team notifications
+        // [ ] Add Email/SMS integration for critical alerts
+        // [ ] Implement alert routing based on alert level and configuration
+        // [ ] Add retry logic for external alert delivery failures
+        // [ ] Add unit tests for alert routing logic
+        // [ ] Add integration tests with mock external services
+        // [ ] Verify alerts are delivered to correct destinations
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Alerts are routed to Prometheus Alertmanager based on configuration
+        // - Critical alerts trigger PagerDuty/ServiceNow incidents
+        // - Team notifications are sent via Slack/Discord webhooks
+        // - Critical alerts trigger Email/SMS notifications
+        // - Alert routing respects configuration and alert levels
+        //
+        // DEPENDENCIES:
+        // - Prometheus Alertmanager API client (Required)
+        // - PagerDuty/ServiceNow API clients (Optional)
+        // - Slack/Discord webhook configuration (Optional)
+        // - Email/SMS service integration (Optional)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (standard feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Observability and alerting domain expertise
         tracing::error!(
             alert_key = %alert_key,
             alert_level = %alert_level,
@@ -475,8 +503,8 @@ impl ErrorHandler {
 
         match &error.recovery {
             ErrorRecovery::Retry { max_attempts, backoff_ms, exponential_backoff } => {
-                // Implement retry logic with backoff
-                // This would be more sophisticated in practice
+                // TODO: Implement sophisticated retry logic with exponential backoff
+                //       Currently uses basic retry; should implement comprehensive retry logic with exponential backoff and jitter.
                 tracing::info!("Attempting retry recovery for error: {}", error.code);
             }
             ErrorRecovery::Fallback { alternative, degradation_level } => {

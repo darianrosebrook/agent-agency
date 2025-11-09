@@ -10,7 +10,7 @@ use std::sync::Arc;
 use std::collections::HashMap;
 use anyhow::Result;
 use uuid::Uuid;
-use tracing::{info, warn, debug, error};
+use tracing::{info, warn, debug};
 use chrono::Utc;
 
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
@@ -535,8 +535,41 @@ impl ReflexiveLearner {
                 "Capability adjustment for worker {}: {} = {:.4}",
                 adjustment.worker_id, capability, adjustment_value
             );
-            // Note: Capability adjustments would require additional WorkerAssignmentStrategy methods
-            // For now, we log them - this can be extended when capability tracking is added
+            // TODO: Implement comprehensive capability adjustment application
+            //       Currently logs capability adjustments only; should implement comprehensive application that uses WorkerAssignmentStrategy methods to apply capability adjustments when capability tracking is added.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Capability adjustments are applied via WorkerAssignmentStrategy
+            // - Capability tracking system is integrated
+            // - Adjustments persist and affect worker assignment
+            // - Adjustment application handles errors gracefully
+            //
+            // DEPENDENCIES:
+            // - WorkerAssignmentStrategy capability methods (Required)
+            // - Capability tracking system (Required)
+            // - Adjustment persistence system (Required)
+            //
+            // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (capability management functionality)
+            // - Change Budget: ~200 LOC
+            // - Reviewer Requirements: Worker assignment and capability tracking expertise
         }
 
         Ok(())

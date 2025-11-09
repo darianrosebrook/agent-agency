@@ -279,10 +279,42 @@ impl QualityGateValidator {
 
     /// Estimate quality for proposed parameters
     async fn estimate_quality(&self, params: &ParameterSet, baseline: &BaselineMetrics) -> Result<f64> {
-        // Simplified quality estimation based on parameter similarity to baseline
-        // In practice, this would use a trained model or historical data
-        
-        let temp_similarity = 1.0 - (params.temperature - baseline.temperature).abs() / 2.0;
+        // TODO: Implement quality estimation using trained model or historical data
+        //       Currently uses basic similarity-based estimation; should implement quality estimation using trained model or historical data for accurate predictions.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Quality estimation uses trained model or historical data
+        // - Predictions are accurate
+        // - Model integration works correctly
+        // - Performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Trained quality model (Required)
+        // - Historical data infrastructure (Required)
+        // - Model inference utilities (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (ML model integration feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: ML model integration expertise
+        let temp_similarity = 1.0 - (params.temperature - baseline.temperature).abs() / 2.0; // Temporary: similarity-based until model integration
         let token_similarity = 1.0 - (params.max_tokens as f64 - baseline.avg_tokens).abs() / baseline.avg_tokens;
         
         // Weighted combination of similarities
@@ -293,9 +325,42 @@ impl QualityGateValidator {
 
     /// Estimate latency delta for proposed parameters
     fn estimate_latency_delta(&self, params: &ParameterSet, baseline: &BaselineMetrics) -> f64 {
-        // Simplified latency estimation
-        // Higher temperature and more tokens generally increase latency
-        let temp_factor = (params.temperature - baseline.temperature) * 100.0;
+        // TODO: Implement comprehensive latency estimation
+        //       Currently uses basic estimation; should implement comprehensive latency estimation considering all parameter effects and historical patterns.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Latency estimation considers all parameter effects
+        // - Historical patterns are incorporated
+        // - Estimation is accurate
+        // - Performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Historical latency data (Required)
+        // - Parameter effect analysis (Required)
+        // - Latency modeling utilities (Required)
+        //
+        // ESTIMATED EFFORT: 5-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (performance estimation feature)
+        // - Change Budget: ~120 LOC
+        // - Reviewer Requirements: Performance modeling expertise
+        let temp_factor = (params.temperature - baseline.temperature) * 100.0; // Temporary: basic until comprehensive estimation
         let token_factor = (params.max_tokens as f64 - baseline.avg_tokens) * 0.1;
         
         temp_factor + token_factor

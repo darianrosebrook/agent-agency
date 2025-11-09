@@ -180,7 +180,8 @@ impl TextIndexer {
     }
 
     fn calculate_bm25_score(&self, doc: &TextDocument, query_terms: &[&str]) -> f64 {
-        // Simplified BM25 calculation
+        // TODO: Implement proper BM25 scoring algorithm
+        //       Currently uses basic calculation; should implement full BM25 algorithm with proper term frequency and inverse document frequency calculations.
         let mut score = 0.0;
         let doc_length = doc.content.split_whitespace().count() as f64;
         let avg_doc_length = 1000.0; // Placeholder

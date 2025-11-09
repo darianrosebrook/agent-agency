@@ -15,13 +15,12 @@ use uuid::Uuid;
 use agent_orchestration::{
     types::OrchestratorConfig,
     adapter::LegacyOrchestratorAdapter,
-    orchestration::unified_orchestrator::{UnifiedOrchestrator, UnifiedOrchestratorConfig},
-    orchestration::task_state_persistence::{TaskExecutionState, ExecutionStateStatus},
+    orchestration::unified_orchestrator::UnifiedOrchestrator,
+    orchestration::task_state_persistence::ExecutionStateStatus,
 };
 use chrono::Utc;
-use std::path::PathBuf;
 use anyhow::Result;
-use tracing::{warn, debug};
+use tracing::warn;
 use tokio::sync::RwLock;
 
 /// Adapter for orchestration service using UnifiedOrchestrator
@@ -73,8 +72,8 @@ impl UnifiedOrchestratorAdapter {
     pub async fn create_with_dependencies(
         db_client: Option<Arc<data_infrastructure::simple_client::DatabaseClient>>,
     ) -> Result<Self, ServiceError> {
+        use std::path::PathBuf;
         use agent_orchestration::{
-            planning::factory::PlanningSystemFactory,
             council::Council,
             council::CouncilConfig,
             decision_making::{ConsensusStrategy, RiskThresholds},
@@ -83,21 +82,26 @@ impl UnifiedOrchestratorAdapter {
             judge_backup::{Judge, EthicsJudge, quality_judge::QualityAssuranceJudge, security_judge::SecurityJudge},
             judge_backup::JudgeConfig,
             judge_backup::backup_types::JudgeType,
+            planning::{
+                factory::PlanningSystemFactory,
+                worktree_manager::{WorktreeManager, WorktreeManagerConfig},
+                council_integration::{CouncilIntegration, CouncilIntegrationImpl},
+                caws_adjudication_cycle::CawsAdjudicationCycle,
+                caws_debate_scorer::CawsDebateScorer,
+                worker_lifecycle_manager::WorkerLifecycleManager,
+                worker_assignment::WorkerAssignmentStrategy,
+                reflexive_learner::{ReflexiveLearner, LearningConfig},
+            },
+            orchestration::unified_orchestrator::UnifiedOrchestratorConfig,
+            orchestration::task_state_persistence::InMemoryTaskStatePersistence,
+            workers::execution_bridge::WorkerExecutionBridge,
         };
-        use agent_orchestration::planning::{
-            plan_generator::PlanGenerator,
-            worktree_manager::{WorktreeManager, WorktreeManagerConfig},
-            caws_adjudication_cycle::{CawsAdjudicationCycle, CawsDebateScorer},
-            council_integration::{CouncilIntegration, CouncilIntegrationImpl},
-            worker_lifecycle_manager::WorkerLifecycleManager,
-            worker_assignment::WorkerAssignmentStrategy,
-            reflexive_learner::ReflexiveLearner,
-            reflexive_learner::LearningConfig,
-        };
-        use agent_orchestration::workers::execution_bridge::WorkerExecutionBridge;
-        use agent_orchestration::orchestration::task_state_persistence::InMemoryTaskStatePersistence;
         use agent_workers::{MCPWorkerPool, TaskExecutor, WorkerPoolConfig};
-        use std::collections::HashMap;
+        
+        
+        
+        
+        
 
         // Create Council (reusing pattern from LegacyOrchestratorAdapter)
         let council_config = CouncilConfig {
@@ -150,6 +154,8 @@ impl UnifiedOrchestratorAdapter {
         }));
 
         let decision_engine = Box::new(AlgorithmicDecisionEngine::new(ConsensusStrategy::Majority));
+        // Clone council_config before moving it into Council::new (needed later in cfg block)
+        let council_config_clone = council_config.clone();
         let council = Arc::new(Council::new(
             council_config,
             judges,
@@ -159,6 +165,8 @@ impl UnifiedOrchestratorAdapter {
 
         // Create database operations adapter
         // If db_client is provided, create an adapter; otherwise use stub
+        // Clone db_client before moving it (needed later in cfg block)
+        let db_client_clone = db_client.as_ref().map(|db| db.clone());
         let db_ops: Arc<dyn agent_orchestration::planning::DatabaseOperations> = if let Some(db_client) = db_client {
             // Use DatabaseOperationsAdapter - partial implementation with placeholders
             Arc::new(crate::database_operations_adapter::DatabaseOperationsAdapter::new(db_client))
@@ -265,188 +273,248 @@ impl UnifiedOrchestratorAdapter {
         // Call create_planning_components with conditional feature gates
         // Research is in default features, so it's always available
         // Memory is optional - function signature changes based on feature
-        let planning_components = {
-            #[cfg(all(feature = "research", feature = "memory"))]
-            {
-                PlanningSystemFactory::create_planning_components(
-                    research_collector,
-                    memory_system,
-                    council.clone(),
-                    db_ops.clone(),
-                ).await
-            }
-            #[cfg(all(feature = "research", not(feature = "memory")))]
-            {
-                // When memory feature is disabled, parameter is not in function signature
-                // Create a stub memory system for the call (won't be used)
-                // Actually, the function doesn't have the parameter when feature is disabled
-                // So we need to call it without the memory parameter
-                // But the function signature requires it when enabled...
-                // For now, require memory feature for UnifiedOrchestrator
-                return Err(ServiceError::Internal(
-                    "Memory feature required for UnifiedOrchestrator initialization. \
-                     Enable memory feature in Cargo.toml or use LegacyOrchestratorAdapter.".to_string()
+        // Note: We require both research and memory features for UnifiedOrchestrator
+        #[cfg(not(all(feature = "research", feature = "memory")))]
+        {
+            return Err(ServiceError::Internal(
+                "Both research and memory features required for UnifiedOrchestrator initialization. \
+                 Enable both features in Cargo.toml or use LegacyOrchestratorAdapter.".to_string()
+            ));
+        }
+        
+        #[cfg(all(feature = "research", feature = "memory"))]
+        {
+            let planning_components = PlanningSystemFactory::create_planning_components(
+                research_collector,
+                memory_system.clone(),
+                council.clone(),
+                db_ops.clone(),
+            ).await
+            .map_err(|e| ServiceError::Internal(format!("Failed to create planning components: {}", e)))?;
+
+            // Create UnifiedOrchestratorConfig
+            let config = UnifiedOrchestratorConfig {
+                enable_council_review: true,
+                enable_refinement: true,
+                enable_worktree_isolation: true,
+                worktree_base_path: PathBuf::from("/tmp/agent-agency-worktrees"),
+                max_parallel_milestones: 5,
+            };
+
+            // Create WorktreeManager
+            let worktree_config = WorktreeManagerConfig {
+                worktree_base_path: config.worktree_base_path.clone(),
+                main_repo_path: PathBuf::from("."),
+                base_branch: "main".to_string(),
+                auto_cleanup: true,
+                max_concurrent_worktrees: 10,
+            };
+            let worktree_manager = Arc::new(WorktreeManager::new(worktree_config));
+
+            // Create CAWS adjudication cycle
+            let council_integration: Arc<dyn CouncilIntegration> = Arc::new(CouncilIntegrationImpl::new(
+                council.clone(),
+                council_config_clone.clone(),
+            ));
+            let debate_scorer = Arc::new(CawsDebateScorer::new(council.clone()));
+            let adjudication_cycle = Arc::new(CawsAdjudicationCycle::new(
+                council.clone(),
+                council_integration.clone(),
+                debate_scorer,
+            ));
+
+            // Create worker lifecycle manager
+            let worker_lifecycle_manager = Arc::new(WorkerLifecycleManager::new(council_integration.clone()));
+
+            // Create worker assignment strategy
+            let worker_assignment_strategy = Arc::new(WorkerAssignmentStrategy::new(db_ops.clone()));
+
+            // Create reflexive learner
+            let reflexive_learner = Arc::new(ReflexiveLearner::new(
+                worker_assignment_strategy.clone(),
+                LearningConfig::default(),
+            ));
+
+            // Create worker bridge
+            let worker_pool = Arc::new(MCPWorkerPool::new(WorkerPoolConfig::default()).await);
+            // TaskExecutor requires a database client - use provided one or create stub
+            let db_client_for_executor = if let Some(db) = db_client_clone {
+                db
+            } else {
+                // TODO: Implement async database client creation
+                //       Currently requires pre-provided client; should implement async database client creation handling DatabaseClient::new async requirement.
+                //
+                // COMPLETION CHECKLIST:
+                // [ ] Primary functionality implemented
+                // [ ] API/data structures defined & stable
+                // [ ] Error handling + validation aligned with error taxonomy
+                // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                // [ ] Integration tests for external systems/contracts
+                // [ ] Documentation: public API + system behavior
+                // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                // [ ] Configurability and feature flags defined if relevant
+                // [ ] Failure-mode cards documented (degradation paths)
+                //
+                // ACCEPTANCE CRITERIA:
+                // - Database client is created asynchronously
+                // - Async creation is handled correctly
+                // - Error handling works for creation failures
+                // - Client is properly initialized
+                //
+                // DEPENDENCIES:
+                // - DatabaseClient::new async API (Required)
+                // - Async initialization utilities (Required)
+                // - Error handling infrastructure (Required)
+                //
+                // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+                // PRIORITY: Medium
+                // BLOCKING: No
+                //
+                // GOVERNANCE:
+                // - CAWS Tier: 2 (database integration feature)
+                // - Change Budget: ~80 LOC
+                // - Reviewer Requirements: Async Rust and database expertise
+                return Err(ServiceError::Internal( // Temporary: error until async client creation
+                    "Database client required for TaskExecutor. Please provide a database client when creating UnifiedOrchestratorAdapter.".to_string()
                 ));
+            };
+            let task_executor = Arc::new(TaskExecutor::new(db_client_for_executor));
+            let worker_bridge = Arc::new(WorkerExecutionBridge::new(worker_pool, task_executor));
+
+            // Extract PlanExecutor from parallel_coordinator
+            // Note: ParallelCoordinator contains PlanExecutor, but UnifiedOrchestrator needs both
+            // We'll create a separate PlanExecutor for UnifiedOrchestrator
+            // The one inside parallel_coordinator is used by ParallelCoordinator itself
+            use agent_orchestration::planning::plan_executor::{PlanExecutor, ExecutionConfig, WorkerPool, WorkerInfo, WorkerStatus, WorkerHealth};
+            use agent_orchestration::audit_trail::{AuditTrailManager, AuditConfig};
+            use agent_orchestration::planning::plan_types::ExecutionPlan;
+            
+            // Create stub worker pool (similar to factory.rs pattern)
+            struct StubWorkerPool;
+            #[async_trait::async_trait]
+            impl WorkerPool for StubWorkerPool {
+                async fn available_workers(&self) -> Result<Vec<WorkerInfo>> {
+                    Ok(vec![])
+                }
+                async fn assign_worker(&self, _worker_id: Uuid, _milestone_id: String) -> Result<()> {
+                    Ok(())
+                }
+                async fn release_worker(&self, _worker_id: Uuid) -> Result<()> {
+                    Ok(())
+                }
+                async fn worker_status(&self, _worker_id: Uuid) -> Result<WorkerStatus> {
+                    Ok(WorkerStatus {
+                        current_assignment: None,
+                        health: WorkerHealth::Healthy,
+                        performance: agent_orchestration::planning::plan_executor::WorkerPerformance {
+                            tasks_completed: 0,
+                            tasks_failed: 0,
+                            avg_completion_time_ms: 0.0,
+                            success_rate: 1.0,
+                        },
+                    })
+                }
             }
-            #[cfg(not(feature = "research"))]
-            {
-                // Research is in default features, so this shouldn't happen
-                return Err(ServiceError::Internal(
-                    "Research feature required for UnifiedOrchestrator initialization. \
-                     This should be enabled by default.".to_string()
-                ));
+            let worker_pool = Arc::new(StubWorkerPool);
+            
+            // Create audit trail
+            let audit_trail_manager = Arc::new(AuditTrailManager::new(AuditConfig::default()));
+            struct AuditTrailAdapter {
+                manager: Arc<AuditTrailManager>,
             }
+            #[async_trait::async_trait]
+            impl agent_orchestration::planning::plan_executor::AuditTrail for AuditTrailAdapter {
+                async fn log_event(&self, event: agent_orchestration::planning::plan_executor::AuditEvent) -> Result<()> {
+                    // TODO: Convert and persist audit trail entry
+                    //       Currently only logs via tracing; should convert audit event to audit trail entry and persist to database.
+                    //
+                    // COMPLETION CHECKLIST:
+                    // [ ] Primary functionality implemented
+                    // [ ] API/data structures defined & stable
+                    // [ ] Error handling + validation aligned with error taxonomy
+                    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                    // [ ] Integration tests for external systems/contracts
+                    // [ ] Documentation: public API + system behavior
+                    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                    // [ ] Configurability and feature flags defined if relevant
+                    // [ ] Failure-mode cards documented (degradation paths)
+                    //
+                    // ACCEPTANCE CRITERIA:
+                    // - Audit events are converted correctly
+                    // - Entries are persisted to database
+                    // - Persistence works reliably
+                    // - Error handling works for persistence failures
+                    //
+                    // DEPENDENCIES:
+                    // - Database connection (Required)
+                    // - Audit trail entry conversion utilities (Required)
+                    // - Database persistence infrastructure (Required)
+                    //
+                    // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+                    // PRIORITY: Medium
+                    // BLOCKING: No
+                    //
+                    // GOVERNANCE:
+                    // - CAWS Tier: 2 (audit trail feature)
+                    // - Change Budget: ~80 LOC
+                    // - Reviewer Requirements: Database and audit trail expertise
+                    tracing::info!("Audit event: {:?}", event); // Temporary: tracing log until database persistence
+                    Ok(())
+                }
+            }
+            let audit_trail = Arc::new(AuditTrailAdapter {
+                manager: audit_trail_manager.clone(),
+            }) as Arc<dyn agent_orchestration::planning::plan_executor::AuditTrail>;
+            
+            // Create PlanExecutor for UnifiedOrchestrator
+            let plan_executor = Arc::new(PlanExecutor::new(
+                ExecutionPlan::default(),
+                worker_pool,
+                planning_components.evidence_collector.clone(),
+                planning_components.worker_assigner.clone(),
+                planning_components.scope_guard.clone(),
+                planning_components.council_monitor.clone(),
+                Arc::downgrade(&planning_components.parallel_coordinator),
+                audit_trail,
+                Some(audit_trail_manager),
+                planning_components.todo_integration.clone(),
+                ExecutionConfig::default(),
+            ));
+
+            // Create state persistence for pause/resume/cancel support
+            let state_persistence = Arc::new(InMemoryTaskStatePersistence::new());
+
+            // Create UnifiedOrchestrator
+            let orchestrator = Arc::new(UnifiedOrchestrator::new(
+                config,
+                planning_components.plan_generator,
+                plan_executor,
+                planning_components.parallel_coordinator,
+                council,
+                worker_bridge,
+                None, // refinement_coordinator - optional
+                worktree_manager,
+                Some(adjudication_cycle),
+                worker_lifecycle_manager,
+                Some(worker_assignment_strategy),
+                Some(reflexive_learner),
+                #[cfg(feature = "memory")]
+                Some(memory_system),
+                None, // turn_level_tracker - optional
+                None, // session_manager - optional
+                Some(state_persistence), // Enable state persistence for pause/resume/cancel
+                None, // federated_learning - optional
+            ));
+
+            Ok(Self {
+                orchestrator,
+                task_to_plan: Arc::new(RwLock::new(HashMap::new())),
+            })
         }
-        .map_err(|e| ServiceError::Internal(format!("Failed to create planning components: {}", e)))?;
-
-        // Create UnifiedOrchestratorConfig
-        let config = UnifiedOrchestratorConfig {
-            enable_council_review: true,
-            enable_refinement: true,
-            enable_worktree_isolation: true,
-            worktree_base_path: PathBuf::from("/tmp/agent-agency-worktrees"),
-            max_parallel_milestones: 5,
-        };
-
-        // Create WorktreeManager
-        let worktree_config = WorktreeManagerConfig {
-            worktree_base_path: config.worktree_base_path.clone(),
-            main_repo_path: PathBuf::from("."),
-            base_branch: "main".to_string(),
-            auto_cleanup: true,
-            max_concurrent_worktrees: 10,
-        };
-        let worktree_manager = Arc::new(WorktreeManager::new(worktree_config));
-
-        // Create CAWS adjudication cycle
-        let council_integration: Arc<dyn CouncilIntegration> = Arc::new(CouncilIntegrationImpl::new(
-            council.clone(),
-            council_config.clone(),
-        ));
-        let debate_scorer = Arc::new(CawsDebateScorer::new(council.clone()));
-        let adjudication_cycle = Arc::new(CawsAdjudicationCycle::new(
-            council.clone(),
-            council_integration.clone(),
-            debate_scorer,
-        ));
-
-        // Create worker lifecycle manager
-        let worker_lifecycle_manager = Arc::new(WorkerLifecycleManager::new(council_integration.clone()));
-
-        // Create worker assignment strategy
-        let worker_assignment_strategy = Arc::new(WorkerAssignmentStrategy::new(db_ops.clone()));
-
-        // Create reflexive learner
-        let reflexive_learner = Arc::new(ReflexiveLearner::new(
-            worker_assignment_strategy.clone(),
-            LearningConfig::default(),
-        ));
-
-        // Create worker bridge
-        let worker_pool = Arc::new(MCPWorkerPool::new(WorkerPoolConfig::default()).await
-            .map_err(|e| ServiceError::Internal(format!("Failed to create worker pool: {}", e)))?);
-        let task_executor = Arc::new(TaskExecutor::new().await
-            .map_err(|e| ServiceError::Internal(format!("Failed to create task executor: {}", e)))?);
-        let worker_bridge = Arc::new(WorkerExecutionBridge::new(worker_pool, task_executor));
-
-        // Extract PlanExecutor from parallel_coordinator
-        // Note: ParallelCoordinator contains PlanExecutor, but UnifiedOrchestrator needs both
-        // We'll create a separate PlanExecutor for UnifiedOrchestrator
-        // The one inside parallel_coordinator is used by ParallelCoordinator itself
-        use agent_orchestration::planning::plan_executor::{PlanExecutor, ExecutionConfig, WorkerPool, WorkerInfo, WorkerStatus, WorkerHealth};
-        use agent_orchestration::audit_trail::{AuditTrailManager, AuditConfig};
-        use agent_orchestration::planning::plan_types::ExecutionPlan;
-        
-        // Create stub worker pool (similar to factory.rs pattern)
-        struct StubWorkerPool;
-        #[async_trait::async_trait]
-        impl WorkerPool for StubWorkerPool {
-            async fn available_workers(&self) -> Result<Vec<WorkerInfo>> {
-                Ok(vec![])
-            }
-            async fn assign_worker(&self, _worker_id: Uuid, _milestone_id: String) -> Result<()> {
-                Ok(())
-            }
-            async fn release_worker(&self, _worker_id: Uuid) -> Result<()> {
-                Ok(())
-            }
-            async fn worker_status(&self, _worker_id: Uuid) -> Result<WorkerStatus> {
-                Ok(WorkerStatus {
-                    current_assignment: None,
-                    health: WorkerHealth::Healthy,
-                    performance: agent_orchestration::planning::plan_executor::WorkerPerformance {
-                        tasks_completed: 0,
-                        tasks_failed: 0,
-                        avg_completion_time_ms: 0.0,
-                        success_rate: 1.0,
-                    },
-                })
-            }
-        }
-        let worker_pool = Arc::new(StubWorkerPool);
-        
-        // Create audit trail
-        let audit_trail_manager = Arc::new(AuditTrailManager::new(AuditConfig::default()));
-        struct AuditTrailAdapter {
-            manager: Arc<AuditTrailManager>,
-        }
-        #[async_trait::async_trait]
-        impl agent_orchestration::planning::plan_executor::AuditTrail for AuditTrailAdapter {
-            async fn log_event(&self, event: agent_orchestration::planning::plan_executor::AuditEvent) -> Result<()> {
-                // Convert to audit trail entry and log
-                // For now, just log via tracing
-                tracing::info!("Audit event: {:?}", event);
-                Ok(())
-            }
-        }
-        let audit_trail = Arc::new(AuditTrailAdapter {
-            manager: audit_trail_manager.clone(),
-        }) as Arc<dyn agent_orchestration::planning::plan_executor::AuditTrail>;
-        
-        // Create PlanExecutor for UnifiedOrchestrator
-        let plan_executor = Arc::new(PlanExecutor::new(
-            ExecutionPlan::default(),
-            worker_pool,
-            planning_components.evidence_collector.clone(),
-            planning_components.worker_assigner.clone(),
-            planning_components.scope_guard.clone(),
-            planning_components.council_monitor.clone(),
-            Arc::downgrade(&planning_components.parallel_coordinator),
-            audit_trail,
-            Some(audit_trail_manager),
-            planning_components.todo_integration.clone(),
-            ExecutionConfig::default(),
-        ));
-
-        // Create state persistence for pause/resume/cancel support
-        let state_persistence = Arc::new(InMemoryTaskStatePersistence::new());
-
-        // Create UnifiedOrchestrator
-        let orchestrator = Arc::new(UnifiedOrchestrator::new(
-            config,
-            planning_components.plan_generator,
-            plan_executor,
-            planning_components.parallel_coordinator,
-            council,
-            worker_bridge,
-            None, // refinement_coordinator - optional
-            worktree_manager,
-            Some(adjudication_cycle),
-            worker_lifecycle_manager,
-            Some(worker_assignment_strategy),
-            Some(reflexive_learner),
-            #[cfg(feature = "memory")]
-            memory_system,
-            None, // turn_level_tracker - optional
-            None, // session_manager - optional
-            Some(state_persistence), // Enable state persistence for pause/resume/cancel
-            None, // federated_learning - optional
-        ));
-
-        Ok(Self {
-            orchestrator,
-            task_to_plan: Arc::new(RwLock::new(HashMap::new())),
-        })
     }
 }
 
@@ -466,7 +534,7 @@ impl OrchestrationService for UnifiedOrchestratorAdapter {
         // Convert ExecutionResult to TaskExecutionResult
         let success = execution_result.final_verdict
             .as_ref()
-            .map(|v| matches!(v.status, agent_agency_contracts::final_verdict::VerdictStatus::Approved))
+            .map(|v| matches!(v.decision, agent_agency_contracts::final_verdict::FinalDecision::Accept))
             .unwrap_or(false);
 
         let errors = if success {
@@ -474,7 +542,13 @@ impl OrchestrationService for UnifiedOrchestratorAdapter {
         } else {
             execution_result.final_verdict
                 .as_ref()
-                .and_then(|v| v.reason.clone())
+                .map(|v| {
+                    if v.dissent.is_empty() {
+                        "Execution completed with warnings".to_string()
+                    } else {
+                        v.dissent.clone()
+                    }
+                })
                 .map(|r| vec![r])
                 .unwrap_or_else(|| vec!["Execution completed with warnings".to_string()])
         };
@@ -487,7 +561,7 @@ impl OrchestrationService for UnifiedOrchestratorAdapter {
         metadata.insert("iterations".to_string(), serde_json::json!(execution_result.iterations));
         metadata.insert("quality_scores".to_string(), serde_json::json!(execution_result.quality_scores));
         if let Some(ref verdict) = execution_result.final_verdict {
-            metadata.insert("verdict_status".to_string(), serde_json::json!(format!("{:?}", verdict.status)));
+            metadata.insert("verdict_status".to_string(), serde_json::json!(format!("{:?}", verdict.decision)));
         }
 
         // Generate task_id from working spec ID
@@ -714,9 +788,42 @@ impl OrchestrationService for OrchestrationServiceAdapter {
     }
     
     async fn get_task_status(&self, task_id: &Uuid) -> Result<TaskStatus, ServiceError> {
-        // TODO: Implement actual status retrieval
-        // For now, return a placeholder status
-        Ok(TaskStatus {
+        // TODO: Retrieve actual task status from database
+        //       Currently returns placeholder; should retrieve actual task status from database for the given task ID.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Task status is retrieved from database correctly
+        // - Status information is accurate
+        // - Missing tasks are handled gracefully
+        // - Error handling works for query failures
+        //
+        // DEPENDENCIES:
+        // - Database connection (Required)
+        // - Task status table schema (Required)
+        // - Status query utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (database query feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Database and task management expertise
+        Ok(TaskStatus { // Temporary: placeholder until database retrieval
             task_id: *task_id,
             status: TaskStatusEnum::Running,
             progress_percent: None,

@@ -178,13 +178,42 @@ impl MemoryManager {
             // For ObjectPool<T>, we can downcast and use the StatsProvider trait
             // In a more sophisticated implementation, we'd use trait objects directly
 
-            // For now, we try to handle ObjectPool types specifically
-            // This could be extended to support other pool types implementing StatsProvider
-
-            // Note: Due to type erasure with Any, we can't directly call trait methods
-            // A more advanced approach would use a registry of trait objects
-
-            tracing::debug!("Attempting to get stats for pool '{}'", name);
+            // TODO: Use trait objects registry for pool stats
+            //       Currently handles ObjectPool types specifically; should use trait objects registry to support all pool types implementing StatsProvider.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Trait objects registry is implemented
+            // - All pool types are supported
+            // - Stats retrieval works for all types
+            // - Performance is acceptable
+            //
+            // DEPENDENCIES:
+            // - Trait object registry infrastructure (Required)
+            // - StatsProvider trait implementation (Required)
+            // - Type registration utilities (Required)
+            //
+            // ESTIMATED EFFORT: 5-6 hours (medium confidence)
+            // PRIORITY: Low
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 3 (architecture enhancement)
+            // - Change Budget: ~120 LOC
+            // - Reviewer Requirements: Rust trait objects expertise
+            tracing::debug!("Attempting to get stats for pool '{}'", name); // Temporary: specific handling until trait registry
 
             // For ObjectPool types, we can't directly downcast due to type erasure
             // This is a limitation of the current Any-based storage approach
@@ -263,10 +292,43 @@ impl MemoryManager {
                 .ok()
                 .and_then(|output| {
                     let output_str = String::from_utf8_lossy(&output.stdout);
-                    // Parse temperature from powermetrics output
-                    // This is a simplified implementation
+                    // TODO: Parse temperature value properly from powermetrics output
+                    //       Currently uses placeholder; should parse temperature value properly from powermetrics output for accurate temperature monitoring.
+                    //
+                    // COMPLETION CHECKLIST:
+                    // [ ] Primary functionality implemented
+                    // [ ] API/data structures defined & stable
+                    // [ ] Error handling + validation aligned with error taxonomy
+                    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                    // [ ] Integration tests for external systems/contracts
+                    // [ ] Documentation: public API + system behavior
+                    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                    // [ ] Configurability and feature flags defined if relevant
+                    // [ ] Failure-mode cards documented (degradation paths)
+                    //
+                    // ACCEPTANCE CRITERIA:
+                    // - Temperature is parsed correctly from output
+                    // - Parsing handles various output formats
+                    // - Error handling works for parse failures
+                    // - Performance is acceptable
+                    //
+                    // DEPENDENCIES:
+                    // - powermetrics output parsing utilities (Required)
+                    // - Temperature extraction algorithms (Required)
+                    // - Output format handling (Required)
+                    //
+                    // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+                    // PRIORITY: Low
+                    // BLOCKING: No
+                    //
+                    // GOVERNANCE:
+                    // - CAWS Tier: 3 (monitoring enhancement)
+                    // - Change Budget: ~80 LOC
+                    // - Reviewer Requirements: System monitoring expertise
                     if output_str.contains("CPU die temperature") {
-                        // Extract temperature value - in practice you'd parse this properly
+                        // Temporary: placeholder until proper parsing
                         Some(45.0) // Placeholder
                     } else {
                         None

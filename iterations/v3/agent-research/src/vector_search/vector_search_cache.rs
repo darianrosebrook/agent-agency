@@ -148,15 +148,41 @@ impl CacheManager {
     }
 
     fn cache_file_path(&self) -> PathBuf {
-        // TODO: Parameterize cache file path for multiple collections
-        // - [ ] Accept collection name as parameter
-        // - [ ] Generate collection-specific cache file paths
-        // - [ ] Support multiple concurrent collections
-        // - [ ] Handle collection name sanitization for file system
-        // - [ ] Add unit tests with various collection names
-        // - [ ] Add integration tests with multiple collections
-        // This would need to be parameterized for multiple collections
-        // For now, using a generic name
+        // TODO: Implement comprehensive collection-specific cache file path parameterization
+        //       Currently uses generic name; should implement comprehensive parameterization that accepts collection name as parameter, generates collection-specific cache file paths, and supports multiple concurrent collections with proper name sanitization.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Collection name is accepted as parameter
+        // - Collection-specific cache file paths are generated
+        // - Multiple concurrent collections are supported
+        // - Collection name sanitization handles file system constraints
+        //
+        // DEPENDENCIES:
+        // - Collection name parameter handling (Required)
+        // - File path generation utilities (Required)
+        // - Name sanitization utilities (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (cache file management functionality)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: File system and cache management expertise
         let file_name = "vector_search_embeddings.json".to_string();
         self.persistent_cache_dir.join(file_name)
     }

@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::process::Command;
 use anyhow::{anyhow, Result, Context};
 use uuid::Uuid;
-use tracing::{info, warn};
+use tracing::info;
 use std::collections::HashMap;
 
 use agent_agency_contracts::planning_io::Milestone;
@@ -83,9 +83,41 @@ impl WorkerExecutionBridge {
     ) -> Result<Vec<ExecutionArtifacts>> {
         info!("Executing parallel plan with {} subtasks", plan.subtasks.len());
 
-        // Use agent-workers ParallelCoordinator for parallel execution
-        // Note: This will be implemented when we integrate ParallelCoordinator
-        // For now, execute sequentially
+        // TODO: Implement comprehensive parallel execution using ParallelCoordinator
+        //       Currently executes sequentially; should implement comprehensive parallel execution that uses agent-workers ParallelCoordinator for efficient parallel task execution.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - ParallelCoordinator is integrated
+        // - Parallel execution is efficient and scalable
+        // - Task dependencies are respected
+        // - Parallel execution handles errors gracefully
+        //
+        // DEPENDENCIES:
+        // - ParallelCoordinator integration (Required)
+        // - Parallel execution utilities (Required)
+        // - Task dependency management (Required)
+        //
+        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (parallel execution functionality)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Parallel execution and task coordination expertise
         let mut results = Vec::new();
         
         for task in &plan.subtasks {
@@ -204,8 +236,8 @@ impl WorkerExecutionBridge {
         worker_result: &WorkerTaskResult,
         worktree_path: &PathBuf,
     ) -> Result<agent_agency_contracts::execution_artifacts::CodeChanges> {
-        let mut diffs = Vec::new();
-        let mut new_files = Vec::new();
+        let mut diffs: Vec<agent_agency_contracts::execution_artifacts::DiffArtifact> = Vec::new();
+        let mut new_files: Vec<agent_agency_contracts::execution_artifacts::NewFileArtifact> = Vec::new();
         let mut deleted_files = Vec::new();
         let mut files_modified = 0;
         let mut lines_added = 0;
@@ -225,7 +257,43 @@ impl WorkerExecutionBridge {
             if diff_output.status.success() {
                 let diff_text = String::from_utf8_lossy(&diff_output.stdout);
                 if !diff_text.trim().is_empty() {
-                    diffs.push(diff_text.to_string());
+                    // Parse diff to extract file path and create DiffArtifact
+                    let diff_lines: Vec<&str> = diff_text.lines().collect();
+                    let file_path = diff_lines.iter()
+                        .find(|line| line.starts_with("diff --git") || line.starts_with("---") || line.starts_with("+++"))
+                        .and_then(|line| {
+                            if line.starts_with("diff --git") {
+                                line.split_whitespace().nth(2)
+                            } else if line.starts_with("---") || line.starts_with("+++") {
+                                line.split_whitespace().nth(1)
+                            } else {
+                                None
+                            }
+                        })
+                        .unwrap_or("unknown")
+                        .trim_start_matches("a/")
+                        .trim_start_matches("b/")
+                        .to_string();
+                    
+                    // Count lines added/removed
+                    let mut added = 0u32;
+                    let mut removed = 0u32;
+                    for line in diff_lines.iter() {
+                        if line.starts_with('+') && !line.starts_with("+++") {
+                            added += 1;
+                        } else if line.starts_with('-') && !line.starts_with("---") {
+                            removed += 1;
+                        }
+                    }
+                    
+                    diffs.push(agent_agency_contracts::execution_artifacts::DiffArtifact {
+                        file_path,
+                        change_type: agent_agency_contracts::execution_artifacts::ChangeType::Modified,
+                        diff_content: diff_text.to_string(),
+                        lines_added: added,
+                        lines_removed: removed,
+                        hunks: vec![],
+                    });
                     
                     // Parse diff statistics
                     let stat_output = Command::new("git")
@@ -275,7 +343,15 @@ impl WorkerExecutionBridge {
                 let untracked_text = String::from_utf8_lossy(&untracked_output.stdout);
                 for line in untracked_text.lines() {
                     if !line.trim().is_empty() {
-                        new_files.push(line.trim().to_string());
+                        let file_path = line.trim().to_string();
+                        // Try to read file content
+                        let content = std::fs::read_to_string(worktree_path.join(&file_path))
+                            .unwrap_or_else(|_| String::new());
+                        new_files.push(agent_agency_contracts::execution_artifacts::NewFileArtifact {
+                            path: file_path,
+                            content,
+                            permissions: None,
+                        });
                     }
                 }
             }
@@ -304,7 +380,15 @@ impl WorkerExecutionBridge {
         if let Some(diff_info) = worker_result.metadata.get("code_changes") {
             if let Some(diff_str) = diff_info.as_str() {
                 if !diff_str.is_empty() && diffs.is_empty() {
-                    diffs.push(diff_str.to_string());
+                    // Create a basic DiffArtifact from string
+                    diffs.push(agent_agency_contracts::execution_artifacts::DiffArtifact {
+                        file_path: "metadata".to_string(),
+                        change_type: agent_agency_contracts::execution_artifacts::ChangeType::Modified,
+                        diff_content: diff_str.to_string(),
+                        lines_added: 0,
+                        lines_removed: 0,
+                        hunks: vec![],
+                    });
                 }
             }
         }
@@ -350,8 +434,8 @@ impl WorkerExecutionBridge {
         let mut integration_total = 0u32;
         let mut integration_passed = 0u32;
         let mut integration_failed = 0u32;
-        let mut test_files = Vec::new();
-        let mut test_results = Vec::new();
+        let mut test_files: Vec<agent_agency_contracts::execution_artifacts::TestFileInfo> = Vec::new();
+        let test_results = Vec::new();
 
         // Check metadata for structured test results (e.g., from Jest tool)
         if let Some(test_data) = worker_result.metadata.get("test_results") {
@@ -374,7 +458,11 @@ impl WorkerExecutionBridge {
                         for test_file in test_files_array {
                             if let Some(file_obj) = test_file.as_object() {
                                 if let Some(file_path) = file_obj.get("testFilePath").and_then(|v| v.as_str()) {
-                                    test_files.push(file_path.to_string());
+                                    test_files.push(agent_agency_contracts::execution_artifacts::TestFileInfo {
+                                        path: file_path.to_string(),
+                                        r#type: agent_agency_contracts::execution_artifacts::TestFileType::Unit,
+                                        status: None,
+                                    });
                                 }
                             }
                         }
@@ -452,7 +540,7 @@ impl WorkerExecutionBridge {
         let mut mutation_score = 0.0;
         let mut coverage_report_path = None;
         let mut uncovered_lines = Vec::new();
-        let mut uncovered_branches = Vec::new();
+        let uncovered_branches = Vec::new();
 
         // Try to parse structured coverage from metadata first
         if let Some(coverage_data) = worker_result.metadata.get("coverage") {
@@ -740,13 +828,16 @@ impl WorkerExecutionBridge {
             .map(|s| s.to_string());
 
         // Build environment information
+        let mut dependencies = std::collections::HashMap::new();
+        if let Some(toolchain) = worker_result.metadata.get("toolchain")
+            .and_then(|v| v.as_str()) {
+            dependencies.insert("toolchain".to_string(), toolchain.to_string());
+        }
         let environment = agent_agency_contracts::execution_artifacts::ExecutionEnvironment {
             os: std::env::consts::OS.to_string(),
-            arch: std::env::consts::ARCH.to_string(),
+            architecture: std::env::consts::ARCH.to_string(),
             rust_version: None, // Could be extracted from rustc --version if needed
-            toolchain: worker_result.metadata.get("toolchain")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string()),
+            dependencies,
         };
 
         Ok(agent_agency_contracts::execution_artifacts::Provenance {
@@ -798,7 +889,8 @@ impl WorkerExecutionBridge {
         &self,
         task: &SubTask,
     ) -> Result<Milestone> {
-        // This is a simplified conversion - real implementation would map all fields
+        // TODO: Implement comprehensive field mapping for milestone conversion
+        //       Currently uses basic conversion; should map all fields from SubTask to Milestone structure.
         Ok(Milestone {
             id: task.id.0.to_string(),
             objective: task.description.clone(),

@@ -207,10 +207,31 @@ impl MLModel {
         let mut model_ref: u64 = 0;
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
+        // TODO: Pass model configuration to agentbridge_model_create:
+        // 1. Config creation: Create model configuration structure
+        //    - Define model config parameters
+        //    - Support configurable model settings
+        //    - Handle config validation and defaults
+        // 2. Config passing: Pass config to model creation
+        //    - Convert config to C-compatible format
+        //    - Pass config pointer to agentbridge function
+        //    - Handle config errors appropriately
+        // 3. Config management: Manage config lifecycle
+        //    - Support config updates and changes
+        //    - Handle config serialization if needed
+        //    - Test config passing thoroughly
+        // ACCEPTANCE CRITERIA:
+        // - Model configuration is passed to creation function
+        // - Config parameters are properly converted
+        // - Config management supports all required settings
+        // DEPENDENCIES:
+        // - Model config structure (Required)
+        // - C FFI config conversion (Required)
+        // PRIORITY: Medium
         let result = unsafe {
             agentbridge_model_create(
                 path_cstr.as_ptr(),
-                std::ptr::null(), // No config for now
+                std::ptr::null(),
                 &mut model_ref,
                 &mut error_ptr
             )
@@ -249,10 +270,11 @@ impl MLModel {
         let mut model_ref: u64 = 0;
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
+        // TODO: Pass model configuration to agentbridge_model_create (see line 213 for full TODO)
         let result = unsafe {
             agentbridge_model_create(
                 url_cstr.as_ptr(),
-                std::ptr::null(), // No config for now
+                std::ptr::null(),
                 &mut model_ref,
                 &mut error_ptr
             )

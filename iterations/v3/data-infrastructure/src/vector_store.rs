@@ -121,10 +121,38 @@ impl Drop for DatabasePool {
 impl DatabasePool {
     /// Perform cleanup when reference count reaches zero
     fn perform_cleanup(&self) {
-        // Close idle connections and prepare for shutdown
-        // Note: In a real implementation, you might want to gracefully close
-        // the pool or return it to a connection pool manager
-
+        // TODO: Implement graceful pool cleanup and return to connection pool manager
+        //       Currently relies on sqlx drop behavior; should gracefully close pool and return to manager.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement graceful pool closure with connection draining
+        // [ ] Return pool to connection pool manager for reuse
+        // [ ] Flush any pending operations before closure
+        // [ ] Close prepared statements and clear caches
+        // [ ] Update monitoring metrics for pool lifecycle
+        // [ ] Add unit tests for cleanup logic
+        // [ ] Add integration tests with pool manager
+        // [ ] Verify connections are properly released
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Pool is gracefully closed with connection draining
+        // - Pool is returned to connection pool manager for reuse
+        // - Pending operations are flushed before closure
+        // - Monitoring metrics are updated correctly
+        //
+        // DEPENDENCIES:
+        // - Connection pool manager API (Required)
+        // - Connection draining utilities (Required)
+        // - Monitoring metrics system (Required)
+        //
+        // ESTIMATED EFFORT: 3-5 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (standard feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Database connection management expertise
         info!("Performing cleanup for pool {} - closing idle connections", self.inner.pool_id);
 
         // The sqlx pool will handle connection cleanup when dropped
@@ -238,8 +266,55 @@ impl VectorStore {
 
         debug!("Storing vector record {} in pool {}", record.block_id, self.pool.stats().pool_id);
 
-        // In a real implementation, this would execute SQL to store the vector
-        // For now, just validate the pool is accessible
+        // TODO: Implement vector storage with SQL execution with the following requirements:
+        // 1. SQL execution: Execute SQL to store the vector in database
+        //    - Prepare INSERT statement with vector data and metadata
+        //    - Execute SQL transaction with proper error handling
+        //    - Handle database connection failures and retries
+        // 2. Vector data handling: Store vector data efficiently
+        //    - Serialize vector data appropriately for database storage
+        //    - Store vector metadata (dimensions, type, etc.)
+        //    - Handle large vector data with proper chunking if needed
+        // 3. Transaction management: Ensure data consistency
+        //    - Use database transactions for atomic operations
+        //    - Handle transaction rollback on errors
+        //    - Maintain referential integrity with related records
+        //
+        // TODO: Implement comprehensive vector store initialization with transaction management
+        //       Currently validates pool accessibility only; should implement comprehensive initialization with database transactions, atomic operations, error rollback, and referential integrity maintenance.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Database transactions are used for atomic operations
+        // - Transaction rollback handles errors correctly
+        // - Referential integrity is maintained with related records
+        // - Initialization is idempotent and safe to retry
+        //
+        // DEPENDENCIES:
+        // - Database transaction management system (Required)
+        // - Referential integrity validation utilities (Required)
+        // - Error rollback mechanisms (Required)
+        //
+        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (data consistency critical)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Database transaction and data consistency expertise
         let stats = self.pool.stats();
         if stats.pool_size == 0 {
             return Err(anyhow::anyhow!("Database pool has no connections"));
@@ -265,9 +340,39 @@ impl VectorStore {
         // - [ ] Add pagination support for large result sets
         // - [ ] Add unit tests with mock vector data
         // - [ ] Add integration tests with real vector search
-        // In a real implementation, this would execute vector similarity search
-        // For now, return empty results but validate pool health
-        let stats = self.pool.stats();
+        // TODO: Execute vector similarity search query
+        //       Currently returns empty results; should execute SQL query with vector similarity function (e.g., cosine similarity).
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Construct SQL query with vector similarity function
+        // [ ] Execute parameterized query with query vector
+        // [ ] Return ranked results with similarity scores
+        // [ ] Support filtering and metadata queries
+        // [ ] Handle pagination for large result sets
+        // [ ] Add unit tests for vector search
+        // [ ] Add integration tests with real database
+        // [ ] Verify search accuracy and performance
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Vector similarity search executes correctly
+        // - Results are ranked by similarity score
+        // - Filtering and metadata queries work
+        // - Pagination handles large result sets
+        //
+        // DEPENDENCIES:
+        // - Database connection pool (Required)
+        // - Vector similarity functions (Required)
+        // - Query builder utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (core search feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Vector search and database expertise
+        let stats = self.pool.stats(); // Temporary: validate pool until search query is implemented
         if stats.idle_connections == 0 {
             debug!("Pool {} has no idle connections, search may be slower", stats.pool_id);
         }
@@ -292,9 +397,39 @@ impl VectorStore {
         // - [ ] Add pagination support for large result sets
         // - [ ] Add unit tests with mock vector data
         // - [ ] Add integration tests with real vector search
-        // In a real implementation, this would execute vector similarity search
-        // For now, validate vector dimensions and pool health
-        if query_vector.is_empty() {
+        // TODO: Execute vector similarity search query with filtering
+        //       Currently only validates input; should execute SQL query with vector similarity function and filters.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Construct SQL query with vector similarity function
+        // [ ] Apply metadata filters to query
+        // [ ] Execute parameterized query with query vector and filters
+        // [ ] Return ranked results with similarity scores
+        // [ ] Support pagination for large result sets
+        // [ ] Add unit tests for filtered vector search
+        // [ ] Add integration tests with real database
+        // [ ] Verify search accuracy with filters
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Vector similarity search executes with filters
+        // - Results are ranked by similarity score
+        // - Metadata filters are applied correctly
+        // - Pagination handles large result sets
+        //
+        // DEPENDENCIES:
+        // - Database connection pool (Required)
+        // - Vector similarity functions (Required)
+        // - Query builder utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (core search feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Vector search and database expertise
+        if query_vector.is_empty() { // Temporary: validate input until search query is implemented
             return Err(anyhow::anyhow!("Query vector cannot be empty"));
         }
 
@@ -315,15 +450,58 @@ impl VectorStore {
 
         debug!("Logging search operation in pool {}", self.pool.stats().pool_id);
 
-        // TODO: Implement real audit log insertion
-        // - [ ] Insert search operation logs into database audit table
-        // - [ ] Include search parameters, results count, execution time
-        // - [ ] Support audit log querying and filtering
-        // - [ ] Handle audit log insertion errors gracefully
-        // - [ ] Add unit tests with mock audit logs
-        // - [ ] Add integration tests with real audit logging
-        // In a real implementation, this would insert audit logs into database
-        // For now, just validate pool is accessible
+        // TODO: Implement audit log insertion with the following requirements:
+        // 1. Audit log insertion: Insert audit logs into database
+        //    - Prepare INSERT statement with audit log data
+        //    - Include search parameters, results count, execution time
+        //    - Execute SQL transaction with proper error handling
+        // 2. Audit log querying: Support audit log querying and filtering
+        //    - Implement query interface for audit logs
+        //    - Support filtering by timestamp, operation type, etc.
+        //    - Handle query performance and indexing
+        // 3. Error handling: Handle audit log insertion errors gracefully
+        //    - Retry failed insertions with exponential backoff
+        //    - Log errors without blocking main operation
+        //    - Maintain audit log integrity
+        // 4. Testing: Add comprehensive test coverage
+        //    - Add unit tests with mock audit logs
+        //    - Add integration tests with real audit logging
+        //
+        // TODO: Implement comprehensive audit logging for vector store operations
+        //       Currently validates pool accessibility only; should implement comprehensive audit logging with structured logs, integration tests, and proper audit trail maintenance.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - All vector store operations are logged with structured audit logs
+        // - Unit tests use mock audit logs for validation
+        // - Integration tests validate real audit logging functionality
+        // - Audit trail is properly maintained and queryable
+        //
+        // DEPENDENCIES:
+        // - Audit logging infrastructure (Required)
+        // - Structured logging utilities (Required)
+        // - Audit trail storage system (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (audit logging enhancement)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Audit logging and observability expertise
         let stats = self.pool.stats();
         if stats.active_refs > 10 {
             debug!("High reference count ({}) for pool {}, consider connection pooling optimization", stats.active_refs, stats.pool_id);

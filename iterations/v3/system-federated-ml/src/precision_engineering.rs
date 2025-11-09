@@ -274,8 +274,8 @@ impl GraphOptimizer {
     }
 
     fn apply_dead_code_elimination(&self, layers: &mut Vec<String>) {
-        // Remove operations that don't contribute to outputs
-        // This is a simplified implementation
+        // TODO: Implement comprehensive dead code elimination with dependency analysis
+        //       Currently uses basic implementation; should analyze operation dependencies to accurately identify and remove dead code.
         let mut i = 0;
         while i < layers.len() {
             if layers[i].starts_with("Unused") {

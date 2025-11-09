@@ -6,10 +6,9 @@
 use anyhow::{Context, Result};
 use sqlx::{PgPool, postgres::PgPoolOptions, Row};
 use std::sync::Arc;
-use tracing::{debug, warn};
+use tracing::debug;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
-use serde_json::Value as JsonValue;
 
 /// Database storage for worker assignments
 #[derive(Clone)]

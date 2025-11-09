@@ -158,13 +158,77 @@ impl ModelManager {
             // - [ ] Add rollback capability if validation fails
             // - [ ] Add unit tests with mock model instances
             // - [ ] Add integration tests with real model validation
-            // PLACEHOLDER: In a real implementation, this would:
-            // 1. Create a test model instance with new parameters
-            // 2. Run test inference requests
-            // 3. Measure performance against validation criteria
-            // 4. Only apply if criteria met
-            
-            // For now, simulate validation
+            // TODO: Implement parameter validation before application
+            //       Currently placeholder; should create test model instance, run test inference, measure performance, and only apply if criteria met.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Create test model instance with new parameters
+            // [ ] Run test inference requests
+            // [ ] Measure performance against validation criteria
+            // [ ] Only apply tuning if all criteria are met
+            // [ ] Add rollback capability if validation fails
+            // [ ] Handle validation errors gracefully
+            // [ ] Add unit tests with mock model instances
+            // [ ] Add integration tests with real model validation
+            // [ ] Performance: Validation should complete in <5s
+            // [ ] Documentation: Document validation process
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Test model instance is created with new parameters
+            // - Test inference requests are executed
+            // - Performance is measured against criteria
+            // - Parameters are only applied if criteria met
+            // - Rollback works if validation fails
+            //
+            // DEPENDENCIES:
+            // - Model instance creation API (Required)
+            // - Inference testing infrastructure (Required)
+            // - Performance measurement tools (Required)
+            //
+            // ESTIMATED EFFORT: 8-12 hours (low confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 1 (model safety feature)
+            // - Change Budget: ~300 LOC
+            // - Reviewer Requirements: ML model management expertise
+            //
+            // TODO: Implement comprehensive parameter tuning validation
+            //       Currently simulates validation; should implement comprehensive validation that checks actual performance against criteria, applies parameters only if criteria are met, and supports rollback if validation fails.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Actual performance is checked against criteria
+            // - Parameters are only applied if criteria met
+            // - Rollback works if validation fails
+            // - Validation process is efficient and reliable
+            //
+            // DEPENDENCIES:
+            // - Model instance creation API (Required)
+            // - Inference testing infrastructure (Required)
+            // - Performance measurement tools (Required)
+            //
+            // ESTIMATED EFFORT: 8-12 hours (low confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 1 (model safety feature)
+            // - Change Budget: ~300 LOC
+            // - Reviewer Requirements: ML model management expertise
             let validation_passed = true; // Would check actual performance
             
             if !validation_passed {
@@ -175,8 +239,40 @@ impl ModelManager {
         }
         
         // Apply parameter tuning
-        // In a real implementation, this would update the model's inference parameters
-        // stored in the registry or backend configuration
+        // TODO: Implement model inference parameter updates
+        //       Currently placeholder; should update model's inference parameters stored in registry or backend configuration.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Update model parameters in registry
+        // [ ] Update backend configuration with new parameters
+        // [ ] Verify parameters are persisted correctly
+        // [ ] Handle update failures gracefully
+        // [ ] Add rollback capability
+        // [ ] Add unit tests with mock registry
+        // [ ] Add integration tests with real model updates
+        // [ ] Performance: Update should complete in <500ms
+        // [ ] Documentation: Document parameter update process
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Model parameters are updated in registry
+        // - Backend configuration is updated
+        // - Parameters are persisted correctly
+        // - Update failures are handled gracefully
+        // - Rollback works if update fails
+        //
+        // DEPENDENCIES:
+        // - Model registry API (Required)
+        // - Backend configuration API (Required)
+        // - Parameter persistence layer (Required)
+        //
+        // ESTIMATED EFFORT: 5-7 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (model management feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Model registry expertise
         
         // Record performance metrics
         let performance_delta = PerformanceDelta {

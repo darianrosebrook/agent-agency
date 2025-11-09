@@ -67,7 +67,28 @@ pub struct TaskSpec {
     pub risk_tier: Option<u32>,
     /// Acceptance criteria in Given-When-Then format
     pub acceptance_criteria: Option<Vec<crate::types::execution::AcceptanceCriterion>>,
-    /// CAWS specification (generic for now to avoid circular deps)
+    /// CAWS specification
+    /// TODO: Use proper CAWS spec type instead of generic HashMap:
+    /// 1. Type definition: Define proper CAWS spec type
+    ///    - Create CAWS spec struct or enum
+    ///    - Resolve circular dependency issues
+    ///    - Support CAWS spec serialization
+    /// 2. Type integration: Integrate CAWS spec type
+    ///    - Replace HashMap with proper type
+    ///    - Update all CAWS spec usages
+    ///    - Handle type conversion appropriately
+    /// 3. Dependency resolution: Resolve circular dependencies
+    ///    - Refactor to break circular dependencies
+    ///    - Use trait objects or type erasure if needed
+    ///    - Support proper type relationships
+    /// ACCEPTANCE CRITERIA:
+    /// - CAWS spec uses proper type instead of HashMap
+    /// - Circular dependencies are resolved
+    /// - Type safety is improved
+    /// DEPENDENCIES:
+    /// - CAWS spec type definition (Required)
+    /// - Dependency refactoring (Required)
+    /// PRIORITY: Medium
     pub caws_spec: Option<HashMap<String, serde_json::Value>>,
     /// Task execution requirements
     pub requirements: Option<TaskRequirements>,

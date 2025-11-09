@@ -66,7 +66,19 @@ impl EmbeddingModel for SafeTensorsModel {
         let tensors = safetensors::SafeTensors::deserialize(&self.data)?;
 
         // Simple mean pooling of token embeddings
-        // In a real implementation, this would run the full transformer model
+        // TODO: Implement full transformer model execution with the following requirements:
+        // 1. Model execution: Run the full transformer model
+        //    - Load and initialize transformer model weights
+        //    - Execute forward pass through transformer layers
+        //    - Handle model inference with proper batching
+        // 2. Token processing: Process tokens through transformer
+        //    - Apply attention mechanisms
+        //    - Process through transformer encoder/decoder layers
+        //    - Generate contextualized embeddings
+        // 3. Performance optimization: Optimize model inference
+        //    - Use appropriate hardware acceleration (GPU/ANE)
+        //    - Implement efficient batching strategies
+        //    - Cache intermediate computations where possible
         let embeddings_tensor = tensors.tensor("embeddings")
             .or_else(|_| tensors.tensor("embed_tokens"))
             .or_else(|_| tensors.tensor("model.embed_tokens"))

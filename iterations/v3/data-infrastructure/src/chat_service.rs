@@ -287,8 +287,40 @@ mod tests {
 
     #[tokio::test]
     async fn test_chat_service_creation() {
-        // This would need a test database setup
-        // For now, just test that the service can be created with a mock client
-        // In practice, this would use a test database
+        // TODO: Implement comprehensive chat service creation test with test database
+        //       Currently just tests service creation with mock client; should implement comprehensive test that uses test database setup for complete chat service validation.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Test uses test database setup
+        // - Service creation is validated comprehensively
+        // - Test covers error cases and edge conditions
+        // - Test validates database integration
+        //
+        // DEPENDENCIES:
+        // - Test database infrastructure (Required)
+        // - Database setup/teardown utilities (Required)
+        // - Test fixtures and data (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (test infrastructure enhancement)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Test infrastructure and database testing expertise
     }
 }

@@ -151,9 +151,41 @@ impl ScenarioRunner {
         decisions: &[DecisionPoint],
         events: &[CoordinationEvent],
     ) -> Result<bool, String> {
-        // For now, use simple heuristic-based verification
-        // In Phase 7, this will use the Oracle trait
-        
+        // TODO: Implement comprehensive Oracle-based verification
+        //       Currently uses simple heuristic-based verification; should implement comprehensive verification that uses the Oracle trait for accurate scenario behavior validation.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Oracle trait is used for verification
+        // - Verification is accurate and comprehensive
+        // - Heuristic fallback is available if Oracle unavailable
+        // - Verification handles edge cases and errors gracefully
+        //
+        // DEPENDENCIES:
+        // - Oracle trait implementation (Required)
+        // - Oracle integration utilities (Required)
+        // - Verification fallback mechanisms (Optional)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (evaluation verification functionality)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Oracle pattern and scenario verification expertise
         // Check if scenario has expected behaviors
             let critical_behaviors: Vec<_> = scenario.expected_behaviors.iter()
             .filter(|b| matches!(b.importance, BehaviorImportance::Critical))

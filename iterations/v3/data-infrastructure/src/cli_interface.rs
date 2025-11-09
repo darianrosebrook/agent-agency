@@ -532,7 +532,8 @@ impl CliInterface {
             ("completed", " Task completed successfully", 100.0, None),
         ];
 
-        // Rotate through statuses for demo (in practice, this would be real data)
+        // TODO: Integrate real task status data
+        //       Currently uses demo rotation; should query actual task status data from system.
         let status_idx = (Utc::now().timestamp() / 10 % statuses.len() as i64) as usize;
         let (status, message, progress, phase) = &statuses[status_idx];
 
@@ -835,9 +836,39 @@ impl CliInterface {
             execution_mode: Some("strict".to_string()),
         };
 
-        // In a real implementation, this would submit to the API
-        // For now, simulate the workflow
-        println!(" Task submitted with ID: strict-task-{}", uuid::Uuid::new_v4());
+        // TODO: Submit task to actual API endpoint
+        //       Currently simulates workflow; should submit task to actual API endpoint with proper authentication and error handling.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Create HTTP client for API submission
+        // [ ] Submit task request to API endpoint
+        // [ ] Handle API authentication
+        // [ ] Handle API errors and retries
+        // [ ] Parse API response for task ID
+        // [ ] Add unit tests for API submission
+        // [ ] Add integration tests with real API
+        // [ ] Verify API submission correctness
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Tasks are submitted to API correctly
+        // - Authentication is handled properly
+        // - API errors are handled gracefully
+        // - Task IDs are parsed from responses
+        //
+        // DEPENDENCIES:
+        // - HTTP client library (Required)
+        // - API client utilities (Required)
+        // - Authentication utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (API integration feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: API integration expertise
+        println!(" Task submitted with ID: strict-task-{}", uuid::Uuid::new_v4()); // Temporary: simulate until API integration
 
         if watch {
             println!(" Entering interactive approval mode...");
@@ -869,9 +900,39 @@ impl CliInterface {
             execution_mode: Some("auto".to_string()),
         };
 
-        // In a real implementation, this would submit to the API
-        // For now, simulate the workflow
-        println!(" Task submitted with ID: auto-task-{}", uuid::Uuid::new_v4());
+        // TODO: Submit task to actual API endpoint
+        //       Currently simulates workflow; should submit task to actual API endpoint with proper authentication and error handling.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Create HTTP client for API submission
+        // [ ] Submit task request to API endpoint
+        // [ ] Handle API authentication
+        // [ ] Handle API errors and retries
+        // [ ] Parse API response for task ID
+        // [ ] Add unit tests for API submission
+        // [ ] Add integration tests with real API
+        // [ ] Verify API submission correctness
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Tasks are submitted to API correctly
+        // - Authentication is handled properly
+        // - API errors are handled gracefully
+        // - Task IDs are parsed from responses
+        //
+        // DEPENDENCIES:
+        // - HTTP client library (Required)
+        // - API client utilities (Required)
+        // - Authentication utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (API integration feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: API integration expertise
+        println!(" Task submitted with ID: auto-task-{}", uuid::Uuid::new_v4()); // Temporary: simulate until API integration
         println!(" Quality gates enabled: test coverage, mutation testing, linting");
 
         if watch {
@@ -901,9 +962,39 @@ impl CliInterface {
             execution_mode: Some("dry_run".to_string()),
         };
 
-        // In a real implementation, this would submit to the API
-        // For now, simulate the workflow
-        println!(" Task submitted with ID: dry-run-task-{}", uuid::Uuid::new_v4());
+        // TODO: Submit task to actual API endpoint
+        //       Currently simulates workflow; should submit task to actual API endpoint with proper authentication and error handling.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Create HTTP client for API submission
+        // [ ] Submit task request to API endpoint
+        // [ ] Handle API authentication
+        // [ ] Handle API errors and retries
+        // [ ] Parse API response for task ID
+        // [ ] Add unit tests for API submission
+        // [ ] Add integration tests with real API
+        // [ ] Verify API submission correctness
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Tasks are submitted to API correctly
+        // - Authentication is handled properly
+        // - API errors are handled gracefully
+        // - Task IDs are parsed from responses
+        //
+        // DEPENDENCIES:
+        // - HTTP client library (Required)
+        // - API client utilities (Required)
+        // - Authentication utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (API integration feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: API integration expertise
+        println!(" Task submitted with ID: dry-run-task-{}", uuid::Uuid::new_v4()); // Temporary: simulate until API integration
         println!("🛡️  Dry-run mode: No filesystem changes will be applied");
         println!(" All artifacts will be generated for review");
 

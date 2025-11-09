@@ -12,18 +12,12 @@ use anyhow::{anyhow, Result};
 use uuid::Uuid;
 use chrono::Utc;
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use agent_agency_contracts::{
-    planning_io::ExecutionPlan as ContractExecutionPlan,
-    types::prelude::*,
-    *,
-};
+use serde::{Serialize, Deserialize};
 use crate::planning::DatabaseOperations;
 use crate::planning::plan_types::ExecutionPlan;
 
 // Use real Council and related types
 use crate::council::Council;
-use crate::council_errors::CouncilError;
-use crate::council_errors::CouncilResult;
 use crate::judge_backup::types::ReviewContext as JudgeReviewContext;
 use crate::decision_making::FinalDecision;
 
@@ -346,7 +340,7 @@ struct ReviewConfig {
     pub enable_council_veto: bool,
 }
 
-/// Council verdict types (simplified for planning)
+/// Council verdict types
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 enum CouncilVerdict {
@@ -603,8 +597,27 @@ impl CouncilPlanReview {
         };
 
         // Extract judge verdicts from council session (if accessible)
-        // Note: contributions field may be private, so we use an empty vec for now
-        // In a production system, this would be extracted from session metadata
+        // TODO: Extract judge verdicts from council session metadata:
+        // 1. Session metadata access: Access council session metadata
+        //    - Retrieve session contributions/verdicts from council
+        //    - Handle private field access appropriately
+        //    - Support session metadata API if available
+        // 2. Verdict extraction: Extract judge verdicts properly
+        //    - Parse verdicts from session contributions
+        //    - Map council verdicts to JudgeVerdict format
+        //    - Handle missing or incomplete verdicts
+        // 3. Metadata integration: Integrate with session metadata system
+        //    - Use proper session metadata access patterns
+        //    - Support session metadata serialization
+        //    - Handle metadata versioning and changes
+        // ACCEPTANCE CRITERIA:
+        // - Judge verdicts are extracted from council session metadata
+        // - Verdicts are correctly mapped to JudgeVerdict format
+        // - Session metadata access works correctly
+        // DEPENDENCIES:
+        // - Council session metadata API (Required)
+        // - Verdict serialization system (Required)
+        // PRIORITY: Medium
         let judge_verdicts: Vec<JudgeVerdict> = vec![];
 
         let council_decision = CouncilDecision {
@@ -656,9 +669,41 @@ impl CouncilPlanReview {
                         return false;
                     }
                     
-                    // Additional check: if council specified refinements in conditional approval,
-                    // verify those have been addressed (would require storing refinement state)
-                    // For now, assume refinements are tracked separately
+                    // TODO: Implement refinement state tracking and verification
+                    //       Currently assumes refinements are tracked separately; should implement comprehensive refinement state tracking and verification to ensure council-specified refinements in conditional approvals are properly addressed.
+                    //
+                    // COMPLETION CHECKLIST:
+                    // [ ] Primary functionality implemented
+                    // [ ] API/data structures defined & stable
+                    // [ ] Error handling + validation aligned with error taxonomy
+                    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                    // [ ] Integration tests for external systems/contracts
+                    // [ ] Documentation: public API + system behavior
+                    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                    // [ ] Configurability and feature flags defined if relevant
+                    // [ ] Failure-mode cards documented (degradation paths)
+                    //
+                    // ACCEPTANCE CRITERIA:
+                    // - Refinement state is stored and tracked
+                    // - Council-specified refinements are verified as addressed
+                    // - Refinement verification integrates with conditional approval workflow
+                    // - Refinement state persists across sessions
+                    //
+                    // DEPENDENCIES:
+                    // - Refinement state storage system (Required)
+                    // - Conditional approval workflow integration (Required)
+                    // - Refinement verification logic (Required)
+                    //
+                    // ESTIMATED EFFORT: 8-10 hours (medium confidence)
+                    // PRIORITY: Medium
+                    // BLOCKING: No
+                    //
+                    // GOVERNANCE:
+                    // - CAWS Tier: 2 (workflow verification enhancement)
+                    // - Change Budget: ~180 LOC
+                    // - Reviewer Requirements: Workflow state management expertise
                     return true;
                 }
                 CouncilVerdict::RequestMoreInfo => return false, // Cannot proceed without more info
@@ -726,7 +771,7 @@ impl CouncilPlanReview {
 
     /// Convert execution plan to working spec for council review
     fn plan_to_working_spec(&self, plan: &ExecutionPlan) -> Result<agent_agency_contracts::WorkingSpec> {
-        use chrono::Utc;
+        
         Ok(agent_agency_contracts::WorkingSpec {
             version: "1.0".to_string(),
             id: plan.contract_plan.id.to_string(),
@@ -847,8 +892,41 @@ impl CouncilPlanReview {
                             .and_then(|s| Uuid::parse_str(s).ok())
                             .unwrap_or(plan_id);
                         
-                        // Extract other fields similarly if needed
-                        // For now, return minimal result
+                        // TODO: Implement comprehensive CouncilReviewResult extraction
+                        //       Currently returns minimal result; should implement comprehensive extraction of all fields from metadata, audit trail, and related sources for complete review result.
+                        //
+                        // COMPLETION CHECKLIST:
+                        // [ ] Primary functionality implemented
+                        // [ ] API/data structures defined & stable
+                        // [ ] Error handling + validation aligned with error taxonomy
+                        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                        // [ ] Integration tests for external systems/contracts
+                        // [ ] Documentation: public API + system behavior
+                        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                        // [ ] Configurability and feature flags defined if relevant
+                        // [ ] Failure-mode cards documented (degradation paths)
+                        //
+                        // ACCEPTANCE CRITERIA:
+                        // - All CouncilReviewResult fields are extracted from available sources
+                        // - Metadata parsing handles all field types correctly
+                        // - Audit trail is parsed for additional context
+                        // - Result extraction is robust to missing or malformed data
+                        //
+                        // DEPENDENCIES:
+                        // - Metadata parsing utilities (Required)
+                        // - Audit trail parsing system (Required)
+                        // - Field extraction and validation logic (Required)
+                        //
+                        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+                        // PRIORITY: Low
+                        // BLOCKING: No
+                        //
+                        // GOVERNANCE:
+                        // - CAWS Tier: 2 (data extraction enhancement)
+                        // - Change Budget: ~150 LOC
+                        // - Reviewer Requirements: Data extraction and parsing expertise
                         Some(CouncilReviewResult {
                             plan_id: plan_id_from_meta,
                             approved,

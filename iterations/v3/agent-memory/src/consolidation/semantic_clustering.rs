@@ -215,9 +215,42 @@ impl SemanticClustering {
             return 0.0;
         }
 
-        // Calculate average importance (simplified - would use actual importance scores)
-        // For now, use cluster size as proxy for importance
-        cluster_memories.len() as f32 / memory_embeddings.len() as f32
+        // TODO: Calculate actual importance scores for cluster memories
+        //       Currently uses cluster size as proxy; should calculate actual importance scores based on memory relevance and recency.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Importance scores are calculated accurately
+        // - Relevance and recency are considered
+        // - Scores reflect actual memory importance
+        // - Calculation handles edge cases
+        //
+        // DEPENDENCIES:
+        // - Importance scoring algorithms (Required)
+        // - Relevance calculation utilities (Required)
+        // - Recency tracking infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (memory analysis feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Memory analysis expertise
+        cluster_memories.len() as f32 / memory_embeddings.len() as f32 // Temporary: cluster size proxy until actual importance scores
     }
 
     /// Calculate Euclidean distance between two vectors
@@ -306,9 +339,42 @@ impl HierarchicalClustering {
             });
         }
 
-        // Merge closest clusters until desired number is reached
-        // Simplified implementation - would continue merging based on distance threshold
-        clusters
+        // TODO: Implement comprehensive cluster merging with distance threshold
+        //       Currently returns clusters as-is; should continue merging based on distance threshold until desired number is reached.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Clusters are merged based on distance threshold
+        // - Merging continues until target count reached
+        // - Distance calculation is accurate
+        // - Merging preserves semantic coherence
+        //
+        // DEPENDENCIES:
+        // - Distance calculation utilities (Required)
+        // - Cluster merging algorithms (Required)
+        // - Threshold configuration (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (clustering feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Clustering algorithm expertise
+        clusters // Temporary: return as-is until comprehensive merging
     }
 
     fn euclidean_distance(&self, a: &[f32], b: &[f32]) -> f32 {

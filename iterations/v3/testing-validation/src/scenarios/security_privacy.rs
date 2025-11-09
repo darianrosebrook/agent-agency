@@ -19,12 +19,11 @@
 //! - Privacy anonymization service (needs implementation)
 
 use std::time::Instant;
-use tracing::{info, error};
+use tracing::info;
 
 use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceManager}};
 use system_quality_security::input_validation::{validate_string_input, validate_sql_safe};
 use system_quality_security::keystore::{Keystore, ProductionKeystore, KeyType, KeyPermission};
-use chrono::Utc;
 
 /// Run the security & privacy E2E test
 pub async fn run_security_test(
@@ -710,7 +709,7 @@ fn calculate_audit_entry_hash(
     use ring::digest;
 
     // Create canonical representation of the audit entry
-    let mut data = format!("{}|{}|{}|{}|{}",
+    let data = format!("{}|{}|{}|{}|{}",
         id,
         action,
         user_id.unwrap_or(""),
@@ -718,9 +717,40 @@ fn calculate_audit_entry_hash(
         resource_id.unwrap_or("")
     );
 
-    // Include metadata if available (in a real implementation, you'd include more fields)
-    // For now, we'll use a simple approach
-
+    // TODO: Implement comprehensive metadata inclusion
+    //       Currently uses simple approach; should include more fields in metadata for better auditability and traceability.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Include additional metadata fields
+    // [ ] Add timestamp and source information
+    // [ ] Include user context and permissions
+    // [ ] Add operation type and parameters
+    // [ ] Handle metadata serialization
+    // [ ] Add unit tests with various metadata scenarios
+    // [ ] Add integration tests with real metadata
+    // [ ] Performance: Metadata inclusion should complete in <1ms
+    // [ ] Documentation: Document metadata structure
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Additional metadata fields are included
+    // - Timestamp and source are tracked
+    // - User context is preserved
+    // - Operation details are captured
+    // - Metadata is serialized correctly
+    //
+    // DEPENDENCIES:
+    // - Metadata structure definition (Required)
+    // - Serialization utilities (Required)
+    // - Context tracking (Required)
+    //
+    // ESTIMATED EFFORT: 3-4 hours (high confidence)
+    // PRIORITY: Medium
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (security feature)
+    // - Change Budget: ~100 LOC
+    // - Reviewer Requirements: Security and audit expertise
     // Calculate SHA-256 hash
     let hash = digest::digest(&digest::SHA256, data.as_bytes());
 

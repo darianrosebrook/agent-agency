@@ -4,12 +4,11 @@
 //! tool chain data flow and type safety across tool boundaries.
 
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 /// Schema registry trait
 #[async_trait::async_trait]
@@ -72,7 +71,39 @@ impl JsonSchemaRegistry {
         self.converters.read().await.contains_key(&converter_key)
     }
 
-    /// Get conversion path (simplified - direct conversion only)
+    /// Get conversion path
+    // TODO: Implement multi-hop conversion path finding for schema transformations
+    //       Currently only supports direct conversions; should find optimal paths through intermediate schemas.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Implement graph-based path finding algorithm
+    // [ ] Find shortest path between source and target schemas
+    // [ ] Support multiple intermediate schemas in conversion path
+    // [ ] Optimize path based on conversion costs
+    // [ ] Handle cycles and unreachable schemas
+    // [ ] Add unit tests for path finding logic
+    // [ ] Add integration tests with complex schema graphs
+    // [ ] Verify conversion paths are optimal
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Multi-hop conversion paths are found correctly
+    // - Shortest path algorithm finds optimal conversions
+    // - Cycles and unreachable schemas are handled gracefully
+    // - Conversion paths are efficient and correct
+    //
+    // DEPENDENCIES:
+    // - Schema graph data structure (Required)
+    // - Path finding algorithm (Required)
+    // - Conversion cost calculation (Optional)
+    //
+    // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (standard feature)
+    // - Change Budget: ~120 LOC
+    // - Reviewer Requirements: Graph algorithm expertise
     pub async fn get_conversion_path(&self, from: &str, to: &str) -> Option<Vec<String>> {
         let converter_key = format!("{}->{}", from, to);
         if self.converters.read().await.contains_key(&converter_key) {
@@ -86,15 +117,38 @@ impl JsonSchemaRegistry {
 #[async_trait::async_trait]
 impl SchemaRegistry for JsonSchemaRegistry {
     fn get(&self, key: &str) -> Option<Value> {
-        // TODO: Implement real schema retrieval
-        // - [ ] Make schema retrieval async for database/remote calls
-        // - [ ] Query schema registry storage (database, cache, etc.)
-        // - [ ] Handle schema versioning and multiple versions
-        // - [ ] Cache frequently accessed schemas
-        // - [ ] Add unit tests with mock schema storage
-        // - [ ] Add integration tests with real schema registry
-        // This would be an async call in a real implementation
-        // For now, return a basic schema
+        // TODO: Implement real schema retrieval from registry storage with versioning and caching
+        //       Currently returns basic placeholder schema; should query registry storage and handle versioning.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Make schema retrieval async for database/remote calls
+        // [ ] Query schema registry storage (database, cache, etc.)
+        // [ ] Handle schema versioning and multiple versions
+        // [ ] Cache frequently accessed schemas
+        // [ ] Implement schema lookup by key and version
+        // [ ] Add unit tests with mock schema storage
+        // [ ] Add integration tests with real schema registry
+        // [ ] Verify schema retrieval performance and accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Schemas are retrieved from registry storage correctly
+        // - Schema versioning is supported and handled properly
+        // - Frequently accessed schemas are cached efficiently
+        // - Schema retrieval is performant for common cases
+        //
+        // DEPENDENCIES:
+        // - Schema registry storage API (Required)
+        // - Schema caching system (Required)
+        // - Schema versioning system (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (standard feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Schema management domain expertise
         Some(serde_json::json!({
             "type": "object",
             "properties": {
@@ -128,18 +182,41 @@ impl SchemaRegistry for JsonSchemaRegistry {
         // - [ ] Add unit tests with various schema types
         // - [ ] Add integration tests with real schema conversions
         // This is a synchronous wrapper - real implementation would be async
-        // For now, return the value unchanged
         Ok(value)
     }
 
     fn register_schema(&mut self, key: String, schema: Value) -> Result<(), SchemaError> {
-        // This would be async in a real implementation
+        // TODO: Convert to async implementation with the following requirements:
+        // 1. Async operation: Make schema registration async
+        //    - Change function signature to async fn
+        //    - Use async database operations for schema storage
+        //    - Handle async error propagation
+        // 2. Database persistence: Persist schema to database
+        //    - Store schema in database with proper serialization
+        //    - Handle database connection and transaction management
+        //    - Ensure schema versioning and conflict resolution
+        // 3. Error handling: Improve error handling for async operations
+        //    - Handle database connection failures
+        //    - Handle schema validation errors
+        //    - Return appropriate error types
         info!("Registered schema: {}", key);
         Ok(())
     }
 
     fn register_converter(&mut self, key: String, converter: Box<dyn Converter>) -> Result<(), SchemaError> {
-        // This would be async in a real implementation
+        // TODO: Convert to async implementation with the following requirements:
+        // 1. Async operation: Make converter registration async
+        //    - Change function signature to async fn
+        //    - Use async database operations for converter storage
+        //    - Handle async error propagation
+        // 2. Database persistence: Persist converter to database
+        //    - Store converter metadata in database
+        //    - Handle database connection and transaction management
+        //    - Ensure converter versioning and conflict resolution
+        // 3. Error handling: Improve error handling for async operations
+        //    - Handle database connection failures
+        //    - Handle converter validation errors
+        //    - Return appropriate error types
         info!("Registered converter: {}", key);
         Ok(())
     }
@@ -152,15 +229,41 @@ pub struct HtmlToMarkdownConverter;
 impl Converter for HtmlToMarkdownConverter {
     async fn convert(&self, value: Value) -> Result<Value, SchemaError> {
         if let Some(html_str) = value.as_str() {
-            // TODO: Implement real HTML to Markdown conversion
-            // - [ ] Integrate html2md or similar crate for conversion
-            // - [ ] Parse HTML and convert to proper Markdown format
-            // - [ ] Handle complex HTML structures (tables, lists, etc.)
-            // - [ ] Preserve formatting and structure in conversion
-            // - [ ] Add unit tests with various HTML formats
-            // - [ ] Add integration tests with real HTML conversion
-            // Use html2md or similar crate for conversion
-            // For now, return a placeholder
+            // TODO: Implement comprehensive HTML to Markdown conversion
+            //       Currently returns placeholder; should implement comprehensive HTML to Markdown conversion using html2md or similar crate with proper formatting, structure preservation, and support for various HTML formats.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - HTML is converted to Markdown using html2md or similar
+            // - Formatting and structure are preserved
+            // - Various HTML formats are supported
+            // - Conversion handles malformed HTML gracefully
+            //
+            // DEPENDENCIES:
+            // - HTML to Markdown conversion library (Required)
+            // - HTML parsing utilities (Required)
+            // - Markdown formatting utilities (Required)
+            //
+            // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+            // PRIORITY: Low
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (schema conversion functionality)
+            // - Change Budget: ~150 LOC
+            // - Reviewer Requirements: HTML/Markdown conversion and text processing expertise
             let markdown = format!("# Converted HTML\n\n{}", html_str);
             Ok(Value::String(markdown))
         } else {
@@ -334,8 +437,39 @@ pub struct SchemaCompatibilityChecker;
 impl SchemaCompatibilityChecker {
     /// Check if two schemas are compatible for data flow
     pub fn are_compatible(source: &Value, target: &Value) -> bool {
-        // Simplified compatibility check
-        // In a real implementation, this would use schema subsumption algorithms
+        // TODO: Implement comprehensive schema compatibility checking
+        //       Currently uses basic subtype checking; should implement full schema subsumption algorithms with support for complex types, nested structures, and type coercion rules.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement schema subsumption algorithm
+        // [ ] Support complex types (arrays, objects, unions, etc.)
+        // [ ] Handle nested schema structures recursively
+        // [ ] Implement type coercion rules (string->url, number->string, etc.)
+        // [ ] Add support for optional fields and nullable types
+        // [ ] Add unit tests with various schema combinations
+        // [ ] Add integration tests with real schema registries
+        // [ ] Performance: Compatibility check should complete in <1ms for typical schemas
+        // [ ] Documentation: Document schema compatibility rules
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Correctly identifies compatible schemas for data flow
+        // - Handles all JSON Schema types (string, number, boolean, object, array, null)
+        // - Supports nested structures and arrays of objects
+        // - Implements proper type coercion rules
+        // - Returns false for incompatible schemas
+        //
+        // DEPENDENCIES:
+        // - JSON Schema Value types (Required)
+        // - Schema type definitions (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (schema validation feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Schema validation and type theory expertise
         Self::is_subtype(source, target)
     }
 
@@ -424,7 +558,40 @@ impl SchemaEvolutionTracker {
 
     /// Get evolution path between versions
     pub fn get_evolution_path(&self, from_key: &str, to_key: &str) -> Option<Vec<String>> {
-        // Simplified - in practice would use graph algorithms
+        // TODO: Implement graph-based schema evolution path finding
+        //       Currently uses basic compatibility check; should use graph algorithms to find optimal evolution paths between schema versions.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Build schema version graph from registry
+        // [ ] Implement shortest path algorithm (Dijkstra or A*)
+        // [ ] Find all possible evolution paths between versions
+        // [ ] Select optimal path based on compatibility and transformation cost
+        // [ ] Handle multiple paths and path optimization
+        // [ ] Add unit tests with various schema graphs
+        // [ ] Add integration tests with real schema registries
+        // [ ] Performance: Path finding should complete in <10ms for typical registries
+        // [ ] Documentation: Document evolution path algorithm
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Returns optimal evolution path between schema versions
+        // - Path consists of valid transformation steps
+        // - Path minimizes transformation cost
+        // - Returns None if no valid path exists
+        // - Handles cycles and complex graph structures
+        //
+        // DEPENDENCIES:
+        // - Schema registry with version graph (Required)
+        // - Compatibility checking (Required)
+        // - Graph algorithms library (Optional, can implement manually)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (schema evolution feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Graph algorithms expertise
         if self.check_compatibility(from_key, to_key) != CompatibilityType::Breaking {
             Some(vec![format!("convert_{}_to_{}", from_key, to_key)])
         } else {

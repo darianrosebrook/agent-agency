@@ -134,9 +134,43 @@ impl RecoveryMetricsCollector {
             .await;
 
         if success {
-            // Update global latency metrics (simplified - in production you'd use proper percentile calculation)
+            // TODO: Implement proper percentile calculation for latency metrics
+            //       Currently uses basic calculation; should implement proper percentile calculation using statistical methods for accurate latency metrics.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Percentiles are calculated using proper statistical methods
+            // - P50 and P95 calculations are accurate
+            // - Calculation handles various data distributions
+            // - Performance is acceptable
+            //
+            // DEPENDENCIES:
+            // - Statistical analysis libraries (Required)
+            // - Percentile calculation utilities (Required)
+            // - Metrics storage infrastructure (Required)
+            //
+            // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (metrics calculation feature)
+            // - Change Budget: ~100 LOC
+            // - Reviewer Requirements: Statistics expertise
             {
-                let mut global = self.global_metrics.write().await;
+                let mut global = self.global_metrics.write().await; // Temporary: basic until proper percentile calculation
                 if global.restore_latency_p50_ms == 0 || duration_ms < global.restore_latency_p50_ms as f64 {
                     global.restore_latency_p50_ms = duration_ms as u64;
                 }
@@ -164,10 +198,44 @@ impl RecoveryMetricsCollector {
             ], 1)
             .await;
 
-        // Update global conflict rate
+        // TODO: Calculate actual conflict rate from metrics
+        //       Currently uses basic increment; should calculate actual conflict rate from metrics data for accurate conflict tracking.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Conflict rate is calculated from actual metrics
+        // - Calculation is accurate
+        // - Rate reflects actual conflict frequency
+        // - Performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Metrics query infrastructure (Required)
+        // - Rate calculation utilities (Required)
+        // - Conflict tracking infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (metrics calculation feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Metrics calculation expertise
         {
             let mut global = self.global_metrics.write().await;
-            global.conflict_rate += 0.01; // Simplified - in production you'd calculate this properly
+            global.conflict_rate += 0.01; // Temporary: basic increment until proper calculation
         }
 
         Ok(())

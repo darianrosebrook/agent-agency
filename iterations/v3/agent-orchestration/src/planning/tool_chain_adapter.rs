@@ -57,7 +57,6 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
         // - [ ] Validate constraints against system capabilities
         // - [ ] Add unit tests with various constraint configurations
         // - [ ] Add integration tests with real constraint-based planning
-        // Use default constraints for now - in a full implementation, these would be configurable
         let constraints = system_federated_ml::tool_chain_planner::PlanningConstraints {
             max_chain_length: 10,
             max_parallel_branches: 3,
@@ -80,16 +79,41 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
 
     async fn validate_tool_chain(&self, plan: &ToolChainPlan) -> ToolChainResult<ValidationResult> {
         // TODO: Implement comprehensive tool chain validation
-        // - [ ] Validate tool chain structure and dependencies
-        // - [ ] Check for circular dependencies
-        // - [ ] Validate tool availability and capabilities
-        // - [ ] Verify resource constraints are met
-        // - [ ] Check for compatibility between chain steps
-        // - [ ] Add unit tests with various tool chain structures
-        // - [ ] Add integration tests with real tool chain validation
-        // For now, return a basic validation result
-        // In a full implementation, this would validate the tool chain structure
-        let validation_result = ValidationResult {
+        //       Currently returns basic validation; should validate tool chain structure, compatibility, and dependencies comprehensively.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Tool chain structure is validated correctly
+        // - Compatibility between steps is checked
+        // - Dependencies are validated
+        // - Validation provides meaningful feedback
+        //
+        // DEPENDENCIES:
+        // - Tool chain structure (Required)
+        // - Compatibility checking utilities (Required)
+        // - Dependency validation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (validation feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Tool chain validation expertise
+        let validation_result = ValidationResult { // Temporary: basic validation until comprehensive implementation
             is_valid: plan.tool_sequence.len() > 0,
             score: 0.8, // Basic score
             issues: if plan.tool_sequence.is_empty() {
@@ -109,17 +133,42 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
         plan: &ToolChainPlan,
         optimization_criteria: Vec<String>,
     ) -> ToolChainResult<ToolChainPlan> {
-        // TODO: Implement tool chain optimization
-        // - [ ] Parse optimization criteria (performance, cost, reliability)
-        // - [ ] Apply optimization algorithms based on criteria
-        // - [ ] Reorder tool chain steps for better performance
-        // - [ ] Merge or eliminate redundant steps
-        // - [ ] Optimize resource usage and parallelization
-        // - [ ] Add unit tests with various optimization criteria
-        // - [ ] Add integration tests with real tool chain optimization
-        // For now, return the plan as-is
-        // In a full implementation, this would apply optimizations based on criteria
-        warn!("optimize_tool_chain not fully implemented - returning original plan");
+        // TODO: Implement tool chain optimization based on criteria
+        //       Currently returns plan as-is; should apply optimizations based on criteria (resource usage, parallelization, etc.).
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Optimizations are applied based on criteria
+        // - Resource usage is optimized
+        // - Parallelization opportunities are identified
+        // - Optimized plan improves performance
+        //
+        // DEPENDENCIES:
+        // - Optimization algorithms (Required)
+        // - Resource analysis utilities (Required)
+        // - Parallelization analysis utilities (Required)
+        //
+        // ESTIMATED EFFORT: 5-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (optimization feature)
+        // - Change Budget: ~120 LOC
+        // - Reviewer Requirements: Optimization algorithms expertise
+        warn!("optimize_tool_chain not fully implemented - returning original plan"); // Temporary: return as-is until optimization is implemented
         Ok(plan.clone())
     }
 
@@ -199,16 +248,42 @@ impl ToolChainPlannerAdapter {
 
     /// Extract tool sequence from ToolChain DAG
     fn extract_tool_sequence(&self, tool_chain: &system_federated_ml::tool_chain_planner::ToolChain) -> Vec<String> {
-        // TODO: Implement proper DAG topological traversal
-        // - [ ] Implement topological sort algorithm for DAG
-        // - [ ] Extract tool sequence respecting dependencies
-        // - [ ] Handle cycles and circular dependencies
-        // - [ ] Preserve execution order requirements
-        // - [ ] Add unit tests with various DAG structures
-        // - [ ] Add integration tests with real tool chain DAGs
-        // For now, return a simple sequence
-        // In a full implementation, this would traverse the DAG topologically
-        tool_chain.nodes.iter()
+        // TODO: Traverse DAG topologically to determine execution order
+        //       Currently returns simple sequence; should traverse DAG topologically to preserve execution order requirements.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - DAG is traversed topologically
+        // - Execution order requirements are preserved
+        // - Dependencies are respected
+        // - Traversal handles cycles correctly
+        //
+        // DEPENDENCIES:
+        // - Graph algorithms library (Required)
+        // - Topological sort utilities (Required)
+        // - DAG structure (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (graph traversal feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Graph algorithms expertise
+        tool_chain.nodes.iter() // Temporary: simple sequence until topological traversal is implemented
             .map(|node| node.tool_id.clone())
             .collect()
     }
@@ -216,14 +291,40 @@ impl ToolChainPlannerAdapter {
     /// Extract dependencies from ToolChain DAG
     fn extract_dependencies(&self, tool_chain: &system_federated_ml::tool_chain_planner::ToolChain) -> std::collections::HashMap<String, Vec<String>> {
         // TODO: Extract dependencies from DAG edges
-        // - [ ] Parse DAG edge structure to extract dependencies
-        // - [ ] Map tool IDs to their dependency lists
-        // - [ ] Handle transitive dependencies if needed
-        // - [ ] Validate dependency structure for cycles
-        // - [ ] Add unit tests with various dependency patterns
-        // - [ ] Add integration tests with real tool chain dependencies
-        // For now, return empty dependencies
-        // In a full implementation, this would extract from the DAG edges
-        std::collections::HashMap::new()
+        //       Currently returns empty dependencies; should extract dependencies from DAG edges to build dependency map.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Dependencies are extracted from DAG edges
+        // - Dependency map is accurate
+        // - Cycles are detected if present
+        // - Dependency structure is validated
+        //
+        // DEPENDENCIES:
+        // - DAG structure with edges (Required)
+        // - Dependency extraction utilities (Required)
+        // - Cycle detection utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (dependency extraction feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Graph algorithms expertise
+        std::collections::HashMap::new() // Temporary: empty until DAG edge extraction is implemented
     }
 }

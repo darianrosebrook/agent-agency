@@ -32,7 +32,6 @@
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 pub mod council;
 pub mod judges;

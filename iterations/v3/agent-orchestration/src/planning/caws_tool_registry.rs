@@ -10,7 +10,7 @@ use std::sync::Arc;
 use std::collections::HashMap;
 use anyhow::Result;
 use uuid::Uuid;
-use tracing::{info, warn, debug, error};
+use tracing::debug;
 use chrono::Utc;
 
 #[cfg(feature = "mcp")]

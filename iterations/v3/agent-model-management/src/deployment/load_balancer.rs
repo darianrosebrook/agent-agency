@@ -47,7 +47,41 @@ impl LoadBalancer {
 
     /// Complete canary deployment
     pub async fn complete_canary(&mut self, model_id: &str) -> Result<(), ModelManagementError> {
-        // In a real implementation, this would promote the canary to full traffic
+        // TODO: Implement canary promotion to full traffic
+        //       Currently sets allocation to 1.0; should promote canary to full traffic with proper validation and monitoring.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Validate canary performance metrics
+        // [ ] Promote canary to full traffic allocation
+        // [ ] Update load balancer routing rules
+        // [ ] Monitor promotion for issues
+        // [ ] Handle promotion failures gracefully
+        // [ ] Add rollback capability if issues detected
+        // [ ] Add unit tests with mock load balancer
+        // [ ] Add integration tests with real canary promotion
+        // [ ] Performance: Promotion should complete in <1s
+        // [ ] Documentation: Document canary promotion process
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Canary performance is validated before promotion
+        // - Traffic allocation is updated to 100%
+        // - Load balancer routing is updated correctly
+        // - Promotion is monitored for issues
+        // - Rollback works if issues detected
+        //
+        // DEPENDENCIES:
+        // - Performance validation logic (Required)
+        // - Load balancer API (Required)
+        // - Monitoring system (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (deployment feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Load balancing expertise
         if let Some(allocation) = self.allocations.get_mut(model_id) {
             *allocation = 1.0;
         }

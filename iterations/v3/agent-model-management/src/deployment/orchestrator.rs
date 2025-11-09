@@ -258,8 +258,42 @@ impl DeploymentOrchestrator {
 
     /// Perform gradual hot-swap
     async fn perform_gradual_swap(&self, _model_id: &str, _new_version: &str, _steps: u32, _interval_secs: u64) -> Result<HotSwapResult, ModelManagementError> {
-        // Simplified implementation - would implement actual gradual rollout
-        Ok(HotSwapResult {
+        // TODO: Implement actual gradual rollout strategy
+        //       Currently returns mock result; should implement actual gradual rollout with step-by-step traffic shifting and monitoring.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Gradual rollout shifts traffic incrementally
+        // - Each step is monitored for issues
+        // - Rollback is possible at any step
+        // - Performance metrics are tracked
+        //
+        // DEPENDENCIES:
+        // - Traffic routing infrastructure (Required)
+        // - Monitoring system (Required)
+        // - Rollback mechanism (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (deployment feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Deployment and traffic management expertise
+        Ok(HotSwapResult { // Temporary: mock result until actual rollout
             model_id: _model_id.to_string(),
             new_version: _new_version.to_string(),
             success: true,
@@ -276,8 +310,42 @@ impl DeploymentOrchestrator {
 
     /// Perform A/B test hot-swap
     async fn perform_ab_test_swap(&self, _model_id: &str, _new_version: &str, _test_duration_secs: u64, _success_threshold: f64) -> Result<HotSwapResult, ModelManagementError> {
-        // Simplified implementation - would implement actual A/B testing
-        Ok(HotSwapResult {
+        // TODO: Implement actual A/B testing infrastructure
+        //       Currently returns mock result; should implement actual A/B testing with traffic splitting, statistical analysis, and winner selection.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Traffic is split between A and B variants
+        // - Statistical analysis determines winner
+        // - Test duration is respected
+        // - Success threshold is evaluated correctly
+        //
+        // DEPENDENCIES:
+        // - Traffic splitting infrastructure (Required)
+        // - Statistical analysis utilities (Required)
+        // - Metrics collection (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (deployment feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: A/B testing and statistics expertise
+        Ok(HotSwapResult { // Temporary: mock result until actual A/B testing
             model_id: _model_id.to_string(),
             new_version: _new_version.to_string(),
             success: true,
@@ -294,8 +362,42 @@ impl DeploymentOrchestrator {
 
     /// Perform blue-green hot-swap
     async fn perform_blue_green_swap(&self, _model_id: &str, _new_version: &str) -> Result<HotSwapResult, ModelManagementError> {
-        // Simplified implementation - would implement actual blue-green deployment
-        Ok(HotSwapResult {
+        // TODO: Implement actual blue-green deployment strategy
+        //       Currently returns mock result; should implement actual blue-green deployment with parallel environments and instant traffic switching.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Blue and green environments run in parallel
+        // - Traffic switches instantly between environments
+        // - Rollback is immediate if issues detected
+        // - Environment cleanup works correctly
+        //
+        // DEPENDENCIES:
+        // - Environment management infrastructure (Required)
+        // - Traffic routing system (Required)
+        // - Health check system (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (deployment feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Deployment and infrastructure expertise
+        Ok(HotSwapResult { // Temporary: mock result until actual blue-green deployment
             model_id: _model_id.to_string(),
             new_version: _new_version.to_string(),
             success: true,

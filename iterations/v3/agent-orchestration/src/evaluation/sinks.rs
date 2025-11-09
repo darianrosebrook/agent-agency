@@ -161,9 +161,42 @@ impl ParquetSink {
 
 impl TraceSink for ParquetSink {
     fn write_trace(&self, _trace: &Trace) -> Result<(), String> {
-        // PLACEHOLDER: Parquet implementation requires parquet crate
-        // For now, convert to JSONL format
-        Err("Parquet sink not yet implemented. Use JSONL sink instead.".to_string())
+        // TODO: Implement Parquet trace sink
+        //       Currently returns error; should implement Parquet trace sink using parquet crate for efficient columnar storage.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Traces are written to Parquet format correctly
+        // - Parquet schema matches trace structure
+        // - Write performance is acceptable
+        // - Error handling works for write failures
+        //
+        // DEPENDENCIES:
+        // - Parquet crate (Required)
+        // - Trace serialization utilities (Required)
+        // - Parquet schema definition (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (storage format enhancement)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Parquet and data serialization expertise
+        Err("Parquet sink not yet implemented. Use JSONL sink instead.".to_string()) // Temporary: error until Parquet implementation
     }
     
     fn sink_type(&self) -> &str {
@@ -212,8 +245,41 @@ impl RedactionLayer {
     
     /// Redact PII from an event
     fn redact_event(&self, event: &mut EventEnvelope) {
-        // Redact email addresses, IP addresses, and other PII patterns
-        // This is a simplified implementation - in production, use a proper PII detection library
+        // TODO: Integrate proper PII detection library
+        //       Currently uses basic pattern matching; should integrate production-grade PII detection library for comprehensive PII redaction.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - PII detection uses production library
+        // - All PII types are detected accurately
+        // - Redaction preserves data structure
+        // - Performance meets requirements
+        //
+        // DEPENDENCIES:
+        // - PII detection library (Required)
+        // - PII redaction utilities (Required)
+        // - Pattern matching infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (security-critical feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Security and PII detection expertise
         
         match &mut event.kind {
             crate::evaluation::trace::EventKind::Decision(dp) => {
@@ -249,8 +315,42 @@ impl RedactionLayer {
             return true;
         }
         
-        // Credit card pattern (simplified)
-        if regex::Regex::new(r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b").unwrap().is_match(text) {
+        // TODO: Implement comprehensive credit card detection
+        //       Currently uses basic pattern; should implement comprehensive credit card detection using proper validation algorithms.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Credit card numbers are detected accurately
+        // - Luhn algorithm validation is applied
+        // - Various card formats are supported
+        // - False positives are minimized
+        //
+        // DEPENDENCIES:
+        // - Credit card validation algorithms (Required)
+        // - Pattern matching utilities (Required)
+        // - Luhn algorithm implementation (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (security-critical feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Security and PII detection expertise
+        if regex::Regex::new(r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b").unwrap().is_match(text) { // Temporary: basic pattern until comprehensive detection
             return true;
         }
         
@@ -408,6 +508,40 @@ mod tests {
         let traces = inner.get_traces();
         assert_eq!(traces.len(), 1);
         // The reasoning should be redacted
-        // Note: This is a simplified test - full PII detection would be more comprehensive
+        // TODO: Implement comprehensive PII detection test
+        //       Currently uses basic test; should implement comprehensive test covering all PII types and edge cases.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - All PII types are tested
+        // - Edge cases are covered
+        // - Test assertions are comprehensive
+        // - Test reliability is high
+        //
+        // DEPENDENCIES:
+        // - PII detection infrastructure (Required)
+        // - Test data fixtures (Required)
+        // - Test utilities (Required)
+        //
+        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (test coverage enhancement)
+        // - Change Budget: ~60 LOC
+        // - Reviewer Requirements: Testing and PII detection expertise
     }
 }

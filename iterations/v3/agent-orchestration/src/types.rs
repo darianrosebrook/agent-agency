@@ -10,9 +10,6 @@ use schemars::JsonSchema;
 use std::collections::HashMap;
 
 // Import contracts types directly
-use agent_agency_contracts::WorkingSpec as ContractsWorkingSpec;
-use agent_agency_contracts::types::planning::{TaskPriority, BlastRadius, ExecutionMode};
-use agent_agency_contracts::planning_io::ChangeBudget as ContractsChangeBudget;
 
 /// Task scope definition for orchestration
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

@@ -1,7 +1,7 @@
 //! Council error types and results
 
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use std::fmt;
+use serde::{Serialize, Deserialize};
 
 /// Result type for council operations
 pub type CouncilResult<T> = Result<T, CouncilError>;

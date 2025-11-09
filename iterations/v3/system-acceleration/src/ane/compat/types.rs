@@ -243,7 +243,41 @@ impl MLDictionaryFeatureProvider {
         for (name, value) in dict {
             match value {
                 MLFeatureValue::MultiArray(array) => {
-                    // For now, only support float32 arrays
+                    // TODO: Implement comprehensive multi-array data type support
+                    //       Currently only supports float32 arrays; should implement comprehensive support for multiple data types (int32, int64, float64, etc.) for complete Core ML feature value handling.
+                    //
+                    // COMPLETION CHECKLIST:
+                    // [ ] Primary functionality implemented
+                    // [ ] API/data structures defined & stable
+                    // [ ] Error handling + validation aligned with error taxonomy
+                    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                    // [ ] Integration tests for external systems/contracts
+                    // [ ] Documentation: public API + system behavior
+                    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                    // [ ] Configurability and feature flags defined if relevant
+                    // [ ] Failure-mode cards documented (degradation paths)
+                    //
+                    // ACCEPTANCE CRITERIA:
+                    // - Multiple data types are supported (int32, int64, float64, etc.)
+                    // - Data type conversion is accurate
+                    // - Unsupported types are handled gracefully
+                    // - Type validation is comprehensive
+                    //
+                    // DEPENDENCIES:
+                    // - Data type conversion utilities (Required)
+                    // - Core ML type mapping (Required)
+                    // - Type validation system (Required)
+                    //
+                    // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+                    // PRIORITY: Medium
+                    // BLOCKING: No
+                    //
+                    // GOVERNANCE:
+                    // - CAWS Tier: 2 (Core ML integration functionality)
+                    // - Change Budget: ~250 LOC
+                    // - Reviewer Requirements: Core ML and type system expertise
                     if array.data_type != MLMultiArrayDataType::Float32 {
                         return Err(format!("Unsupported data type for feature '{}'", name));
                     }

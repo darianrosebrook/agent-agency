@@ -284,10 +284,39 @@ impl DataConsistencyManager {
         }
 
         if !commit_failures.is_empty() {
-            // Some participants failed to commit - this is a critical error
-            // In a real distributed system, we'd need complex recovery procedures
-            // For now, log the failures but still mark as committed since 2PC decision was made
-            warn!("Some participants failed to commit transaction {}: {:?}", transaction_id, commit_failures);
+            // TODO: Implement complex recovery procedures for commit failures
+            //       Currently logs failures but marks as committed; should implement proper recovery procedures for distributed systems.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Implement transaction recovery procedures
+            // [ ] Handle partial commit scenarios
+            // [ ] Coordinate recovery across participants
+            // [ ] Support transaction compensation
+            // [ ] Handle network partitions during recovery
+            // [ ] Add unit tests for recovery procedures
+            // [ ] Add integration tests with failure scenarios
+            // [ ] Verify recovery correctness
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Recovery procedures handle commit failures correctly
+            // - Partial commits are handled appropriately
+            // - Recovery coordinates across participants
+            // - Network partitions are handled during recovery
+            //
+            // DEPENDENCIES:
+            // - Recovery coordination infrastructure (Required)
+            // - Transaction compensation utilities (Required)
+            // - Network partition handling (Required)
+            //
+            // ESTIMATED EFFORT: 6-8 hours (low confidence - complex distributed systems)
+            // PRIORITY: High
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 1 (critical distributed systems feature)
+            // - Change Budget: ~150 LOC
+            // - Reviewer Requirements: Distributed systems expertise
+            warn!("Some participants failed to commit transaction {}: {:?}", transaction_id, commit_failures); // Temporary: log until recovery procedures are implemented
         }
 
         // Mark transaction as committed
@@ -343,9 +372,39 @@ impl DataConsistencyManager {
 
     /// Recover a single in-doubt transaction
     async fn recover_transaction(&self, transaction_id: &str) -> Result<(), String> {
-        // Implementation would check with participants to determine outcome
-        // For now, we'll use a simple heuristic
-        let transactions = self.transactions.read().await;
+        // TODO: Check with participants to determine transaction outcome
+        //       Currently uses simple heuristic; should check with participants to determine actual outcome.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Query each participant for transaction state
+        // [ ] Determine transaction outcome from participant responses
+        // [ ] Handle inconsistent participant states
+        // [ ] Commit or abort transaction based on outcome
+        // [ ] Handle participant unavailability
+        // [ ] Add unit tests for transaction recovery
+        // [ ] Add integration tests with various scenarios
+        // [ ] Verify recovery correctness
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Transaction state is queried from participants correctly
+        // - Outcome is determined accurately from participant responses
+        // - Inconsistent states are handled appropriately
+        // - Participant unavailability is handled gracefully
+        //
+        // DEPENDENCIES:
+        // - Participant query API (Required)
+        // - Transaction state tracking (Required)
+        // - Outcome determination logic (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (critical distributed systems feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Distributed systems expertise
+        let transactions = self.transactions.read().await; // Temporary: simple heuristic until participant query is implemented
         let transaction = transactions.get(transaction_id)
             .ok_or(format!("Transaction not found: {}", transaction_id))?;
 
@@ -686,9 +745,39 @@ impl DataConsistencyManager {
             }
         }
 
-        // If we get here, all operations succeeded - keep transaction open for commit phase
-        // In a real implementation, we'd store the transaction handle for later commit/rollback
-        Ok(())
+        // TODO: Store transaction handle for later commit/rollback
+        //       Currently keeps transaction open; should store transaction handle for proper commit/rollback management.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Store transaction handle in transaction registry
+        // [ ] Associate handle with transaction ID
+        // [ ] Support transaction handle retrieval
+        // [ ] Handle transaction handle cleanup
+        // [ ] Support transaction handle expiration
+        // [ ] Add unit tests for handle storage
+        // [ ] Add integration tests with transaction lifecycle
+        // [ ] Verify handle storage and retrieval
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Transaction handles are stored correctly
+        // - Handles are associated with transaction IDs
+        // - Handles can be retrieved for commit/rollback
+        // - Handle cleanup works correctly
+        //
+        // DEPENDENCIES:
+        // - Transaction registry (Required)
+        // - Handle storage infrastructure (Required)
+        // - Handle lifecycle management (Required)
+        //
+        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (transaction management feature)
+        // - Change Budget: ~60 LOC
+        // - Reviewer Requirements: Transaction management expertise
+        Ok(()) // Temporary: keep transaction open until handle storage is implemented
     }
 
     /// Execute commit phase for a participant (Phase 2 of 2PC)
@@ -699,9 +788,39 @@ impl DataConsistencyManager {
         let pool = sqlx::PgPool::connect(&participant.connection_info).await
             .map_err(|e| format!("Failed to connect to participant database: {}", e))?;
 
-        // In a real implementation, we'd retrieve the prepared transaction and commit it
-        // For now, we'll simulate the commit by executing the operations again
-        // (in reality, the operations would be prepared but not committed)
+        // TODO: Retrieve prepared transaction and commit it
+        //       Currently simulates commit by re-executing; should retrieve prepared transaction and commit it properly.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Retrieve prepared transaction from participant
+        // [ ] Commit prepared transaction using transaction handle
+        // [ ] Handle prepared transaction not found errors
+        // [ ] Support transaction commit retry
+        // [ ] Verify transaction commit success
+        // [ ] Add unit tests for prepared transaction commit
+        // [ ] Add integration tests with real database
+        // [ ] Verify commit correctness
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Prepared transactions are retrieved correctly
+        // - Transactions are committed using proper handles
+        // - Missing prepared transactions are handled gracefully
+        // - Commit retry works correctly
+        //
+        // DEPENDENCIES:
+        // - Prepared transaction storage (Required)
+        // - Transaction commit API (Required)
+        // - Transaction handle retrieval (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (critical transaction feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Database transaction expertise
+        // Temporary: simulate commit until prepared transaction retrieval is implemented
 
         let mut tx = pool.begin().await
             .map_err(|e| format!("Failed to start commit transaction: {}", e))?;
@@ -790,9 +909,40 @@ impl DataConsistencyManager {
         let _pool = sqlx::PgPool::connect(&participant.connection_info).await
             .map_err(|e| format!("Failed to connect to participant database: {}", e))?;
 
-        // In a real implementation, we'd rollback the prepared transaction
-        // For now, we'll simulate by not executing any operations
-        // (in reality, the prepared transaction would be rolled back)
+        // TODO: Implement transaction rollback with the following requirements:
+        // 1. Prepared transaction rollback: Rollback the prepared transaction
+        //    - Identify the prepared transaction by transaction ID
+        //    - Execute ROLLBACK PREPARED statement
+        //    - Handle rollback errors and connection failures
+        // 2. State cleanup: Clean up transaction state
+        //    - Remove transaction from active transaction tracking
+        //    - Release any held locks or resources
+        //    - Update transaction status appropriately
+        // 3. Error handling: Handle rollback failures gracefully
+        //    - Log rollback failures for investigation
+        //    - Attempt retry with exponential backoff
+        //    - Ensure system remains in consistent state
+        // TODO: Implement actual transaction rollback:
+        // 1. Transaction rollback: Execute actual rollback operations
+        //    - Rollback prepared transactions in participant databases
+        //    - Execute ROLLBACK commands for each participant
+        //    - Verify rollback completion and status
+        // 2. Rollback verification: Verify rollback success
+        //    - Confirm transactions are rolled back
+        //    - Verify data consistency after rollback
+        //    - Handle partial rollback failures
+        // 3. State management: Manage transaction state
+        //    - Update transaction status to aborted
+        //    - Clean up transaction resources
+        //    - Notify participants of rollback completion
+        // ACCEPTANCE CRITERIA:
+        // - Prepared transactions are rolled back in participant databases
+        // - Rollback operations complete successfully
+        // - Transaction state is properly updated after rollback
+        // DEPENDENCIES:
+        // - Database transaction management (Required)
+        // - Participant database connections (Required)
+        // PRIORITY: High
 
         info!("Successfully aborted operations for participant {} in transaction {}",
               participant.service_id, transaction_id);

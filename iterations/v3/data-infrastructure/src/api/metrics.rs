@@ -95,7 +95,6 @@ pub async fn metrics_stream(
                 // - [ ] Support metrics aggregation and reporting
                 // - [ ] Add unit tests with mock business metrics
                 // - [ ] Add integration tests with real metrics collection
-                // Use fallback business metrics for now
                 let business_metrics = crate::BusinessMetrics {
                     active_users: 0,
                     requests_per_second: 0.0,

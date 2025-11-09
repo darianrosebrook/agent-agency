@@ -70,6 +70,7 @@ use sqlx::Row;
 
 // Unified orchestrator adapter
 use data_interfaces_adapters::orchestration_adapter::UnifiedOrchestratorAdapter;
+use data_interfaces::service_contracts::OrchestrationService;
 
 // API modules
 #[cfg(feature = "orchestration")]
@@ -498,10 +499,12 @@ async fn submit_task_handler(
                 }
             };
 
-            // Create TaskContext
-            use agent_agency_contracts::TaskContext;
-            use agent_agency_contracts::task_request::Environment;
-            let task_context = TaskContext {
+            // Create TaskContext (convert from RequestTaskContext to ContractsTaskContext)
+            use agent_agency_contracts::task_request::{TaskContext as RequestTaskContext, Environment};
+            use agent_agency_contracts::TaskContext as ContractsTaskContext;
+            use chrono::Utc;
+            
+            let request_context = RequestTaskContext {
                 workspace_root: std::env::current_dir()
                     .ok()
                     .and_then(|p| p.to_str().map(|s| s.to_string()))
@@ -510,6 +513,23 @@ async fn submit_task_handler(
                 recent_changes: vec![],
                 dependencies: std::collections::HashMap::new(),
                 environment: Environment::Development,
+            };
+            
+            // Convert to ContractsTaskContext
+            let task_context = ContractsTaskContext {
+                task_id: Uuid::new_v4(), // Generate new task ID
+                worker_id: Uuid::new_v4(), // Generate worker ID
+                start_time: Utc::now(),
+                timeout_ms: 300_000, // 5 minutes default
+                retry_count: 0,
+                max_retries: 3,
+                metadata: {
+                    let mut meta = std::collections::HashMap::new();
+                    meta.insert("workspace_root".to_string(), serde_json::Value::String(request_context.workspace_root));
+                    meta.insert("git_branch".to_string(), serde_json::Value::String(request_context.git_branch));
+                    meta.insert("environment".to_string(), serde_json::Value::String(format!("{:?}", request_context.environment)));
+                    meta
+                },
             };
 
             // Execute task via UnifiedOrchestratorAdapter
@@ -608,7 +628,6 @@ async fn get_task_status_handler(
     {
         // Use UnifiedOrchestratorAdapter if available, fallback to legacy API
         if let Some(unified_orchestrator) = &state.unified_orchestrator {
-            use data_interfaces::service_contracts::OrchestrationService;
             match unified_orchestrator.get_task_status(&task_uuid).await {
                 Ok(status) => {
                     use data_infrastructure::api::types::TaskStatusResponse;
@@ -947,8 +966,27 @@ async fn chat_handler(
             .and_then(|v| v.as_str())
             .and_then(|s| Uuid::parse_str(s).ok());
 
-        // For now, return a response indicating we're observing orchestrator context
-        // In full implementation, this would query the orchestrator's context/memory system
+        // TODO: Integrate with orchestrator context/memory system:
+        // 1. Context querying: Query orchestrator's context system
+        //    - Retrieve context for the given task ID
+        //    - Access orchestrator's memory/context storage
+        //    - Handle context retrieval errors gracefully
+        // 2. Memory integration: Integrate with memory system
+        //    - Query memory system for relevant context
+        //    - Retrieve conversation history and context
+        //    - Support context filtering and search
+        // 3. Response generation: Generate contextual responses
+        //    - Use retrieved context to inform responses
+        //    - Include relevant context in response
+        //    - Handle missing context appropriately
+        // ACCEPTANCE CRITERIA:
+        // - Orchestrator context is queried for given task ID
+        // - Memory system integration provides relevant context
+        // - Responses include contextual information when available
+        // DEPENDENCIES:
+        // - Orchestrator context API (Required)
+        // - Memory system integration (Required)
+        // PRIORITY: High
         let mut response = serde_json::json!({
             "response": format!("Query received: '{}'. This endpoint observes orchestrator context. Full chat integration requires orchestrator memory/context system.", query),
             "query": query,
@@ -1250,7 +1288,28 @@ async fn execute_query_handler(
             .and_then(|v| v.as_str())
             .ok_or(StatusCode::BAD_REQUEST)?;
 
-        // Basic safety check - only allow SELECT queries for now
+        // TODO: Implement comprehensive SQL query safety validation:
+        // 1. Query type validation: Support additional safe query types
+        //    - Allow SELECT queries (read-only operations)
+        //    - Support EXPLAIN, DESCRIBE, SHOW queries (metadata queries)
+        //    - Validate against dangerous operations (DROP, DELETE, UPDATE, etc.)
+        // 2. SQL injection prevention: Enhanced protection against SQL injection
+        //    - Parse and validate SQL syntax structure
+        //    - Whitelist allowed SQL keywords and patterns
+        //    - Block dangerous SQL patterns and functions
+        // 3. Query complexity limits: Prevent resource exhaustion
+        //    - Limit query execution time and resource usage
+        //    - Restrict result set sizes and pagination
+        //    - Monitor and throttle query execution
+        // ACCEPTANCE CRITERIA:
+        // - Only safe read-only queries are allowed to execute
+        // - SQL injection attempts are detected and blocked
+        // - Query complexity limits prevent resource exhaustion
+        // - Dangerous operations (DROP, DELETE, UPDATE) are rejected
+        // DEPENDENCIES:
+        // - SQL parser for syntax validation (Required)
+        // - Query complexity analyzer (Required)
+        // PRIORITY: High
         let query_upper = query_text.trim().to_uppercase();
         if !query_upper.starts_with("SELECT") {
             return Err(StatusCode::BAD_REQUEST);
@@ -1258,9 +1317,41 @@ async fn execute_query_handler(
 
         match db.query(query_text, &[]).await {
             Ok(rows) => {
-                // Convert rows to JSON (simplified - would need proper type handling)
+                // TODO: Implement proper database row to JSON serialization
+                //       Currently returns empty JSON objects; should properly serialize row data with type handling and column mapping.
+                //
+                // COMPLETION CHECKLIST:
+                // [ ] Extract column names from query result
+                // [ ] Map database types to JSON types
+                // [ ] Handle NULL values appropriately
+                // [ ] Support all PostgreSQL types (text, numeric, boolean, json, etc.)
+                // [ ] Add proper error handling for type conversion failures
+                // [ ] Add unit tests with various row types
+                // [ ] Add integration tests with real database queries
+                // [ ] Performance: Serialization should complete in <10ms for typical rows
+                // [ ] Documentation: Document type mapping rules
+                //
+                // ACCEPTANCE CRITERIA:
+                // - All database types are properly converted to JSON
+                // - Column names are preserved in JSON output
+                // - NULL values are handled correctly (null vs omitted)
+                // - Nested types (arrays, objects) are properly serialized
+                // - Error handling provides clear messages for conversion failures
+                //
+                // DEPENDENCIES:
+                // - Database query result rows (Required)
+                // - Column metadata from query (Required)
+                // - Type conversion utilities (Required)
+                //
+                // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+                // PRIORITY: Medium
+                // BLOCKING: No
+                //
+                // GOVERNANCE:
+                // - CAWS Tier: 2 (API server feature)
+                // - Change Budget: ~150 LOC
+                // - Reviewer Requirements: Database and serialization expertise
                 let results: Vec<JsonValue> = rows.into_iter().map(|_row| {
-                    // TODO: Properly serialize row data
                     serde_json::json!({})
                 }).collect();
 

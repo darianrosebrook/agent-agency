@@ -136,8 +136,41 @@ impl VisualIndexer {
     // Private helper methods
 
     fn generate_visual_embedding(&self, doc: &VisualDocument) -> Result<EmbeddingVector> {
-        // Placeholder - would use CLIP or similar model
-        // For now, generate a simple embedding based on image features
+        // TODO: Implement comprehensive CLIP-based visual embedding generation
+        //       Currently generates simple embedding based on image features; should implement comprehensive generation that uses CLIP or similar model for accurate visual embeddings.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - CLIP or similar model is integrated
+        // - Visual embeddings are generated accurately
+        // - Image features are extracted and processed correctly
+        // - Embedding generation handles various image formats
+        //
+        // DEPENDENCIES:
+        // - CLIP model integration (Required)
+        // - Image feature extraction (Required)
+        // - Visual embedding utilities (Required)
+        //
+        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (visual embedding functionality)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: CLIP integration and visual embedding expertise
         let features = if let Some(ref features) = doc.features {
             features.clone()
         } else {

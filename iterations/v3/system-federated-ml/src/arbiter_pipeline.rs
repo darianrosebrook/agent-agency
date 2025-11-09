@@ -163,12 +163,37 @@ impl CommonPipelineStage<DecisionInput, DecisionResult> for DecisionStageAdapter
             }
             DecisionStage::RiskAssessment => {
                 // TODO: Implement real risk assessment
-                // - [ ] Analyze task characteristics for risk factors
-                // - [ ] Calculate risk tier based on task complexity and requirements
-                // - [ ] Use risk analysis models or heuristics
-                // - [ ] Add unit tests with various task types
-                // - [ ] Add integration tests with real risk assessment
-                // Placeholder risk assessment - would use actual risk analysis
+                //       Currently returns default risk tier; should analyze task characteristics and calculate risk tier based on complexity and requirements.
+                //
+                // COMPLETION CHECKLIST:
+                // [ ] Analyze task characteristics for risk factors
+                // [ ] Calculate risk tier based on task complexity and requirements
+                // [ ] Use risk analysis models or heuristics
+                // [ ] Handle edge cases and ambiguous tasks
+                // [ ] Add unit tests with various task types
+                // [ ] Add integration tests with real risk assessment
+                // [ ] Performance: Risk assessment should complete in <10ms
+                // [ ] Documentation: Document risk assessment methodology
+                //
+                // ACCEPTANCE CRITERIA:
+                // - Risk factors are identified from task characteristics
+                // - Risk tier is calculated accurately
+                // - Risk analysis uses appropriate models or heuristics
+                // - Edge cases are handled appropriately
+                // - Assessment performance is acceptable
+                //
+                // DEPENDENCIES:
+                // - Risk analysis models or heuristics (Required)
+                // - Task characteristic analysis (Required)
+                //
+                // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+                // PRIORITY: Medium
+                // BLOCKING: No
+                //
+                // GOVERNANCE:
+                // - CAWS Tier: 2 (risk assessment feature)
+                // - Change Budget: ~200 LOC
+                // - Reviewer Requirements: Risk analysis expertise
                 Ok(DecisionResult {
                     task_type: input.task_description.clone(),
                     risk_tier: "medium".to_string(),
@@ -179,12 +204,38 @@ impl CommonPipelineStage<DecisionInput, DecisionResult> for DecisionStageAdapter
             }
             DecisionStage::WorkerSelection => {
                 // TODO: Implement real worker selection
-                // - [ ] Match task requirements with worker capabilities
-                // - [ ] Consider worker load and availability
-                // - [ ] Use worker selection algorithms (round-robin, least-loaded, etc.)
-                // - [ ] Add unit tests with various worker configurations
-                // - [ ] Add integration tests with real worker pools
-                // Placeholder worker selection - would use actual worker matching
+                //       Currently returns default worker pool; should match task requirements with worker capabilities and consider load/availability.
+                //
+                // COMPLETION CHECKLIST:
+                // [ ] Match task requirements with worker capabilities
+                // [ ] Consider worker load and availability
+                // [ ] Use worker selection algorithms (round-robin, least-loaded, etc.)
+                // [ ] Handle worker unavailability gracefully
+                // [ ] Add unit tests with various worker configurations
+                // [ ] Add integration tests with real worker pools
+                // [ ] Performance: Worker selection should complete in <5ms
+                // [ ] Documentation: Document worker selection algorithms
+                //
+                // ACCEPTANCE CRITERIA:
+                // - Task requirements are matched with worker capabilities
+                // - Worker load and availability are considered
+                // - Selection algorithm produces optimal assignments
+                // - Worker unavailability is handled gracefully
+                // - Selection performance is acceptable
+                //
+                // DEPENDENCIES:
+                // - Worker capability registry (Required)
+                // - Worker load monitoring (Required)
+                // - Selection algorithm implementation (Required)
+                //
+                // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+                // PRIORITY: Medium
+                // BLOCKING: No
+                //
+                // GOVERNANCE:
+                // - CAWS Tier: 2 (worker management feature)
+                // - Change Budget: ~200 LOC
+                // - Reviewer Requirements: Load balancing expertise
                 Ok(DecisionResult {
                     task_type: input.task_description.clone(),
                     risk_tier: "medium".to_string(),
@@ -195,13 +246,39 @@ impl CommonPipelineStage<DecisionInput, DecisionResult> for DecisionStageAdapter
             }
             DecisionStage::SpeculativeExecution => {
                 // TODO: Implement real speculative execution
-                // - [ ] Determine when to use speculative execution
-                // - [ ] Execute multiple task variants in parallel
-                // - [ ] Select best result based on outcomes
-                // - [ ] Handle speculative execution cancellation
-                // - [ ] Add unit tests with speculative scenarios
-                // - [ ] Add integration tests with real speculative execution
-                // Placeholder speculative execution - would implement actual speculative logic
+                //       Currently returns default result; should determine when to use speculative execution, execute variants in parallel, and select best result.
+                //
+                // COMPLETION CHECKLIST:
+                // [ ] Determine when to use speculative execution
+                // [ ] Execute multiple task variants in parallel
+                // [ ] Select best result based on outcomes
+                // [ ] Handle speculative execution cancellation
+                // [ ] Manage resource usage for parallel execution
+                // [ ] Add unit tests with speculative scenarios
+                // [ ] Add integration tests with real speculative execution
+                // [ ] Performance: Speculative execution should complete in <200ms
+                // [ ] Documentation: Document speculative execution strategy
+                //
+                // ACCEPTANCE CRITERIA:
+                // - Speculative execution is triggered appropriately
+                // - Multiple variants are executed in parallel
+                // - Best result is selected correctly
+                // - Cancellation works properly
+                // - Resource usage is managed efficiently
+                //
+                // DEPENDENCIES:
+                // - Parallel execution infrastructure (Required)
+                // - Result comparison logic (Required)
+                // - Cancellation mechanism (Required)
+                //
+                // ESTIMATED EFFORT: 10-15 hours (low confidence)
+                // PRIORITY: Medium
+                // BLOCKING: No
+                //
+                // GOVERNANCE:
+                // - CAWS Tier: 2 (execution optimization feature)
+                // - Change Budget: ~300 LOC
+                // - Reviewer Requirements: Parallel execution expertise
                 Ok(DecisionResult {
                     task_type: input.task_description.clone(),
                     risk_tier: "medium".to_string(),
@@ -306,9 +383,40 @@ impl ArbiterPipelineOptimizer {
             .copied()
             .unwrap_or(self.config.max_concurrent_decisions as f64) as usize;
 
-        // Update configuration
-        // Note: In a real implementation, this would update the running pipeline
-
+        // TODO: Implement running pipeline configuration update
+        //       Currently updates config only; should update the running pipeline with new configuration dynamically.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Update running pipeline with new configuration
+        // [ ] Apply latency target to pipeline components
+        // [ ] Update concurrent decision limits
+        // [ ] Handle configuration update errors
+        // [ ] Verify configuration is applied correctly
+        // [ ] Add unit tests with mock pipeline
+        // [ ] Add integration tests with real pipeline updates
+        // [ ] Performance: Update should complete in <100ms
+        // [ ] Documentation: Document configuration update process
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Running pipeline is updated with new configuration
+        // - Latency targets are applied to components
+        // - Concurrent limits are enforced
+        // - Configuration updates are verified
+        // - Update errors are handled gracefully
+        //
+        // DEPENDENCIES:
+        // - Pipeline update API (Required)
+        // - Configuration management (Required)
+        // - Pipeline state tracking (Required)
+        //
+        // ESTIMATED EFFORT: 5-7 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (pipeline management feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Pipeline management expertise
         debug!("Updated pipeline config: latency={}ms, concurrent={}", target_latency, max_concurrent);
 
         Ok(())
@@ -371,8 +479,37 @@ impl ArbiterPipelineOptimizer {
 
     /// Make standard decision (non-speculative)
     async fn make_standard_decision(&self, task_description: &str, context: &str) -> Result<DecisionResult> {
-        // Simplified decision logic - in real implementation this would use ML models
-        // or rule-based classification
+        // TODO: Implement ML-based or rule-based decision logic
+        //       Currently uses basic decision logic; should use ML models or rule-based classification for accurate decisions.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement ML model for decision classification
+        // [ ] Or implement rule-based classification system
+        // [ ] Train/configure decision model with historical data
+        // [ ] Handle decision confidence and uncertainty
+        // [ ] Add unit tests with various decision scenarios
+        // [ ] Add integration tests with real decision tasks
+        // [ ] Performance: Decision should complete in <100ms
+        // [ ] Documentation: Document decision methodology
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Decisions are accurate and consistent
+        // - Decision confidence is properly calculated
+        // - Handles edge cases and ambiguous inputs
+        // - Performance meets latency requirements
+        //
+        // DEPENDENCIES:
+        // - ML model or rule engine (Required)
+        // - Training data or rule definitions (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (decision making feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: ML or rule-based systems expertise
 
         let task_type = self.classify_task_type(task_description)?;
         let risk_tier = self.assess_risk_tier(task_description, context)?;
@@ -503,7 +640,40 @@ impl ArbiterPipelineOptimizer {
         let hit = if cache_hit { 1.0 } else { 0.0 };
         metrics.cache_hit_rate = metrics.cache_hit_rate * (1.0 - hit_rate_alpha) + hit * hit_rate_alpha;
 
-        // Update speculative accuracy (simplified)
+        // TODO: Implement proper speculative accuracy tracking
+        //       Currently uses basic update; should track speculative accuracy with proper statistical methods.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Track actual speculative execution outcomes
+        // [ ] Compare speculative results with final results
+        // [ ] Calculate accuracy metrics using proper statistical methods
+        // [ ] Track accuracy over time windows
+        // [ ] Handle accuracy calculation errors
+        // [ ] Add unit tests with various accuracy scenarios
+        // [ ] Add integration tests with real speculative execution
+        // [ ] Performance: Accuracy tracking should complete in <1ms
+        // [ ] Documentation: Document accuracy calculation methodology
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Speculative accuracy reflects actual execution outcomes
+        // - Statistical methods are used for accuracy calculation
+        // - Accuracy is tracked over appropriate time windows
+        // - Accuracy metrics are accurate and reliable
+        // - Tracking performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Outcome tracking system (Required)
+        // - Statistical analysis utilities (Required)
+        // - Time window management (Required)
+        //
+        // ESTIMATED EFFORT: 5-7 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (monitoring feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Statistics expertise
         if confidence >= self.config.speculative_threshold {
             let accuracy_alpha = 0.05;
             metrics.speculative_accuracy = metrics.speculative_accuracy * (1.0 - accuracy_alpha) + 0.9 * accuracy_alpha;

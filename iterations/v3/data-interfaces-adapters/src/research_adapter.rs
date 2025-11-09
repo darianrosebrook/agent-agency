@@ -12,7 +12,7 @@ use agent_agency_contracts::{
 };
 use std::sync::Arc;
 use agent_research::planning_agent::{
-    PlanningAgent, PlanningRequest, PlanningResponse,
+    PlanningAgent, PlanningRequest,
     planning_errors::PlanningError,
     types::{PlanningConfig, ValidationStatus},
 };
@@ -136,9 +136,41 @@ impl ResearchService for ResearchServiceAdapter {
         spec: &mut WorkingSpec,
         validation_issues: &[ValidationIssue],
     ) -> Result<(), ServiceError> {
-        // The refinement is handled internally by the planning agent
-        // This method is for manual refinement if needed
-        // For now, return success as refinement is handled in plan_task
+        // TODO: Implement comprehensive working spec refinement
+        //       Currently returns success as refinement is handled in plan_task; should implement comprehensive refinement that allows manual refinement of working spec based on validation issues for complete refinement support.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Working spec is refined based on validation issues
+        // - Refinement addresses all validation issues
+        // - Refined spec maintains consistency and validity
+        // - Manual refinement integrates with planning agent refinement
+        //
+        // DEPENDENCIES:
+        // - Working spec refinement utilities (Required)
+        // - Validation issue processing (Required)
+        // - Planning agent integration (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (working spec refinement functionality)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Working spec and validation expertise
         Ok(())
     }
 }

@@ -4,13 +4,13 @@
 //! for accelerated inference on Apple Silicon devices.
 
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 
 // Import Core ML types from system-acceleration
 use system_acceleration::ane::{
@@ -25,15 +25,11 @@ use system_acceleration::ane::models::{
 };
 use system_acceleration::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
 use system_acceleration::telemetry::TelemetryCollector;
-use system_acceleration::ane::infer::{
-    WhisperInferenceExecutor, create_whisper_executor,
-    YOLOInferenceExecutor, create_yolo_executor,
-    MistralInferenceOptions,
-};
+use system_acceleration::ane::infer::MistralInferenceOptions;
 use system_acceleration::ane::infer::mistral::generate_text as mistral_generate_text;
 use system_acceleration::ane::models::whisper_model::WhisperInferenceOptions as WhisperInferenceOpts;
 use system_acceleration::ane::models::yolo_model::YOLOInferenceOptions as YOLOInferenceOpts;
-use system_acceleration::ane::infer::mistral::{deliberate_constitution, ConstitutionalVerdict};
+use system_acceleration::ane::infer::mistral::ConstitutionalVerdict;
 
 // External C functions for Core ML bridge
 extern "C" {
@@ -134,7 +130,8 @@ impl CoreMLManager {
     /// Check if Apple Neural Engine is available
     fn check_ane_availability() -> bool {
         // On macOS, check if we're running on Apple Silicon
-        // This is a simplified check - in practice would use system APIs
+        // TODO: Implement proper ANE availability check using system APIs
+        //       Currently uses basic check; should use system APIs to accurately detect ANE availability.
         cfg!(target_os = "macos") && std::env::consts::ARCH == "aarch64"
     }
 
@@ -192,7 +189,7 @@ impl CoreMLManager {
             }
         };
         
-        let mut telemetry = TelemetryCollector::new();
+        let telemetry = TelemetryCollector::new();
         let options = MistralCompilationOptions::default();
         
         match load_mistral_model(&model_path, &options, telemetry).await {
@@ -247,7 +244,7 @@ impl CoreMLManager {
             }
         };
         
-        let mut telemetry = TelemetryCollector::new();
+        let telemetry = TelemetryCollector::new();
         let circuit_breaker = CircuitBreaker::new(CircuitBreakerConfig::default());
         let config = WhisperConfig::default();
         
@@ -303,7 +300,7 @@ impl CoreMLManager {
             }
         };
         
-        let mut telemetry = TelemetryCollector::new();
+        let telemetry = TelemetryCollector::new();
         let circuit_breaker = CircuitBreaker::new(CircuitBreakerConfig::default());
         let config = YOLOConfig::default();
         
@@ -433,12 +430,41 @@ impl CoreMLManager {
 
     /// Run Mistral constitutional reasoning
     /// 
-    /// Note: This requires mutable access to MistralModel. Since models are stored in Arc,
-    /// you'll need to use interior mutability. For now, access the model directly:
-    /// ```rust
-    /// let model_arc = manager.get_mistral_model("mistral-7b-instruct").await?;
-    /// // Use Arc::try_unwrap or similar to get mutable access
-    /// ```
+    /// TODO: Implement comprehensive interior mutability for MistralModel access
+    ///       Currently requires direct model access; should implement comprehensive interior mutability pattern that allows mutable access to MistralModel stored in Arc without requiring Arc::try_unwrap.
+    ///
+    /// COMPLETION CHECKLIST:
+    /// [ ] Primary functionality implemented
+    /// [ ] API/data structures defined & stable
+    /// [ ] Error handling + validation aligned with error taxonomy
+    /// [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    /// [ ] Integration tests for external systems/contracts
+    /// [ ] Documentation: public API + system behavior
+    /// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    /// [ ] Security posture reviewed (inputs, authz, sandboxing)
+    /// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    /// [ ] Configurability and feature flags defined if relevant
+    /// [ ] Failure-mode cards documented (degradation paths)
+    ///
+    /// ACCEPTANCE CRITERIA:
+    /// - Interior mutability pattern is implemented
+    /// - Mutable access to MistralModel works with Arc
+    /// - Pattern is safe and thread-safe
+    /// - Access pattern is efficient and non-blocking
+    ///
+    /// DEPENDENCIES:
+    /// - Interior mutability utilities (Required)
+    /// - Arc access pattern refactoring (Required)
+    /// - Thread-safe mutability mechanisms (Required)
+    ///
+    /// ESTIMATED EFFORT: 6-8 hours (medium confidence)
+    /// PRIORITY: Medium
+    /// BLOCKING: No
+    ///
+    /// GOVERNANCE:
+    /// - CAWS Tier: 2 (model access pattern functionality)
+    /// - Change Budget: ~150 LOC
+    /// - Reviewer Requirements: Rust concurrency and interior mutability expertise
     pub async fn run_mistral_constitutional_reasoning(
         &self,
         _model_name: &str,
@@ -513,7 +539,28 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let manager = CoreMLManager::new(temp_dir.path().to_path_buf());
 
-        assert!(!manager.models.read().await.is_empty() || true); // Allow empty for now
+        // TODO: Implement proper model loading test:
+        // 1. Model loading: Test actual model loading
+        //    - Load test models into manager
+        //    - Verify models are loaded correctly
+        //    - Test model loading error handling
+        // 2. Model verification: Verify loaded models
+        //    - Check model count and availability
+        //    - Verify model metadata and properties
+        //    - Test model access and retrieval
+        // 3. Test infrastructure: Set up test infrastructure
+        //    - Create test model fixtures
+        //    - Support model loading in test environment
+        //    - Handle test cleanup appropriately
+        // ACCEPTANCE CRITERIA:
+        // - Test verifies actual model loading
+        // - Models are verified after loading
+        // - Test infrastructure supports model testing
+        // DEPENDENCIES:
+        // - Test model fixtures (Required)
+        // - Model loading test utilities (Required)
+        // PRIORITY: Low
+        assert!(!manager.models.read().await.is_empty() || true);
     }
 
     #[tokio::test]

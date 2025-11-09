@@ -8,12 +8,9 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 use uuid::Uuid;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 
-use agent_agency_contracts::{
-    task_executor::{TaskExecutor, TaskSpec, TaskExecutionResult, TaskExecutorHealth, TaskExecutionStats},
-    TaskContext, TaskRequirements, TaskScope, ExecutionStatus, Progress,
-};
+use agent_agency_contracts::task_executor::{TaskExecutor, TaskSpec, TaskExecutionResult, TaskExecutorHealth, TaskExecutionStats};
 
 /// Execution strategy for task execution
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -98,7 +95,7 @@ impl TaskExecutorFactory {
 
     /// Configure with task queue service
     /// TODO: Enable when data-infrastructure integration is available
-    pub fn with_task_queue(mut self, _task_queue: Arc<dyn std::marker::Send + std::marker::Sync + 'static>) -> Self {
+    pub fn with_task_queue(self, _task_queue: Arc<dyn std::marker::Send + std::marker::Sync + 'static>) -> Self {
         // self.task_queue = Some(task_queue);
         self
     }
@@ -260,10 +257,39 @@ impl TaskExecutor for SequentialTaskExecutor {
             // TODO: Record task execution start
         }
 
-        // For now, simulate sequential execution
-        // TODO: Integrate with actual worker execution
-
-        let started_at = chrono::Utc::now();
+        // TODO: Integrate with actual worker execution for sequential task execution
+        //       Currently simulates execution with fixed timing; should integrate with actual worker execution infrastructure.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Submit task to worker pool for sequential execution
+        // [ ] Wait for worker to accept and execute task
+        // [ ] Track actual execution start and completion times
+        // [ ] Handle worker execution errors
+        // [ ] Support task cancellation and timeout
+        // [ ] Add unit tests for worker integration
+        // [ ] Add integration tests with real workers
+        // [ ] Verify sequential execution ordering
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Tasks are executed by actual workers
+        // - Execution timing reflects real worker performance
+        // - Worker errors are handled gracefully
+        // - Sequential execution ordering is maintained
+        //
+        // DEPENDENCIES:
+        // - Worker pool infrastructure (Required)
+        // - Task submission API (Required)
+        // - Worker execution tracking (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (core orchestration feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Task orchestration expertise
+        let started_at = chrono::Utc::now(); // Temporary: simulated timing until worker integration
         let completed_at = started_at + chrono::Duration::milliseconds(1000);
 
         let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
@@ -295,9 +321,39 @@ impl TaskExecutor for SequentialTaskExecutor {
         worker_id: Uuid,
         circuit_breaker_enabled: bool,
     ) -> Result<TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
-        // For now, just delegate to regular execute_task
-        // TODO: Implement actual circuit breaker logic
-        self.execute_task(task_spec, worker_id).await
+        // TODO: Implement circuit breaker logic for task execution
+        //       Currently delegates to regular execute_task; should implement circuit breaker pattern for resilience.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Check circuit breaker state before execution
+        // [ ] Track execution failures and successes
+        // [ ] Open circuit after failure threshold
+        // [ ] Attempt half-open state after timeout
+        // [ ] Close circuit after success threshold
+        // [ ] Add unit tests for circuit breaker logic
+        // [ ] Add integration tests with failure scenarios
+        // [ ] Verify circuit breaker effectiveness
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Circuit breaker prevents execution when circuit is open
+        // - Failure tracking triggers circuit opening correctly
+        // - Half-open state allows limited retry attempts
+        // - Circuit closes after successful recovery
+        //
+        // DEPENDENCIES:
+        // - Circuit breaker infrastructure (Required)
+        // - Failure tracking utilities (Required)
+        // - State management utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (resilience feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Resilience patterns expertise
+        self.execute_task(task_spec, worker_id).await // Temporary: delegate until circuit breaker is implemented
     }
 
     async fn health_check(&self) -> Result<TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>> {
@@ -392,10 +448,39 @@ impl TaskExecutor for ParallelTaskExecutor {
             // TODO: Record task execution start
         }
 
-        // For now, simulate parallel execution
-        // TODO: Integrate with actual worker execution
-
-        let started_at = chrono::Utc::now();
+        // TODO: Integrate with actual worker execution for parallel task execution
+        //       Currently simulates execution with fixed timing; should integrate with actual worker execution infrastructure.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Submit tasks to worker pool for parallel execution
+        // [ ] Wait for workers to accept and execute tasks concurrently
+        // [ ] Track actual execution start and completion times
+        // [ ] Handle worker execution errors
+        // [ ] Support task cancellation and timeout
+        // [ ] Add unit tests for parallel worker integration
+        // [ ] Add integration tests with real workers
+        // [ ] Verify parallel execution concurrency
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Tasks are executed by actual workers in parallel
+        // - Execution timing reflects real worker performance
+        // - Worker errors are handled gracefully
+        // - Parallel execution maintains concurrency
+        //
+        // DEPENDENCIES:
+        // - Worker pool infrastructure (Required)
+        // - Task submission API (Required)
+        // - Worker execution tracking (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (core orchestration feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Task orchestration expertise
+        let started_at = chrono::Utc::now(); // Temporary: simulated timing until worker integration
         let completed_at = started_at + chrono::Duration::milliseconds(800);
         let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
 
@@ -426,9 +511,39 @@ impl TaskExecutor for ParallelTaskExecutor {
         worker_id: Uuid,
         circuit_breaker_enabled: bool,
     ) -> Result<TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
-        // For now, just delegate to regular execute_task
-        // TODO: Implement actual circuit breaker logic
-        self.execute_task(task_spec, worker_id).await
+        // TODO: Implement circuit breaker logic for task execution
+        //       Currently delegates to regular execute_task; should implement circuit breaker pattern for resilience.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Check circuit breaker state before execution
+        // [ ] Track execution failures and successes
+        // [ ] Open circuit after failure threshold
+        // [ ] Attempt half-open state after timeout
+        // [ ] Close circuit after success threshold
+        // [ ] Add unit tests for circuit breaker logic
+        // [ ] Add integration tests with failure scenarios
+        // [ ] Verify circuit breaker effectiveness
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Circuit breaker prevents execution when circuit is open
+        // - Failure tracking triggers circuit opening correctly
+        // - Half-open state allows limited retry attempts
+        // - Circuit closes after successful recovery
+        //
+        // DEPENDENCIES:
+        // - Circuit breaker infrastructure (Required)
+        // - Failure tracking utilities (Required)
+        // - State management utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (resilience feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Resilience patterns expertise
+        self.execute_task(task_spec, worker_id).await // Temporary: delegate until circuit breaker is implemented
     }
 
     async fn health_check(&self) -> Result<TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>> {
@@ -506,8 +621,43 @@ impl HybridTaskExecutor {
 
     /// Determine if a task should be executed sequentially or in parallel
     fn should_execute_sequentially(&self, task_spec: &TaskSpec) -> bool {
-        // Logic to determine execution strategy based on task characteristics
-        // For now, use simple heuristics
+        // TODO: Implement comprehensive sequential/parallel execution decision logic
+        //       Currently uses basic priority-based heuristics; should implement sophisticated decision logic based on task characteristics, dependencies, and system state.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Decision logic considers task dependencies and relationships
+        // - System load and resource availability are factored into decisions
+        // - Task complexity and estimated duration influence execution strategy
+        // - Historical performance data informs decision-making
+        // - Configuration allows tuning of decision parameters
+        //
+        // DEPENDENCIES:
+        // - Task dependency analysis system (Required)
+        // - System resource monitoring (Required)
+        // - Historical performance tracking (Optional)
+        // - Configuration management system (Optional)
+        //
+        // ESTIMATED EFFORT: 12-16 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (task execution optimization)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Task orchestration and scheduling expertise
         match task_spec.priority {
             agent_agency_contracts::TaskPriority::Critical => true, // Critical tasks sequential
             agent_agency_contracts::TaskPriority::Urgent => true,   // Urgent tasks sequential
@@ -579,9 +729,39 @@ impl TaskExecutor for HybridTaskExecutor {
         worker_id: Uuid,
         circuit_breaker_enabled: bool,
     ) -> Result<TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
-        // For now, just delegate to regular execute_task
-        // TODO: Implement actual circuit breaker logic
-        self.execute_task(task_spec, worker_id).await
+        // TODO: Implement circuit breaker logic for task execution
+        //       Currently delegates to regular execute_task; should implement circuit breaker pattern for resilience.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Check circuit breaker state before execution
+        // [ ] Track execution failures and successes
+        // [ ] Open circuit after failure threshold
+        // [ ] Attempt half-open state after timeout
+        // [ ] Close circuit after success threshold
+        // [ ] Add unit tests for circuit breaker logic
+        // [ ] Add integration tests with failure scenarios
+        // [ ] Verify circuit breaker effectiveness
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Circuit breaker prevents execution when circuit is open
+        // - Failure tracking triggers circuit opening correctly
+        // - Half-open state allows limited retry attempts
+        // - Circuit closes after successful recovery
+        //
+        // DEPENDENCIES:
+        // - Circuit breaker infrastructure (Required)
+        // - Failure tracking utilities (Required)
+        // - State management utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (resilience feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Resilience patterns expertise
+        self.execute_task(task_spec, worker_id).await // Temporary: delegate until circuit breaker is implemented
     }
 
     async fn health_check(&self) -> Result<TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>> {
@@ -659,13 +839,43 @@ impl AdaptiveTaskExecutor {
 
     /// Adapt execution strategy based on current system state
     fn adapt_strategy(&self, task_spec: &TaskSpec) -> ExecutionStrategy {
-        // TODO: Implement adaptive logic based on:
-        // - Current system load
-        // - Worker availability
-        // - Task priority
-        // - Historical performance
-
-        // For now, use simple logic
+        // TODO: Implement adaptive execution strategy logic
+        //       Currently uses basic priority-based logic; should implement sophisticated adaptive logic that considers system load, worker availability, task priority, and historical performance for optimal execution strategy selection.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Strategy adapts based on current system load metrics
+        // - Worker availability influences strategy selection
+        // - Task priority is factored into adaptive decisions
+        // - Historical performance data informs strategy selection
+        // - Strategy selection is configurable and tunable
+        //
+        // DEPENDENCIES:
+        // - System load monitoring (Required)
+        // - Worker availability tracking (Required)
+        // - Historical performance database (Optional)
+        // - Configuration management system (Optional)
+        //
+        // ESTIMATED EFFORT: 12-16 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (task execution optimization)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Task orchestration and adaptive systems expertise
         match task_spec.priority {
             agent_agency_contracts::TaskPriority::Critical => ExecutionStrategy::Sequential,
             agent_agency_contracts::TaskPriority::Urgent => ExecutionStrategy::Sequential,
@@ -755,9 +965,39 @@ impl TaskExecutor for AdaptiveTaskExecutor {
         worker_id: Uuid,
         circuit_breaker_enabled: bool,
     ) -> Result<TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
-        // For now, just delegate to regular execute_task
-        // TODO: Implement actual circuit breaker logic
-        self.execute_task(task_spec, worker_id).await
+        // TODO: Implement circuit breaker logic for task execution
+        //       Currently delegates to regular execute_task; should implement circuit breaker pattern for resilience.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Check circuit breaker state before execution
+        // [ ] Track execution failures and successes
+        // [ ] Open circuit after failure threshold
+        // [ ] Attempt half-open state after timeout
+        // [ ] Close circuit after success threshold
+        // [ ] Add unit tests for circuit breaker logic
+        // [ ] Add integration tests with failure scenarios
+        // [ ] Verify circuit breaker effectiveness
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Circuit breaker prevents execution when circuit is open
+        // - Failure tracking triggers circuit opening correctly
+        // - Half-open state allows limited retry attempts
+        // - Circuit closes after successful recovery
+        //
+        // DEPENDENCIES:
+        // - Circuit breaker infrastructure (Required)
+        // - Failure tracking utilities (Required)
+        // - State management utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (resilience feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Resilience patterns expertise
+        self.execute_task(task_spec, worker_id).await // Temporary: delegate until circuit breaker is implemented
     }
 
     async fn health_check(&self) -> Result<TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>> {

@@ -8,8 +8,6 @@
 
 use agent_agency_contracts::types::planning::{TaskScope as ContractsTaskScope, BlastRadius};
 use agent_agency_contracts::planning_io::ChangeBudget as ContractsChangeBudget;
-use agent_agency_contracts::WorkingSpec as ContractsWorkingSpec;
-use agent_agency_contracts::AcceptanceCriterion as ContractsAcceptanceCriterion;
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 
@@ -19,7 +17,7 @@ use crate::types::TaskScope;
 // WorkingSpec and AcceptanceCriterion have been removed from crate::types
 // Use agent_agency_contracts types directly instead
 
-// Simplified ChangeBudget for adapter conversions (deprecated - use contracts directly)
+// Deprecated ChangeBudget for adapter conversions (use contracts directly)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct ChangeBudget {
     pub max_files: u32,

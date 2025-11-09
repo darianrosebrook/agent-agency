@@ -225,7 +225,7 @@ impl TraceHierarchyManager {
         }
     }
 
-    /// Extract trace ID from span ID (simplified implementation)
+    /// Extract trace ID from span ID
     pub async fn extract_trace_id(&self, span_id: &str) -> Option<String> {
         let span_relationships = self.span_relationships.read().await;
 

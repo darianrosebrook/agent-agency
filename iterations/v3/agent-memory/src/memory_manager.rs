@@ -39,9 +39,30 @@ impl MemoryManager {
 
     /// Create a new memory manager
     pub async fn new(config: MemoryConfig, db_pool: PgPool) -> MemoryResult<Self> {
+        // TODO: Make scheduler configurable:
+        // 1. Configuration support: Add scheduler configuration
+        //    - Allow enabling/disabling scheduler via config
+        //    - Support configurable decay intervals
+        //    - Allow max concurrent cycles configuration
+        // 2. Config integration: Integrate with MemoryConfig
+        //    - Add scheduler config to MemoryConfig
+        //    - Support per-instance scheduler configuration
+        //    - Handle config validation and defaults
+        // 3. Runtime control: Support runtime scheduler control
+        //    - Allow enabling/disabling scheduler at runtime
+        //    - Support scheduler pause and resume
+        //    - Handle scheduler state management
+        // ACCEPTANCE CRITERIA:
+        // - Scheduler can be enabled/disabled via configuration
+        // - Scheduler settings are configurable
+        // - Runtime scheduler control works correctly
+        // DEPENDENCIES:
+        // - MemoryConfig extension (Required)
+        // - Scheduler control API (Required)
+        // PRIORITY: Low
         let scheduler_config = crate::decay_scheduler::DecaySchedulerConfig {
             decay_interval_seconds: 3600, // 1 hour
-            enabled: true, // Always enable scheduler for now
+            enabled: true,
             max_concurrent_cycles: 1,
         };
 
@@ -66,9 +87,10 @@ impl MemoryManager {
         db_pool: PgPool,
         workspace_registry: Arc<crate::workspace_registry::WorkspaceRegistry>
     ) -> MemoryResult<Self> {
+        // TODO: Make scheduler configurable (see line 42 for full TODO)
         let scheduler_config = crate::decay_scheduler::DecaySchedulerConfig {
             decay_interval_seconds: 3600, // 1 hour
-            enabled: true, // Always enable scheduler for now
+            enabled: true,
             max_concurrent_cycles: 1,
         };
 

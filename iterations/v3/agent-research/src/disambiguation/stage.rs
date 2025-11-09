@@ -138,7 +138,40 @@ impl DisambiguationStage {
             match ambiguity.ambiguity_type {
                 AmbiguityType::Pronoun => {
                     if let Some(resolution) = self.resolver.resolve_ambiguity(ambiguity, context).await? {
-                        // Simple replacement - in a real implementation this would be more sophisticated
+                        // TODO: Implement sophisticated text replacement for disambiguation
+                        //       Currently uses simple string replacement; should use more sophisticated replacement that preserves context, handles multiple occurrences, and maintains grammatical correctness.
+                        //
+                        // COMPLETION CHECKLIST:
+                        // [ ] Implement context-aware text replacement
+                        // [ ] Handle multiple occurrences of ambiguous text
+                        // [ ] Preserve grammatical correctness
+                        // [ ] Maintain sentence structure and flow
+                        // [ ] Handle edge cases (punctuation, capitalization)
+                        // [ ] Add unit tests with various ambiguity types
+                        // [ ] Add integration tests with real disambiguation scenarios
+                        // [ ] Performance: Replacement should complete in <1ms
+                        // [ ] Documentation: Document replacement algorithm
+                        //
+                        // ACCEPTANCE CRITERIA:
+                        // - Text replacement preserves context
+                        // - Multiple occurrences are handled correctly
+                        // - Grammatical correctness is maintained
+                        // - Sentence structure is preserved
+                        // - Edge cases are handled appropriately
+                        //
+                        // DEPENDENCIES:
+                        // - Text processing utilities (Required)
+                        // - Grammar analysis (Optional)
+                        // - Context preservation logic (Required)
+                        //
+                        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+                        // PRIORITY: Medium
+                        // BLOCKING: No
+                        //
+                        // GOVERNANCE:
+                        // - CAWS Tier: 2 (NLP feature)
+                        // - Change Budget: ~200 LOC
+                        // - Reviewer Requirements: NLP expertise
                         disambiguated = disambiguated.replace(&ambiguity.original_text, &resolution);
                     }
                 }
@@ -148,8 +181,41 @@ impl DisambiguationStage {
                 AmbiguityType::Quantifier |
                 AmbiguityType::EntityReference |
                 AmbiguityType::Other(_) => {
-                    // For now, these are handled by the resolver but not replaced in text
-                    // This could be extended to replace them as well
+                    // TODO: Implement comprehensive text replacement for resolved ambiguities
+                    //       Currently these are handled by resolver but not replaced in text; should implement comprehensive replacement that replaces resolved ambiguities in text for complete disambiguation.
+                    //
+                    // COMPLETION CHECKLIST:
+                    // [ ] Primary functionality implemented
+                    // [ ] API/data structures defined & stable
+                    // [ ] Error handling + validation aligned with error taxonomy
+                    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                    // [ ] Integration tests for external systems/contracts
+                    // [ ] Documentation: public API + system behavior
+                    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                    // [ ] Configurability and feature flags defined if relevant
+                    // [ ] Failure-mode cards documented (degradation paths)
+                    //
+                    // ACCEPTANCE CRITERIA:
+                    // - Resolved ambiguities are replaced in text
+                    // - Text replacement preserves context and meaning
+                    // - Replacement handles all ambiguity types
+                    // - Replacement is accurate and contextually appropriate
+                    //
+                    // DEPENDENCIES:
+                    // - Text replacement utilities (Required)
+                    // - Ambiguity resolution results (Required)
+                    // - Context preservation logic (Required)
+                    //
+                    // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+                    // PRIORITY: Medium
+                    // BLOCKING: No
+                    //
+                    // GOVERNANCE:
+                    // - CAWS Tier: 2 (text disambiguation functionality)
+                    // - Change Budget: ~200 LOC
+                    // - Reviewer Requirements: Text processing and ambiguity resolution expertise
                 }
             }
         }

@@ -96,16 +96,76 @@ impl QualityValidator {
 
     /// Validate CAWS compliance
     async fn validate_caws_compliance(&self, result: &ExecutionResult) -> Result<ValidationResult, QualityError> {
-        // TODO: Implement real CAWS compliance validation
-        // - [ ] Integrate with CAWS runtime validator
-        // - [ ] Validate execution result against CAWS rules
-        // - [ ] Check for violations in change budgets, scope, and invariants
-        // - [ ] Generate detailed violation reports
-        // - [ ] Calculate accurate compliance scores
-        // - [ ] Add unit tests with mock CAWS validation
-        // - [ ] Add integration tests with real CAWS compliance checking
-        // In a real implementation, this would use the CAWS validator
-        // For now, return a basic compliance check
+        // TODO: Implement CAWS validator integration
+        //       Currently returns basic compliance check; should use CAWS validator for comprehensive compliance checking.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Integrate with CAWS validator service
+        // [ ] Validate working spec against CAWS rules
+        // [ ] Generate detailed violation reports
+        // [ ] Calculate accurate compliance scores
+        // [ ] Handle validator service errors
+        // [ ] Add unit tests with mock CAWS validation
+        // [ ] Add integration tests with real CAWS compliance checking
+        // [ ] Performance: Validation should complete in <500ms
+        // [ ] Documentation: Document CAWS validation integration
+        //
+        // ACCEPTANCE CRITERIA:
+        // - CAWS validator is integrated properly
+        // - Working spec is validated against CAWS rules
+        // - Violation reports are detailed and actionable
+        // - Compliance scores are accurate
+        // - Validator errors are handled gracefully
+        //
+        // DEPENDENCIES:
+        // - CAWS validator service (Required)
+        // - CAWS rules definition (Required)
+        // - Validation result processing (Required)
+        //
+        // ESTIMATED EFFORT: 5-7 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (quality gate feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: CAWS expertise
+        //
+        // TODO: Implement comprehensive CAWS working spec validation
+        //       Currently returns basic compliance check; should implement comprehensive validation that integrates with CAWS validator service, validates working spec against CAWS rules, and generates detailed violation reports with compliance scores.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - CAWS validator service is integrated
+        // - Working spec is validated against CAWS rules
+        // - Violation reports are detailed and actionable
+        // - Compliance scores are accurate
+        //
+        // DEPENDENCIES:
+        // - CAWS validator service (Required)
+        // - CAWS rules definition (Required)
+        // - Validation result processing (Required)
+        //
+        // ESTIMATED EFFORT: 5-7 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (quality gate feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: CAWS expertise
         Ok(ValidationResult {
             score: 0.9,
             violations: vec![],

@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 // Explicit imports from contracts (contracts-first: no wildcard imports)
-use agent_agency_contracts::types::planning::{TaskDescriptor, TaskPriority, RiskTier, BlastRadius};
+use agent_agency_contracts::types::planning::RiskTier;
 use agent_agency_contracts::types::data_processing::ProcessingPriority;
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};use uuid::Uuid;
@@ -20,12 +20,11 @@ use crate::OrchestrationError;
 
 // Local type definitions used instead of agent_data_processing
 use crate::audit_trail::{
-    AuditTrailManager, AuditConfig, AuditLogLevel, AuditOutputFormat,
-    AuditEvent, AuditCategory, AuditSeverity, AuditResult, AuditPerformance,
+    AuditTrailManager, AuditSeverity, AuditResult,
 };
-use crate::error_handling::{CircuitBreaker, CircuitBreakerState, CircuitBreakerStats};
+use crate::error_handling::CircuitBreaker;
 use system_common_interfaces::DatabaseAuditOperations;
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 
 // Import ConsensusCoordinator from local module (not in contracts yet)
 use crate::consensus_coordinator::ConsensusCoordinator;
@@ -185,7 +184,8 @@ struct ExtractedTopic {
     pub keywords: Vec<String>,
 }
 
-// Placeholder types for data processing stages (would be implemented by agent-data-processing)
+// TODO: Implement data processing stage types in agent-data-processing
+//       Currently uses placeholder types; should implement actual data processing stage types in agent-data-processing module.
 // Following contracts-first architecture: Use contracts types where possible, local types for implementations
 
 // Contracts-first approach: Remove direct dependency on agent-data-processing
@@ -416,7 +416,7 @@ struct EnrichedContent {
     pub entities: Vec<ExtractedEntity>,
     pub topics: Vec<ExtractedTopic>,
 }
-use crate::coreml::{CoreMLManager, CoreMLModelType, InferenceResult};
+use crate::coreml::CoreMLManager;
 use std::path::{Path, PathBuf};
 use serde_json;
 
@@ -750,7 +750,7 @@ impl MultimodalOrchestrator {
                 last_modified: file_metadata.modified()
                     .ok()
                     .and_then(|t| {
-                        use std::time::{SystemTime, UNIX_EPOCH};
+                        use std::time::UNIX_EPOCH;
                         t.duration_since(UNIX_EPOCH)
                             .ok()
                             .map(|d| chrono::DateTime::from_timestamp(d.as_secs() as i64, 0))

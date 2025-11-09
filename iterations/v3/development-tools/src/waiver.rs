@@ -265,7 +265,7 @@ impl WaiverManager {
     }
 }
 
-/// Waiver generator - simplified interface for creating waivers
+/// Waiver generator interface for creating waivers
 pub struct WaiverGenerator {
     manager: WaiverManager,
 }

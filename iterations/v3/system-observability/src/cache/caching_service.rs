@@ -213,20 +213,114 @@ impl CachingService for DefaultCachingService {
     }
 
     async fn invalidate_model_cache(&self, _model_id: &str) -> Result<usize, CachingServiceError> {
-        // PLACEHOLDER: In a real implementation, this would:
-        // 1. List all keys matching pattern "inference:{model_id}:*"
-        // 2. Delete each matching key
-        // 3. Return count of deleted keys
-        
-        // For now, return 0 as we don't have pattern-based deletion
+        // TODO: Implement pattern-based cache invalidation
+        //       Currently returns 0; should list keys matching pattern, delete matching keys, and return deletion count.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement pattern matching for cache keys
+        // [ ] List all keys matching pattern "inference:{model_id}:*"
+        // [ ] Delete each matching key
+        // [ ] Return count of deleted keys
+        // [ ] Handle deletion errors gracefully
+        // [ ] Add unit tests with mock cache
+        // [ ] Add integration tests with real cache invalidation
+        // [ ] Performance: Invalidation should complete in <100ms
+        // [ ] Documentation: Document pattern matching syntax
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Pattern matching finds all matching keys
+        // - Matching keys are deleted successfully
+        // - Deletion count is accurate
+        // - Deletion errors are handled gracefully
+        // - Invalidation performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Pattern matching library (Required)
+        // - Cache key listing API (Required)
+        // - Cache deletion API (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (caching feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Caching expertise
+        //
+        // TODO: Implement comprehensive pattern-based cache invalidation
+        //       Currently returns 0 as pattern-based deletion is not implemented; should implement comprehensive invalidation that matches keys against pattern and deletes matching entries for efficient cache management.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Pattern matching finds all matching keys
+        // - Matching keys are deleted successfully
+        // - Deletion count is accurate
+        // - Deletion errors are handled gracefully
+        //
+        // DEPENDENCIES:
+        // - Pattern matching library (Required)
+        // - Cache key listing API (Required)
+        // - Cache deletion API (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (caching feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Caching expertise
         Ok(0)
     }
 
     async fn clear_cache(&self) -> Result<(), CachingServiceError> {
-        // PLACEHOLDER: In a real implementation, this would:
-        // 1. List all keys matching pattern "inference:*"
-        // 2. Delete all matching keys
-        
+        // TODO: Implement pattern-based cache clearing
+        //       Currently resets stats only; should list keys matching pattern and delete all matching keys.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement pattern matching for cache keys
+        // [ ] List all keys matching pattern "inference:*"
+        // [ ] Delete all matching keys
+        // [ ] Handle deletion errors gracefully
+        // [ ] Verify cache is cleared
+        // [ ] Add unit tests with mock cache
+        // [ ] Add integration tests with real cache clearing
+        // [ ] Performance: Clearing should complete in <500ms
+        // [ ] Documentation: Document cache clearing process
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Pattern matching finds all matching keys
+        // - All matching keys are deleted
+        // - Cache is verified as cleared
+        // - Deletion errors are handled gracefully
+        // - Clearing performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Pattern matching library (Required)
+        // - Cache key listing API (Required)
+        // - Cache deletion API (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (caching feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Caching expertise
         // Reset stats
         let mut stats = self.stats.write().await;
         stats.total_entries = 0;

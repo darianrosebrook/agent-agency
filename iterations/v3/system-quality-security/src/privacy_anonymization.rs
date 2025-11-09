@@ -437,8 +437,8 @@ impl PrivacyAnonymizationService {
         &self,
         data: &serde_json::Value,
     ) -> Result<(Option<usize>, AnonymizationMethod), PrivacyAnonymizationError> {
-        // Simplified k-anonymity calculation
-        // In production, this would analyze the dataset to find the smallest group size
+        // TODO: Implement proper k-anonymity calculation
+        //       Currently uses basic calculation; should analyze dataset to find smallest group size for accurate k-anonymity.
         let k = if self.config.k_anonymity_threshold > 0 {
             Some(self.config.k_anonymity_threshold)
         } else {

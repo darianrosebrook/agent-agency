@@ -89,7 +89,42 @@ pub struct StrategyResult {
     pub effectiveness_score: f64,
 }
 
-/// Strategy-specific task execution result (simplified for strategy evaluation)
+/// Strategy-specific task execution result
+// TODO: Enhance StrategyTaskResult with comprehensive execution metrics
+//       Currently basic for strategy evaluation; should include comprehensive execution metrics for accurate strategy assessment.
+//
+// COMPLETION CHECKLIST:
+// [ ] Primary functionality implemented
+// [ ] API/data structures defined & stable
+// [ ] Error handling + validation aligned with error taxonomy
+// [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+// [ ] Integration tests for external systems/contracts
+// [ ] Documentation: public API + system behavior
+// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+// [ ] Security posture reviewed (inputs, authz, sandboxing)
+// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+// [ ] Configurability and feature flags defined if relevant
+// [ ] Failure-mode cards documented (degradation paths)
+//
+// ACCEPTANCE CRITERIA:
+// - Execution metrics include timing, resource usage, and quality metrics
+// - Metrics support accurate strategy evaluation
+// - Data structure is stable and well-documented
+// - Metrics are efficiently collected and stored
+//
+// DEPENDENCIES:
+// - Execution metrics infrastructure (Required)
+// - Strategy evaluation utilities (Required)
+// - Metrics collection utilities (Required)
+//
+// ESTIMATED EFFORT: 3-4 hours (medium confidence)
+// PRIORITY: Low
+// BLOCKING: No
+//
+// GOVERNANCE:
+// - CAWS Tier: 3 (data structure enhancement)
+// - Change Budget: ~60 LOC
+// - Reviewer Requirements: Metrics and strategy evaluation expertise
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StrategyTaskResult {
     /// Task ID
@@ -264,9 +299,42 @@ impl ExecutionStrategyService for DefaultExecutionStrategyService {
                         // - [ ] Integrate with telemetry system
                         // - [ ] Add unit tests for execution paths
                         // - [ ] Add integration tests with real task execution
-                        // PLACEHOLDER: In real implementation, this would execute the actual task
-                        // For now, simulate task execution
-                        let execution_time = std::time::Duration::from_millis(100);
+                        // TODO: Execute actual task through task executor
+                        //       Currently simulates execution; should execute actual task through task executor infrastructure.
+                        //
+                        // COMPLETION CHECKLIST:
+                        // [ ] Primary functionality implemented
+                        // [ ] API/data structures defined & stable
+                        // [ ] Error handling + validation aligned with error taxonomy
+                        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                        // [ ] Integration tests for external systems/contracts
+                        // [ ] Documentation: public API + system behavior
+                        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                        // [ ] Configurability and feature flags defined if relevant
+                        // [ ] Failure-mode cards documented (degradation paths)
+                        //
+                        // ACCEPTANCE CRITERIA:
+                        // - Tasks are executed through task executor
+                        // - Execution results are captured accurately
+                        // - Error handling works correctly
+                        // - Execution metrics are collected
+                        //
+                        // DEPENDENCIES:
+                        // - Task executor infrastructure (Required)
+                        // - Task execution utilities (Required)
+                        // - Result collection utilities (Required)
+                        //
+                        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+                        // PRIORITY: High
+                        // BLOCKING: No
+                        //
+                        // GOVERNANCE:
+                        // - CAWS Tier: 2 (core execution feature)
+                        // - Change Budget: ~80 LOC
+                        // - Reviewer Requirements: Task execution expertise
+                        let execution_time = std::time::Duration::from_millis(100); // Temporary: simulate until task executor integration
                         tokio::time::sleep(execution_time).await;
 
                         StrategyTaskResult {
@@ -319,9 +387,42 @@ impl ExecutionStrategyService for DefaultExecutionStrategyService {
                 // - [ ] Add error handling for invalid conditions
                 // - [ ] Add unit tests with various condition types
                 // - [ ] Add integration tests with real conditional execution
-                // PLACEHOLDER: Conditional execution would evaluate condition and execute accordingly
-                // For now, execute sequentially
-                for task_id in task_ids {
+                // TODO: Implement conditional task execution with condition evaluation
+                //       Currently executes sequentially; should evaluate conditions and execute tasks conditionally based on evaluation results.
+                //
+                // COMPLETION CHECKLIST:
+                // [ ] Primary functionality implemented
+                // [ ] API/data structures defined & stable
+                // [ ] Error handling + validation aligned with error taxonomy
+                // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                // [ ] Integration tests for external systems/contracts
+                // [ ] Documentation: public API + system behavior
+                // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                // [ ] Configurability and feature flags defined if relevant
+                // [ ] Failure-mode cards documented (degradation paths)
+                //
+                // ACCEPTANCE CRITERIA:
+                // - Conditions are evaluated correctly
+                // - Tasks execute conditionally based on evaluation
+                // - Conditional logic is clear and maintainable
+                // - Error handling works for condition evaluation failures
+                //
+                // DEPENDENCIES:
+                // - Condition evaluation infrastructure (Required)
+                // - Conditional execution utilities (Required)
+                // - Task execution infrastructure (Required)
+                //
+                // ESTIMATED EFFORT: 5-6 hours (medium confidence)
+                // PRIORITY: Medium
+                // BLOCKING: No
+                //
+                // GOVERNANCE:
+                // - CAWS Tier: 2 (conditional execution feature)
+                // - Change Budget: ~100 LOC
+                // - Reviewer Requirements: Conditional logic expertise
+                for task_id in task_ids { // Temporary: sequential execution until conditional logic is implemented
                     let execution_time = std::time::Duration::from_millis(100);
                     tokio::time::sleep(execution_time).await;
 
@@ -342,9 +443,42 @@ impl ExecutionStrategyService for DefaultExecutionStrategyService {
                 // - [ ] Add validation for custom strategy parameters
                 // - [ ] Add unit tests with various custom strategies
                 // - [ ] Add integration tests with real custom strategy execution
-                // PLACEHOLDER: Custom strategy execution
-                // For now, execute sequentially
-                for task_id in task_ids {
+                // TODO: Implement custom strategy execution logic
+                //       Currently executes sequentially; should implement custom strategy-specific execution logic.
+                //
+                // COMPLETION CHECKLIST:
+                // [ ] Primary functionality implemented
+                // [ ] API/data structures defined & stable
+                // [ ] Error handling + validation aligned with error taxonomy
+                // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                // [ ] Integration tests for external systems/contracts
+                // [ ] Documentation: public API + system behavior
+                // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                // [ ] Configurability and feature flags defined if relevant
+                // [ ] Failure-mode cards documented (degradation paths)
+                //
+                // ACCEPTANCE CRITERIA:
+                // - Custom strategies execute with strategy-specific logic
+                // - Strategy execution is configurable and extensible
+                // - Execution results reflect strategy behavior
+                // - Error handling works for strategy-specific failures
+                //
+                // DEPENDENCIES:
+                // - Strategy execution infrastructure (Required)
+                // - Custom strategy definition utilities (Required)
+                // - Task execution infrastructure (Required)
+                //
+                // ESTIMATED EFFORT: 5-6 hours (medium confidence)
+                // PRIORITY: Medium
+                // BLOCKING: No
+                //
+                // GOVERNANCE:
+                // - CAWS Tier: 2 (strategy execution feature)
+                // - Change Budget: ~100 LOC
+                // - Reviewer Requirements: Strategy pattern expertise
+                for task_id in task_ids { // Temporary: sequential execution until custom strategy logic is implemented
                     let execution_time = std::time::Duration::from_millis(100);
                     tokio::time::sleep(execution_time).await;
 

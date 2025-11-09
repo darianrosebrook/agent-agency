@@ -13,7 +13,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use anyhow::Result;
 
-use crate::progress_tracker::{ProgressTracker, ExecutionProgress, ProgressError};
+use crate::progress_tracker::{ProgressTracker, ExecutionProgress};
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
 
 use crate::progress_tracker::trajectory_analyzer::TrajectoryAnalyzer;

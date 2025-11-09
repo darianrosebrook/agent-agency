@@ -510,8 +510,38 @@ impl PerformanceTracker {
                 validation.speedup_target_met = validation.ane_speedup_ratio.unwrap() >= self.targets.target_ane_speedup;
             }
 
-            // Calculate dispatch rate (simplified - in real implementation would track ANE usage)
-            validation.ane_dispatch_rate = Some(0.85); // Placeholder - would be measured
+            // TODO: Implement real-time ANE dispatch rate tracking
+            //       Currently uses placeholder value; should track actual ANE usage and calculate dispatch rate.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Track ANE inference requests and successful dispatches
+            // [ ] Calculate dispatch rate as successful_dispatches / total_requests
+            // [ ] Maintain rolling window statistics for dispatch rate
+            // [ ] Handle edge cases (no requests, all failures)
+            // [ ] Add unit tests for dispatch rate calculation
+            // [ ] Add integration tests with real ANE usage
+            // [ ] Verify dispatch rate accuracy matches actual ANE usage
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Dispatch rate is calculated from actual ANE usage statistics
+            // - Dispatch rate accurately reflects percentage of requests using ANE
+            // - Rolling window statistics provide accurate recent dispatch rate
+            // - Edge cases are handled gracefully
+            //
+            // DEPENDENCIES:
+            // - ANE usage tracking system (Required)
+            // - Inference request monitoring (Required)
+            // - Statistics calculation utilities (Required)
+            //
+            // ESTIMATED EFFORT: 3-5 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (standard feature)
+            // - Change Budget: ~80 LOC
+            // - Reviewer Requirements: ANE acceleration domain expertise
+            validation.ane_dispatch_rate = Some(0.85); // Temporary placeholder until real tracking is implemented
             validation.dispatch_target_met = validation.ane_dispatch_rate.unwrap() >= self.targets.target_dispatch_rate;
         }
 
@@ -574,9 +604,41 @@ pub mod agent_integration {
 
         /// Execute judge inference with acceleration
         pub async fn execute_judge_inference(&self, input: Vec<f32>) -> Result<Vec<f32>> {
-            // This would integrate with actual judge models
-            // For now, simulate accelerated inference
-
+            // TODO: Implement comprehensive judge inference integration with actual models
+            //       Currently simulates accelerated inference; should implement comprehensive integration that uses actual judge models with proper acceleration for real inference execution.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Actual judge models are integrated
+            // - Inference uses proper acceleration
+            // - Inference results are accurate
+            // - Model loading and execution are efficient
+            //
+            // DEPENDENCIES:
+            // - Judge model integration (Required)
+            // - Model loading utilities (Required)
+            // - Inference execution system (Required)
+            //
+            // ESTIMATED EFFORT: 12-16 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (judge inference functionality)
+            // - Change Budget: ~300 LOC
+            // - Reviewer Requirements: ML inference and model integration expertise
             let start_time = Instant::now();
 
             // Simulate inference operation

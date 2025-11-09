@@ -14,16 +14,10 @@ use testing_validation::scenarios::autonomous_workflow::run_test as run_autonomo
 
 use testing_validation::{
     E2ETestRunner, Scenario,
-    scenarios::{
-        caws_governance::run_caws_governance_test,
-        human_intervention::run_human_intervention_test,
-        performance_scalability::run_performance_test,
-        security_privacy::run_security_test,
-    },
     harness::TestEnvironment,
     services::{OllamaService, PostgresService},
 };
-use tracing::{info, error, warn};
+use tracing::{info, error};
 use tracing_subscriber;
 use std::env;
 

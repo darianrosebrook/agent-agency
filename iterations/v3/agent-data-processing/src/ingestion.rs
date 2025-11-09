@@ -883,7 +883,39 @@ impl CaptionsIngestor {
         Ok(captions)
     }
 
-    /// Parse ASS/SSA format (simplified)
+    /// Parse ASS/SSA format
+    // TODO: Implement full ASS/SSA subtitle format parser
+    //       Currently uses basic parsing; should support full ASS/SSA specification including styles, events, and formatting.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Parse ASS/SSA header section (Script Info, V4+ Styles, Events)
+    // [ ] Support style definitions and formatting codes
+    // [ ] Parse dialogue events with full field support
+    // [ ] Handle ASS/SSA formatting tags (bold, italic, colors, positioning)
+    // [ ] Support multiple subtitle tracks and languages
+    // [ ] Add unit tests for ASS/SSA parsing
+    // [ ] Add integration tests with real ASS/SSA files
+    // [ ] Verify parsed captions match original formatting
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Full ASS/SSA format is parsed correctly
+    // - Style definitions and formatting codes are preserved
+    // - Dialogue events include all fields and formatting
+    // - Multiple subtitle tracks are supported
+    //
+    // DEPENDENCIES:
+    // - ASS/SSA format specification (Required)
+    // - Subtitle parsing utilities (Optional)
+    // - Text formatting library (Optional)
+    //
+    // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+    // PRIORITY: Low
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 3 (low risk enhancement)
+    // - Change Budget: ~200 LOC
+    // - Reviewer Requirements: Subtitle format parsing expertise
     fn parse_ass(&self, content: &str) -> Result<Vec<serde_json::Value>, DataProcessingError> {
         let mut captions = Vec::new();
         let lines: Vec<&str> = content.lines().collect();
@@ -1412,8 +1444,39 @@ impl SlidesIngestor {
             ];
             (slides.len(), "Sample Presentation".to_string(), slides)
         } else if is_pdf {
-            // For PDF, basic page detection (very simplified)
-            let page_count = (content.len() / 50000).max(1).min(50); // Rough heuristic
+            // TODO: Implement proper PDF page detection and content extraction
+            //       Currently uses basic heuristic; should parse PDF structure to detect actual pages and extract content.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Parse PDF structure to detect actual page boundaries
+            // [ ] Extract text content from each PDF page
+            // [ ] Extract images and embedded content from PDF pages
+            // [ ] Handle PDF metadata (title, author, creation date)
+            // [ ] Support encrypted and password-protected PDFs
+            // [ ] Add unit tests for PDF parsing
+            // [ ] Add integration tests with real PDF files
+            // [ ] Verify page count and content extraction accuracy
+            //
+            // ACCEPTANCE CRITERIA:
+            // - PDF pages are detected accurately from structure
+            // - Text content is extracted from each page
+            // - Images and embedded content are extracted
+            // - PDF metadata is preserved
+            //
+            // DEPENDENCIES:
+            // - PDF parsing library (Required)
+            // - PDF structure analysis utilities (Required)
+            // - Content extraction utilities (Required)
+            //
+            // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (standard feature)
+            // - Change Budget: ~150 LOC
+            // - Reviewer Requirements: PDF processing domain expertise
+            let page_count = (content.len() / 50000).max(1).min(50); // Temporary heuristic until proper PDF parsing is implemented
             let slides = (1..=page_count)
                 .map(|i| format!("Page {} content", i))
                 .collect();
@@ -1663,7 +1726,8 @@ impl FileWatcher {
             .unwrap_or("");
 
         self.file_patterns.iter().any(|pattern| {
-            // Simple glob matching - in practice would use a proper glob library
+            // TODO: Implement proper glob pattern matching library
+            //       Currently uses basic string matching; should use a proper glob library for accurate pattern matching.
             file_name.contains(pattern.trim_start_matches("*"))
         })
     }
@@ -1865,9 +1929,42 @@ mod tests {
         );
 
         // Note: This test verifies timing infrastructure exists
-        // In a real test, we'd inject the clock into FileIngestor
-        // For now, we just verify the structure works
-        let ingestor = FileIngestor::new();
+        // TODO: Inject clock dependency for deterministic testing
+        //       Currently verifies structure only; should inject clock dependency into FileIngestor for deterministic and controllable timing tests.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Clock dependency is injected correctly
+        // - Tests are deterministic with injected clock
+        // - Timing tests are controllable
+        // - Test reliability is improved
+        //
+        // DEPENDENCIES:
+        // - Clock abstraction interface (Required)
+        // - Dependency injection infrastructure (Required)
+        // - Test utilities for clock injection (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (test infrastructure enhancement)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Testing and dependency injection expertise
+        let ingestor = FileIngestor::new(); // Temporary: structure verification until clock injection
         let result = ingestor.ingest(input).await;
 
         assert!(result.is_ok());
@@ -1878,9 +1975,42 @@ mod tests {
     #[tokio::test]
     async fn test_url_ingestor_json_content_type() {
         // Test that URL ingestor properly detects JSON content type
-        // This would require a mock HTTP server in a real test
-        // For now, we verify the structure
-        let ingestor = UrlIngestor::new();
+        // TODO: Implement mock HTTP server for comprehensive testing
+        //       Currently verifies structure only; should implement mock HTTP server to test actual content type detection.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Mock HTTP server is implemented
+        // - Content type detection is tested comprehensively
+        // - Tests cover various content types
+        // - Test reliability is high
+        //
+        // DEPENDENCIES:
+        // - Mock HTTP server library (Required)
+        // - Test infrastructure for HTTP mocking (Required)
+        // - Content type detection utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (test infrastructure enhancement)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: HTTP testing expertise
+        let ingestor = UrlIngestor::new(); // Temporary: structure verification until mock server implementation
         let url_source = UrlSource {
             url: "http://example.com".to_string(),
             content_type: None,
@@ -2028,7 +2158,7 @@ mod tests {
         // Wait longer for processing
         tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
 
-        // Just check that we get at least one processing event (simplified test)
+        // Just check that we get at least one processing event (basic test)
         let count = processed.load(Ordering::SeqCst);
         println!("Processed count: {}", count);
         if count == 0 {
@@ -2037,7 +2167,41 @@ mod tests {
             let content = std::fs::read_to_string(&file).unwrap();
             assert!(!content.is_empty(), "Test file should have content");
         }
-        // For now, just ensure the runtime was created successfully
-        assert!(true);
+        // TODO: Implement comprehensive runtime creation test
+        //       Currently uses basic assertion; should implement comprehensive test verifying runtime creation, initialization, and functionality.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Runtime creation is tested comprehensively
+        // - Initialization is verified correctly
+        // - Functionality is validated
+        // - Test assertions are meaningful
+        //
+        // DEPENDENCIES:
+        // - Runtime infrastructure (Required)
+        // - Test utilities for runtime testing (Required)
+        // - Initialization verification utilities (Required)
+        //
+        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (test infrastructure enhancement)
+        // - Change Budget: ~60 LOC
+        // - Reviewer Requirements: Runtime testing expertise
+        assert!(true); // Temporary: basic assertion until comprehensive test
     }
 }

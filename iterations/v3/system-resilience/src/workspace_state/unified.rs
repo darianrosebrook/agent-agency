@@ -633,9 +633,41 @@ impl UnifiedWorkspaceStateManager {
                         if watch_config_clone.auto_capture_state {
                             let state_manager_clone = Arc::clone(&state_manager);
                             tokio::task::spawn_blocking(move || {
-                                // Note: capture_state is async, but we need to handle it in blocking context
-                                // For now, we'll skip auto-capture in spawned tasks to avoid Send issues
-                                // TODO: Refactor capture_state to use spawn_blocking internally for git operations
+                                // TODO: Implement comprehensive auto-capture in async context
+                                //       Currently skips auto-capture to avoid Send issues; should refactor capture_state to use spawn_blocking internally for git operations to enable auto-capture in async contexts safely.
+                                //
+                                // COMPLETION CHECKLIST:
+                                // [ ] Primary functionality implemented
+                                // [ ] API/data structures defined & stable
+                                // [ ] Error handling + validation aligned with error taxonomy
+                                // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                                // [ ] Integration tests for external systems/contracts
+                                // [ ] Documentation: public API + system behavior
+                                // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                                // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                                // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                                // [ ] Configurability and feature flags defined if relevant
+                                // [ ] Failure-mode cards documented (degradation paths)
+                                //
+                                // ACCEPTANCE CRITERIA:
+                                // - capture_state uses spawn_blocking internally for git operations
+                                // - Auto-capture works in async contexts
+                                // - Send issues are resolved
+                                // - Git operations are properly isolated
+                                //
+                                // DEPENDENCIES:
+                                // - spawn_blocking refactoring (Required)
+                                // - Git operation isolation (Required)
+                                // - Async context handling utilities (Required)
+                                //
+                                // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+                                // PRIORITY: Medium
+                                // BLOCKING: No
+                                //
+                                // GOVERNANCE:
+                                // - CAWS Tier: 2 (async context handling enhancement)
+                                // - Change Budget: ~150 LOC
+                                // - Reviewer Requirements: Async programming and git integration expertise
                                 tracing::debug!("Auto-capture skipped in async context (git2 Send safety)");
                             });
                         }

@@ -5,7 +5,7 @@
 
 use schemars::JsonSchema;
 use std::collections::HashMap;
-use anyhow::{Result, Context};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
@@ -116,7 +116,8 @@ impl FactVerifier {
 
     /// Verify by cross-referencing multiple sources
     async fn verify_by_cross_reference(&self, claim: &AtomicClaim, _context: &ProcessingContext) -> Result<(VerificationStatus, f64, Vec<String>, Vec<String>)> {
-        // Simplified implementation - in reality this would search multiple sources
+        // TODO: Implement comprehensive cross-reference verification
+        //       Currently uses placeholder implementation; should search multiple sources and aggregate evidence for accurate verification.
         let evidence = vec!["Source A confirms".to_string(), "Source B corroborates".to_string()];
         let counter_evidence = vec![];
 
@@ -130,7 +131,8 @@ impl FactVerifier {
 
     /// Verify by empirical testing
     async fn verify_by_empirical_testing(&self, claim: &AtomicClaim, _context: &ProcessingContext) -> Result<(VerificationStatus, f64, Vec<String>, Vec<String>)> {
-        // Simplified implementation - would run actual tests
+        // TODO: Implement actual empirical testing verification
+        //       Currently uses placeholder implementation; should run actual tests and collect empirical evidence for verification.
         let evidence = vec!["Empirical test passed".to_string()];
         let counter_evidence = vec![];
 
@@ -139,7 +141,8 @@ impl FactVerifier {
 
     /// Verify by expert consensus
     async fn verify_by_expert_consensus(&self, claim: &AtomicClaim, _context: &ProcessingContext) -> Result<(VerificationStatus, f64, Vec<String>, Vec<String>)> {
-        // Simplified implementation - would consult experts
+        // TODO: Implement expert consensus verification
+        //       Currently uses placeholder implementation; should consult experts and aggregate consensus for verification.
         let evidence = vec!["Expert consensus reached".to_string()];
         let counter_evidence = vec![];
 
@@ -148,7 +151,8 @@ impl FactVerifier {
 
     /// Verify by logical consistency
     async fn verify_by_logical_consistency(&self, claim: &AtomicClaim) -> Result<(VerificationStatus, f64, Vec<String>, Vec<String>)> {
-        // Simplified logical consistency check
+        // TODO: Implement comprehensive logical consistency verification
+        //       Currently uses basic check; should implement comprehensive logical consistency analysis using formal logic and reasoning.
         let evidence = vec!["Logically consistent".to_string()];
         let counter_evidence = vec![];
 

@@ -22,8 +22,41 @@ impl CodeAnalysisEngine {
 
     /// Analyze code metrics for a given claim
     pub async fn analyze_code_metrics(&self, _claim: &AtomicClaim) -> Result<(f64, f64, f64, Option<f64>)> {
-        // This would analyze the actual codebase
-        // For now, return mock analysis: (complexity, maintainability, doc_coverage, test_coverage)
+        // TODO: Implement comprehensive code metrics analysis
+        //       Currently returns mock analysis; should implement comprehensive code metrics analysis that analyzes the actual codebase to calculate complexity, maintainability, documentation coverage, and test coverage.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Code complexity is calculated from actual codebase analysis
+        // - Maintainability score is derived from code metrics
+        // - Documentation coverage is measured accurately
+        // - Test coverage is calculated from test execution data
+        //
+        // DEPENDENCIES:
+        // - Code analysis tools (Required)
+        // - Metrics calculation libraries (Required)
+        // - Test coverage data sources (Required)
+        //
+        // ESTIMATED EFFORT: 12-16 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (code analysis functionality)
+        // - Change Budget: ~300 LOC
+        // - Reviewer Requirements: Code analysis and metrics calculation expertise
         Ok((0.6, 75.0, 0.7, Some(85.0)))
     }
 
@@ -41,8 +74,41 @@ impl CodeAnalysisEngine {
 
     /// Analyze test coverage
     pub async fn analyze_test_coverage(&self, claim: &AtomicClaim) -> Result<f64> {
-        // Try to read coverage data if available
-        // For now, return a mock value
+        // TODO: Implement comprehensive test coverage analysis
+        //       Currently returns mock value; should implement comprehensive test coverage analysis that reads actual coverage data from test execution reports and calculates accurate coverage percentages.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Test coverage data is read from actual test execution reports
+        // - Coverage percentage is calculated accurately
+        // - Coverage data is parsed from standard formats (lcov, cobertura, etc.)
+        // - Missing coverage data is handled gracefully
+        //
+        // DEPENDENCIES:
+        // - Coverage report parsing utilities (Required)
+        // - Coverage data storage system (Required)
+        // - Test execution integration (Required)
+        //
+        // ESTIMATED EFFORT: 8-10 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (test coverage analysis functionality)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Test coverage analysis and report parsing expertise
         Ok(85.0)
     }
 

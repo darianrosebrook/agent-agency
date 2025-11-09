@@ -172,7 +172,9 @@ pub struct ProgressInfo {
     pub status_message: Option<String>,
 }
 
-/// Progress stream (simplified - in real implementation would be a stream)
+/// Progress stream
+// TODO: Implement proper async stream for progress updates
+//       Currently uses UnboundedReceiver; should implement proper async Stream trait for progress updates.
 pub type ProgressStream = tokio::sync::mpsc::UnboundedReceiver<ProgressInfo>;
 
 /// Memory content

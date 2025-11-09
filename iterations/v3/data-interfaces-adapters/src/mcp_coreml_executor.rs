@@ -13,7 +13,8 @@ use agent_data_processing::enrichment::{
     AsrEnricher, VisionEnricher, VisualCaptioningEnricher,
     EnrichmentCircuitBreakerConfig,
 };
-use agent_data_processing::ingestion::{UnifiedIngestor, DataInput, DataSource, FileSource, ContentType, DataContent, ProcessingContext, ProcessingPriority};
+use agent_data_processing::ingestion::{UnifiedIngestor, IngestionStage};
+use agent_data_processing::data_processing_types::{DataInput, DataSource, FileSource, ContentType, DataContent, ProcessingContext, ProcessingPriority};
 use std::collections::HashMap;
 
 /// Real CoreML ingestion executor implementation
@@ -137,11 +138,21 @@ impl CoreMLIngestionExecutor for RealCoreMLIngestionExecutor {
     ) -> Result<serde_json::Value, String> {
         let ingestor = UnifiedIngestor::new();
         
+        let file_metadata = tokio::fs::metadata(file_path)
+            .await
+            .map_err(|e| format!("Failed to read file metadata: {}", e))?;
+        
         let data_input = DataInput {
             id: agent_data_processing::data_processing_types::ProcessingId::new(),
             source: DataSource::File(FileSource {
                 path: PathBuf::from(file_path),
                 content_type: ContentType::Video,
+                size_bytes: file_metadata.len(),
+                last_modified: file_metadata.modified()
+                    .ok()
+                    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                    .map(|d| chrono::DateTime::from_timestamp(d.as_secs() as i64, 0).unwrap_or_else(|| chrono::Utc::now()))
+                    .unwrap_or_else(|| chrono::Utc::now()),
             }),
             content: DataContent::Binary(
                 tokio::fs::read(file_path)

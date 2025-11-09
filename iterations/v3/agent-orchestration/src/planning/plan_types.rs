@@ -14,18 +14,10 @@ use schemars::JsonSchema;
 use agent_agency_contracts::{
     planning_io::{
         ExecutionPlan as ContractExecutionPlan, PlanState as ContractPlanState,
-        Milestone as ContractMilestone, MilestoneState as ContractMilestoneState,
-        DependencyGraph as ContractDependencyGraph, PlanMetadata,
-    },
-    planning::{
-        PlanningCapabilities,
-        DetailedQualityMetrics, CoverageMetrics, TestQualityMetrics,
-        CodeQualityMetrics, DocumentationQualityMetrics,
-        QualityMetrics, PerformanceMetrics, HardwareResourceRequirements, NetworkRequirements, HumanResourceRequirements,
+        DependencyGraph as ContractDependencyGraph,
     },
     types::validation::ValidationResult,
-    task_request::Environment,
-    ChangeBudget, QualityGates, WorkingSpec,
+    ChangeBudget, WorkingSpec,
 };
 
 /// Extended execution plan with orchestration state

@@ -294,8 +294,8 @@ impl Judge for MockJudge {
         _description: &str,
         _acceptance_criteria: &[String],
     ) -> CouncilResult<JudgeVerdict> {
-        // For mock judge, delegate to review_spec with a constructed context
-        // This is a simplified implementation - in practice, you'd construct a proper ReviewContext
+        // TODO: Construct proper ReviewContext for mock judge
+        //       Currently uses basic context construction; should construct proper ReviewContext with all required fields and metadata.
         let context = ReviewContext {
             session_id: "mock_session".to_string(),
             working_spec: format!(r#"{{"title": "{}", "description": "{}", "acceptance_criteria": []}}"#, _title, _description),

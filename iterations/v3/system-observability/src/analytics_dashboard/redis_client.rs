@@ -195,9 +195,41 @@ impl ProductionRedisClient {
 
     /// Check if Redis connection is healthy
     async fn is_connection_healthy(&self, _conn: &Connection) -> bool {
-        // Simple PING check to verify connection health
-        // Note: This would need to be implemented with redis::cmd
-        // For now, assume connection is healthy
+        // TODO: Implement comprehensive Redis connection health check
+        //       Currently assumes connection is healthy; should implement comprehensive health check that uses redis::cmd to perform PING check for accurate connection health verification.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - PING check is performed using redis::cmd
+        // - Connection health is accurately determined
+        // - Health check handles connection errors gracefully
+        // - Health check is efficient and non-blocking
+        //
+        // DEPENDENCIES:
+        // - redis::cmd API (Required)
+        // - Connection health check utilities (Required)
+        // - Error handling for connection failures (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (Redis connection management functionality)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Redis integration and connection health expertise
         true
     }
 

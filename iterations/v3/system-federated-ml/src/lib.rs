@@ -49,12 +49,6 @@ pub use tool_registry::{ToolRegistry, RegisteredTool, ToolRegistration};
 // pub use crate::tool_orchestrator::ToolOrchestrator; // Module not implemented yet
 
 use schemars::JsonSchema;
-use anyhow::{Result, Context};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use tracing::{info, debug, warn, error};
 
 /// Policy validation result
 #[derive(Debug, Clone, JsonSchema)]

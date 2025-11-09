@@ -14,10 +14,12 @@ use uuid::Uuid;
 
 #[cfg(feature = "research")]
 use agent_agency_contracts::{
-    ResearchEvidenceCollector,
+    ResearchEvidenceCollector as ContractsResearchEvidenceCollector,
     types::research::{Evidence, EvidenceType, EvidenceQuery, ValidationResult, EvidenceStats},
     errors::ResearchResult,
 };
+#[cfg(feature = "research")]
+use crate::planning::evidence::{ResearchEvidenceCollector, ResearchEvidence as PlanningResearchEvidence, ProcessingContext as PlanningProcessingContext};
 
 /// Adapter that wraps agent-research::EvidenceCollector to implement contracts::ResearchEvidenceCollector
 #[cfg(feature = "research")]
@@ -36,7 +38,7 @@ impl ResearchEvidenceAdapter {
 
 #[cfg(feature = "research")]
 #[async_trait]
-impl ResearchEvidenceCollector for ResearchEvidenceAdapter {
+impl ContractsResearchEvidenceCollector for ResearchEvidenceAdapter {
     async fn collect_evidence(&self, query: EvidenceQuery) -> ResearchResult<Vec<Evidence>> {
         // Convert contracts EvidenceQuery to agent-research types
         let atomic_claim = agent_research::extraction_types::AtomicClaim {
@@ -78,9 +80,15 @@ impl ResearchEvidenceCollector for ResearchEvidenceAdapter {
         };
 
         // Collect evidence using the real research collector
-        let research_evidence = self.evidence_collector.collect_evidence(&atomic_claim, &processing_context).await
-            .map_err(|e| agent_agency_contracts::ContractError::ServiceUnavailable {
-                service: "research".to_string()
+        // Note: EvidenceCollector requires &mut self, but we have Arc
+        // Create a new instance for this call since we can't mutate through Arc
+        let mut collector = agent_research::evidence::collector::EvidenceCollector::new();
+        let research_evidence = collector.collect_evidence(&atomic_claim, &processing_context).await
+            .map_err(|e| {
+                let error_msg = format!("{}", e);
+                agent_agency_contracts::errors::PlanningError::PlanGenerationFailed {
+                    reason: format!("Research evidence collection failed: {}", error_msg)
+                }
             })?;
 
         // Convert back to contracts types
@@ -96,7 +104,7 @@ impl ResearchEvidenceCollector for ResearchEvidenceAdapter {
         let atomic_claim = agent_research::extraction_types::AtomicClaim {
             id: Uuid::parse_str(&evidence.id).unwrap_or_else(|_| Uuid::new_v4()),
             claim_text: evidence.content.clone(),
-            claim_type: self.map_evidence_type_to_claim_type(evidence.evidence_type),
+            claim_type: self.map_evidence_type_to_claim_type(evidence.evidence_type.clone()),
             verifiability: agent_research::extraction_types::VerifiabilityLevel::DirectlyVerifiable,
             scope: agent_research::extraction_types::ClaimScope {
                 working_spec_id: "contracts-adapter".to_string(),
@@ -119,24 +127,48 @@ impl ResearchEvidenceCollector for ResearchEvidenceAdapter {
             updated_at: chrono::Utc::now(),
         };
 
-        // TODO: Integrate real research validation pipeline
-        // - [ ] Connect to agent-research validation services
-        // - [ ] Run full validation pipeline on claims and evidence
-        // - [ ] Calculate validation confidence scores
-        // - [ ] Include validation evidence and reasoning
-        // - [ ] Handle validation errors and timeouts
-        // - [ ] Add unit tests with mock validation results
-        // - [ ] Add integration tests with real research validation
-        // For now, return a basic validation result
-        // In a full implementation, this would use the research validation pipeline
+        // TODO: Integrate real research validation pipeline from agent-research
+        //       Currently returns basic validation result based on confidence threshold; should use full research validation pipeline.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Connect to agent-research validation services
+        // [ ] Run full validation pipeline on claims and evidence
+        // [ ] Calculate validation confidence scores using research algorithms
+        // [ ] Include validation evidence and reasoning in results
+        // [ ] Handle validation errors and timeouts gracefully
+        // [ ] Add unit tests with mock validation results
+        // [ ] Add integration tests with real research validation
+        // [ ] Verify validation results improve claim verification accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Research validation pipeline is integrated and functional
+        // - Validation results include confidence scores, evidence, and reasoning
+        // - Validation errors and timeouts are handled gracefully
+        // - Validation accuracy improves over basic confidence threshold approach
+        //
+        // DEPENDENCIES:
+        // - agent-research validation services (Required)
+        // - Research validation pipeline API (Required)
+        // - Evidence and claim data structures (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (standard feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Research validation domain expertise
         let validation_result = ValidationResult {
-            is_valid: evidence.confidence > 0.5,
+            valid: evidence.confidence > 0.5,
             score: evidence.confidence,
             issues: if evidence.confidence < 0.5 {
                 vec!["Low confidence evidence".to_string()]
             } else {
                 vec![]
             },
+            warnings: vec![],
+            suggestions: vec![],
             metadata: std::collections::HashMap::new(),
         };
 
@@ -144,8 +176,41 @@ impl ResearchEvidenceCollector for ResearchEvidenceAdapter {
     }
 
     async fn search_evidence(&self, criteria: serde_json::Value) -> ResearchResult<Vec<Evidence>> {
-        // For now, return empty results
-        // In a full implementation, this would search the research evidence database
+        // TODO: Implement comprehensive evidence search from research database
+        //       Currently returns empty results; should implement comprehensive search that queries the research evidence database using criteria for accurate evidence retrieval.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Evidence is searched from research database
+        // - Search criteria are properly applied
+        // - Search results are accurate and relevant
+        // - Search handles database errors gracefully
+        //
+        // DEPENDENCIES:
+        // - Research evidence database connection (Required)
+        // - Search query utilities (Required)
+        // - Criteria parsing and validation (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (research evidence search functionality)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Database search and research evidence expertise
         warn!("search_evidence not fully implemented - returning empty results");
         Ok(Vec::new())
     }
@@ -160,6 +225,50 @@ impl ResearchEvidenceCollector for ResearchEvidenceAdapter {
             collection_success_rate: 0.0,
             last_collection_time: None,
         })
+    }
+}
+
+#[cfg(feature = "research")]
+#[async_trait]
+impl ResearchEvidenceCollector for ResearchEvidenceAdapter {
+    async fn collect_evidence(&self, context: &PlanningProcessingContext) -> anyhow::Result<Vec<PlanningResearchEvidence>> {
+        // Convert planning ProcessingContext to contracts EvidenceQuery
+        let query = EvidenceQuery {
+            query: format!("Task {} milestone {}", context.task_id, context.milestone_id),
+            evidence_types: context.evidence_types.iter().map(|et| match et {
+                crate::planning::evidence::ResearchEvidenceType::CodeReview | crate::planning::evidence::ResearchEvidenceType::CodeAnalysis => EvidenceType::CodeAnalysis,
+                crate::planning::evidence::ResearchEvidenceType::TestExecution => EvidenceType::TestResults,
+                crate::planning::evidence::ResearchEvidenceType::PerformanceMetrics | crate::planning::evidence::ResearchEvidenceType::Performance => EvidenceType::PerformanceMetrics,
+                crate::planning::evidence::ResearchEvidenceType::SecurityScan | crate::planning::evidence::ResearchEvidenceType::Security => EvidenceType::SecurityScan,
+                crate::planning::evidence::ResearchEvidenceType::Constitutional => EvidenceType::ConstitutionalReference,
+                crate::planning::evidence::ResearchEvidenceType::Documentation => EvidenceType::Documentation,
+            }).collect(),
+            context: std::collections::HashMap::new(),
+            limit: None,
+            min_confidence: None,
+        };
+
+        // Use the contracts implementation via ContractsResearchEvidenceCollector trait
+        let contracts_evidence = ContractsResearchEvidenceCollector::collect_evidence(self, query).await
+            .map_err(|e| anyhow::anyhow!("Research evidence collection failed: {:?}", e))?;
+
+        // Convert contracts Evidence to planning ResearchEvidence
+        Ok(contracts_evidence.into_iter().map(|ev| PlanningResearchEvidence {
+            id: Uuid::parse_str(&ev.id).unwrap_or_else(|_| Uuid::new_v4()),
+            content: ev.content,
+            evidence_type: match ev.evidence_type {
+                EvidenceType::CodeAnalysis => crate::planning::evidence::ResearchEvidenceType::CodeAnalysis,
+                EvidenceType::TestResults => crate::planning::evidence::ResearchEvidenceType::TestExecution,
+                EvidenceType::PerformanceMetrics => crate::planning::evidence::ResearchEvidenceType::PerformanceMetrics,
+                EvidenceType::SecurityScan => crate::planning::evidence::ResearchEvidenceType::SecurityScan,
+                EvidenceType::ConstitutionalReference => crate::planning::evidence::ResearchEvidenceType::Constitutional,
+                EvidenceType::Documentation => crate::planning::evidence::ResearchEvidenceType::Documentation,
+                _ => crate::planning::evidence::ResearchEvidenceType::CodeAnalysis, // Default
+            },
+            confidence: ev.confidence,
+            source: ev.source,
+            timestamp: ev.timestamp,
+        }).collect())
     }
 }
 
@@ -183,17 +292,17 @@ impl ResearchEvidenceAdapter {
     fn map_evidence_type_to_claim_type(&self, evidence_type: EvidenceType) -> agent_research::extraction_types::ClaimType {
         match evidence_type {
             EvidenceType::CodeAnalysis | EvidenceType::TestResults => agent_research::extraction_types::ClaimType::Factual,
-            EvidenceType::Documentation => agent_research::extraction_types::ClaimType::Definitional,
-            EvidenceType::ResearchFindings | EvidenceType::PerformanceMetrics => agent_research::extraction_types::ClaimType::Comparative,
-            EvidenceType::SecurityScan => agent_research::extraction_types::ClaimType::Factual,
-            EvidenceType::ConstitutionalReference => agent_research::extraction_types::ClaimType::Normative,
-            EvidenceType::CouncilDecision => agent_research::extraction_types::ClaimType::Normative,
+            EvidenceType::Documentation => agent_research::extraction_types::ClaimType::Factual, // Definitional -> Factual
+            EvidenceType::ResearchFindings | EvidenceType::PerformanceMetrics => agent_research::extraction_types::ClaimType::Quantitative, // Comparative -> Quantitative
+            EvidenceType::SecurityScan => agent_research::extraction_types::ClaimType::Security,
+            EvidenceType::ConstitutionalReference => agent_research::extraction_types::ClaimType::Constitutional, // Normative -> Constitutional
+            EvidenceType::CouncilDecision => agent_research::extraction_types::ClaimType::Constitutional, // Normative -> Constitutional
             EvidenceType::MultiModalAnalysis => agent_research::extraction_types::ClaimType::Factual,
             EvidenceType::ExternalSource => agent_research::extraction_types::ClaimType::Factual,
             EvidenceType::TestResult => agent_research::extraction_types::ClaimType::Factual,
-            EvidenceType::UserFeedback => agent_research::extraction_types::ClaimType::Evaluative,
-            EvidenceType::Measurement => agent_research::extraction_types::ClaimType::Factual,
-            EvidenceType::LogicalAnalysis => agent_research::extraction_types::ClaimType::Definitional,
+            EvidenceType::UserFeedback => agent_research::extraction_types::ClaimType::Behavioral, // Evaluative -> Behavioral
+            EvidenceType::Measurement => agent_research::extraction_types::ClaimType::Quantitative,
+            EvidenceType::LogicalAnalysis => agent_research::extraction_types::ClaimType::Factual, // Definitional -> Factual
             EvidenceType::Supporting => agent_research::extraction_types::ClaimType::Factual,
         }
     }
@@ -203,6 +312,7 @@ impl ResearchEvidenceAdapter {
         match research_type {
             agent_research::extraction_types::EvidenceType::CodeAnalysis => EvidenceType::CodeAnalysis,
             agent_research::extraction_types::EvidenceType::TestResults => EvidenceType::TestResults,
+            agent_research::extraction_types::EvidenceType::TestExecution => EvidenceType::TestResults, // Map TestExecution to TestResults
             agent_research::extraction_types::EvidenceType::Documentation => EvidenceType::Documentation,
             agent_research::extraction_types::EvidenceType::ResearchFindings => EvidenceType::ResearchFindings,
             agent_research::extraction_types::EvidenceType::PerformanceMetrics => EvidenceType::PerformanceMetrics,

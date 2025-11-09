@@ -294,16 +294,39 @@ impl PlanGenerator {
         let text = format!("{} {} {}", criterion.given, criterion.when, criterion.then);
 
         if text.contains("after") || text.contains("requires") || text.contains("depends on") {
-            // TODO: Implement NLP-based dependency extraction
-            // - [ ] Integrate NLP library for text analysis
-            // - [ ] Parse dependency relationships from natural language
-            // - [ ] Extract milestone references from text
-            // - [ ] Build dependency graph from extracted relationships
-            // - [ ] Handle ambiguous or missing dependencies
-            // - [ ] Add unit tests with various dependency patterns
-            // - [ ] Add integration tests with real plan descriptions
-            // Extract dependency references (simplified - would use NLP in real implementation)
-            // For now, return empty - real implementation would analyze text
+            // TODO: Implement NLP-based dependency extraction from plan descriptions
+            //       Currently returns empty dependencies; should use NLP to extract dependency relationships from natural language.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Integrate NLP library for text analysis
+            // [ ] Parse dependency relationships from natural language
+            // [ ] Extract milestone references from text
+            // [ ] Build dependency graph from extracted relationships
+            // [ ] Handle ambiguous or missing dependencies
+            // [ ] Validate extracted dependencies against milestone definitions
+            // [ ] Add unit tests with various dependency patterns
+            // [ ] Add integration tests with real plan descriptions
+            // [ ] Verify dependency extraction accuracy
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Dependencies are extracted accurately from natural language
+            // - Milestone references are identified correctly
+            // - Dependency graph is built correctly
+            // - Ambiguous dependencies are handled gracefully
+            //
+            // DEPENDENCIES:
+            // - NLP library for text analysis (Required)
+            // - Dependency parsing utilities (Required)
+            // - Milestone reference extraction (Required)
+            //
+            // ESTIMATED EFFORT: 8-10 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (standard feature)
+            // - Change Budget: ~200 LOC
+            // - Reviewer Requirements: NLP domain expertise
         }
 
         Ok(deps)
@@ -311,9 +334,39 @@ impl PlanGenerator {
 
     /// Check if dependency is blocking
     fn is_blocking_dependency(&self, dependency: &str) -> bool {
-        // Check if dependency blocks other milestones
-        // Simplified logic - real implementation would analyze impact
-        dependency.contains("infrastructure") ||
+        // TODO: Analyze dependency impact to determine if blocking
+        //       Currently uses basic keyword matching; should analyze dependency impact on milestone execution to determine if blocking.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Analyze dependency graph for blocking relationships
+        // [ ] Consider dependency criticality and impact
+        // [ ] Evaluate dependency execution time and resources
+        // [ ] Check if dependency blocks multiple milestones
+        // [ ] Handle transitive blocking dependencies
+        // [ ] Add unit tests for blocking dependency detection
+        // [ ] Add integration tests with complex dependency graphs
+        // [ ] Verify blocking dependency accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Blocking dependencies are identified from impact analysis
+        // - Dependency criticality is considered
+        // - Transitive blocking is detected
+        // - Blocking detection is accurate
+        //
+        // DEPENDENCIES:
+        // - Dependency graph analysis utilities (Required)
+        // - Impact analysis utilities (Required)
+        // - Criticality assessment utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (planning feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Dependency analysis expertise
+        dependency.contains("infrastructure") || // Temporary: keyword matching until impact analysis
         dependency.contains("database") ||
         dependency.contains("security")
     }
@@ -413,9 +466,39 @@ impl PlanGenerator {
 
     /// Determine milestone scope
     fn determine_milestone_scope(&self, objective: &str, _context: &PlanGenerationContext) -> Result<MilestoneScope> {
-        // Analyze objective to determine affected files and operations
-        // Simplified - real implementation would use NLP and project analysis
-        Ok(MilestoneScope {
+        // TODO: Use NLP and project analysis to determine milestone scope
+        //       Currently returns empty scope; should use NLP and project analysis to determine affected files and operations.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Use NLP to extract file references from objective
+        // [ ] Analyze project structure for affected files
+        // [ ] Determine affected directories and operations
+        // [ ] Identify files that will be modified
+        // [ ] Handle complex objectives with multiple components
+        // [ ] Add unit tests for scope determination
+        // [ ] Add integration tests with various objectives
+        // [ ] Verify scope determination accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Affected files are identified from objective analysis
+        // - Project structure is analyzed correctly
+        // - Directories and operations are determined accurately
+        // - Complex objectives are handled correctly
+        //
+        // DEPENDENCIES:
+        // - NLP utilities (Required)
+        // - Project analysis utilities (Required)
+        // - File reference extraction utilities (Required)
+        //
+        // ESTIMATED EFFORT: 5-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (planning feature)
+        // - Change Budget: ~120 LOC
+        // - Reviewer Requirements: NLP and project analysis expertise
+        Ok(MilestoneScope { // Temporary: empty scope until NLP and project analysis
             excluded_paths: vec![],
             included_paths: vec![],
             files: vec![], // Would be populated by analysis
@@ -517,13 +600,39 @@ impl PlanGenerator {
             critical_path,
             parallel_groups,
             // TODO: Detect cycles in dependency graph
-            // - [ ] Implement cycle detection algorithm (DFS-based)
-            // - [ ] Identify all cycles in the dependency graph
-            // - [ ] Report cycles with their paths
-            // - [ ] Add unit tests with cyclic graphs
-            // - [ ] Add integration tests with complex dependency graphs
-            has_cycles: false, // Assume no cycles for now
-            cycles: vec![],
+            //       Currently assumes no cycles; should detect cycles in dependency graph and report their paths.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Implement cycle detection algorithm (DFS-based)
+            // [ ] Track cycle paths in dependency graph
+            // [ ] Report cycles with their complete paths
+            // [ ] Handle multiple cycles in graph
+            // [ ] Provide cycle resolution suggestions
+            // [ ] Add unit tests with cyclic graphs
+            // [ ] Add integration tests with complex dependency graphs
+            // [ ] Verify cycle detection accuracy
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Cycles are detected correctly in dependency graph
+            // - Cycle paths are reported accurately
+            // - Multiple cycles are handled
+            // - Cycle detection is efficient
+            //
+            // DEPENDENCIES:
+            // - Graph algorithms library (Required)
+            // - Cycle detection utilities (Required)
+            // - Path tracking utilities (Required)
+            //
+            // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (planning feature)
+            // - Change Budget: ~100 LOC
+            // - Reviewer Requirements: Graph algorithms expertise
+            has_cycles: false, // Temporary: assume no cycles until cycle detection is implemented
+            cycles: vec![], // Temporary: empty until cycle detection
         })
     }
 
@@ -619,12 +728,75 @@ impl PlanGenerator {
     }
 
     fn calculate_critical_path(&self, _nodes: &HashMap<String, DependencyNode>, _edges: &[DependencyEdge]) -> Result<Vec<String>> {
-        // Simplified critical path calculation
-        Ok(vec![])
+        // TODO: Implement proper critical path calculation
+        //       Currently returns empty path; should calculate critical path through dependency graph using longest path algorithm.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement longest path algorithm for DAG
+        // [ ] Calculate earliest start and finish times
+        // [ ] Calculate latest start and finish times
+        // [ ] Identify critical path nodes
+        // [ ] Handle multiple critical paths
+        // [ ] Support weighted edges for duration
+        // [ ] Add unit tests for critical path calculation
+        // [ ] Add integration tests with complex graphs
+        // [ ] Verify critical path accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Critical path is calculated correctly
+        // - Longest path algorithm is implemented properly
+        // - Multiple critical paths are handled
+        // - Weighted edges are supported
+        //
+        // DEPENDENCIES:
+        // - Graph algorithms library (Required)
+        // - Critical path calculation utilities (Required)
+        // - Path analysis utilities (Required)
+        //
+        // ESTIMATED EFFORT: 5-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (planning feature)
+        // - Change Budget: ~120 LOC
+        // - Reviewer Requirements: Graph algorithms and project management expertise
+        Ok(vec![]) // Temporary: empty until critical path calculation is implemented
     }
 
     fn identify_parallel_groups(&self, _nodes: &HashMap<String, DependencyNode>, _edges: &[DependencyEdge]) -> Result<Vec<Vec<String>>> {
-        // Simplified parallel group identification
+        // TODO: Implement parallel group identification algorithm
+        //       Currently returns empty groups; should identify groups of nodes that can execute in parallel based on dependency analysis.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Build dependency graph from nodes and edges
+        // [ ] Identify independent node sets (no dependencies between them)
+        // [ ] Group nodes by dependency level (topological sort levels)
+        // [ ] Optimize groups for parallel execution efficiency
+        // [ ] Handle cycles and complex dependencies
+        // [ ] Add unit tests with various dependency graphs
+        // [ ] Add integration tests with real execution plans
+        // [ ] Performance: Group identification should complete in <10ms for typical graphs
+        // [ ] Documentation: Document parallel grouping algorithm
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Identifies groups of nodes that can execute in parallel
+        // - Groups respect dependency constraints
+        // - Optimizes for execution efficiency
+        // - Handles complex dependency structures
+        //
+        // DEPENDENCIES:
+        // - Dependency graph structure (Required)
+        // - Graph algorithms (topological sort, etc.) (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (planning feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Graph algorithms expertise
         Ok(vec![])
     }
 
@@ -754,7 +926,36 @@ impl DependencyAnalysis {
     }
 
     fn is_blocking_criterion(&self, _criterion_id: &str) -> bool {
-        // Simplified - real implementation would check if criterion blocks others
+        // TODO: Implement criterion blocking analysis
+        //       Currently returns false; should analyze criterion dependencies to determine if a criterion blocks others.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Build criterion dependency graph
+        // [ ] Analyze blocking relationships between criteria
+        // [ ] Detect circular blocking dependencies
+        // [ ] Add unit tests with various criterion relationships
+        // [ ] Add integration tests with real working specs
+        // [ ] Performance: Blocking check should complete in <1ms
+        // [ ] Documentation: Document blocking analysis algorithm
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Accurately identifies blocking criteria
+        // - Handles complex dependency structures
+        // - Detects circular dependencies
+        // - Returns correct blocking status
+        //
+        // DEPENDENCIES:
+        // - Criterion dependency graph (Required)
+        // - Graph analysis algorithms (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (planning feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Graph algorithms expertise
         false
     }
 

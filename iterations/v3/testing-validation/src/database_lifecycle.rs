@@ -6,7 +6,7 @@
 use anyhow::{Context, Result};
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::sync::Arc;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 use uuid::Uuid;
 use chrono::Utc;
 
@@ -77,15 +77,41 @@ impl TestDatabaseManager {
     pub async fn initialize_schema(&self) -> Result<()> {
         info!("Initializing database schema for test database: {}", self.database_name);
         
-        // TODO: Integrate proper migration framework
-        // - [ ] Integrate refinery or sqlx migrations framework
-        // - [ ] Use migration files instead of direct SQL execution
-        // - [ ] Track migration version and rollback capability
-        // - [ ] Handle migration conflicts and errors
-        // - [ ] Add unit tests for migration execution
-        // - [ ] Add integration tests with real database migrations
-        // Apply migrations using refinery or sqlx migrations
-        // For now, we'll use direct SQL execution
+        // TODO: Implement proper migration system using refinery or sqlx migrations
+        //       Currently uses direct SQL execution; should implement comprehensive migration system using refinery or sqlx migrations with version tracking, rollback capability, and proper error handling.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Migrations use refinery or sqlx migration system
+        // - Migration version is tracked and managed
+        // - Rollback capability is available
+        // - Migration conflicts and errors are handled gracefully
+        //
+        // DEPENDENCIES:
+        // - Migration framework (refinery or sqlx) (Required)
+        // - Migration version tracking system (Required)
+        // - Rollback mechanism (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (database migration functionality)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Database migration and schema management expertise
         self.apply_migrations().await?;
         
         info!("Database schema initialized");
@@ -354,15 +380,41 @@ impl TestDatabaseManager {
 
 impl Drop for TestDatabaseManager {
     fn drop(&mut self) {
-        // TODO: Implement automatic test database cleanup
-        // - [ ] Add configuration option for auto-cleanup vs manual cleanup
-        // - [ ] Drop test database on Drop if configured
-        // - [ ] Support database reuse for faster test runs
-        // - [ ] Handle cleanup errors gracefully
-        // - [ ] Add unit tests for cleanup behavior
-        // - [ ] Add integration tests with real database cleanup
-        // Note: In production, you might want to drop the test database here
-        // For now, we'll leave it for manual cleanup or reuse
+        // TODO: Implement comprehensive test database cleanup strategy
+        //       Currently leaves database for manual cleanup or reuse; should implement comprehensive cleanup strategy that supports database reuse for faster test runs, handles cleanup errors gracefully, and optionally drops test databases in production environments.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Database reuse is supported for faster test runs
+        // - Cleanup errors are handled gracefully
+        // - Test databases can be dropped in production environments
+        // - Cleanup strategy is configurable
+        //
+        // DEPENDENCIES:
+        // - Database cleanup utilities (Required)
+        // - Test environment configuration (Required)
+        // - Database reuse management system (Optional)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (test infrastructure enhancement)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Test infrastructure and database management expertise
         debug!("TestDatabaseManager dropped (database {} remains)", self.database_name);
     }
 }

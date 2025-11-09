@@ -4,12 +4,12 @@
 //! error recovery, and result aggregation for complex reasoning workflows.
 
 use schemars::JsonSchema;
-use anyhow::{Result, Context};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
-use tokio::sync::{RwLock, mpsc};
-use tracing::{info, debug, warn, error};
+use tokio::sync::RwLock;
+use tracing::{info, debug};
 
 use crate::tool_registry::{ToolRegistry, Tool};
 use crate::tool_execution::{ToolExecutor, ToolInvocation, ToolResult};
@@ -446,7 +446,8 @@ impl ToolCoordinator {
             return Err(anyhow::anyhow!("Incomplete execution. Missing steps: {:?}", missing));
         }
 
-        // Aggregate final result (simplified - take last step's result)
+        // TODO: Implement proper result aggregation strategy
+        //       Currently takes last step's result; should implement proper aggregation considering all step results, confidence scores, and dependencies.
         if let Some(last_step) = chain.steps.last() {
             if let Some(result) = step_results.get(&last_step.step_id) {
                 if let Some(tool_result) = &result.result {
@@ -631,7 +632,8 @@ impl ToolChain {
 
     /// Get steps in topological order
     pub fn get_steps_topological(&self) -> Result<Vec<&ToolChainStep>> {
-        // Simplified topological sort - assumes no cycles (validated elsewhere)
+        // TODO: Implement proper topological sort algorithm
+        //       Currently uses basic sort; should implement proper topological sort with cycle detection and dependency handling.
         let mut result = Vec::new();
         let mut processed = std::collections::HashSet::new();
 

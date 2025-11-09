@@ -65,8 +65,42 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Use DatabaseOperationsAdapter from data-interfaces-adapters
         // Note: This creates a dependency, but it's only used in main.rs binary, not in lib.rs
         // The factory accepts Option<Arc<dyn DatabaseOperations>> so we can pass None if adapter not available
-        // For now, pass None - factory will use stub implementation
-        // TODO: Create DatabaseOperationsAdapter in agent-orchestration or move to shared crate
+        //
+        // TODO: Implement comprehensive DatabaseOperationsAdapter integration
+        //       Currently passes None and factory uses stub implementation; should implement comprehensive integration that creates DatabaseOperationsAdapter in agent-orchestration or moves to shared crate for proper database operations support.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - DatabaseOperationsAdapter is created or moved to shared crate
+        // - Database operations are properly integrated
+        // - Factory uses real adapter instead of stub
+        // - Database client integration works correctly
+        //
+        // DEPENDENCIES:
+        // - DatabaseOperationsAdapter implementation (Required)
+        // - Shared crate organization (Optional)
+        // - Database client integration (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (database integration functionality)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Database integration and adapter pattern expertise
         None
     } else {
         None

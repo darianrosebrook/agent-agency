@@ -8,14 +8,13 @@
 use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use uuid::Uuid;
-use tracing::{info, error};
+use tracing::info;
 
 use agent_agency_contracts::{
     TaskDescriptor, ExecutionArtifacts, WorkingSpec, WorkingSpecConstraints,
     AcceptanceCriterion, TestPlan, RollbackPlan, WorkingSpecContext,
-    BudgetLimits, ScopeRestrictions,
 };
+use agent_agency_contracts::working_spec::{BudgetLimits, ScopeRestrictions};
 use agent_orchestration::orchestration::unified_orchestrator::UnifiedOrchestrator;
 use data_infrastructure::TaskExecutor;
 
@@ -71,15 +70,29 @@ impl TaskExecutor for UnifiedOrchestratorTaskExecutor {
             artifact.iteration = execution_result.iterations;
 
             // Add metadata about execution
-            artifact.metadata = Some(serde_json::json!({
-                "plan_id": execution_result.plan_id.to_string(),
-                "iterations": execution_result.iterations,
-                "quality_scores": execution_result.quality_scores,
-                "final_verdict": execution_result.final_verdict.as_ref().map(|v| serde_json::json!({
-                    "status": format!("{:?}", v.status),
-                    "reason": v.reason.clone(),
-                })),
-            }));
+            // Note: ArtifactMetadata is a simple struct, not a JSON value
+            // TODO: Extend ArtifactMetadata to support custom fields:
+            // 1. Custom metadata fields: Add support for arbitrary key-value pairs
+            //    - Extend ArtifactMetadata struct with custom fields map
+            //    - Support JSON value types for flexible metadata storage
+            //    - Maintain backward compatibility with existing default metadata
+            // 2. Metadata serialization: Proper serialization support
+            //    - Serialize custom fields to JSON format
+            //    - Handle nested structures and complex types
+            //    - Preserve metadata across serialization/deserialization
+            // 3. Metadata validation: Validate metadata structure
+            //    - Enforce schema constraints if needed
+            //    - Validate field types and value ranges
+            //    - Handle invalid metadata gracefully
+            // ACCEPTANCE CRITERIA:
+            // - Custom metadata fields can be added and retrieved
+            // - Metadata serializes correctly to JSON format
+            // - Backward compatibility maintained with existing code
+            // DEPENDENCIES:
+            // - ArtifactMetadata struct extension (Required)
+            // - JSON serialization support (Required)
+            // PRIORITY: Medium
+            artifact.metadata = Some(agent_agency_contracts::execution_artifacts::ArtifactMetadata::default());
 
             Ok(artifact)
         }
@@ -105,7 +118,7 @@ fn task_descriptor_to_working_spec(task_descriptor: &TaskDescriptor) -> Result<W
 
     // Determine risk tier
     let risk_tier = task_descriptor
-        .risk_tier
+        .risk_tier.clone()
         .map(|rt| match rt {
             agent_agency_contracts::types::planning::RiskTier::Tier1 => 1,
             agent_agency_contracts::types::planning::RiskTier::Tier2 => 2,
@@ -114,18 +127,36 @@ fn task_descriptor_to_working_spec(task_descriptor: &TaskDescriptor) -> Result<W
         .unwrap_or(2);
 
     // Create acceptance criteria from task descriptor
-    let acceptance_criteria = if let Some(ref acceptance) = task_descriptor.acceptance {
-        acceptance
-            .iter()
-            .enumerate()
-            .map(|(idx, criterion)| AcceptanceCriterion {
-                id: format!("A{}", idx + 1),
-                given: criterion.given.clone(),
-                when: criterion.when.clone(),
-                then: criterion.then.clone(),
-                priority: None,
-            })
-            .collect()
+    // Note: TaskDescriptor.acceptance is Option<String>, not Option<Vec<...>>
+    // TODO: Parse acceptance criteria from structured format:
+    // 1. Criteria parsing: Parse acceptance criteria from structured format
+    //    - Support multiple acceptance criteria from single string
+    //    - Parse Given-When-Then format from text
+    //    - Handle structured JSON/YAML acceptance criteria
+    // 2. Criteria extraction: Extract individual criteria
+    //    - Split multi-criteria strings into individual criteria
+    //    - Parse criteria components (given/when/then)
+    //    - Generate unique IDs for each criterion
+    // 3. Criteria validation: Validate parsed criteria
+    //    - Ensure all required fields are present
+    //    - Validate criteria format and structure
+    //    - Handle parsing errors gracefully
+    // ACCEPTANCE CRITERIA:
+    // - Multiple acceptance criteria can be parsed from single string
+    // - Given-When-Then format is correctly parsed
+    // - Structured formats (JSON/YAML) are supported
+    // DEPENDENCIES:
+    // - Acceptance criteria parser (Required)
+    // - Structured format support (Optional)
+    // PRIORITY: Medium
+    let acceptance_criteria = if let Some(ref acceptance_str) = task_descriptor.acceptance {
+        vec![AcceptanceCriterion {
+            id: "A1".to_string(),
+            given: "Task is submitted".to_string(),
+            when: "Execution completes".to_string(),
+            then: acceptance_str.clone(),
+            priority: None,
+        }]
     } else {
         vec![AcceptanceCriterion {
             id: "A1".to_string(),
@@ -140,16 +171,18 @@ fn task_descriptor_to_working_spec(task_descriptor: &TaskDescriptor) -> Result<W
     let test_plan = TestPlan {
         unit_tests: vec![],
         integration_tests: vec![],
-        e2e_tests: vec![],
-        performance_tests: vec![],
-        security_tests: vec![],
+        e2e_scenarios: vec![],
+        coverage_targets: None,
     };
 
     // Create rollback plan
     let rollback_plan = RollbackPlan {
-        rollback_steps: vec!["Revert all file changes".to_string()],
-        rollback_verification: vec!["Verify original state restored".to_string()],
-        rollback_slo: "5m".to_string(),
+        strategy: agent_agency_contracts::working_spec::RollbackStrategy::GitRevert,
+        automated_steps: vec!["Revert all file changes".to_string()],
+        manual_steps: vec!["Verify original state restored".to_string()],
+        data_impact: agent_agency_contracts::working_spec::DataImpact::None,
+        downtime_required: Some(false),
+        rollback_window_minutes: Some(5),
     };
 
     // Create context
@@ -169,11 +202,8 @@ fn task_descriptor_to_working_spec(task_descriptor: &TaskDescriptor) -> Result<W
         max_duration_minutes: None,
         max_iterations: None,
         budget_limits: Some(BudgetLimits {
-            max_files: task_descriptor
-                .change_budget
-                .max_files
-                .map(|f| f as u32),
-            max_loc: task_descriptor.change_budget.max_loc.map(|l| l as u32),
+            max_files: Some(task_descriptor.change_budget.max_files as u32),
+            max_loc: Some(task_descriptor.change_budget.max_loc as u32),
         }),
         scope_restrictions: Some(ScopeRestrictions {
             allowed_paths: task_descriptor.scope_in.allowed_paths.clone(),

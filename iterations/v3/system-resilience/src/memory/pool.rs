@@ -236,8 +236,41 @@ impl<T: Send + Sync + 'static> PooledObject<T> {
     fn register_orphaned_object(&self, obj: T) {
         // Try to register the object for later cleanup
         if let Ok(orphaned) = crate::memory::ORPHANED_OBJECTS.lock() {
-            // In a real implementation, this would use a proper cleanup queue
-            // For now, we just log the issue and drop the object
+            // TODO: Implement proper cleanup queue for orphaned objects
+            //       Currently drops objects immediately; should use a cleanup queue to defer cleanup when pool is unavailable.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Implement cleanup queue data structure
+            // [ ] Register orphaned objects in queue instead of dropping
+            // [ ] Implement background cleanup worker thread
+            // [ ] Process cleanup queue when pool becomes available
+            // [ ] Handle queue overflow and memory limits
+            // [ ] Add metrics for orphaned object tracking
+            // [ ] Add unit tests with pool unavailability scenarios
+            // [ ] Add integration tests with cleanup queue processing
+            // [ ] Performance: Queue operations should complete in <100μs
+            // [ ] Documentation: Document cleanup queue behavior
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Orphaned objects are queued instead of immediately dropped
+            // - Cleanup queue processes objects when pool becomes available
+            // - Queue handles overflow gracefully
+            // - No memory leaks from unprocessed orphaned objects
+            // - Cleanup operations are tracked and monitored
+            //
+            // DEPENDENCIES:
+            // - Cleanup queue implementation (Required)
+            // - Background worker thread (Required)
+            // - Pool availability monitoring (Required)
+            //
+            // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (memory management feature)
+            // - Change Budget: ~150 LOC
+            // - Reviewer Requirements: Memory management expertise
             warn!("Object pool unavailable for return - object will be dropped. Consider increasing pool capacity.");
             drop(obj); // Explicit drop to indicate intentional cleanup
         } else {
@@ -310,8 +343,41 @@ where
             self.evict_lru();
         }
 
-        // Comprehensive memory limit management with configurable policies
-        // For now, implement basic insertion with timestamp
+        // TODO: Implement comprehensive memory limit management with configurable policies
+        //       Currently implements basic insertion with timestamp; should implement comprehensive memory limit management that supports configurable eviction policies, memory size limits, and sophisticated cache management strategies.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Configurable eviction policies are supported
+        // - Memory size limits are enforced
+        // - Cache management strategies are sophisticated
+        // - Memory usage is tracked and optimized
+        //
+        // DEPENDENCIES:
+        // - Eviction policy system (Required)
+        // - Memory tracking utilities (Required)
+        // - Cache management algorithms (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (memory management functionality)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Memory management and cache algorithms expertise
         self.cache.insert(key, (value, std::time::Instant::now()));
         true
     }

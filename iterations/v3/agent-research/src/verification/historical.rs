@@ -95,8 +95,41 @@ impl HistoricalLookup {
 
     /// Get cached historical claims (fallback implementation)
     async fn get_cached_historical_claims(&self, _search_term: &str) -> Result<Vec<HistoricalClaim>, Box<dyn std::error::Error + Send + Sync>> {
+        // TODO: Implement cache or local store querying for historical claims
+        //       Currently simulates claims; should query cache or local store for actual historical claims.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement cache querying for historical claims
+        // [ ] Query local store for historical claims
+        // [ ] Match claims by search term
+        // [ ] Handle cache misses and fallback to store
+        // [ ] Implement cache warming and refresh
+        // [ ] Add unit tests with mock cache/store
+        // [ ] Add integration tests with real cache/store
+        // [ ] Performance: Query should complete in <10ms
+        // [ ] Documentation: Document cache/store querying strategy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Historical claims are queried from cache or store
+        // - Claims are matched by search term
+        // - Cache misses fallback to store appropriately
+        // - Query performance is acceptable
+        // - Cache is warmed and refreshed properly
+        //
+        // DEPENDENCIES:
+        // - Cache implementation (Required)
+        // - Local store implementation (Required)
+        // - Search term matching logic (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (verification feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Caching expertise
         // Simulate some historical claims for testing
-        // In a real implementation, this would query a cache or local store
         Ok(vec![
             HistoricalClaim {
                 id: "hist-001".to_string(),

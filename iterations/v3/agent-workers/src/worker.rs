@@ -224,12 +224,44 @@ fn create_tool_execution_request(
     use agent_mcp::mcp_types::{ToolExecutionRequest, ExecutionContext};
 
     // Create MCP execution context
+    // TODO: Populate metadata with task context and execution information
+    //       Currently uses empty metadata; should include task context, execution parameters, and provenance data.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Extract task context information from subtask
+    // [ ] Add execution parameters to metadata
+    // [ ] Add provenance tracking data to metadata
+    // [ ] Include worker identification and capabilities
+    // [ ] Add timestamp and execution environment info
+    // [ ] Add unit tests for metadata population
+    // [ ] Add integration tests with real task execution
+    // [ ] Verify metadata is accessible during execution
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Metadata contains task context information
+    // - Metadata includes execution parameters and provenance data
+    // - Metadata is accessible during tool execution
+    // - Metadata supports debugging and observability
+    //
+    // DEPENDENCIES:
+    // - Task context data structure (Required)
+    // - Execution context API (Required)
+    // - Provenance tracking system (Optional)
+    //
+    // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+    // PRIORITY: Low
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 3 (low risk enhancement)
+    // - Change Budget: ~40 LOC
+    // - Reviewer Requirements: Worker execution domain expertise
     let mcp_context = ExecutionContext {
         working_directory: Some(context.working_directory.clone()),
         environment_variables: context.environment_variables.clone(),
         input_files: context.input_files.clone(),
         output_directory: Some("/tmp".to_string()), // Default output directory
-        metadata: HashMap::new(), // Empty metadata for now
+        metadata: HashMap::new(), // Temporary: empty metadata until TODO above is implemented
     };
 
     // Create tool parameters from subtask
@@ -249,10 +281,28 @@ fn create_tool_execution_request(
             source: Some(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, e))),
         })?;
 
-    // Create deterministic UUID from tool name for now
-    // TODO: Use actual tool registry to get real UUID
-    // For now, create a simple UUID - in practice this would come from tool registry
-    let tool_uuid = uuid::Uuid::new_v4(); // Placeholder - would be looked up from registry
+    // TODO: Use actual tool registry to get real UUID:
+    // 1. Tool registry integration: Integrate with tool registry system
+    //    - Query tool registry for tool UUID by name
+    //    - Handle tool registry lookup errors gracefully
+    //    - Support tool registry caching for performance
+    // 2. UUID management: Manage tool UUIDs properly
+    //    - Store tool UUID mappings for deterministic lookups
+    //    - Handle tool UUID changes and updates
+    //    - Support UUID validation and verification
+    // 3. Fallback handling: Handle missing tool registry entries
+    //    - Generate deterministic UUIDs when registry unavailable
+    //    - Log missing registry entries for investigation
+    //    - Support tool registration workflow
+    // ACCEPTANCE CRITERIA:
+    // - Tool UUIDs are retrieved from tool registry
+    // - UUID lookups are deterministic and cached appropriately
+    // - Missing registry entries are handled gracefully
+    // DEPENDENCIES:
+    // - Tool registry API (Required)
+    // - UUID caching system (Optional)
+    // PRIORITY: Medium
+    let tool_uuid = uuid::Uuid::new_v4();
 
     Ok(ToolExecutionRequest {
         id: uuid::Uuid::new_v4(),
@@ -289,6 +339,39 @@ async fn record_execution_metrics(
     _execution_time: std::time::Duration,
     _result: &MCPExecutionResult,
 ) {
-    // TODO: Integrate with telemetry system for observability
-    // For now, this is a no-op placeholder
+    // TODO: Implement comprehensive telemetry integration for worker execution observability
+    //       Currently a no-op placeholder; should implement comprehensive integration that records worker execution metrics, tracks execution times and results, and sends telemetry data to observability system.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Worker execution metrics are recorded
+    // - Execution times and results are tracked
+    // - Telemetry data is sent to observability system
+    // - Metrics are queryable and analyzable
+    //
+    // DEPENDENCIES:
+    // - Telemetry system integration (Required)
+    // - Metrics recording utilities (Required)
+    // - Observability system client (Required)
+    //
+    // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (observability functionality)
+    // - Change Budget: ~150 LOC
+    // - Reviewer Requirements: Telemetry and observability expertise
 }

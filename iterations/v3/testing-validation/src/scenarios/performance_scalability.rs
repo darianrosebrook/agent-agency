@@ -16,7 +16,7 @@
 //! - Real-time performance profiling (needs implementation)
 
 use std::time::Instant;
-use tracing::{info, error, warn};
+use tracing::{info, warn};
 
 use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceManager}};
 

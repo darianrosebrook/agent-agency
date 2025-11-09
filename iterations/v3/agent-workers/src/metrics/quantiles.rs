@@ -64,8 +64,41 @@ impl OnlineQuantiles {
     
     /// Merge with another quantile estimator
     pub fn merge(&mut self, other: &OnlineQuantiles) {
-        // For now, we'll use a simple approach since merge_digests doesn't exist
-        // In a production system, you'd want to implement proper merging
+        // TODO: Implement comprehensive quantile estimator merging
+        //       Currently uses simple count addition; should implement comprehensive merging that properly merges quantile digests for accurate quantile estimation across merged datasets.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Quantile digests are properly merged
+        // - Merged estimator maintains accurate quantile estimates
+        // - Merge operation is efficient and preserves statistical properties
+        // - Merge handles edge cases (empty estimators, single values) correctly
+        //
+        // DEPENDENCIES:
+        // - Quantile digest merge algorithm (Required)
+        // - Statistical merging utilities (Required)
+        // - Merge validation and testing (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (statistical metrics functionality)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Statistical algorithms and quantile estimation expertise
         self.count += other.count;
     }
     

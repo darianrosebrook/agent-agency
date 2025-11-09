@@ -511,7 +511,38 @@ impl FullTextIndexer {
         score
     }
 
-    /// Get average document length (simplified)
+    /// Get average document length
+    // TODO: Implement comprehensive document length calculation with statistical analysis
+    //       Currently uses simple arithmetic mean; should include statistical measures for better BM25 scoring.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Calculate mean, median, and standard deviation of document lengths
+    // [ ] Implement length normalization for BM25 scoring
+    // [ ] Add caching for document length statistics
+    // [ ] Handle edge cases (empty documents, very long documents)
+    // [ ] Add unit tests for statistical calculations
+    // [ ] Add integration tests with real document collections
+    // [ ] Verify improved BM25 scoring accuracy
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Document length statistics include mean, median, and standard deviation
+    // - Length normalization improves BM25 scoring accuracy
+    // - Statistics are cached and updated efficiently
+    // - Edge cases are handled gracefully
+    //
+    // DEPENDENCIES:
+    // - Document collection data structure (Required)
+    // - BM25 scoring algorithm (Required)
+    // - Statistical calculation utilities (Optional)
+    //
+    // ESTIMATED EFFORT: 3-5 hours (medium confidence)
+    // PRIORITY: Low
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 3 (low risk optimization)
+    // - Change Budget: ~80 LOC
+    // - Reviewer Requirements: Search algorithm expertise
     fn get_average_document_length(&self) -> f64 {
         let documents = self.documents.lock().unwrap();
         if documents.is_empty() {
@@ -614,7 +645,38 @@ impl VectorIndexer {
             vectors.insert(id.clone(), record);
         }
 
-        // Build graph connections (simplified HNSW)
+        // TODO: Implement full HNSW (Hierarchical Navigable Small World) graph structure
+        //       Currently uses basic single-layer graph with fixed top-5 connections.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement multi-layer HNSW graph structure (entry layer + multiple levels)
+        // [ ] Implement dynamic connection count based on layer and vector density
+        // [ ] Add graph pruning and optimization algorithms
+        // [ ] Implement efficient search algorithm using graph structure
+        // [ ] Add graph maintenance and rebalancing logic
+        // [ ] Add unit tests for HNSW graph operations
+        // [ ] Add integration tests with large vector collections
+        // [ ] Benchmark search performance vs basic implementation
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Multi-layer HNSW graph structure is implemented
+        // - Search performance improves significantly over basic version
+        // - Graph maintains good connectivity and search quality
+        // - Memory usage is reasonable for large vector collections
+        //
+        // DEPENDENCIES:
+        // - Vector similarity calculation (Required)
+        // - Graph data structures (Required)
+        // - HNSW algorithm specification (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (standard feature)
+        // - Change Budget: ~300 LOC
+        // - Reviewer Requirements: Vector search algorithm expertise
         self.build_graph_connections(&id, &vector).await?;
 
         Ok(())
@@ -635,11 +697,13 @@ impl VectorIndexer {
         let vectors = self.vectors.lock().unwrap();
         let graph = self.graph.lock().unwrap();
 
-        // Use graph-based search for efficiency (simplified)
+        // TODO: Implement proper graph-based search algorithm
+        //       Currently uses basic graph search; should implement efficient graph traversal for vector similarity search.
         let mut visited = std::collections::HashSet::new();
         let mut candidates = Vec::new();
 
-        // Start with random entry point (simplified)
+        // TODO: Implement proper entry point selection
+        //       Currently uses random entry point; should select optimal entry point based on graph structure and query characteristics.
         if let Some(entry_point) = vectors.keys().next() {
             let score = self.cosine_similarity(query_vector, query_norm, &vectors[entry_point]);
             candidates.push((score, entry_point.clone()));
@@ -714,7 +778,8 @@ impl VectorIndexer {
         // Sort by similarity and take top connections
         similarities.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
         
-        // Connect to top 5 most similar vectors (simplified)
+        // TODO: Implement full HNSW graph structure (see TODO above)
+        //       Currently uses temporary top-5 connections; should implement full HNSW graph structure for efficient similarity search.
         for (_, other_id) in similarities.iter().take(5) {
             connections.push(other_id.clone());
         }
@@ -1389,7 +1454,7 @@ impl HnswIndexer {
                 // - [ ] Retrieve modality from block metadata
                 // - [ ] Support multiple modalities (text, image, audio, video)
                 // - [ ] Add unit tests for modality extraction
-                modality: "vector".to_string(), // Placeholder
+                modality: "vector".to_string(), // TODO: Extract actual modality from content analysis
             })
             .collect();
 
@@ -1433,13 +1498,15 @@ impl DatabasePool {
 
     /// Get number of idle connections
     pub fn num_idle(&self) -> usize {
-        // This would need to be implemented based on the actual pool type
+        // TODO: Implement actual idle connection count based on pool type
+        //       Currently returns placeholder; should query actual pool type for accurate idle connection count.
         0
     }
 
     /// Get pool size
     pub fn size(&self) -> usize {
-        // This would need to be implemented based on the actual pool type
+        // TODO: Implement actual pool size based on pool type
+        //       Currently returns placeholder; should query actual pool type for accurate pool size.
         0
     }
 }
@@ -1697,8 +1764,9 @@ impl UnifiedIndexer {
             // - [ ] Add batch processing for multiple blocks
             // - [ ] Add unit tests with mock embedding service
             // - [ ] Add integration tests with real embedding generation
-            // Generate a simple vector (in practice this would come from embeddings)
-            let vector = vec![0.1; 384]; // Placeholder vector with fixed dimension
+            // TODO: Generate real embeddings from embedding service
+            //       Currently uses placeholder vector; should generate actual embeddings from embedding service (agent-model-management or CoreML).
+            let vector = vec![0.1; 384]; // Temporary: placeholder vector until embedding service integration
 
             // Index the content
             self.index_content(
@@ -1771,7 +1839,8 @@ impl UnifiedIndexer {
             project_scope: None,
         }).await?;
 
-        // Combine results (simplified - would need proper fusion)
+        // TODO: Implement proper result fusion algorithm
+        //       Currently uses basic combination; should implement proper fusion algorithm for combining search results from multiple sources.
         let mut hybrid_results = Vec::new();
 
         for text_result in text_results {

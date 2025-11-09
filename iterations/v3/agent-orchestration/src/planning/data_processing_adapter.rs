@@ -175,8 +175,42 @@ impl DataProcessingService for DataProcessingServiceAdapter {
         // - [ ] Add permission and security checks
         // - [ ] Add unit tests with mock file system
         // - [ ] Add integration tests with real file operations
-        // Convert FileOperation to internal type and call file_operation
-        // For now, return a placeholder implementation
+        //
+        // TODO: Implement comprehensive file operation handling
+        //       Currently returns placeholder implementation; should implement comprehensive handling that converts FileOperation to internal types, routes to appropriate file operation service, and handles all file operations with proper error handling and security checks.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - FileOperation is converted to internal types correctly
+        // - Operations are routed to appropriate service
+        // - All file operations (read, write, delete, etc.) are handled
+        // - Error handling and security checks are comprehensive
+        //
+        // DEPENDENCIES:
+        // - File operation service integration (Required)
+        // - Type conversion utilities (Required)
+        // - Security and permission checking (Required)
+        //
+        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (file operation functionality)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: File system operations and security expertise
         warn!("file_operation not fully implemented - returning success");
         Ok(FileOperationResult {
             success: true,

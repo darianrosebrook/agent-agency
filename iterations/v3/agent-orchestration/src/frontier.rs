@@ -7,11 +7,11 @@
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use agent_agency_contracts::{types::planning::TaskDescriptor, TaskPriority};
-use anyhow::{Context, Result};
+use agent_agency_contracts::types::planning::TaskDescriptor;
+use anyhow::Result;
 use std::collections::{BinaryHeap, HashMap};
 use std::sync::{Arc, RwLock};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use tracing::{debug, info, warn};
 use thiserror::Error;
 

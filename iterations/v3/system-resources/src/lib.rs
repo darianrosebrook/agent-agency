@@ -220,10 +220,40 @@ impl ResourceManagerService {
 
     /// Find pool for an allocation ID
     async fn find_pool_for_allocation(&self, allocation_id: &str) -> Result<String, ResourceError> {
-        // Search through pools to find which one has this allocation
+        // TODO: Implement proper allocation tracking to find pool containing allocation
+        //       Currently returns first pool without checking if allocation exists; needs allocation tracking system.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement allocation tracking data structure (allocation_id -> pool_name mapping)
+        // [ ] Add allocation registration when allocations are created
+        // [ ] Add allocation removal when allocations are freed
+        // [ ] Query allocation tracking to find correct pool
+        // [ ] Handle allocation not found errors properly
+        // [ ] Add unit tests for allocation tracking
+        // [ ] Add integration tests with multiple pools and allocations
+        // [ ] Verify correct pool is returned for each allocation
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Allocation tracking system maintains allocation_id -> pool_name mapping
+        // - Function returns correct pool name for given allocation_id
+        // - Function returns error when allocation_id is not found
+        // - Allocation tracking is updated when allocations are created/freed
+        //
+        // DEPENDENCIES:
+        // - Pool management system (Required)
+        // - Allocation lifecycle tracking (Required)
+        // - Data structure for allocation_id -> pool_name mapping (Required)
+        //
+        // ESTIMATED EFFORT: 3-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (standard feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Resource management domain expertise
         for (name, _pool) in &self.pools {
-            // In a real implementation, we'd check if pool contains allocation
-            // For now, return first pool (would need allocation tracking)
+            // Temporary: return first pool until allocation tracking is implemented
             return Ok(name.clone());
         }
         

@@ -148,12 +148,61 @@ async fn cancel_task(
     // - [ ] Signal task execution to stop gracefully
     // - [ ] Send cancellation signal to running task
     // - [ ] Wait for task to complete cancellation
-    // - [ ] Handle cancellation timeouts
-    // - [ ] Clean up resources after cancellation
-    // - [ ] Add unit tests with mock task cancellation
-    // - [ ] Add integration tests with real task cancellation
-    // In a real implementation, this would signal the task execution to stop
-    // For now, we simulate successful cancellation
+    // TODO: Implement task cancellation signaling
+    //       Currently simulates cancellation; should signal task execution to stop gracefully.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Implement cancellation signal mechanism
+    // [ ] Send cancellation signal to running task execution
+    // [ ] Wait for task to acknowledge cancellation
+    // [ ] Handle cancellation timeouts
+    // [ ] Clean up resources after cancellation
+    // [ ] Add unit tests with mock task cancellation
+    // [ ] Add integration tests with real task cancellation
+    // [ ] Performance: Cancellation signal should be delivered in <100ms
+    // [ ] Documentation: Document cancellation flow
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Cancellation signal is delivered to task execution
+    // - Task execution stops gracefully after cancellation
+    // - Resources are cleaned up properly
+    // - Cancellation timeouts are handled appropriately
+    // - Cancellation state is tracked and reported
+    //
+    // DEPENDENCIES:
+    // - Task execution cancellation API (Required)
+    // - Signal mechanism (Required)
+    // - Resource cleanup handlers (Required)
+    //
+    // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (task management feature)
+    // - Change Budget: ~150 LOC
+    // - Reviewer Requirements: Task execution expertise
+    // TODO: Implement actual task cancellation:
+    // 1. Cancellation signaling: Signal cancellation to running tasks
+    //    - Send cancellation signals to task executors
+    //    - Handle cancellation propagation through task tree
+    //    - Support graceful vs forceful cancellation
+    // 2. State management: Update task state on cancellation
+    //    - Mark tasks as cancelled in database
+    //    - Clean up task resources and handles
+    //    - Update task status appropriately
+    // 3. Cancellation verification: Verify cancellation success
+    //    - Confirm tasks are actually cancelled
+    //    - Handle cancellation failures and timeouts
+    //    - Report cancellation status accurately
+    // ACCEPTANCE CRITERIA:
+    // - Tasks receive cancellation signals and stop execution
+    // - Task state is updated to cancelled status
+    // - Cancellation status is accurately reported
+    // DEPENDENCIES:
+    // - Task executor cancellation API (Required)
+    // - Database state management (Required)
+    // PRIORITY: High
     let cancelled = true;
 
     let response = TaskCancelResponse {

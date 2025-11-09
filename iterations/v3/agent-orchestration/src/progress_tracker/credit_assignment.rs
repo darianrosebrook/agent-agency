@@ -6,9 +6,7 @@
 //!
 //! @author @darianrosebrook
 
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
-use anyhow::Result;
 
 use crate::progress_tracker::turn_level::{TurnProgress, TaskOutcome, CreditAssignment};
 

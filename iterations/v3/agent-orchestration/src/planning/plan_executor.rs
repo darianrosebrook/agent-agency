@@ -7,26 +7,23 @@
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{Mutex, Semaphore};
+use tokio::sync::Semaphore;
 use tokio::time::{timeout, Duration};
-use futures::future::join_all;
 use anyhow::{anyhow, Result};
 use uuid::Uuid;
 use chrono::Utc;
 use rand::prelude::*;
 use tokio::sync::RwLock;
-use agent_agency_contracts::planning::{PlanningEngine, PlanningCapabilities, PlanningError, PlanExecutionResult, ExecutionEvidence, ExecutionEventType};
-use agent_agency_contracts::types::validation::ValidationResult;
-use agent_agency_contracts::{WorkerContext, TaskPriority};
+use agent_agency_contracts::planning::{PlanningEngine, PlanExecutionResult, ExecutionEvidence, ExecutionEventType};
 
 use crate::planning::{
     plan_types::{ExecutionPlan, ParallelBatch, BatchStatus, ResourceUtilization, ResourceRequirements},
     todo_integration::TodoIntegration,
     dependency_resolver::DependencyResolver,
     evidence::EvidenceCollector,
-    parallel_coordinator::{ParallelCoordinator, ParallelExecutionResult},
+    parallel_coordinator::ParallelCoordinator,
     worker_assignment::WorkerAssignmentStrategy,
     scope_guard::ScopeGuard,
     council_monitor::CouncilMonitor,
@@ -36,7 +33,7 @@ use crate::planning::{
 use crate::workers::execution_bridge::WorkerExecutionBridge;
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
 use crate::audit_trail::AuditTrailManager;
-use agent_agency_contracts::planning::{QualityMetrics, CoverageMetrics, TestQualityMetrics, CodeQualityMetrics, DocumentationQualityMetrics};
+use agent_agency_contracts::planning::QualityMetrics;
 
 /// TODO integration interface with interior mutability
 #[async_trait::async_trait]
@@ -643,9 +640,39 @@ impl PlanExecutor {
                 audit_manager.record_coordination_event(event.clone()).await?;
             }
 
-            // For now, we'll record coordination events as part of the broader trace
-            // This could be enhanced with a dedicated coordination trace
-            info!("Coordination event: {:?}", event.event_type);
+            // TODO: Implement dedicated coordination trace
+            //       Currently records as part of broader trace; should implement dedicated coordination trace for better observability.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Create dedicated coordination trace structure
+            // [ ] Record coordination events in dedicated trace
+            // [ ] Support coordination trace querying
+            // [ ] Add coordination trace visualization
+            // [ ] Handle trace storage and retrieval
+            // [ ] Add unit tests for coordination trace
+            // [ ] Add integration tests with coordination events
+            // [ ] Verify coordination trace accuracy
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Coordination events are recorded in dedicated trace
+            // - Trace is queryable and searchable
+            // - Trace visualization works correctly
+            // - Trace storage and retrieval are efficient
+            //
+            // DEPENDENCIES:
+            // - Trace infrastructure (Required)
+            // - Coordination event structure (Required)
+            // - Trace query utilities (Required)
+            //
+            // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+            // PRIORITY: Low
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 3 (observability enhancement)
+            // - Change Budget: ~100 LOC
+            // - Reviewer Requirements: Observability and tracing expertise
+            info!("Coordination event: {:?}", event.event_type); // Temporary: basic logging until dedicated trace is implemented
         }
         Ok(())
     }
@@ -902,7 +929,7 @@ impl PlanExecutor {
         }
 
         // Set up batch for parallel coordinator
-        let mut batch = ParallelBatch {
+        let batch = ParallelBatch {
             batch_index: 0,
             milestone_ids: milestone_ids.clone(),
             status: BatchStatus::Executing,
@@ -1177,20 +1204,48 @@ impl PlanExecutor {
         ).await?;
 
         // Get worktree path for this milestone
+        // Note: ParallelCoordinator may have already created a worktree, so we try to find it by milestone_id first
         let worktree_path = if let Some(ref worktree_manager) = self.worktree_manager {
-            // Try to get existing worktree for this worker
-            match worktree_manager.get_worktree_path(worker_id).await {
-                Ok(path) => path,
+            // First, try to find worktree by milestone_id (in case ParallelCoordinator created it)
+            match worktree_manager.get_worktree_path_by_milestone(&milestone.id).await {
+                Ok(path) => {
+                    tracing::info!("Found existing worktree for milestone {}: {}", milestone.id, path.display());
+                    path
+                },
                 Err(_) => {
-                    // Worktree doesn't exist yet - create one
-                    // Note: This should ideally be created by ParallelCoordinator before calling execute_milestone_impl
-                    // For now, we'll use a fallback path
-                    tracing::warn!("No worktree found for worker {}, using fallback path", worker_id);
-                    std::path::PathBuf::from(".")
+                    // Try to get existing worktree for this worker
+                    match worktree_manager.get_worktree_path(worker_id).await {
+                        Ok(path) => {
+                            tracing::info!("Using existing worktree for worker {}: {}", worker_id, path.display());
+                            path
+                        },
+                        Err(_) => {
+                            // Create worktree if it doesn't exist
+                            tracing::info!("No worktree found for worker {} or milestone {}, creating new worktree", worker_id, milestone.id);
+                            match worktree_manager.create_worktree(milestone, worker_id).await {
+                                Ok(worktree_info) => {
+                                    tracing::info!(
+                                        "Created worktree {} for worker {} at {}",
+                                        worktree_info.worktree_id,
+                                        worker_id,
+                                        worktree_info.worktree_path.display()
+                                    );
+                                    worktree_info.worktree_path
+                                }
+                                Err(e) => {
+                                    tracing::error!("Failed to create worktree for worker {}: {}", worker_id, e);
+                                    // Fallback to current directory if worktree creation fails
+                                    tracing::warn!("Falling back to current directory due to worktree creation failure");
+                                    std::path::PathBuf::from(".")
+                                }
+                            }
+                        }
+                    }
                 }
             }
         } else {
             // No worktree manager - use current directory
+            tracing::warn!("No worktree manager available, using current directory");
             std::path::PathBuf::from(".")
         };
 
@@ -1337,8 +1392,39 @@ impl PlanExecutor {
 
     /// Calculate resource utilization
     async fn calculate_resource_utilization(&self, plan: &ExecutionPlan) -> ResourceUtilization {
-        // Simplified calculation - would analyze actual resource usage
-        ResourceUtilization {
+        // TODO: Analyze actual resource usage from execution plan
+        //       Currently returns zero values; should analyze actual resource usage from plan execution history and metrics.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Query execution history for resource metrics
+        // [ ] Calculate CPU utilization from execution data
+        // [ ] Calculate memory usage from execution data
+        // [ ] Calculate disk and network usage
+        // [ ] Support GPU utilization if applicable
+        // [ ] Add unit tests for resource calculation
+        // [ ] Add integration tests with real execution plans
+        // [ ] Verify resource calculation accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Resource utilization is calculated from actual execution data
+        // - CPU, memory, disk, and network metrics are accurate
+        // - GPU utilization is supported if applicable
+        // - Resource calculations reflect actual usage
+        //
+        // DEPENDENCIES:
+        // - Execution history storage (Required)
+        // - Resource metrics collection (Required)
+        // - Resource calculation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (monitoring feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Resource monitoring expertise
+        ResourceUtilization { // Temporary: zero values until actual resource analysis is implemented
             cpu_percent: 0.0,
             memory_mb: 0.0,
             disk_mb: 0.0,
@@ -1351,8 +1437,39 @@ impl PlanExecutor {
 
     /// Calculate quality metrics
     fn calculate_quality_metrics(&self, evidence: &ExecutionEvidence) -> QualityMetrics {
-        // Simplified calculation - would analyze evidence
-        QualityMetrics {
+        // TODO: Analyze actual evidence for quality metrics
+        //       Currently uses hardcoded values; should analyze actual execution evidence to calculate quality metrics.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Extract test coverage data from evidence
+        // [ ] Calculate average coverage from evidence
+        // [ ] Extract mutation testing scores from evidence
+        // [ ] Calculate average mutation score
+        // [ ] Analyze linting results from evidence
+        // [ ] Add unit tests for quality metric calculation
+        // [ ] Add integration tests with real evidence
+        // [ ] Verify quality metric accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Quality metrics are calculated from actual evidence
+        // - Coverage and mutation scores are accurate
+        // - Linting results are analyzed correctly
+        // - Quality metrics reflect actual execution quality
+        //
+        // DEPENDENCIES:
+        // - Execution evidence structure (Required)
+        // - Quality metric extraction utilities (Required)
+        // - Evidence analysis utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (quality analysis feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Quality metrics expertise
+        QualityMetrics { // Temporary: hardcoded values until evidence analysis is implemented
             avg_coverage: 0.8,
             avg_mutation_score: 0.75,
             security_issues_found: 0,
@@ -1363,13 +1480,47 @@ impl PlanExecutor {
 
     /// Calculate performance metrics
     fn calculate_performance_metrics(&self, plan: &ExecutionPlan, total_duration_ms: u64) -> agent_agency_contracts::PerformanceMetrics {
-        // Simplified calculation
+        // TODO: Implement comprehensive performance metrics calculation
+        //       Currently uses basic calculation; should analyze actual execution plan structure to calculate dependency wait times, parallel vs sequential execution times, and efficiency ratios.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Analyze execution plan structure for dependency relationships
+        // [ ] Calculate actual dependency wait times from batch dependencies
+        // [ ] Track parallel execution time from batch execution timestamps
+        // [ ] Calculate sequential execution time as sum of batch durations
+        // [ ] Compute efficiency ratio as parallel_time / sequential_time
+        // [ ] Handle edge cases (no dependencies, single batch, etc.)
+        // [ ] Add unit tests with various plan structures
+        // [ ] Add integration tests with real execution plans
+        // [ ] Performance: Metrics calculation should complete in <1ms
+        // [ ] Documentation: Document metric calculation methodology
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Dependency wait time accurately reflects time spent waiting for dependencies
+        // - Parallel execution time reflects actual parallel batch execution duration
+        // - Sequential execution time reflects total time if executed sequentially
+        // - Efficiency ratio is between 0.0 and 1.0, with 1.0 indicating perfect parallelization
+        // - Metrics are consistent with actual execution evidence
+        //
+        // DEPENDENCIES:
+        // - ExecutionPlan structure with batch dependencies (Required)
+        // - Batch execution timestamps (started_at, completed_at) (Required)
+        // - agent_agency_contracts::PerformanceMetrics type definition (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (performance metrics feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Performance analysis expertise
         agent_agency_contracts::PerformanceMetrics {
             total_time_ms: total_duration_ms,
-            dependency_wait_time_ms: 0, // No dependency wait in simple case
+            dependency_wait_time_ms: 0,
             parallel_execution_time_ms: total_duration_ms,
             sequential_execution_time_ms: total_duration_ms,
-            efficiency_ratio: 1.0, // Perfect efficiency in simple case
+            efficiency_ratio: 1.0,
         }
     }
 
@@ -1407,7 +1558,37 @@ impl PlanExecutor {
 
     /// Clone executor for parallel execution
     fn clone_executor(&self) -> Arc<Self> {
-        // This is a simplified clone - in practice, would need proper cloning
+        // TODO: Implement proper executor cloning for parallel execution
+        //       Currently uses basic Arc cloning; should ensure all internal state is properly cloned and thread-safe for parallel execution contexts.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Verify all fields are properly cloneable
+        // [ ] Ensure thread-safe state sharing where appropriate
+        // [ ] Clone mutable state that should be independent per executor
+        // [ ] Share immutable state via Arc where possible
+        // [ ] Add unit tests for concurrent executor usage
+        // [ ] Add integration tests with parallel execution
+        // [ ] Performance: Cloning should complete in <100μs
+        // [ ] Documentation: Document cloning semantics and thread safety
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Cloned executor can be used independently in parallel execution
+        // - Shared state is properly synchronized
+        // - No data races or memory safety issues
+        // - Cloning preserves all executor configuration and state
+        //
+        // DEPENDENCIES:
+        // - All executor fields must implement Clone or be Arc-wrapped (Required)
+        // - Thread-safe primitives for shared mutable state (Required)
+        //
+        // ESTIMATED EFFORT: 2-3 hours (high confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (parallel execution feature)
+        // - Change Budget: ~30 LOC
+        // - Reviewer Requirements: Concurrency and Rust expertise
         Arc::new(Self {
             parallel_coordinator: self.parallel_coordinator.clone(),
             todo_integration: self.todo_integration.clone(),
@@ -1455,7 +1636,7 @@ struct MilestoneExecutionResult {
 }
 
 // Import missing types
-use crate::planning::plan_types::{ActiveExecutionState, ExecutionProgress, EvidenceCollectionState, EvidenceBundle};
+use crate::planning::plan_types::EvidenceBundle;
 
 // Re-export for convenience
 pub use agent_agency_contracts::planning::{ExecutionEvent, ExecutionMetrics, PerformanceMetrics};

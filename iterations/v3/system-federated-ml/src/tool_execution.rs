@@ -7,7 +7,7 @@ use schemars::JsonSchema;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tokio::sync::{mpsc, Semaphore};
+use tokio::sync::Semaphore;
 use tracing::{debug, info, warn, error};
 
 /// Tool executor for secure invocation
@@ -210,17 +210,58 @@ impl ToolExecutor {
     async fn perform_tool_execution(&self, mut context: ExecutionContext) -> Result<ToolResult> {
         let tool_name = context.invocation.tool_name.clone();
 
-        // TODO: Implement real tool execution dispatch
-        // - [ ] Dispatch to appropriate tool based on tool name and registry
-        // - [ ] Execute tool with proper context and parameters
-        // - [ ] Handle tool execution errors and timeouts
-        // - [ ] Support async tool execution and cancellation
-        // - [ ] Add unit tests with mock tool execution
-        // - [ ] Add integration tests with real tool dispatch
-        // In a real implementation, this would dispatch to the appropriate tool
-        // For now, we'll simulate execution based on tool name
-
-        let result_value = match tool_name.as_str() {
+        // TODO: Implement tool dispatch with the following requirements:
+        // 1. Tool dispatch: Dispatch to the appropriate tool based on tool name
+        //    - Implement tool registry lookup
+        //    - Route execution to correct tool handler
+        //    - Handle unknown tool errors
+        // 2. Error handling: Handle tool execution errors and timeouts
+        //    - Implement timeout mechanisms
+        //    - Handle tool execution failures gracefully
+        //    - Return appropriate error types
+        // 3. Async execution: Support async tool execution and cancellation
+        //    - Support cancellation of running tools
+        //    - Handle async operation lifecycle
+        //    - Manage tool execution state
+        // 4. Testing: Add comprehensive test coverage
+        //    - Add unit tests with mock tool execution
+        //    - Add integration tests with real tool dispatch
+        // TODO: Execute tools through actual tool dispatch system
+        //       Currently simulates execution; should execute tools through actual tool dispatch system for real functionality.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Tools are executed through dispatch system correctly
+        // - Execution results are accurate
+        // - Error handling works for execution failures
+        // - Performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Tool dispatch infrastructure (Required)
+        // - Tool execution APIs (Required)
+        // - Execution result handling (Required)
+        //
+        // ESTIMATED EFFORT: 5-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (tool execution feature)
+        // - Change Budget: ~120 LOC
+        // - Reviewer Requirements: Tool execution expertise
+        let result_value = match tool_name.as_str() { // Temporary: simulation until actual dispatch
             "caws_validator" => self.execute_caws_validator(&context.invocation).await?,
             "claim_extractor" => self.execute_claim_extractor(&context.invocation).await?,
             "fact_verifier" => self.execute_fact_verifier(&context.invocation).await?,
@@ -271,7 +312,8 @@ impl ToolExecutor {
             .and_then(|v| v.as_str())
             .unwrap_or("{}");
 
-        // Simple validation - in practice would use actual CAWS validator
+        // TODO: Integrate actual CAWS validator
+        //       Currently uses basic validation; should use actual CAWS validator for comprehensive spec validation.
         let is_valid = spec.contains("risk_tier") && spec.contains("scope");
 
         Ok(serde_json::json!({
@@ -443,7 +485,7 @@ impl ResourceTracker {
     }
 }
 
-/// Get current memory usage in MB (simplified)
+/// Get current memory usage in MB
 fn get_current_memory_mb() -> f64 {
     // TODO: Implement real memory usage monitoring
     // - [ ] Use system APIs (sysinfo, etc.) to get actual process memory usage
@@ -451,9 +493,42 @@ fn get_current_memory_mb() -> f64 {
     // - [ ] Handle API errors and platform differences
     // - [ ] Add unit tests with mock memory data
     // - [ ] Add integration tests with real memory monitoring
-    // In practice, this would use system APIs to get actual memory usage
-    // For now, return a simulated value
-    100.0 + (rand::random::<f64>() - 0.5) * 20.0 // 80-120 MB
+    // TODO: Query actual memory usage from system APIs
+    //       Currently returns simulated value; should query actual memory usage from system APIs for accurate monitoring.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Memory usage is queried from system APIs correctly
+    // - Measurements are accurate
+    // - Query handles API failures gracefully
+    // - Performance is acceptable
+    //
+    // DEPENDENCIES:
+    // - System memory APIs (Required)
+    // - Memory monitoring utilities (Required)
+    // - Process monitoring infrastructure (Required)
+    //
+    // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (monitoring feature)
+    // - Change Budget: ~80 LOC
+    // - Reviewer Requirements: System monitoring expertise
+    100.0 + (rand::random::<f64>() - 0.5) * 20.0 // Temporary: simulated until system API integration
 }
 
 impl Default for ToolInvocation {

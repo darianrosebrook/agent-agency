@@ -85,7 +85,7 @@ system-common-interfaces = { path = "../system-common-interfaces" }
 data-infrastructure = { path = "../data-infrastructure", default-features = false }  # Required for main.rs database initialization
 # data-interfaces-adapters removed to break circular dependency - factory moved to agent-orchestration
 system-acceleration = { path = "../system-acceleration" }
-agent-memory = { path = "../agent-memory", optional = true, features = ["database"] }
+agent-memory = { path = "../agent-memory", optional = true, features = ["database", "embeddings", "contracts"] }
 system-resilience = { path = "../system-resilience" }
 agent-research = { path = "../agent-research", optional = true }
 agent-model-management = { path = "../agent-model-management", optional = true }

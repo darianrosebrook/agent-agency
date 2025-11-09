@@ -607,7 +607,42 @@ impl DatabaseOptimizationManager {
         // - [ ] Add SQL injection protection through parameterized queries
         // - [ ] Add unit tests with various parameter types
         // - [ ] Add integration tests with real database queries
-        // For now, execute without parameters - this needs proper parameter binding
+        //
+        // TODO: Implement proper parameterized query execution
+        //       Currently executes without parameters; should implement proper parameter binding using sqlx::query! or sqlx::QueryBuilder with SQL injection protection and support for different parameter types.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Queries use parameterized binding for all user inputs
+        // - SQL injection protection is enforced
+        // - Different parameter types (string, int, float) are supported
+        // - Query execution is safe and performant
+        //
+        // DEPENDENCIES:
+        // - sqlx::query! or sqlx::QueryBuilder (Required)
+        // - Parameter type handling utilities (Required)
+        // - SQL injection protection mechanisms (Required)
+        //
+        // ESTIMATED EFFORT: 8-10 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (security critical - SQL injection prevention)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Database security and SQL injection prevention expertise
         let result = sqlx::query(query).execute(&*self.client.pool()).await.map(|_| vec![]).map_err(anyhow::Error::from);
 
         let execution_time = start_time.elapsed().as_millis() as u64;
@@ -688,7 +723,42 @@ impl MonitoredQueryExecutor {
         // - [ ] Add SQL injection protection through parameterized queries
         // - [ ] Add unit tests with various parameter types
         // - [ ] Add integration tests with real database queries
-        // For now, execute without parameters - this needs proper parameter binding
+        //
+        // TODO: Implement proper parameterized query execution
+        //       Currently executes without parameters; should implement proper parameter binding using sqlx::query! or sqlx::QueryBuilder with SQL injection protection and support for different parameter types.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Queries use parameterized binding for all user inputs
+        // - SQL injection protection is enforced
+        // - Different parameter types (string, int, float) are supported
+        // - Query execution is safe and performant
+        //
+        // DEPENDENCIES:
+        // - sqlx::query! or sqlx::QueryBuilder (Required)
+        // - Parameter type handling utilities (Required)
+        // - SQL injection protection mechanisms (Required)
+        //
+        // ESTIMATED EFFORT: 8-10 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (security critical - SQL injection prevention)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Database security and SQL injection prevention expertise
         let result = sqlx::query(query).execute(&*self.client.pool()).await.map(|_| vec![]).map_err(anyhow::Error::from);
 
         let execution_time = start_time.elapsed().as_millis() as u64;

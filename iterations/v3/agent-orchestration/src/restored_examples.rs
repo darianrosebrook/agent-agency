@@ -6,10 +6,9 @@
 //! @author @darianrosebrook
 
 use agent_agency_contracts::{
-    TaskDescriptor, TaskPriority, WorkingSpec, BlastRadius, ChangeBudget,
-    types::planning::ExecutionMode, AcceptanceCriterion, types::prelude::RiskTier,
+    TaskDescriptor, TaskPriority, WorkingSpec, BlastRadius, ChangeBudget, AcceptanceCriterion, types::prelude::RiskTier,
 };
-use crate::types::{TaskScope, DiffStats, OrchestratorConfig};
+use crate::types::{DiffStats, OrchestratorConfig};
 use crate::adapter::{LegacyOrchestratorAdapter, ValidationResult};
 use crate::evidence_enrichment::{EvidenceEnrichmentCoordinator, EnrichmentConfig};
 use crate::frontier::{Frontier, FrontierConfig};
@@ -196,7 +195,8 @@ pub async fn example_orchestration_workflow() -> Result<()> {
             println!("❌ Errors: {}", result.errors.join(", "));
         }
         // Note: artifacts and quality_report should be retrieved separately using execution_id
-        // This is a simplified example - in production, you would fetch these from storage
+        // TODO: Implement proper artifact and quality report retrieval from storage
+        //       Currently uses placeholder example; should fetch artifacts and quality reports from storage using execution_id.
 
         // 11. Mark task as completed
         frontier.complete_task(&task_descriptor.task_id.to_string()).await?;

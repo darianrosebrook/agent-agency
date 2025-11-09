@@ -68,9 +68,42 @@ impl PerformanceMonitor {
         // - [ ] Handle multi-core systems correctly
         // - [ ] Add unit tests with mock CPU data
         // - [ ] Add integration tests with real CPU monitoring
-        // Estimate CPU usage (simplified - would use sysinfo in full implementation)
-        // For now, derive from latency and throughput patterns
-        let cpu_usage = self.estimate_cpu_usage(&latencies, rps);
+        // TODO: Query actual CPU usage from system
+        //       Currently estimates from patterns; should query actual CPU usage from system using sysinfo or platform-specific APIs.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - CPU usage is queried from system accurately
+        // - Multi-core systems are handled correctly
+        // - Query performance is acceptable
+        // - Error handling works for system query failures
+        //
+        // DEPENDENCIES:
+        // - sysinfo crate (Required)
+        // - Platform-specific system APIs (Required)
+        // - CPU monitoring infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (monitoring feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: System monitoring expertise
+        let cpu_usage = self.estimate_cpu_usage(&latencies, rps); // Temporary: estimation until system query
 
         // Calculate memory usage percentage from inference data
         // Assuming total system memory of 16GB for percentage calculation
@@ -190,8 +223,42 @@ impl PerformanceMonitor {
             return 0.0;
         }
 
-        // Simplified CPU estimation based on latency and throughput
-        // Higher latency + higher throughput = higher CPU usage
+        // TODO: Replace with actual CPU usage query
+        //       Currently estimates from latency/throughput; should be replaced with actual CPU usage query from system.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - CPU usage is queried from system accurately
+        // - Estimation is replaced with actual query
+        // - Multi-core systems are handled correctly
+        // - Error handling works for query failures
+        //
+        // DEPENDENCIES:
+        // - sysinfo crate (Required)
+        // - Platform-specific system APIs (Required)
+        // - CPU monitoring infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (monitoring feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: System monitoring expertise
+        // Temporary: estimation until actual query
         let avg_latency = latencies.iter().sum::<f64>() / latencies.len() as f64;
         let base_cpu = (avg_latency / 1000.0).min(1.0) * 50.0; // Latency contribution
         let throughput_cpu = (rps / 100.0).min(1.0) * 50.0; // Throughput contribution

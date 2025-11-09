@@ -40,10 +40,41 @@ impl PlaygroundManager {
         fs::create_dir_all(&scenario_dir)
             .map_err(|e| format!("Failed to create playground directory: {}", e))?;
 
-        // Store active scenario
-        // Note: We can't mutate self in async context, so we'll track this differently
-        // For now, just ensure directory exists
-        
+        // TODO: Implement comprehensive active scenario tracking
+        //       Currently just ensures directory exists; should implement comprehensive tracking that stores active scenario state properly despite async context limitations for complete scenario management.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Active scenario is tracked properly
+        // - Tracking works in async context
+        // - Scenario state is persisted and retrievable
+        // - Tracking handles concurrent scenarios gracefully
+        //
+        // DEPENDENCIES:
+        // - Async-safe state tracking mechanism (Required)
+        // - Scenario state persistence (Required)
+        // - Concurrent scenario management (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (evaluation infrastructure enhancement)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Async state management and scenario tracking expertise
         Ok(())
     }
 

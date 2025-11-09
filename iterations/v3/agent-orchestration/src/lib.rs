@@ -245,8 +245,41 @@ mod playground {
     #[cfg(feature = "evaluation")]
     pub use crate::evaluation::playground::*;
     
-    // If evaluation feature is not enabled, we need to include playground directly
-    // For now, tests will only work with evaluation feature enabled
+    // TODO: Implement comprehensive test support without evaluation feature
+    //       Currently tests only work with evaluation feature enabled; should implement comprehensive support that allows tests to work without evaluation feature by including playground directly or providing alternative test infrastructure.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Tests work without evaluation feature enabled
+    // - Playground is included directly or alternative infrastructure provided
+    // - Test infrastructure is complete and functional
+    // - Feature flag dependencies are minimized
+    //
+    // DEPENDENCIES:
+    // - Playground module inclusion (Required)
+    // - Alternative test infrastructure (Optional)
+    // - Feature flag refactoring (Required)
+    //
+    // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+    // PRIORITY: Low
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 3 (test infrastructure enhancement)
+    // - Change Budget: ~100 LOC
+    // - Reviewer Requirements: Test infrastructure and feature flag management expertise
 }
 
 #[cfg(feature = "evaluation")]
@@ -375,8 +408,28 @@ struct AgentOrchestrationService {
 impl AgentOrchestrationService {
     /// Create a new Agent Orchestration Service
     pub async fn new(config: OrchestrationConfig) -> Result<Self, OrchestrationError> {
-        // Create basic council components - TODO: make configurable
-        let available_judges: Vec<Arc<dyn crate::judge_backup::Judge>> = vec![]; // Empty for now
+        // TODO: Make council components configurable:
+        // 1. Judge configuration: Configure available judges
+        //    - Load judge configurations from config
+        //    - Initialize judge instances based on configuration
+        //    - Support dynamic judge registration
+        // 2. Component configuration: Make components configurable
+        //    - Allow custom verdict aggregators
+        //    - Support configurable decision engines
+        //    - Enable component plugin system
+        // 3. Configuration validation: Validate component configurations
+        //    - Ensure required components are configured
+        //    - Validate component compatibility
+        //    - Handle configuration errors gracefully
+        // ACCEPTANCE CRITERIA:
+        // - Council components are loaded from configuration
+        // - Judge instances are initialized based on config
+        // - Component configurations are validated
+        // DEPENDENCIES:
+        // - Configuration system (Required)
+        // - Component factory system (Required)
+        // PRIORITY: Medium
+        let available_judges: Vec<Arc<dyn crate::judge_backup::Judge>> = vec![];
         let verdict_aggregator = Arc::new(crate::verdict_aggregation::create_verdict_aggregator());
         let decision_engine = crate::decision_making::create_decision_engine();
 

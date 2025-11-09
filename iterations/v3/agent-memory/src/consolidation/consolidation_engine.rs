@@ -84,16 +84,39 @@ impl MemoryConsolidationEngine {
 
         // Step 3: Deduplication
         if config.enable_deduplication {
-            // TODO: Implement deduplication logic
-            // - [ ] Fetch actual memory objects from storage
-            // - [ ] Compare memory content for duplicates
-            // - [ ] Use semantic similarity for near-duplicate detection
-            // - [ ] Remove or merge duplicate memories
-            // - [ ] Track deduplication statistics
-            // - [ ] Add unit tests with duplicate memories
-            // - [ ] Add integration tests with real deduplication
-            // This would require fetching actual memory objects
-            // For now, just set a placeholder
+            // TODO: Implement deduplication logic with semantic similarity detection
+            //       Currently uses placeholder; should fetch memory objects and detect duplicates using semantic similarity.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Fetch actual memory objects from storage
+            // [ ] Compare memory content for exact duplicates
+            // [ ] Use semantic similarity for near-duplicate detection
+            // [ ] Implement similarity threshold for duplicate detection
+            // [ ] Remove or merge duplicate memories
+            // [ ] Track deduplication statistics (removed count, similarity scores)
+            // [ ] Add unit tests with duplicate memories
+            // [ ] Add integration tests with real deduplication
+            // [ ] Verify deduplication improves memory quality
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Duplicate memories are detected and removed
+            // - Near-duplicates are identified using semantic similarity
+            // - Deduplication statistics are tracked accurately
+            // - Memory quality improves after deduplication
+            //
+            // DEPENDENCIES:
+            // - Memory storage API for fetching objects (Required)
+            // - Semantic similarity calculation (Required)
+            // - Memory comparison utilities (Required)
+            //
+            // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (standard feature)
+            // - Change Budget: ~150 LOC
+            // - Reviewer Requirements: Memory management domain expertise
             result.removed_duplicates = 0;
         }
 
@@ -197,9 +220,42 @@ impl ConsolidationEngine for MemoryConsolidationEngine {
         if let Some(manager) = &self.memory_manager {
             // Fetch all memories and their embeddings
             // Note: This requires MemoryManager to have a method to get all memories with embeddings
-            // For now, return an error indicating this needs implementation
             // TODO: Implement memory fetching when MemoryManager API is available
-            return Err(crate::MemoryError::Other(
+            //       Currently returns error; should implement memory fetching when MemoryManager API provides methods to get all memories with embeddings.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Memories are fetched with embeddings correctly
+            // - MemoryManager API integration works
+            // - Error handling works for API failures
+            // - Performance is acceptable
+            //
+            // DEPENDENCIES:
+            // - MemoryManager API (Required)
+            // - Memory fetching utilities (Required)
+            // - Embedding extraction infrastructure (Required)
+            //
+            // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (memory consolidation feature)
+            // - Change Budget: ~100 LOC
+            // - Reviewer Requirements: Memory management expertise
+            return Err(crate::MemoryError::Other( // Temporary: error until MemoryManager API available
                 "ConsolidationEngine::consolidate requires MemoryManager integration. \
                 Use MemoryConsolidationEngine::with_memory_manager() and ensure MemoryManager \
                 provides methods to fetch memories with embeddings.".to_string()
@@ -236,10 +292,42 @@ impl ConsolidationEngine for MemoryConsolidationEngine {
     }
 
     async fn get_stats(&self) -> MemoryResult<ConsolidationStats> {
-        // Stats tracking requires memory manager integration
-        // For now, return basic stats structure with zeros
         // TODO: Implement real stats tracking when MemoryManager provides stats API
-        Ok(ConsolidationStats {
+        //       Currently returns zeros; should implement real stats tracking when MemoryManager provides stats API for accurate consolidation metrics.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Stats are tracked accurately
+        // - MemoryManager stats API integration works
+        // - Metrics reflect actual consolidation activity
+        // - Performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - MemoryManager stats API (Required)
+        // - Stats tracking utilities (Required)
+        // - Metrics aggregation infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (stats tracking enhancement)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Memory management expertise
+        Ok(ConsolidationStats { // Temporary: zeros until stats API integration
             total_memories_processed: 0,
             active_clusters: 0,
             total_summaries: 0,

@@ -41,14 +41,13 @@
 //!     .record_command_complete(cmd_audit, exit_code, stdout, stderr, duration).await;
 //! ```
 
-use std::collections::{HashMap, BTreeMap};
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};use uuid::Uuid;
 use chrono::{DateTime, Utc};
-use crate::CouncilDecision;
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use tracing::info;
 
@@ -529,12 +528,28 @@ impl AuditTrailManager {
         if let Some(pid) = plan_id {
             indices.retain(|idx| {
                 if let Some(event) = events.get(*idx) {
-                    // Check if event is associated with this plan_id
-                    // This requires examining event details/metadata
-                    // For now, we'll need to check the event structure
-                    // Note: CoordinationEvent doesn't directly store plan_id,
-                    // so this is a placeholder for future enhancement
-                    true // Accept all for now - can be enhanced with plan_id tracking
+                    // TODO: Implement plan_id-based event filtering:
+                    // 1. Event metadata: Add plan_id to event metadata
+                    //    - Extend CoordinationEvent with plan_id field
+                    //    - Store plan_id in event creation
+                    //    - Support plan_id retrieval from events
+                    // 2. Event filtering: Filter events by plan_id
+                    //    - Check event plan_id against filter plan_id
+                    //    - Support multiple plan_id filtering
+                    //    - Handle events without plan_id appropriately
+                    // 3. Event tracking: Track plan_id associations
+                    //    - Maintain plan_id to event mappings
+                    //    - Support plan_id-based event queries
+                    //    - Handle plan_id updates and changes
+                    // ACCEPTANCE CRITERIA:
+                    // - Events are filtered by plan_id correctly
+                    // - Plan_id is stored and retrievable from events
+                    // - Event filtering improves audit trail accuracy
+                    // DEPENDENCIES:
+                    // - CoordinationEvent extension (Required)
+                    // - Plan_id tracking system (Required)
+                    // PRIORITY: Medium
+                    true
                 } else {
                     false
                 }

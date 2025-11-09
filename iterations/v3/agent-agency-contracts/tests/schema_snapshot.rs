@@ -22,8 +22,76 @@ macro_rules! test_schema_snapshot {
             let schema_json = serde_json::to_string_pretty(&schema)
                 .expect("serialize schema");
             
-            // In a real implementation, you would compare against a stored snapshot file
-            // For now, we verify the schema is valid JSON and contains expected fields
+            // TODO: Implement schema snapshot comparison
+            //       Currently validates JSON only; should compare against stored snapshot file for schema regression detection.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Load stored snapshot file
+            // [ ] Compare current schema with snapshot
+            // [ ] Detect schema changes and regressions
+            // [ ] Generate diff report for changes
+            // [ ] Handle missing snapshot files
+            // [ ] Add unit tests with mock snapshots
+            // [ ] Add integration tests with real schema changes
+            // [ ] Performance: Comparison should complete in <10ms
+            // [ ] Documentation: Document snapshot format
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Schema is compared against snapshot
+            // - Changes are detected accurately
+            // - Diff reports are generated
+            // - Missing snapshots are handled gracefully
+            // - Comparison performance is acceptable
+            //
+            // DEPENDENCIES:
+            // - Snapshot file storage (Required)
+            // - Schema comparison logic (Required)
+            // - Diff generation utilities (Required)
+            //
+            // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (testing feature)
+            // - Change Budget: ~150 LOC
+            // - Reviewer Requirements: Schema testing expertise
+            //
+            // TODO: Implement comprehensive schema snapshot comparison
+            //       Currently verifies schema is valid JSON and contains expected fields only; should implement comprehensive comparison that compares schema against snapshot, detects changes accurately, and generates diff reports.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Schema is compared against snapshot
+            // - Changes are detected accurately
+            // - Diff reports are generated
+            // - Missing snapshots are handled gracefully
+            //
+            // DEPENDENCIES:
+            // - Snapshot file storage (Required)
+            // - Schema comparison logic (Required)
+            // - Diff generation utilities (Required)
+            //
+            // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (testing feature)
+            // - Change Budget: ~150 LOC
+            // - Reviewer Requirements: Schema testing expertise
             let parsed: Value = serde_json::from_str(&schema_json)
                 .expect("schema should be valid JSON");
             

@@ -167,10 +167,42 @@ pub fn load_model(path: &str) -> Result<ModelRef> {
         let mut model_ref: u64 = 0;
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
+        // TODO: Pass model configuration to agentbridge_model_create
+        //       Currently passes null config; should create and pass proper model configuration structure.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Define model configuration structure
+        // [ ] Create configuration from model parameters
+        // [ ] Pass configuration to agentbridge_model_create
+        // [ ] Handle configuration errors
+        // [ ] Support various configuration options
+        // [ ] Add unit tests for configuration
+        // [ ] Add integration tests with real models
+        // [ ] Verify configuration handling
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Model configuration is created correctly
+        // - Configuration is passed to model creation
+        // - Configuration errors are handled gracefully
+        // - Various configuration options are supported
+        //
+        // DEPENDENCIES:
+        // - Model configuration structure (Required)
+        // - Configuration creation utilities (Required)
+        // - agentbridge API (Required)
+        //
+        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (model configuration feature)
+        // - Change Budget: ~60 LOC
+        // - Reviewer Requirements: Core ML and model configuration expertise
         let result = unsafe {
             agentbridge_model_create(
                 model_path_cstr.as_ptr(),
-                std::ptr::null(), // No config for now
+                std::ptr::null(), // Temporary: null config until configuration structure is implemented
                 &mut model_ref,
                 &mut error_ptr,
             )
@@ -422,9 +454,38 @@ pub fn run_inference(
             return Err(ANEError::Internal("No output provider returned from inference".to_string()));
         }
 
-        // Extract output tensor - for now, assume the output feature name is the same as input
-        // In practice, this would need to be configurable
-        let output_name_cstr = CString::new(input_name)
+        // TODO: Make output feature name configurable
+        //       Currently assumes output name matches input; should make output feature name configurable from model metadata or configuration.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Query model metadata for output feature names
+        // [ ] Support configurable output feature name
+        // [ ] Handle multiple output features
+        // [ ] Validate output feature name exists
+        // [ ] Add unit tests for output name handling
+        // [ ] Add integration tests with various models
+        // [ ] Verify output name configuration
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Output feature name is configurable
+        // - Model metadata is queried correctly
+        // - Multiple output features are supported
+        // - Invalid output names are handled gracefully
+        //
+        // DEPENDENCIES:
+        // - Model metadata API (Required)
+        // - Output feature configuration (Required)
+        // - Feature name validation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (model configuration feature)
+        // - Change Budget: ~50 LOC
+        // - Reviewer Requirements: Core ML expertise
+        let output_name_cstr = CString::new(input_name) // Temporary: assume same as input until configurable output names
             .map_err(|e| ANEError::Internal(format!("Invalid output name: {}", e)))?;
 
         let mut output_data_ptr: *mut f32 = std::ptr::null_mut();
@@ -523,9 +584,39 @@ pub fn query_model_inputs(_model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
         return Err(ANEError::Internal("Core ML not available on this platform".to_string()));
     }
 
-    // For now, return a default input spec
-    // In a real implementation, this would query the actual model
-    Ok(vec![ModelIOSpec {
+    // TODO: Query actual model input specifications
+    //       Currently returns default spec; should query actual model metadata for input specifications.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Query model metadata for input specifications
+    // [ ] Extract input feature names and types
+    // [ ] Extract input shapes and dimensions
+    // [ ] Determine batch capability from model
+    // [ ] Handle multiple input features
+    // [ ] Add unit tests for input spec query
+    // [ ] Add integration tests with various models
+    // [ ] Verify input spec accuracy
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Input specifications are queried from model metadata
+    // - Feature names and types are extracted correctly
+    // - Shapes and dimensions are accurate
+    // - Multiple input features are supported
+    //
+    // DEPENDENCIES:
+    // - Model metadata API (Required)
+    // - Input specification extraction utilities (Required)
+    // - Model query infrastructure (Required)
+    //
+    // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (model metadata feature)
+    // - Change Budget: ~80 LOC
+    // - Reviewer Requirements: Core ML expertise
+    Ok(vec![ModelIOSpec { // Temporary: default spec until model metadata query is implemented
         name: "input".to_string(),
         dtype: "F32".to_string(),
         shape: vec![-1, -1], // [batch_size, sequence_length]
@@ -539,9 +630,39 @@ pub fn query_model_outputs(_model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
         return Err(ANEError::Internal("Core ML not available on this platform".to_string()));
     }
 
-    // For now, return a default output spec
-    // In a real implementation, this would query the actual model
-    Ok(vec![ModelIOSpec {
+    // TODO: Query actual model output specifications
+    //       Currently returns default spec; should query actual model metadata for output specifications.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Query model metadata for output specifications
+    // [ ] Extract output feature names and types
+    // [ ] Extract output shapes and dimensions
+    // [ ] Determine batch capability from model
+    // [ ] Handle multiple output features
+    // [ ] Add unit tests for output spec query
+    // [ ] Add integration tests with various models
+    // [ ] Verify output spec accuracy
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Output specifications are queried from model metadata
+    // - Feature names and types are extracted correctly
+    // - Shapes and dimensions are accurate
+    // - Multiple output features are supported
+    //
+    // DEPENDENCIES:
+    // - Model metadata API (Required)
+    // - Output specification extraction utilities (Required)
+    // - Model query infrastructure (Required)
+    //
+    // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (model metadata feature)
+    // - Change Budget: ~80 LOC
+    // - Reviewer Requirements: Core ML expertise
+    Ok(vec![ModelIOSpec { // Temporary: default spec until model metadata query is implemented
         name: "output".to_string(),
         dtype: "F32".to_string(),
         shape: vec![-1, -1, -1], // [batch_size, sequence_length, vocab_size]

@@ -244,8 +244,38 @@ impl BayesianOptimizer {
 
     /// Sample continuous parameter using Upper Confidence Bound (UCB) acquisition
     fn sample_continuous_parameter(&self, param_name: &str, param_def: &ParameterDefinition) -> f64 {
-        // Simplified UCB implementation
-        // In a full implementation, this would use Gaussian Process regression
+        // TODO: Implement full UCB acquisition using Gaussian Process regression
+        //       Currently uses basic UCB; should use Gaussian Process regression for accurate uncertainty estimation.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement Gaussian Process regression model
+        // [ ] Calculate posterior mean and variance
+        // [ ] Implement UCB acquisition function with GP uncertainty
+        // [ ] Optimize hyperparameters for GP model
+        // [ ] Handle high-dimensional parameter spaces
+        // [ ] Add unit tests for GP regression
+        // [ ] Add integration tests with real parameter optimization
+        // [ ] Verify GP-based UCB improves optimization efficiency
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Gaussian Process regression is implemented and functional
+        // - UCB acquisition uses GP uncertainty estimates
+        // - Parameter sampling improves optimization efficiency
+        // - GP model handles high-dimensional spaces
+        //
+        // DEPENDENCIES:
+        // - Gaussian Process regression library (Required)
+        // - UCB acquisition function (Required)
+        // - Hyperparameter optimization (Optional)
+        //
+        // ESTIMATED EFFORT: 8-10 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (standard feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Bayesian optimization expertise
 
         let exploration_bonus = self.config.exploration_factor *
                                (self.evaluation_history.len() as f64).sqrt();
@@ -294,8 +324,38 @@ impl BayesianOptimizer {
 
     /// Evaluate parameter set against performance metrics
     async fn evaluate_parameters(&self, parameters: &HashMap<String, f64>, baseline: &PerformanceMetrics) -> Result<f64> {
-        // Simplified objective function
-        // In practice, this would run the actual system with these parameters and measure performance
+        // TODO: Implement real parameter evaluation by running system with parameters and measuring performance
+        //       Currently uses theoretical model; should run actual system and measure real performance metrics.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Run system with specified parameters
+        // [ ] Measure actual performance metrics (throughput, latency, memory)
+        // [ ] Compare against baseline performance
+        // [ ] Calculate objective function from real metrics
+        // [ ] Handle evaluation failures and timeouts
+        // [ ] Add unit tests for parameter evaluation
+        // [ ] Add integration tests with real system runs
+        // [ ] Verify evaluation accuracy improves optimization
+        //
+        // ACCEPTANCE CRITERIA:
+        // - System is run with specified parameters
+        // - Real performance metrics are measured accurately
+        // - Objective function reflects actual system performance
+        // - Evaluation failures are handled gracefully
+        //
+        // DEPENDENCIES:
+        // - System execution infrastructure (Required)
+        // - Performance measurement utilities (Required)
+        // - Objective function calculation (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (standard feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: System performance evaluation expertise
 
         // Extract key parameters
         let chunk_size = parameters.get("chunk_size").copied().unwrap_or(3.0);
@@ -325,8 +385,38 @@ impl BayesianOptimizer {
 
     /// Check if quality is preserved with these parameters
     async fn check_quality_preservation(&self, parameters: &HashMap<String, f64>, baseline: &PerformanceMetrics) -> Result<bool> {
-        // Simplified quality check
-        // In practice, this would run quality validation tests
+        // TODO: Implement real quality validation by running quality tests with parameters
+        //       Currently uses basic heuristic; should run actual quality validation tests.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Run quality validation tests with specified parameters
+        // [ ] Measure quality metrics (accuracy, correctness, reliability)
+        // [ ] Compare quality metrics against baseline
+        // [ ] Determine if quality is preserved
+        // [ ] Handle test failures and timeouts
+        // [ ] Add unit tests for quality checking
+        // [ ] Add integration tests with real quality validation
+        // [ ] Verify quality checks prevent quality degradation
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Quality validation tests are run with parameters
+        // - Quality metrics are measured accurately
+        // - Quality preservation is determined correctly
+        // - Quality checks prevent optimization from degrading quality
+        //
+        // DEPENDENCIES:
+        // - Quality validation test framework (Required)
+        // - Quality metrics measurement (Required)
+        // - Quality comparison utilities (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (quality-critical)
+        // - Change Budget: ~120 LOC
+        // - Reviewer Requirements: Quality assurance expertise
 
         let chunk_size = parameters.get("chunk_size").copied().unwrap_or(3.0);
         let memory_mb = parameters.get("memory_arena_mb").copied().unwrap_or(1024.0);
@@ -450,9 +540,38 @@ impl BayesianOptimizer {
 
     /// Add evaluation to history
     fn add_evaluation(&self, parameters: HashMap<String, f64>, objective: f64, quality: f64, compliance: f64) {
-        // Note: This is a simplified version. In practice, we'd use a mutex-protected history
-        // For this implementation, we'll assume single-threaded access
-
+        // TODO: Implement thread-safe evaluation history storage
+        //       Currently assumes single-threaded access; should use mutex-protected history for concurrent access safety.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Wrap history storage in mutex or RwLock
+        // [ ] Implement thread-safe append operations
+        // [ ] Add proper error handling for lock acquisition failures
+        // [ ] Ensure atomic operations for history updates
+        // [ ] Add unit tests for concurrent access scenarios
+        // [ ] Add integration tests with multiple threads
+        // [ ] Performance: Lock acquisition should complete in <10μs
+        // [ ] Documentation: Document thread safety guarantees
+        //
+        // ACCEPTANCE CRITERIA:
+        // - History updates are thread-safe
+        // - No data races or corruption under concurrent access
+        // - Lock contention is minimized
+        // - History operations are atomic
+        // - Error handling for lock failures is graceful
+        //
+        // DEPENDENCIES:
+        // - Thread-safe primitives (Mutex/RwLock) (Required)
+        // - ParameterEvaluation type (Required)
+        //
+        // ESTIMATED EFFORT: 2-3 hours (high confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (optimization feature)
+        // - Change Budget: ~50 LOC
+        // - Reviewer Requirements: Concurrency expertise
         let evaluation = ParameterEvaluation {
             parameters,
             objective_value: objective,
@@ -461,8 +580,19 @@ impl BayesianOptimizer {
             timestamp: chrono::Utc::now(),
         };
 
-        // In a real implementation, this would be protected by a mutex
-        // For now, we'll just add to the vec (not thread-safe but okay for demo)
+        // TODO: Implement thread-safe evaluation history with the following requirements:
+        // 1. Mutex protection: Protect evaluation history with mutex
+        //    - Wrap Vec in Arc<Mutex<Vec<ParameterEvaluation>>>
+        //    - Acquire mutex lock before modifying history
+        //    - Handle mutex poisoning and errors
+        // 2. Thread safety: Ensure thread-safe access
+        //    - Remove unsafe code blocks
+        //    - Use proper synchronization primitives
+        //    - Handle concurrent access correctly
+        // 3. Performance: Optimize for concurrent access
+        //    - Minimize lock contention
+        //    - Consider lock-free data structures if appropriate
+        //    - Handle lock timeouts appropriately
         unsafe {
             let history_ptr = &self.evaluation_history as *const Vec<ParameterEvaluation> as *mut Vec<ParameterEvaluation>;
             (*history_ptr).push(evaluation);
@@ -471,9 +601,41 @@ impl BayesianOptimizer {
 
     /// Create optimization result
     async fn create_optimization_result(&self, best_params: HashMap<String, f64>, best_objective: f64) -> Result<OptimizationResult> {
-        let expected_improvement = best_objective; // Simplified - would compare to baseline
-        let confidence = 0.85; // Simplified confidence calculation
-        let quality_preservation = 0.92; // Simplified quality score
+        // TODO: Implement proper optimization result calculation
+        //       Currently uses placeholder values; should calculate expected improvement by comparing to baseline, compute confidence from evaluation history, and measure actual quality preservation.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Calculate expected improvement by comparing best_objective to baseline
+        // [ ] Compute confidence score from evaluation history statistics
+        // [ ] Measure actual quality preservation from evaluation results
+        // [ ] Add proper error handling for missing baseline or history
+        // [ ] Add unit tests with various optimization scenarios
+        // [ ] Add integration tests with real optimization runs
+        // [ ] Performance: Result calculation should complete in <1ms
+        // [ ] Documentation: Document calculation methodology
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Expected improvement accurately reflects improvement over baseline
+        // - Confidence score reflects statistical confidence in optimization result
+        // - Quality preservation reflects actual quality metrics from evaluations
+        // - All values are within valid ranges (0.0-1.0 for scores, etc.)
+        //
+        // DEPENDENCIES:
+        // - Baseline performance metrics (Required)
+        // - Evaluation history (Required)
+        // - Quality metrics from evaluations (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (optimization feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Optimization and statistics expertise
+        let expected_improvement = best_objective;
+        let confidence = 0.85;
+        let quality_preservation = 0.92;
 
         let metadata = OptimizationMetadata {
             iterations: self.evaluation_history.len(),

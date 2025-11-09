@@ -9,7 +9,7 @@ use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};use std::collections::HashMap;
 use anyhow::{anyhow, Result};
 use agent_agency_contracts::{
-    working_spec::{WorkingSpec, AcceptanceCriterion, MoSCoWPriority},
+    working_spec::WorkingSpec,
     planning_io::{ExecutionPlan as ContractExecutionPlan, Milestone as ContractMilestone, PlanState, EvidenceGate},
 };
 
@@ -196,7 +196,27 @@ impl CawsPlanBridge {
             milestones.insert(0, self.create_infrastructure_milestone(&working_spec));
         }
 
-        // Build dependency graph (simplified - all milestones independent for now)
+        // TODO: Build proper dependency graph between milestones:
+        // 1. Dependency analysis: Analyze milestone dependencies
+        //    - Identify dependencies between milestones
+        //    - Detect circular dependencies and resolve them
+        //    - Support explicit and implicit dependencies
+        // 2. Graph construction: Construct dependency graph
+        //    - Build directed acyclic graph (DAG) of milestones
+        //    - Support parallel execution of independent milestones
+        //    - Handle dependency resolution and ordering
+        // 3. Dependency validation: Validate dependency graph
+        //    - Ensure no circular dependencies exist
+        //    - Verify all dependencies are satisfiable
+        //    - Handle missing or invalid dependencies
+        // ACCEPTANCE CRITERIA:
+        // - Dependency graph correctly represents milestone relationships
+        // - Graph supports parallel execution of independent milestones
+        // - Dependency validation prevents circular dependencies
+        // DEPENDENCIES:
+        // - Dependency analysis algorithms (Required)
+        // - Graph construction utilities (Required)
+        // PRIORITY: High
         let dependency_graph = self.build_dependency_graph(&milestones);
 
         // Create quality gates
@@ -288,7 +308,8 @@ impl CawsPlanBridge {
     /// Determine milestone scope
     fn determine_milestone_scope(&self, criterion: &agent_agency_contracts::AcceptanceCriterion, working_spec: &agent_agency_contracts::WorkingSpec) -> Result<agent_agency_contracts::planning_io::MilestoneScope> {
         // Analyze criterion to determine affected files
-        // Simplified - would use NLP to analyze the criterion text
+        // TODO: Implement NLP-based criterion analysis
+        //       Currently uses basic text matching; should use NLP to analyze criterion text and determine affected files.
         let files = working_spec.file_changes.iter()
             .filter(|change| self.is_change_relevant_to_criterion(*change, criterion))
             .map(|change| change.file.clone())
@@ -308,7 +329,8 @@ impl CawsPlanBridge {
 
     /// Check if file change is relevant to criterion
     fn is_change_relevant_to_criterion(&self, change: &agent_agency_contracts::working_spec::FileChange, criterion: &agent_agency_contracts::AcceptanceCriterion) -> bool {
-        // Simplified relevance check - would use semantic analysis
+        // TODO: Implement semantic analysis for change relevance
+        //       Currently uses basic text matching; should use semantic analysis to determine if changes are relevant to criteria.
         let change_text = format!("{} {}", change.change_type, change.file);
         let criterion_text = format!("{} {} {}", criterion.given, criterion.when, criterion.then);
 
@@ -465,7 +487,8 @@ impl CawsPlanBridge {
             }
         }
 
-        // Calculate critical path (simplified)
+        // TODO: Implement proper critical path calculation
+        //       Currently uses basic calculation; should use graph algorithms to calculate actual critical path through milestone dependencies.
         let critical_path = if let Some(blocking) = milestones.iter().find(|m| m.is_blocking) {
             vec![blocking.id.clone()]
         } else {

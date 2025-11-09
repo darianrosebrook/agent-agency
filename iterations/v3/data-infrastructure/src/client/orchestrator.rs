@@ -106,9 +106,42 @@ impl DatabaseClient {
 
     /// Create an audit trail entry
     pub async fn create_audit_trail_entry(&self, audit_entry: serde_json::Value) -> Result<()> {
-        // This is a placeholder - actual implementation would insert into audit table
-        // For now, just log the audit entry
-        tracing::info!("Audit entry: {}", audit_entry);
+        // TODO: Insert audit trail entry into database
+        //       Currently only logs; should insert audit trail entry into audit table for persistent audit logging.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Audit entries are inserted into database correctly
+        // - Entries include all required information
+        // - Database persistence works correctly
+        // - Error handling works for insertion failures
+        //
+        // DEPENDENCIES:
+        // - Database connection (Required)
+        // - Audit table schema (Required)
+        // - Database insertion utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (audit trail feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Database and audit trail expertise
+        tracing::info!("Audit entry: {}", audit_entry); // Temporary: log until database insertion
         Ok(())
     }
 
@@ -777,7 +810,27 @@ impl DatabaseOperations for DatabaseClient {
     async fn create_judge_evaluation(&self, evaluation: CreateJudgeEvaluation) -> Result<JudgeEvaluation> {
         let id = Uuid::new_v4();
         
-        // Create a verdict_id from the task_id for now (may need adjustment based on actual schema)
+        // TODO: Retrieve verdict_id from actual schema:
+        // 1. Schema integration: Integrate with actual database schema
+        //    - Query verdict table for verdict_id based on task_id
+        //    - Handle verdict lookup errors appropriately
+        //    - Support verdict creation workflow if needed
+        // 2. Verdict relationship: Establish proper verdict-task relationship
+        //    - Link verdict_id to task_id correctly
+        //    - Handle multiple verdicts per task if applicable
+        //    - Support verdict updates and modifications
+        // 3. Schema validation: Validate schema relationships
+        //    - Ensure verdict_id exists in verdict table
+        //    - Verify task_id-verdict_id relationship is valid
+        //    - Handle schema migration scenarios
+        // ACCEPTANCE CRITERIA:
+        // - Verdict_id is retrieved from actual database schema
+        // - Verdict-task relationships are correctly established
+        // - Schema validation ensures data integrity
+        // DEPENDENCIES:
+        // - Database schema with verdict table (Required)
+        // - Verdict lookup API (Required)
+        // PRIORITY: Medium
         let verdict_id = Uuid::new_v4();
         
         sqlx::query(
@@ -830,10 +883,42 @@ impl DatabaseOperations for DatabaseClient {
     }
 
     async fn get_judge_evaluations(&self, task_id: Uuid) -> Result<Vec<JudgeEvaluation>> {
-        // Note: This queries by task_id, but judge_evaluations table may not have task_id directly
-        // We'll need to join through council_verdicts if needed, or adjust schema
-        // For now, returning empty as schema relationship is unclear
-        let rows = sqlx::query_as::<_, JudgeEvaluation>(
+        // TODO: Resolve schema relationship and implement proper query
+        //       Currently returns empty; should resolve schema relationship between judge_evaluations and task_id, implement proper join through council_verdicts if needed.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Schema relationship is resolved correctly
+        // - Query joins tables properly
+        // - Judge evaluations are retrieved accurately
+        // - Error handling works for query failures
+        //
+        // DEPENDENCIES:
+        // - Database schema documentation (Required)
+        // - Schema migration if needed (Required)
+        // - Query optimization utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (database query feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Database schema expertise
+        let rows = sqlx::query_as::<_, JudgeEvaluation>( // Temporary: query structure until schema resolution
             r#"
             SELECT id, verdict_id, judge_id, judge_verdict, evaluation_time_ms,
                    tokens_used, confidence, created_at, evaluation_score,
@@ -1453,9 +1538,42 @@ mod tests {
             timestamp: Some(Utc::now()),
         };
 
-        // This test would require a real database connection
-        // For now, we just verify the struct can be created
-        assert_eq!(entry.entity_type, "test_entity");
+        // TODO: Implement comprehensive test with real database connection
+        //       Currently verifies struct creation only; should implement comprehensive test with real database connection for full audit trail functionality.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Test uses real database connection
+        // - Audit trail insertion is tested
+        // - Database queries are tested
+        // - Test assertions are comprehensive
+        //
+        // DEPENDENCIES:
+        // - Test database setup (Required)
+        // - Database test utilities (Required)
+        // - Test fixtures (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (test infrastructure enhancement)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Database testing expertise
+        assert_eq!(entry.entity_type, "test_entity"); // Temporary: struct verification until database test
         assert_eq!(entry.action, "test_action");
         assert!(entry.user_id.is_some());
         assert!(entry.ip_address.is_some());

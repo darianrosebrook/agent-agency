@@ -442,8 +442,27 @@ impl McpIntegration for DefaultMcpIntegration {
         // - [ ] Handle storage errors gracefully
         // - [ ] Add unit tests with mock waiver system
         // - [ ] Add integration tests with real audit metadata storage
-        // Store audit metadata in waiver system for audit trail
-        // Note: Using logging for now since store_audit_metadata method is not available
+        // TODO: Store audit metadata in waiver system:
+        // 1. Metadata storage: Store audit metadata in waiver system
+        //    - Implement store_audit_metadata method in waiver system
+        //    - Store metadata with proper structure and indexing
+        //    - Support metadata retrieval and querying
+        // 2. Audit trail: Maintain complete audit trail
+        //    - Link audit metadata to execution records
+        //    - Support audit trail queries and filtering
+        //    - Ensure audit metadata persistence
+        // 3. Integration: Integrate with waiver system
+        //    - Use waiver system API for metadata storage
+        //    - Handle storage errors gracefully
+        //    - Support metadata versioning if needed
+        // ACCEPTANCE CRITERIA:
+        // - Audit metadata is stored in waiver system
+        // - Metadata is retrievable and queryable
+        // - Audit trail is complete and persistent
+        // DEPENDENCIES:
+        // - Waiver system audit metadata API (Required)
+        // - Metadata storage infrastructure (Required)
+        // PRIORITY: Medium
         tracing::debug!("Audit metadata for execution {}: {}", execution.execution_id, audit_metadata);
         
         Ok(())
@@ -898,7 +917,27 @@ impl DefaultOrchestrationIntegration {
         // - [ ] Calculate expiration date from waiver configuration
         // - [ ] Add unit tests with mock waiver system
         // - [ ] Add integration tests with real waiver creation
-        // Create a simple waiver result for now
+        // TODO: Create proper waiver result with full processing:
+        // 1. Waiver processing: Process waiver eligibility properly
+        //    - Evaluate waiver eligibility criteria
+        //    - Calculate approval status based on criteria
+        //    - Set expiration dates from waiver configuration
+        // 2. Result creation: Create comprehensive waiver result
+        //    - Include all required waiver result fields
+        //    - Set proper approval status and reasons
+        //    - Calculate accurate expiration dates
+        // 3. Waiver integration: Integrate with waiver system
+        //    - Use waiver system API for result creation
+        //    - Handle waiver creation errors appropriately
+        //    - Support waiver result validation
+        // ACCEPTANCE CRITERIA:
+        // - Waiver results are created with proper processing
+        // - Approval status reflects eligibility criteria
+        // - Expiration dates are calculated correctly
+        // DEPENDENCIES:
+        // - Waiver system API (Required)
+        // - Waiver eligibility evaluation (Required)
+        // PRIORITY: Medium
         Ok(Some(WaiverResult {
             waiver_id: Some(Uuid::new_v4().to_string()),
             approved: false,

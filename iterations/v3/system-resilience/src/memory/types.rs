@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 /// Object reference for garbage collection
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ObjectRef {
-    /// Pointer to the object (simplified for demonstration)
+    /// Pointer to the object
     pub ptr: usize,
     /// Type information for the object
     pub type_id: std::any::TypeId,

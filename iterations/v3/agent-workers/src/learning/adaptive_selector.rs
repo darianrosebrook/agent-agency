@@ -166,7 +166,42 @@ impl AdaptiveWorkerSelector {
         // - [ ] Handle workers with similar load scores
         // - [ ] Add unit tests with mock worker load data
         // - [ ] Add integration tests with real worker load balancing
-        // For now, use fairness-based selection as a proxy for load balancing
+        //
+        // TODO: Implement comprehensive load balancing worker selection
+        //       Currently uses fairness-based selection as proxy; should implement comprehensive selection that queries worker load metrics (CPU, memory, active tasks), calculates load scores, and selects worker with lowest load score.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Worker load metrics (CPU, memory, active tasks) are queried
+        // - Load scores are calculated for each available worker
+        // - Worker with lowest load score is selected
+        // - Workers with similar load scores are handled appropriately
+        //
+        // DEPENDENCIES:
+        // - Worker load metrics API (Required)
+        // - Load score calculation algorithm (Required)
+        // - Load balancing selection utilities (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (load balancing functionality)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Load balancing and worker metrics expertise
         self.select_by_fairness(subtask, available_workers).await
     }
 

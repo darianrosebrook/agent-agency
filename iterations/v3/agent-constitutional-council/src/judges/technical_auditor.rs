@@ -223,7 +223,6 @@ impl super::common::Judge for TechnicalAuditor {
         // - [ ] Add performance checks for resource-intensive operations
         // - [ ] Add unit tests for each check type
         // - [ ] Add integration tests with real working specs
-        // STEP 1: Run deterministic technical checks (placeholder for now)
         let technical_violations = self.run_deterministic_checks_impl(ctx);
 
         // STEP 2: Check for blocking technical violations
@@ -275,7 +274,8 @@ impl TechnicalAuditor {
     fn run_deterministic_checks_impl(&self, ctx: &ReviewContext) -> Vec<Violation> {
         let mut violations = vec![];
 
-        // Check for security basics (simplified checks)
+        // TODO: Implement comprehensive security checks
+        //       Currently uses basic checks; should implement comprehensive security validation for working specs.
         let spec_text = format!("{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
             ctx.working_spec.title,
             ctx.working_spec.description,

@@ -4,14 +4,14 @@
 //! and intelligent tool selection based on task requirements.
 
 use schemars::JsonSchema;
-use anyhow::{Result, Context};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, debug, warn};
 
-use crate::tool_registry::{ToolMetadata, ToolCategory};
+use crate::tool_registry::ToolCategory;
 
 /// Tool discovery engine
 pub struct ToolDiscoveryEngine {
@@ -444,7 +444,39 @@ impl ToolDiscoveryEngine {
             risk_level,
             risk_factors,
             mitigations,
-            confidence: 0.8, // Simplified confidence
+            // TODO: Calculate actual confidence score from risk analysis
+            //       Currently uses hardcoded value; should calculate confidence score from risk analysis and tool metadata.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Analyze risk factors for confidence calculation
+            // [ ] Consider tool metadata quality
+            // [ ] Factor in tool usage history
+            // [ ] Support various confidence calculation methods
+            // [ ] Handle uncertainty in confidence scores
+            // [ ] Add unit tests for confidence calculation
+            // [ ] Add integration tests with various tools
+            // [ ] Verify confidence score accuracy
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Confidence scores are calculated from risk analysis
+            // - Tool metadata quality is considered
+            // - Usage history improves accuracy
+            // - Various calculation methods are supported
+            //
+            // DEPENDENCIES:
+            // - Risk analysis utilities (Required)
+            // - Tool metadata structure (Required)
+            // - Confidence calculation utilities (Required)
+            //
+            // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (risk analysis feature)
+            // - Change Budget: ~80 LOC
+            // - Reviewer Requirements: Risk analysis expertise
+            confidence: 0.8, // Temporary: hardcoded until confidence calculation is implemented
         })
     }
 
@@ -525,8 +557,39 @@ impl ToolDiscoveryEngine {
         if capabilities.is_empty() {
             0.0
         } else {
-            // Simplified: return percentage of expected capabilities found
-            (capabilities.len() as f64 / 100.0).min(1.0) // Cap at 100%
+            // TODO: Calculate actual completeness score from expected vs found capabilities
+            //       Currently uses basic percentage; should calculate completeness score comparing expected capabilities with found capabilities.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Define expected capabilities for tool type
+            // [ ] Compare found capabilities with expected
+            // [ ] Calculate completeness percentage accurately
+            // [ ] Weight capabilities by importance
+            // [ ] Handle missing critical capabilities
+            // [ ] Add unit tests for completeness calculation
+            // [ ] Add integration tests with various tools
+            // [ ] Verify completeness score accuracy
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Completeness score compares expected vs found capabilities
+            // - Capabilities are weighted by importance
+            // - Missing critical capabilities reduce score appropriately
+            // - Completeness calculation is accurate
+            //
+            // DEPENDENCIES:
+            // - Expected capabilities definitions (Required)
+            // - Capability comparison utilities (Required)
+            // - Completeness calculation utilities (Required)
+            //
+            // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (tool analysis feature)
+            // - Change Budget: ~80 LOC
+            // - Reviewer Requirements: Tool analysis expertise
+            (capabilities.len() as f64 / 100.0).min(1.0) // Temporary: placeholder percentage until proper completeness calculation
         }
     }
 }
@@ -589,16 +652,39 @@ impl NetworkSource {
 #[async_trait::async_trait]
 impl DiscoverySource for NetworkSource {
     async fn discover_tools(&self) -> Result<Vec<ToolCapability>> {
-        // TODO: Implement real remote registry tool discovery
-        // - [ ] Query remote tool registries (HTTP APIs, etc.)
-        // - [ ] Parse tool capabilities from registry responses
-        // - [ ] Handle registry connection errors and timeouts
-        // - [ ] Cache discovered tools for performance
-        // - [ ] Add unit tests with mock registries
-        // - [ ] Add integration tests with real remote registries
-        // In practice, this would query remote registries
-        // For now, return empty list
-        Ok(vec![])
+        // TODO: Query remote tool registries
+        //       Currently returns empty list; should query remote tool registries (npm, PyPI, crates.io, etc.) for available tools.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Integrate with remote registry APIs (npm, PyPI, crates.io)
+        // [ ] Query registries for available tools
+        // [ ] Parse registry responses for tool metadata
+        // [ ] Handle registry API errors and rate limits
+        // [ ] Support multiple registry types
+        // [ ] Add unit tests with mock registries
+        // [ ] Add integration tests with real remote registries
+        // [ ] Verify registry query accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Remote registries are queried correctly
+        // - Tool metadata is parsed accurately
+        // - Registry errors are handled gracefully
+        // - Multiple registry types are supported
+        //
+        // DEPENDENCIES:
+        // - Registry API clients (Required)
+        // - Registry response parsing utilities (Required)
+        // - Rate limiting utilities (Required)
+        //
+        // ESTIMATED EFFORT: 5-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (tool discovery feature)
+        // - Change Budget: ~120 LOC
+        // - Reviewer Requirements: Registry API integration expertise
+        Ok(vec![]) // Temporary: empty list until remote registry query is implemented
     }
 
     fn source_name(&self) -> &str {
@@ -606,8 +692,38 @@ impl DiscoverySource for NetworkSource {
     }
 
     async fn is_available(&self) -> bool {
-        // Check network connectivity
-        true // Simplified
+        // TODO: Implement actual network connectivity check
+        //       Currently returns true; should check actual network connectivity and service availability.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement network connectivity check (ping, DNS lookup, etc.)
+        // [ ] Check service endpoint availability
+        // [ ] Handle network errors and timeouts
+        // [ ] Add caching for connectivity results
+        // [ ] Add unit tests with mock network conditions
+        // [ ] Add integration tests with real network checks
+        // [ ] Performance: Connectivity check should complete in <1s
+        // [ ] Documentation: Document connectivity check methodology
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Returns true only when network and service are actually available
+        // - Handles network failures gracefully
+        // - Provides accurate availability status
+        // - Caches results appropriately to avoid excessive checks
+        //
+        // DEPENDENCIES:
+        // - Network connectivity utilities (Required)
+        // - Service endpoint configuration (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (network feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Network programming expertise
+        true
     }
 }
 
@@ -623,15 +739,41 @@ impl PluginSource {
 #[async_trait::async_trait]
 impl DiscoverySource for PluginSource {
     async fn discover_tools(&self) -> Result<Vec<ToolCapability>> {
-        // TODO: Implement real plugin directory scanning
-        // - [ ] Scan plugin directories for tool definitions
-        // - [ ] Parse tool metadata files (JSON, YAML, etc.)
-        // - [ ] Validate tool schemas and capabilities
-        // - [ ] Handle file system errors and invalid plugins
-        // - [ ] Add unit tests with mock plugin directories
-        // - [ ] Add integration tests with real plugin discovery
-        // In practice, this would scan plugin directories
-        // For now, return empty list
+        // TODO: Implement comprehensive plugin directory scanning for tool discovery
+        //       Currently returns empty list; should implement comprehensive plugin directory scanning that scans plugin directories for tool definitions, parses metadata files (JSON, YAML), and validates tool schemas and capabilities.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Plugin directories are scanned for tool definitions
+        // - Metadata files (JSON, YAML) are parsed correctly
+        // - Tool schemas and capabilities are validated
+        // - File system errors and invalid plugins are handled gracefully
+        //
+        // DEPENDENCIES:
+        // - File system scanning utilities (Required)
+        // - Metadata parsing libraries (Required)
+        // - Schema validation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (tool discovery functionality)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Plugin systems and tool discovery expertise
         Ok(vec![])
     }
 

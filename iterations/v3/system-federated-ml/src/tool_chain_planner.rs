@@ -6,17 +6,14 @@
 
 use schemars::JsonSchema;
 use petgraph::graph::{Graph, NodeIndex};
-use petgraph::visit::Topo;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn};
-use uuid::Uuid;
+use tracing::{debug, info};
 
 use crate::tool_registry::{ToolRegistry, RegisteredTool};
-use crate::tool_execution::{ToolExecutor, ToolInvocation, ToolResult};
 
 /// Tool chain planner with typed DAG support
 pub struct ToolChainPlanner {
@@ -328,7 +325,7 @@ impl ToolChainPlanner {
         // Update roots and sinks
         let (roots, sinks) = self.compute_roots_and_sinks(&new_dag);
 
-        let mut extended_chain = ToolChain {
+        let extended_chain = ToolChain {
             dag: new_dag,
             roots,
             sinks,
@@ -410,9 +407,42 @@ impl ToolChainPlanner {
         // - [ ] Handle schema version differences (@v1 -> @v2)
         // - [ ] Add unit tests with various schema types
         // - [ ] Add integration tests with real schema compatibility
-
-        // For now, allow optional inputs to accept any output
-        Ok(input.optional)
+        // TODO: Implement comprehensive schema compatibility checking
+        //       Currently allows optional inputs to accept any output; should implement comprehensive schema compatibility checking for proper type validation.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Schema compatibility is checked comprehensively
+        // - Type validation works correctly
+        // - Optional inputs are handled properly
+        // - Error messages are helpful
+        //
+        // DEPENDENCIES:
+        // - Schema validation libraries (Required)
+        // - Type checking utilities (Required)
+        // - Schema compatibility algorithms (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (schema validation feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Schema validation expertise
+        Ok(input.optional) // Temporary: basic until comprehensive checking
     }
 
     /// Convert a registered tool to a DAG node
@@ -444,9 +474,42 @@ impl ToolChainPlanner {
         // - [ ] Handle missing or invalid schemas gracefully
         // - [ ] Add unit tests with various schema formats
         // - [ ] Add integration tests with real tool schemas
-        // This would extract from tool's JSON schema
-        // For now, create generic ports
-        let port_name = if is_input { "input" } else { "output" };
+        // TODO: Extract port schemas from tool's JSON schema
+        //       Currently creates generic ports; should extract port schemas from tool's JSON schema for accurate type information.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Port schemas are extracted from JSON schema correctly
+        // - Type information is accurate
+        // - Schema parsing handles various formats
+        // - Error handling works for invalid schemas
+        //
+        // DEPENDENCIES:
+        // - JSON schema parsing libraries (Required)
+        // - Schema extraction utilities (Required)
+        // - Port schema conversion utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (schema extraction feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: JSON schema expertise
+        let port_name = if is_input { "input" } else { "output" }; // Temporary: generic until JSON schema extraction
         let schema_key = format!("{}.{}.default@v1", tool.metadata.category, port_name);
 
         ports.push(ToolPort {
@@ -570,7 +633,8 @@ impl ToolChainPlanner {
 
     /// Compute chain confidence based on node confidences and structure
     fn compute_chain_confidence(&self, base_chain: &ToolChain, new_node: &ToolNode) -> f64 {
-        // Simplified: geometric mean of node confidences
+        // TODO: Implement comprehensive chain confidence calculation
+        //       Currently uses basic geometric mean; should implement comprehensive calculation considering node dependencies, reliability, and chain structure.
         let node_count = base_chain.dag.node_count() + 1;
         let total_confidence = base_chain.confidence * (node_count - 1) as f64 + 0.8; // Assume 0.8 for new node
         total_confidence / node_count as f64

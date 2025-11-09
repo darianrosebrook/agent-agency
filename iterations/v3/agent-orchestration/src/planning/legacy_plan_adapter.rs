@@ -34,11 +34,41 @@ impl LegacyPlanAdapter {
 
     /// Adapt working spec to legacy plan format
     pub async fn adapt_working_spec(&self, working_spec: WorkingSpec) -> Result<ContractExecutionPlan> {
-        // Placeholder implementation
-        // In a real implementation, this would:
-        // 1. Extract task description from working spec
-        // 2. Use planning agent to decompose into subtasks
-        // 3. Convert back to execution plan format
+        // TODO: Implement working spec to legacy plan adaptation
+        //       Currently placeholder; should extract task description, use planning agent to decompose, and convert to execution plan format.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Extract task description from working spec
+        // [ ] Use planning agent to decompose into subtasks
+        // [ ] Convert decomposed tasks back to execution plan format
+        // [ ] Map working spec acceptance criteria to plan requirements
+        // [ ] Handle working spec constraints and invariants
+        // [ ] Preserve task context and metadata
+        // [ ] Add unit tests with various working specs
+        // [ ] Add integration tests with real planning agent
+        // [ ] Performance: Adaptation should complete in <100ms
+        // [ ] Documentation: Document adaptation process
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Task description is extracted from working spec
+        // - Planning agent decomposes tasks correctly
+        // - Execution plan format is properly generated
+        // - Acceptance criteria are preserved
+        // - Constraints and invariants are maintained
+        //
+        // DEPENDENCIES:
+        // - Planning agent integration (Required)
+        // - Task decomposition logic (Required)
+        // - Execution plan format conversion (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (adapter feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Planning and adapter expertise
 
         Err(anyhow::anyhow!("Legacy plan adapter not yet implemented - PLACEHOLDER"))
     }

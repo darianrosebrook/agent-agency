@@ -179,9 +179,41 @@ mod tests {
         // Wait for event to be processed
         sleep(Duration::from_millis(1000)).await;
         
-        // Check if we received an event (non-blocking check)
-        // Note: In a real test, we'd use a timeout and verify the event
-        // For now, we just verify the bridge is running and processing
+        // TODO: Implement comprehensive event verification in integration test
+        //       Currently verifies bridge is running only; should implement comprehensive event verification that uses timeout mechanisms and validates event type and content for proper integration testing.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Event verification uses timeout mechanisms
+        // - Event type and content are validated
+        // - Test handles missing or delayed events gracefully
+        // - Test assertions are meaningful and comprehensive
+        //
+        // DEPENDENCIES:
+        // - Event timeout utilities (Required)
+        // - Event validation logic (Required)
+        // - Test infrastructure for event handling (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (test infrastructure enhancement)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Integration testing and event handling expertise
         
         bridge.stop().await.expect("Failed to stop bridge");
     }
@@ -422,9 +454,41 @@ mod tests {
         // Wait a bit for event
         sleep(Duration::from_millis(100)).await;
         
-        // Try to receive event (non-blocking check)
-        // In a real test, we'd verify the event type and content
-        // For now, we just verify the subscription works
+        // TODO: Implement comprehensive event subscription verification
+        //       Currently verifies subscription works only; should implement comprehensive verification that validates event type and content for proper integration testing of event subscription functionality.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Event type is verified correctly
+        // - Event content is validated
+        // - Subscription mechanism is properly tested
+        // - Test handles subscription failures gracefully
+        //
+        // DEPENDENCIES:
+        // - Event validation utilities (Required)
+        // - Subscription testing infrastructure (Required)
+        // - Event content parsing utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (test infrastructure enhancement)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Integration testing and event subscription expertise
         assert!(true, "Event subscription verified");
     }
 

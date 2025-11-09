@@ -2,8 +2,7 @@
 //! Embedding Integration - Vector embeddings for memory with decay/importance
 
 use crate::memory_types::*;
-use crate::MemoryResult;
-use data_infrastructure::{DatabaseClient, DatabaseConfig, Row};
+use crate::{MemoryResult, MemoryError};
 use std::sync::Arc;
 use chrono::{DateTime, Utc, Duration};
 use serde::{Deserialize, Serialize};
@@ -11,9 +10,11 @@ use tracing::{debug, info, warn, error};
 use reqwest::Client;
 use anyhow::{Context, Result};
 use std::collections::HashMap;
+use sqlx::{PgPool, Row};
 /// Memory embedding with decay information
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct MemoryEmbedding {
+    #[schemars(with = "String")]
     pub memory_id: MemoryId,
     pub embedding: Vec<f32>,
     pub importance_score: f32,
@@ -118,7 +119,7 @@ impl HttpEmbeddingService {
 /// Embedding integration for memory operations
 pub struct EmbeddingIntegration {
     embedding_service: Arc<HttpEmbeddingService>,
-    db_client: Arc<DatabaseClient>,
+    db_pool: Arc<PgPool>,
     config: EmbeddingConfig,
 }
 
@@ -144,12 +145,18 @@ impl EmbeddingIntegration {
             info!("Embedding service health check passed");
         }
 
-        let db_config = data_infrastructure::DatabaseConfig::default();
-        let db_client = Arc::new(DatabaseClient::new(db_config).await?);
+        // Get database URL from environment or use default
+        let database_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgresql://localhost/agent_agency_v3".to_string());
+        let db_pool = Arc::new(
+            sqlx::PgPool::connect(&database_url)
+                .await
+                .context("Failed to connect to database for embedding integration")?
+        );
 
         Ok(Self {
             embedding_service,
-            db_client,
+            db_pool,
             config: config.clone(),
         })
     }
@@ -221,7 +228,7 @@ impl EmbeddingIntegration {
         .bind(memory_embedding.last_accessed)
         .bind(memory_embedding.access_count as i32)
         .bind(memory_embedding.created_at)
-        .execute(self.db_client.pool())
+        .execute(self.db_pool.as_ref())
         .await?;
 
         debug!("Stored embedding for memory: {}", memory_id);
@@ -245,7 +252,7 @@ impl EmbeddingIntegration {
         )
         .bind(&context_embedding)
         .bind(limit as i32)
-        .fetch_all(self.db_client.pool())
+        .fetch_all(self.db_pool.as_ref())
         .await?;
 
         let mut results = Vec::new();
@@ -293,7 +300,7 @@ impl EmbeddingIntegration {
         )
         .bind(&query_embedding)
         .bind(limit as i32)
-        .fetch_all(self.db_client.pool())
+        .fetch_all(self.db_pool.as_ref())
         .await?;
 
         let mut results = Vec::new();
@@ -321,7 +328,7 @@ impl EmbeddingIntegration {
         )
         .bind(memory_id)
         .bind(new_importance)
-        .execute(self.db_client.pool())
+        .execute(self.db_pool.as_ref())
         .await?;
 
         debug!("Updated importance score for memory {} to {}", memory_id, new_importance);
@@ -345,7 +352,7 @@ impl EmbeddingIntegration {
             "#,
         )
         .bind(now)
-        .execute(self.db_client.pool())
+        .execute(self.db_pool.as_ref())
         .await?;
 
         let updated_count = updated.rows_affected() as usize;
@@ -370,7 +377,7 @@ impl EmbeddingIntegration {
             "#,
         )
         .bind(cutoff)
-        .execute(self.db_client.pool())
+        .execute(self.db_pool.as_ref())
         .await?;
 
         let updated_count = updated.rows_affected() as usize;
@@ -394,7 +401,7 @@ impl EmbeddingIntegration {
         )
         .bind(memory_id)
         .bind(Utc::now())
-        .execute(self.db_client.pool())
+        .execute(self.db_pool.as_ref())
         .await?;
 
         Ok(())
@@ -414,7 +421,7 @@ impl EmbeddingIntegration {
             FROM memory_embeddings
             "#,
         )
-        .fetch_one(self.db_client.pool())
+        .fetch_one(self.db_pool.as_ref())
         .await?;
 
         Ok(EmbeddingStats {
@@ -479,7 +486,7 @@ impl EmbeddingIntegration {
             "SELECT id FROM block_vectors WHERE block_id = $1 LIMIT 1"
         )
         .bind(block_id)
-        .fetch_optional(self.db_client.pool())
+        .fetch_optional(self.db_pool.as_ref())
         .await?;
         
         if existing.is_some() {
@@ -498,7 +505,7 @@ impl EmbeddingIntegration {
             .bind(content)
             .bind(&embedding)
             .bind(&metadata_json)
-            .execute(self.db_client.pool())
+            .execute(self.db_pool.as_ref())
             .await?;
         } else {
             // Insert new
@@ -515,7 +522,7 @@ impl EmbeddingIntegration {
             .bind(&embedding_model_id)
             .bind(&embedding)
             .bind(&metadata_json)
-            .execute(self.db_client.pool())
+            .execute(self.db_pool.as_ref())
             .await?;
         }
         
@@ -544,7 +551,7 @@ impl EmbeddingIntegration {
         )
         .bind(&query_embedding)
         .bind(limit as i32)
-        .fetch_all(self.db_client.pool())
+        .fetch_all(self.db_pool.as_ref())
         .await?;
         
         let mut results = Vec::new();

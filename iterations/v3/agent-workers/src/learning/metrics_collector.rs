@@ -120,7 +120,7 @@ impl ParallelWorkerMetricsCollector {
         } else {
             0.0
         };
-        let cost_reward = self.reward_weights.cost; // Simplified cost calculation
+        let cost_reward = self.reward_weights.cost; // TODO: Implement proper cost calculation from actual metrics
 
         quality_reward + latency_reward + rework_reward + cost_reward
     }

@@ -253,12 +253,43 @@ impl FederationParticipant {
 
     /// Train for one epoch
     async fn train_epoch(&self, model: &mut Vec<Vec<f32>>) -> Result<f32> {
-        // Simplified training simulation
-        // In practice, this would:
-        // 1. Load batch of training data
-        // 2. Forward pass through model
-        // 3. Compute loss
-        // 4. Backward pass and parameter updates
+        // TODO: Implement actual training loop with forward/backward passes
+        //       Currently simulates training; should implement actual training loop with data loading, forward pass, loss computation, and backward pass.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Training loop loads batches correctly
+        // - Forward pass computes outputs accurately
+        // - Loss computation is correct
+        // - Backward pass updates parameters correctly
+        //
+        // DEPENDENCIES:
+        // - Training data loader (Required)
+        // - Forward pass implementation (Required)
+        // - Loss computation utilities (Required)
+        // - Backward pass implementation (Required)
+        //
+        // ESTIMATED EFFORT: 8-10 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (core ML training feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: ML training expertise
+        // Temporary: simulation until actual training loop
 
         // Simulate training progress
         let mut total_loss = 0.0;
@@ -327,10 +358,44 @@ impl FederationParticipant {
             .ok_or_else(|| anyhow::anyhow!("No active round"))
     }
 
-    /// Clone participant for training (simplified)
+    /// Clone participant for training
     fn clone_for_training(&self) -> Self {
-        // This is a simplified clone - in practice, we'd implement proper cloning
-        Self {
+        // TODO: Implement proper participant cloning
+        //       Currently uses basic field cloning; should implement proper cloning with deep copy of model state and data manager.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Participant is cloned correctly
+        // - Model state is deep copied
+        // - Data manager is cloned properly
+        // - Cloned participant is independent
+        //
+        // DEPENDENCIES:
+        // - Deep copy utilities (Required)
+        // - Model state cloning (Required)
+        // - Data manager cloning (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (data structure feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Rust cloning expertise
+        Self { // Temporary: basic cloning until proper implementation
             id: self.id.clone(),
             config: self.config.clone(),
             local_model: Arc::clone(&self.local_model),

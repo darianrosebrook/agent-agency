@@ -224,7 +224,8 @@ impl GarbageCollector {
                 println!("Processing object: {:?}", digest);
             }
 
-            // Get object references (this would be implemented based on your object store)
+            // TODO: Implement object reference retrieval from object store
+            //       Currently uses placeholder; should query actual object store for object references based on digest.
             let references = self.get_object_references(&digest)?;
             
             for reference in references {
@@ -242,7 +243,8 @@ impl GarbageCollector {
     fn sweep_unreachable(&mut self, reachable: &HashSet<Digest>) -> Result<HashSet<Digest>> {
         let mut unreachable = HashSet::new();
         
-        // Get all objects in the system (this would be implemented based on your object store)
+        // TODO: Implement object enumeration from object store
+        //       Currently uses placeholder; should query actual object store to enumerate all objects in the system.
         let all_objects = self.get_all_objects()?;
         
         for object in all_objects {
@@ -309,7 +311,39 @@ impl GarbageCollector {
         use crate::merkle::{Commit, FileTree};
 
         // Create a blob store instance to read objects
-        // In a real implementation, this would be injected or accessed from the collector
+        // TODO: Implement dependency injection for blob store
+        //       Currently creates blob store directly; should be injected or accessed from collector for better testability and configuration.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Add blob store as constructor parameter
+        // [ ] Access blob store from collector instance
+        // [ ] Support configuration-based blob store creation
+        // [ ] Handle missing blob store gracefully
+        // [ ] Add unit tests with mock blob store
+        // [ ] Add integration tests with real blob store
+        // [ ] Performance: No performance impact (construction-time only)
+        // [ ] Documentation: Document injection pattern
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Blob store can be injected via constructor
+        // - Blob store is accessible from collector
+        // - Configuration-based creation is supported
+        // - Missing blob store is handled gracefully
+        // - Injection pattern is testable
+        //
+        // DEPENDENCIES:
+        // - Dependency injection framework (Optional)
+        // - Blob store interface (Required)
+        // - Configuration management (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (high confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (code quality improvement)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Dependency injection expertise
         let objects_dir = std::path::PathBuf::from("./.recovery/objects");
         let blob_store = BlobStore::new(objects_dir);
 
@@ -352,10 +386,42 @@ impl GarbageCollector {
 
         match blob.header.kind {
             PayloadKind::Full => {
-                // Full blobs typically don't reference other objects directly
-                // But they might contain references in their data (e.g., chunk references)
-                // For now, we don't parse internal blob references to avoid loading large objects
-                // This is an optimization - we could scan blob content for digest patterns if needed
+                // TODO: Parse internal blob references for complete reference tracking
+                //       Currently skips parsing to avoid loading large objects; should parse internal blob references (e.g., chunk references) for complete reference tracking.
+                //
+                // COMPLETION CHECKLIST:
+                // [ ] Primary functionality implemented
+                // [ ] API/data structures defined & stable
+                // [ ] Error handling + validation aligned with error taxonomy
+                // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                // [ ] Integration tests for external systems/contracts
+                // [ ] Documentation: public API + system behavior
+                // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                // [ ] Configurability and feature flags defined if relevant
+                // [ ] Failure-mode cards documented (degradation paths)
+                //
+                // ACCEPTANCE CRITERIA:
+                // - Internal references are parsed correctly
+                // - Parsing is efficient for large objects
+                // - Reference tracking is complete
+                // - Performance is acceptable
+                //
+                // DEPENDENCIES:
+                // - Blob parsing utilities (Required)
+                // - Reference extraction algorithms (Required)
+                // - Digest pattern matching (Required)
+                //
+                // ESTIMATED EFFORT: 5-6 hours (medium confidence)
+                // PRIORITY: Low
+                // BLOCKING: No
+                //
+                // GOVERNANCE:
+                // - CAWS Tier: 3 (GC optimization enhancement)
+                // - Change Budget: ~120 LOC
+                // - Reviewer Requirements: GC and blob parsing expertise
+                // Temporary: skip parsing until efficient implementation
             }
             PayloadKind::UnifiedDiff => {
                 // Diff blobs might reference the base object they're diffing against
@@ -409,10 +475,42 @@ impl GarbageCollector {
 
     /// Parse references from a unified diff
     fn parse_diff_references(&self, blob: &crate::cas::Blob) -> Result<Vec<Digest>> {
-        // Unified diffs might reference the base object in their header
-        // For now, we don't parse diff internals to avoid complexity
-        // This could be enhanced to extract referenced objects from diff headers
-        Ok(Vec::new())
+        // TODO: Extract referenced objects from diff headers
+        //       Currently returns empty; should extract referenced objects from diff headers for complete reference tracking.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - References are extracted from diff headers correctly
+        // - Parsing handles various diff formats
+        // - Reference tracking is complete
+        // - Performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Diff parsing utilities (Required)
+        // - Header extraction algorithms (Required)
+        // - Reference tracking infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (GC enhancement)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Diff parsing expertise
+        Ok(Vec::new()) // Temporary: empty until diff header parsing
     }
 
     /// Parse chunk references from a chunk map

@@ -160,7 +160,27 @@ impl MemoryDeduplicator {
 
     /// Calculate content-based similarity
     fn calculate_content_similarity(&self, a: &crate::memory_types::Memory, b: &crate::memory_types::Memory) -> crate::MemoryResult<f32> {
-        // Simple string similarity for now
+        // TODO: Implement advanced content similarity calculation:
+        // 1. Semantic similarity: Calculate semantic similarity
+        //    - Use embedding-based similarity for semantic matching
+        //    - Consider content structure and meaning
+        //    - Support multi-modal content similarity
+        // 2. Content analysis: Analyze content features
+        //    - Extract key content features and topics
+        //    - Compare content structure and organization
+        //    - Consider content metadata and context
+        // 3. Similarity algorithms: Implement advanced algorithms
+        //    - Use vector similarity for embeddings
+        //    - Apply content-specific similarity metrics
+        //    - Support weighted similarity calculations
+        // ACCEPTANCE CRITERIA:
+        // - Content similarity uses semantic analysis
+        // - Similarity calculations are accurate and meaningful
+        // - Advanced algorithms improve deduplication quality
+        // DEPENDENCIES:
+        // - Embedding system (Required)
+        // - Content analysis utilities (Required)
+        // PRIORITY: Medium
         Ok(self.text_similarity(&a.content, &b.content))
     }
 

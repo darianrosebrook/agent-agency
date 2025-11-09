@@ -87,9 +87,41 @@ impl SandboxEnvironment {
         // 4. Enforce resource limits
         // 5. Return the result
         
-        // For now, validate operation and return success
-        // Dependency: Process isolation requires platform-specific APIs or
-        // libraries like `isolate` or Docker for full isolation
+        // TODO: Implement process isolation for sandbox execution
+        //       Currently validates operation only; should implement process isolation using platform-specific APIs or libraries like `isolate` or Docker.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Process isolation is implemented correctly
+        // - Sandbox execution is secure
+        // - Resource limits are enforced
+        // - Isolation works across platforms
+        //
+        // DEPENDENCIES:
+        // - Platform-specific isolation APIs (Required)
+        // - Isolation libraries (isolate/Docker) (Required)
+        // - Resource limit enforcement (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (security-critical feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Security and process isolation expertise
         
         tracing::info!(
             "Sandbox execution requested: {} (executed in sandbox root: {:?})",
@@ -276,26 +308,51 @@ impl ResourceMonitor {
         // - [ ] Handle platform-specific differences (macOS, Linux, Windows)
         // - [ ] Add unit tests with mock system metrics
         // - [ ] Add integration tests with real resource monitoring
-        // Attempt to get real resource usage using platform-specific methods
-        // For now, use basic estimation with fallback
-        
-        // Check if we can get process memory usage
-        // Dependency: sysinfo crate would provide System::new() and process memory queries
+        // TODO: Query actual resource usage from system
+        //       Currently uses basic estimation; should query actual resource usage using platform-specific methods and sysinfo crate.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Resource usage is queried from system accurately
+        // - Memory and CPU usage are measured correctly
+        // - Process counting is accurate
+        // - Error handling works for system query failures
+        //
+        // DEPENDENCIES:
+        // - sysinfo crate (Required)
+        // - Platform-specific system APIs (Required)
+        // - Resource monitoring infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (resource monitoring feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: System monitoring expertise
+        // Temporary: basic estimation until sysinfo integration
         // Example with sysinfo:
         //   use sysinfo::{System, SystemExt, ProcessExt};
         //   let mut system = System::new_all();
         //   system.refresh_all();
         //   let process = system.process(sysinfo::get_current_pid().unwrap());
         //   let memory_mb = process.map(|p| p.memory() / 1024 / 1024).unwrap_or(0);
-        
-        // For now, estimate based on configuration and active processes
-        // This is a placeholder until sysinfo is added as a dependency
-        let memory_mb = self.config.max_memory_mb / 4; // Conservative estimate
-        let cpu_percent = self.config.max_cpu_percent / 2.0; // Conservative estimate
-        
-        // Try to count active processes using std::process if available
-        // Note: This is a simplified approximation
-        let active_processes = 1; // Current process
+        let memory_mb = self.config.max_memory_mb / 4; // Temporary: conservative estimate until sysinfo integration
+        let cpu_percent = self.config.max_cpu_percent / 2.0; // Temporary: conservative estimate until sysinfo integration
+        let active_processes = 1; // Temporary: basic count until sysinfo integration
         
         ResourceUsage {
             memory_mb,

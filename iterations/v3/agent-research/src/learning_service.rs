@@ -238,7 +238,7 @@ impl LearningService for ReflexiveLearningService {
         let mut q_learning = self.q_learning.write().await;
         // Select action based on current state and available actions
         let action_taken = q_learning.select_action(&state, &available_actions);
-        q_learning.update(&state, &action_taken, reward, &state); // Simplified: next_state = state
+        q_learning.update(&state, &action_taken, reward, &state); // TODO: Use actual next_state instead of current state
 
         // Extract patterns
         let patterns = self.extract_patterns(context, performance);

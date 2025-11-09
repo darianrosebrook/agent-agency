@@ -153,7 +153,8 @@ impl AmbiguityDetector {
         pronoun: &str,
         _context_map: &HashMap<String, ReferentInfo>,
     ) -> Option<ReferentInfo> {
-        // Simplified implementation - in real code this would use the context map
+        // TODO: Implement proper pronoun resolution using context map
+        //       Currently uses basic implementation; should use context map for accurate pronoun resolution.
         match pronoun {
             "it" | "this" | "that" => Some(ReferentInfo {
                 referent: "the system".to_string(),

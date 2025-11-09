@@ -412,8 +412,8 @@ impl FileOperationsService for DataInfrastructureFileOperationsService {
             .map_err(|e| FileOpsError::Io(e))?;
 
         if metadata.is_dir() {
-            // For directories, we need recursive copy
-            // This is a simplified implementation - for production, consider using a crate like fs_extra
+            // TODO: Implement proper recursive directory copy
+            //       Currently not implemented; should use fs_extra or similar crate for production-grade recursive directory copying.
             return Err(FileOpsError::Validation(
                 "Directory copy not yet implemented. Use workspace/changeset for complex operations.".to_string()
             ));

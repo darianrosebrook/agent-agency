@@ -207,22 +207,88 @@ impl LLMParameterFeedbackExample {
         })
     }
 
-    /// Estimate quality score (simplified)
+    /// Estimate quality score
     fn estimate_quality(&self, content: &str) -> f64 {
-        // Simplified quality estimation
-        // In practice, this would use a quality assessment model
-        if content.len() > 50 {
+        // TODO: Integrate quality assessment model for accurate scoring
+        //       Currently uses basic length-based estimation; should integrate quality assessment model for accurate quality scoring.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Quality assessment model is integrated correctly
+        // - Quality scores are accurate
+        // - Model inference is performant
+        // - Error handling works for model failures
+        //
+        // DEPENDENCIES:
+        // - Quality assessment model (Required)
+        // - Model inference infrastructure (Required)
+        // - Model evaluation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (ML model integration feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: ML model integration expertise
+        if content.len() > 50 { // Temporary: basic estimation until model integration
             0.9
         } else {
             0.7
         }
     }
 
-    /// Check CAWS compliance (simplified)
+    /// Check CAWS compliance
     fn check_caws_compliance(&self, content: &str) -> bool {
-        // Simplified compliance check
-        // In practice, this would use CAWS compliance validator
-        !content.contains("TODO") && !content.contains("PLACEHOLDER")
+        // TODO: Integrate CAWS compliance validator for comprehensive checking
+        //       Currently uses basic pattern matching; should integrate CAWS compliance validator for comprehensive compliance checking.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - CAWS compliance validator is integrated correctly
+        // - Compliance checks are comprehensive
+        // - All CAWS rules are validated
+        // - Error handling works for validator failures
+        //
+        // DEPENDENCIES:
+        // - CAWS compliance validator (Required)
+        // - Compliance checking infrastructure (Required)
+        // - Rule validation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (compliance validation feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: CAWS compliance expertise
+        !content.contains("TODO") && !content.contains("PLACEHOLDER") // Temporary: basic check until validator integration
     }
 
     /// Convert ParameterSet to UsedParameters

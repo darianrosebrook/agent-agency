@@ -87,7 +87,40 @@ impl LearningPersistence for InMemoryLearningPersistence {
         let storage = self.execution_records.read().await;
         let mut records: Vec<ExecutionRecord> = storage.iter()
             .filter(|record| {
-                // Simple pattern matching - in a real implementation, this would be more sophisticated
+                // TODO: Implement sophisticated pattern matching
+                //       Currently uses simple metadata key matching; should implement more sophisticated pattern matching with regex, fuzzy matching, and complex queries.
+                //
+                // COMPLETION CHECKLIST:
+                // [ ] Implement regex pattern matching
+                // [ ] Add fuzzy matching for approximate matches
+                // [ ] Support complex query patterns (AND/OR/NOT)
+                // [ ] Handle pattern compilation and caching
+                // [ ] Add pattern matching performance optimization
+                // [ ] Add unit tests with various pattern types
+                // [ ] Add integration tests with real execution records
+                // [ ] Performance: Pattern matching should complete in <10ms
+                // [ ] Documentation: Document pattern matching syntax
+                //
+                // ACCEPTANCE CRITERIA:
+                // - Pattern matching supports regex patterns
+                // - Fuzzy matching finds approximate matches
+                // - Complex queries are supported
+                // - Pattern matching is performant
+                // - Pattern syntax is well-documented
+                //
+                // DEPENDENCIES:
+                // - Regex library (Required)
+                // - Fuzzy matching library (Optional)
+                // - Query parser (Required)
+                //
+                // ESTIMATED EFFORT: 5-7 hours (medium confidence)
+                // PRIORITY: Medium
+                // BLOCKING: No
+                //
+                // GOVERNANCE:
+                // - CAWS Tier: 2 (search feature)
+                // - Change Budget: ~200 LOC
+                // - Reviewer Requirements: Pattern matching expertise
                 record.metadata.contains_key(&pattern.pattern_type.to_string())
             })
             .cloned()
@@ -506,7 +539,28 @@ struct WorkerProfileRow {
                 capability_scores,
                 task_count: row.total_executions as u64,
                 success_rate: row.success_rate,
-                quality_score: row.success_rate, // Use success rate as quality score for now
+                // TODO: Implement comprehensive quality score calculation:
+                // 1. Quality metrics: Calculate quality score from multiple factors
+                //    - Combine success rate with other quality indicators
+                //    - Weight different quality factors appropriately
+                //    - Consider task complexity and difficulty
+                // 2. Score normalization: Normalize quality scores
+                //    - Scale scores to consistent range (0.0-1.0)
+                //    - Handle edge cases (no tasks, all failures, etc.)
+                //    - Apply statistical normalization if needed
+                // 3. Score validation: Validate quality score calculations
+                //    - Ensure scores are within valid range
+                //    - Handle calculation errors gracefully
+                //    - Log quality score calculation details
+                // ACCEPTANCE CRITERIA:
+                // - Quality score incorporates multiple quality factors
+                // - Scores are normalized to consistent range
+                // - Score calculations are validated and error-free
+                // DEPENDENCIES:
+                // - Quality metrics collection (Required)
+                // - Score calculation algorithms (Required)
+                // PRIORITY: Medium
+                quality_score: row.success_rate,
                 specialization_score: 0.0, // OPTIONAL: Calculate specialization score (deferred - analytics feature)
                 metadata: serde_json::from_value(row.metadata).unwrap_or_default(),
             };

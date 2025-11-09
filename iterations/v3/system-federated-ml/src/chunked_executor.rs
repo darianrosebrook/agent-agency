@@ -464,19 +464,110 @@ impl ChunkedExecutor {
             .unwrap_or_default()
             .as_secs_f64();
 
-        // Basic CPU utilization approximation using process execution time
-        // In a real implementation, this would use system APIs
-        let cpu_percent = self.estimate_cpu_utilization().await;
+        // TODO: Use system APIs for accurate CPU utilization measurement
+        //       Currently uses approximation; should use system APIs (e.g., sysinfo, procfs) for accurate CPU measurement.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Use system APIs (sysinfo, procfs, etc.) for CPU measurement
+        // [ ] Query process-specific CPU usage
+        // [ ] Calculate CPU percentage accurately
+        // [ ] Handle multi-core systems correctly
+        // [ ] Support cross-platform CPU measurement
+        // [ ] Add unit tests for CPU measurement
+        // [ ] Add integration tests with real system
+        // [ ] Verify CPU measurement accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - CPU utilization is measured using system APIs
+        // - Process-specific CPU usage is accurate
+        // - Multi-core systems are handled correctly
+        // - Cross-platform compatibility is maintained
+        //
+        // DEPENDENCIES:
+        // - System monitoring library (sysinfo, procfs) (Required)
+        // - CPU measurement utilities (Required)
+        // - Process identification utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (monitoring feature)
+        // - Change Budget: ~70 LOC
+        // - Reviewer Requirements: System programming expertise
+        let cpu_percent = self.estimate_cpu_utilization().await; // Temporary: approximation until system API integration
 
-        // Basic memory utilization using std::alloc::System
-        // In a real implementation, this would query process memory usage
-        let memory_mb = self.estimate_memory_usage().await;
+        // TODO: Query actual process memory usage from system
+        //       Currently uses std::alloc::System estimation; should query actual process memory usage from system.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Query process memory usage from system APIs
+        // [ ] Measure RSS (Resident Set Size) accurately
+        // [ ] Track memory growth over time
+        // [ ] Support cross-platform memory measurement
+        // [ ] Handle memory measurement errors gracefully
+        // [ ] Add unit tests for memory measurement
+        // [ ] Add integration tests with real processes
+        // [ ] Verify memory measurement accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Process memory usage is queried from system correctly
+        // - RSS is measured accurately
+        // - Memory growth is tracked over time
+        // - Cross-platform compatibility is maintained
+        //
+        // DEPENDENCIES:
+        // - System monitoring library (Required)
+        // - Memory measurement utilities (Required)
+        // - Process identification utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (monitoring feature)
+        // - Change Budget: ~70 LOC
+        // - Reviewer Requirements: System programming expertise
+        let memory_mb = self.estimate_memory_usage().await; // Temporary: estimation until system API integration
 
         // I/O operations per second - track from execution stats
         let io_ops_per_sec = self.estimate_io_operations().await;
 
-        // Network bandwidth - placeholder for now, would require network monitoring
-        let network_mbps = 0.0; // Not implemented yet - requires network monitoring library
+        // TODO: Implement network bandwidth monitoring
+        //       Currently placeholder; should implement network bandwidth monitoring using network monitoring library.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Integrate network monitoring library
+        // [ ] Measure network bandwidth usage
+        // [ ] Track network I/O statistics
+        // [ ] Support per-interface monitoring
+        // [ ] Handle network monitoring errors gracefully
+        // [ ] Add unit tests for network monitoring
+        // [ ] Add integration tests with real network activity
+        // [ ] Verify network measurement accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Network bandwidth is monitored accurately
+        // - Network I/O statistics are tracked
+        // - Per-interface monitoring is supported
+        // - Network monitoring errors are handled gracefully
+        //
+        // DEPENDENCIES:
+        // - Network monitoring library (Required)
+        // - Network measurement utilities (Required)
+        // - Interface identification utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (monitoring enhancement)
+        // - Change Budget: ~90 LOC
+        // - Reviewer Requirements: Network monitoring expertise
+        let network_mbps = 0.0; // Temporary: placeholder until network monitoring library integration
 
         ResourceUtilization {
             timestamp,
@@ -491,9 +582,39 @@ impl ChunkedExecutor {
     async fn estimate_cpu_utilization(&self) -> f64 {
         let stats = self.execution_stats.read().await;
 
-        // Simple estimation: higher utilization during active processing
-        // In a real implementation, this would query system CPU usage
-        let active_ratio = if stats.total_chunks_processed > 0 {
+        // TODO: Query actual system CPU usage
+        //       Currently uses simple estimation; should query system CPU usage using system APIs.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Query system CPU usage using system APIs
+        // [ ] Measure process-specific CPU percentage
+        // [ ] Calculate CPU utilization accurately
+        // [ ] Handle multi-core CPU measurement
+        // [ ] Support cross-platform CPU queries
+        // [ ] Add unit tests for CPU query
+        // [ ] Add integration tests with real system
+        // [ ] Verify CPU query accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - System CPU usage is queried correctly
+        // - Process-specific CPU percentage is accurate
+        // - Multi-core CPUs are handled correctly
+        // - Cross-platform compatibility is maintained
+        //
+        // DEPENDENCIES:
+        // - System monitoring library (Required)
+        // - CPU query utilities (Required)
+        // - Process identification utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (monitoring feature)
+        // - Change Budget: ~60 LOC
+        // - Reviewer Requirements: System programming expertise
+        let active_ratio = if stats.total_chunks_processed > 0 { // Temporary: estimation until system API query
             stats.successful_chunks as f64 / stats.total_chunks_processed as f64
         } else {
             0.0
@@ -511,7 +632,19 @@ impl ChunkedExecutor {
         let stats = self.execution_stats.read().await;
 
         // Rough estimation: base memory plus per-chunk allocation
-        // In a real implementation, this would query actual process memory
+        // TODO: Implement actual process memory querying with the following requirements:
+        // 1. Process memory querying: Query actual process memory usage
+        //    - Use platform-specific APIs to get current process memory
+        //    - Query memory statistics from OS (RSS, virtual memory, etc.)
+        //    - Handle platform differences (macOS, Linux, Windows)
+        // 2. Memory tracking: Track memory usage over time
+        //    - Monitor memory changes during chunk processing
+        //    - Track peak memory usage
+        //    - Account for memory fragmentation
+        // 3. Accuracy improvement: Provide accurate memory estimates
+        //    - Replace estimation with actual measurements
+        //    - Account for memory overhead and allocations
+        //    - Return precise memory usage values
         let base_memory_mb = 50.0; // Base memory usage
         let per_chunk_mb = 2.0; // Estimated memory per processed chunk
         let chunk_memory = stats.total_chunks_processed as f64 * per_chunk_mb;
@@ -524,7 +657,19 @@ impl ChunkedExecutor {
         let stats = self.execution_stats.read().await;
 
         // Estimate based on processing rate and typical I/O patterns
-        // In a real implementation, this would monitor actual disk/network I/O
+        // TODO: Implement actual I/O monitoring with the following requirements:
+        // 1. Disk I/O monitoring: Monitor actual disk I/O operations
+        //    - Track disk read/write operations per second
+        //    - Monitor disk I/O bandwidth usage
+        //    - Account for disk cache and buffering
+        // 2. Network I/O monitoring: Monitor actual network I/O operations
+        //    - Track network read/write operations per second
+        //    - Monitor network bandwidth usage
+        //    - Account for network latency and retries
+        // 3. I/O metrics collection: Collect comprehensive I/O metrics
+        //    - Use platform-specific I/O monitoring APIs
+        //    - Aggregate I/O statistics over time windows
+        //    - Return accurate I/O operation rates
         if stats.total_execution_time_ms > 0 {
             let ops_per_ms = stats.total_chunks_processed as f64 / stats.total_execution_time_ms as f64;
             ops_per_ms * 1000.0 // Convert to per second

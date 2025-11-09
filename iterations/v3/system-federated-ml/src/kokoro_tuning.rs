@@ -216,8 +216,42 @@ impl KokoroTuner {
         // 2. Run the workload through the model
         // 3. Collect performance metrics
         // 4. Monitor thermal state
-
-        // For now, simulate realistic metrics based on parameters
+        //
+        // TODO: Implement comprehensive performance metrics collection and thermal monitoring
+        //       Currently simulates realistic metrics; should implement comprehensive performance metrics collection and thermal state monitoring that queries actual system metrics and hardware sensors for accurate tuning data.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Performance metrics are collected from actual system
+        // - Thermal state is monitored from hardware sensors
+        // - Metrics collection is efficient and non-intrusive
+        // - Thermal monitoring provides accurate temperature data
+        //
+        // DEPENDENCIES:
+        // - System metrics collection APIs (Required)
+        // - Hardware sensor integration (Required)
+        // - Performance monitoring utilities (Required)
+        //
+        // ESTIMATED EFFORT: 12-16 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (performance monitoring and thermal management functionality)
+        // - Change Budget: ~300 LOC
+        // - Reviewer Requirements: Performance monitoring and hardware integration expertise
         let throughput = self.simulate_throughput(params);
         let latency = self.simulate_latency(params);
         let memory = self.simulate_memory_usage(params);

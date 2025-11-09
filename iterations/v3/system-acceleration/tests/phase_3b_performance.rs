@@ -302,7 +302,38 @@ async fn find_available_models(models_dir: &str) -> Vec<ModelInfo> {
         models.push(ModelInfo {
             name: "Mistral 7B FP16".to_string(),
             path: mistral_path.to_string_lossy().to_string(),
-            input_shape: vec![1, 128], // [batch, sequence_length] - simplified for testing
+            // TODO: Use actual model input shape from model metadata
+            //       Currently uses basic fixed shape for testing; should query model for actual input requirements.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Query model metadata for actual input shape requirements
+            // [ ] Support variable batch sizes and sequence lengths
+            // [ ] Handle model-specific input format requirements
+            // [ ] Add validation for input shape compatibility
+            // [ ] Add unit tests for input shape detection
+            // [ ] Add integration tests with various models
+            // [ ] Verify input shape accuracy
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Input shapes are detected from model metadata
+            // - Variable batch sizes and sequence lengths are supported
+            // - Input shape validation ensures compatibility
+            // - Input shape detection works with various model types
+            //
+            // DEPENDENCIES:
+            // - Model metadata API (Required)
+            // - Model input shape detection utilities (Required)
+            // - Input validation utilities (Required)
+            //
+            // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+            // PRIORITY: Low
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 3 (test infrastructure enhancement)
+            // - Change Budget: ~50 LOC
+            // - Reviewer Requirements: Model integration expertise
+            input_shape: vec![1, 128], // Temporary: basic fixed shape until model metadata query is implemented
             input_dtype: "I32".to_string(),
         });
     }
@@ -355,8 +386,38 @@ async fn test_model_performance(
     let ane_runner = BenchmarkRunner::new(ane_inference, ane_config);
     let mut ane_metrics = ane_runner.run()?;
 
-    // Measure ANE utilization (simplified - in real implementation would query system)
-    ane_metrics.ane_utilization = Some(measure_ane_utilization().await);
+    // TODO: Query actual ANE utilization from system metrics
+    //       Currently uses basic measurement; should query system metrics for real ANE utilization.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Query system metrics for ANE utilization
+    // [ ] Use IOKit or system APIs for hardware metrics
+    // [ ] Track ANE power consumption and thermal state
+    // [ ] Measure ANE compute utilization percentage
+    // [ ] Add unit tests for utilization measurement
+    // [ ] Add integration tests with real hardware
+    // [ ] Verify utilization measurement accuracy
+    //
+    // ACCEPTANCE CRITERIA:
+    // - ANE utilization is measured from system metrics
+    // - Power consumption and thermal state are tracked
+    // - Utilization percentage is accurate
+    // - Measurement works across different Apple Silicon chips
+    //
+    // DEPENDENCIES:
+    // - System metrics API (Required)
+    // - IOKit integration (Required)
+    // - Hardware monitoring utilities (Required)
+    //
+    // ESTIMATED EFFORT: 4-6 hours (low confidence - requires system API research)
+    // PRIORITY: Low
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 3 (test infrastructure enhancement)
+    // - Change Budget: ~80 LOC
+    // - Reviewer Requirements: macOS system programming expertise
+    ane_metrics.ane_utilization = Some(measure_ane_utilization().await); // Temporary: basic measurement until system metrics integration
 
     Ok((cpu_metrics, ane_metrics))
 }
@@ -385,13 +446,39 @@ fn run_inference_cpu(
     _model_ref: &ModelRef,
     _input: &MLDictionaryFeatureProvider,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // In a real implementation, this would:
-    // 1. Configure model to use CPU only
-    // 2. Run inference
-    // 3. Return result
-
-    // For now, simulate CPU inference with realistic latency
-    std::thread::sleep(Duration::from_millis(50)); // Simulate 50ms CPU inference
+    // TODO: Implement actual CPU-only inference execution
+    //       Currently simulates inference with sleep; should configure model for CPU-only execution and run real inference.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Configure model to use CPU-only execution
+    // [ ] Execute actual inference on CPU
+    // [ ] Capture inference results
+    // [ ] Measure actual inference latency
+    // [ ] Handle CPU inference errors
+    // [ ] Add unit tests for CPU inference
+    // [ ] Add integration tests with real models
+    // [ ] Verify CPU inference accuracy and performance
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Model is configured for CPU-only execution
+    // - Real inference is executed on CPU
+    // - Inference results are captured correctly
+    // - Latency measurement reflects actual CPU inference time
+    //
+    // DEPENDENCIES:
+    // - Core ML CPU execution API (Required)
+    // - Model configuration utilities (Required)
+    // - Inference execution infrastructure (Required)
+    //
+    // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (test infrastructure)
+    // - Change Budget: ~60 LOC
+    // - Reviewer Requirements: Core ML expertise
+    std::thread::sleep(Duration::from_millis(50)); // Temporary: simulate CPU inference until real execution is implemented
     Ok(())
 }
 
@@ -400,25 +487,152 @@ fn run_inference_ane(
     _model_ref: &ModelRef,
     _input: &MLDictionaryFeatureProvider,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // In a real implementation, this would:
-    // 1. Configure model to use ANE (All compute units)
-    // 2. Run inference
-    // 3. Return result
-
-    // For now, simulate ANE inference with faster latency (target 2.8x speedup)
-    std::thread::sleep(Duration::from_millis(18)); // Simulate ~18ms ANE inference (2.8x faster)
+    // TODO: Implement actual ANE inference execution
+    //       Currently simulates inference; should configure model to use ANE, run actual inference, and return real results.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Configure model to use ANE (All compute units)
+    // [ ] Execute actual inference on ANE
+    // [ ] Return inference results
+    // [ ] Handle ANE inference errors
+    // [ ] Measure actual inference latency
+    // [ ] Add unit tests with mock ANE
+    // [ ] Add integration tests with real ANE inference
+    // [ ] Performance: Inference should complete in <50ms
+    // [ ] Documentation: Document ANE inference setup
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Model is configured to use ANE
+    // - Actual inference is executed
+    // - Results are returned correctly
+    // - Inference errors are handled
+    // - Latency matches expected performance
+    //
+    // DEPENDENCIES:
+    // - ANE configuration API (Required)
+    // - Inference execution API (Required)
+    // - Result handling (Required)
+    //
+    // ESTIMATED EFFORT: 8-12 hours (low confidence)
+    // PRIORITY: High
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 1 (performance-critical feature)
+    // - Change Budget: ~300 LOC
+    // - Reviewer Requirements: ANE and ML inference expertise
+    // TODO: Execute actual ANE inference through CoreML
+    //       Currently simulates inference; should execute actual ANE inference through CoreML infrastructure to measure real performance.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - ANE inference executes through CoreML
+    // - Inference latency matches expected 2.8x speedup
+    // - Performance metrics are accurate
+    // - Error handling works for inference failures
+    //
+    // DEPENDENCIES:
+    // - CoreML inference infrastructure (Required)
+    // - ANE execution utilities (Required)
+    // - Performance measurement utilities (Required)
+    //
+    // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+    // PRIORITY: High
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 1 (performance-critical feature)
+    // - Change Budget: ~300 LOC
+    // - Reviewer Requirements: ANE and ML inference expertise
+    std::thread::sleep(Duration::from_millis(18)); // Temporary: simulate until actual ANE inference is implemented
     Ok(())
 }
 
-/// Measure ANE utilization (simplified implementation)
+/// Measure ANE utilization
 async fn measure_ane_utilization() -> f64 {
-    // In a real implementation, this would:
-    // 1. Query system ANE usage statistics
-    // 2. Calculate utilization percentage
-    // 3. Return accurate measurement
+    // TODO: Implement actual ANE utilization measurement
+    //       Currently placeholder; should query system ANE usage statistics, calculate utilization percentage, and return accurate measurement.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Query system ANE usage statistics
+    // [ ] Calculate utilization percentage
+    // [ ] Return accurate measurement
+    // [ ] Handle measurement errors
+    // [ ] Support multiple ANE units if available
+    // [ ] Add unit tests with mock ANE stats
+    // [ ] Add integration tests with real ANE measurement
+    // [ ] Performance: Measurement should complete in <10ms
+    // [ ] Documentation: Document ANE utilization calculation
+    //
+    // ACCEPTANCE CRITERIA:
+    // - ANE usage statistics are queried correctly
+    // - Utilization percentage is calculated accurately
+    // - Measurement reflects actual ANE usage
+    // - Measurement errors are handled gracefully
+    // - Multiple ANE units are supported if available
+    //
+    // DEPENDENCIES:
+    // - System ANE statistics API (Required)
+    // - Utilization calculation logic (Required)
+    // - Multi-unit support (Optional)
+    //
+    // ESTIMATED EFFORT: 5-7 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (monitoring feature)
+    // - Change Budget: ~150 LOC
+    // - Reviewer Requirements: System monitoring expertise
 
-    // For now, simulate high ANE utilization
-    0.85 // 85% ANE utilization
+    // TODO: Query actual ANE utilization from system
+    //       Currently simulates utilization; should query actual system ANE utilization statistics and return accurate measurement.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - ANE utilization is queried from system accurately
+    // - System statistics are retrieved correctly
+    // - Measurement reflects actual ANE usage
+    // - Error handling works for system query failures
+    //
+    // DEPENDENCIES:
+    // - System monitoring APIs (Required)
+    // - ANE statistics infrastructure (Required)
+    // - Platform-specific system APIs (Required)
+    //
+    // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 3 (test infrastructure enhancement)
+    // - Change Budget: ~100 LOC
+    // - Reviewer Requirements: System monitoring expertise
+    0.85 // Temporary: simulated until actual system query is implemented
 }
 
 /// Phase 3B: Memory and resource usage test
@@ -471,10 +685,40 @@ async fn test_phase_3b_memory_and_resources() {
     }
 }
 
-/// Get current memory usage (simplified implementation)
+/// Get current memory usage
 fn get_memory_usage() -> Option<u64> {
-    // In a real implementation, this would use platform-specific APIs
-    // to get accurate memory usage statistics
+    // TODO: Implement platform-specific memory usage statistics
+    //       Currently simulates usage; should use platform-specific APIs to get accurate memory usage statistics.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Use platform-specific APIs for memory statistics
+    // [ ] Query actual process memory usage
+    // [ ] Get accurate memory statistics
+    // [ ] Handle platform differences (macOS, Linux, Windows)
+    // [ ] Add unit tests with mock memory stats
+    // [ ] Add integration tests with real memory measurement
+    // [ ] Performance: Query should complete in <10ms
+    // [ ] Documentation: Document platform-specific implementation
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Memory usage is queried from actual system
+    // - Statistics are accurate
+    // - Multiple platforms are supported
+    // - Query errors are handled gracefully
+    // - Query performance is acceptable
+    //
+    // DEPENDENCIES:
+    // - Platform-specific memory APIs (Required)
+    // - Process memory query utilities (Required)
+    //
+    // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (monitoring feature)
+    // - Change Budget: ~150 LOC
+    // - Reviewer Requirements: Platform-specific API expertise
     Some(100 * 1024 * 1024) // Simulate 100MB usage
 }
 

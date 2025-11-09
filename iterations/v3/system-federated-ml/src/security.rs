@@ -46,9 +46,42 @@ impl SecurityValidator {
         // - [ ] Handle verification errors and invalid proofs
         // - [ ] Add unit tests with real ZKP verification
         // - [ ] Add integration tests with proof generation/verification
-        // In practice, this would verify the cryptographic proof
-        // For now, return true (placeholder implementation)
-        Ok(true)
+        // TODO: Implement actual zero-knowledge proof verification
+        //       Currently returns placeholder; should implement actual zero-knowledge proof verification using cryptographic proof verification.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Cryptographic proof is verified correctly
+        // - Verification uses proper ZKP algorithms
+        // - Security properties are maintained
+        // - Performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - ZKP verification library (Required)
+        // - Cryptographic proof infrastructure (Required)
+        // - Verification key management (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (security-critical feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Cryptography and ZKP expertise
+        Ok(true) // Temporary: placeholder until ZKP verification implementation
     }
 
     /// Generate a zero-knowledge proof for a model update
@@ -62,10 +95,43 @@ impl SecurityValidator {
         // - [ ] Handle proof generation errors and invalid inputs
         // - [ ] Add unit tests with real ZKP generation
         // - [ ] Add integration tests with proof generation/verification
-        // In practice, this would generate a real ZKP
-        // For now, return a placeholder proof
+        // TODO: Generate actual zero-knowledge proof
+        //       Currently returns placeholder; should generate actual zero-knowledge proof using cryptographic proof generation algorithms.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Zero-knowledge proof is generated correctly
+        // - Proof uses proper ZKP algorithms
+        // - Security properties are maintained
+        // - Performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - ZKP generation library (Required)
+        // - Cryptographic proof infrastructure (Required)
+        // - Secret key management (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (security-critical feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Cryptography and ZKP expertise
         Ok(ZeroKnowledgeProof {
-            proof_data: vec![1, 2, 3, 4], // Placeholder
+            proof_data: vec![1, 2, 3, 4], // Temporary: placeholder until ZKP generation
             public_inputs: data.to_vec(),
             proof_type: "placeholder".to_string(),
             verification_key: secret_key.to_vec(),

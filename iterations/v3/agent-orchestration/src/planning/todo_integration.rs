@@ -10,9 +10,8 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use anyhow::{anyhow, Result};
 use uuid::Uuid;
-use chrono::Utc;
 use tracing::{debug, info, warn};
-use agent_agency_contracts::planning_io::{ExecutionPlan, Milestone, PlanState};
+use agent_agency_contracts::planning_io::ExecutionPlan;
 use crate::planning::DatabaseOperations;
 
 /// TODO integration with planning workflow
@@ -82,8 +81,41 @@ impl TodoIntegration {
 
     /// Initialize TODO tracking for a plan
     pub async fn initialize_plan_todos(&mut self, plan_id: Uuid, title: &str) -> Result<()> {
-        // Determine appropriate template based on plan characteristics
-        // For now, use a default template since we only have plan_id and title
+        // TODO: Implement comprehensive template selection based on plan characteristics
+        //       Currently uses default template since only plan_id and title are available; should implement comprehensive selection that analyzes plan characteristics to determine appropriate template for accurate TODO tracking initialization.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Template selection analyzes plan characteristics
+        // - Appropriate template is selected based on plan type
+        // - Template selection handles missing characteristics gracefully
+        // - Selection logic is extensible for new plan types
+        //
+        // DEPENDENCIES:
+        // - Plan characteristic analysis (Required)
+        // - Template selection logic (Required)
+        // - Template registry system (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (TODO integration functionality)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Template selection and plan analysis expertise
         let template_name = "standard-feature-template".to_string();
 
         // Create TODO instance (requires mutable access to todo_system)

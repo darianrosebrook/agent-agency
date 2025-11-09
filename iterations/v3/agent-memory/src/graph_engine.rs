@@ -755,11 +755,46 @@ impl KnowledgeGraphEngine {
             .map(|path| path.entities)
             .collect();
 
+        // TODO: Use first path if available and calculate actual confidence score
+        //       Currently uses empty path and fixed confidence; should use first path from valid_paths and calculate actual confidence score from path analysis.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - First path is used if available
+        // - Confidence score is calculated from path analysis
+        // - Calculation is accurate
+        // - Performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Path analysis utilities (Required)
+        // - Confidence calculation algorithms (Required)
+        // - Path ranking infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (reasoning feature enhancement)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Graph reasoning expertise
         Ok(ReasoningResult {
-            path: Vec::new(), // Simplified - use first path if available
+            path: Vec::new(), // Temporary: empty until first path extraction
             paths: path_strings,
             confidence: 0.8, // Overall confidence
-            confidence_score: 0.8, // Simplified
+            confidence_score: 0.8, // Temporary: fixed until actual calculation
             reasoning_steps: vec!["Multi-hop reasoning completed".to_string()],
             reasoning_time_ms: 100,
             entities_discovered,

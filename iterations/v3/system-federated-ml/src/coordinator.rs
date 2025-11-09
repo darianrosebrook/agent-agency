@@ -373,7 +373,41 @@ impl FederationCoordinator {
 
     /// Store a participant contribution
     pub async fn store_contribution(&self, contribution: ParticipantContribution) -> Result<()> {
-        // For now, just validate and store - actual aggregation happens elsewhere
+        // TODO: Implement comprehensive participant contribution storage and aggregation
+        //       Currently validates and stores only; should implement comprehensive contribution storage that includes actual aggregation logic or proper integration with aggregation system for complete federated learning workflow.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Contributions are stored with proper validation
+        // - Aggregation logic is implemented or integrated
+        // - Contribution storage is atomic and consistent
+        // - Storage integrates with federated learning workflow
+        //
+        // DEPENDENCIES:
+        // - Contribution storage system (Required)
+        // - Aggregation system integration (Required)
+        // - Validation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (federated learning functionality)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Federated learning and contribution aggregation expertise
         info!("Stored contribution from participant {}", contribution.participant_id);
         Ok(())
     }

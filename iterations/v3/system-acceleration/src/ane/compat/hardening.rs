@@ -53,10 +53,39 @@ pub struct DeviceMatrix;
 impl DeviceMatrix {
     /// Get device capabilities for the current system
     pub fn detect_current_device() -> Result<DeviceCapabilities> {
-        // In a real implementation, this would query system information
-        // For now, we use a simplified detection based on available features
-
-        let capabilities = detect_coreml_capabilities();
+        // TODO: Query actual system information for device capabilities
+        //       Currently uses basic detection based on available features; should query system information for accurate device capabilities.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Query system information APIs for device capabilities
+        // [ ] Use sysctl or IOKit for hardware information
+        // [ ] Detect chip model, generation, and capabilities accurately
+        // [ ] Query ANE availability and performance characteristics
+        // [ ] Detect memory bandwidth and capacity
+        // [ ] Add unit tests for device detection
+        // [ ] Add integration tests across different devices
+        // [ ] Verify device detection accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Device capabilities are detected from system information
+        // - Chip model and generation are identified accurately
+        // - ANE availability and performance are detected correctly
+        // - Device detection works across different Apple Silicon chips
+        //
+        // DEPENDENCIES:
+        // - System information APIs (Required)
+        // - IOKit or sysctl integration (Required)
+        // - Hardware detection utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (low confidence - requires system API research)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (device compatibility feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: macOS system programming expertise
+        let capabilities = detect_coreml_capabilities(); // Temporary: basic detection until system information query is implemented
 
         // Detect chip family from system information
         let chip_family = Self::detect_chip_family()?;
@@ -84,14 +113,41 @@ impl DeviceMatrix {
 
     /// Detect the current chip family
     fn detect_chip_family() -> Result<String> {
-        // In a real implementation, this would use sysctl or other system APIs
-        // For now, we use a simplified detection
-
+        // TODO: Query actual chip family from system APIs
+        //       Currently uses basic detection; should use sysctl or other system APIs for accurate chip identification.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Use sysctl to query chip model information
+        // [ ] Query IOKit for hardware identifiers
+        // [ ] Detect specific chip model (M1, M1 Pro, M1 Max, M2, M2 Pro, M2 Max, M3, etc.)
+        // [ ] Handle chip variants and generations
+        // [ ] Add fallback for unknown chips
+        // [ ] Add unit tests for chip detection
+        // [ ] Add integration tests across different devices
+        // [ ] Verify chip detection accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Chip family is detected from system APIs
+        // - Specific chip models are identified accurately
+        // - Chip variants and generations are handled correctly
+        // - Unknown chips are handled gracefully
+        //
+        // DEPENDENCIES:
+        // - sysctl API (Required)
+        // - IOKit integration (Optional)
+        // - Chip identification utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (device compatibility feature)
+        // - Change Budget: ~70 LOC
+        // - Reviewer Requirements: macOS system programming expertise
         #[cfg(target_arch = "aarch64")]
         {
-            // Apple Silicon detection - this is simplified
-            // In reality, you'd query the specific chip model
-
+            // Temporary: basic Apple Silicon detection until sysctl query is implemented
             // Try to detect via CPU features or other indicators
             // For demonstration, we'll assume M2 as default
             Ok("M2".to_string())
@@ -240,9 +296,39 @@ impl HardenedInferenceExecutor {
 
                 // Try fallback strategy if appropriate
                 if self.should_attempt_fallback(&e) {
-                    // For fallback, we'd need to clone the operation or restructure
-                    // For now, just return the original error
-                    Err(e)
+                    // TODO: Implement fallback strategy with operation cloning or restructuring
+                    //       Currently returns original error; should implement fallback with operation cloning or restructuring.
+                    //
+                    // COMPLETION CHECKLIST:
+                    // [ ] Clone operation for fallback execution
+                    // [ ] Restructure operation for alternative execution path
+                    // [ ] Execute fallback operation
+                    // [ ] Track fallback success/failure
+                    // [ ] Handle fallback errors gracefully
+                    // [ ] Add unit tests for fallback logic
+                    // [ ] Add integration tests with various error scenarios
+                    // [ ] Verify fallback strategy effectiveness
+                    //
+                    // ACCEPTANCE CRITERIA:
+                    // - Fallback operations are executed when appropriate
+                    // - Operation cloning or restructuring works correctly
+                    // - Fallback success/failure is tracked
+                    // - Fallback errors are handled gracefully
+                    //
+                    // DEPENDENCIES:
+                    // - Operation cloning utilities (Required)
+                    // - Fallback execution infrastructure (Required)
+                    // - Error recovery utilities (Required)
+                    //
+                    // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+                    // PRIORITY: Medium
+                    // BLOCKING: No
+                    //
+                    // GOVERNANCE:
+                    // - CAWS Tier: 2 (resilience feature)
+                    // - Change Budget: ~80 LOC
+                    // - Reviewer Requirements: Error handling expertise
+                    Err(e) // Temporary: return original error until fallback strategy is implemented
                 } else {
                     Err(e)
                 }
@@ -267,17 +353,26 @@ impl HardenedInferenceExecutor {
         }
     }
 
-    /// Attempt fallback inference (simplified - would need actual implementation)
+    /// Attempt fallback inference
     #[allow(dead_code)] // Will be used in v4
     async fn attempt_fallback_inference<F, Fut, T>(&self, _operation: F) -> Result<T>
     where
         F: FnOnce() -> Fut,
         Fut: std::future::Future<Output = Result<T>>,
     {
-        // In a real implementation, this would:
-        // 1. Reconfigure to use CPU-only mode
-        // 2. Retry the operation
-        // 3. Return the result
+        // TODO: Implement fallback inference with the following requirements:
+        // 1. CPU mode reconfiguration: Reconfigure to use CPU-only mode
+        //    - Detect ANE failure or unavailability
+        //    - Switch inference backend to CPU
+        //    - Update device capabilities accordingly
+        // 2. Operation retry: Retry the operation with CPU backend
+        //    - Execute the same operation using CPU inference
+        //    - Handle CPU-specific error conditions
+        //    - Maintain operation context and state
+        // 3. Result handling: Return the result appropriately
+        //    - Return successful result if CPU inference succeeds
+        //    - Propagate errors if CPU inference also fails
+        //    - Update metrics to reflect fallback usage
 
         Err(ANEError::Internal("Fallback inference not implemented".to_string()))
     }

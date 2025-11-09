@@ -197,7 +197,27 @@ impl VectorSearchEngine for InMemoryVectorSearchEngine {
 
         for text_result in text_results {
             if let Some(existing) = combined_results.get_mut(&text_result.memory_id) {
-                // Combine scores (simple average for now)
+                // TODO: Implement advanced score combination:
+                // 1. Score weighting: Weight scores based on search type
+                //    - Apply different weights to vector vs text scores
+                //    - Consider search type relevance and quality
+                //    - Support configurable weighting strategies
+                // 2. Score normalization: Normalize scores before combination
+                //    - Normalize scores to consistent range
+                //    - Handle score distribution differences
+                //    - Apply statistical normalization if needed
+                // 3. Combination algorithms: Implement advanced combination
+                //    - Use weighted average or other combination methods
+                //    - Consider score confidence and reliability
+                //    - Support multiple combination strategies
+                // ACCEPTANCE CRITERIA:
+                // - Score combination uses weighted algorithms
+                // - Scores are normalized before combination
+                // - Combination improves search result quality
+                // DEPENDENCIES:
+                // - Score normalization utilities (Required)
+                // - Weighting configuration system (Required)
+                // PRIORITY: Medium
                 existing.score = (existing.score + text_result.score) / 2.0;
                 existing.metadata.search_type = SearchType::Hybrid;
                 existing.metadata.text_similarity = text_result.metadata.text_similarity;
@@ -266,8 +286,41 @@ impl VectorSearchEngine for InMemoryVectorSearchEngine {
 impl InMemoryVectorSearchEngine {
     /// Check if text content matches the given filters
     fn matches_filters(_text: &str, _filters: &SearchFilters) -> bool {
-        // TODO: Implement proper filtering logic
-        // For now, accept all results
+        // TODO: Implement comprehensive search filter matching logic
+        //       Currently accepts all results; should implement comprehensive filtering logic that properly matches text content against search filters for accurate result filtering.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Text content is matched against search filters correctly
+        // - Filter matching logic handles all filter types
+        // - Filtering is efficient and performant
+        // - Filter matching handles edge cases gracefully
+        //
+        // DEPENDENCIES:
+        // - Filter matching utilities (Required)
+        // - Text analysis utilities (Required)
+        // - Search filter parsing (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (search filtering functionality)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Search filtering and text matching expertise
         true
     }
 }

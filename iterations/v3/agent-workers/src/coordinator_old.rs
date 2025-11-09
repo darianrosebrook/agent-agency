@@ -461,10 +461,31 @@ impl ParallelCoordinator {
 
         for subtask in subtasks {
             // Register subtask with progress tracker
+            // TODO: Calculate dynamic weights for worker registration:
+            // 1. Weight calculation: Calculate weights based on task characteristics
+            //    - Consider task complexity and estimated duration
+            //    - Factor in worker capabilities and specialization
+            //    - Adjust weights based on historical performance
+            // 2. Weight normalization: Normalize weights appropriately
+            //    - Ensure weights sum to expected total
+            //    - Handle edge cases (single worker, equal complexity, etc.)
+            //    - Apply weight constraints and bounds
+            // 3. Weight updates: Support dynamic weight updates
+            //    - Update weights based on progress and performance
+            //    - Adjust weights for load balancing
+            //    - Handle weight recalculation during execution
+            // ACCEPTANCE CRITERIA:
+            // - Weights are calculated based on task and worker characteristics
+            // - Weights are normalized and within valid ranges
+            // - Weight updates reflect current system state
+            // DEPENDENCIES:
+            // - Task complexity analysis (Required)
+            // - Worker capability assessment (Required)
+            // PRIORITY: Medium
             self.progress_aggregator.register_worker(
                 WorkerId(subtask.id.0.clone()),
                 subtask.id.clone(),
-                1.0, // Equal weight for now
+                1.0,
             )?;
 
             // Select optimal worker using learning system
@@ -764,7 +785,7 @@ impl ParallelCoordinator {
         }
 
         // Create ExecutionArtifacts with extracted data
-        // Note: Using the simplified structure expected by the bridge
+        // Note: Using the structure expected by the bridge
         ExecutionArtifacts {
             test_results,
             coverage_report,
@@ -781,7 +802,8 @@ impl ParallelCoordinator {
 
         if let Some(orchestrator) = &self.orchestrator_handle {
             // Convert ComplexTask back to regular Task
-            // This is a simplified conversion - in practice would need proper mapping
+            // TODO: Implement proper task conversion mapping
+            //       Currently uses basic conversion; should properly map ComplexTask fields to Task structure.
             orchestrator.execute_sequential(task).await
         } else {
             Err(ParallelError::Coordination {
@@ -1109,9 +1131,27 @@ mod tests {
         let classification = self.failure_taxonomy.classify_failure(&error_message, &task_context).await?;
         
         // Convert FailureClassification to RootCauseAnalysis format
-        // Note: RootCauseAnalysis type may need to be defined in learning module
-        // For now, return None to indicate analysis not yet available
-        // TODO: Define RootCauseAnalysis type in learning module and implement conversion
+        // TODO: Define RootCauseAnalysis type and implement conversion:
+        // 1. Type definition: Define RootCauseAnalysis type in learning module
+        //    - Create RootCauseAnalysis struct with appropriate fields
+        //    - Map FailureClassification fields to RootCauseAnalysis
+        //    - Handle type conversion and validation
+        // 2. Conversion implementation: Implement conversion logic
+        //    - Convert FailureClassification to RootCauseAnalysis
+        //    - Preserve all relevant analysis information
+        //    - Handle conversion errors appropriately
+        // 3. Integration: Integrate with analysis system
+        //    - Return RootCauseAnalysis instead of None
+        //    - Use analysis in failure handling and learning
+        //    - Test conversion with various failure types
+        // ACCEPTANCE CRITERIA:
+        // - RootCauseAnalysis type is defined and available
+        // - Conversion from FailureClassification works correctly
+        // - Analysis is returned and used in failure handling
+        // DEPENDENCIES:
+        // - RootCauseAnalysis type definition (Required)
+        // - Learning module type system (Required)
+        // PRIORITY: Medium
         Ok(None)
     }
 
@@ -2431,8 +2471,27 @@ impl CouncilLearningBridge {
     ) -> Result<Option<crate::learning::council_bridge::LearningFeedback>, ParallelError> {
         tracing::debug!("Receiving learning feedback for task: {}", task_id.0);
         
-        // In a real implementation, this would receive feedback from the council
-        // For now, we'll return None to indicate no feedback available
+        // TODO: Implement council learning feedback integration:
+        // 1. Feedback retrieval: Retrieve feedback from council
+        //    - Query council for learning feedback for task
+        //    - Handle feedback retrieval errors gracefully
+        //    - Support async feedback retrieval
+        // 2. Feedback processing: Process and validate feedback
+        //    - Validate feedback structure and content
+        //    - Extract relevant learning information
+        //    - Handle invalid or missing feedback
+        // 3. Feedback integration: Integrate feedback into learning system
+        //    - Store feedback for learning analysis
+        //    - Use feedback to improve task execution
+        //    - Track feedback effectiveness
+        // ACCEPTANCE CRITERIA:
+        // - Learning feedback is retrieved from council
+        // - Feedback is processed and validated correctly
+        // - Feedback is integrated into learning system
+        // DEPENDENCIES:
+        // - Council feedback API (Required)
+        // - Learning feedback storage (Required)
+        // PRIORITY: Medium
         Ok(None)
     }
     
@@ -2443,8 +2502,27 @@ impl CouncilLearningBridge {
     ) -> Result<Vec<crate::learning::council_bridge::LearningRecommendation>, ParallelError> {
         tracing::debug!("Getting learning recommendations for task pattern: {:?}", task_pattern);
         
-        // In a real implementation, this would get recommendations from the council
-        // For now, we'll return an empty vector
+        // TODO: Implement council learning recommendations integration:
+        // 1. Recommendation retrieval: Retrieve recommendations from council
+        //    - Query council for learning recommendations based on task pattern
+        //    - Handle recommendation retrieval errors gracefully
+        //    - Support pattern-based recommendation queries
+        // 2. Recommendation processing: Process and validate recommendations
+        //    - Validate recommendation structure and relevance
+        //    - Filter recommendations by applicability
+        //    - Rank recommendations by priority or effectiveness
+        // 3. Recommendation integration: Integrate recommendations into workflow
+        //    - Apply recommendations to task execution
+        //    - Track recommendation effectiveness
+        //    - Update learning system based on results
+        // ACCEPTANCE CRITERIA:
+        // - Learning recommendations are retrieved from council
+        // - Recommendations are processed and ranked correctly
+        // - Recommendations are applied to improve task execution
+        // DEPENDENCIES:
+        // - Council recommendation API (Required)
+        // - Recommendation processing system (Required)
+        // PRIORITY: Medium
         Ok(vec![])
     }
 }

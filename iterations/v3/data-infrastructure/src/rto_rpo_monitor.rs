@@ -171,7 +171,38 @@ impl RtoRpoMonitor {
         let mut violations = Vec::new();
 
         for (service_id, status) in service_status {
-            // Parse service type from ID (simplified - in real system would be more robust)
+            // TODO: Implement robust service type parsing from service ID and metadata
+            //       Currently uses basic string matching; should use service registry or metadata for accurate type identification.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Query service registry for service type information
+            // [ ] Use service metadata for type identification
+            // [ ] Handle service type aliases and variations
+            // [ ] Support custom service types
+            // [ ] Add fallback for unknown service types
+            // [ ] Add unit tests for service type parsing
+            // [ ] Add integration tests with real service registry
+            // [ ] Verify service type parsing accuracy
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Service types are identified accurately from registry or metadata
+            // - Service type aliases and variations are handled
+            // - Unknown service types are handled gracefully
+            // - Service type parsing is reliable and maintainable
+            //
+            // DEPENDENCIES:
+            // - Service registry API (Required)
+            // - Service metadata structure (Required)
+            // - Service type definitions (Required)
+            //
+            // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+            // PRIORITY: Low
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 3 (low risk enhancement)
+            // - Change Budget: ~60 LOC
+            // - Reviewer Requirements: Service management expertise
             let service_type = if service_id.contains("api") {
                 ServiceType::ApiServer
             } else if service_id.contains("db") {
@@ -203,8 +234,38 @@ impl RtoRpoMonitor {
                 .collect();
 
             let avg_rto = if !recent_failovers.is_empty() {
-                // Simplified - in real system would track actual recovery times
-                Some(service_objectives.rto_seconds / 2)
+                // TODO: Track actual recovery times from failover history
+                //       Currently uses basic estimate; should track actual recovery times from failover events.
+                //
+                // COMPLETION CHECKLIST:
+                // [ ] Extract actual recovery times from failover events
+                // [ ] Calculate average recovery time from historical data
+                // [ ] Handle missing recovery time data gracefully
+                // [ ] Support time-weighted averages for recent events
+                // [ ] Add unit tests for recovery time calculation
+                // [ ] Add integration tests with real failover data
+                // [ ] Verify recovery time accuracy
+                //
+                // ACCEPTANCE CRITERIA:
+                // - Recovery times are calculated from actual failover events
+                // - Average recovery time reflects historical performance
+                // - Missing data is handled gracefully
+                // - Time-weighted averages prioritize recent events
+                //
+                // DEPENDENCIES:
+                // - Failover history tracking (Required)
+                // - Recovery time extraction utilities (Required)
+                // - Statistical calculation utilities (Required)
+                //
+                // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+                // PRIORITY: Medium
+                // BLOCKING: No
+                //
+                // GOVERNANCE:
+                // - CAWS Tier: 2 (monitoring feature)
+                // - Change Budget: ~50 LOC
+                // - Reviewer Requirements: Monitoring and metrics expertise
+                Some(service_objectives.rto_seconds / 2) // Temporary: basic estimate until actual recovery time tracking
             } else {
                 None
             };
@@ -260,8 +321,39 @@ impl RtoRpoMonitor {
             // - [ ] Handle missing backup data gracefully
             // - [ ] Add unit tests with mock backup system
             // - [ ] Add integration tests with real backup system
-            // Check RPO compliance (simplified - would integrate with backup system)
-            let rpo_compliant = true; // Placeholder - would check actual backup age
+            // TODO: Integrate with backup system to check actual RPO compliance
+            //       Currently uses placeholder; should query backup system for actual backup age and compare against RPO objectives.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Query backup system for last backup timestamp
+            // [ ] Calculate time since last backup
+            // [ ] Compare against service RPO objectives
+            // [ ] Handle missing backup data gracefully
+            // [ ] Support multiple backup sources
+            // [ ] Add unit tests with mock backup system
+            // [ ] Add integration tests with real backup system
+            // [ ] Verify RPO compliance accuracy
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Backup age is queried from backup system
+            // - RPO compliance is calculated accurately
+            // - Missing backup data is handled gracefully
+            // - Multiple backup sources are supported
+            //
+            // DEPENDENCIES:
+            // - Backup system API (Required)
+            // - Backup metadata structure (Required)
+            // - RPO calculation utilities (Required)
+            //
+            // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (monitoring feature)
+            // - Change Budget: ~70 LOC
+            // - Reviewer Requirements: Backup and monitoring expertise
+            let rpo_compliant = true; // Temporary: placeholder until backup system integration
 
             service_compliance.insert(service_type_as_string(service_type).to_string(), ServiceComplianceStatus {
                 service_name: service_type_as_string(service_type).to_string(),
@@ -273,7 +365,38 @@ impl RtoRpoMonitor {
                 // - [ ] Add unit tests with mock recovery system
                 // - [ ] Add integration tests with real recovery system
                 last_recovery_time: Some(Utc::now() - chrono::Duration::hours(1)), // Placeholder
-                compliance_percentage: if rto_compliant && rpo_compliant { 100.0 } else { 0.0 }, // Simplified
+                // TODO: Calculate actual compliance percentage based on RTO/RPO metrics
+                //       Currently uses basic binary calculation; should calculate percentage based on actual metrics and objectives.
+                //
+                // COMPLETION CHECKLIST:
+                // [ ] Calculate compliance percentage from RTO/RPO metrics
+                // [ ] Weight RTO and RPO compliance appropriately
+                // [ ] Handle partial compliance scenarios
+                // [ ] Support time-weighted compliance calculations
+                // [ ] Add unit tests for compliance calculation
+                // [ ] Add integration tests with various metrics
+                // [ ] Verify compliance percentage accuracy
+                //
+                // ACCEPTANCE CRITERIA:
+                // - Compliance percentage reflects actual RTO/RPO performance
+                // - Partial compliance is calculated correctly
+                // - Time-weighted calculations prioritize recent metrics
+                // - Compliance percentage is accurate and meaningful
+                //
+                // DEPENDENCIES:
+                // - RTO/RPO metrics (Required)
+                // - Compliance calculation utilities (Required)
+                // - Statistical calculation utilities (Required)
+                //
+                // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+                // PRIORITY: Low
+                // BLOCKING: No
+                //
+                // GOVERNANCE:
+                // - CAWS Tier: 3 (monitoring enhancement)
+                // - Change Budget: ~40 LOC
+                // - Reviewer Requirements: Metrics and monitoring expertise
+                compliance_percentage: if rto_compliant && rpo_compliant { 100.0 } else { 0.0 }, // Temporary: basic binary calculation until proper percentage calculation
             });
         }
 
@@ -496,7 +619,8 @@ fn calculate_compliance_percentage(violations: &[ComplianceViolation], violation
     if relevant_violations == 0 {
         100.0
     } else {
-        // Simplified calculation - in real system would be more sophisticated
+        // TODO: Implement sophisticated compliance score calculation
+        //       Currently uses basic calculation; should implement comprehensive compliance scoring with proper weighting.
         (100.0 - (relevant_violations as f64 * 10.0)).max(0.0)
     }
 }
@@ -580,7 +704,8 @@ pub struct MonitoringComplianceReport {
 impl RtoRpoMonitor {
     /// Internal method to get recovery metrics
     async fn internal_get_recovery_metrics(&self) -> RecoveryMetrics {
-        // Simplified implementation - return default metrics
+        // TODO: Implement actual recovery metrics collection
+        //       Currently returns default metrics; should collect actual recovery metrics from system state.
         RecoveryMetrics {
             total_incidents: 0,
             average_rto_seconds: 0,
@@ -604,15 +729,15 @@ impl RtoRpoMonitor {
 
         MonitoringComplianceReport {
             timestamp: Utc::now(),
-            overall_compliance_percentage: if status.overall_compliant { 100.0 } else { 95.0 }, // Simplified calculation
+            overall_compliance_percentage: if status.overall_compliant { 100.0 } else { 95.0 }, // TODO: Calculate actual compliance percentage
             rto_compliance_percentage: if status.rto_compliant { 100.0 } else { 90.0 },
             rpo_compliance_percentage: if status.rpo_compliant { 100.0 } else { 85.0 },
             total_violations: violations.len(),
             critical_violations: violations.iter().filter(|v| v.severity == ViolationSeverity::Critical).count(),
             average_recovery_time_seconds: metrics.average_rto_seconds as f64,
-            max_recovery_time_seconds: metrics.average_rto_seconds as f64 * 2.0, // Simplified
+            max_recovery_time_seconds: metrics.average_rto_seconds as f64 * 2.0, // TODO: Calculate actual max recovery time
             data_loss_incidents: metrics.total_incidents as usize,
-            service_availability_percentage: 99.9, // Simplified - should be calculated from actual metrics
+            service_availability_percentage: 99.9, // TODO: Calculate actual service availability from metrics
         }
     }
 }

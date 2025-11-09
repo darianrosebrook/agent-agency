@@ -759,8 +759,41 @@ impl ClipEmbeddingProvider {
 
     /// Create a new CLIP embedding provider with specified variant
     pub fn with_variant(model_name: String, variant: ClipModelVariant) -> Result<Self> {
-        // For now, we'll create a stub implementation
-        // In a full implementation, this would load the actual CLIP model
+        // TODO: Implement comprehensive CLIP model loading and initialization
+        //       Currently creates stub implementation; should implement comprehensive loading that loads actual CLIP model, initializes model with proper device placement (GPU if available), and configures model for embedding generation.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Actual CLIP model is loaded
+        // - Model is initialized with proper device placement
+        // - Model configuration matches specified variant
+        // - Model loading handles errors gracefully
+        //
+        // DEPENDENCIES:
+        // - CLIP model loading library (Required)
+        // - Device placement utilities (Required)
+        // - Model configuration system (Required)
+        //
+        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (CLIP model integration functionality)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: CLIP model loading and ML framework expertise
         warn!("CLIP embedding provider using stub implementation - actual CLIP model loading disabled");
 
         // Placeholder device - would be GPU if available

@@ -18,7 +18,6 @@
 //! 4. **Waivable Tracking**: Non-critical violations passed to LLM for judgment
 
 use agent_agency_contracts::{CAWSInvariant, Severity, ViolationLocation, InvariantCheck, InvariantResults, WorkingSpec};
-use std::collections::HashMap;
 
 /// Run all CAWS invariant checks on a working spec
 pub fn run_caws_invariants(spec: &WorkingSpec) -> InvariantResults {
@@ -323,7 +322,8 @@ fn find_pattern_violations(
 
     let mut violations = vec![];
 
-    // Search in spec text (simplified - in real impl, would search code files)
+    // TODO: Implement code file search for invariant checking
+    //       Currently searches spec text only; should search actual code files for comprehensive invariant verification.
     for (line_num, line) in spec_text.lines().enumerate() {
         if regex.is_match(line) {
             violations.push(ViolationLocation {

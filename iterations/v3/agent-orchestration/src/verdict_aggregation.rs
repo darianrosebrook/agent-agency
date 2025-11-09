@@ -37,9 +37,42 @@ fn string_to_judge_type(s: &str) -> JudgeType {
 
 // Helper function to convert string to JudgeVerdict
 fn string_to_judge_verdict(_s: &str) -> Result<JudgeVerdict, CouncilError> {
-    // This is a simplified conversion - in reality this would need to parse the string
-    // For now, return a default verdict
-    Ok(JudgeVerdict::Approve {
+    // TODO: Parse string verdict into JudgeVerdict structure
+    //       Currently returns default verdict; should parse string representation into proper JudgeVerdict structure with confidence and reasoning.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - String verdicts are parsed correctly into JudgeVerdict
+    // - Confidence and reasoning are extracted from string
+    // - Invalid string formats are handled gracefully
+    // - Parsing is accurate and reliable
+    //
+    // DEPENDENCIES:
+    // - Verdict parsing utilities (Required)
+    // - JudgeVerdict structure (Required)
+    // - String parsing utilities (Required)
+    //
+    // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+    // PRIORITY: Low
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 3 (parsing utility)
+    // - Change Budget: ~50 LOC
+    // - Reviewer Requirements: Parsing and data structure expertise
+    Ok(JudgeVerdict::Approve { // Temporary: default verdict until string parsing is implemented
         confidence: 0.8,
         reasoning: "Converted from string verdict".to_string(),
         quality_score: 0.7,
@@ -495,8 +528,43 @@ impl VerdictAggregator {
             }
         }
 
+        // TODO: Aggregate actual risks from individual assessments
+        //       Currently uses default low risk; should aggregate risks from individual assessments to calculate overall risk level.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Overall risk is calculated from individual assessments
+        // - Risk aggregation considers all risk factors
+        // - Risk levels are accurate and meaningful
+        // - Aggregation handles edge cases correctly
+        //
+        // DEPENDENCIES:
+        // - Risk assessment structure (Required)
+        // - Risk aggregation utilities (Required)
+        // - Risk calculation algorithms (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (risk assessment feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Risk analysis expertise
         AggregatedRiskAssessment {
-            overall_risk: RiskLevel::Low, // Simplified - should aggregate actual risks
+            overall_risk: RiskLevel::Low, // Temporary: default until risk aggregation is implemented
             risk_factors,
             mitigation_suggestions: vec!["Standard monitoring".to_string()],
             confidence: 0.8, // Default confidence
@@ -1548,8 +1616,42 @@ impl ChangeDeduplicationEngine {
         // Extract key terms from description
         let key_terms = self.extract_key_terms(&change.description);
 
-        // Extract affected components (simplified - would parse from description)
-        let affected_components = self.extract_affected_components(&change.description);
+        // TODO: Parse affected components from change description
+        //       Currently uses basic extraction; should parse change description to identify affected components accurately.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Affected components are parsed from description accurately
+        // - Component identification handles various description formats
+        // - Parsing is reliable and maintainable
+        // - Edge cases are handled gracefully
+        //
+        // DEPENDENCIES:
+        // - Description parsing utilities (Required)
+        // - Component identification utilities (Required)
+        // - NLP or pattern matching utilities (Optional)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (parsing enhancement)
+        // - Change Budget: ~70 LOC
+        // - Reviewer Requirements: Text parsing expertise
+        let affected_components = self.extract_affected_components(&change.description); // Temporary: basic extraction until proper parsing
 
         // Classify change intent
         let change_intent = self.classify_change_intent(&change.description);

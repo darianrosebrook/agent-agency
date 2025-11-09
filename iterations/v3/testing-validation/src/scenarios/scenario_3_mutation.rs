@@ -200,7 +200,41 @@ pub async fn run_test(
                 Some(format!("Found {} test functions", test_function_count)),
             );
         } else {
-            // Simulate mutation score - in a real implementation, this would run cargo-mutants
+            // TODO: Implement actual mutation testing with cargo-mutants
+            //       Currently simulates mutation score; should run cargo-mutants to get actual mutation testing results.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Integrate cargo-mutants tool
+            // [ ] Run mutation testing on codebase
+            // [ ] Parse mutation testing results
+            // [ ] Calculate actual mutation score
+            // [ ] Handle mutation testing errors
+            // [ ] Add unit tests with mock mutation results
+            // [ ] Add integration tests with real mutation testing
+            // [ ] Performance: Mutation testing should complete in <5min
+            // [ ] Documentation: Document mutation testing setup
+            //
+            // ACCEPTANCE CRITERIA:
+            // - cargo-mutants is executed on codebase
+            // - Mutation testing results are parsed correctly
+            // - Mutation score is calculated accurately
+            // - Testing errors are handled gracefully
+            // - Results are reported appropriately
+            //
+            // DEPENDENCIES:
+            // - cargo-mutants tool (Required)
+            // - Mutation result parser (Required)
+            // - Score calculation logic (Required)
+            //
+            // ESTIMATED EFFORT: 5-7 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (testing feature)
+            // - Change Budget: ~200 LOC
+            // - Reviewer Requirements: Mutation testing expertise
+            // Simulate mutation score
             assertions.assert_mutation_score(0.85, 0.80, "Basic test coverage should meet minimum threshold");
         }
     }

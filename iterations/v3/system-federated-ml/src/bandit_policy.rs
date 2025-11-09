@@ -352,18 +352,72 @@ impl BanditPolicy for LinUCB {
             };
         }
 
-        // TODO: Implement real task type extraction
-        // - [ ] Extract task type from task description or metadata
-        // - [ ] Use NLP or pattern matching to classify task types
-        // - [ ] Support multiple task type categories
-        // - [ ] Add unit tests with various task descriptions
-        // - [ ] Add integration tests with real task classification
-        // For now, use a simple task type based on risk tier
+        // TODO: Implement real task type extraction from task description and metadata
+        //       Currently uses simple risk tier-based classification; should use NLP or pattern matching for accurate task type classification.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Extract task type from task description or metadata
+        // [ ] Use NLP or pattern matching to classify task types
+        // [ ] Support multiple task type categories
+        // [ ] Handle ambiguous or unclassified tasks
+        // [ ] Add unit tests with various task descriptions
+        // [ ] Add integration tests with real task classification
+        // [ ] Verify task type classification accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Task types are extracted accurately from descriptions
+        // - Multiple task type categories are supported
+        // - Ambiguous tasks are handled gracefully
+        // - Task type classification improves bandit performance
+        //
+        // DEPENDENCIES:
+        // - NLP or pattern matching utilities (Required)
+        // - Task metadata structure (Required)
+        // - Task type taxonomy (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (standard feature)
+        // - Change Budget: ~120 LOC
+        // - Reviewer Requirements: NLP/classification domain expertise
         let task_type = format!("tier_{}", ctx.risk_tier);
         let features = Self::features_to_vector(ctx);
         let feature_dim = features.len();
 
-        // Get model parameters (this is a simplified version - in practice you'd need proper locking)
+        // TODO: Implement thread-safe model parameter access with proper locking
+        //       Currently uses direct access without locking; should use proper synchronization for concurrent access.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement proper locking mechanism for model parameters
+        // [ ] Use RwLock or Mutex for thread-safe access
+        // [ ] Handle lock contention and deadlock prevention
+        // [ ] Optimize lock granularity for performance
+        // [ ] Add unit tests for concurrent access
+        // [ ] Add integration tests with multiple threads
+        // [ ] Verify thread safety and performance
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Model parameters are accessed safely from multiple threads
+        // - Lock contention is minimized
+        // - No deadlocks occur under concurrent access
+        // - Performance is acceptable under load
+        //
+        // DEPENDENCIES:
+        // - Thread synchronization primitives (Required)
+        // - Lock management utilities (Required)
+        // - Concurrent access testing framework (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (standard feature)
+        // - Change Budget: ~60 LOC
+        // - Reviewer Requirements: Concurrency domain expertise
         let theta = self.theta.get(&task_type).unwrap_or(&vec![0.0; feature_dim]);
         let covariance = self.covariance.get(&task_type).unwrap_or(&vec![vec![0.0; feature_dim]; feature_dim]);
 
@@ -373,7 +427,38 @@ impl BanditPolicy for LinUCB {
 
         // Calculate UCB for each arm
         for (idx, arm) in arms.iter().enumerate() {
-            // Simplified: use arm parameters as additional features
+            // TODO: Implement proper feature engineering for arm selection
+            //       Currently uses basic arm parameters as features; should implement comprehensive feature engineering.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Design comprehensive feature set for arm selection
+            // [ ] Include arm-specific features (temperature, max_tokens, top_p)
+            // [ ] Include context features (task type, risk tier, complexity)
+            // [ ] Include historical performance features
+            // [ ] Normalize and scale features appropriately
+            // [ ] Add unit tests for feature engineering
+            // [ ] Add integration tests with real arm selection
+            // [ ] Verify feature engineering improves bandit performance
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Comprehensive feature set is used for arm selection
+            // - Features are normalized and scaled correctly
+            // - Feature engineering improves bandit performance
+            // - Features are interpretable and debuggable
+            //
+            // DEPENDENCIES:
+            // - Feature engineering utilities (Required)
+            // - Feature normalization/scaling (Required)
+            // - Historical performance tracking (Required)
+            //
+            // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (standard feature)
+            // - Change Budget: ~100 LOC
+            // - Reviewer Requirements: Machine learning feature engineering expertise
             let mut arm_features = features.clone();
             arm_features.push(arm.temperature as f64);
             arm_features.push(arm.max_tokens as f64);
@@ -386,7 +471,38 @@ impl BanditPolicy for LinUCB {
             // Calculate mean reward estimate
             let mean_reward = theta.iter().zip(arm_features.iter()).map(|(t, f)| t * f).sum::<f64>();
 
-            // Calculate confidence bound (simplified)
+            // TODO: Implement proper confidence bound calculation for LinUCB
+            //       Currently uses basic formula; should implement proper LinUCB confidence bound using covariance matrix and feature vectors.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Implement covariance matrix calculation
+            // [ ] Calculate proper confidence bound using sqrt(x^T * A^-1 * x) formula
+            // [ ] Handle matrix inversion with numerical stability
+            // [ ] Add regularization for numerical stability
+            // [ ] Add unit tests with various feature dimensions
+            // [ ] Add integration tests with real LinUCB learning
+            // [ ] Performance: Confidence bound calculation should complete in <10μs
+            // [ ] Documentation: Document LinUCB confidence bound formula
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Confidence bound follows LinUCB theoretical formula
+            // - Confidence bound decreases as arm is pulled more (exploration decreases)
+            // - Numerical stability maintained for all feature dimensions
+            // - Confidence bound is always positive
+            //
+            // DEPENDENCIES:
+            // - Covariance matrix from LinUCB model (Required)
+            // - Feature vector for arm (Required)
+            // - Matrix operations library (Optional, can implement manually)
+            //
+            // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (machine learning feature)
+            // - Change Budget: ~100 LOC
+            // - Reviewer Requirements: Machine learning and numerical methods expertise
             let confidence_bound = self.alpha * (1.0 / (1.0 + idx as f64)).sqrt();
 
             let ucb = mean_reward + confidence_bound;
@@ -424,14 +540,38 @@ impl BanditPolicy for LinUCB {
         // Get or initialize model parameters
         let (theta, covariance) = self.get_or_init_model(&task_type, feature_dim);
 
-        // TODO: Implement proper LinUCB with ridge regression
-        // - [ ] Implement matrix operations for LinUCB algorithm
-        // - [ ] Use proper ridge regression for parameter updates
-        // - [ ] Handle matrix inversion and numerical stability
-        // - [ ] Add unit tests with various feature dimensions
-        // - [ ] Add integration tests with real LinUCB learning
-        // Simplified update (in practice, you'd implement proper ridge regression)
-        // This is a placeholder - real LinUCB requires matrix operations
+        // TODO: Implement proper LinUCB parameter update with ridge regression
+        //       Currently uses basic gradient step; should implement proper ridge regression for parameter updates with matrix operations.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement ridge regression update formula
+        // [ ] Calculate covariance matrix update
+        // [ ] Handle matrix inversion with numerical stability
+        // [ ] Add regularization parameter for ridge regression
+        // [ ] Add unit tests with various feature dimensions
+        // [ ] Add integration tests with real LinUCB learning
+        // [ ] Performance: Parameter update should complete in <100μs
+        // [ ] Documentation: Document LinUCB update formula
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Parameter update follows LinUCB theoretical formula
+        // - Ridge regression properly regularizes parameter updates
+        // - Numerical stability maintained for all feature dimensions
+        // - Update converges to optimal parameters over time
+        //
+        // DEPENDENCIES:
+        // - Covariance matrix from LinUCB model (Required)
+        // - Feature vector and reward (Required)
+        // - Matrix operations library (Optional, can implement manually)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (machine learning feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Machine learning and numerical methods expertise
         for (i, feature) in features.iter().enumerate() {
             if i < theta.len() {
                 theta[i] += 0.01 * feature * reward; // Simple gradient step

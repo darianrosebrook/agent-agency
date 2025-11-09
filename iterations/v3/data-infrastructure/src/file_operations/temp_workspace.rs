@@ -785,8 +785,39 @@ impl ChangesetApplicationEngine {
             });
         }
 
-        // Dependency validation (simplified)
-        let dependency_valid = self.validate_changeset_dependencies(changeset).await?;
+        // TODO: Implement comprehensive dependency validation
+        //       Currently uses basic validation; should implement comprehensive dependency checking with cycle detection and topological sorting.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Build dependency graph from changeset
+        // [ ] Detect circular dependencies
+        // [ ] Perform topological sort for execution order
+        // [ ] Validate dependency completeness
+        // [ ] Handle missing dependencies gracefully
+        // [ ] Add unit tests for dependency validation
+        // [ ] Add integration tests with complex changesets
+        // [ ] Verify dependency validation correctness
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Dependency graph is built correctly
+        // - Circular dependencies are detected
+        // - Topological sort provides valid execution order
+        // - Missing dependencies are handled appropriately
+        //
+        // DEPENDENCIES:
+        // - Graph algorithms library (Required)
+        // - Dependency analysis utilities (Required)
+        // - Topological sort utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (validation feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Graph algorithms expertise
+        let dependency_valid = self.validate_changeset_dependencies(changeset).await?; // Temporary: basic validation until comprehensive validation
         results.push(ChangesetValidationResult {
             validation_type: ValidationType::Dependency,
             passed: dependency_valid,
@@ -943,12 +974,43 @@ impl ChangesetApplicationEngine {
 
     /// Helper methods for validation and conflict detection
     async fn validate_patch_integrity(&self, patch: &Patch) -> Result<bool> {
-        // Calculate checksum of patch content
-        let content = format!("{:?}", patch); // Simplified checksum
+        // TODO: Calculate proper patch content checksum and compare with stored checksum
+        //       Currently uses Debug format; should calculate proper checksum from patch content and compare with stored value.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Calculate checksum from actual patch content (not Debug format)
+        // [ ] Retrieve stored checksum from patch metadata
+        // [ ] Compare calculated checksum with stored checksum
+        // [ ] Handle checksum mismatch errors
+        // [ ] Support multiple checksum algorithms (SHA256, SHA512, etc.)
+        // [ ] Add unit tests for checksum validation
+        // [ ] Add integration tests with real patches
+        // [ ] Verify checksum validation accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Checksum is calculated from actual patch content
+        // - Stored checksum is retrieved correctly
+        // - Checksum comparison is accurate
+        // - Checksum mismatches are handled appropriately
+        //
+        // DEPENDENCIES:
+        // - Patch metadata structure (Required)
+        // - Checksum calculation utilities (Required)
+        // - Checksum storage infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (integrity validation feature)
+        // - Change Budget: ~60 LOC
+        // - Reviewer Requirements: Cryptographic and integrity expertise
+        let content = format!("{:?}", patch); // Temporary: Debug format until proper checksum calculation
         let mut hasher = Sha256::new();
         hasher.update(content.as_bytes());
         let _checksum = hasher.finalize();
-        // In real implementation, compare with stored checksum
+        // Temporary: no comparison until stored checksum retrieval is implemented
         Ok(true)
     }
 
@@ -1017,8 +1079,39 @@ impl ChangesetApplicationEngine {
         for (_file, deps) in &file_dependencies {
             for dep in deps {
                 if !files_modified.contains(dep) {
-                    // In a real implementation, check if file exists in workspace
-                    // For now, assume missing dependencies are warnings, not errors
+                    // TODO: Check if dependency file exists in workspace
+                    //       Currently assumes missing dependencies are warnings; should check if file exists in workspace and handle appropriately.
+                    //
+                    // COMPLETION CHECKLIST:
+                    // [ ] Check if dependency file exists in workspace
+                    // [ ] Verify file path is valid
+                    // [ ] Handle missing files as errors or warnings based on context
+                    // [ ] Support relative and absolute paths
+                    // [ ] Handle symlinks and special files
+                    // [ ] Add unit tests for file existence checking
+                    // [ ] Add integration tests with various file scenarios
+                    // [ ] Verify file existence checking accuracy
+                    //
+                    // ACCEPTANCE CRITERIA:
+                    // - Dependency files are checked for existence correctly
+                    // - File paths are validated properly
+                    // - Missing files are handled appropriately
+                    // - Symlinks and special files are handled correctly
+                    //
+                    // DEPENDENCIES:
+                    // - File system utilities (Required)
+                    // - Path validation utilities (Required)
+                    // - Workspace file tracking (Required)
+                    //
+                    // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+                    // PRIORITY: Medium
+                    // BLOCKING: No
+                    //
+                    // GOVERNANCE:
+                    // - CAWS Tier: 2 (validation feature)
+                    // - Change Budget: ~50 LOC
+                    // - Reviewer Requirements: File system expertise
+                    // Temporary: assume warnings until file existence checking is implemented
                 }
             }
         }
@@ -1148,7 +1241,39 @@ fn extract_file_reference(line: &str) -> Option<String> {
 impl ChangesetApplicationEngine {
     async fn apply_single_patch_atomic(&self, patch: &Patch, workspace_path: &Path) -> Result<u64> {
         let file_path = workspace_path.join(&patch.path);
-        let io_operations = 1; // Simplified count
+        // TODO: Count actual I/O operations during patch application
+        //       Currently uses placeholder count; should track actual I/O operations (reads, writes, seeks) during patch application.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Track file read operations
+        // [ ] Track file write operations
+        // [ ] Track directory creation operations
+        // [ ] Track file seek operations
+        // [ ] Count total I/O operations accurately
+        // [ ] Add unit tests for I/O counting
+        // [ ] Add integration tests with various patches
+        // [ ] Verify I/O operation counting accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - I/O operations are counted accurately
+        // - All operation types are tracked
+        // - Total count reflects actual I/O performed
+        // - I/O counting is efficient
+        //
+        // DEPENDENCIES:
+        // - I/O operation tracking utilities (Required)
+        // - File operation monitoring (Required)
+        // - Operation counting infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (monitoring enhancement)
+        // - Change Budget: ~50 LOC
+        // - Reviewer Requirements: I/O monitoring expertise
+        let io_operations = 1; // Temporary: placeholder count until actual I/O tracking
 
         // Ensure parent directory exists
         if let Some(parent) = file_path.parent() {
@@ -1169,7 +1294,8 @@ impl ChangesetApplicationEngine {
 
     fn verify_patch_application(&self, patch: &Patch, current_content: &str) -> bool {
         // Verify patch application by checking that expected changes are present
-        // This is a simplified verification - in a full implementation, would:
+        // TODO: Implement comprehensive patch verification
+        //       Currently uses basic verification; in a full implementation, would:
         // 1. Calculate expected content hash after patch application
         // 2. Calculate actual content hash
         // 3. Compare hunks against actual content
@@ -1520,7 +1646,27 @@ mod tests {
       // - Add async test timeouts and cancellation handling
       // - Support concurrent test execution
       // - Add async test debugging and profiling tools
-      // PLACEHOLDER: Relying on integration tests for now
+      // TODO: Implement async test infrastructure:
+      // 1. Async test framework: Set up async test framework
+      //    - Configure async test runtime and executor
+      //    - Support async test setup and teardown
+      //    - Handle async test timeouts and cancellation
+      // 2. Test infrastructure: Build test infrastructure
+      //    - Implement proper async test cleanup
+      //    - Support concurrent test execution
+      //    - Add async test debugging tools
+      // 3. Integration: Integrate with test system
+      //    - Use async test framework for temp workspace tests
+      //    - Support async test fixtures and helpers
+      //    - Handle async test failures gracefully
+      // ACCEPTANCE CRITERIA:
+      // - Async tests run correctly with proper cleanup
+      // - Test infrastructure supports concurrent execution
+      // - Async test debugging tools are available
+      // DEPENDENCIES:
+      // - Async test framework (Required)
+      // - Test infrastructure utilities (Required)
+      // PRIORITY: Medium
 
     #[test]
     fn test_temp_workspace_types() {

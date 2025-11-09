@@ -3,14 +3,9 @@
 //! Implements CAWS-compliant evidence collection through claim extraction,
 //! fact verification, and source validation mechanisms.
 
-use anyhow::{Result, Context};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use anyhow::Result;
 use std::sync::Arc;
-use tracing::{info, debug, warn};
 
-use crate::tool_registry::{Tool, ToolMetadata, ToolCategory};
-use crate::evidence_types::*;
 use crate::claim_extraction::*;
 use crate::fact_verification::*;
 use crate::source_validation::*;

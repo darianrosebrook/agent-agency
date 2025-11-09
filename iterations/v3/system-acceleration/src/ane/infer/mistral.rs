@@ -166,8 +166,29 @@ pub async fn generate_text(
     // - [ ] Add performance benchmarks for ANE vs CPU
     // - [ ] Add unit tests with ANE device
     // - [ ] Add integration tests with real ANE inference
+    // TODO: Integrate ANE device for inference:
+    // 1. ANE device setup: Set up ANE device for inference
+    //    - Initialize ANE device and resources
+    //    - Configure ANE for model execution
+    //    - Handle ANE device errors and fallback
+    // 2. ANE inference: Execute inference on ANE
+    //    - Load model onto ANE device
+    //    - Execute inference using ANE
+    //    - Handle ANE inference errors gracefully
+    // 3. Performance optimization: Optimize ANE usage
+    //    - Measure ANE vs CPU performance
+    //    - Optimize ANE inference pipeline
+    //    - Support ANE-specific optimizations
+    // ACCEPTANCE CRITERIA:
+    // - ANE device is used for inference when available
+    // - ANE inference provides performance improvements
+    // - CPU fallback works when ANE unavailable
+    // DEPENDENCIES:
+    // - ANE device API (Required)
+    // - ANE inference backend (Required)
+    // PRIORITY: High
     // Prepare input tensor
-    let device = Device::Cpu; // Use CPU for now, ANE integration will come later
+    let device = Device::Cpu;
     // Keep token ids as i32; the backend embeds internally
     // Note: Candle requires converting to f32 for tensor creation, but we'll treat them as IDs
     let input_tokens_f32: Vec<f32> = input_tokens.iter().map(|&x| x as f32).collect();
@@ -243,15 +264,41 @@ async fn run_mistral_inference(
 ) -> Result<Tensor> {
     // Use the model's Core ML handle for inference
     let result = model.handle.with_handle(|_handle| -> Result<Tensor> {
-        // TODO: Implement real Core ML inference for Mistral
-        // - [ ] Call actual Core ML inference API with handle
-        // - [ ] Process input tokens through Core ML model
-        // - [ ] Extract output tensor from Core ML results
-        // - [ ] Handle inference errors and timeouts
-        // - [ ] Add unit tests with mock Core ML outputs
-        // - [ ] Add integration tests with real Core ML inference
-        // This would call the actual Core ML inference
-        // For now, return a placeholder tensor
+        // TODO: Implement comprehensive Core ML inference execution
+        //       Currently returns placeholder tensor; should implement comprehensive inference that calls actual Core ML inference API, processes input tokens through Core ML model, and extracts output tensor from Core ML results.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Core ML inference API is called with proper handle
+        // - Input tokens are processed through Core ML model
+        // - Output tensor is extracted from Core ML results
+        // - Inference errors and timeouts are handled gracefully
+        //
+        // DEPENDENCIES:
+        // - Core ML inference API integration (Required)
+        // - Model handle management (Required)
+        // - Tensor extraction utilities (Required)
+        //
+        // ESTIMATED EFFORT: 12-16 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (Core ML inference functionality)
+        // - Change Budget: ~300 LOC
+        // - Reviewer Requirements: Core ML inference and model execution expertise
         let device = Device::Cpu;
         let batch_size = input_tensor.dims()[0];
         

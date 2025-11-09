@@ -89,8 +89,8 @@ impl FilesystemScanner {
         let content = tokio::fs::read_to_string(path).await?;
         let manifest: serde_json::Value = serde_json::from_str(&content)?;
 
-        // Parse the manifest into an MCPTool
-        // This is a simplified implementation - real implementation would be more complex
+        // TODO: Implement comprehensive manifest parsing for MCPTool creation
+        //       Currently uses basic parsing; should parse manifest comprehensively including all tool metadata and capabilities.
         let tool = MCPTool {
             id: Uuid::new_v4(),
             name: manifest.get("name")

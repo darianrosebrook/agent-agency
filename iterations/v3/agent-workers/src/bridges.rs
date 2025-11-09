@@ -63,10 +63,42 @@ impl OrchestrationQualityBridge {
         // - [ ] Handle missing complexity data gracefully
         // - [ ] Add unit tests with various complexity scenarios
         // - [ ] Add integration tests with real task complexity
-        // Check complexity requirements
-        // Note: Complexity checking would require additional implementation
-        // For now, we skip this check as the field structure needs clarification
-        
+        //
+        // TODO: Implement comprehensive complexity requirement checking
+        //       Currently skips complexity check as field structure needs clarification; should implement comprehensive checking that defines complexity field structure in task schema, implements complexity calculation algorithm, and validates complexity against task requirements.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Complexity field structure is defined in task schema
+        // - Complexity calculation algorithm is implemented
+        // - Complexity validation against task requirements works correctly
+        // - Missing complexity data is handled gracefully
+        //
+        // DEPENDENCIES:
+        // - Task schema complexity field definition (Required)
+        // - Complexity calculation algorithm (Required)
+        // - Validation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (task complexity validation functionality)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Task complexity and validation expertise
         tracing::info!("Quality gates passed for task: {}", task_id.0);
         Ok(true)
     }

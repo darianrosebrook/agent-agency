@@ -166,11 +166,42 @@ impl LLMParameterOptimizer {
             });
         }
         
-        // 5. Calculate confidence intervals (simplified)
+        // TODO: Calculate proper confidence intervals from statistical analysis
+        //       Currently uses hardcoded values; should calculate confidence intervals from statistical analysis of historical data.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Collect historical reward data for parameter sets
+        // [ ] Calculate statistical confidence intervals (e.g., using t-distribution)
+        // [ ] Calculate confidence intervals for latency metrics
+        // [ ] Calculate confidence intervals for quality metrics
+        // [ ] Handle insufficient data scenarios
+        // [ ] Add unit tests for confidence interval calculation
+        // [ ] Add integration tests with real historical data
+        // [ ] Verify confidence interval accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Confidence intervals are calculated from historical data
+        // - Statistical methods are applied correctly
+        // - Insufficient data is handled gracefully
+        // - Confidence intervals are accurate and meaningful
+        //
+        // DEPENDENCIES:
+        // - Historical data storage (Required)
+        // - Statistical analysis library (Required)
+        // - Confidence interval calculation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (statistical analysis feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Statistics expertise
         let confidence = selection.confidence;
-        let ci_reward = (0.7, 0.9); // Simplified
-        let ci_latency = (100, 200); // Simplified
-        let ci_quality = (0.8, 0.95); // Simplified
+        let ci_reward = (0.7, 0.9); // Temporary: hardcoded until statistical calculation
+        let ci_latency = (100, 200); // Temporary: hardcoded until statistical calculation
+        let ci_quality = (0.8, 0.95); // Temporary: hardcoded until statistical calculation
         
         Ok(RecommendedParameters {
             set: selection.parameters,
@@ -310,8 +341,39 @@ impl LLMParameterOptimizer {
 
     /// Calculate reward from outcome
     fn calculate_reward(&self, outcome: &TaskOutcome) -> f64 {
-        // Simplified reward calculation
-        let quality_reward = outcome.quality_score;
+        // TODO: Implement comprehensive reward calculation with proper weighting
+        //       Currently uses basic calculation; should implement comprehensive reward function with proper weighting and normalization.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Define reward function with proper weighting factors
+        // [ ] Normalize metrics to comparable scales
+        // [ ] Handle negative rewards appropriately
+        // [ ] Support configurable reward weights
+        // [ ] Consider multiple reward dimensions
+        // [ ] Add unit tests for reward calculation
+        // [ ] Add integration tests with various outcomes
+        // [ ] Verify reward calculation accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Reward function uses proper weighting
+        // - Metrics are normalized correctly
+        // - Negative rewards are handled appropriately
+        // - Configurable weights are supported
+        //
+        // DEPENDENCIES:
+        // - Reward function configuration (Required)
+        // - Metric normalization utilities (Required)
+        // - Weighting factor utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (optimization feature)
+        // - Change Budget: ~70 LOC
+        // - Reviewer Requirements: Optimization and reward function expertise
+        let quality_reward = outcome.quality_score; // Temporary: placeholder until comprehensive reward function
         let latency_penalty = (outcome.latency_ms as f64) / 1000.0; // Normalize
         let token_penalty = (outcome.tokens_used as f64) / 1000.0; // Normalize
         
@@ -334,8 +396,39 @@ impl QualityGateValidator {
         proposed: &ParameterSet,
         constraints: &OptimizationConstraints,
     ) -> Result<ValidationResult> {
-        // Simplified validation
-        if proposed.max_tokens > constraints.max_tokens as usize {
+        // TODO: Implement comprehensive parameter validation
+        //       Currently uses basic validation; should implement comprehensive validation with all constraint checks and parameter relationships.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Validate all parameter constraints
+        // [ ] Check parameter relationships and dependencies
+        // [ ] Validate parameter ranges and types
+        // [ ] Handle constraint conflicts
+        // [ ] Provide detailed validation error messages
+        // [ ] Add unit tests for parameter validation
+        // [ ] Add integration tests with various parameter sets
+        // [ ] Verify validation completeness
+        //
+        // ACCEPTANCE CRITERIA:
+        // - All parameter constraints are validated
+        // - Parameter relationships are checked correctly
+        // - Constraint conflicts are detected
+        // - Detailed error messages are provided
+        //
+        // DEPENDENCIES:
+        // - Parameter constraint definitions (Required)
+        // - Validation utilities (Required)
+        // - Constraint checking infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (validation feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Parameter validation expertise
+        if proposed.max_tokens > constraints.max_tokens as usize { // Temporary: basic validation until comprehensive validation
             return Ok(ValidationResult::Rejected {
                 reason: format!("Token limit {} exceeds constraint {}", 
                                 proposed.max_tokens, constraints.max_tokens),

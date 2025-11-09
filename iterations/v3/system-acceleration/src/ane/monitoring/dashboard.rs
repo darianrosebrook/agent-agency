@@ -351,7 +351,7 @@ impl PerformancePredictor {
 
         Some(PerformancePrediction {
             predicted_avg_inference_time_ms: avg_recent,
-            confidence_level: 0.8, // Simplified confidence
+            confidence_level: 0.8, // TODO: Calculate actual confidence level from prediction variance and data quality
             trend,
             data_points: recent_data.len(),
         })

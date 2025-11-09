@@ -212,9 +212,42 @@ impl QualityGateExecutor {
         test_type: &str,
         min_threshold: f64,
     ) -> Result<QualityGateResult> {
-        // For now, use general coverage check
-        // Could be enhanced to filter by test type
-        self.check_coverage(min_threshold).await
+        // TODO: Implement test type-specific coverage checking
+        //       Currently uses general coverage check; should enhance to filter by test type for more granular coverage validation.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Coverage is filtered by test type
+        // - Each test type has appropriate thresholds
+        // - Filtering is accurate
+        // - Error handling works for invalid test types
+        //
+        // DEPENDENCIES:
+        // - Test type classification (Required)
+        // - Coverage filtering utilities (Required)
+        // - Type-specific threshold configuration (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (quality gate enhancement)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Test coverage expertise
+        self.check_coverage(min_threshold).await // Temporary: general check until type-specific filtering
     }
 
     /// Check coverage using cargo-llvm-cov
@@ -579,10 +612,43 @@ impl QualityGateExecutor {
 
         let duration_ms = (Utc::now() - start_time).num_milliseconds() as u64;
 
-        // Parse mutation testing output
-        // This is a simplified implementation - actual parsing would depend on cargo-mutants output format
+        // TODO: Implement comprehensive mutation testing output parsing
+        //       Currently uses basic scoring; should parse actual cargo-mutants output format for accurate mutation score calculation.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Mutation testing output is parsed correctly
+        // - Mutation score is calculated accurately
+        // - Parsing handles various output formats
+        // - Error handling works for parsing failures
+        //
+        // DEPENDENCIES:
+        // - cargo-mutants output format specification (Required)
+        // - Output parsing utilities (Required)
+        // - Score calculation algorithms (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (quality gate feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Mutation testing expertise
         let passed = output.status.success();
-        let score = if passed { 1.0 } else { 0.5 }; // Simplified scoring
+        let score = if passed { 1.0 } else { 0.5 }; // Temporary: basic scoring until actual parsing
 
         let mut issues = Vec::new();
         if score < min_score {

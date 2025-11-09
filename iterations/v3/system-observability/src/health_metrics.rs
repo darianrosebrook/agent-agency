@@ -123,7 +123,7 @@ impl MetricsCollector {
         // - [ ] Handle API changes gracefully
         // - [ ] Add unit tests with mock disk data
         // - [ ] Add integration tests with real disk monitoring
-        let total_io = 0u64; // sysinfo disk API has changed, simplified for now
+        let total_io = 0u64;
 
         // In full implementation, would aggregate across disks:
         // for disk in system.disks() {

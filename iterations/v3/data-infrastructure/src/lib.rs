@@ -103,11 +103,41 @@ impl WorkerPoolHealth for SimpleWorkerPool {
         // 3. Check worker capacity and load
         // 4. Return error if critical workers are unavailable
         //
-        // For now, SimpleWorkerPool is a placeholder that always returns healthy.
-        // Real implementation requires:
-        // - Worker registry service (agent-workers crate)
-        // - Worker health check endpoints
-        // - Worker pool metrics and monitoring
+        // TODO: Implement comprehensive worker pool health checking
+        //       Currently SimpleWorkerPool is a placeholder that always returns healthy; should implement comprehensive health checking that checks worker registry for available workers, verifies health endpoints, checks capacity and load, and returns errors if critical workers are unavailable.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Worker registry service is integrated
+        // - Worker health endpoints are verified
+        // - Worker capacity and load are checked
+        // - Errors are returned if critical workers unavailable
+        //
+        // DEPENDENCIES:
+        // - Worker registry service (agent-workers crate) (Required)
+        // - Worker health check endpoints (Required)
+        // - Worker pool metrics and monitoring (Required)
+        //
+        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (worker pool functionality)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Worker pool and health checking expertise
         Ok(())
     }
 }

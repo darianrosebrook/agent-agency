@@ -175,15 +175,41 @@ where
 
                         warn!("Processing error: {}", e);
 
-                        // TODO: Implement proper error handling and reporting
-                        // - [ ] Send error indicators to monitoring/alerting system
-                        // - [ ] Track error rates and patterns
-                        // - [ ] Implement error recovery strategies
-                        // - [ ] Add circuit breaker for repeated failures
-                        // - [ ] Add unit tests with various error scenarios
-                        // - [ ] Add integration tests with real error handling
-                        // Send error indicator if needed
-                        // For now, we just log and continue
+                        // TODO: Implement comprehensive error handling and reporting in streaming pipeline
+                        //       Currently just logs and continues; should implement comprehensive handling that sends error indicators to monitoring/alerting system, tracks error rates and patterns, and implements error recovery strategies.
+                        //
+                        // COMPLETION CHECKLIST:
+                        // [ ] Primary functionality implemented
+                        // [ ] API/data structures defined & stable
+                        // [ ] Error handling + validation aligned with error taxonomy
+                        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                        // [ ] Integration tests for external systems/contracts
+                        // [ ] Documentation: public API + system behavior
+                        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                        // [ ] Configurability and feature flags defined if relevant
+                        // [ ] Failure-mode cards documented (degradation paths)
+                        //
+                        // ACCEPTANCE CRITERIA:
+                        // - Error indicators are sent to monitoring/alerting system
+                        // - Error rates and patterns are tracked
+                        // - Error recovery strategies are implemented
+                        // - Circuit breaker prevents repeated failures
+                        //
+                        // DEPENDENCIES:
+                        // - Monitoring/alerting system integration (Required)
+                        // - Error tracking utilities (Required)
+                        // - Error recovery mechanisms (Required)
+                        //
+                        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+                        // PRIORITY: Medium
+                        // BLOCKING: No
+                        //
+                        // GOVERNANCE:
+                        // - CAWS Tier: 2 (error handling functionality)
+                        // - Change Budget: ~200 LOC
+                        // - Reviewer Requirements: Error handling and monitoring expertise
                     }
                 }
 

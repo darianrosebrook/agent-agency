@@ -11,7 +11,7 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use agent_agency_contracts::{
-    JudgeVerdict, VerdictLabel, Violation, JudgeType,
+    JudgeVerdict, VerdictLabel, JudgeType,
     WorkingSpec, judge_io::Severity,
 };
 use agent_orchestration::audit_trail::{AuditTrailManager, AuditConfig};
@@ -283,7 +283,8 @@ impl VerdictWriter {
             0.0
         };
 
-        // Calculate consensus strength (simplified - could be more sophisticated)
+        // TODO: Implement sophisticated consensus strength calculation
+        //       Currently uses basic calculation; should implement sophisticated calculation considering judge agreement, confidence levels, and voting patterns.
         let consensus_label = judge_verdicts.first().map(|v| &v.label);
         let consensus_strength = if let Some(label) = consensus_label {
             let agreeing_judges = judge_verdicts.iter()
@@ -326,20 +327,81 @@ impl VerdictWriter {
     /// Send notifications about verdict to stakeholders
     async fn notify_verdict_stakeholders(&self, _record: &VerdictRecord) -> CouncilResult<()> {
         // TODO: Implement notification system for verdict changes
-        // This could integrate with external notification services,
-        // send emails, trigger webhooks, etc.
-
-        // For now, this is a placeholder - notifications not implemented yet
+        //       Currently a placeholder; should implement comprehensive notification system that integrates with external notification services, sends emails, triggers webhooks, and notifies all stakeholders of verdict changes.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Stakeholders are notified of verdict changes
+        // - Integration with external notification services (email, webhooks)
+        // - Notification delivery is reliable and tracked
+        // - Notification preferences are configurable
+        //
+        // DEPENDENCIES:
+        // - External notification service integration (Required)
+        // - Email service integration (Optional)
+        // - Webhook infrastructure (Optional)
+        // - Stakeholder management system (Required)
+        //
+        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (notification system enhancement)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Notification systems and integration expertise
         Ok(())
     }
 
     /// Get verdict history for a working spec
     pub async fn get_verdict_history(&self, working_spec_id: &str) -> CouncilResult<Vec<VerdictRecord>> {
         // TODO: Implement verdict history retrieval from audit trail
-        // This would query the audit trail for all council evaluations
-        // of a specific working spec
-
-        // For now, return empty history
+        //       Currently returns empty history; should implement comprehensive verdict history retrieval that queries the audit trail for all council evaluations of a specific working spec.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Verdict history is retrieved from audit trail
+        // - All council evaluations for a working spec are included
+        // - History is ordered chronologically
+        // - Query performance is acceptable for large histories
+        //
+        // DEPENDENCIES:
+        // - Audit trail query system (Required)
+        // - Verdict record parsing utilities (Required)
+        // - Working spec ID validation (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (audit trail querying functionality)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Audit trail and query optimization expertise
         Ok(vec![])
     }
 

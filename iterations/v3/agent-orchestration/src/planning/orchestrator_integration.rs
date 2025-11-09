@@ -23,7 +23,6 @@ use crate::planning::{
     evidence::EvidenceCollector,
     scope_guard::ScopeGuard,
     council_monitor::CouncilMonitor,
-    todo_integration::TodoIntegration,
     council_review::CouncilPlanReview,
 };
 
@@ -386,7 +385,7 @@ impl OrchestratorPlanningIntegration {
                 plan_id: plan.contract_plan.id,
                 state: plan.contract_plan.state.clone(),
                 progress,
-                quality_verified: plan.contract_plan.quality_gates.coverage_requirements.values().all(|&req| req >= 80.0), // Simplified check
+                quality_verified: plan.contract_plan.quality_gates.coverage_requirements.values().all(|&req| req >= 80.0), // TODO: Implement comprehensive quality verification
                 evidence_count: plan.contract_plan.evidence_requirements.len(),
                 last_updated: chrono::Utc::now(),
             };
@@ -489,7 +488,7 @@ impl crate::planning::plan_executor::AuditTrail for AuditTrailAdapter {
                             // - [ ] Handle missing vote data
                             // - [ ] Add unit tests with mock consensus data
                             // - [ ] Add integration tests with real council consensus
-                            std::collections::HashMap::new(), // vote_distribution - empty for now
+                            std::collections::HashMap::new(),
                             1.0, // consensus_strength - full consensus
                             std::time::Duration::from_secs(0),
                         )
@@ -644,10 +643,50 @@ impl crate::planning::plan_executor::WorkerPool for WorkerPoolAdapter {
             // Use capabilities directly from mock worker handle
             let capabilities = worker_handle.capabilities.clone();
 
-            // Calculate worker load (placeholder for now - will be improved in TICKET-003)
+            // TODO: Calculate actual worker load from real metrics:
+            // 1. Load calculation: Calculate worker load from metrics
+            //    - Query worker metrics for current load
+            //    - Aggregate load across active tasks
+            //    - Consider CPU, memory, and task queue depth
+            // 2. Load normalization: Normalize load metrics
+            //    - Scale load to consistent range (0.0-1.0)
+            //    - Handle load spikes and averages
+            //    - Support load prediction and forecasting
+            // 3. Load integration: Integrate with worker monitoring
+            //    - Use real-time worker metrics
+            //    - Support load-based worker selection
+            //    - Handle missing metrics gracefully
+            // ACCEPTANCE CRITERIA:
+            // - Worker load is calculated from real metrics
+            // - Load values are normalized and comparable
+            // - Load calculation integrates with monitoring system
+            // DEPENDENCIES:
+            // - Worker metrics API (Required)
+            // - Load calculation algorithms (Required)
+            // PRIORITY: Medium
             let load = self.calculate_mock_worker_load(&worker_handle).await;
 
-            // Get worker health status (placeholder for now - will be improved in TICKET-003)
+            // TODO: Get actual worker health status from monitoring:
+            // 1. Health monitoring: Query worker health from monitoring system
+            //    - Retrieve health status from worker health API
+            //    - Check worker availability and responsiveness
+            //    - Support health status caching for performance
+            // 2. Health classification: Classify worker health status
+            //    - Map metrics to health states (Healthy/Degraded/Unhealthy)
+            //    - Consider multiple health indicators
+            //    - Handle health status transitions
+            // 3. Health integration: Integrate with health monitoring
+            //    - Use real-time health data
+            //    - Support health-based worker filtering
+            //    - Handle health monitoring failures
+            // ACCEPTANCE CRITERIA:
+            // - Worker health is retrieved from monitoring system
+            // - Health status accurately reflects worker state
+            // - Health monitoring integrates with worker selection
+            // DEPENDENCIES:
+            // - Worker health monitoring API (Required)
+            // - Health status classification system (Required)
+            // PRIORITY: Medium
             let health = self.get_mock_worker_health(&worker_handle).await;
 
             let worker_info = crate::planning::plan_executor::WorkerInfo {
@@ -687,7 +726,6 @@ impl crate::planning::plan_executor::WorkerPool for WorkerPoolAdapter {
         // - [ ] Handle missing performance data gracefully
         // - [ ] Add unit tests with mock worker data
         // - [ ] Add integration tests with real worker performance
-        // Mock health and performance for now
         let health = crate::planning::plan_executor::WorkerHealth::Healthy;
 
         Ok(crate::planning::plan_executor::WorkerStatus {

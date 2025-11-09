@@ -194,7 +194,7 @@ pub trait ClaimExtractionEmbeddingProvider: Send + Sync {
 // imported via types.rs module to avoid duplicate definitions.
 // Domain-specific traits like ClaimExtractionEmbeddingProvider can coexist.
 
-/// External knowledge entity (simplified for disambiguation)
+/// External knowledge entity
 
 /// Supported ingestion channels for on-demand knowledge acquisition
 

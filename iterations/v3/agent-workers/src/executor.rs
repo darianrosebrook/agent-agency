@@ -694,8 +694,41 @@ impl TaskExecutor {
                 // - [ ] Handle missing WorkingSpec gracefully
                 // - [ ] Add unit tests with various WorkingSpec structures
                 // - [ ] Add integration tests with real WorkingSpec extraction
-                // Note: acceptance_criteria and invariants would come from WorkingSpec if available
-                // For now, we extract from waivers and rules only
+                // TODO: Implement WorkingSpec extraction for acceptance criteria and invariants
+                //       Currently extracts from waivers and rules only; should implement comprehensive extraction of acceptance_criteria and invariants from WorkingSpec when available for complete compliance requirements.
+                //
+                // COMPLETION CHECKLIST:
+                // [ ] Primary functionality implemented
+                // [ ] API/data structures defined & stable
+                // [ ] Error handling + validation aligned with error taxonomy
+                // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                // [ ] Integration tests for external systems/contracts
+                // [ ] Documentation: public API + system behavior
+                // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                // [ ] Configurability and feature flags defined if relevant
+                // [ ] Failure-mode cards documented (degradation paths)
+                //
+                // ACCEPTANCE CRITERIA:
+                // - Acceptance criteria are extracted from WorkingSpec when available
+                // - Invariants are extracted from WorkingSpec when available
+                // - Extraction handles missing or malformed WorkingSpec gracefully
+                // - Extracted data integrates with existing waiver and rule extraction
+                //
+                // DEPENDENCIES:
+                // - WorkingSpec parsing utilities (Required)
+                // - Acceptance criteria extraction logic (Required)
+                // - Invariant extraction logic (Required)
+                //
+                // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+                // PRIORITY: Medium
+                // BLOCKING: No
+                //
+                // GOVERNANCE:
+                // - CAWS Tier: 2 (compliance requirements enhancement)
+                // - Change Budget: ~150 LOC
+                // - Reviewer Requirements: WorkingSpec and compliance requirements expertise
                 None, // acceptance_criteria: could be extracted from WorkingSpec if available
                 None, // invariants: could be extracted from WorkingSpec if available
             ),
@@ -1525,10 +1558,41 @@ impl TaskExecutor {
             return Ok(endpoint);
         }
         
-        // Try to query database for worker endpoint
-        // PLACEHOLDER: Database query for worker endpoints
         // TODO: Implement database query for worker endpoints
-        // For now, skip database query and use default pattern
+        //       Currently skips database query and uses default pattern; should implement comprehensive database query for worker endpoints with proper error handling and endpoint validation.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Worker endpoints are queried from database
+        // - Database query handles missing endpoints gracefully
+        // - Endpoint validation ensures reachability and correctness
+        // - Fallback to default pattern when database query fails
+        //
+        // DEPENDENCIES:
+        // - Database connection and query system (Required)
+        // - Worker endpoint storage schema (Required)
+        // - Endpoint validation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (worker endpoint management)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Database integration and endpoint management expertise
         
         // Default pattern: http://worker-{id}.local:8080
         let worker_endpoint = format!("http://worker-{}.local:8080", worker_id);

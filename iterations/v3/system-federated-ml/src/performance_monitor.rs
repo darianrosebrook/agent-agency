@@ -265,14 +265,77 @@ impl PerformanceMonitor {
         // - [ ] Collect CPU usage from system
         // - [ ] Collect memory usage from system
         // - [ ] Collect network throughput metrics
-        // - [ ] Collect latency metrics from application
-        // - [ ] Collect error rates from logs or metrics
-        // - [ ] Add unit tests with mock system metrics
-        // - [ ] Add integration tests with real system monitoring
-        // In a real implementation, this would collect actual system metrics
-        // For now, we'll simulate realistic values
-
-        let timestamp = chrono::Utc::now();
+        // TODO: Implement actual system metrics collection
+        //       Currently simulates metrics; should collect actual system metrics from monitoring infrastructure.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Integrate with system monitoring infrastructure
+        // [ ] Collect CPU usage from system APIs
+        // [ ] Collect memory usage from system APIs
+        // [ ] Collect latency metrics from application
+        // [ ] Collect error rates from logs or metrics
+        // [ ] Aggregate metrics over time windows
+        // [ ] Add unit tests with mock system metrics
+        // [ ] Add integration tests with real system monitoring
+        // [ ] Performance: Collection should complete in <10ms
+        // [ ] Documentation: Document metrics collection methodology
+        //
+        // ACCEPTANCE CRITERIA:
+        // - System metrics are collected from actual sources
+        // - CPU and memory usage are accurate
+        // - Latency metrics reflect actual application performance
+        // - Error rates are calculated from real data
+        // - Metrics collection is performant
+        //
+        // DEPENDENCIES:
+        // - System monitoring APIs (Required)
+        // - Metrics collection infrastructure (Required)
+        // - Log aggregation system (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (monitoring feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: System monitoring expertise
+        // TODO: Query actual performance metrics from system monitoring
+        //       Currently simulates values; should query actual performance metrics from system monitoring libraries for accurate measurements.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Performance metrics are queried from system monitoring
+        // - Metrics are accurate and timely
+        // - Query handles monitoring failures gracefully
+        // - Performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - System monitoring libraries (Required)
+        // - Monitoring API integration (Required)
+        // - Metric collection utilities (Required)
+        //
+        // ESTIMATED EFFORT: 5-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (monitoring feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: System monitoring expertise
+        let timestamp = chrono::Utc::now(); // Temporary: simulation until system monitoring integration
 
         // Simulate some realistic performance metrics
         // In production, these would come from system monitoring libraries
@@ -328,13 +391,76 @@ impl PerformanceMonitor {
         // TODO: Collect actual current performance metrics
         // - [ ] Integrate system monitoring library for real-time metrics
         // - [ ] Measure current throughput, latency, CPU, memory
-        // - [ ] Calculate percentiles (P95, P99) from actual measurements
-        // - [ ] Track error rates from application logs
-        // - [ ] Add unit tests with mock metrics
-        // - [ ] Add integration tests with real system monitoring
-        // In a real implementation, this would collect actual system metrics
-        // For now, simulate measurement with some variance
-        use rand::prelude::*;
+        // TODO: Implement actual system metrics collection with statistical analysis
+        //       Currently simulates measurements; should collect actual system metrics and calculate percentiles from real measurements.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Collect actual system metrics from monitoring
+        // [ ] Calculate percentiles (P95, P99) from actual measurements
+        // [ ] Track error rates from application logs
+        // [ ] Implement statistical analysis of metrics
+        // [ ] Handle missing or incomplete metric data
+        // [ ] Add unit tests with mock metrics
+        // [ ] Add integration tests with real system monitoring
+        // [ ] Performance: Analysis should complete in <50ms
+        // [ ] Documentation: Document statistical analysis methodology
+        //
+        // ACCEPTANCE CRITERIA:
+        // - System metrics are collected from actual sources
+        // - Percentiles are calculated from real measurements
+        // - Error rates reflect actual application behavior
+        // - Statistical analysis is accurate
+        // - Missing data is handled appropriately
+        //
+        // DEPENDENCIES:
+        // - System monitoring APIs (Required)
+        // - Statistical analysis libraries (Required)
+        // - Log aggregation system (Required)
+        //
+        // ESTIMATED EFFORT: 7-9 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (monitoring feature)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Statistics and monitoring expertise
+        // TODO: Measure actual current performance metrics
+        //       Currently simulates measurements; should measure actual current performance metrics from system monitoring for accurate assessment.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Current metrics are measured accurately
+        // - Measurements reflect actual system state
+        // - Variance is handled correctly
+        // - Performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - System monitoring APIs (Required)
+        // - Performance measurement utilities (Required)
+        // - Statistical analysis tools (Required)
+        //
+        // ESTIMATED EFFORT: 5-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (monitoring feature)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Statistics and monitoring expertise
+        use rand::prelude::*; // Temporary: simulation until actual measurement
 
         let mut rng = rand::thread_rng();
         let base_metrics = self.measure_baseline().await?;

@@ -269,8 +269,41 @@ pub struct PolicyEvaluationResult {
 
 /// Outcome model for doubly robust estimation
 pub struct OutcomeModel {
-    // Simplified outcome model
-    // In practice, this would be a trained ML model
+    // TODO: Integrate trained ML model for outcome prediction
+    //       Currently uses placeholder; should integrate trained ML model for accurate outcome prediction in doubly robust estimation.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Trained ML model is integrated correctly
+    // - Predictions are accurate
+    // - Model inference works reliably
+    // - Performance is acceptable
+    //
+    // DEPENDENCIES:
+    // - Trained ML model (Required)
+    // - Model inference infrastructure (Required)
+    // - Feature extraction utilities (Required)
+    //
+    // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (ML model integration feature)
+    // - Change Budget: ~150 LOC
+    // - Reviewer Requirements: ML model integration expertise
 }
 
 impl OutcomeModel {
@@ -279,7 +312,7 @@ impl OutcomeModel {
     }
 
     pub fn predict(&self, _features: &TaskFeatures, _params: &ParameterSet) -> f64 {
-        // Simplified prediction
+        // Temporary: placeholder prediction until ML model integration
         0.8 // Would use actual model
     }
 }

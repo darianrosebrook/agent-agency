@@ -14,7 +14,7 @@ use schemars::JsonSchema;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use anyhow::Result;
-use tracing::{info, warn};
+use tracing::info;
 
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
 use agent_agency_contracts::WorkingSpec;
@@ -503,12 +503,10 @@ impl RubricEngine {
     ) -> Result<f64> {
         let rubric = self.get_rubric(surface).await;
         
-        let weighted_score = (
-            component_scores.evidence_completeness * rubric.weights.evidence_completeness +
+        let weighted_score = component_scores.evidence_completeness * rubric.weights.evidence_completeness +
             component_scores.budget_adherence * rubric.weights.budget_adherence +
             component_scores.gate_integrity * rubric.weights.gate_integrity +
-            component_scores.provenance_clarity * rubric.weights.provenance_clarity
-        );
+            component_scores.provenance_clarity * rubric.weights.provenance_clarity;
         
         Ok(weighted_score)
     }

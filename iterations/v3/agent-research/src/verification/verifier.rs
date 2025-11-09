@@ -569,17 +569,75 @@ impl MultiModalVerificationEngine {
 
     /// Lookup historical claims by search term
     async fn lookup_historical_claims_by_term(&self, term: &str) -> Result<Vec<HistoricalClaim>> {
-        // TODO: Implement real historical claims database query
-        // - [ ] Integrate with historical claims database or storage
-        // - [ ] Query claims by search term with proper indexing
-        // - [ ] Filter and rank results by relevance
-        // - [ ] Support pagination for large result sets
-        // - [ ] Handle query errors and missing data gracefully
-        // - [ ] Add unit tests with mock historical claims
-        // - [ ] Add integration tests with real claims database
-        // In a real implementation, this would query a historical claims database
-        // For now, simulate with some example historical claims
-        
+        // TODO: Implement historical claims database querying
+        //       Currently simulates claims; should query historical claims database for actual verification data.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement database query for historical claims
+        // [ ] Query claims matching search criteria
+        // [ ] Support pagination for large result sets
+        // [ ] Handle query errors and missing data gracefully
+        // [ ] Add unit tests with mock historical claims
+        // [ ] Add integration tests with real claims database
+        // [ ] Performance: Query should complete in <100ms
+        // [ ] Documentation: Document query interface
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Historical claims are queried from database
+        // - Claims match search criteria accurately
+        // - Pagination works for large result sets
+        // - Query errors are handled gracefully
+        // - Query performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Claims database connection (Required)
+        // - Database query interface (Required)
+        // - Pagination support (Required)
+        //
+        // ESTIMATED EFFORT: 5-7 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (verification feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Database expertise
+        //
+        // TODO: Implement comprehensive historical claims retrieval from database
+        //       Currently simulates with example historical claims; should implement comprehensive retrieval that queries claims database for historical claims matching search term with proper pagination and filtering.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Historical claims are queried from claims database
+        // - Search term matching is accurate
+        // - Pagination and filtering are supported
+        // - Query performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Claims database connection (Required)
+        // - Database query interface (Required)
+        // - Pagination support (Required)
+        //
+        // ESTIMATED EFFORT: 5-7 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (verification feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Database expertise
         let mut claims = Vec::new();
         
         // Simulate different types of historical claims based on term

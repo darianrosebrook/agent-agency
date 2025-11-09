@@ -96,9 +96,38 @@ impl SafeMistralTokenizer {
 
     /// Get vocabulary size
     pub fn vocab_size(&self) -> Result<i32> {
-        // TODO: Implement actual vocab_size through CoreML bridge
-        // For now, return known Mistral-7B vocab size
-        Ok(32000)
+        // TODO: Query actual vocabulary size through CoreML bridge
+        //       Currently returns hardcoded value; should query actual vocabulary size from CoreML model metadata.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Query CoreML model metadata for vocabulary size
+        // [ ] Extract vocabulary size from model schema
+        // [ ] Handle missing vocabulary size metadata
+        // [ ] Support various model architectures
+        // [ ] Add unit tests for vocabulary size query
+        // [ ] Add integration tests with real models
+        // [ ] Verify vocabulary size accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Vocabulary size is queried from CoreML metadata
+        // - Model schema is parsed correctly
+        // - Missing metadata is handled gracefully
+        // - Various model architectures are supported
+        //
+        // DEPENDENCIES:
+        // - CoreML bridge API (Required)
+        // - Model metadata structure (Required)
+        // - Vocabulary size extraction utilities (Required)
+        //
+        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (model metadata feature)
+        // - Change Budget: ~60 LOC
+        // - Reviewer Requirements: Core ML expertise
+        Ok(32000) // Temporary: hardcoded Mistral-7B vocab size until CoreML query is implemented
     }
 
     /// Get end-of-sequence token ID
@@ -399,16 +428,75 @@ async fn compile_if_needed(
 
 /// Discover context length from model metadata or use default
 fn discover_context_len_or_default(default: usize) -> usize {
-    // TODO: Query Core ML model metadata for actual context length
-    // For now, return default
-    default
+    // TODO: Query actual context length from CoreML model metadata
+    //       Currently returns default; should query actual context length from CoreML model metadata.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Query CoreML model metadata for context length
+    // [ ] Extract context length from model schema
+    // [ ] Handle missing context length metadata
+    // [ ] Support various model architectures
+    // [ ] Add unit tests for context length query
+    // [ ] Add integration tests with real models
+    // [ ] Verify context length accuracy
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Context length is queried from CoreML metadata
+    // - Model schema is parsed correctly
+    // - Missing metadata falls back to default
+    // - Various model architectures are supported
+    //
+    // DEPENDENCIES:
+    // - CoreML bridge API (Required)
+    // - Model metadata structure (Required)
+    // - Context length extraction utilities (Required)
+    //
+    // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (model metadata feature)
+    // - Change Budget: ~60 LOC
+    // - Reviewer Requirements: Core ML expertise
+    default // Temporary: return default until CoreML query is implemented
 }
 
 /// Extract model schema from loaded model
 async fn extract_model_schema(_handle: crate::ane::compat::coreml::ModelRef) -> Result<ModelSchema> {
-    // TODO: Implement schema extraction through CoreML bridge
-    // For now, return default Mistral schema
-    Ok(ModelSchema {
+    // TODO: Extract actual model schema through CoreML bridge
+    //       Currently returns default schema; should extract actual model schema from CoreML model handle.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Query CoreML model for input/output specifications
+    // [ ] Extract tensor names, shapes, and types
+    // [ ] Build ModelSchema from CoreML metadata
+    // [ ] Handle missing schema information
+    // [ ] Support various model architectures
+    // [ ] Add unit tests for schema extraction
+    // [ ] Add integration tests with real models
+    // [ ] Verify schema extraction accuracy
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Model schema is extracted from CoreML model
+    // - Tensor specifications are accurate
+    // - Missing information is handled gracefully
+    // - Various model architectures are supported
+    //
+    // DEPENDENCIES:
+    // - CoreML bridge API (Required)
+    // - Model schema structure (Required)
+    // - Schema extraction utilities (Required)
+    //
+    // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (model metadata feature)
+    // - Change Budget: ~80 LOC
+    // - Reviewer Requirements: Core ML expertise
+    Ok(ModelSchema { // Temporary: default Mistral schema until CoreML extraction is implemented
         inputs: vec![
             TensorSpec {
                 name: "input_ids".to_string(),
@@ -464,8 +552,39 @@ pub fn validate_mistral_compatibility(_model: &MistralModel) -> Result<()> {
     // Validate tokenizer compatibility
     // Verify compute unit support
 
-    // For now, assume compatible
-    Ok(())
+    // TODO: Implement actual tokenizer and compute unit validation
+    //       Currently assumes compatibility; should validate tokenizer compatibility and compute unit support.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Validate tokenizer compatibility with model
+    // [ ] Verify compute unit (ANE/CPU/GPU) support
+    // [ ] Check tokenizer vocabulary matches model
+    // [ ] Validate tokenizer configuration
+    // [ ] Handle validation errors appropriately
+    // [ ] Add unit tests for validation
+    // [ ] Add integration tests with various tokenizers
+    // [ ] Verify validation accuracy
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Tokenizer compatibility is validated correctly
+    // - Compute unit support is verified
+    // - Validation errors are handled gracefully
+    // - Various tokenizers are supported
+    //
+    // DEPENDENCIES:
+    // - Tokenizer validation utilities (Required)
+    // - Compute unit detection utilities (Required)
+    // - Model compatibility checking (Required)
+    //
+    // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (model validation feature)
+    // - Change Budget: ~80 LOC
+    // - Reviewer Requirements: Core ML and tokenizer expertise
+    Ok(()) // Temporary: assume compatible until validation is implemented
 }
 
 /// Constitutional reasoning templates
@@ -700,8 +819,41 @@ mod tests {
 
     #[test]
     fn test_memory_usage_estimation() {
-        // This would need a real model to test properly
-        // For now, just ensure function doesn't panic
+        // TODO: Implement comprehensive memory usage estimation test with real model
+        //       Currently ensures function doesn't panic only; should implement comprehensive test that uses real model to validate memory usage estimation accuracy.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Test uses real model for validation
+        // - Memory usage estimation is accurate
+        // - Test validates expected memory usage thresholds
+        // - Test covers various model sizes
+        //
+        // DEPENDENCIES:
+        // - Real model for testing (Required)
+        // - Memory measurement utilities (Required)
+        // - Test fixtures and model loading (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (test infrastructure enhancement)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Model testing and memory measurement expertise
         // let model = MistralModel { ... };
         // let usage = estimate_memory_usage(&model);
         // assert!(usage > 4000); // At least 4GB for 7B model

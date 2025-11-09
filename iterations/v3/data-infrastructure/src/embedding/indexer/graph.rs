@@ -234,7 +234,7 @@ impl GraphIndexer {
             .collect()
     }
 
-    /// Calculate node centrality (simplified)
+    /// Calculate node centrality
     pub fn calculate_centrality(&self, node_id: Uuid) -> f64 {
         let outgoing = self.get_neighbors(node_id).len() as f64;
         let incoming = self.get_references(node_id).len() as f64;
@@ -459,8 +459,41 @@ impl GraphQueryBuilder {
                     }
                 }
                 QueryFilter::EdgeType(_edge_type) => {
-                    // For now, we'll skip edge type filtering
-                    // This would require checking the edges connected to this node
+                    // TODO: Implement comprehensive edge type filtering in graph queries
+                    //       Currently skips edge type filtering; should implement comprehensive filtering that checks edges connected to node and filters by edge type for accurate graph query results.
+                    //
+                    // COMPLETION CHECKLIST:
+                    // [ ] Primary functionality implemented
+                    // [ ] API/data structures defined & stable
+                    // [ ] Error handling + validation aligned with error taxonomy
+                    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                    // [ ] Integration tests for external systems/contracts
+                    // [ ] Documentation: public API + system behavior
+                    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                    // [ ] Configurability and feature flags defined if relevant
+                    // [ ] Failure-mode cards documented (degradation paths)
+                    //
+                    // ACCEPTANCE CRITERIA:
+                    // - Edges connected to node are checked
+                    // - Edge type filtering is accurate
+                    // - Filtering handles missing or invalid edge types gracefully
+                    // - Query performance is acceptable
+                    //
+                    // DEPENDENCIES:
+                    // - Edge connection query API (Required)
+                    // - Edge type matching utilities (Required)
+                    // - Graph query optimization (Optional)
+                    //
+                    // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+                    // PRIORITY: Medium
+                    // BLOCKING: No
+                    //
+                    // GOVERNANCE:
+                    // - CAWS Tier: 2 (graph query functionality)
+                    // - Change Budget: ~150 LOC
+                    // - Reviewer Requirements: Graph query and edge filtering expertise
                     continue;
                 }
             }

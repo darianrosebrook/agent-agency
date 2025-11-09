@@ -90,8 +90,42 @@ impl MemoryIntegrationHooks {
         // - [ ] Add configurable result limit
         // - [ ] Add unit tests with various query types
         // - [ ] Add integration tests with real memory search
-        // For now, return all results (could implement relevance scoring)
-        Ok(memories)
+        // TODO: Implement relevance scoring and result limiting
+        //       Currently returns all results; should implement relevance scoring and configurable result limiting for better search quality.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Relevance scoring is implemented correctly
+        // - Results are sorted by relevance
+        // - Result limit is configurable
+        // - Scoring improves search quality
+        //
+        // DEPENDENCIES:
+        // - Relevance scoring algorithms (Required)
+        // - Result limiting utilities (Required)
+        // - Configuration infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (search feature enhancement)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Search ranking expertise
+        Ok(memories) // Temporary: all results until relevance scoring and limiting
     }
 
     /// Get memory system statistics
@@ -216,9 +250,42 @@ mod tests {
     async fn test_memory_hooks_creation() {
         let config = MemoryConfig::default();
         let hooks = MemoryIntegrationHooks::new(&config).await;
-        // Note: This test would require a test memory system
-        // For now, we just check that the config is valid
-        assert!(config.enable_contextual_retrieval);
+        // TODO: Implement comprehensive test with test memory system
+        //       Currently verifies config only; should implement comprehensive test with test memory system for full functionality verification.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Test uses test memory system
+        // - Memory hooks are tested comprehensively
+        // - Test assertions verify functionality
+        // - Test reliability is high
+        //
+        // DEPENDENCIES:
+        // - Test memory system infrastructure (Required)
+        // - Test utilities (Required)
+        // - Test fixtures (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (test infrastructure enhancement)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Memory system testing expertise
+        assert!(config.enable_contextual_retrieval); // Temporary: config verification until comprehensive test
     }
 
     #[test]

@@ -6,11 +6,11 @@
 //! @author @darianrosebrook
 
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use std::collections::{HashMap, HashSet, VecDeque};
+use serde::{Serialize, Deserialize};use std::collections::{HashMap, HashSet};
 use anyhow::{anyhow, Result};
 use petgraph::algo::toposort;
 use petgraph::graph::{DiGraph, NodeIndex};
-use agent_agency_contracts::planning_io::{DependencyGraph, DependencyNode, DependencyEdge};
+use agent_agency_contracts::planning_io::DependencyGraph;
 
 /// Dependency resolver for milestone execution ordering
 pub struct DependencyResolver {
@@ -236,11 +236,42 @@ impl AdvancedDependencyResolver {
 
     /// Calculate longest path (critical path)
     pub fn critical_path(&self) -> Result<Vec<String>> {
-        // Simplified critical path calculation
-        // Real implementation would use longest path algorithm
+        // TODO: Implement comprehensive longest path algorithm for critical path
+        //       Currently returns topological order as approximation; should implement comprehensive longest path algorithm using topological sort and dynamic programming for accurate critical path calculation.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Longest path algorithm is implemented correctly
+        // - Topological sort and dynamic programming are used
+        // - Critical path calculation is accurate
+        // - Algorithm handles cycles and complex dependencies
+        //
+        // DEPENDENCIES:
+        // - Topological sort implementation (Required)
+        // - Dynamic programming utilities (Required)
+        // - Graph algorithm libraries (Optional)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (dependency resolution functionality)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Graph algorithms and critical path analysis expertise
         let topo_order = self.topological_order()?;
-
-        // For now, return topological order as approximation
         Ok(topo_order)
     }
 

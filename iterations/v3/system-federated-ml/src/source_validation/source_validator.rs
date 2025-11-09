@@ -5,7 +5,7 @@
 
 use schemars::JsonSchema;
 use std::collections::HashMap;
-use anyhow::{Result, Context};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use tracing::debug;
@@ -76,7 +76,8 @@ impl SourceValidator {
         // Reliability assessment based on known ratings
         reliability_score = self.source_ratings.get(source_id).copied().unwrap_or(0.6);
 
-        // Bias assessment (simplified)
+        // TODO: Implement comprehensive bias assessment
+        //       Currently uses basic assessment; should implement comprehensive bias detection using NLP and source analysis.
         bias_score = if source_id.contains("news") {
             0.6 // News sources may have bias
         } else if source_id.contains("academic") {

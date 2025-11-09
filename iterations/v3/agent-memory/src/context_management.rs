@@ -212,15 +212,39 @@ impl MemoryContextManager {
         let _context_uuid = Uuid::parse_str(context_id)
             .map_err(|e| MemoryError::Other(format!("Invalid context ID: {}", e)))?;
 
-        // TODO: Implement real context retrieval
-        // - [ ] Query database for context by ID
-        // - [ ] Reconstruct folded context from stored data
-        // - [ ] Handle context decompression if stored compressed
-        // - [ ] Add caching for frequently accessed contexts
-        // - [ ] Add error handling for missing contexts
-        // - [ ] Add unit tests with mock context storage
-        // - [ ] Add integration tests with real context retrieval
-        // Return a default task context for now
+        // TODO: Implement real context retrieval from storage with decompression and caching
+        //       Currently returns default TaskContext; should query database and reconstruct actual context data.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Query database for context by ID
+        // [ ] Reconstruct folded context from stored data
+        // [ ] Handle context decompression if stored compressed
+        // [ ] Add caching for frequently accessed contexts
+        // [ ] Add error handling for missing contexts
+        // [ ] Handle context versioning and migration
+        // [ ] Add unit tests with mock context storage
+        // [ ] Add integration tests with real context retrieval
+        // [ ] Verify context retrieval performance and accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Contexts are retrieved from database correctly
+        // - Folded contexts are reconstructed properly
+        // - Compressed contexts are decompressed correctly
+        // - Frequently accessed contexts are cached efficiently
+        //
+        // DEPENDENCIES:
+        // - Context storage database API (Required)
+        // - Context decompression utilities (Required)
+        // - Context caching system (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (standard feature)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Memory management domain expertise
         let context = TaskContext::default();
         
         debug!("Context {} retrieved successfully", context_id);
@@ -255,15 +279,39 @@ impl MemoryContextManager {
         let _context_uuid = Uuid::parse_str(context_id)
             .map_err(|e| MemoryError::Other(format!("Invalid context ID: {}", e)))?;
 
-        // TODO: Calculate actual context age
-        // - [ ] Query database for context creation timestamp
-        // - [ ] Calculate age from creation time to now
-        // - [ ] Handle timezone conversions correctly
-        // - [ ] Add caching for frequently accessed ages
-        // - [ ] Add unit tests for age calculation
-        // - [ ] Add integration tests with real context ages
-        // Return a default age for now
-        Ok(Duration::hours(1))
+        // TODO: Calculate actual context age from creation timestamp
+        //       Currently returns default age; should query database and calculate age from creation time.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Query database for context creation timestamp
+        // [ ] Calculate age from creation time to now
+        // [ ] Handle timezone conversions correctly
+        // [ ] Add caching for frequently accessed ages
+        // [ ] Handle missing or invalid timestamps gracefully
+        // [ ] Add unit tests for age calculation
+        // [ ] Add integration tests with real context ages
+        // [ ] Verify age calculation accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Context age is calculated from actual creation timestamp
+        // - Timezone conversions are handled correctly
+        // - Age calculation is accurate and consistent
+        // - Frequently accessed ages are cached efficiently
+        //
+        // DEPENDENCIES:
+        // - Context creation timestamp in database (Required)
+        // - Timezone handling utilities (Required)
+        // - Age calculation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (standard feature)
+        // - Change Budget: ~60 LOC
+        // - Reviewer Requirements: Memory management domain expertise
+        Ok(Duration::hours(1)) // Temporary default until real age calculation is implemented
     }
 
     /// Get access frequency for a context
@@ -272,14 +320,38 @@ impl MemoryContextManager {
         let _context_uuid = Uuid::parse_str(context_id)
             .map_err(|e| MemoryError::Other(format!("Invalid context ID: {}", e)))?;
 
-        // TODO: Calculate actual access frequency
-        // - [ ] Query database for context access history
-        // - [ ] Calculate frequency based on access count and time window
-        // - [ ] Handle time-based decay for access frequency
-        // - [ ] Add caching for frequently accessed frequencies
-        // - [ ] Add unit tests for frequency calculation
-        // - [ ] Add integration tests with real access data
-        // Return a default frequency for now
+        // TODO: Calculate actual access frequency from context access history
+        //       Currently returns default frequency; should query database and calculate based on access patterns.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Query database for context access history
+        // [ ] Calculate frequency based on access count and time window
+        // [ ] Handle time-based decay for access frequency
+        // [ ] Add caching for frequently accessed frequencies
+        // [ ] Implement frequency calculation algorithm
+        // [ ] Add unit tests for frequency calculation
+        // [ ] Add integration tests with real access data
+        // [ ] Verify frequency calculation accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Access frequency is calculated from actual access history
+        // - Time-based decay is applied correctly
+        // - Frequency calculation is accurate and consistent
+        // - Frequently accessed frequencies are cached efficiently
+        //
+        // DEPENDENCIES:
+        // - Context access history database (Required)
+        // - Frequency calculation algorithm (Required)
+        // - Time-based decay utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (standard feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Memory management domain expertise
         Ok(0.5)
     }
 
@@ -289,7 +361,27 @@ impl MemoryContextManager {
         let _context_uuid = Uuid::parse_str(context_id)
             .map_err(|e| MemoryError::Other(format!("Invalid context ID: {}", e)))?;
 
-        // Return a default importance for now
+        // TODO: Calculate context importance dynamically:
+        // 1. Importance calculation: Calculate importance from context data
+        //    - Analyze context content and metadata
+        //    - Consider context usage frequency and recency
+        //    - Factor in context relationships and dependencies
+        // 2. Importance factors: Consider multiple importance factors
+        //    - Content relevance and quality
+        //    - Access patterns and frequency
+        //    - Context age and freshness
+        // 3. Dynamic adjustment: Support dynamic importance updates
+        //    - Update importance based on usage patterns
+        //    - Adjust importance over time
+        //    - Handle importance recalculation
+        // ACCEPTANCE CRITERIA:
+        // - Context importance is calculated from actual context data
+        // - Importance reflects usage patterns and relevance
+        // - Importance values are dynamically updated
+        // DEPENDENCIES:
+        // - Context analysis utilities (Required)
+        // - Importance calculation algorithms (Required)
+        // PRIORITY: Medium
         Ok(0.7)
     }
 

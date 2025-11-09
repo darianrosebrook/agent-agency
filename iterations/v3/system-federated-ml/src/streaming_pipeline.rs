@@ -659,9 +659,44 @@ impl StreamingPipelineExecutor {
                     });
 
                     // Update progress
+                    // TODO: Calculate actual progress from chunk completion
+                    //       Currently uses fixed progress value; should calculate actual progress based on completed chunks vs total chunks.
+                    //
+                    // COMPLETION CHECKLIST:
+                    // [ ] Primary functionality implemented
+                    // [ ] API/data structures defined & stable
+                    // [ ] Error handling + validation aligned with error taxonomy
+                    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                    // [ ] Integration tests for external systems/contracts
+                    // [ ] Documentation: public API + system behavior
+                    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                    // [ ] Configurability and feature flags defined if relevant
+                    // [ ] Failure-mode cards documented (degradation paths)
+                    //
+                    // ACCEPTANCE CRITERIA:
+                    // - Progress is calculated accurately from chunk completion
+                    // - Progress reflects actual processing state
+                    // - Progress updates are timely
+                    // - Calculation handles edge cases
+                    //
+                    // DEPENDENCIES:
+                    // - Chunk tracking infrastructure (Required)
+                    // - Progress calculation utilities (Required)
+                    // - Event system (Required)
+                    //
+                    // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+                    // PRIORITY: Low
+                    // BLOCKING: No
+                    //
+                    // GOVERNANCE:
+                    // - CAWS Tier: 3 (monitoring enhancement)
+                    // - Change Budget: ~60 LOC
+                    // - Reviewer Requirements: Progress tracking expertise
                     let _ = event_sender.send(StreamEvent::StreamProgress {
                         id: stream_id.clone(),
-                        progress: 0.5, // Simplified progress calculation
+                        progress: 0.5, // Temporary: fixed value until actual calculation
                         timestamp: chrono::Utc::now(),
                     });
                 }
@@ -677,16 +712,82 @@ impl StreamingPipelineExecutor {
 
     /// Combine results from primary and secondary sessions
     fn combine_session_results(primary: Vec<u8>, secondary: Vec<u8>) -> Vec<u8> {
-        // For now, just concatenate results
-        // In practice, this would intelligently merge overlapping computations
-        [primary, secondary].concat()
+        // TODO: Implement intelligent result merging
+        //       Currently concatenates results; should intelligently merge overlapping computations from primary and secondary sessions.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Overlapping computations are merged intelligently
+        // - Result quality is preserved
+        // - Merging handles conflicts correctly
+        // - Performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Result comparison utilities (Required)
+        // - Merge algorithms (Required)
+        // - Conflict resolution logic (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (data processing feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Data merging expertise
+        [primary, secondary].concat() // Temporary: concatenation until intelligent merging
     }
 
     /// Calculate chunk processing efficiency
     fn calculate_chunk_efficiency(_chunks: &[ExecutionChunk]) -> f64 {
-        // Simplified efficiency calculation
-        // In practice, this would analyze processing time vs. expected time
-        0.85 // 85% efficiency
+        // TODO: Implement comprehensive efficiency calculation
+        //       Currently returns fixed value; should analyze processing time vs expected time to calculate actual efficiency.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Efficiency is calculated from actual processing times
+        // - Expected time is estimated accurately
+        // - Calculation reflects actual performance
+        // - Edge cases are handled correctly
+        //
+        // DEPENDENCIES:
+        // - Processing time tracking (Required)
+        // - Expected time estimation (Required)
+        // - Efficiency calculation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (monitoring enhancement)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: Performance metrics expertise
+        0.85 // Temporary: fixed value until actual calculation
     }
 
     /// Tune pipeline with optimization results

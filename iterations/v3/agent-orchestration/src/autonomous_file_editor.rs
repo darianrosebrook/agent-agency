@@ -6,14 +6,11 @@
 //! @author @darianrosebrook
 
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use async_trait::async_trait;
-use std::path::Path;
+use serde::{Serialize, Deserialize};
 use std::sync::Arc;
-use system_common_interfaces::{
-    file_operations::{FileOperationsService, Workspace, Changeset, AllowList, Budgets,
-                     ChangesetId, Patch, Hunk, FileResult, FileOpsError},
-};
-use tracing::{info, warn, error, instrument};
+use system_common_interfaces::file_operations::{FileOperationsService, Workspace, Changeset, AllowList, Budgets,
+                     ChangesetId, Patch, Hunk};
+use tracing::{info, error, instrument};
 
 /// Autonomous file editor that integrates with agent orchestration
 
@@ -51,7 +48,7 @@ impl AutonomousFileEditor {
             .map_err(|e| AutonomousFileEditError::Validation(e.to_string()))?;
 
         // Create workspace
-        let mut workspace = self.file_ops.create_workspace(task_id, &self.repo_path).await
+        let workspace = self.file_ops.create_workspace(task_id, &self.repo_path).await
             .map_err(|e| AutonomousFileEditError::Workspace(e.to_string()))?;
 
         // Apply changeset

@@ -109,13 +109,76 @@ impl PatternRecognizer {
 
         // Group by error types and create error groups
         for error_code in error_codes {
+            // TODO: Implement proper file detection from error messages
+            //       Currently uses placeholder file path; should detect actual file paths from error messages and compiler output.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Parse error messages for file paths
+            // [ ] Extract file paths from compiler output
+            // [ ] Map error codes to affected files
+            // [ ] Handle multiple files per error
+            // [ ] Validate file paths exist
+            // [ ] Add unit tests for file detection
+            // [ ] Add integration tests with real compiler output
+            // [ ] Verify file detection accuracy
+            //
+            // ACCEPTANCE CRITERIA:
+            // - File paths are detected from error messages correctly
+            // - Multiple files per error are handled
+            // - File paths are validated
+            // - File detection works with various error formats
+            //
+            // DEPENDENCIES:
+            // - Error message parsing utilities (Required)
+            // - Compiler output parsing utilities (Required)
+            // - File path validation utilities (Required)
+            //
+            // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (error analysis feature)
+            // - Change Budget: ~80 LOC
+            // - Reviewer Requirements: Compiler output parsing expertise
             error_groups.push(ErrorGroup {
-                file_path: format!("unknown_file.rs"), // Simplified - would need proper file detection
-                error_count: 1, // Simplified count
+                file_path: format!("unknown_file.rs"), // Temporary: placeholder until file detection is implemented
+                // TODO: Count actual error occurrences per file
+                //       Currently uses placeholder count; should count actual occurrences of each error code per file.
+                //
+                // COMPLETION CHECKLIST:
+                // [ ] Count error occurrences per file
+                // [ ] Aggregate error counts across files
+                // [ ] Track error frequency statistics
+                // [ ] Handle duplicate error detection
+                // [ ] Add unit tests for error counting
+                // [ ] Add integration tests with real errors
+                // [ ] Verify error counting accuracy
+                //
+                // ACCEPTANCE CRITERIA:
+                // - Error counts are accurate per file
+                // - Error frequency is tracked correctly
+                // - Duplicate errors are handled appropriately
+                // - Error counting reflects actual occurrences
+                //
+                // DEPENDENCIES:
+                // - Error tracking infrastructure (Required)
+                // - Error counting utilities (Required)
+                // - Error aggregation utilities (Required)
+                //
+                // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+                // PRIORITY: Medium
+                // BLOCKING: No
+                //
+                // GOVERNANCE:
+                // - CAWS Tier: 2 (error analysis feature)
+                // - Change Budget: ~50 LOC
+                // - Reviewer Requirements: Error tracking expertise
+                error_count: 1, // Temporary: placeholder count until actual counting is implemented
                 severity: ErrorSeverity::High, // Default severity
                 error_code: error_code.clone(),
                 count: 1,
-                affected_files: vec![format!("unknown_file.rs")],
+                affected_files: vec![format!("unknown_file.rs")], // Temporary: placeholder until file detection
             });
         }
 
@@ -160,8 +223,39 @@ impl PatternRecognizer {
 
     /// Determine which files are likely affected by a specific error
     fn files_likely_affected_by_error(&self, error_code: &str, files: &[std::path::PathBuf]) -> Vec<std::path::PathBuf> {
-        // This is a simplified heuristic - in practice, you'd analyze the actual error
-        match error_code {
+        // TODO: Analyze actual error to determine affected files
+        //       Currently uses basic heuristic; should analyze actual error message and compiler output to determine affected files.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Parse error message for file references
+        // [ ] Analyze compiler output for file dependencies
+        // [ ] Use static analysis to find affected files
+        // [ ] Consider transitive dependencies
+        // [ ] Handle various error types appropriately
+        // [ ] Add unit tests for file detection
+        // [ ] Add integration tests with real errors
+        // [ ] Verify file detection accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Affected files are determined from actual error analysis
+        // - File dependencies are considered
+        // - Transitive dependencies are handled
+        // - Various error types are handled correctly
+        //
+        // DEPENDENCIES:
+        // - Error message parsing utilities (Required)
+        // - Static analysis utilities (Required)
+        // - Dependency analysis utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (error analysis feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Compiler and static analysis expertise
+        match error_code { // Temporary: basic heuristic until actual error analysis
             "E0063" => files.iter().filter(|f| f.to_string_lossy().contains("struct")).cloned().collect(),
             "E0277" => files.iter().filter(|f| f.to_string_lossy().contains("trait") || f.to_string_lossy().contains("impl")).cloned().collect(),
             "E0308" => files.iter().filter(|f| f.to_string_lossy().contains("fn") || f.to_string_lossy().contains("let")).cloned().collect(),
@@ -178,9 +272,41 @@ impl PatternRecognizer {
 
         // Look for common refactoring patterns in description
         if description.to_lowercase().contains("rename") {
+            // TODO: Extract actual file path from description or context
+            //       Currently uses placeholder; should extract actual file path from description or task context.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Parse description for file path references
+            // [ ] Extract file paths from task context
+            // [ ] Validate file paths exist
+            // [ ] Handle multiple file references
+            // [ ] Support relative and absolute paths
+            // [ ] Add unit tests for file path extraction
+            // [ ] Add integration tests with various descriptions
+            // [ ] Verify file path extraction accuracy
+            //
+            // ACCEPTANCE CRITERIA:
+            // - File paths are extracted from description correctly
+            // - File paths are validated
+            // - Multiple file references are handled
+            // - Relative and absolute paths are supported
+            //
+            // DEPENDENCIES:
+            // - Description parsing utilities (Required)
+            // - File path extraction utilities (Required)
+            // - Path validation utilities (Required)
+            //
+            // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (refactoring analysis feature)
+            // - Change Budget: ~60 LOC
+            // - Reviewer Requirements: Text parsing expertise
             operations.push(RefactoringOperation {
                 operation_type: "rename".to_string(),
-                file_path: "unknown_file.rs".to_string(), // Simplified
+                file_path: "unknown_file.rs".to_string(), // Temporary: placeholder until file path extraction
                 complexity: 0.7, // Moderate complexity
                 description: "Rename operation".to_string(),
             });
@@ -189,7 +315,7 @@ impl PatternRecognizer {
         if description.to_lowercase().contains("extract") {
             operations.push(RefactoringOperation {
                 operation_type: "extract".to_string(),
-                file_path: "unknown_file.rs".to_string(), // Simplified
+                file_path: "unknown_file.rs".to_string(), // Temporary: placeholder until file path extraction
                 complexity: 0.8, // Higher complexity
                 description: "Extract method/variable".to_string(),
             });
@@ -198,7 +324,7 @@ impl PatternRecognizer {
         if description.to_lowercase().contains("move") {
             operations.push(RefactoringOperation {
                 operation_type: "move".to_string(),
-                file_path: "unknown_file.rs".to_string(), // Simplified
+                file_path: "unknown_file.rs".to_string(), // Temporary: placeholder until file path extraction
                 complexity: 0.6, // Lower complexity
                 description: "Move code between modules".to_string(),
             });

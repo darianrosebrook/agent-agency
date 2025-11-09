@@ -189,7 +189,8 @@ impl MemoryArchivalManager {
 
     /// Extract searchable text from memory
     fn extract_search_text(&self, memory: &crate::memory_types::Memory) -> String {
-        // Extract text from memory content (simplified)
+        // TODO: Implement comprehensive text extraction with metadata and structured content parsing
+        //       Currently uses basic content cloning; should extract searchable text from structured memory content including metadata.
         memory.content.clone()
     }
 
@@ -202,7 +203,8 @@ impl MemoryArchivalManager {
         // - [ ] Add compression level configuration
         // - [ ] Add unit tests with various memory sizes
         // - [ ] Add integration tests with real compression
-        // Placeholder compression - in practice would use a compression library
+        // TODO: Implement proper compression using compression library
+        //       Currently uses placeholder compression; should use production-grade compression library (e.g., zstd, gzip) for efficient memory archival.
         Ok(serde_json::to_vec(_memory)?)
     }
 

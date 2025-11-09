@@ -212,16 +212,41 @@ impl ToolExecutor {
             .and_then(|v| v.as_str())
             .unwrap_or("syntax");
 
-        // TODO: Implement real MCP code/output validation
-        // - [ ] Integrate with MCP validation service
-        // - [ ] Validate code syntax and structure
-        // - [ ] Check output format and content quality
-        // - [ ] Perform static analysis and linting
-        // - [ ] Generate detailed validation issues with line numbers
-        // - [ ] Add unit tests with various code samples
-        // - [ ] Add integration tests with real MCP validation
-        // In a real MCP implementation, this would validate code/output
-        // For now, simulate validation
+        // TODO: Implement comprehensive MCP code/output validation
+        //       Currently simulates validation; should implement comprehensive validation that integrates with MCP validation service, validates code syntax and structure, performs static analysis and linting, and generates detailed validation issues with line numbers.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - MCP validation service is integrated
+        // - Code syntax and structure are validated
+        // - Output format and content quality are checked
+        // - Static analysis and linting are performed
+        //
+        // DEPENDENCIES:
+        // - MCP validation service integration (Required)
+        // - Code validation utilities (Required)
+        // - Static analysis tools (Required)
+        //
+        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (MCP validation functionality)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: MCP integration and code validation expertise
         let is_valid = !content.contains("ERROR") && !content.contains("TODO");
         let issues = if !is_valid {
             vec!["Found ERROR marker".to_string(), "Found TODO marker".to_string()]

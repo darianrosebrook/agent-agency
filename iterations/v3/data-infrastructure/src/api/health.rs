@@ -77,8 +77,42 @@ async fn check_orchestrator_health() -> Result<(), String> {
     // - [ ] Handle health check errors gracefully
     // - [ ] Add unit tests with mock orchestrator
     // - [ ] Add integration tests with real orchestrator service
-    // Check if CoreML models are available (this would need agent-orchestration integration)
-    // For now, return healthy since this requires cross-crate integration
+    //
+    // TODO: Implement comprehensive orchestrator health check with CoreML model verification
+    //       Currently returns healthy without checking; should implement comprehensive health check that integrates with agent-orchestration crate, checks CoreML model availability and health, and verifies orchestrator service is responding.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Agent-orchestration crate is integrated for health checks
+    // - CoreML model availability and health are checked
+    // - Orchestrator service response is verified
+    // - Health check errors are handled gracefully
+    //
+    // DEPENDENCIES:
+    // - agent-orchestration crate integration (Required)
+    // - CoreML model health checking (Required)
+    // - Orchestrator service client (Required)
+    //
+    // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (health check functionality)
+    // - Change Budget: ~150 LOC
+    // - Reviewer Requirements: Health checking and cross-crate integration expertise
     Ok(())
 }
 

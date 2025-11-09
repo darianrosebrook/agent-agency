@@ -399,9 +399,76 @@ impl WorkerRecovery {
 
     /// Find the latest commit for a given session
     fn find_latest_commit_for_session(session_id: &str) -> Result<Option<MerkleCommit>> {
-        // In a real implementation, this would query a persistent commit store/database
-        // For now, we implement a basic in-memory commit store for session lookup
-
+        // TODO: Implement persistent commit store querying
+        //       Currently uses in-memory store; should query persistent commit store/database for session commits.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement database query for commit store
+        // [ ] Query commits by session ID
+        // [ ] Order commits by timestamp (most recent first)
+        // [ ] Handle database connection errors
+        // [ ] Support pagination for large commit lists
+        // [ ] Add unit tests with mock commit store
+        // [ ] Add integration tests with real database
+        // [ ] Performance: Query should complete in <50ms
+        // [ ] Documentation: Document commit store schema
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Commits are queried from persistent store
+        // - Commits are ordered by timestamp correctly
+        // - Latest commit is returned for session
+        // - Database errors are handled gracefully
+        // - Query performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Commit store database connection (Required)
+        // - Database query interface (Required)
+        // - Commit schema definition (Required)
+        //
+        // ESTIMATED EFFORT: 5-7 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (persistence feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Database expertise
+        //
+        // TODO: Implement comprehensive persistent commit store for session lookup
+        //       Currently implements basic in-memory commit store; should implement comprehensive persistent commit store using database for production-ready session lookup and commit tracking.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Commits are stored in persistent database
+        // - Session lookup queries database correctly
+        // - Commit store handles concurrent access
+        // - Database errors are handled gracefully
+        //
+        // DEPENDENCIES:
+        // - Database connection and schema (Required)
+        // - Commit store database interface (Required)
+        // - Session lookup query utilities (Required)
+        //
+        // ESTIMATED EFFORT: 5-7 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (persistence feature)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Database expertise
         // Create a simple in-memory commit store (in production, this would be a database)
         use std::collections::HashMap;
         use std::sync::Mutex;
@@ -435,7 +502,40 @@ impl WorkerRecovery {
         let session_commits = store.entry(session_id.to_string()).or_insert_with(Vec::new);
 
         // Insert the commit in timestamp order (most recent first)
-        // In a real implementation, we'd extract timestamp from commit metadata
+        // TODO: Implement timestamp extraction from commit metadata
+        //       Currently inserts at position 0; should extract timestamp from commit metadata for proper ordering.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Extract timestamp from commit metadata
+        // [ ] Parse timestamp format correctly
+        // [ ] Insert commit in proper timestamp order
+        // [ ] Handle missing or invalid timestamps
+        // [ ] Support multiple timestamp formats
+        // [ ] Add unit tests with various timestamp formats
+        // [ ] Add integration tests with real commit metadata
+        // [ ] Performance: Extraction should complete in <1μs
+        // [ ] Documentation: Document timestamp format
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Timestamp is extracted from commit metadata
+        // - Commits are ordered by timestamp correctly
+        // - Missing timestamps are handled gracefully
+        // - Multiple timestamp formats are supported
+        // - Ordering is accurate and consistent
+        //
+        // DEPENDENCIES:
+        // - Commit metadata structure (Required)
+        // - Timestamp parsing utilities (Required)
+        // - Time ordering logic (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (high confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (data ordering feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Time handling expertise
         session_commits.insert(0, commit);
 
         // Keep only the most recent 10 commits per session to prevent unbounded growth

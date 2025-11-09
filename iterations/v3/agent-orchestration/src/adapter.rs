@@ -9,15 +9,11 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use agent_agency_contracts::types::prelude::{
-    TaskDescriptor, TaskPriority, BlastRadius
+    TaskDescriptor, TaskPriority
 };
-use agent_agency_contracts::working_spec::{
-    WorkingSpec, AcceptanceCriterion
-};
-use agent_agency_contracts::planning_io::ChangeBudget;
+use agent_agency_contracts::working_spec::WorkingSpec;
 use agent_agency_contracts::task_executor::ExecutionStatus;
 use agent_agency_contracts::ExecutionArtifacts;
-use agent_agency_contracts::types::planning::TaskScope;
 use crate::types::{
     OrchestratorConfig, DiffStats
 };
@@ -26,7 +22,7 @@ use uuid;
 use agent_agency_contracts::task_executor::TaskExecutionResult;
 use crate::judge_backup::backup_types::JudgeType;
 use crate::council::{Council, CouncilConfig};
-use crate::decision_making::{ConsensusStrategy, RiskThresholds};
+use crate::decision_making::ConsensusStrategy;
 use crate::multimodal_orchestration::MultimodalOrchestrator;
 use crate::audit_trail::{AuditTrailManager, AuditConfig};
 use crate::judge_backup::{
@@ -34,9 +30,7 @@ use crate::judge_backup::{
     EthicsJudge,
     quality_judge::QualityAssuranceJudge,
     security_judge::SecurityJudge,
-    verdicts::JudgeVerdict,
 };
-use crate::judge_backup::mock::VerdictStrategy;
 use crate::verdict_aggregation::{
     VerdictAggregator, AggregationConfig, DissentHandling, RiskAggregationStrategy,
 };
@@ -237,7 +231,42 @@ impl LegacyOrchestratorAdapter {
         // - [ ] Extract reasoning from council review verdict
         // - [ ] Add unit tests with mock council reviews
         // - [ ] Add integration tests with real council review flow
-        // For now, approve with medium confidence since start_session doesn't populate final_decision
+        //
+        // TODO: Implement comprehensive council consensus result extraction
+        //       Currently approves with medium confidence since start_session doesn't populate final_decision; should implement comprehensive extraction that extracts final_decision from council review result, maps to ConsensusResult with accurate approval status, and calculates confidence from actual council consensus strength.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - final_decision is extracted from council review result
+        // - Council decision is mapped to ConsensusResult accurately
+        // - Confidence is calculated from actual consensus strength
+        // - Reasoning is extracted from council review verdict
+        //
+        // DEPENDENCIES:
+        // - Council review result parsing (Required)
+        // - Consensus strength calculation (Required)
+        // - Verdict extraction utilities (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (council integration functionality)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Council integration and consensus analysis expertise
         let consensus_result = crate::council_types::ConsensusResult {
             approved: true,
             confidence: 0.7,
@@ -520,7 +549,7 @@ impl LegacyOrchestratorAdapter {
         }
 
         // Check against acceptance criteria if available
-        let mut reasoning = format!(
+        let reasoning = format!(
             "Artifact review for task {}: Tests={}/{} passed, Coverage={:.1}%, Linting={}",
             desc.task_id,
             artifacts.tests.unit_tests.passed,

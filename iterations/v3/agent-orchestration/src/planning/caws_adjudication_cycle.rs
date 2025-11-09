@@ -23,10 +23,7 @@ use crate::council::Council;
 use crate::planning::council_integration::CouncilIntegration;
 use crate::planning::caws_debate_scorer::CawsDebateScorer;
 use crate::planning::worktree_manager::WorktreeManager;
-use crate::planning::caws_tool_registry::CawsToolRegistry;
 use crate::planning::caws_quality_gates::CawsQualityGateExecutor;
-use std::process::Command;
-use std::path::PathBuf;
 
 /// CAWS Adjudication Cycle stages
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -264,9 +261,16 @@ impl CawsAdjudicationCycle {
             working_spec,
         ).await?;
 
-        if !review_result.approved {
+        // If plan needs refinement, that's okay - it will be handled in Phase 5 refinement loop
+        // Only reject if council explicitly rejected (not just requesting refinement)
+        if !review_result.approved && !review_result.needs_refinement {
             return Err(anyhow::anyhow!("Plan rejected during examination: {}", 
                 review_result.refinement_reason));
+        }
+        
+        // If refinement is needed, log it but continue - refinement happens in Phase 5
+        if review_result.needs_refinement {
+            tracing::info!("Plan requires refinement during examination: {}", review_result.refinement_reason);
         }
 
         // Extract and verify claims from artifacts if claim extractor is available
@@ -441,13 +445,30 @@ impl CawsAdjudicationCycle {
                         line_number: None,
                         surrounding_context: String::new(),
                         domain_hints: vec![],
-                        metadata: artifact.metadata.clone().unwrap_or_default(),
+                        metadata: artifact.metadata.as_ref().map(|m| {
+                            let mut map = std::collections::HashMap::new();
+                            if let Some(compression) = m.compression_applied {
+                                map.insert("compression_applied".to_string(), serde_json::json!(compression));
+                            }
+                            if let Some(location) = &m.storage_location {
+                                map.insert("storage_location".to_string(), serde_json::json!(location));
+                            }
+                            if let Some(policy) = &m.retention_policy {
+                                map.insert("retention_policy".to_string(), serde_json::json!(policy));
+                            }
+                            for tag in &m.tags {
+                                map.insert(format!("tag:{}", tag), serde_json::json!(true));
+                            }
+                            map
+                        }).unwrap_or_default(),
                         input_text: text_content.clone(),
                         language: None,
                     };
 
-                    // Run claim extraction
-                    match claim_extractor.run(&text_content, &processing_context).await {
+                    // Run claim extraction - need to use Arc::get_mut or create new instance
+                    // Since we can't mutate through Arc, create a new processor for this extraction
+                    let mut extractor = agent_research::ClaimExtractionProcessor::new();
+                    match extractor.run(&text_content, &processing_context).await {
                         Ok(extraction_result) => {
                             total_claims += extraction_result.atomic_claims.len();
                             verified_claims += extraction_result.atomic_claims.iter()
@@ -503,10 +524,41 @@ impl CawsAdjudicationCycle {
             }
         }
 
-        // Extract from metadata description if available
-        // Note: ArtifactMetadata doesn't have description/summary/rationale fields
-        // These would need to be extracted from provenance.audit_trail or other sources
-        // For now, we skip metadata extraction as it's not structured for text extraction
+        // TODO: Implement metadata description extraction for artifact analysis
+        //       Currently skips metadata extraction; should implement structured extraction from ArtifactMetadata, provenance.audit_trail, or other sources for comprehensive artifact text analysis.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Metadata description fields are extracted from ArtifactMetadata
+        // - Provenance audit trail is parsed for additional context
+        // - Text extraction handles structured and unstructured metadata
+        // - Extraction is robust to missing or malformed metadata
+        //
+        // DEPENDENCIES:
+        // - ArtifactMetadata schema enhancement (Optional)
+        // - Provenance audit trail parsing utilities (Required)
+        // - Text extraction and normalization utilities (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (artifact analysis enhancement)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Data extraction and parsing expertise
 
         // Extract from diff content (code changes)
         for diff in &artifact.code_changes.diffs {
@@ -723,8 +775,41 @@ impl CawsAdjudicationCycle {
                                             warn!("Merge conflicts detected in {} files: {:?}", 
                                                 merge_result.conflicts.len(), merge_result.conflicts);
                                             
-                                            // Present conflicts to council for resolution
-                                            // For now, log and continue - could be enhanced to request council resolution
+                                            // TODO: Implement council resolution request for merge conflicts
+                                            //       Currently logs conflicts and continues; should implement automatic council resolution request workflow for merge conflict handling.
+                                            //
+                                            // COMPLETION CHECKLIST:
+                                            // [ ] Primary functionality implemented
+                                            // [ ] API/data structures defined & stable
+                                            // [ ] Error handling + validation aligned with error taxonomy
+                                            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                                            // [ ] Integration tests for external systems/contracts
+                                            // [ ] Documentation: public API + system behavior
+                                            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                                            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                                            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                                            // [ ] Configurability and feature flags defined if relevant
+                                            // [ ] Failure-mode cards documented (degradation paths)
+                                            //
+                                            // ACCEPTANCE CRITERIA:
+                                            // - Merge conflicts trigger council resolution request
+                                            // - Conflict details are properly formatted for council review
+                                            // - Council can resolve conflicts through standard workflow
+                                            // - Resolution is applied back to worktree merge process
+                                            //
+                                            // DEPENDENCIES:
+                                            // - Council resolution API (Required)
+                                            // - Conflict formatting and presentation utilities (Required)
+                                            // - Worktree merge retry mechanism (Required)
+                                            //
+                                            // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+                                            // PRIORITY: Medium
+                                            // BLOCKING: No
+                                            //
+                                            // GOVERNANCE:
+                                            // - CAWS Tier: 2 (workflow automation enhancement)
+                                            // - Change Budget: ~200 LOC
+                                            // - Reviewer Requirements: Council integration and workflow expertise
                                             info!("Merge conflicts will require manual resolution");
                                         } else {
                                             info!("Successfully merged worktree {} ({} files changed)", 

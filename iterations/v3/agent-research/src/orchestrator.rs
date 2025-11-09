@@ -73,8 +73,41 @@ impl LearningOrchestrator {
 
     /// Select the best algorithm for a given problem
     pub fn select_algorithm(&self, problem: &ProblemCharacteristics) -> Option<LearningAlgorithmType> {
-        // Simple algorithm selection based on problem characteristics
-        // In a real implementation, this would use ML to select the best algorithm
+        // TODO: Implement ML-based algorithm selection
+        //       Currently uses simple heuristics; should use ML model to select the best algorithm based on problem characteristics and historical performance.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Train ML model for algorithm selection
+        // [ ] Use problem characteristics as features
+        // [ ] Consider historical algorithm performance
+        // [ ] Implement model inference for selection
+        // [ ] Handle model prediction errors
+        // [ ] Add fallback to heuristic selection
+        // [ ] Add unit tests with mock ML model
+        // [ ] Add integration tests with real ML selection
+        // [ ] Performance: Selection should complete in <50ms
+        // [ ] Documentation: Document ML selection methodology
+        //
+        // ACCEPTANCE CRITERIA:
+        // - ML model selects algorithms based on problem characteristics
+        // - Historical performance is considered in selection
+        // - Model predictions are accurate and reliable
+        // - Fallback to heuristics works when model unavailable
+        // - Selection performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - ML model for algorithm selection (Required)
+        // - Historical performance data (Required)
+        // - Model inference infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (low confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (ML orchestration feature)
+        // - Change Budget: ~300 LOC
+        // - Reviewer Requirements: ML and orchestration expertise
 
         if problem.is_regression {
             Some(LearningAlgorithmType::SupervisedLearning)
@@ -101,7 +134,36 @@ impl LearningOrchestrator {
         let algorithm = self.algorithms.get_mut(&algorithm_type)
             .ok_or_else(|| format!("Algorithm {:?} not registered", algorithm_type))?;
 
-        // Train the algorithm (simplified - in practice would batch)
+        // TODO: Implement batch training for learning algorithms
+        //       Currently trains on single data point; should batch multiple data points for efficient training.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Collect multiple data points before training
+        // [ ] Implement batch size configuration
+        // [ ] Handle batch overflow and partial batches
+        // [ ] Add unit tests with various batch sizes
+        // [ ] Add integration tests with real data streams
+        // [ ] Performance: Batch training should be more efficient than single-point training
+        // [ ] Documentation: Document batch training strategy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Trains on batches of data points instead of single points
+        // - Configurable batch size
+        // - Handles partial batches correctly
+        // - More efficient than single-point training
+        //
+        // DEPENDENCIES:
+        // - Batch collection mechanism (Required)
+        // - Batch size configuration (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (machine learning feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Machine learning expertise
         algorithm.train(&[data_point.clone()])?;
 
         // Make prediction
@@ -403,9 +465,73 @@ mod tests {
         };
 
         // Test algorithm selection (this should be deterministic based on problem characteristics)
-        // Note: In a real implementation, this would call the actual selection logic
-        // For now, we test that the orchestrator can be created and has expected structure
-
+        // TODO: Implement actual algorithm selection logic call
+        //       Currently tests structure only; should call actual selection logic to verify algorithm selection behavior.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Call actual select_algorithm method in test
+        // [ ] Verify algorithm selection based on problem characteristics
+        // [ ] Test various problem characteristic combinations
+        // [ ] Verify selection determinism
+        // [ ] Add edge case tests
+        // [ ] Performance: Test should complete in <100ms
+        // [ ] Documentation: Document test coverage
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Actual selection logic is called in tests
+        // - Algorithm selection is verified for various inputs
+        // - Selection determinism is verified
+        // - Edge cases are tested
+        // - Test coverage is comprehensive
+        //
+        // DEPENDENCIES:
+        // - Algorithm selection implementation (Required)
+        // - Problem characteristics test data (Required)
+        //
+        // ESTIMATED EFFORT: 2-3 hours (high confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (test improvement)
+        // - Change Budget: ~50 LOC
+        // - Reviewer Requirements: Testing expertise
+        //
+        // TODO: Implement comprehensive orchestrator algorithm selection test
+        //       Currently tests orchestrator creation and structure only; should implement comprehensive test that validates algorithm selection based on problem characteristics for complete algorithm selection validation.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Algorithm selection is tested with various problem characteristics
+        // - Selected algorithms match expected characteristics
+        // - Test coverage is comprehensive
+        // - Test validates selection logic correctly
+        //
+        // DEPENDENCIES:
+        // - Algorithm selection implementation (Required)
+        // - Problem characteristics test data (Required)
+        // - Test validation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 2-3 hours (high confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (test improvement)
+        // - Change Budget: ~50 LOC
+        // - Reviewer Requirements: Testing expertise
         assert!(!orchestrator.algorithms.is_empty());
         // These fields are always present (not Options)
         let _tracker = &orchestrator.performance_tracker;

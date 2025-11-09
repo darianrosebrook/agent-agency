@@ -7,8 +7,9 @@
 
 use agent_agency_contracts::{
     WorkingSpec, WorkingSpecConstraints, AcceptanceCriterion, TestPlan, RollbackPlan,
-    WorkingSpecContext, BudgetLimits, ScopeRestrictions, FileChange,
+    WorkingSpecContext,
 };
+use agent_agency_contracts::working_spec::BudgetLimits;
 use data_infrastructure::api::types::TaskSubmissionRequest;
 use chrono::Utc;
 use uuid::Uuid;
@@ -58,16 +59,18 @@ pub fn convert_task_request_to_working_spec(
     let test_plan = TestPlan {
         unit_tests: vec![],
         integration_tests: vec![],
-        e2e_tests: vec![],
-        performance_tests: vec![],
-        security_tests: vec![],
+        e2e_scenarios: vec![],
+        coverage_targets: None,
     };
     
     // Create default rollback plan
     let rollback_plan = RollbackPlan {
-        rollback_steps: vec!["Revert all file changes".to_string()],
-        rollback_verification: vec!["Verify original state restored".to_string()],
-        rollback_slo: "5m".to_string(),
+        strategy: agent_agency_contracts::working_spec::RollbackStrategy::GitRevert,
+        automated_steps: vec!["Revert all file changes".to_string()],
+        manual_steps: vec!["Verify original state restored".to_string()],
+        data_impact: agent_agency_contracts::working_spec::DataImpact::None,
+        downtime_required: Some(false),
+        rollback_window_minutes: Some(5),
     };
     
     // Create default context (can be enhanced with actual workspace detection)
@@ -97,8 +100,10 @@ pub fn convert_task_request_to_working_spec(
     let change_budget = agent_agency_contracts::planning_io::ChangeBudget {
         max_files: 25,
         max_loc: 1000,
-        max_days: 3,
-        max_complexity: 10,
+        max_migrations: 0,
+        allow_breaking_changes: false,
+        allow_new_dependencies: false,
+        enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
     };
     
     // Extract goals from description (split by sentences or newlines)

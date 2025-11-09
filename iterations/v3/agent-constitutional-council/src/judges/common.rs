@@ -4,12 +4,9 @@
 //! constitutional judges with consistent patterns and behaviors.
 
 use async_trait::async_trait;
-use std::sync::Arc;
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
 
 use agent_agency_contracts::{
-    JudgeEngine, JudgeVerdict, JudgePrompt, JudgeType, VerdictLabel,
+    JudgeVerdict, JudgePrompt, JudgeType, VerdictLabel,
     Violation, judge_io::Severity, RubricItem, WorkingSpecEvidence,
 };
 
@@ -113,9 +110,43 @@ pub trait Judge: Send + Sync {
         // STEP 3: Build LLM prompt
         let prompt = self.build_prompt(ctx);
 
-        // STEP 4: Execute engine (this would need to be passed in or available via context)
-        // For now, this is a placeholder - judges will need their engine reference
-        // This shows the pattern but concrete judges will implement this part
+        // STEP 4: Execute engine
+        //
+        // TODO: Implement comprehensive LLM engine integration for judges
+        //       Currently a placeholder; should implement comprehensive integration that passes LLM engine reference via context or constructor for concrete judges to use in evaluation.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - LLM engine reference is available to judges
+        // - Engine is passed via context or constructor
+        // - Concrete judges can use engine for evaluation
+        // - Engine integration is flexible and extensible
+        //
+        // DEPENDENCIES:
+        // - LLM engine interface (Required)
+        // - Context or constructor pattern (Required)
+        // - Judge evaluation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (judge LLM integration functionality)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: LLM integration and judge pattern expertise
         self.execute_llm_evaluation(ctx, prompt, violations).await
     }
 

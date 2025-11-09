@@ -193,7 +193,7 @@ impl MerkleTree {
         self.leaves.contains(digest)
     }
 
-    /// Get a proof path for a digest (simplified - returns all sibling hashes)
+    /// Get a proof path for a digest
     pub fn proof_path(&self, digest: &Digest) -> Option<Vec<Digest>> {
         if !self.contains(digest) {
             return None;

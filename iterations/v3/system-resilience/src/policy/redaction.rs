@@ -80,7 +80,28 @@ impl SecretRedactor {
     pub fn check_and_deny(&self, content: &[u8]) -> CheckResult {
         let content_str = match std::str::from_utf8(content) {
             Ok(s) => s,
-            Err(_) => return CheckResult::Allowed, // Skip binary content for now
+            // TODO: Implement binary content secret detection:
+            // 1. Binary analysis: Analyze binary content for secrets
+            //    - Detect secrets in binary formats (images, PDFs, etc.)
+            //    - Use binary pattern matching for secret detection
+            //    - Support OCR for image-based secrets
+            // 2. Format support: Support multiple binary formats
+            //    - Handle common binary formats (PDF, images, archives)
+            //    - Extract text from binary formats
+            //    - Support format-specific secret detection
+            // 3. Detection algorithms: Implement binary detection algorithms
+            //    - Use pattern matching for binary secrets
+            //    - Apply heuristics for embedded secrets
+            //    - Support format-aware secret scanning
+            // ACCEPTANCE CRITERIA:
+            // - Binary content is analyzed for secrets
+            // - Multiple binary formats are supported
+            // - Secret detection works on binary content
+            // DEPENDENCIES:
+            // - Binary format parsers (Required)
+            // - Binary secret detection algorithms (Required)
+            // PRIORITY: Medium
+            Err(_) => return CheckResult::Allowed,
         };
 
         for pattern in &self.patterns {

@@ -223,8 +223,42 @@ impl ModelLifecycleManager {
                 info!("Worker {}: triggering hot-swap due to performance degradation", worker_id);
                 
                 // Get worker model information
-                // Note: This requires access to worker database to get model_id
-                // For now, we'll use a placeholder approach
+                //
+                // TODO: Implement comprehensive worker model information retrieval
+                //       Currently uses placeholder approach; should implement comprehensive retrieval that accesses worker database to get actual model_id and queries for optimal new version for hot-swap operations.
+                //
+                // COMPLETION CHECKLIST:
+                // [ ] Primary functionality implemented
+                // [ ] API/data structures defined & stable
+                // [ ] Error handling + validation aligned with error taxonomy
+                // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                // [ ] Integration tests for external systems/contracts
+                // [ ] Documentation: public API + system behavior
+                // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                // [ ] Configurability and feature flags defined if relevant
+                // [ ] Failure-mode cards documented (degradation paths)
+                //
+                // ACCEPTANCE CRITERIA:
+                // - Worker database is accessed to get model_id
+                // - Model ID retrieval is accurate
+                // - Optimal new version is queried for hot-swap
+                // - Version selection considers performance and compatibility
+                //
+                // DEPENDENCIES:
+                // - Worker database access (Required)
+                // - Model version query system (Required)
+                // - Version selection logic (Required)
+                //
+                // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+                // PRIORITY: Medium
+                // BLOCKING: No
+                //
+                // GOVERNANCE:
+                // - CAWS Tier: 2 (model lifecycle management functionality)
+                // - Change Budget: ~200 LOC
+                // - Reviewer Requirements: Database access and model versioning expertise
                 let model_id = format!("worker-{}", worker_id);
                 let new_version = "latest"; // In real implementation, would query for better version
 

@@ -340,9 +340,28 @@ impl CommitChain {
         self.commits
             .iter()
             .filter(|commit| {
-                // In a full implementation, this would check if the commit
-                // modified the specific file by examining the tree
-                true // Simplified for now
+                // TODO: Check if commit modified specific file:
+                // 1. Tree examination: Examine commit tree for file changes
+                //    - Parse commit tree structure
+                //    - Check if path exists in commit tree
+                //    - Detect file modifications and changes
+                // 2. File tracking: Track file changes across commits
+                //    - Compare file content between commits
+                //    - Handle file renames and moves
+                //    - Support file deletion detection
+                // 3. History filtering: Filter commits by file changes
+                //    - Return only commits that modified the file
+                //    - Support filtering by change type
+                //    - Handle edge cases (new files, deleted files)
+                // ACCEPTANCE CRITERIA:
+                // - File history only includes commits that modified the file
+                // - File renames and moves are tracked correctly
+                // - History filtering is accurate and efficient
+                // DEPENDENCIES:
+                // - Commit tree parsing (Required)
+                // - File change detection (Required)
+                // PRIORITY: Medium
+                true
             })
             .collect()
     }

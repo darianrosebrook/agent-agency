@@ -482,15 +482,75 @@ impl DisasterRecoveryManager {
                 .ok_or("No backup found before target time")?
         };
 
-        // TODO: Implement proper dependency injection for WAL storage
-        // - [ ] Accept WAL storage and replay engine as constructor parameters
-        // - [ ] Remove direct environment variable dependency
-        // - [ ] Support configuration-based WAL storage setup
-        // - [ ] Add unit tests with mock WAL storage
-        // - [ ] Add integration tests with real WAL storage
-        // Create WAL storage and replay engine
-        // Note: In a real implementation, these would be injected or configured
-        // For now, we'll use the database client's connection string
+        // TODO: Implement dependency injection for WAL storage
+        //       Currently uses environment variable; should support dependency injection or configuration-based setup.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Implement dependency injection pattern
+        // [ ] Support configuration-based WAL storage setup
+        // [ ] Allow WAL storage to be injected at construction
+        // [ ] Handle missing configuration gracefully
+        // [ ] Add unit tests with mock WAL storage
+        // [ ] Add integration tests with real WAL storage
+        // [ ] Performance: No performance impact (construction-time only)
+        // [ ] Documentation: Document injection and configuration options
+        //
+        // ACCEPTANCE CRITERIA:
+        // - WAL storage can be injected via constructor
+        // - Configuration-based setup is supported
+        // - Missing configuration is handled gracefully
+        // - Injection pattern is testable
+        // - Configuration is validated
+        //
+        // DEPENDENCIES:
+        // - Dependency injection framework (Optional)
+        // - Configuration management (Required)
+        // - WAL storage interface (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (high confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (code quality improvement)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Dependency injection expertise
+        //
+        // TODO: Implement comprehensive dependency injection for database connection
+        //       Currently uses database client's connection string from environment; should implement comprehensive dependency injection that passes database connection through constructor or dependency injection framework for better testability and configuration management.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Database connection is injected via constructor or DI framework
+        // - Connection configuration is managed through dependency injection
+        // - Testability is improved with mockable dependencies
+        // - Configuration management is centralized
+        //
+        // DEPENDENCIES:
+        // - Dependency injection framework (Optional)
+        // - Configuration management (Required)
+        // - WAL storage interface (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (high confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (code quality improvement)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Dependency injection expertise
         let database_url = std::env::var("DATABASE_URL")
             .map_err(|_| "DATABASE_URL environment variable not set")?;
 

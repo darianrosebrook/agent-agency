@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
@@ -88,10 +87,19 @@ impl ConsensusCoordinator for RealTimeConsensusCoordinator {
     
     async fn health_check(&self) -> Result<bool, String> {
         // Real-time consensus coordinator is always healthy if it can respond
-        // In a real implementation, this might check:
-        // - Connection to consensus backend
-        // - Response time thresholds
-        // - Participant availability
+        // TODO: Implement comprehensive health checking with the following requirements:
+        // 1. Backend connection: Check connection to consensus backend
+        //    - Verify connection to consensus service
+        //    - Test connection health and responsiveness
+        //    - Handle connection failures appropriately
+        // 2. Response time monitoring: Monitor response time thresholds
+        //    - Measure response times to consensus backend
+        //    - Compare against configured thresholds
+        //    - Report health degradation if thresholds exceeded
+        // 3. Participant availability: Check participant availability
+        //    - Verify participant nodes are reachable
+        //    - Check participant health status
+        //    - Report unhealthy participants
         Ok(true)
     }
 }

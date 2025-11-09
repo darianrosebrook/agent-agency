@@ -150,16 +150,41 @@ impl SearchOperations {
 
         self.qdrant_client.delete_knowledge_entry(entry_id).await?;
 
-        // TODO: Implement sophisticated cache invalidation
-        // - [ ] Track deleted entry IDs in cache
-        // - [ ] Remove deleted entries from cache immediately
-        // - [ ] Support cache invalidation by entry ID or pattern
-        // - [ ] Handle cache invalidation for related entries
-        // - [ ] Add unit tests with various invalidation scenarios
-        // - [ ] Add integration tests with real cache invalidation
-        // Note: Cache invalidation for deleted entries would need more sophisticated tracking
-        // For now, we rely on cache expiration
-
+        // TODO: Implement comprehensive sophisticated cache invalidation for deleted entries
+        //       Currently relies on cache expiration; should implement comprehensive invalidation that tracks deleted entry IDs in cache, removes deleted entries immediately, and supports invalidation by entry ID or pattern.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Deleted entry IDs are tracked in cache
+        // - Deleted entries are removed from cache immediately
+        // - Cache invalidation supports entry ID or pattern matching
+        // - Related entries are invalidated when appropriate
+        //
+        // DEPENDENCIES:
+        // - Cache tracking system (Required)
+        // - Pattern matching utilities (Required)
+        // - Cache invalidation API (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (cache invalidation functionality)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Cache management and invalidation expertise
         Ok(())
     }
 

@@ -136,10 +136,45 @@ impl OptimizedPlanningAgent {
         let latency = start.elapsed().as_millis() as u64;
         
         // 7. Record outcome for learning
+        // TODO: Calculate actual token count from LLM response
+        //       Currently uses character length; should calculate actual token count from LLM response metadata.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Token count is calculated accurately
+        // - Tokenizer is used correctly
+        // - Count matches LLM response metadata
+        // - Error handling works for tokenization failures
+        //
+        // DEPENDENCIES:
+        // - Tokenizer library (Required)
+        // - LLM response metadata (Required)
+        // - Token counting utilities (Required)
+        //
+        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (metrics enhancement)
+        // - Change Budget: ~60 LOC
+        // - Reviewer Requirements: Tokenization expertise
         let outcome = TaskOutcome {
             quality_score: self.estimate_quality(&response_content),
             latency_ms: latency,
-            tokens_used: response_content.len(), // Simplified
+            tokens_used: response_content.len(), // Temporary: character length until token counting
             success: true,
             caws_compliance: self.validate_caws_compliance(&response_content)?,
         };
@@ -275,18 +310,84 @@ impl OptimizedPlanningAgent {
     
     /// Estimate quality of generated content
     fn estimate_quality(&self, content: &str) -> f64 {
-        // Simplified quality estimation
-        // In practice, this would use a more sophisticated quality model
-        let length_score = (content.len() as f64 / 1000.0).min(1.0);
-        let structure_score = if content.contains("##") { 0.9 } else { 0.7 };
+        // TODO: Integrate sophisticated quality assessment model
+        //       Currently uses basic length and structure scoring; should integrate sophisticated quality model for accurate quality estimation.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Quality model is integrated correctly
+        // - Quality scores are accurate
+        // - Model inference is performant
+        // - Error handling works for model failures
+        //
+        // DEPENDENCIES:
+        // - Quality assessment model (Required)
+        // - Model inference infrastructure (Required)
+        // - Quality evaluation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (ML model integration feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: ML model integration expertise
+        let length_score = (content.len() as f64 / 1000.0).min(1.0); // Temporary: basic scoring until model integration
+        let structure_score = if content.contains("##") { 0.9 } else { 0.7 }; // Temporary: basic scoring until model integration
         (length_score + structure_score) / 2.0
     }
     
     /// Validate CAWS compliance
     fn validate_caws_compliance(&self, content: &str) -> Result<bool> {
-        // Simplified CAWS compliance check
-        // In practice, this would use the actual CAWS validator
-        Ok(!content.is_empty() && content.len() > 10)
+        // TODO: Integrate CAWS compliance validator
+        //       Currently uses basic checks; should integrate actual CAWS validator for comprehensive compliance checking.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - CAWS validator is integrated correctly
+        // - Compliance checks are comprehensive
+        // - All CAWS rules are validated
+        // - Error handling works for validator failures
+        //
+        // DEPENDENCIES:
+        // - CAWS compliance validator (Required)
+        // - Compliance checking infrastructure (Required)
+        // - Rule validation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (compliance validation feature)
+        // - Change Budget: ~80 LOC
+        // - Reviewer Requirements: CAWS compliance expertise
+        Ok(!content.is_empty() && content.len() > 10) // Temporary: basic check until validator integration
     }
     
     /// Get current optimization status

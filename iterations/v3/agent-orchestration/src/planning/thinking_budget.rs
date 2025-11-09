@@ -14,7 +14,7 @@ use schemars::JsonSchema;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use anyhow::Result;
-use tracing::{info, warn, debug};
+use tracing::{info, warn};
 
 use agent_agency_contracts::WorkingSpec;
 

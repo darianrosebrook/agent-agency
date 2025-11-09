@@ -8,7 +8,7 @@
 use std::sync::Arc;
 use std::collections::HashMap;
 use anyhow::Result;
-use tracing::{info, debug, warn};
+use tracing::info;
 use chrono::Utc;
 
 /// Optimization parameter space
@@ -197,8 +197,8 @@ impl AutoTuner {
         &self,
         measurements: &[PerformanceMeasurement],
     ) -> Result<HashMap<String, f64>> {
-        // Simplified Upper Confidence Bound (UCB) acquisition function
-        // In a full implementation, this would use a Gaussian Process model
+        // TODO: Implement proper Upper Confidence Bound (UCB) acquisition function with Gaussian Process
+        //       Currently uses basic UCB; should use Gaussian Process model for accurate acquisition function.
         
         // Calculate mean and variance for each parameter
         let mut parameter_stats: HashMap<String, (f64, f64)> = HashMap::new();
@@ -221,8 +221,8 @@ impl AutoTuner {
         }
 
         // Generate next sample using UCB
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
+        
+        let rng = rand::thread_rng();
         let mut suggested = HashMap::new();
 
         for space in &self.parameter_spaces {

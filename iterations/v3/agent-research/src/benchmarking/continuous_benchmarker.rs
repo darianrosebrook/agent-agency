@@ -176,9 +176,8 @@ impl ContinuousBenchmarker {
         for model in &scheduled.models {
             info!("Running benchmark for model {}", model.name);
 
-            // Run benchmark using benchmark runner
-            // Note: This is a simplified integration - full implementation would
-            // use the actual benchmark runner API
+            // TODO: Integrate actual benchmark runner API
+            //       Currently uses placeholder integration; should use actual benchmark runner API for comprehensive benchmarking.
             let result = BenchmarkResult {
                 model_id: model.id,
                 benchmark_type: scheduled.benchmark_type.clone(),

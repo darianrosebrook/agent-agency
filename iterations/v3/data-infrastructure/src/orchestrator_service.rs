@@ -353,8 +353,38 @@ impl OrchestratorService {
         } else {
             warn!("Task executor not available - task {} will be queued", task_id);
             
-            // For now, mark as pending until task executor is available
-            // In a real implementation, this would queue the task or use a fallback
+            // TODO: Implement proper task queuing system when task executor is unavailable
+            //       Currently marks task as pending; should queue task for later execution or use fallback executor.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Implement task queue data structure for pending tasks
+            // [ ] Add task to queue when executor is unavailable
+            // [ ] Process queued tasks when executor becomes available
+            // [ ] Implement fallback executor for critical tasks
+            // [ ] Add queue size limits and overflow handling
+            // [ ] Add unit tests for task queuing logic
+            // [ ] Add integration tests for queue processing
+            // [ ] Verify tasks are executed in correct order
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Tasks are queued when executor is unavailable
+            // - Queued tasks are processed when executor becomes available
+            // - Fallback executor handles critical tasks when main executor unavailable
+            // - Queue size limits prevent memory exhaustion
+            //
+            // DEPENDENCIES:
+            // - Task queue data structure (Required)
+            // - Task executor lifecycle management (Required)
+            // - Fallback executor implementation (Optional)
+            //
+            // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (standard feature)
+            // - Change Budget: ~120 LOC
+            // - Reviewer Requirements: Task orchestration domain expertise
             {
                 let mut tasks = self.active_tasks.write().await;
                 if let Some(task) = tasks.get_mut(&task_id) {

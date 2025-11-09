@@ -44,8 +44,41 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinator for CouncilCoord
             priority: self.map_task_priority(task.priority),
         };
 
-        // For now, we'll simulate session creation by generating a UUID
-        // In a real implementation, this would track sessions in the council
+        // TODO: Implement council session tracking
+        //       Currently simulates session creation by generating UUID; should implement comprehensive council session tracking with session records, lifecycle state management, and proper session-context association.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Session records are created in council storage
+        // - Sessions are associated with review contexts
+        // - Session lifecycle state is properly maintained
+        // - Session management operations are atomic and consistent
+        //
+        // DEPENDENCIES:
+        // - Council storage system (Required)
+        // - Session lifecycle management (Required)
+        // - Review context association system (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (session management core functionality)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Session management and council integration expertise
         let session_id = SessionId(uuid::Uuid::new_v4());
 
         // The council doesn't have explicit session management, so we'll just validate
@@ -83,8 +116,41 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinator for CouncilCoord
     }
 
     async fn get_session_status(&self, session_id: &SessionId) -> CouncilResult<SessionStatus> {
-        // For now, return a completed status since the council doesn't maintain session state
-        // In a real implementation, this would query the council for session status
+        // TODO: Implement council session status querying
+        //       Currently returns completed status; should implement comprehensive council session status querying that retrieves actual session state from council service and maps to SessionStatus enum.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Council service is queried for session information
+        // - Current session state and progress are retrieved
+        // - Session not found errors are handled gracefully
+        // - Council status is properly mapped to SessionStatus enum
+        //
+        // DEPENDENCIES:
+        // - Council service API (Required)
+        // - Session status mapping utilities (Required)
+        // - Error handling for session not found (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (session status querying core functionality)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Council integration and status mapping expertise
         Ok(SessionStatus {
             session_id: *session_id,
             status: SessionStatusType::Completed,
@@ -99,7 +165,41 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinator for CouncilCoord
 impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinatorAdapter<E> {
     /// Convert contracts TaskDescriptor to council WorkingSpec
     fn task_descriptor_to_working_spec(&self, task: &TaskDescriptor) -> agent_agency_contracts::WorkingSpec {
-        // This is a simplified conversion - in practice, we'd need to populate more fields
+        // TODO: Implement comprehensive TaskDescriptor to WorkingSpec conversion
+        //       Currently uses basic field mapping; should populate all WorkingSpec fields including context, acceptance criteria, non-functional requirements, and governance information.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Map all TaskDescriptor fields to WorkingSpec fields
+        // [ ] Extract and convert acceptance criteria from task
+        // [ ] Populate WorkingSpecContext with full context information
+        // [ ] Convert non-functional requirements (performance, security, etc.)
+        // [ ] Map governance and quality gate requirements
+        // [ ] Handle edge cases and missing fields
+        // [ ] Add unit tests with various TaskDescriptor configurations
+        // [ ] Add integration tests with real task conversions
+        // [ ] Performance: Conversion should complete in <1ms
+        // [ ] Documentation: Document field mapping and conversion rules
+        //
+        // ACCEPTANCE CRITERIA:
+        // - All TaskDescriptor fields are properly mapped to WorkingSpec
+        // - WorkingSpec contains complete context and requirements
+        // - Acceptance criteria are preserved and properly formatted
+        // - Risk tier and constraints are accurately converted
+        // - Conversion is reversible (can reconstruct TaskDescriptor from WorkingSpec)
+        //
+        // DEPENDENCIES:
+        // - TaskDescriptor type definition (Required)
+        // - WorkingSpec type definition (Required)
+        // - WorkingSpecConstraints and WorkingSpecContext types (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (adapter integration feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Contract and adapter expertise
         use agent_agency_contracts::{WorkingSpec, WorkingSpecConstraints, WorkingSpecContext};
 
         WorkingSpec {

@@ -383,7 +383,8 @@ impl ASTAnalyzer {
             0.0
         };
 
-        // Estimate duplication (simplified)
+        // TODO: Implement comprehensive duplication detection algorithm
+        //       Currently uses basic estimation; should implement proper duplication detection using AST comparison and similarity metrics.
         let duplication_percentage = self.estimate_duplication(hunks);
 
         Ok(QualityMetrics {

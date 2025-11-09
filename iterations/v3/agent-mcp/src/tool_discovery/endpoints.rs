@@ -203,14 +203,46 @@ impl EndpointManager {
 
     /// Discover tools from a single endpoint
     async fn discover_from_endpoint(&self, endpoint: &str) -> Result<Vec<MCPTool>> {
-        // This is a simplified implementation
-        // Real implementation would parse different endpoint types
-
+        // TODO: Implement comprehensive endpoint parsing for all endpoint types
+        //       Currently uses basic parsing; should implement comprehensive endpoint parsing for different endpoint types (HTTP, filesystem, etc.).
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - All endpoint types are parsed correctly
+        // - Tool discovery works for each endpoint type
+        // - Error handling works for invalid endpoints
+        // - Performance is acceptable
+        //
+        // DEPENDENCIES:
+        // - Endpoint parsing utilities (Required)
+        // - Filesystem discovery infrastructure (Required)
+        // - HTTP discovery infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (tool discovery feature)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: Tool discovery expertise
         if endpoint.starts_with("http") {
             self.discover_from_http_endpoint(endpoint).await
         } else if std::path::Path::new(endpoint).exists() {
             // Filesystem endpoint
-            Ok(Vec::new()) // Simplified
+            Ok(Vec::new()) // Temporary: empty until filesystem discovery implementation
         } else {
             Ok(Vec::new())
         }

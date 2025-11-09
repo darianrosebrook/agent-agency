@@ -251,7 +251,28 @@ impl EmbeddingServiceFactory {
             tokenizer,
             dimension,
             model_name.clone(),
-            512, // Fixed max_length for now
+            // TODO: Make max_length configurable based on model capabilities:
+            // 1. Model capability detection: Detect model's maximum sequence length
+            //    - Query model metadata for max_length capability
+            //    - Support different max_length values per model
+            //    - Handle models with variable max_length
+            // 2. Configuration support: Add max_length to configuration
+            //    - Allow per-model max_length configuration
+            //    - Support default max_length values
+            //    - Validate max_length against model capabilities
+            // 3. Dynamic adjustment: Adjust max_length dynamically
+            //    - Consider input text length when setting max_length
+            //    - Optimize max_length for performance vs quality tradeoff
+            //    - Handle max_length errors gracefully
+            // ACCEPTANCE CRITERIA:
+            // - Max_length is configurable per model
+            // - Max_length respects model capabilities
+            // - Configuration supports default and per-model values
+            // DEPENDENCIES:
+            // - Model metadata API (Required)
+            // - Configuration system (Required)
+            // PRIORITY: Medium
+            512,
         ).await {
             Ok(provider) => {
                 tracing::info!("ONNX Runtime embedding provider created successfully");

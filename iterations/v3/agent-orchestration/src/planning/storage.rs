@@ -7,7 +7,7 @@
 
 use schemars::JsonSchema;
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
@@ -16,14 +16,10 @@ use serde::{Deserialize, Serialize};
 use anyhow::{anyhow, Result};
 use crate::planning::{
     DatabaseOperations,
-    models::{ExecutionPlan as DbExecutionPlan, PlanningSession as DbPlanningSession, Milestone as DbMilestone, PlanningAuditEvent, PlanningTelemetry},
+    models::{ExecutionPlan as DbExecutionPlan, PlanningSession as DbPlanningSession},
 };
 
-use agent_agency_contracts::*;
-use agent_agency_contracts::planning_io as planning_io;
-use agent_agency_contracts::types;
-use agent_agency_contracts::task_request;
-use crate::planning::plan_types::{ExecutionPlan, PlanGenerationContext};
+use crate::planning::plan_types::ExecutionPlan;
 
 /// Planning storage with dual persistence strategy
 pub struct PlanningStorage {
@@ -330,8 +326,29 @@ impl PlanningStorage {
         // - [ ] Add session management and tracking
         // - [ ] Add unit tests with proper session IDs
         // - [ ] Add integration tests with real telemetry sessions
+        // TODO: Use proper session management for telemetry:
+        // 1. Session management: Implement proper session tracking
+        //    - Create or retrieve session ID for planning operations
+        //    - Link multiple plans to the same session when appropriate
+        //    - Support session lifecycle management
+        // 2. Session ID generation: Generate proper session IDs
+        //    - Use session management system for ID generation
+        //    - Support session ID reuse and linking
+        //    - Handle session ID validation
+        // 3. Telemetry integration: Integrate with telemetry system
+        //    - Use proper session IDs in telemetry records
+        //    - Support session-based telemetry queries
+        //    - Handle telemetry session tracking
+        // ACCEPTANCE CRITERIA:
+        // - Proper session IDs are used for telemetry
+        // - Multiple plans can be linked to the same session
+        // - Session management integrates with telemetry system
+        // DEPENDENCIES:
+        // - Session management system (Required)
+        // - Telemetry session tracking (Required)
+        // PRIORITY: Medium
         let telemetry = CreatePlanningTelemetry {
-            session_id: plan_id, // Using plan_id as session_id for now
+            session_id: plan_id,
             metric_name: "planning_metric".to_string(), // Default metric name
             metric_value: metric_value_f64,
             metadata,
@@ -464,15 +481,41 @@ impl PlanningStorage {
 
     /// Reconstruct plan from database (when file is missing)
     fn reconstruct_plan_from_db(&self, db_plan: DbExecutionPlan) -> Result<ExecutionPlan> {
-        // TODO: Implement plan reconstruction from database
-        // - [ ] Reconstruct ExecutionPlan from DbExecutionPlan data
-        // - [ ] Restore plan milestones and dependencies
-        // - [ ] Restore plan metadata and configuration
-        // - [ ] Handle missing or corrupted database data
-        // - [ ] Add unit tests with mock database plans
-        // - [ ] Add integration tests with real database plans
-        // This would reconstruct the full plan from database data
-        // For now, return a minimal plan
+        // TODO: Implement comprehensive plan reconstruction from database
+        //       Currently returns error placeholder; should implement comprehensive reconstruction that reconstructs ExecutionPlan from DbExecutionPlan data, restores plan milestones and dependencies, and handles missing or corrupted database data.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - ExecutionPlan is reconstructed from DbExecutionPlan
+        // - Plan milestones and dependencies are restored
+        // - Plan metadata and configuration are restored
+        // - Missing or corrupted data is handled gracefully
+        //
+        // DEPENDENCIES:
+        // - Plan reconstruction utilities (Required)
+        // - Database plan data parsing (Required)
+        // - Data validation and recovery (Required)
+        //
+        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (plan persistence functionality)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Plan reconstruction and database persistence expertise
         Err(anyhow!("Plan reconstruction from DB not yet implemented - PLACEHOLDER"))
     }
 }
@@ -884,9 +927,27 @@ impl PlanningStorage {
 
     /// Get plan for a specific task
     pub async fn get_plan_for_task(&self, task_id: Uuid) -> Result<Option<ExecutionPlan>> {
-        // For now, we don't have a direct mapping from task_id to plan_id
-        // This would require additional indexing or database queries
-        // Return None for now - this needs proper implementation
+        // TODO: Implement task-to-plan mapping:
+        // 1. Index creation: Create task_id to plan_id mapping index
+        //    - Store task_id -> plan_id mappings in database
+        //    - Create database index for efficient lookups
+        //    - Support multiple plans per task if needed
+        // 2. Query implementation: Implement efficient plan lookup
+        //    - Query database for plan_id by task_id
+        //    - Handle missing mappings gracefully
+        //    - Support plan versioning and selection
+        // 3. Mapping management: Manage task-plan mappings
+        //    - Create mappings when plans are created
+        //    - Update mappings when plans are modified
+        //    - Handle mapping cleanup and deletion
+        // ACCEPTANCE CRITERIA:
+        // - Task-to-plan mappings are stored and queryable
+        // - Plan lookups by task_id are efficient and accurate
+        // - Mapping management handles all lifecycle events
+        // DEPENDENCIES:
+        // - Database indexing system (Required)
+        // - Task-plan mapping storage (Required)
+        // PRIORITY: High
         Ok(None)
     }
 

@@ -232,10 +232,42 @@ async fn create_test_orchestrator() -> anyhow::Result<UnifiedOrchestrator> {
         debate_scorer,
     ));
 
-    // Create worker bridge (requires async initialization)
-    // Note: This requires proper setup of MCPWorkerPool with memory system
-    // For integration tests, we would create real instances
-    // For now, this is a placeholder structure
+    // TODO: Implement comprehensive worker bridge setup for integration tests
+    //       Currently a placeholder structure; should implement comprehensive worker bridge setup that creates real instances of MCPWorkerPool with memory system, TaskExecutor, and WorkerExecutionBridge for proper integration testing.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Worker bridge is properly initialized with real instances
+    // - MCPWorkerPool is configured with memory system
+    // - TaskExecutor is properly configured
+    // - WorkerExecutionBridge integrates all components correctly
+    //
+    // DEPENDENCIES:
+    // - MCPWorkerPool implementation (Required)
+    // - Memory system integration (Required)
+    // - TaskExecutor implementation (Required)
+    // - WorkerExecutionBridge implementation (Required)
+    //
+    // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: Yes – Blocks integration test execution
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (integration test infrastructure)
+    // - Change Budget: ~250 LOC
+    // - Reviewer Requirements: Integration testing and worker orchestration expertise
     // let worker_pool = Arc::new(MCPWorkerPool::new(WorkerPoolConfig::default()).await);
     // let task_executor = Arc::new(TaskExecutor::new(/* config */));
     // let worker_bridge = Arc::new(WorkerExecutionBridge::new(worker_pool, task_executor));
@@ -305,12 +337,42 @@ async fn test_unified_orchestration_end_to_end() {
     // 5. Refinement loop works if needed
     // 6. Merge completes successfully
     
-    // For now, this is a placeholder test structure
-    // Full implementation requires:
-    // - Mock worker pool that returns ExecutionArtifacts
-    // - Mock plan generator that creates ExecutionPlan
-    // - Proper setup of all dependencies
-    
+    // TODO: Implement comprehensive unified orchestrator integration test
+    //       Currently a placeholder test structure; should implement comprehensive integration test that includes mock worker pool returning ExecutionArtifacts, mock plan generator creating ExecutionPlan, and proper setup of all dependencies for full test coverage.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Mock worker pool returns ExecutionArtifacts correctly
+    // - Mock plan generator creates ExecutionPlan properly
+    // - All dependencies are properly set up
+    // - Test validates complete orchestrator workflow
+    //
+    // DEPENDENCIES:
+    // - Mock worker pool implementation (Required)
+    // - Mock plan generator implementation (Required)
+    // - Dependency setup utilities (Required)
+    // - Test infrastructure for orchestrator (Required)
+    //
+    // ESTIMATED EFFORT: 12-16 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: Yes – Blocks unified orchestrator integration testing
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (integration test infrastructure)
+    // - Change Budget: ~300 LOC
+    // - Reviewer Requirements: Integration testing and orchestrator expertise
     assert!(true, "Integration test structure verified");
 }
 

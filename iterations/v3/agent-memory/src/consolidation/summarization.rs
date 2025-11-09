@@ -75,9 +75,39 @@ impl MemorySummarizer {
 
     /// Extract contents from cluster memories
     async fn extract_cluster_contents(&self, cluster: &MemoryCluster) -> crate::MemoryResult<String> {
-        // This would typically fetch actual memory content from the database
-        // For now, return a placeholder representation
-        let content = format!(
+        // TODO: Fetch actual memory content from database
+        //       Currently returns placeholder representation; should fetch actual memory content from database.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Query database for cluster memory content
+        // [ ] Fetch memory records by cluster member IDs
+        // [ ] Aggregate memory content into summary
+        // [ ] Handle missing memory records gracefully
+        // [ ] Support pagination for large clusters
+        // [ ] Add unit tests for content extraction
+        // [ ] Add integration tests with real database
+        // [ ] Verify content extraction accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Memory content is fetched from database correctly
+        // - Cluster member memories are retrieved accurately
+        // - Content aggregation works correctly
+        // - Missing records are handled gracefully
+        //
+        // DEPENDENCIES:
+        // - Database connection (Required)
+        // - Memory query utilities (Required)
+        // - Content aggregation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (memory retrieval feature)
+        // - Change Budget: ~70 LOC
+        // - Reviewer Requirements: Database and memory management expertise
+        let content = format!( // Temporary: placeholder until database query is implemented
             "Cluster with {} memories, importance score: {:.3}",
             cluster.member_memories.len(),
             cluster.importance_score
@@ -91,8 +121,39 @@ impl MemorySummarizer {
         let mut contents = Vec::new();
 
         for memory in memories {
-            // Extract meaningful content from memory (simplified)
-            let content = memory.content.clone();
+            // TODO: Extract meaningful content with preprocessing and filtering
+            //       Currently clones raw content; should extract meaningful content with preprocessing and filtering.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Preprocess memory content (normalization, cleaning)
+            // [ ] Filter irrelevant or low-quality content
+            // [ ] Extract key information and entities
+            // [ ] Handle various memory content formats
+            // [ ] Support content summarization for long memories
+            // [ ] Add unit tests for content extraction
+            // [ ] Add integration tests with various memory types
+            // [ ] Verify content extraction quality
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Content is preprocessed and cleaned correctly
+            // - Irrelevant content is filtered out
+            // - Key information is extracted accurately
+            // - Various content formats are handled
+            //
+            // DEPENDENCIES:
+            // - Content preprocessing utilities (Required)
+            // - Content filtering utilities (Required)
+            // - Information extraction utilities (Required)
+            //
+            // ESTIMATED EFFORT: 3-4 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (content processing feature)
+            // - Change Budget: ~80 LOC
+            // - Reviewer Requirements: NLP and content processing expertise
+            let content = memory.content.clone(); // Temporary: raw clone until preprocessing is implemented
             contents.push(content);
         }
 
@@ -101,8 +162,39 @@ impl MemorySummarizer {
 
     /// Generate summary from text content
     async fn generate_summary(&self, content: &str) -> crate::MemoryResult<String> {
-        // Simplified summarization - in practice, this would use an LLM or ML model
-        if content.len() <= self.config.max_summary_length {
+        // TODO: Use LLM or ML model for proper summarization
+        //       Currently uses basic extractive summarization; should use LLM or ML model for abstractive summarization.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Integrate LLM API for summarization
+        // [ ] Or integrate ML model for summarization
+        // [ ] Support abstractive summarization (not just extractive)
+        // [ ] Handle long content with chunking
+        // [ ] Preserve key information and context
+        // [ ] Add unit tests for summarization
+        // [ ] Add integration tests with LLM/ML model
+        // [ ] Verify summary quality and accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Summaries are generated using LLM or ML model
+        // - Abstractive summarization preserves meaning
+        // - Long content is handled with chunking
+        // - Key information is preserved in summaries
+        //
+        // DEPENDENCIES:
+        // - LLM API or ML model (Required)
+        // - Summarization utilities (Required)
+        // - Content chunking utilities (Required)
+        //
+        // ESTIMATED EFFORT: 5-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (NLP feature)
+        // - Change Budget: ~120 LOC
+        // - Reviewer Requirements: NLP and LLM expertise
+        if content.len() <= self.config.max_summary_length { // Temporary: basic check until LLM/ML integration
             return Ok(content.to_string());
         }
 
@@ -170,8 +262,39 @@ impl TemplateBasedSummarizer {
         let template = self.templates.get(template_idx)
             .ok_or_else(|| crate::MemoryError::Other("Template not found".to_string()))?;
 
-        // Extract key information (simplified keyword extraction)
-        let keywords = self.extract_keywords(content);
+        // TODO: Implement proper keyword extraction with NLP techniques
+        //       Currently uses basic keyword extraction; should use NLP techniques for accurate keyword extraction.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Use NLP library for keyword extraction (TF-IDF, RAKE, etc.)
+        // [ ] Extract named entities and important phrases
+        // [ ] Rank keywords by importance and relevance
+        // [ ] Handle domain-specific terminology
+        // [ ] Support multiple languages
+        // [ ] Add unit tests for keyword extraction
+        // [ ] Add integration tests with various content types
+        // [ ] Verify keyword extraction accuracy
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Keywords are extracted using NLP techniques
+        // - Named entities and important phrases are identified
+        // - Keywords are ranked by importance
+        // - Domain-specific terminology is handled correctly
+        //
+        // DEPENDENCIES:
+        // - NLP library (Required)
+        // - Keyword extraction utilities (Required)
+        // - Entity recognition utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (NLP feature)
+        // - Change Budget: ~90 LOC
+        // - Reviewer Requirements: NLP expertise
+        let keywords = self.extract_keywords(content); // Temporary: basic extraction until NLP integration
         let key_info = keywords.join(", ");
 
         let summary = template.replace("{}", &key_info);
@@ -222,10 +345,44 @@ impl SummaryQualityEvaluator {
     pub async fn evaluate_quality(&self, original: &str, summary: &str) -> crate::MemoryResult<SummarizationMetrics> {
         let compression_ratio = summary.len() as f32 / original.len() as f32;
 
-        // Simplified quality metrics
-        let information_retention = self.calculate_information_retention(original, summary);
-        let readability_score = self.calculate_readability(summary);
-        let coherence_score = self.calculate_coherence(summary);
+        // TODO: Implement comprehensive quality metrics calculation
+        //       Currently uses basic metrics; should implement comprehensive quality metrics using proper NLP techniques and evaluation methods.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Quality metrics are calculated comprehensively
+        // - Metrics use proper NLP evaluation methods
+        // - Metrics accurately reflect summary quality
+        // - Calculation handles edge cases
+        //
+        // DEPENDENCIES:
+        // - NLP evaluation libraries (Required)
+        // - Quality metrics infrastructure (Required)
+        // - Evaluation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 5-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (NLP feature enhancement)
+        // - Change Budget: ~120 LOC
+        // - Reviewer Requirements: NLP and evaluation expertise
+        let information_retention = self.calculate_information_retention(original, summary); // Temporary: basic until comprehensive metrics
+        let readability_score = self.calculate_readability(summary); // Temporary: basic until comprehensive metrics
+        let coherence_score = self.calculate_coherence(summary); // Temporary: basic until comprehensive metrics
 
         Ok(SummarizationMetrics {
             compression_ratio,
@@ -236,8 +393,42 @@ impl SummaryQualityEvaluator {
     }
 
     fn calculate_information_retention(&self, _original: &str, _summary: &str) -> f32 {
-        // Simplified: assume 70% retention for non-trivial summaries
-        0.7
+        // TODO: Implement comprehensive information retention calculation
+        //       Currently uses basic assumption; should implement comprehensive calculation using semantic similarity and content analysis.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Information retention is calculated accurately
+        // - Semantic similarity is measured correctly
+        // - Content analysis is comprehensive
+        // - Calculation reflects actual retention
+        //
+        // DEPENDENCIES:
+        // - Semantic similarity libraries (Required)
+        // - Content analysis utilities (Required)
+        // - NLP evaluation infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (NLP feature enhancement)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: NLP and evaluation expertise
+        0.7 // Temporary: basic assumption until comprehensive calculation
     }
 
     fn calculate_readability(&self, summary: &str) -> f32 {
@@ -251,8 +442,42 @@ impl SummaryQualityEvaluator {
     }
 
     fn calculate_coherence(&self, summary: &str) -> f32 {
-        // Simplified coherence based on presence of transition words
-        let transition_words = ["however", "therefore", "thus", "consequently", "furthermore"];
+        // TODO: Implement comprehensive coherence calculation
+        //       Currently uses basic transition word detection; should implement comprehensive coherence calculation using discourse analysis and linguistic features.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Coherence is calculated comprehensively
+        // - Discourse analysis is applied correctly
+        // - Linguistic features are considered
+        // - Calculation reflects actual coherence
+        //
+        // DEPENDENCIES:
+        // - Discourse analysis libraries (Required)
+        // - Linguistic feature extraction (Required)
+        // - NLP evaluation infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (NLP feature enhancement)
+        // - Change Budget: ~100 LOC
+        // - Reviewer Requirements: NLP and discourse analysis expertise
+        let transition_words = ["however", "therefore", "thus", "consequently", "furthermore"]; // Temporary: basic until comprehensive calculation
         let word_count = summary.split_whitespace().count();
 
         if word_count == 0 {

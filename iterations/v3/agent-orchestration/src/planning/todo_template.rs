@@ -5,13 +5,12 @@
 //!
 //! @author @darianrosebrook
 
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 use anyhow::{anyhow, Result};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-use agent_agency_contracts::planning_io::{ExecutionPlan, Milestone};
 
 /// TODO template with dependency tracking
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

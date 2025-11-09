@@ -14,7 +14,9 @@ use serde::{Deserialize, Serialize};
 use anyhow::Result;
 
 #[cfg(feature = "memory")]
-use agent_memory::{MemorySystem, TaskContext};
+use agent_memory::MemorySystem;
+#[cfg(feature = "memory")]
+use agent_memory::memory_types::TaskContext;
 
 /// Represents a session context for multi-session continuity
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -182,9 +184,37 @@ impl SessionManager {
                 // Retrieve contextual memories
                 match memory.retrieve_contextual_memories(&search_context, limit).await {
                     Ok(memories) => {
-                        // Extract TaskContext from contextual memories if possible
-                        // For now, we'll use the search context as a placeholder
-                        // In a full implementation, we'd extract actual TaskContext from memories
+                        // TODO: Extract actual TaskContext from contextual memories
+                        //       Currently uses search context as placeholder; should parse contextual memories to extract TaskContext.
+                        //
+                        // COMPLETION CHECKLIST:
+                        // [ ] Parse contextual memory data structure to extract TaskContext fields
+                        // [ ] Map contextual memory fields to TaskContext struct
+                        // [ ] Handle multiple memories and select most relevant
+                        // [ ] Handle missing or invalid fields gracefully
+                        // [ ] Add unit tests for TaskContext extraction from contextual memories
+                        // [ ] Add integration tests with real memory system data
+                        // [ ] Verify extracted TaskContext is valid and usable
+                        //
+                        // ACCEPTANCE CRITERIA:
+                        // - TaskContext is successfully extracted from contextual memories when available
+                        // - Extracted TaskContext contains valid task_id, agent_id, and description
+                        // - Most relevant memory is selected when multiple memories exist
+                        // - Error handling for malformed contextual memory data
+                        //
+                        // DEPENDENCIES:
+                        // - Contextual memory data structure format (Required)
+                        // - TaskContext struct definition (Required)
+                        // - Memory system contextual memory API (Required)
+                        //
+                        // ESTIMATED EFFORT: 2-4 hours (medium confidence)
+                        // PRIORITY: Medium
+                        // BLOCKING: No
+                        //
+                        // GOVERNANCE:
+                        // - CAWS Tier: 2 (standard feature)
+                        // - Change Budget: ~60 LOC
+                        // - Reviewer Requirements: Memory system domain expertise
                         contexts.push(search_context);
                     }
                     Err(e) => {
