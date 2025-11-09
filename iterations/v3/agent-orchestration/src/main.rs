@@ -61,7 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     use agent_orchestration::planning::DatabaseOperations;
     
     // Create database operations adapter if database client is available
-    let db_ops: Option<Arc<dyn DatabaseOperations>> = if let Some(db_client) = db_client {
+    let db_ops: Option<Arc<dyn DatabaseOperations>> = if let Some(_db_client) = db_client {
         // Use DatabaseOperationsAdapter from data-interfaces-adapters
         // Note: This creates a dependency, but it's only used in main.rs binary, not in lib.rs
         // The factory accepts Option<Arc<dyn DatabaseOperations>> so we can pass None if adapter not available
@@ -106,7 +106,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         None
     };
     
-    let orchestrator = match UnifiedOrchestratorFactory::create(db_ops).await {
+    let _orchestrator = match UnifiedOrchestratorFactory::create(db_ops).await {
         Ok(orchestrator) => {
             info!("UnifiedOrchestrator initialized successfully");
             orchestrator

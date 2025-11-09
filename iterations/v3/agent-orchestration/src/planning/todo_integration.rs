@@ -484,6 +484,7 @@ impl TodoQualityEnforcer {
 }
 
 /// Integration hooks for planning workflow
+#[allow(async_fn_in_trait)] // Trait is internal to this crate
 pub trait TodoWorkflowHooks {
     /// Called when plan execution starts
     async fn on_plan_started(&self, plan: &ExecutionPlan) -> Result<()> {

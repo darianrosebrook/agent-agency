@@ -789,7 +789,7 @@ impl MultimodalOrchestrator {
         info!("Indexed {} blocks", blocks_indexed);
 
         // Record success in circuit breaker
-        self.circuit_breaker.record_success();
+        self.circuit_breaker.record_success().await;
 
         let processing_time = start_time.elapsed().as_millis() as u64;
         info!(
