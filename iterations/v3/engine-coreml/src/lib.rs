@@ -47,6 +47,7 @@ pub struct CoreMLEngine {
     metrics: std::sync::Arc<std::sync::Mutex<EngineMetrics>>,
 
     /// Model availability status
+    #[allow(dead_code)] // Reserved for future use
     models_loaded: bool,
 }
 
@@ -67,6 +68,7 @@ struct CachedVerdict {
     verdict: JudgeVerdict,
 
     /// Judge type for efficient invalidation
+    #[allow(dead_code)] // Reserved for future use
     judge_type: JudgeType,
 
     /// Expiration timestamp
@@ -79,6 +81,7 @@ struct CachedVerdict {
 #[derive(Clone)]
 struct EngineMetrics {
     /// Time to first token histograms per judge
+    #[allow(dead_code)] // Reserved for future use
     ttft_histogram: HashMap<JudgeType, Vec<u64>>,
 
     /// Tokens per second tracking per judge type
@@ -94,9 +97,11 @@ struct EngineMetrics {
     total_requests: u64,
 
     /// ANE acceleration active flag
+    #[allow(dead_code)] // Reserved for future use
     ane_active: bool,
 
     /// Model warming status per judge type
+    #[allow(dead_code)] // Reserved for future use
     warmed_judges: HashMap<JudgeType, bool>,
 }
 
@@ -150,6 +155,7 @@ impl CoreMLEngine {
 
 
     /// Check if models are available by attempting to load from path
+    #[allow(dead_code)] // Reserved for future use
     async fn check_models_available(model_path: &std::path::Path) -> bool {
         // Check if the model path exists and is readable
         model_path.exists() && model_path.is_file()
@@ -536,6 +542,7 @@ impl PromptCache {
         self.cache.insert(key, cached);
     }
 
+    #[allow(dead_code)] // Reserved for future use
     fn invalidate(&self, judge_type: JudgeType) {
         // Remove all entries for this judge type
         self.cache.retain(|_, v| v.judge_type != judge_type);
@@ -563,6 +570,7 @@ impl EngineMetrics {
         self.cache_hits += 1;
     }
 
+    #[allow(dead_code)] // Reserved for future use
     fn record_inference_time(&mut self, judge_type: JudgeType, ttft_ms: u64) {
         self.ttft_histogram.entry(judge_type)
             .or_insert_with(Vec::new)
@@ -591,11 +599,13 @@ impl EngineMetrics {
             .push(tokens_per_sec);
     }
 
+    #[allow(dead_code)] // Reserved for future use
     fn mark_warmed(&mut self, judge_type: JudgeType) {
         // Track that this judge type has been warmed
         self.warmed_judges.insert(judge_type, true);
     }
 
+    #[allow(dead_code)] // Reserved for future use
     fn cache_hit_rate(&self) -> f64 {
         if self.total_requests == 0 {
             0.0

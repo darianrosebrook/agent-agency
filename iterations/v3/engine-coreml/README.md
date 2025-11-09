@@ -2,7 +2,9 @@
 
 **CoreML inference engine for constitutional council judges**
 
-The Engine CoreML crate provides a production-grade CoreML inference engine that implements the JudgeEngine trait for running constitutional council judges. It features Mistral model support, RCU-safe model hot-swapping, prompt caching with Blake3 hashing, JSON schema validation, ANE acceleration, and comprehensive metrics and observability.
+The Engine CoreML crate provides a CoreML inference engine that implements the JudgeEngine trait for running constitutional council judges. It features Mistral model support with simulation fallback, RCU-safe model hot-swapping, prompt caching with Blake3 hashing, JSON schema validation, ANE acceleration, and comprehensive metrics and observability.
+
+**Note**: The engine operates in dual mode - when Mistral models are available, it uses real CoreML inference. When models are unavailable, it gracefully falls back to simulation mode for development and testing.
 
 ## Overview
 
@@ -17,25 +19,25 @@ The CoreML engine serves as the inference backend for the constitutional council
 
 ## Key Features
 
-### 🤖 **Mistral Model Integration**
-- **CoreML Compilation**: Native .mlmodelc format for optimal performance
+### **Mistral Model Integration**
+- **CoreML Compilation**: Native .mlmodelc format for optimal performance (when models available)
 - **ANE Acceleration**: Automatic Apple Neural Engine utilization when available
-- **Fallback Support**: Graceful degradation to simulation mode when models unavailable
-- **Model Hot-Swapping**: Runtime model updates with RCU safety guarantees
+- **Dual-Mode Operation**: Real CoreML inference when models loaded, simulation fallback otherwise
+- **Model Hot-Swapping**: Runtime model updates with RCU safety guarantees (real models only)
 
-### 🧠 **Intelligent Prompt Caching**
+### **Intelligent Prompt Caching**
 - **Blake3 Hashing**: Cryptographic hashing for cache key generation
 - **TTL-Based Eviction**: Configurable time-to-live for cache entries
 - **Judge-Specific Invalidation**: Targeted cache invalidation by judge type
 - **Cache Hit Tracking**: Performance monitoring and hit rate analytics
 
-### 📋 **Schema Validation**
+### **Schema Validation**
 - **JSON Schema Enforcement**: Runtime validation of all judge verdict formats
 - **Type Safety**: Strongly-typed verdict structures with compile-time guarantees
 - **Error Recovery**: Detailed validation error reporting and debugging
 - **Version Compatibility**: Schema versioning for backward compatibility
 
-### 📊 **Observability & Metrics**
+### **Observability & Metrics**
 - **Performance Tracking**: Time-to-first-token, tokens-per-second, end-to-end latency
 - **Cache Analytics**: Hit rates, eviction statistics, and efficiency metrics
 - **Judge Health**: Individual judge performance and warming status
