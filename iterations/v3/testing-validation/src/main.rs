@@ -99,7 +99,8 @@ async fn run_legacy_autonomous_test() -> Result<(), Box<dyn std::error::Error + 
     {
         info!("🧹 Cleaning up test environment...");
         _env.cleanup().await?;
-    info!("✅ Cleanup complete");
+        info!("✅ Cleanup complete");
+    }
 
     info!("🎉 Legacy autonomous workflow E2E test completed successfully!");
     Ok(())
