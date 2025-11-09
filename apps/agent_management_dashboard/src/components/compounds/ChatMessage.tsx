@@ -4,6 +4,7 @@ import { Badge } from "../ui/badge";
 import { TaskTimeline } from "../TaskTimeline";
 import { PhaseManager } from "../composers/PhaseManager";
 import { PhasePlanSkeleton } from "./PhasePlanSkeleton";
+import { ChatMessageError } from "./ChatMessageError";
 import type { Message } from "../composers/Chat";
 import {
   DropdownMenu,
@@ -15,9 +16,10 @@ import { Button } from "../ui/button";
 
 interface ChatMessageProps {
   message: Message;
+  onRetry?: (messageId: string) => void | Promise<void>;
 }
 
-export function ChatMessage({ message }: ChatMessageProps) {
+export function ChatMessage({ message, onRetry }: ChatMessageProps) {
   const isUser = message.role === "user";
 
   // If this is a phase plan message
@@ -25,6 +27,52 @@ export function ChatMessage({ message }: ChatMessageProps) {
     return (
       <div className="ml-12">
         {message.isGeneratingPlan ? <PhasePlanSkeleton /> : <PhaseManager />}
+      </div>
+    );
+  }
+
+  // If message has an error, render error component
+  if (message.error) {
+    return (
+      <div className="space-y-4">
+        {/* Task Timeline - only for assistant messages with tasks */}
+        {!isUser && message.tasks && message.tasks.length > 0 && (
+          <div className="ml-12">
+            <TaskTimeline tasks={message.tasks} />
+          </div>
+        )}
+
+        {/* Message with error */}
+        <div
+          className={`flex gap-4 ${isUser ? "flex-row-reverse" : "flex-row"}`}
+        >
+          {/* Avatar */}
+          <div
+            className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+              isUser ? "bg-blue-600" : "bg-gray-800"
+            }`}
+          >
+            {isUser ? (
+              <User className="w-4 h-4 text-white" />
+            ) : (
+              <Bot className="w-4 h-4 text-gray-300" />
+            )}
+          </div>
+
+          {/* Error Content */}
+          <div className={`flex-1 ${isUser ? "flex flex-col items-end" : ""}`}>
+            <ChatMessageError
+              error={message.error}
+              onRetry={
+                onRetry
+                  ? () => {
+                      onRetry(message.id);
+                    }
+                  : undefined
+              }
+            />
+          </div>
+        </div>
       </div>
     );
   }

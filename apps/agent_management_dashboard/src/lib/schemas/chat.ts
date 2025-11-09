@@ -1,13 +1,13 @@
 /**
  * Zod schemas for chat API validation
- * 
+ *
  * Validates API responses before they enter Zustand stores,
  * ensuring type safety and runtime validation.
- * 
+ *
  * @author @darianrosebrook
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Task schema for chat message tasks
@@ -15,7 +15,7 @@ import { z } from 'zod';
 export const TaskSchema = z.object({
   id: z.string(),
   name: z.string(),
-  status: z.enum(['pending', 'in-progress', 'completed', 'failed']),
+  status: z.enum(["pending", "in-progress", "completed", "failed"]),
   result: z.string().optional(),
   timestamp: z.date().or(z.string().transform((str) => new Date(str))),
 });
@@ -25,7 +25,7 @@ export const TaskSchema = z.object({
  */
 export const MessageSchema = z.object({
   id: z.string(),
-  role: z.enum(['user', 'assistant']),
+  role: z.enum(["user", "assistant"]),
   content: z.string(),
   timestamp: z.date().or(z.string().transform((str) => new Date(str))),
   isLoading: z.boolean().optional(),
@@ -33,6 +33,7 @@ export const MessageSchema = z.object({
   contextFiles: z.array(z.string()).optional(),
   isPhasePlan: z.boolean().optional(),
   isGeneratingPlan: z.boolean().optional(),
+  error: z.unknown().optional(), // Error can be string, object, or Error instance
 });
 
 /**
@@ -42,7 +43,10 @@ export const ChatSessionSchema = z.object({
   id: z.string(),
   title: z.string(),
   createdAt: z.date().or(z.string().transform((str) => new Date(str))),
-  updatedAt: z.date().or(z.string().transform((str) => new Date(str))).optional(),
+  updatedAt: z
+    .date()
+    .or(z.string().transform((str) => new Date(str)))
+    .optional(),
   messageCount: z.number().int().nonnegative().default(0),
   groupId: z.string().optional(),
 });
@@ -114,7 +118,8 @@ export type ChatSession = z.infer<typeof ChatSessionSchema>;
 export type ChatData = z.infer<typeof ChatDataSchema>;
 export type ChatSessionResponse = z.infer<typeof ChatSessionResponseSchema>;
 export type ChatMessageResponse = z.infer<typeof ChatMessageResponseSchema>;
-export type CreateChatSessionRequest = z.infer<typeof CreateChatSessionRequestSchema>;
+export type CreateChatSessionRequest = z.infer<
+  typeof CreateChatSessionRequestSchema
+>;
 export type StreamAgentRequest = z.infer<typeof StreamAgentRequestSchema>;
 export type StreamEvent = z.infer<typeof StreamEventSchema>;
-

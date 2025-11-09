@@ -142,7 +142,7 @@ impl ConflictResolutionTool {
     }
 
     /// Resolve gradient update conflicts using federated averaging
-    async fn resolve_gradient_update_conflict(&self, participants: &[serde_json::Value], evidence: &[serde_json::Value]) -> Result<serde_json::Value> {
+    async fn resolve_gradient_update_conflict(&self, participants: &[serde_json::Value], _evidence: &[serde_json::Value]) -> Result<serde_json::Value> {
         use tracing::debug;
         
         debug!("Resolving gradient update conflict with {} participants", participants.len());
@@ -192,7 +192,7 @@ impl ConflictResolutionTool {
     }
 
     /// Resolve aggregation method conflicts using majority voting
-    async fn resolve_aggregation_method_conflict(&self, participants: &[serde_json::Value], evidence: &[serde_json::Value]) -> Result<serde_json::Value> {
+    async fn resolve_aggregation_method_conflict(&self, participants: &[serde_json::Value], _evidence: &[serde_json::Value]) -> Result<serde_json::Value> {
         use tracing::debug;
         use std::collections::HashMap;
         
@@ -225,7 +225,7 @@ impl ConflictResolutionTool {
     }
 
     /// Resolve privacy constraint conflicts using strictest policy
-    async fn resolve_privacy_constraint_conflict(&self, participants: &[serde_json::Value], evidence: &[serde_json::Value]) -> Result<serde_json::Value> {
+    async fn resolve_privacy_constraint_conflict(&self, participants: &[serde_json::Value], _evidence: &[serde_json::Value]) -> Result<serde_json::Value> {
         use tracing::debug;
         
         debug!("Resolving privacy constraint conflict with {} participants", participants.len());

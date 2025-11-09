@@ -10,7 +10,7 @@ use axum::extract::{Query, State};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{broadcast, RwLock};
+use tokio::sync::{broadcast, RwLock, oneshot};
 use uuid::Uuid;
 use futures_util::{SinkExt, StreamExt};
 
@@ -24,6 +24,8 @@ pub struct WebSocketManager {
     channels: Arc<RwLock<HashMap<String, broadcast::Sender<Message>>>>,
     /// Active connections: connection_id -> user_id
     connections: Arc<RwLock<HashMap<String, String>>>,
+    /// Cancellation tokens: channel_id -> cancellation sender
+    cancellation_tokens: Arc<RwLock<HashMap<String, oneshot::Sender<()>>>>,
     /// Redis session manager for distributed sessions (optional)
     redis_manager: Option<Arc<RedisSessionManager>>,
 }
@@ -34,6 +36,7 @@ impl WebSocketManager {
         Self {
             channels: Arc::new(RwLock::new(HashMap::new())),
             connections: Arc::new(RwLock::new(HashMap::new())),
+            cancellation_tokens: Arc::new(RwLock::new(HashMap::new())),
             redis_manager: None,
         }
     }
@@ -49,6 +52,7 @@ impl WebSocketManager {
         Ok(Self {
             channels: Arc::new(RwLock::new(HashMap::new())),
             connections: Arc::new(RwLock::new(HashMap::new())),
+            cancellation_tokens: Arc::new(RwLock::new(HashMap::new())),
             redis_manager,
         })
     }
@@ -60,22 +64,27 @@ impl WebSocketManager {
     /// - Isolated streams per request
     /// - Multiple concurrent requests per user
     /// - Clean cleanup on task completion
+    /// 
+    /// Returns the channel ID and a cancellation receiver
     pub async fn create_channel(
         &self,
         agent_id: &str,
         task_id: &str,
         session_id: &str,
-    ) -> String {
+    ) -> (String, oneshot::Receiver<()>) {
         let channel = format!(
             "agent:{}:task:{}:session:{}",
             agent_id, task_id, session_id
         );
 
         let (tx, _rx) = broadcast::channel(100);
+        let (cancel_tx, cancel_rx) = oneshot::channel();
+        
         self.channels.write().await.insert(channel.clone(), tx);
+        self.cancellation_tokens.write().await.insert(channel.clone(), cancel_tx);
 
         tracing::debug!("Created channel: {}", channel);
-        channel
+        (channel, cancel_rx)
     }
 
     /// Send a message to a specific channel
@@ -87,9 +96,23 @@ impl WebSocketManager {
         Ok(())
     }
 
+    /// Cancel a stream for a specific channel
+    pub async fn cancel_channel(&self, channel: &str) -> bool {
+        let mut cancellation_tokens = self.cancellation_tokens.write().await;
+        if let Some(cancel_tx) = cancellation_tokens.remove(channel) {
+            let _ = cancel_tx.send(());
+            tracing::info!("Cancelled stream for channel: {}", channel);
+            true
+        } else {
+            tracing::warn!("Channel not found for cancellation: {}", channel);
+            false
+        }
+    }
+
     /// Clean up a channel when done
     pub async fn cleanup_channel(&self, channel: &str) {
         self.channels.write().await.remove(channel);
+        self.cancellation_tokens.write().await.remove(channel);
     }
 
     /// Register a connection

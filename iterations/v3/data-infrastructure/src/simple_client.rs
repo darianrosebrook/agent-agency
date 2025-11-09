@@ -675,6 +675,53 @@ impl DatabaseClient {
 
         Ok(tasks)
     }
+
+    // User operations
+    pub async fn get_user(&self, id: Uuid) -> Result<Option<crate::models::User>> {
+        self.inner.get_user(id).await
+    }
+
+    pub async fn get_user_by_email(&self, email: &str) -> Result<Option<crate::models::User>> {
+        self.inner.get_user_by_email(email).await
+    }
+
+    pub async fn get_user_by_username(&self, username: &str) -> Result<Option<crate::models::User>> {
+        self.inner.get_user_by_username(username).await
+    }
+
+    pub async fn update_user(&self, id: Uuid, update: crate::database_operations::UpdateUser) -> Result<crate::models::User> {
+        self.inner.update_user(id, update).await
+    }
+
+    // Session operations
+    pub async fn create_session(&self, session: crate::database_operations::CreateSession) -> Result<crate::models::Session> {
+        self.inner.create_session(session).await
+    }
+
+    pub async fn get_session(&self, id: Uuid) -> Result<Option<crate::models::Session>> {
+        self.inner.get_session(id).await
+    }
+
+    pub async fn get_session_by_token_hash(&self, token_hash: &str) -> Result<Option<crate::models::Session>> {
+        self.inner.get_session_by_token_hash(token_hash).await
+    }
+
+    pub async fn update_session(&self, id: Uuid, update: crate::database_operations::UpdateSession) -> Result<crate::models::Session> {
+        self.inner.update_session(id, update).await
+    }
+
+    // Password reset token operations
+    pub async fn create_password_reset_token(&self, token: crate::database_operations::CreatePasswordResetToken) -> Result<crate::models::PasswordResetToken> {
+        self.inner.create_password_reset_token(token).await
+    }
+
+    pub async fn get_password_reset_token(&self, token_hash: &str) -> Result<Option<crate::models::PasswordResetToken>> {
+        self.inner.get_password_reset_token(token_hash).await
+    }
+
+    pub async fn mark_password_reset_token_used(&self, id: Uuid) -> Result<()> {
+        self.inner.mark_password_reset_token_used(id).await
+    }
 }
 
 /// Adapter for DatabaseClient to be used with agent-research DatabaseClientTrait

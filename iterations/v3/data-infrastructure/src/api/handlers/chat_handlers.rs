@@ -12,6 +12,7 @@ use std::convert::Infallible;
 use std::time::Duration;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio::sync::mpsc;
+use tokio::time::{timeout, Instant};
 use uuid::Uuid;
 
 use super::super::Result as ApiResult;
@@ -39,6 +40,7 @@ struct StreamEvent {
 ///
 /// Creates a Server-Sent Events stream for real-time agent responses.
 /// Uses channel-based routing to isolate streams per request.
+/// Implements timeout handling to prevent long-running streams.
 /// 
 /// Channel format: `agent:{agent_id}:task:{task_id}:session:{session_id}`
 pub async fn stream_agent_response(
@@ -50,59 +52,168 @@ pub async fn stream_agent_response(
         .map(|s| s.clone())
         .unwrap_or_else(|| Uuid::new_v4().to_string());
     
-    let channel = state
+    let (channel, cancel_rx) = state
         .websocket_manager
         .create_channel(&request.agent_id, &task_id, &request.session_id)
         .await;
+    
+    // Get stream timeout from config (default: 300 seconds / 5 minutes)
+    let timeout_duration = Duration::from_secs(
+        state.api.config().stream_timeout_seconds
+    );
     
     // Clone request for the spawned task
     let request_clone = request.clone();
 
     let (tx, rx) = mpsc::channel::<std::result::Result<Event, Infallible>>(100);
 
-    // Spawn task to generate response
+    // Spawn task to generate response with timeout and cancellation handling
     let state_clone = state.clone();
     let channel_clone = channel.clone();
+    let timeout_duration_clone = timeout_duration;
     tokio::spawn(async move {
-        // TODO: Replace with actual agent service call
-        // For now, simulate streaming response
-        let response_text = format!("Agent response to: {}", request_clone.message);
-        let words: Vec<&str> = response_text.split_whitespace().collect();
+        let start_time = Instant::now();
 
-        for (i, word) in words.iter().enumerate() {
-            let is_last = i == words.len() - 1;
-            
-            let event = StreamEvent {
-                content: Some(format!("{} ", word)),
-                done: is_last,
-                error: None,
-            };
+        // Wrap the stream generation in a timeout with cancellation support
+        let stream_result = timeout(timeout_duration_clone, async {
+            tokio::select! {
+                result = async {
+                    // TODO: Replace with actual agent service call
+                    // For now, simulate streaming response
+                    let response_text = format!("Agent response to: {}", request_clone.message);
+                    let words: Vec<&str> = response_text.split_whitespace().collect();
 
-            if tx
-                .send(std::result::Result::<Event, Infallible>::Ok(Event::default().json_data(event).unwrap()))
-                .await
-                .is_err()
-            {
-                break;
+                    for (i, word) in words.iter().enumerate() {
+                        let is_last = i == words.len() - 1;
+                        
+                        let event = StreamEvent {
+                            content: Some(format!("{} ", word)),
+                            done: is_last,
+                            error: None,
+                        };
+
+                        if tx
+                            .send(std::result::Result::<Event, Infallible>::Ok(Event::default().json_data(event).unwrap()))
+                            .await
+                            .is_err()
+                        {
+                            break;
+                        }
+
+                        // Small delay to simulate streaming
+                        tokio::time::sleep(Duration::from_millis(50)).await;
+                    }
+
+                    // Send done event
+                    let done_event = StreamEvent {
+                        content: None,
+                        done: true,
+                        error: None,
+                    };
+                    let _ = tx.send(std::result::Result::<Event, Infallible>::Ok(Event::default().json_data(done_event).unwrap())).await;
+                    Ok::<(), ()>(())
+                } => {
+                    result
+                }
+                _ = cancel_rx => {
+                    // Stream was cancelled
+                    Err(())
+                }
             }
+        }).await;
 
-            // Small delay to simulate streaming
-            tokio::time::sleep(Duration::from_millis(50)).await;
+        // Handle cancellation (check if cancel_rx was received)
+        // Note: If cancellation happens, the select! will return Err(())
+        // If timeout happens, stream_result will be Err(Elapsed)
+        match stream_result {
+            Ok(Ok(())) => {
+                // Stream completed successfully
+                let duration = start_time.elapsed();
+                tracing::debug!(
+                    "Stream completed for channel {} in {:?}",
+                    channel_clone,
+                    duration
+                );
+            }
+            Ok(Err(())) => {
+                // Stream was cancelled
+                let cancel_event = StreamEvent {
+                    content: None,
+                    done: true,
+                    error: Some("Stream cancelled by user".to_string()),
+                };
+                let _ = tx.send(std::result::Result::<Event, Infallible>::Ok(Event::default().json_data(cancel_event).unwrap())).await;
+                
+                let duration = start_time.elapsed();
+                tracing::info!(
+                    "Stream cancelled for channel {} after {:?}",
+                    channel_clone,
+                    duration
+                );
+            }
+            Err(_) => {
+                // Stream timed out
+                let timeout_event = StreamEvent {
+                    content: None,
+                    done: true,
+                    error: Some(format!(
+                        "Stream timeout after {} seconds",
+                        timeout_duration_clone.as_secs()
+                    )),
+                };
+                let _ = tx.send(std::result::Result::<Event, Infallible>::Ok(Event::default().json_data(timeout_event).unwrap())).await;
+                
+                let duration = start_time.elapsed();
+                tracing::warn!(
+                    "Stream timeout for channel {} after {:?} (configured timeout: {:?})",
+                    channel_clone,
+                    duration,
+                    timeout_duration_clone
+                );
+            }
         }
-
-        // Send done event
-        let done_event = StreamEvent {
-            content: None,
-            done: true,
-            error: None,
-        };
-        let _ = tx.send(std::result::Result::<Event, Infallible>::Ok(Event::default().json_data(done_event).unwrap())).await;
 
         // Cleanup channel
         state_clone.websocket_manager.cleanup_channel(&channel_clone).await;
     });
 
     ApiResult::Ok(Sse::new(ReceiverStream::new(rx)).keep_alive(KeepAlive::default()))
+}
+
+/// Cancel an active stream
+///
+/// Cancels a streaming agent response by channel ID.
+/// Channel format: `agent:{agent_id}:task:{task_id}:session:{session_id}`
+#[derive(Debug, Deserialize)]
+pub struct CancelStreamRequest {
+    pub agent_id: String,
+    pub task_id: String,
+    pub session_id: String,
+}
+
+pub async fn cancel_stream(
+    State(state): State<ApiState>,
+    Json(request): Json<CancelStreamRequest>,
+) -> ApiResult<Json<serde_json::Value>> {
+    let channel = format!(
+        "agent:{}:task:{}:session:{}",
+        request.agent_id, request.task_id, request.session_id
+    );
+
+    let cancelled = state.websocket_manager.cancel_channel(&channel).await;
+
+    if cancelled {
+        ApiResult::Ok(Json(serde_json::json!({
+            "success": true,
+            "message": "Stream cancelled successfully",
+            "channel": channel,
+        })))
+    } else {
+        ApiResult::Err(super::super::ApiError::NotFound(format!(
+            "Stream not found for channel: {}",
+            channel
+        )))
+    }
 }
 
 /// Get chat sessions for a workspace with optional search

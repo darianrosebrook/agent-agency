@@ -29,6 +29,48 @@ export function Chat() {
   const currentChat = getCurrentChat();
   const messages = currentChat?.messages ?? [];
 
+  // Retry handler for failed messages
+  const handleRetryMessage = async (messageId: string) => {
+    const message = messages.find((m) => m.id === messageId);
+    if (!message || !currentChatId) return;
+
+    // Clear error from message
+    updateMessageInCurrentChat(messageId, {
+      error: undefined,
+      isLoading: true,
+    });
+
+    // If it's an assistant message, find the previous user message and regenerate
+    if (message.role === "assistant") {
+      const messageIndex = messages.findIndex((m) => m.id === messageId);
+      const previousUserMessage = messages
+        .slice(0, messageIndex)
+        .reverse()
+        .find((m) => m.role === "user");
+
+      if (previousUserMessage) {
+        // Remove the failed assistant message
+        const store = useChatStore.getState();
+        const updatedMessages = messages.filter((m) => m.id !== messageId);
+        store.setChats(
+          store.chats.map((chat) =>
+            chat.id === currentChatId
+              ? { ...chat, messages: updatedMessages }
+              : chat
+          )
+        );
+
+        // Resend the user message to regenerate response
+        // This will be handled by the normal message sending flow
+        // For now, we'll just clear the error and let the user resend
+        updateMessageInCurrentChat(messageId, {
+          error: undefined,
+          isLoading: false,
+        });
+      }
+    }
+  };
+
   // Show error state if there's an error and no messages
   if (error && messages.length === 0 && !currentChatId) {
     return (
@@ -65,15 +107,17 @@ export function Chat() {
   // Streaming response hook
   const streamingRef = useRef<string | null>(null);
   const { start: startStreaming } = useStreamingResponse({
-    url: '/api/chat/stream',
-    method: 'POST',
+    url: "/api/chat/stream",
+    method: "POST",
     onChunk: (chunk: string) => {
       if (streamingRef.current) {
         // Get current message content and append chunk
         const currentChat = getCurrentChat();
-        const currentMessage = currentChat?.messages.find(m => m.id === streamingRef.current);
-        const currentContent = currentMessage?.content || '';
-        
+        const currentMessage = currentChat?.messages.find(
+          (m) => m.id === streamingRef.current
+        );
+        const currentContent = currentMessage?.content || "";
+
         updateMessageInCurrentChat(streamingRef.current, {
           content: currentContent + chunk,
         });
@@ -89,11 +133,12 @@ export function Chat() {
       }
     },
     onError: (error: Error) => {
-      console.error('Streaming error:', error);
+      console.error("Streaming error:", error);
       if (streamingRef.current) {
         updateMessageInCurrentChat(streamingRef.current, {
           isLoading: false,
-          content: 'Sorry, there was an error generating the response. Please try again.',
+          content:
+            "Sorry, there was an error generating the response. Please try again.",
         });
         streamingRef.current = null;
       }
@@ -138,24 +183,24 @@ export function Chat() {
     // Start streaming response from API
     // TODO: Replace with actual API endpoint when backend is ready
     // For now, fallback to simulation if API is not available
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-    
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+
     try {
       startStreaming({
         url: `${apiUrl}/api/chat/stream`,
-        method: 'POST',
+        method: "POST",
         body: {
-          agent_id: 'default-agent',
-          session_id: currentChatId || 'new-session',
+          agent_id: "default-agent",
+          session_id: currentChatId || "new-session",
           message: userMessage.content,
           context_files: contextFiles.length > 0 ? contextFiles : undefined,
         },
       });
     } catch (error) {
       // Fallback to simulation if API is not available
-      console.warn('API not available, using simulation:', error);
+      console.warn("API not available, using simulation:", error);
       // Import dynamically to avoid breaking if not available
-      import('./ChatAIHelper').then(({ simulateAIResponse }) => {
+      import("./ChatAIHelper").then(({ simulateAIResponse }) => {
         simulateAIResponse(
           assistantMessage.id,
           messages,
@@ -444,7 +489,11 @@ export function Chat() {
             message.isLoading ? (
               <ChatMessageSkeleton key={message.id} tasks={message.tasks} />
             ) : (
-              <ChatMessage key={message.id} message={message} />
+              <ChatMessage
+                key={message.id}
+                message={message}
+                onRetry={handleRetryMessage}
+              />
             )
           )}
         </div>

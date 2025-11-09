@@ -29,6 +29,8 @@ pub struct ApiConfig {
     pub rate_limit_per_minute: u32,
     /// Redis URL for WebSocket session management (optional, enables multi-instance support)
     pub redis_url: Option<String>,
+    /// Stream timeout in seconds (default: 300 seconds / 5 minutes)
+    pub stream_timeout_seconds: u64,
 }
 
 /// Task submission request

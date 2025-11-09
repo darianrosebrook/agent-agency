@@ -141,7 +141,7 @@ impl ClaimExtractor {
         let claims = self.decompose_atomic_claims(&qualified, pattern).await?;
 
         // Phase 4: CAWS-compliant verification preparation
-        let verification_requirements = self.prepare_verification_requirements(&claims, context).await?;
+        let _verification_requirements = self.prepare_verification_requirements(&claims, context).await?;
 
         let entity_count = claims.iter().map(|c| c.entities.len()).sum();
 

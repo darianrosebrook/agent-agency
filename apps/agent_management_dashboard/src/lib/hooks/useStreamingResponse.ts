@@ -64,6 +64,13 @@ export function useStreamingResponse(options: StreamingOptions) {
   const abortControllerRef = useRef<AbortController | null>(null);
   const contentRef = useRef('');
 
+  interface StreamingStartOptions {
+    url?: string;
+    method?: 'GET' | 'POST';
+    body?: any;
+    headers?: Record<string, string>;
+  }
+
   const start = useCallback(async (overrideOptions?: StreamingStartOptions) => {
     // Cancel any existing stream
     if (abortControllerRef.current) {
@@ -153,7 +160,15 @@ export function useStreamingResponse(options: StreamingOptions) {
               }
 
               if (parsed.error) {
-                throw new Error(parsed.error);
+                // Handle timeout and other stream errors
+                const error = new Error(parsed.error);
+                setState((prev) => ({
+                  ...prev,
+                  isStreaming: false,
+                  error,
+                }));
+                onError?.(error);
+                return; // Stop processing stream on error
               }
             } catch (e) {
               // If not JSON, treat as plain text content

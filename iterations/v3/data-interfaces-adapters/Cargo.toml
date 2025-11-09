@@ -35,6 +35,13 @@ schemars = { version = "0.8", features = ["chrono"] }
 # TOML parsing (for config files)
 toml = "0.8"
 
+# Cryptography (for authentication)
+sha2 = "0.10"
+base64 = "0.21"
+
+# Security and authentication
+system-quality-security = { path = "../system-quality-security" }
+
 # Interface contracts
 data-interfaces = { path = "../data-interfaces" }
 agent-agency-contracts = { path = "../agent-agency-contracts" }

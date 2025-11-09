@@ -1,19 +1,18 @@
 /**
  * Zustand store for chat state management
- * 
+ *
  * Uses Zod schemas to validate API responses before updating state.
  * Implements optimistic updates with rollback on failure.
- * 
+ *
  * Adapted from open-webui patterns for agent-agency.
- * 
+ *
  * @author @darianrosebrook
  */
 
-import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
-import { z } from 'zod';
+import { create } from "zustand";
+import { devtools } from "zustand/middleware";
+import { z } from "zod";
 import {
-  ChatDataSchema,
   MessageSchema,
   ChatSessionResponseSchema,
   ChatSessionsResponseSchema,
@@ -22,10 +21,10 @@ import {
   CreateChatSessionRequestSchema,
   type ChatData,
   type Message,
-  type ChatSessionResponse,
-} from '../schemas/chat';
-import { toastError, toastSuccess, toastLoading } from '../utils/toast';
-import { parseApiError } from '../errors';
+} from "../schemas/chat";
+import { toastError, toastSuccess, toastLoading } from "../utils/toast";
+import { parseApiError } from "../errors";
+import { apiGet, apiPost } from "../utils/api";
 
 interface ChatState {
   // State
@@ -44,13 +43,19 @@ interface ChatState {
   createNewChat: () => string;
   switchToChat: (chatId: string) => void;
   addMessageToCurrentChat: (message: Message) => void;
-  updateMessageInCurrentChat: (messageId: string, updates: Partial<Message>) => void;
+  updateMessageInCurrentChat: (
+    messageId: string,
+    updates: Partial<Message>
+  ) => void;
 
   // API actions (with Zod validation)
   fetchChatSessions: () => Promise<void>;
   createChatSession: (request: { title?: string }) => Promise<string>;
   fetchChatMessages: (sessionId: string) => Promise<void>;
-  addMessage: (sessionId: string, message: Omit<Message, 'id' | 'timestamp'>) => Promise<void>;
+  addMessage: (
+    sessionId: string,
+    message: Omit<Message, "id" | "timestamp">
+  ) => Promise<void>;
 
   // Optimistic updates
   optimisticAddMessage: (message: Message) => void;
@@ -63,26 +68,26 @@ interface ChatState {
 
 // Random chat title generator (preserved from original)
 const chatTitleTemplates = [
-  'New application design',
-  'API integration help',
-  'Database schema planning',
-  'UI component brainstorm',
-  'Bug fixing session',
-  'Feature implementation',
-  'Code review discussion',
-  'Architecture planning',
-  'Performance optimization',
-  'Testing strategy',
-  'Deployment questions',
-  'Security improvements',
-  'User experience ideas',
-  'Mobile responsive design',
-  'Animation concepts',
-  'Data visualization',
-  'Form validation logic',
-  'Authentication setup',
-  'State management help',
-  'CSS styling questions',
+  "New application design",
+  "API integration help",
+  "Database schema planning",
+  "UI component brainstorm",
+  "Bug fixing session",
+  "Feature implementation",
+  "Code review discussion",
+  "Architecture planning",
+  "Performance optimization",
+  "Testing strategy",
+  "Deployment questions",
+  "Security improvements",
+  "User experience ideas",
+  "Mobile responsive design",
+  "Animation concepts",
+  "Data visualization",
+  "Form validation logic",
+  "Authentication setup",
+  "State management help",
+  "CSS styling questions",
 ];
 
 function generateChatTitle(): string {
@@ -103,9 +108,12 @@ function validateApiResponse<T>(
     return schema.parse(data);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error(`Validation error in ${context}:`, error.errors);
+      const issues = (error as z.ZodError).issues;
+      console.error(`Validation error in ${context}:`, issues);
       throw new Error(
-        `Invalid API response format in ${context}: ${error.errors.map((e) => e.message).join(', ')}`
+        `Invalid API response format in ${context}: ${issues
+          .map((e) => e.message)
+          .join(", ")}`
       );
     }
     throw error;
@@ -170,7 +178,10 @@ export const useChatStore = create<ChatState>()(
         }));
       },
 
-      updateMessageInCurrentChat: (messageId: string, updates: Partial<Message>) => {
+      updateMessageInCurrentChat: (
+        messageId: string,
+        updates: Partial<Message>
+      ) => {
         const { currentChatId } = get();
         if (!currentChatId) return;
 
@@ -191,22 +202,19 @@ export const useChatStore = create<ChatState>()(
       // API actions with Zod validation
       fetchChatSessions: async () => {
         set({ isLoading: true, error: null });
-        const loadingToast = toastLoading('Loading chat sessions...');
+        const loadingToast = toastLoading("Loading chat sessions...");
 
         try {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-          const response = await fetch(`${apiUrl}/api/chat/sessions`);
+          const apiUrl =
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+          const data = await apiGet<unknown>(`${apiUrl}/api/chat/sessions`, {
+            retry: { maxAttempts: 3, initialDelay: 1000 },
+          });
 
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw { ...errorData, status: response.status, statusText: response.statusText };
-          }
-
-          const data = await response.json();
           const validatedSessions = validateApiResponse(
             ChatSessionsResponseSchema,
             data,
-            'fetchChatSessions'
+            "fetchChatSessions"
           );
 
           // Transform API response to ChatData format
@@ -236,23 +244,17 @@ export const useChatStore = create<ChatState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-          const response = await fetch(`${apiUrl}/api/chat/sessions`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(validatedRequest),
-          });
+          const apiUrl =
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+          const data = await apiPost<unknown>(
+            `${apiUrl}/api/chat/sessions`,
+            validatedRequest
+          );
 
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw { ...errorData, status: response.status, statusText: response.statusText };
-          }
-
-          const data = await response.json();
           const validatedSession = validateApiResponse(
             ChatSessionResponseSchema,
             data,
-            'createChatSession'
+            "createChatSession"
           );
 
           // Transform to ChatData format
@@ -269,7 +271,7 @@ export const useChatStore = create<ChatState>()(
             isLoading: false,
           }));
 
-          toastSuccess('Chat session created');
+          toastSuccess("Chat session created");
           return validatedSession.id;
         } catch (error) {
           const appError = parseApiError(error);
@@ -281,29 +283,27 @@ export const useChatStore = create<ChatState>()(
 
       fetchChatMessages: async (sessionId: string) => {
         set({ isLoading: true, error: null });
-        const loadingToast = toastLoading('Loading messages...');
+        const loadingToast = toastLoading("Loading messages...");
 
         try {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-          const response = await fetch(`${apiUrl}/api/chat/sessions/${sessionId}/messages`);
+          const apiUrl =
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+          const data = await apiGet<unknown>(
+            `${apiUrl}/api/chat/sessions/${sessionId}/messages`,
+            { retry: { maxAttempts: 3, initialDelay: 1000 } }
+          );
 
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw { ...errorData, status: response.status, statusText: response.statusText };
-          }
-
-          const data = await response.json();
           const validatedMessages = validateApiResponse(
             ChatMessagesResponseSchema,
             data,
-            'fetchChatMessages'
+            "fetchChatMessages"
           );
 
           // Transform API messages to Message format
           const messages: Message[] = validatedMessages.map((msg) =>
             MessageSchema.parse({
               id: msg.id,
-              role: msg.role as 'user' | 'assistant',
+              role: msg.role as "user" | "assistant",
               content: msg.content,
               timestamp: msg.timestamp,
             })
@@ -326,7 +326,10 @@ export const useChatStore = create<ChatState>()(
         }
       },
 
-      addMessage: async (sessionId: string, message: Omit<Message, 'id' | 'timestamp'>) => {
+      addMessage: async (
+        sessionId: string,
+        message: Omit<Message, "id" | "timestamp">
+      ) => {
         // Optimistic update
         const optimisticMessage: Message = {
           ...message,
@@ -336,32 +339,27 @@ export const useChatStore = create<ChatState>()(
         get().optimisticAddMessage(optimisticMessage);
 
         try {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-          const response = await fetch(`${apiUrl}/api/chat/sessions/${sessionId}/messages`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+          const apiUrl =
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+          const data = await apiPost<unknown>(
+            `${apiUrl}/api/chat/sessions/${sessionId}/messages`,
+            {
               role: message.role,
               content: message.content,
               contextFiles: message.contextFiles,
-            }),
-          });
+            }
+          );
 
-          if (!response.ok) {
-            throw new Error(`Failed to add message: ${response.statusText}`);
-          }
-
-          const data = await response.json();
           const validatedMessage = validateApiResponse(
             ChatMessageResponseSchema,
             data,
-            'addMessage'
+            "addMessage"
           );
 
           // Replace optimistic message with validated one
           const finalMessage: Message = MessageSchema.parse({
             id: validatedMessage.id,
-            role: validatedMessage.role as 'user' | 'assistant',
+            role: validatedMessage.role as "user" | "assistant",
             content: validatedMessage.content,
             timestamp: validatedMessage.timestamp,
             isLoading: message.isLoading,
@@ -425,7 +423,6 @@ export const useChatStore = create<ChatState>()(
       setError: (error) => set({ error }),
       clearError: () => set({ error: null }),
     }),
-    { name: 'ChatStore' }
+    { name: "ChatStore" }
   )
 );
-

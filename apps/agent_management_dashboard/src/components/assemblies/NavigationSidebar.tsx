@@ -44,7 +44,7 @@ export function Sidebar() {
 
     // Set will-change before animation starts
     sidebar.style.willChange = "width";
-    
+
     // Use GSAP for optimized animation with force3D for GPU acceleration
     const tween = gsap.to(sidebar, {
       width: targetWidth,
@@ -121,7 +121,9 @@ export function Sidebar() {
       {/* Header */}
       <div
         ref={contentRef}
-        className={`${isCollapsed ? "p-3" : "p-6"} border-b border-gray-800 transition-[padding] duration-300 ease-out`}
+        className={`${
+          isCollapsed ? "p-3" : "p-6"
+        } border-b border-gray-800 transition-[padding] duration-300 ease-out`}
       >
         <div
           className={`flex items-center ${
@@ -231,7 +233,11 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className={`flex-1 ${isCollapsed ? "p-2" : "p-4"} overflow-y-auto transition-[padding] duration-300 ease-out`}>
+      <nav
+        className={`flex-1 ${
+          isCollapsed ? "p-2" : "p-4"
+        } overflow-y-auto transition-[padding] duration-300 ease-out`}
+      >
         <TooltipProvider>
           <div className="space-y-1">
             <Tooltip>

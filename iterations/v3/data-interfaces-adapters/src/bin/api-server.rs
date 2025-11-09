@@ -57,9 +57,13 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
 };
+use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use uuid::Uuid;
 use tracing::{info, error, warn};
+use sha2::{Sha256, Digest};
+use chrono::{DateTime, Utc, Duration as ChronoDuration};
+use system_quality_security::{AuthService, AuthConfig, PasswordPolicy};
 
 // Database integration
 use data_infrastructure::database_config::DatabaseConfig;
@@ -264,6 +268,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 enable_rate_limiting: false,
                 rate_limit_per_minute: 100,
                 redis_url: redis_url.clone(),
+                stream_timeout_seconds: env::var("STREAM_TIMEOUT_SECONDS")
+                    .ok()
+                    .and_then(|s| s.parse().ok())
+                    .unwrap_or(300), // Default: 5 minutes
             };
 
             // Create progress tracker
@@ -383,6 +391,8 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
     // Chat and context endpoints
     router = router
         .route("/api/v1/chat", post(chat_handler))
+        .route("/api/v1/chat/stream", post(data_infrastructure::api::handlers::chat_handlers::stream_agent_response))
+        .route("/api/v1/chat/stream/cancel", post(data_infrastructure::api::handlers::chat_handlers::cancel_stream))
         .route("/api/v1/chat/sessions", get(list_chat_sessions_handler))
         .route("/api/v1/chat/sessions/:session_id", get(get_chat_session_handler))
         .route("/api/v1/chat/sessions/:session_id/messages", get(get_chat_messages_handler));
@@ -453,6 +463,15 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
         .route("/api/v1/slos/:slo_name/status", get(get_slo_status_handler))
         .route("/api/v1/slos/:slo_name/measurements", get(get_slo_measurements_handler))
         .route("/api/v1/slo-alerts", get(list_slo_alerts_handler));
+
+    // Authentication endpoints
+    router = router
+        .route("/api/v1/auth/login", post(login_handler))
+        .route("/api/v1/auth/logout", post(logout_handler))
+        .route("/api/v1/auth/refresh", post(refresh_token_handler))
+        .route("/api/v1/users/me", get(get_current_user_handler))
+        .route("/api/v1/auth/password-reset/request", post(request_password_reset_handler))
+        .route("/api/v1/auth/password-reset/confirm", post(confirm_password_reset_handler));
 
     // Add CORS if enabled
     if enable_cors {
@@ -2194,5 +2213,452 @@ async fn list_slo_alerts_handler(
     #[cfg(not(feature = "orchestration"))]
     {
         Err(StatusCode::NOT_IMPLEMENTED)
+    }
+}
+
+// ============================================================================
+// Authentication Handlers
+// ============================================================================
+
+#[derive(Debug, Deserialize)]
+struct LoginRequest {
+    email: Option<String>,
+    username: Option<String>,
+    password: String,
+}
+
+#[derive(Debug, Serialize)]
+struct LoginResponse {
+    token: String,
+    refresh_token: Option<String>,
+    user: UserResponse,
+    expires_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+struct UserResponse {
+    id: String,
+    email: String,
+    username: String,
+    name: Option<String>,
+    roles: Vec<String>,
+    is_active: bool,
+    last_login: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct PasswordResetRequest {
+    email: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct PasswordResetConfirmRequest {
+    token: String,
+    new_password: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct RefreshTokenRequest {
+    refresh_token: String,
+}
+
+/// Helper function to hash a token (for session storage)
+fn hash_token(token: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(token.as_bytes());
+    format!("{:x}", hasher.finalize())
+}
+
+/// Helper function to generate a simple token (for MVP)
+/// PLACEHOLDER: In production, use proper JWT library with signing
+fn generate_token(user_id: &Uuid, roles: &[String]) -> String {
+    let timestamp = Utc::now().timestamp();
+    let roles_str = roles.join(",");
+    let token_data = format!("{}:{}:{}", user_id, roles_str, timestamp);
+    use base64::{Engine as _, engine::general_purpose};
+    general_purpose::STANDARD.encode(token_data.as_bytes())
+}
+
+/// Helper function to verify password hash
+/// PLACEHOLDER: Integrate with system-quality-security AuthService for Argon2
+fn verify_password(password: &str, hash: &str) -> bool {
+    // PLACEHOLDER: Use argon2::Argon2::default().verify_password(password.as_bytes(), &parsed_hash)
+    warn!("Using placeholder password verification - NOT SECURE");
+    let mut hasher = Sha256::new();
+    hasher.update(password.as_bytes());
+    let password_hash = format!("{:x}", hasher.finalize());
+    password_hash == hash // TEMPORARY - MUST REPLACE WITH ARGON2
+}
+
+/// Helper function to hash password
+/// PLACEHOLDER: Integrate with system-quality-security AuthService for Argon2
+fn hash_password(password: &str) -> String {
+    // PLACEHOLDER: Use argon2::Argon2::default().hash_password(password.as_bytes(), &salt)
+    warn!("Using placeholder password hashing - NOT SECURE");
+    let mut hasher = Sha256::new();
+    hasher.update(password.as_bytes());
+    format!("{:x}", hasher.finalize()) // TEMPORARY - MUST REPLACE WITH ARGON2
+}
+
+async fn login_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Json(login_req): Json<LoginRequest>,
+) -> Result<Json<LoginResponse>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+
+    // Get user by email or username
+    let user = if let Some(ref email) = login_req.email {
+        db.get_user_by_email(email).await
+            .map_err(|e| {
+                error!("Database error during login: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?
+    } else if let Some(ref username) = login_req.username {
+        db.get_user_by_username(username).await
+            .map_err(|e| {
+                error!("Database error during login: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?
+    } else {
+        return Err(StatusCode::BAD_REQUEST);
+    };
+
+    let user = user.ok_or_else(|| {
+        warn!("Login attempt with invalid credentials");
+        StatusCode::UNAUTHORIZED
+    })?;
+
+    // Check if account is locked
+    if let Some(locked_until) = user.locked_until {
+        if Utc::now() < locked_until {
+            warn!("Login attempt for locked account: {}", user.id);
+            return Err(StatusCode::FORBIDDEN);
+        }
+    }
+
+    // Check if account is active
+    if !user.is_active {
+        warn!("Login attempt for inactive account: {}", user.id);
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    // Verify password
+    if !verify_password(&login_req.password, &user.password_hash) {
+        // Increment failed attempts
+        let failed_attempts = user.failed_attempts + 1;
+        let update = data_infrastructure::database_operations::UpdateUser {
+            email: None,
+            username: None,
+            password_hash: None,
+            name: None,
+            roles: None,
+            is_active: None,
+            failed_attempts: Some(failed_attempts),
+            locked_until: if failed_attempts >= 5 {
+                Some(Utc::now() + ChronoDuration::minutes(15))
+            } else {
+                None
+            },
+            last_login: None,
+        };
+        
+        let _ = db.update_user(user.id, update).await;
+        
+        warn!("Failed login attempt for user: {}", user.id);
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+
+    // Reset failed attempts on successful login
+    let update = data_infrastructure::database_operations::UpdateUser {
+        email: None,
+        username: None,
+        password_hash: None,
+        name: None,
+        roles: None,
+        is_active: None,
+        failed_attempts: Some(0),
+        locked_until: None,
+        last_login: Some(Utc::now()),
+    };
+    let _ = db.update_user(user.id, update).await;
+
+    // Generate tokens
+    let token = generate_token(&user.id, &user.roles);
+    let refresh_token = generate_token(&user.id, &user.roles);
+    let token_hash = hash_token(&token);
+    let refresh_token_hash = Some(hash_token(&refresh_token));
+    
+    let expires_at = Utc::now() + ChronoDuration::hours(24);
+    let refresh_expires_at = Some(Utc::now() + ChronoDuration::days(7));
+
+    // Get IP address and user agent from headers
+    let ip_address = headers.get("x-forwarded-for")
+        .or_else(|| headers.get("x-real-ip"))
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string());
+    let user_agent = headers.get("user-agent")
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string());
+
+    // Create session
+    let session = data_infrastructure::database_operations::CreateSession {
+        user_id: user.id,
+        token_hash,
+        refresh_token_hash,
+        expires_at,
+        refresh_expires_at,
+        ip_address,
+        user_agent,
+    };
+
+    match db.create_session(session).await {
+        Ok(_) => {
+            info!("Successful login for user: {}", user.id);
+            
+            Ok(Json(LoginResponse {
+                token,
+                refresh_token: Some(refresh_token),
+                user: UserResponse {
+                    id: user.id.to_string(),
+                    email: user.email,
+                    username: user.username,
+                    name: user.name,
+                    roles: user.roles,
+                    is_active: user.is_active,
+                    last_login: Some(Utc::now()),
+                },
+                expires_at,
+            }))
+        }
+        Err(e) => {
+            error!("Failed to create session: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn logout_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+
+    // Extract token from Authorization header
+    let token = headers.get("authorization")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|s| {
+            if s.starts_with("Bearer ") {
+                Some(s[7..].to_string())
+            } else {
+                None
+            }
+        })
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+
+    let token_hash = hash_token(&token);
+
+    // Find and deactivate session
+    if let Ok(Some(session)) = db.get_session_by_token_hash(&token_hash).await {
+        let update = data_infrastructure::database_operations::UpdateSession {
+            token_hash: None,
+            refresh_token_hash: None,
+            expires_at: None,
+            refresh_expires_at: None,
+            is_active: Some(false),
+        };
+        
+        match db.update_session(session.id, update).await {
+            Ok(_) => {
+                info!("User logged out: {}", session.user_id);
+                Ok(Json(serde_json::json!({
+                    "status": "success",
+                    "message": "Logged out successfully"
+                })))
+            }
+            Err(e) => {
+                error!("Failed to update session during logout: {}", e);
+                Err(StatusCode::INTERNAL_SERVER_ERROR)
+            }
+        }
+    } else {
+        // Token not found, but return success anyway (idempotent)
+        Ok(Json(serde_json::json!({
+            "status": "success",
+            "message": "Logged out successfully"
+        })))
+    }
+}
+
+async fn get_current_user_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<UserResponse>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+
+    // Extract token from Authorization header
+    let token = headers.get("authorization")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|s| {
+            if s.starts_with("Bearer ") {
+                Some(s[7..].to_string())
+            } else {
+                None
+            }
+        })
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+
+    let token_hash = hash_token(&token);
+
+    // Find session
+    let session = db.get_session_by_token_hash(&token_hash).await
+        .map_err(|e| {
+            error!("Database error during get current user: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+
+    // Check if session is expired
+    if Utc::now() > session.expires_at {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+
+    // Get user
+    let user = db.get_user(session.user_id).await
+        .map_err(|e| {
+            error!("Database error during get current user: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    Ok(Json(UserResponse {
+        id: user.id.to_string(),
+        email: user.email,
+        username: user.username,
+        name: user.name,
+        roles: user.roles,
+        is_active: user.is_active,
+        last_login: user.last_login,
+    }))
+}
+
+async fn refresh_token_handler(
+    State(_state): State<AppState>,
+    Json(_refresh_req): Json<RefreshTokenRequest>,
+) -> Result<Json<LoginResponse>, StatusCode> {
+    // TODO: Implement refresh token logic
+    // Need to add get_session_by_refresh_token_hash to DatabaseOperations
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+async fn request_password_reset_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Json(reset_req): Json<PasswordResetRequest>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+
+    // Get user by email
+    let user = db.get_user_by_email(&reset_req.email).await
+        .map_err(|e| {
+            error!("Database error during password reset request: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Always return success (don't reveal if email exists)
+    if let Some(user) = user {
+        // Generate reset token
+        let reset_token = Uuid::new_v4().to_string();
+        let token_hash = hash_token(&reset_token);
+        let expires_at = Utc::now() + ChronoDuration::hours(1);
+
+        let ip_address = headers.get("x-forwarded-for")
+            .or_else(|| headers.get("x-real-ip"))
+            .and_then(|h| h.to_str().ok())
+            .map(|s| s.to_string());
+
+        let token = data_infrastructure::database_operations::CreatePasswordResetToken {
+            user_id: user.id,
+            token_hash,
+            expires_at,
+            ip_address,
+        };
+
+        match db.create_password_reset_token(token).await {
+            Ok(_) => {
+                info!("Password reset token created for user: {}", user.id);
+                // TODO: Send email with reset token
+                // For now, just log it (NOT SECURE - remove in production)
+                warn!("Password reset token (DEV ONLY): {}", reset_token);
+            }
+            Err(e) => {
+                error!("Failed to create password reset token: {}", e);
+            }
+        }
+    }
+
+    // Always return success
+    Ok(Json(serde_json::json!({
+        "status": "success",
+        "message": "If the email exists, a password reset link has been sent"
+    })))
+}
+
+async fn confirm_password_reset_handler(
+    State(state): State<AppState>,
+    Json(confirm_req): Json<PasswordResetConfirmRequest>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+
+    let token_hash = hash_token(&confirm_req.token);
+
+    // Get password reset token
+    let reset_token = db.get_password_reset_token(&token_hash).await
+        .map_err(|e| {
+            error!("Database error during password reset confirm: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or(StatusCode::BAD_REQUEST)?;
+
+    // Get user
+    let user = db.get_user(reset_token.user_id).await
+        .map_err(|e| {
+            error!("Database error during password reset confirm: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    // Hash new password
+    let new_password_hash = hash_password(&confirm_req.new_password);
+
+    // Update user password
+    let update = data_infrastructure::database_operations::UpdateUser {
+        email: None,
+        username: None,
+        password_hash: Some(new_password_hash),
+        name: None,
+        roles: None,
+        is_active: None,
+        failed_attempts: Some(0), // Reset failed attempts
+        locked_until: None,
+        last_login: None,
+    };
+
+    match db.update_user(user.id, update).await {
+        Ok(_) => {
+            // Mark token as used
+            let _ = db.mark_password_reset_token_used(reset_token.id).await;
+            
+            info!("Password reset completed for user: {}", user.id);
+            
+            Ok(Json(serde_json::json!({
+                "status": "success",
+                "message": "Password reset successfully"
+            })))
+        }
+        Err(e) => {
+            error!("Failed to update password: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
     }
 }

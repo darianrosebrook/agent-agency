@@ -85,6 +85,30 @@ pub trait DatabaseOperations {
     async fn get_waivers(&self, status: Option<String>) -> Result<Vec<Waiver>>;
     async fn create_waiver(&self, waiver: CreateWaiver) -> Result<Waiver>;
     async fn update_waiver(&self, id: Uuid, update: UpdateWaiver) -> Result<Waiver>;
+
+    // User operations
+    async fn create_user(&self, user: CreateUser) -> Result<User>;
+    async fn get_user(&self, id: Uuid) -> Result<Option<User>>;
+    async fn get_user_by_email(&self, email: &str) -> Result<Option<User>>;
+    async fn get_user_by_username(&self, username: &str) -> Result<Option<User>>;
+    async fn update_user(&self, id: Uuid, update: UpdateUser) -> Result<User>;
+    async fn delete_user(&self, id: Uuid) -> Result<()>;
+
+    // Session operations
+    async fn create_session(&self, session: CreateSession) -> Result<Session>;
+    async fn get_session(&self, id: Uuid) -> Result<Option<Session>>;
+    async fn get_session_by_token_hash(&self, token_hash: &str) -> Result<Option<Session>>;
+    async fn get_user_sessions(&self, user_id: Uuid) -> Result<Vec<Session>>;
+    async fn update_session(&self, id: Uuid, update: UpdateSession) -> Result<Session>;
+    async fn delete_session(&self, id: Uuid) -> Result<()>;
+    async fn delete_user_sessions(&self, user_id: Uuid) -> Result<()>;
+    async fn cleanup_expired_sessions(&self) -> Result<usize>;
+
+    // Password reset token operations
+    async fn create_password_reset_token(&self, token: CreatePasswordResetToken) -> Result<PasswordResetToken>;
+    async fn get_password_reset_token(&self, token_hash: &str) -> Result<Option<PasswordResetToken>>;
+    async fn mark_password_reset_token_used(&self, id: Uuid) -> Result<()>;
+    async fn cleanup_expired_password_reset_tokens(&self) -> Result<usize>;
 }
 
 /// Input types for database operations
@@ -412,6 +436,60 @@ pub struct UpdateWaiver {
     pub expires_at: Option<DateTime<Utc>>,
     pub status: Option<String>,
     pub metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateUser {
+    pub email: String,
+    pub username: String,
+    pub password_hash: String,
+    pub name: Option<String>,
+    pub roles: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UpdateUser {
+    pub email: Option<String>,
+    pub username: Option<String>,
+    pub password_hash: Option<String>,
+    pub name: Option<String>,
+    pub roles: Option<Vec<String>>,
+    pub is_active: Option<bool>,
+    pub failed_attempts: Option<i32>,
+    pub locked_until: Option<DateTime<Utc>>,
+    pub last_login: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateSession {
+    #[schemars(with = "String")]
+    pub user_id: Uuid,
+    pub token_hash: String,
+    pub refresh_token_hash: Option<String>,
+    #[schemars(with = "String")]
+    pub expires_at: DateTime<Utc>,
+    pub refresh_expires_at: Option<DateTime<Utc>>,
+    pub ip_address: Option<String>,
+    pub user_agent: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UpdateSession {
+    pub token_hash: Option<String>,
+    pub refresh_token_hash: Option<String>,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub refresh_expires_at: Option<DateTime<Utc>>,
+    pub is_active: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreatePasswordResetToken {
+    #[schemars(with = "String")]
+    pub user_id: Uuid,
+    pub token_hash: String,
+    #[schemars(with = "String")]
+    pub expires_at: DateTime<Utc>,
+    pub ip_address: Option<String>,
 }
 
 /// Factory function to create a database operations instance

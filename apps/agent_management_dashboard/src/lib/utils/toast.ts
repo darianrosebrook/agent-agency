@@ -75,19 +75,23 @@ export function toastLoading(message: string): () => void {
 
 /**
  * Show promise toast (loading -> success/error)
+ * Automatically parses errors for user-friendly messages
  */
 export function toastPromise<T>(
   promise: Promise<T>,
   messages: {
     loading: string;
     success: string | ((data: T) => string);
-    error: string | ((error: unknown) => string);
+    error?: string | ((error: unknown) => string);
   }
 ) {
   return sonnerToast.promise(promise, {
     loading: messages.loading,
     success: messages.success,
-    error: messages.error,
+    error: messages.error || ((error: unknown) => {
+      const appError = parseApiError(error);
+      return appError.getUserMessage();
+    }),
   });
 }
 

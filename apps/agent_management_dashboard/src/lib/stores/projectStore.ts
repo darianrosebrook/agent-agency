@@ -1,17 +1,17 @@
 /**
  * Zustand store for project state management
- * 
+ *
  * Uses Zod schemas to validate API responses before updating state.
  * Implements optimistic updates with rollback on failure.
- * 
+ *
  * Adapted from open-webui patterns for agent-agency.
- * 
+ *
  * @author @darianrosebrook
  */
 
-import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
-import { z } from 'zod';
+import { create } from "zustand";
+import { devtools } from "zustand/middleware";
+import { z } from "zod";
 import {
   ProjectSchema,
   ProjectResponseSchema,
@@ -22,14 +22,14 @@ import {
   UpdateTaskRequestSchema,
   type Project,
   type ProjectTask,
-  type Milestone,
   type CreateProjectRequest,
   type UpdateProjectRequest,
   type CreateTaskRequest,
   type UpdateTaskRequest,
-} from '../schemas/project';
-import { toastError, toastSuccess, toastLoading } from '../utils/toast';
-import { parseApiError } from '../errors';
+} from "../schemas/project";
+import { toastError, toastSuccess, toastLoading } from "../utils/toast";
+import { parseApiError } from "../errors";
+import { apiGet, apiPost, apiPatch } from "../utils/api";
 
 interface ProjectState {
   // State
@@ -50,18 +50,33 @@ interface ProjectState {
   selectProject: (projectId: string) => void;
   clearCurrentProject: () => void;
   addTask: (projectId: string, task: CreateTaskRequest) => void;
-  updateTask: (projectId: string, taskId: string, updates: UpdateTaskRequest) => void;
+  updateTask: (
+    projectId: string,
+    taskId: string,
+    updates: UpdateTaskRequest
+  ) => void;
 
   // API actions (with Zod validation)
   fetchProjects: () => Promise<void>;
   createProjectApi: (request: CreateProjectRequest) => Promise<string>;
-  updateProject: (projectId: string, request: UpdateProjectRequest) => Promise<void>;
+  updateProject: (
+    projectId: string,
+    request: UpdateProjectRequest
+  ) => Promise<void>;
   addTaskApi: (projectId: string, task: CreateTaskRequest) => Promise<void>;
-  updateTaskApi: (projectId: string, taskId: string, updates: UpdateTaskRequest) => Promise<void>;
+  updateTaskApi: (
+    projectId: string,
+    taskId: string,
+    updates: UpdateTaskRequest
+  ) => Promise<void>;
 
   // Optimistic updates
   optimisticAddTask: (projectId: string, task: ProjectTask) => void;
-  optimisticUpdateTask: (projectId: string, taskId: string, updates: Partial<ProjectTask>) => void;
+  optimisticUpdateTask: (
+    projectId: string,
+    taskId: string,
+    updates: Partial<ProjectTask>
+  ) => void;
   rollbackOptimisticTask: (projectId: string, taskId: string) => void;
 
   // Error handling
@@ -81,9 +96,12 @@ function validateApiResponse<T>(
     return schema.parse(data);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error(`Validation error in ${context}:`, error.errors);
+      const issues = (error as z.ZodError).issues;
+      console.error(`Validation error in ${context}:`, issues);
       throw new Error(
-        `Invalid API response format in ${context}: ${error.errors.map((e) => e.message).join(', ')}`
+        `Invalid API response format in ${context}: ${issues
+          .map((e) => e.message)
+          .join(", ")}`
       );
     }
     throw error;
@@ -129,11 +147,13 @@ export const useProjectStore = create<ProjectState>()(
           name: validatedRequest.name,
           summary: validatedRequest.summary,
           description: validatedRequest.description,
-          milestones: (validatedRequest.milestones ?? []).map((title, index) => ({
-            id: `milestone-${Date.now()}-${index}`,
-            title,
-            completed: false,
-          })),
+          milestones: (validatedRequest.milestones ?? []).map(
+            (title, index) => ({
+              id: `milestone-${Date.now()}-${index}`,
+              title,
+              completed: false,
+            })
+          ),
           tasks: [],
           createdAt: new Date(),
           lastAccessed: new Date(),
@@ -177,7 +197,11 @@ export const useProjectStore = create<ProjectState>()(
         }));
       },
 
-      updateTask: (projectId: string, taskId: string, updates: UpdateTaskRequest) => {
+      updateTask: (
+        projectId: string,
+        taskId: string,
+        updates: UpdateTaskRequest
+      ) => {
         set((state) => ({
           projects: state.projects.map((p) =>
             p.id === projectId
@@ -195,22 +219,19 @@ export const useProjectStore = create<ProjectState>()(
       // API actions with Zod validation
       fetchProjects: async () => {
         set({ isLoading: true, error: null });
-        const loadingToast = toastLoading('Loading projects...');
+        const loadingToast = toastLoading("Loading projects...");
 
         try {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-          const response = await fetch(`${apiUrl}/api/projects`);
+          const apiUrl =
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+          const data = await apiGet<unknown>(`${apiUrl}/api/projects`, {
+            retry: { maxAttempts: 3, initialDelay: 1000 },
+          });
 
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw { ...errorData, status: response.status, statusText: response.statusText };
-          }
-
-          const data = await response.json();
           const validatedProjects = validateApiResponse(
             ProjectsResponseSchema,
             data,
-            'fetchProjects'
+            "fetchProjects"
           );
 
           // Transform API response to Project format
@@ -253,23 +274,17 @@ export const useProjectStore = create<ProjectState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-          const response = await fetch(`${apiUrl}/api/projects`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(validatedRequest),
-          });
+          const apiUrl =
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+          const data = await apiPost<unknown>(
+            `${apiUrl}/api/projects`,
+            validatedRequest
+          );
 
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw { ...errorData, status: response.status, statusText: response.statusText };
-          }
-
-          const data = await response.json();
           const validatedProject = validateApiResponse(
             ProjectResponseSchema,
             data,
-            'createProjectApi'
+            "createProjectApi"
           );
 
           // Transform to Project format
@@ -298,7 +313,7 @@ export const useProjectStore = create<ProjectState>()(
             isLoading: false,
           }));
 
-          toastSuccess('Project created successfully');
+          toastSuccess("Project created successfully");
           return validatedProject.id;
         } catch (error) {
           const appError = parseApiError(error);
@@ -308,29 +323,27 @@ export const useProjectStore = create<ProjectState>()(
         }
       },
 
-      updateProject: async (projectId: string, request: UpdateProjectRequest) => {
+      updateProject: async (
+        projectId: string,
+        request: UpdateProjectRequest
+      ) => {
         // Validate request
         const validatedRequest = UpdateProjectRequestSchema.parse(request);
 
         set({ isLoading: true, error: null });
 
         try {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-          const response = await fetch(`${apiUrl}/api/projects/${projectId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(validatedRequest),
-          });
+          const apiUrl =
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+          const data = await apiPatch<unknown>(
+            `${apiUrl}/api/projects/${projectId}`,
+            validatedRequest
+          );
 
-          if (!response.ok) {
-            throw new Error(`Failed to update project: ${response.statusText}`);
-          }
-
-          const data = await response.json();
           const validatedProject = validateApiResponse(
             ProjectResponseSchema,
             data,
-            'updateProject'
+            "updateProject"
           );
 
           // Update project in state
@@ -369,27 +382,24 @@ export const useProjectStore = create<ProjectState>()(
         get().optimisticAddTask(projectId, optimisticTask);
 
         try {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-          const response = await fetch(`${apiUrl}/api/projects/${projectId}/tasks`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(validatedTask),
-          });
+          const apiUrl =
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+          const data = await apiPost<unknown>(
+            `${apiUrl}/api/projects/${projectId}/tasks`,
+            validatedTask
+          );
 
-          if (!response.ok) {
-            throw new Error(`Failed to add task: ${response.statusText}`);
-          }
-
-          const data = await response.json();
-          const validatedResponse = z.object({
-            id: z.string(),
-            title: z.string(),
-            description: z.string().nullable().optional(),
-            status: z.enum(['backlog', 'todo', 'in-progress', 'done']),
-            priority: z.string().nullable().optional(),
-            assignee: z.string().nullable().optional(),
-            created_at: z.string().transform((str) => new Date(str)),
-          }).parse(data);
+          const validatedResponse = z
+            .object({
+              id: z.string(),
+              title: z.string(),
+              description: z.string().nullable().optional(),
+              status: z.enum(["backlog", "todo", "in-progress", "done"]),
+              priority: z.string().nullable().optional(),
+              assignee: z.string().nullable().optional(),
+              created_at: z.string().transform((str) => new Date(str)),
+            })
+            .parse(data);
 
           // Replace optimistic task with validated one
           const finalTask: ProjectTask = {
@@ -424,7 +434,11 @@ export const useProjectStore = create<ProjectState>()(
         }
       },
 
-      updateTaskApi: async (projectId: string, taskId: string, updates: UpdateTaskRequest) => {
+      updateTaskApi: async (
+        projectId: string,
+        taskId: string,
+        updates: UpdateTaskRequest
+      ) => {
         // Validate request
         const validatedUpdates = UpdateTaskRequestSchema.parse(updates);
 
@@ -439,27 +453,24 @@ export const useProjectStore = create<ProjectState>()(
         get().optimisticUpdateTask(projectId, taskId, validatedUpdates);
 
         try {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-          const response = await fetch(`${apiUrl}/api/projects/${projectId}/tasks/${taskId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(validatedUpdates),
-          });
+          const apiUrl =
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+          const data = await apiPatch<unknown>(
+            `${apiUrl}/api/projects/${projectId}/tasks/${taskId}`,
+            validatedUpdates
+          );
 
-          if (!response.ok) {
-            throw new Error(`Failed to update task: ${response.statusText}`);
-          }
-
-          const data = await response.json();
-          const validatedResponse = z.object({
-            id: z.string(),
-            title: z.string(),
-            description: z.string().nullable().optional(),
-            status: z.enum(['backlog', 'todo', 'in-progress', 'done']),
-            priority: z.string().nullable().optional(),
-            assignee: z.string().nullable().optional(),
-            created_at: z.string().transform((str) => new Date(str)),
-          }).parse(data);
+          const validatedResponse = z
+            .object({
+              id: z.string(),
+              title: z.string(),
+              description: z.string().nullable().optional(),
+              status: z.enum(["backlog", "todo", "in-progress", "done"]),
+              priority: z.string().nullable().optional(),
+              assignee: z.string().nullable().optional(),
+              created_at: z.string().transform((str) => new Date(str)),
+            })
+            .parse(data);
 
           // Update with validated response
           set((state) => ({
@@ -472,7 +483,8 @@ export const useProjectStore = create<ProjectState>()(
                         ? {
                             id: validatedResponse.id,
                             title: validatedResponse.title,
-                            description: validatedResponse.description ?? undefined,
+                            description:
+                              validatedResponse.description ?? undefined,
                             status: validatedResponse.status,
                             priority: validatedResponse.priority ?? undefined,
                             assignee: validatedResponse.assignee ?? undefined,
@@ -505,7 +517,11 @@ export const useProjectStore = create<ProjectState>()(
         }));
       },
 
-      optimisticUpdateTask: (projectId: string, taskId: string, updates: Partial<ProjectTask>) => {
+      optimisticUpdateTask: (
+        projectId: string,
+        taskId: string,
+        updates: Partial<ProjectTask>
+      ) => {
         set((state) => ({
           projects: state.projects.map((p) =>
             p.id === projectId
@@ -537,7 +553,6 @@ export const useProjectStore = create<ProjectState>()(
       setError: (error) => set({ error }),
       clearError: () => set({ error: null }),
     }),
-    { name: 'ProjectStore' }
+    { name: "ProjectStore" }
   )
 );
-

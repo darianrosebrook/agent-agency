@@ -305,7 +305,8 @@ impl AuthService {
         Ok(())
     }
 
-    fn hash_password(&self, password: &str) -> Result<String> {
+    /// Hash a password using Argon2
+    pub fn hash_password(&self, password: &str) -> Result<String> {
         let salt = SaltString::generate(&mut OsRng);
         let argon2 = Argon2::new(
             Algorithm::Argon2id,
@@ -319,7 +320,8 @@ impl AuthService {
         Ok(password_hash.to_string())
     }
 
-    fn verify_password(&self, password: &str, hash: &str) -> Result<bool> {
+    /// Verify a password against an Argon2 hash
+    pub fn verify_password(&self, password: &str, hash: &str) -> Result<bool> {
         let parsed_hash = PasswordHash::new(hash)
             .map_err(|e| anyhow::anyhow!("Invalid password hash: {}", e))?;
 
@@ -327,7 +329,8 @@ impl AuthService {
         Ok(argon2.verify_password(password.as_bytes(), &parsed_hash).is_ok())
     }
 
-    fn generate_token(&self, user_id: &str, roles: &[String]) -> Result<String> {
+    /// Generate a JWT token for a user
+    pub fn generate_token(&self, user_id: &str, roles: &[String]) -> Result<String> {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|e| anyhow::anyhow!("Time went backwards: {}", e))?

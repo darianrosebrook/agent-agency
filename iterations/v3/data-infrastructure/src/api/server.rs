@@ -198,6 +198,11 @@ impl RestApi {
         Self::new(config, orchestrator, progress_tracker, db_client)
     }
 
+    /// Get API configuration
+    pub fn config(&self) -> &ApiConfig {
+        &self.__config
+    }
+
     /// Create the Axum router with all endpoints
     pub fn create_router(&self) -> Router<()> {
         // Note: This router is not currently used in main.rs

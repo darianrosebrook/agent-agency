@@ -17,6 +17,8 @@ pub mod query_management;
 pub mod system_monitoring;
 #[cfg(feature = "orchestration")]
 pub mod chat_handlers;
+#[cfg(feature = "orchestration")]
+pub mod auth_handlers;
 
 // Re-export all handlers for easy access
 #[cfg(feature = "orchestration")]
@@ -40,3 +42,6 @@ pub use system_monitoring::*;
 #[cfg(feature = "orchestration")]
 #[allow(ambiguous_glob_reexports)]
 pub use chat_handlers::*;
+#[cfg(feature = "orchestration")]
+#[allow(ambiguous_glob_reexports)]
+pub use auth_handlers::*;

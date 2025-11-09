@@ -9,14 +9,14 @@
 
 /**
  * Standard error response format from API
+ * Matches backend ErrorResponse format
  */
 export interface ApiErrorResponse {
-  error: {
-    code: string;
-    message: string;
-    details?: Record<string, unknown>;
-    timestamp?: string;
-  };
+  error: string; // Human-readable error message
+  code: string; // Machine-readable error code
+  status: number; // HTTP status code
+  details?: Record<string, unknown>; // Additional error details
+  request_id?: string; // Request ID for correlation
 }
 
 /**
@@ -110,7 +110,30 @@ export class AppError extends Error {
 }
 
 /**
+ * Map backend error codes to frontend ErrorCode enum
+ */
+function mapErrorCode(backendCode: string): ErrorCode {
+  const codeMap: Record<string, ErrorCode> = {
+    'DATABASE_ERROR': ErrorCode.SERVER_ERROR,
+    'NOT_FOUND': ErrorCode.NOT_FOUND,
+    'TASK_NOT_FOUND': ErrorCode.RESOURCE_NOT_FOUND,
+    'INVALID_OPERATION': ErrorCode.INVALID_STATE,
+    'INVALID_REQUEST': ErrorCode.BAD_REQUEST,
+    'EXECUTION_ERROR': ErrorCode.OPERATION_FAILED,
+    'VALIDATION_ERROR': ErrorCode.VALIDATION_ERROR,
+    'AUTHENTICATION_ERROR': ErrorCode.UNAUTHORIZED,
+    'AUTHORIZATION_ERROR': ErrorCode.FORBIDDEN,
+    'RATE_LIMIT_EXCEEDED': ErrorCode.RATE_LIMIT,
+    'INTERNAL_ERROR': ErrorCode.SERVER_ERROR,
+    'BAD_REQUEST': ErrorCode.BAD_REQUEST,
+  };
+  
+  return codeMap[backendCode] || ErrorCode.OPERATION_FAILED;
+}
+
+/**
  * Parse API error response to AppError
+ * Handles both new standardized format and legacy formats
  */
 export function parseApiError(error: unknown): AppError {
   // Handle fetch errors
@@ -118,14 +141,23 @@ export function parseApiError(error: unknown): AppError {
     return new AppError(ErrorCode.NETWORK_ERROR, 'Network request failed');
   }
 
-  // Handle API error response
+  // Handle API error response (new standardized format)
   if (typeof error === 'object' && error !== null) {
     const apiError = error as ApiErrorResponse;
-    if (apiError.error) {
-      const code = Object.values(ErrorCode).find(
-        (c) => c === apiError.error.code
-      ) || ErrorCode.OPERATION_FAILED;
-      return new AppError(code, apiError.error.message, apiError.error.details);
+    
+    // New format: { error: string, code: string, status: number, details?, request_id? }
+    if ('error' in apiError && 'code' in apiError && 'status' in apiError) {
+      const code = mapErrorCode(apiError.code);
+      return new AppError(code, apiError.error, apiError.details);
+    }
+
+    // Legacy format: { error: { code, message, details } }
+    if ('error' in apiError && typeof apiError.error === 'object' && apiError.error !== null) {
+      const legacyError = apiError.error as { code?: string; message?: string; details?: Record<string, unknown> };
+      if (legacyError.code) {
+        const code = mapErrorCode(legacyError.code);
+        return new AppError(code, legacyError.message, legacyError.details);
+      }
     }
 
     // Handle FastAPI-style errors

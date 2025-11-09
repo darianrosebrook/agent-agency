@@ -968,3 +968,60 @@ pub struct PlanningAuditEvent {
 
     pub created_at: DateTime<Utc>,
 }
+
+/// User model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
+pub struct User {
+    #[schemars(with = "String")]
+    pub id: Uuid,
+    pub email: String,
+    pub username: String,
+    pub password_hash: String,
+    pub name: Option<String>,
+    pub roles: Vec<String>,
+    pub is_active: bool,
+    pub failed_attempts: i32,
+    pub locked_until: Option<DateTime<Utc>>,
+    pub last_login: Option<DateTime<Utc>>,
+    #[schemars(with = "String")]
+    pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Session model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
+pub struct Session {
+    #[schemars(with = "String")]
+    pub id: Uuid,
+    #[schemars(with = "String")]
+    pub user_id: Uuid,
+    pub token_hash: String,
+    pub refresh_token_hash: Option<String>,
+    #[schemars(with = "String")]
+    pub expires_at: DateTime<Utc>,
+    pub refresh_expires_at: Option<DateTime<Utc>>,
+    pub ip_address: Option<String>,
+    pub user_agent: Option<String>,
+    pub is_active: bool,
+    #[schemars(with = "String")]
+    pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Password reset token model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
+pub struct PasswordResetToken {
+    #[schemars(with = "String")]
+    pub id: Uuid,
+    #[schemars(with = "String")]
+    pub user_id: Uuid,
+    pub token_hash: String,
+    #[schemars(with = "String")]
+    pub expires_at: DateTime<Utc>,
+    pub used_at: Option<DateTime<Utc>>,
+    pub ip_address: Option<String>,
+    #[schemars(with = "String")]
+    pub created_at: DateTime<Utc>,
+}

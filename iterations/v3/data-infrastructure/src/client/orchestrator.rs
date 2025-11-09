@@ -23,13 +23,14 @@ use super::super::database_operations::{
     CreatePlanningTelemetry, CreateMilestone, UpdateMilestone, CreatePlanningSession,
     UpdatePlanningSession, CreateEvidenceArtifact, UpdateEvidenceArtifact,
     CreatePlanningAuditEvent, CreateExecutionPlan, UpdateExecutionPlan,
-    CreateWaiver, UpdateWaiver
+    CreateWaiver, UpdateWaiver, CreateUser, UpdateUser, CreateSession, UpdateSession,
+    CreatePasswordResetToken
 };
 use super::super::database_audit::DatabaseAuditLogger;
 use super::super::models::{
     Judge, Worker, Task, TaskExecution, CouncilVerdict, JudgeEvaluation, AuditTrailEntry,
     PlanningTelemetry, Milestone, PlanningSession, EvidenceArtifact, PlanningAuditEvent,
-    ExecutionPlan, Waiver
+    ExecutionPlan, Waiver, User, Session, PasswordResetToken
 };
 use crate::connection_manager::{ConnectionPoolManager, PooledDatabaseClient};
 use crate::database_config::DatabaseConfig;
@@ -1502,6 +1503,368 @@ impl DatabaseOperations for DatabaseClient {
             }
             None => Err(anyhow::anyhow!("Waiver not found after update"))
         }
+    }
+
+    // User operations
+    async fn create_user(&self, user: CreateUser) -> Result<User> {
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            INSERT INTO users (
+                id, email, username, password_hash, name, roles,
+                is_active, failed_attempts, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            "#
+        )
+        .bind(id)
+        .bind(&user.email)
+        .bind(&user.username)
+        .bind(&user.password_hash)
+        .bind(&user.name)
+        .bind(&user.roles)
+        .bind(true)
+        .bind(0)
+        .bind(now)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+        
+        Ok(User {
+            id,
+            email: user.email,
+            username: user.username,
+            password_hash: user.password_hash,
+            name: user.name,
+            roles: user.roles,
+            is_active: true,
+            failed_attempts: 0,
+            locked_until: None,
+            last_login: None,
+            created_at: now,
+            updated_at: now,
+        })
+    }
+
+    async fn get_user(&self, id: Uuid) -> Result<Option<User>> {
+        let row = sqlx::query_as::<_, User>(
+            r#"
+            SELECT id, email, username, password_hash, name, roles,
+                   is_active, failed_attempts, locked_until, last_login,
+                   created_at, updated_at
+            FROM users
+            WHERE id = $1
+            "#
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+        
+        Ok(row)
+    }
+
+    async fn get_user_by_email(&self, email: &str) -> Result<Option<User>> {
+        let row = sqlx::query_as::<_, User>(
+            r#"
+            SELECT id, email, username, password_hash, name, roles,
+                   is_active, failed_attempts, locked_until, last_login,
+                   created_at, updated_at
+            FROM users
+            WHERE email = $1
+            "#
+        )
+        .bind(email)
+        .fetch_optional(&self.pool)
+        .await?;
+        
+        Ok(row)
+    }
+
+    async fn get_user_by_username(&self, username: &str) -> Result<Option<User>> {
+        let row = sqlx::query_as::<_, User>(
+            r#"
+            SELECT id, email, username, password_hash, name, roles,
+                   is_active, failed_attempts, locked_until, last_login,
+                   created_at, updated_at
+            FROM users
+            WHERE username = $1
+            "#
+        )
+        .bind(username)
+        .fetch_optional(&self.pool)
+        .await?;
+        
+        Ok(row)
+    }
+
+    async fn update_user(&self, id: Uuid, update: UpdateUser) -> Result<User> {
+        let now = Utc::now();
+        
+        // Get current user to merge with updates
+        let current = self.get_user(id).await?
+            .ok_or_else(|| anyhow::anyhow!("User not found: {}", id))?;
+        
+        sqlx::query_as::<_, User>(
+            r#"
+            UPDATE users
+            SET email = COALESCE($1, email),
+                username = COALESCE($2, username),
+                password_hash = COALESCE($3, password_hash),
+                name = COALESCE($4, name),
+                roles = COALESCE($5, roles),
+                is_active = COALESCE($6, is_active),
+                failed_attempts = COALESCE($7, failed_attempts),
+                locked_until = COALESCE($8, locked_until),
+                last_login = COALESCE($9, last_login),
+                updated_at = $10
+            WHERE id = $11
+            RETURNING id, email, username, password_hash, name, roles,
+                     is_active, failed_attempts, locked_until, last_login,
+                     created_at, updated_at
+            "#
+        )
+        .bind(&update.email)
+        .bind(&update.username)
+        .bind(&update.password_hash)
+        .bind(&update.name)
+        .bind(&update.roles)
+        .bind(update.is_active)
+        .bind(update.failed_attempts)
+        .bind(&update.locked_until)
+        .bind(&update.last_login)
+        .bind(now)
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("User not found after update: {}", id))
+    }
+
+    async fn delete_user(&self, id: Uuid) -> Result<()> {
+        sqlx::query("DELETE FROM users WHERE id = $1")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        
+        Ok(())
+    }
+
+    // Session operations
+    async fn create_session(&self, session: CreateSession) -> Result<Session> {
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            INSERT INTO sessions (
+                id, user_id, token_hash, refresh_token_hash, expires_at,
+                refresh_expires_at, ip_address, user_agent, is_active, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            "#
+        )
+        .bind(id)
+        .bind(session.user_id)
+        .bind(&session.token_hash)
+        .bind(&session.refresh_token_hash)
+        .bind(session.expires_at)
+        .bind(&session.refresh_expires_at)
+        .bind(&session.ip_address)
+        .bind(&session.user_agent)
+        .bind(true)
+        .bind(now)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+        
+        Ok(Session {
+            id,
+            user_id: session.user_id,
+            token_hash: session.token_hash,
+            refresh_token_hash: session.refresh_token_hash,
+            expires_at: session.expires_at,
+            refresh_expires_at: session.refresh_expires_at,
+            ip_address: session.ip_address,
+            user_agent: session.user_agent,
+            is_active: true,
+            created_at: now,
+            updated_at: now,
+        })
+    }
+
+    async fn get_session(&self, id: Uuid) -> Result<Option<Session>> {
+        let row = sqlx::query_as::<_, Session>(
+            r#"
+            SELECT id, user_id, token_hash, refresh_token_hash, expires_at,
+                   refresh_expires_at, ip_address, user_agent, is_active,
+                   created_at, updated_at
+            FROM sessions
+            WHERE id = $1
+            "#
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+        
+        Ok(row)
+    }
+
+    async fn get_session_by_token_hash(&self, token_hash: &str) -> Result<Option<Session>> {
+        let row = sqlx::query_as::<_, Session>(
+            r#"
+            SELECT id, user_id, token_hash, refresh_token_hash, expires_at,
+                   refresh_expires_at, ip_address, user_agent, is_active,
+                   created_at, updated_at
+            FROM sessions
+            WHERE token_hash = $1 AND is_active = true
+            "#
+        )
+        .bind(token_hash)
+        .fetch_optional(&self.pool)
+        .await?;
+        
+        Ok(row)
+    }
+
+    async fn get_user_sessions(&self, user_id: Uuid) -> Result<Vec<Session>> {
+        let rows = sqlx::query_as::<_, Session>(
+            r#"
+            SELECT id, user_id, token_hash, refresh_token_hash, expires_at,
+                   refresh_expires_at, ip_address, user_agent, is_active,
+                   created_at, updated_at
+            FROM sessions
+            WHERE user_id = $1 AND is_active = true
+            ORDER BY created_at DESC
+            "#
+        )
+        .bind(user_id)
+        .fetch_all(&self.pool)
+        .await?;
+        
+        Ok(rows)
+    }
+
+    async fn update_session(&self, id: Uuid, update: UpdateSession) -> Result<Session> {
+        let now = Utc::now();
+        
+        // Get current session to merge with updates
+        let current = self.get_session(id).await?
+            .ok_or_else(|| anyhow::anyhow!("Session not found: {}", id))?;
+        
+        sqlx::query_as::<_, Session>(
+            r#"
+            UPDATE sessions
+            SET token_hash = COALESCE($1, token_hash),
+                refresh_token_hash = COALESCE($2, refresh_token_hash),
+                expires_at = COALESCE($3, expires_at),
+                refresh_expires_at = COALESCE($4, refresh_expires_at),
+                is_active = COALESCE($5, is_active),
+                updated_at = $6
+            WHERE id = $7
+            RETURNING id, user_id, token_hash, refresh_token_hash, expires_at,
+                     refresh_expires_at, ip_address, user_agent, is_active,
+                     created_at, updated_at
+            "#
+        )
+        .bind(&update.token_hash)
+        .bind(&update.refresh_token_hash)
+        .bind(&update.expires_at)
+        .bind(&update.refresh_expires_at)
+        .bind(update.is_active)
+        .bind(now)
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("Session not found after update: {}", id))
+    }
+
+    async fn delete_session(&self, id: Uuid) -> Result<()> {
+        sqlx::query("DELETE FROM sessions WHERE id = $1")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        
+        Ok(())
+    }
+
+    async fn delete_user_sessions(&self, user_id: Uuid) -> Result<()> {
+        sqlx::query("UPDATE sessions SET is_active = false WHERE user_id = $1")
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
+        
+        Ok(())
+    }
+
+    async fn cleanup_expired_sessions(&self) -> Result<usize> {
+        let result = sqlx::query("UPDATE sessions SET is_active = false WHERE expires_at < NOW() AND is_active = true")
+            .execute(&self.pool)
+            .await?;
+        
+        Ok(result.rows_affected() as usize)
+    }
+
+    // Password reset token operations
+    async fn create_password_reset_token(&self, token: CreatePasswordResetToken) -> Result<PasswordResetToken> {
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            INSERT INTO password_reset_tokens (
+                id, user_id, token_hash, expires_at, ip_address, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6)
+            "#
+        )
+        .bind(id)
+        .bind(token.user_id)
+        .bind(&token.token_hash)
+        .bind(token.expires_at)
+        .bind(&token.ip_address)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+        
+        Ok(PasswordResetToken {
+            id,
+            user_id: token.user_id,
+            token_hash: token.token_hash,
+            expires_at: token.expires_at,
+            used_at: None,
+            ip_address: token.ip_address,
+            created_at: now,
+        })
+    }
+
+    async fn get_password_reset_token(&self, token_hash: &str) -> Result<Option<PasswordResetToken>> {
+        let row = sqlx::query_as::<_, PasswordResetToken>(
+            r#"
+            SELECT id, user_id, token_hash, expires_at, used_at, ip_address, created_at
+            FROM password_reset_tokens
+            WHERE token_hash = $1 AND expires_at > NOW() AND used_at IS NULL
+            "#
+        )
+        .bind(token_hash)
+        .fetch_optional(&self.pool)
+        .await?;
+        
+        Ok(row)
+    }
+
+    async fn mark_password_reset_token_used(&self, id: Uuid) -> Result<()> {
+        sqlx::query("UPDATE password_reset_tokens SET used_at = NOW() WHERE id = $1")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        
+        Ok(())
+    }
+
+    async fn cleanup_expired_password_reset_tokens(&self) -> Result<usize> {
+        let result = sqlx::query("DELETE FROM password_reset_tokens WHERE expires_at < NOW()")
+            .execute(&self.pool)
+            .await?;
+        
+        Ok(result.rows_affected() as usize)
     }
 }
 

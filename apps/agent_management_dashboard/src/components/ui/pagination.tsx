@@ -7,7 +7,6 @@ import {
 
 import { cn } from "./utils";
 import { Button, buttonVariants } from "./button";
-import styles from "./pagination.module.scss";
 
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
   return (
@@ -15,7 +14,7 @@ function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
       role="navigation"
       aria-label="pagination"
       data-slot="pagination"
-      className={cn(styles.root, className)}
+      className={cn("mx-auto flex w-full justify-center", className)}
       {...props}
     />
   );
@@ -28,7 +27,7 @@ function PaginationContent({
   return (
     <ul
       data-slot="pagination-content"
-      className={cn(styles.content, className)}
+      className={cn("flex flex-row items-center gap-1", className)}
       {...props}
     />
   );
@@ -74,7 +73,7 @@ function PaginationPrevious({
     <PaginationLink
       aria-label="Go to previous page"
       size="default"
-      className={cn(styles.previous, className)}
+      className={cn("gap-1 px-2.5 sm:pl-2.5", className)}
       {...props}
     >
       <ChevronLeftIcon />
@@ -91,7 +90,7 @@ function PaginationNext({
     <PaginationLink
       aria-label="Go to next page"
       size="default"
-      className={cn(styles.next, className)}
+      className={cn("gap-1 px-2.5 sm:pr-2.5", className)}
       {...props}
     >
       <span className="hidden sm:block">Next</span>
