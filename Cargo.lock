@@ -89,6 +89,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "sqlx",
+ "system-acceleration",
  "system-configuration 0.1.0",
  "system-resilience",
  "tar",
@@ -216,6 +217,7 @@ dependencies = [
  "agent-data-processing",
  "agent-evaluation",
  "agent-memory",
+ "agent-model-management",
  "agent-research",
  "agent-workers",
  "anyhow",
@@ -227,6 +229,7 @@ dependencies = [
  "comrak",
  "console 0.16.1",
  "crossbeam",
+ "data-infrastructure",
  "development-tools",
  "fastrand 2.3.0",
  "flate2",
@@ -11269,6 +11272,7 @@ dependencies = [
  "getrandom 0.3.4",
  "js-sys",
  "serde",
+ "sha1_smol",
  "wasm-bindgen",
 ]
 

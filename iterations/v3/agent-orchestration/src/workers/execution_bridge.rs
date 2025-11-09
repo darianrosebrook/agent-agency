@@ -147,13 +147,17 @@ impl WorkerExecutionBridge {
         let mut required_tools = Vec::new();
         
         // Add tools based on milestone scope files/directories
+        // Use file_edit for code editing (file_edit is the MCP tool for editing files)
         if !milestone.scope.files.is_empty() || !milestone.scope.directories.is_empty() {
-            required_tools.push("code_editor".to_string());
+            required_tools.push("file_edit".to_string());
+            // Also add file_read for reading existing files
+            required_tools.push("file_read".to_string());
         }
 
-        // Default to code-editing tool if no tools specified
+        // Default to file editing tools if no tools specified
         if required_tools.is_empty() {
-            required_tools.push("code_editor".to_string());
+            required_tools.push("file_edit".to_string());
+            required_tools.push("file_read".to_string());
         }
 
         // Convert priority - TaskDefinition uses TaskPriority from contracts
@@ -177,9 +181,14 @@ impl WorkerExecutionBridge {
         parameters.insert("tests".to_string(), serde_json::json!(milestone.tests));
         parameters.insert("worktree_path".to_string(), serde_json::json!(worktree_path.display().to_string()));
 
+        // Create a generic task name that will match General specialty workers
+        // worker_can_handle_task checks task name patterns, but defaults to General specialty
+        // So we use a generic name that doesn't match any specific pattern
+        let task_name = format!("task_{}", milestone.id);
+
         Ok(TaskDefinition {
             id: Uuid::new_v4(),
-            name: format!("milestone_{}", milestone.id),
+            name: task_name,
             description: milestone.objective.clone(),
             required_tools,
             parameters,

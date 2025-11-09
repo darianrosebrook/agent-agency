@@ -289,6 +289,8 @@ impl UnifiedOrchestratorAdapter {
                 memory_system.clone(),
                 council.clone(),
                 db_ops.clone(),
+                None, // worker_bridge - not available in deprecated method
+                None, // worktree_manager - not available in deprecated method
             ).await
             .map_err(|e| ServiceError::Internal(format!("Failed to create planning components: {}", e)))?;
 

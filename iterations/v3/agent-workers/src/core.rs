@@ -155,14 +155,20 @@ impl MCPWorkerPool {
             .find(|t| t.name == *tool_id)
             .ok_or_else(|| WorkerError::ToolNotAvailable(tool_id.clone()))?;
 
+        // Convert task parameters to tool-specific parameters
+        // Different tools expect different parameter formats
+        let tool_parameters = self.convert_task_params_to_tool_params(&task, &mcp_tool.name, &task.parameters)?;
+        
         // Create MCP execution request
         let request = ToolExecutionRequest {
             id: uuid::Uuid::new_v4(),
             tool_id: mcp_tool.id,
-            parameters: task.parameters.clone(),
+            parameters: tool_parameters,
             timeout_seconds: task.timeout_seconds.map(|t| t as u64),
             context: Some(ExecutionContext {
-                working_directory: None,
+                working_directory: task.parameters.get("worktree_path")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
                 environment_variables: HashMap::new(),
                 input_files: vec![],
                 output_directory: None,
@@ -394,6 +400,103 @@ impl MCPWorkerPool {
                 worker.specialty == WorkerSpecialty::CodeGeneration,
             _ => worker.specialty == WorkerSpecialty::General,
         }
+    }
+
+    /// Convert task parameters to tool-specific parameters
+    /// 
+    /// Different MCP tools expect different parameter formats. This function
+    /// converts high-level task parameters (objective, scope, etc.) into
+    /// tool-specific parameters that the MCP tools can understand.
+    fn convert_task_params_to_tool_params(
+        &self,
+        task: &TaskDefinition,
+        tool_name: &str,
+        task_params: &HashMap<String, serde_json::Value>,
+    ) -> Result<HashMap<String, serde_json::Value>, WorkerError> {
+        let mut tool_params = HashMap::new();
+        
+        match tool_name {
+            "file_edit" => {
+                // file_edit requires: task_id, changes
+                // Extract task_id from task.id
+                tool_params.insert("task_id".to_string(), serde_json::json!(task.id.to_string()));
+                
+                // For changes, we need to generate a changeset from the objective
+                // Since we don't have an LLM here, we'll create a minimal placeholder changeset
+                // that indicates the file should be created/modified based on the objective
+                let objective = task_params.get("objective")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(&task.description);
+                
+                // Extract file path from scope if available
+                let file_path = task_params.get("scope")
+                    .and_then(|s| s.get("files"))
+                    .and_then(|f| f.as_array())
+                    .and_then(|arr| arr.first())
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_else(|| {
+                        // Default to a Python file if objective mentions Python
+                        if objective.to_lowercase().contains("python") {
+                            "hello_world.py"
+                        } else {
+                            "output.txt"
+                        }
+                    });
+                
+                // Create a minimal changeset - full file replacement
+                // file_edit expects: path, old_content (optional), new_content (optional)
+                // This is a placeholder that will need LLM interpretation in the future
+                let changes = vec![serde_json::json!({
+                    "path": file_path,
+                    "old_content": "",
+                    "new_content": format!("# {}\n# TODO: Implement actual content based on objective", objective)
+                })];
+                
+                tool_params.insert("changes".to_string(), serde_json::json!(changes));
+            },
+            "file_write" => {
+                // file_write requires: path, content
+                let file_path = task_params.get("scope")
+                    .and_then(|s| s.get("files"))
+                    .and_then(|f| f.as_array())
+                    .and_then(|arr| arr.first())
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_else(|| {
+                        let objective = task_params.get("objective")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or(&task.description);
+                        if objective.to_lowercase().contains("python") {
+                            "hello_world.py"
+                        } else {
+                            "output.txt"
+                        }
+                    });
+                
+                let objective = task_params.get("objective")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(&task.description);
+                
+                tool_params.insert("path".to_string(), serde_json::json!(file_path));
+                tool_params.insert("content".to_string(), serde_json::json!(format!("# {}\n# TODO: Implement actual content", objective)));
+            },
+            "file_read" => {
+                // file_read requires: path
+                let file_path = task_params.get("scope")
+                    .and_then(|s| s.get("files"))
+                    .and_then(|f| f.as_array())
+                    .and_then(|arr| arr.first())
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(".");
+                
+                tool_params.insert("path".to_string(), serde_json::json!(file_path));
+            },
+            _ => {
+                // For other tools, pass through task parameters as-is
+                tool_params.extend(task_params.clone());
+            },
+        }
+        
+        Ok(tool_params)
     }
 
     /// Validate task requirements before execution

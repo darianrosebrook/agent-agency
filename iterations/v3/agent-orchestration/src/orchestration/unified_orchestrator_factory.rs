@@ -141,14 +141,91 @@ impl UnifiedOrchestratorFactory {
             Arc::new(MemorySystem::init(MemoryConfig::default()).await?)
         };
 
+        // Create UnifiedOrchestratorConfig (needed for worktree_manager)
+        let config = UnifiedOrchestratorConfig {
+            enable_council_review: true,
+            enable_refinement: true,
+            enable_worktree_isolation: true,
+            worktree_base_path: PathBuf::from("/tmp/agent-agency-worktrees"),
+            max_parallel_milestones: 5,
+        };
+
+        // Create WorktreeManager (needed for PlanExecutor)
+        let worktree_config = WorktreeManagerConfig {
+            worktree_base_path: config.worktree_base_path.clone(),
+            main_repo_path: PathBuf::from("."),
+            base_branch: "main".to_string(),
+            auto_cleanup: true,
+            max_concurrent_worktrees: 10,
+        };
+        let worktree_manager = Arc::new(WorktreeManager::new(worktree_config));
+
+        // Create worker bridge (needed for PlanExecutor)
+        // Create database client using DATABASE_URL from environment or default
+        let database_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgresql://localhost/agent_agency_v3".to_string());
+        let db_config = data_infrastructure::DatabaseConfig {
+            database_url: database_url.clone(),
+            pool_max: Some(10),
+            connection_timeout: Some(30),
+            query_timeout: Some(60),
+            ..Default::default()
+        };
+        let db_client = Arc::new(data_infrastructure::DatabaseClient::new(db_config)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to create database client: {}", e))?);
+        // Create ToolRegistry with real FileOperationsService for MCP tools
+        // Use helper function from agent-workers that has access to both agent_mcp and data-infrastructure
+        let repo_path = std::env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."));
+        let tool_registry = agent_workers::create_tool_registry_with_file_ops(repo_path).await
+            .map_err(|e| anyhow::anyhow!("Failed to create tool registry with file operations: {}", e))?;
+        
+        // Use the existing memory_system for workers (already created above)
+        #[cfg(feature = "memory")]
+        let shared_memory = memory_system.clone();
+        #[cfg(not(feature = "memory"))]
+        {
+            return Err(anyhow::anyhow!("Memory feature required for UnifiedOrchestrator initialization"));
+        }
+        
+        // Create worker pool with the initialized tool registry and shared memory
+        let worker_pool = Arc::new(MCPWorkerPool::new_with_registry(
+            WorkerPoolConfig::default(),
+            tool_registry,
+            shared_memory,
+        ));
+        
+        // Register a default worker in the pool to handle tasks
+        // This matches the worker in the database (Default MCP Worker)
+        use agent_workers::{WorkerSpecialty, WorkerCapabilities};
+        let default_capabilities = WorkerCapabilities {
+            languages: vec!["python".to_string(), "rust".to_string(), "typescript".to_string()],
+            frameworks: vec![],
+            domains: vec!["code_generation".to_string(), "file_operations".to_string()],
+            max_context_length: 8192,
+            max_output_length: 4096,
+            supported_formats: vec!["text".to_string(), "json".to_string()],
+            caws_awareness: 0.8,
+            quality_score: 0.9,
+            speed_score: 0.7,
+        };
+        worker_pool.register_worker(WorkerSpecialty::General, default_capabilities).await
+            .map_err(|e| anyhow::anyhow!("Failed to register default worker: {}", e))?;
+        
+        let task_executor = Arc::new(TaskExecutor::new(db_client));
+        let worker_bridge = Arc::new(WorkerExecutionBridge::new(worker_pool, task_executor));
+
         // Create planning components - requires both research and memory features
-        // Create planning components - requires both research and memory features
+        // Pass worker_bridge and worktree_manager so PlanExecutor has real execution capabilities
         #[cfg(all(feature = "research", feature = "memory"))]
         let planning_components = PlanningSystemFactory::create_planning_components(
             research_collector,
             memory_system.clone(),
             council.clone(),
             db_ops.clone(),
+            Some(worker_bridge.clone()), // Pass WorkerExecutionBridge
+            Some(worktree_manager.clone()), // Pass WorktreeManager
         ).await?;
 
         #[cfg(not(all(feature = "research", feature = "memory")))]
@@ -158,25 +235,6 @@ impl UnifiedOrchestratorFactory {
                  Enable both features in Cargo.toml or use LegacyOrchestratorAdapter."
             ));
         }
-
-        // Create UnifiedOrchestratorConfig
-        let config = UnifiedOrchestratorConfig {
-            enable_council_review: true,
-            enable_refinement: true,
-            enable_worktree_isolation: true,
-            worktree_base_path: PathBuf::from("/tmp/agent-agency-worktrees"),
-            max_parallel_milestones: 5,
-        };
-
-        // Create WorktreeManager
-        let worktree_config = WorktreeManagerConfig {
-            worktree_base_path: config.worktree_base_path.clone(),
-            main_repo_path: PathBuf::from("."),
-            base_branch: "main".to_string(),
-            auto_cleanup: true,
-            max_concurrent_worktrees: 10,
-        };
-        let worktree_manager = Arc::new(WorktreeManager::new(worktree_config));
 
         // Create CAWS adjudication cycle
         let council_integration: Arc<dyn CouncilIntegration> = Arc::new(CouncilIntegrationImpl::new(
@@ -201,45 +259,6 @@ impl UnifiedOrchestratorFactory {
             worker_assignment_strategy.clone(),
             LearningConfig::default(),
         ));
-
-        // Create worker bridge
-        let worker_pool = Arc::new(MCPWorkerPool::new(WorkerPoolConfig::default()).await);
-        // TODO: Pass actual database client when available:
-        // 1. Database client integration: Integrate with actual database client
-        //    - Retrieve database client from configuration or dependency injection
-        //    - Use shared database client instance if available
-        //    - Handle database client creation errors appropriately
-        // 2. Client management: Manage database client lifecycle
-        //    - Share database client across components
-        //    - Handle client connection pooling
-        //    - Support client configuration and setup
-        // 3. Integration completion: Complete database integration
-        //    - Remove stub database client creation
-        //    - Use actual database client for all operations
-        //    - Test database client integration thoroughly
-        // ACCEPTANCE CRITERIA:
-        // - Actual database client is passed to TaskExecutor
-        // - Database client is properly configured and connected
-        // - All database operations use the actual client
-        // DEPENDENCIES:
-        // - Database client configuration (Required)
-        // - Database connection management (Required)
-        // PRIORITY: High
-        // Create database client using DATABASE_URL from environment or default
-        let database_url = std::env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgresql://localhost/agent_agency_v3".to_string());
-        let db_config = data_infrastructure::DatabaseConfig {
-            database_url: database_url.clone(),
-            pool_max: Some(10),
-            connection_timeout: Some(30),
-            query_timeout: Some(60),
-            ..Default::default()
-        };
-        let db_client = Arc::new(data_infrastructure::DatabaseClient::new(db_config)
-            .await
-            .map_err(|e| anyhow::anyhow!("Failed to create database client: {}", e))?);
-        let task_executor = Arc::new(TaskExecutor::new(db_client));
-        let worker_bridge = Arc::new(WorkerExecutionBridge::new(worker_pool, task_executor));
 
         // Create stub worker pool for PlanExecutor
         struct StubWorkerPool;

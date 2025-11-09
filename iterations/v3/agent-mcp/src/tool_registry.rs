@@ -238,46 +238,14 @@ impl ToolRegistry {
     /// This allows injecting a real FileOperationsService implementation
     /// when both agent-mcp and data-infrastructure are available
     pub fn set_file_operations_service(&self, file_ops: Arc<dyn FileOperationsService>) {
-        // Replace the file_ops and recreate the executor
-        let new_executor = Arc::new(FileEditingToolExecutor::new(file_ops.clone()));
-        // Note: This requires making file_ops and file_editing_executor mutable
-        //
-        // TODO: Refactor ToolRegistry to use Arc<RwLock<>> for file_ops and executor
-        //       Currently requires storing in Arc<RwLock<>> to allow updates; should refactor ToolRegistry to use Arc<RwLock<>> for file_ops and executor to support runtime updates while maintaining backward compatibility.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - file_ops and executor are stored in Arc<RwLock<>>
-        // - Runtime updates are supported
-        // - Backward compatibility is maintained
-        // - Thread safety is ensured
-        //
-        // DEPENDENCIES:
-        // - Arc<RwLock<>> refactoring (Required)
-        // - Thread-safe update mechanisms (Required)
-        // - Backward compatibility layer (Required)
-        //
-        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (refactoring for runtime updates)
-        // - Change Budget: ~150 LOC
-        // - Reviewer Requirements: Concurrency and refactoring expertise
-        warn!("set_file_operations_service() called but ToolRegistry.file_ops is not mutable. Use ToolRegistry::with_file_ops() at construction time instead.");
+        // Update file_ops in the RwLock
+        *self.file_ops.write().unwrap() = file_ops.clone();
+        
+        // Recreate the executor with the new file_ops
+        let new_executor = Arc::new(FileEditingToolExecutor::new(file_ops));
+        *self.file_editing_executor.write().unwrap() = new_executor;
+        
+        info!("FileOperationsService updated successfully");
     }
 
     /// Set the memory system for memory tools

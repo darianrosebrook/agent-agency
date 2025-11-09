@@ -50,19 +50,19 @@ impl MCPIntegration {
         Ok(())
     }
 
-    /// Execute a tool using real HTTP calls to MCP server
+    /// Execute a tool using the local ToolRegistry (direct execution)
+    /// 
+    /// This executes tools directly from the registry without HTTP calls,
+    /// which is more efficient and doesn't require a separate MCP server.
     pub async fn execute_tool(&self, request: ToolExecutionRequest) -> Result<ToolExecutionResult, MCPIntegrationError> {
-        info!("Executing tool via HTTP MCP server: {}", request.tool_id);
+        info!("Executing tool directly from registry: {}", request.tool_id);
         
-        // Get tool from registry first
-        let tool = self.tool_registry.get_tool(request.tool_id).await
-            .ok_or_else(|| MCPIntegrationError::ExecutionFailed(format!("Tool not found: {}", request.tool_id)))?;
-
-        // Execute via HTTP call to MCP server
-        let result = self.execute_via_http(&tool, &request).await
+        // Execute tool directly from the registry
+        // This avoids HTTP overhead and works without a separate MCP server
+        let result = self.tool_registry.execute_tool(request).await
             .map_err(|e| MCPIntegrationError::ExecutionFailed(e.to_string()))?;
 
-        info!("Tool execution completed: {} -> {}", request.tool_id, result.status);
+        info!("Tool execution completed: {} -> {}", result.tool_id, result.status);
         Ok(result)
     }
 

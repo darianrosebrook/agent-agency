@@ -126,6 +126,25 @@ pub async fn new_worker_pool_with_registry(tool_registry: std::sync::Arc<agent_m
     MCPWorkerPool::new_with_registry(WorkerPoolConfig::default(), tool_registry, shared_memory)
 }
 
+/// Create a ToolRegistry with real FileOperationsService
+/// 
+/// This creates a fully functional ToolRegistry with all file editing tools
+/// registered and ready to use. The FileOperationsService is created from
+/// data-infrastructure and uses the provided repository path.
+pub async fn create_tool_registry_with_file_ops(repo_path: std::path::PathBuf) -> anyhow::Result<std::sync::Arc<agent_mcp::ToolRegistry>> {
+    use data_infrastructure::file_operations_service::create_file_operations_service;
+    use agent_mcp::ToolRegistry;
+    
+    let file_ops = create_file_operations_service(repo_path);
+    let tool_registry = std::sync::Arc::new(ToolRegistry::with_file_ops(file_ops));
+    
+    // Initialize the tool registry to register all available tools
+    tool_registry.initialize().await
+        .map_err(|e| anyhow::anyhow!("Failed to initialize tool registry: {}", e))?;
+    
+    Ok(tool_registry)
+}
+
 /// Create a parallel coordinator for complex task decomposition
 pub fn new_parallel_coordinator() -> ParallelCoordinator {
     let config = ParallelCoordinatorConfig::default();

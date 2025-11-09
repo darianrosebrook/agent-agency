@@ -136,6 +136,9 @@ impl PlanningSystemFactory {
         #[cfg(feature = "memory")] memory_system: Arc<agent_memory::MemorySystem>,
         council: Arc<crate::council::Council>,
         db_ops: Arc<dyn DatabaseOperations>,
+        // Optional execution dependencies - if provided, PlanExecutor will have real execution capabilities
+        worker_bridge: Option<Arc<crate::workers::execution_bridge::WorkerExecutionBridge>>,
+        worktree_manager: Option<Arc<crate::planning::worktree_manager::WorktreeManager>>,
     ) -> Result<PlanningSystemComponents> {
         // Initialize CoreML manager for AI-assisted planning
         let coreml_manager = {
@@ -268,19 +271,39 @@ impl PlanningSystemFactory {
         // We'll create them using a cyclic reference pattern
         let parallel_coordinator = Arc::new_cyclic(|coordinator_ref| {
             // Create PlanExecutor that references the coordinator
-            let plan_executor = Arc::new(crate::planning::plan_executor::PlanExecutor::new(
-                crate::planning::plan_types::ExecutionPlan::default(),
-                worker_pool.clone(),
-                evidence_collector.clone(),
-                worker_assigner.clone(),
-                scope_guard.clone(),
-                council_monitor.clone(),
-                coordinator_ref.clone(), // Weak reference to the coordinator being created
-                audit_trail.clone(),
-                None, // audit_trail_manager - optional, not provided in factory
-                todo_adapter.clone(), // Pass the TodoAdapter implementing TodoInterface
-                crate::planning::plan_executor::ExecutionConfig::default(),
-            ));
+            // Use with_lifecycle_manager if worker_bridge and worktree_manager are provided
+            let plan_executor = if worker_bridge.is_some() || worktree_manager.is_some() {
+                Arc::new(crate::planning::plan_executor::PlanExecutor::with_lifecycle_manager(
+                    crate::planning::plan_types::ExecutionPlan::default(),
+                    worker_pool.clone(),
+                    evidence_collector.clone(),
+                    worker_assigner.clone(),
+                    scope_guard.clone(),
+                    council_monitor.clone(),
+                    coordinator_ref.clone(), // Weak reference to the coordinator being created
+                    audit_trail.clone(),
+                    None, // audit_trail_manager - optional, not provided in factory
+                    todo_adapter.clone(), // Pass the TodoAdapter implementing TodoInterface
+                    None, // worker_lifecycle_manager - optional
+                    worker_bridge.clone(), // Pass WorkerExecutionBridge if provided
+                    worktree_manager.clone(), // Pass WorktreeManager if provided
+                    crate::planning::plan_executor::ExecutionConfig::default(),
+                ))
+            } else {
+                Arc::new(crate::planning::plan_executor::PlanExecutor::new(
+                    crate::planning::plan_types::ExecutionPlan::default(),
+                    worker_pool.clone(),
+                    evidence_collector.clone(),
+                    worker_assigner.clone(),
+                    scope_guard.clone(),
+                    council_monitor.clone(),
+                    coordinator_ref.clone(), // Weak reference to the coordinator being created
+                    audit_trail.clone(),
+                    None, // audit_trail_manager - optional, not provided in factory
+                    todo_adapter.clone(), // Pass the TodoAdapter implementing TodoInterface
+                    crate::planning::plan_executor::ExecutionConfig::default(),
+                ))
+            };
             
             // Create ParallelCoordinator with the PlanExecutor
             ParallelCoordinator::new(
