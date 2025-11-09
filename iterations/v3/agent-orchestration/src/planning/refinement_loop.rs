@@ -490,15 +490,15 @@ impl RefinementLoopCoordinator {
             }
         }
 
-        let final_verdict = final_verdict.expect("Final verdict should be set after refinement loop");
-        
+        let final_verdict_value = final_verdict.expect("Final verdict should be set after refinement loop");
+
         // Get final state
         let state = self.execution_state.read().await;
         let refinement_state = state.get(&task_id)
             .ok_or_else(|| anyhow::anyhow!("Refinement state not found for task {}", task_id))?;
 
         Ok(RefinementLoopResult {
-            final_verdict,
+            final_verdict: final_verdict_value,
             iterations: iteration,
             quality_scores: refinement_state.quality_scores.clone(),
             iteration_history: refinement_state.iteration_history.clone(),

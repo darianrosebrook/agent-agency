@@ -33,7 +33,7 @@ use crate::planning::refinement_loop::{
 };
 use crate::planning::worker_assignment::WorkerAssignmentStrategy;
 use agent_agency_contracts::ExecutionStatus;
-use crate::planning::plan_types::{PlanGenerationContext, WorkingSpecProvider, TaskDescriptorProvider, ExecutionPlan, PlanGenerationStrategy, ResourceInventory};
+use crate::planning::plan_types::{PlanGenerationContext, WorkingSpecProvider, TaskDescriptorProvider, ExecutionPlan, PlanGenerationStrategy, ResourceInventory, HistoricalPlan, HistoricalPlanningData, FailurePattern};
 use crate::planning::worktree_manager::WorktreeManager;
 use crate::planning::caws_adjudication_cycle::CawsAdjudicationCycle;
 use crate::planning::worker_lifecycle_manager::WorkerLifecycleManager;
@@ -366,7 +366,7 @@ impl UnifiedOrchestrator {
         // Phase 0: Crash recovery - Check for resumable state by working_spec.id
         let mut recovered_state: Option<TaskExecutionState> = None;
         let mut is_resuming = false;
-        let plan_id = {
+        let _plan_id = {
             if let Some(ref persistence) = self.state_persistence {
                 // Look for resumable state by checking all resumable tasks
                 // and matching by working_spec.id

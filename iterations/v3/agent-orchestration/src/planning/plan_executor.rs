@@ -949,7 +949,7 @@ impl PlanExecutor {
         let batch_result = parallel_coordinator.execute_batch_parallel(plan, batch_index).await?;
 
         // Process results
-        let batch_success = batch_result.failed == 0;
+        let _batch_success = batch_result.failed == 0;
 
         // Collect evidence from successful executions
         // Evidence is collected by checking milestone state after batch execution completes
@@ -993,8 +993,8 @@ impl PlanExecutor {
         }
 
         // Update batch completion
-        let batch_end = Utc::now();
-        if let Some(state) = &mut plan.execution_state {
+        let _batch_end = Utc::now();
+        if let Some(_state) = &mut plan.execution_state {
             // Note: parallel_batches access commented out due to double borrow issues
             // if let Some(current_batch) = state.parallel_batches.get_mut(batch_index) {
             //     current_batch.completed_at = Some(batch_end);
@@ -1017,7 +1017,7 @@ impl PlanExecutor {
         let milestone_start = Utc::now();
 
         // Find milestone
-        let milestone = plan.contract_plan.milestones.iter()
+        let _milestone = plan.contract_plan.milestones.iter()
             .find(|m| m.id == milestone_id)
             .ok_or_else(|| anyhow!("Milestone '{}' not found", milestone_id))?
             .clone();

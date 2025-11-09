@@ -27,11 +27,13 @@ use crate::planning::{
     worker_lifecycle_manager::WorkerLifecycleManager,
     worker_assignment::WorkerAssignmentStrategy,
     reflexive_learner::{ReflexiveLearner, LearningConfig},
-    plan_executor::{WorkerPool, WorkerInfo, WorkerStatus, WorkerHealth},
+    plan_executor::{WorkerPool, WorkerInfo, WorkerStatus, WorkerHealth, PlanExecutor, ExecutionConfig},
+    factory::PlanningSystemFactory,
 };
 use crate::orchestration::task_state_persistence::InMemoryTaskStatePersistence;
-use crate::planning::DatabaseOperations;
-use agent_workers::TaskExecutor;
+use crate::planning::{DatabaseOperations, plan_types::ExecutionPlan};
+use crate::workers::execution_bridge::WorkerExecutionBridge;
+use agent_workers::{TaskExecutor, MCPWorkerPool, WorkerPoolConfig, WorkerSpecialty};
 use async_trait::async_trait;
 
 /// Factory for creating UnifiedOrchestrator instances

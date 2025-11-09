@@ -681,7 +681,7 @@ impl QualityGateExecutor {
     /// Check security requirements
     async fn check_security(
         &self,
-        security_requirements: &agent_agency_contracts::planning_io::SecurityRequirements,
+        _security_requirements: &agent_agency_contracts::planning_io::SecurityRequirements,
     ) -> Result<QualityGateResult> {
         let start_time = Utc::now();
 

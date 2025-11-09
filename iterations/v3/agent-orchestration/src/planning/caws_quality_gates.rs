@@ -278,7 +278,7 @@ impl CawsQualityGateExecutor {
                 .unwrap_or("unknown")
                 .to_string();
             
-            let title = waiver_json.get("title")
+            let _title = waiver_json.get("title")
                 .and_then(|t| t.as_str())
                 .unwrap_or("Unknown waiver")
                 .to_string();

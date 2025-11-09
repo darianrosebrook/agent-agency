@@ -267,7 +267,7 @@ impl ParallelCoordinator {
         plan: &mut ExecutionPlan,
         batch_index: usize,
     ) -> Result<BatchExecutionResult> {
-        let batch_start = std::time::Instant::now();
+        let _batch_start = std::time::Instant::now();
 
         // Get mutable reference to batch
         let batch = &mut plan.execution_context.parallel_batches[batch_index];
@@ -627,8 +627,8 @@ impl ParallelCoordinator {
             milestone.id.hash(&mut hasher);
             let hash = hasher.finish();
             // Use first 128 bits of hash to create UUID
-            let uuid = Uuid::from_u128(hash as u128);
-            uuid.to_string()
+            let _uuid = Uuid::from_u128(hash as u128);
+            _uuid.to_string()
         };
         
         // Only call scope_guard if scope has files to lock
@@ -667,8 +667,8 @@ impl ParallelCoordinator {
             let mut hasher = DefaultHasher::new();
             milestone.id.hash(&mut hasher);
             let hash = hasher.finish();
-            let uuid = Uuid::from_u128(hash as u128);
-            uuid.to_string()
+            let _uuid = Uuid::from_u128(hash as u128);
+            _uuid.to_string()
         };
         
         if !milestone.scope.files.is_empty() {

@@ -269,7 +269,7 @@ impl OrchestratorPlanningIntegration {
     /// Create plan executor with all real dependencies
     async fn create_plan_executor(&self, plan: PlanningExecutionPlan) -> Result<PlanExecutor> {
         // Create worker pool using local MCPWorkerPool implementation
-        let mcp_pool = Arc::new(
+        let _mcp_pool = Arc::new(
             crate::multimodal_orchestration::MCPWorkerPool::new(
                 crate::multimodal_orchestration::WorkerPoolConfig::default()
             ).await
@@ -281,7 +281,7 @@ impl OrchestratorPlanningIntegration {
         let audit_config = crate::AuditConfig::default();
         let audit_manager = Arc::new(crate::AuditTrailManager::new(audit_config));
         let audit_trail = Arc::new(AuditTrailAdapter::new(
-            audit_manager,
+            audit_manager.clone(),
             Arc::clone(&self.db_ops),
         ));
 
@@ -311,7 +311,7 @@ impl OrchestratorPlanningIntegration {
     /// Verify execution quality against requirements
     async fn verify_execution_quality(
         &self,
-        plan: &PlanningExecutionPlan,
+        _plan: &PlanningExecutionPlan,
         result: &agent_agency_contracts::planning::PlanExecutionResult,
     ) -> Result<bool> {
         // Check if all quality gates were satisfied

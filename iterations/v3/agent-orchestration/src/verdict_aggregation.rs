@@ -425,7 +425,7 @@ impl VerdictAggregator {
     /// Make the final council decision based on analysis
     async fn make_council_decision(
         &self,
-        verdict_distribution: &VerdictDistribution,
+        _verdict_distribution: &VerdictDistribution,
         weighted_contributions: &[WeightedContribution],
         consensus_strength: ConsensusStrength,
         dissenting_opinions: &[DissentingOpinion],
@@ -1901,7 +1901,7 @@ impl ChangeDeduplicationEngine {
         &self,
         all_changes: &[RequiredChange],
         indices: &[usize],
-        features: &[ChangeSemanticFeatures],
+        _features: &[ChangeSemanticFeatures],
     ) -> CouncilResult<RequiredChange> {
         if indices.is_empty() {
             return Err(CouncilError::InvalidInput {
