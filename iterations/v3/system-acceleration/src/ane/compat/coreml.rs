@@ -7,6 +7,7 @@
 pub use crate::ane::compat::types::*;
 
 // Re-export model functionality
+#[allow(ambiguous_glob_reexports)]
 pub use crate::ane::compat::model::*;
 
 // Re-export tokenizer functionality

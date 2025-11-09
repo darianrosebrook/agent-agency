@@ -66,6 +66,7 @@ system-configuration = { path = "../system-configuration" }
 default = []
 metal = []
 coreml = []
+coreml_probe = []  # Feature flag for CoreML probe functionality
 
 [dev-dependencies]
 tokio-test = "0.4"

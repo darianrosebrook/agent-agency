@@ -184,6 +184,7 @@ impl CircuitBreaker {
 
 /// Permit for circuit breaker execution
 pub struct CircuitBreakerPermit<'a> {
+    #[allow(dead_code)] // Used for lifetime tracking
     circuit_breaker: &'a CircuitBreaker,
 }
 
