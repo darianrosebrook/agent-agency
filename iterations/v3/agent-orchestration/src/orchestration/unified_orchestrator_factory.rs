@@ -27,14 +27,11 @@ use crate::planning::{
     worker_lifecycle_manager::WorkerLifecycleManager,
     worker_assignment::WorkerAssignmentStrategy,
     reflexive_learner::{ReflexiveLearner, LearningConfig},
-    plan_executor::{WorkerPool, WorkerInfo, WorkerStatus, WorkerHealth, PlanExecutor, ExecutionConfig},
-    factory::PlanningSystemFactory,
-    plan_types::{HistoricalPlan, FailurePattern, HistoricalPlanningData, ExecutionPlan},
+    plan_executor::{WorkerPool, WorkerInfo, WorkerStatus, WorkerHealth},
 };
-use crate::workers::execution_bridge::WorkerExecutionBridge;
 use crate::orchestration::task_state_persistence::InMemoryTaskStatePersistence;
 use crate::planning::DatabaseOperations;
-use agent_workers::{MCPWorkerPool, TaskExecutor, WorkerPoolConfig};
+use agent_workers::TaskExecutor;
 use async_trait::async_trait;
 
 /// Factory for creating UnifiedOrchestrator instances
@@ -182,13 +179,15 @@ impl UnifiedOrchestratorFactory {
             .map_err(|e| anyhow::anyhow!("Failed to create tool registry with file operations: {}", e))?;
         
         // Use the existing memory_system for workers (already created above)
-        #[cfg(feature = "memory")]
-        let shared_memory = memory_system.clone();
         #[cfg(not(feature = "memory"))]
         {
             return Err(anyhow::anyhow!("Memory feature required for UnifiedOrchestrator initialization"));
         }
         
+        #[cfg(feature = "memory")]
+        let shared_memory = memory_system.clone();
+        
+        #[cfg(feature = "memory")]
         // Create worker pool with the initialized tool registry and shared memory
         let worker_pool = Arc::new(MCPWorkerPool::new_with_registry(
             WorkerPoolConfig::default(),
@@ -198,7 +197,7 @@ impl UnifiedOrchestratorFactory {
         
         // Register a default worker in the pool to handle tasks
         // This matches the worker in the database (Default MCP Worker)
-        use agent_workers::{WorkerSpecialty, WorkerCapabilities};
+        use agent_workers::WorkerCapabilities;
         let default_capabilities = WorkerCapabilities {
             languages: vec!["python".to_string(), "rust".to_string(), "typescript".to_string()],
             frameworks: vec![],
@@ -210,10 +209,14 @@ impl UnifiedOrchestratorFactory {
             quality_score: 0.9,
             speed_score: 0.7,
         };
+        
+        #[cfg(feature = "memory")]
         worker_pool.register_worker(WorkerSpecialty::General, default_capabilities).await
             .map_err(|e| anyhow::anyhow!("Failed to register default worker: {}", e))?;
         
         let task_executor = Arc::new(TaskExecutor::new(db_client));
+        
+        #[cfg(feature = "memory")]
         let worker_bridge = Arc::new(WorkerExecutionBridge::new(worker_pool, task_executor));
 
         // Create planning components - requires both research and memory features

@@ -33,7 +33,7 @@ use crate::planning::refinement_loop::{
 };
 use crate::planning::worker_assignment::WorkerAssignmentStrategy;
 use agent_agency_contracts::ExecutionStatus;
-use crate::planning::plan_types::{PlanGenerationContext, WorkingSpecProvider, TaskDescriptorProvider, ExecutionPlan, PlanGenerationStrategy, ResourceInventory, HistoricalPlan, FailurePattern, HistoricalPlanningData};
+use crate::planning::plan_types::{PlanGenerationContext, WorkingSpecProvider, TaskDescriptorProvider, ExecutionPlan, PlanGenerationStrategy, ResourceInventory};
 use crate::planning::worktree_manager::WorktreeManager;
 use crate::planning::caws_adjudication_cycle::CawsAdjudicationCycle;
 use crate::planning::worker_lifecycle_manager::WorkerLifecycleManager;

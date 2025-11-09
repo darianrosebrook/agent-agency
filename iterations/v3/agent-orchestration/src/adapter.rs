@@ -153,7 +153,7 @@ impl LegacyOrchestratorAdapter {
         let decision_engine = Box::new(AlgorithmicDecisionEngine::new(ConsensusStrategy::Majority));
 
         // Create the council
-        let mut council = Council::new(
+        let council = Council::new(
             council_config,
             judges,
             verdict_aggregator,

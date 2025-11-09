@@ -108,6 +108,8 @@ memory = ["agent-memory"]  # Gate memory functionality behind feature flag
 research = ["agent-research"]  # Research functionality (claim extraction) - now in default features
 data-processing = ["dep:agent-data-processing"]  # Gate data processing integration behind feature flag
 evaluation = []  # Gate evaluation framework behind feature flag
+council = []  # Feature flag for council functionality
+tool-chain = []  # Feature flag for tool-chain functionality
 
 [dev-dependencies]
 insta = { version = "1.38", features = ["yaml"] }
