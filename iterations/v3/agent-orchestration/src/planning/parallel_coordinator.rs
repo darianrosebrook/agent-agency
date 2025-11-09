@@ -770,14 +770,14 @@ impl ParallelCoordinator {
     }
 
     /// Clean up council session
-    async fn cleanup_council_session(&self, session_id: String) -> Result<()> {
+    async fn cleanup_council_session(&self, _session_id: String) -> Result<()> {
         // Clean up any council monitoring resources
         // This is a placeholder for actual cleanup
         Ok(())
     }
 
     /// Check council before milestone execution
-    async fn check_council_before_execution(&self, plan_id: Uuid, milestone: &Milestone) -> Result<Option<CouncilIntervention>> {
+    async fn check_council_before_execution(&self, plan_id: Uuid, _milestone: &Milestone) -> Result<Option<CouncilIntervention>> {
         // Check for constitutional violations
         let violations = self.council_monitor.check_violations(&plan_id.to_string()).await?;
 

@@ -926,7 +926,7 @@ impl PlanningStorage {
     }
 
     /// Get plan for a specific task
-    pub async fn get_plan_for_task(&self, task_id: Uuid) -> Result<Option<ExecutionPlan>> {
+    pub async fn get_plan_for_task(&self, _task_id: Uuid) -> Result<Option<ExecutionPlan>> {
         // TODO: Implement task-to-plan mapping:
         // 1. Index creation: Create task_id to plan_id mapping index
         //    - Store task_id -> plan_id mappings in database

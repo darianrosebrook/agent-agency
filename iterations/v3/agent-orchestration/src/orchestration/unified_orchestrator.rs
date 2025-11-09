@@ -764,7 +764,7 @@ impl UnifiedOrchestrator {
             };
 
             // Conduct council review of the execution plan
-            let council_session = self.council.conduct_review(working_spec.clone(), review_context).await
+            let council_session = self.council.conduct_review(working_spec.clone(), _review_context).await
                 .map_err(|e| anyhow::anyhow!("Council plan review (CAWS Examination) failed: {:?}", e))?;
 
             // Check council decision
@@ -1702,7 +1702,7 @@ impl CouncilReviewer for UnifiedCouncilReviewer {
                 constraints: std::collections::HashMap::new(),
             };
         
-        let session = self.council.conduct_review(working_spec.clone(), review_context).await
+        let session = self.council.conduct_review(working_spec.clone(), _review_context).await
             .map_err(|e| anyhow::anyhow!("Council review failed: {:?}", e))?;
         
         let approved = session.final_decision.as_ref()
