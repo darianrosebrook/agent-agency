@@ -1391,7 +1391,7 @@ impl PlanExecutor {
     }
 
     /// Calculate resource utilization
-    async fn calculate_resource_utilization(&self, plan: &ExecutionPlan) -> ResourceUtilization {
+    async fn calculate_resource_utilization(&self, _plan: &ExecutionPlan) -> ResourceUtilization {
         // TODO: Analyze actual resource usage from execution plan
         //       Currently returns zero values; should analyze actual resource usage from plan execution history and metrics.
         //
