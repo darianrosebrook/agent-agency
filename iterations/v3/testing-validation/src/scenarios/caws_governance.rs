@@ -16,7 +16,7 @@ use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceMana
 /// Run the CAWS governance E2E test
 pub async fn run_caws_governance_test(
     env: &TestEnvironment,
-    services: &LocalServiceManager,
+    _services: &LocalServiceManager,
 ) -> TestResult {
     let start_time = Instant::now();
     info!("Starting CAWS Governance E2E test");

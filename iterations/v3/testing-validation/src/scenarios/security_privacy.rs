@@ -437,7 +437,7 @@ async fn test_audit_trail(_env: &TestEnvironment, services: &LocalServiceManager
     info!("Testing audit trail integrity with real database");
 
     let mut audit_log_entries = 0;
-    let mut integrity_checks = 0;
+    let mut _integrity_checks = 0;
 
     // Get PostgreSQL service for real database operations
     let postgres_arc = services.postgres();
@@ -458,7 +458,7 @@ async fn test_audit_trail(_env: &TestEnvironment, services: &LocalServiceManager
         &[],
     ).await?;
 
-    integrity_checks += 1;
+    _integrity_checks += 1;
 
     // Test 1: Create audit entries with real database
     let test_actions = vec![
@@ -497,7 +497,7 @@ async fn test_audit_trail(_env: &TestEnvironment, services: &LocalServiceManager
         audit_log_entries += 1;
     }
 
-    integrity_checks += 1;
+    _integrity_checks += 1;
 
     // Test 2: Verify audit entries can be retrieved
     let rows = postgres.execute_query(
@@ -520,7 +520,7 @@ async fn test_audit_trail(_env: &TestEnvironment, services: &LocalServiceManager
         });
     }
 
-    integrity_checks += 1;
+    _integrity_checks += 1;
 
     // Test 3: Verify chronological ordering
     // Note: tokio_postgres doesn't directly support chrono::DateTime
@@ -546,7 +546,7 @@ async fn test_audit_trail(_env: &TestEnvironment, services: &LocalServiceManager
         prev_timestamp_str = Some(timestamp_str);
     }
 
-    integrity_checks += 1;
+    _integrity_checks += 1;
 
     // Test 4: Verify hash integrity (cryptographic check)
     for row in &rows {
@@ -592,7 +592,7 @@ async fn test_audit_trail(_env: &TestEnvironment, services: &LocalServiceManager
         }
     }
 
-    integrity_checks += 1;
+    _integrity_checks += 1;
 
     // Clean up test data
     postgres.execute("DELETE FROM audit_trail WHERE id >= $1 AND id <= $2", &[&1000i32, &1005i32]).await?;

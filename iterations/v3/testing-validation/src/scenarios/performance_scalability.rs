@@ -157,7 +157,7 @@ async fn test_resource_utilization(_env: &TestEnvironment, _services: &LocalServ
                 system.refresh_all();
                 let cpu_usage = system.global_cpu_usage() as f64;
                 resource_utilization.push(cpu_usage);
-                let total_memory = system.total_memory() as f64;
+                let _total_memory = system.total_memory() as f64;
                 let used_memory = system.used_memory() as f64;
                 let memory_mb = used_memory / (1024.0 * 1024.0);
                 memory_usage_mb.push(memory_mb);

@@ -55,12 +55,12 @@ async fn run_legacy_autonomous_test() -> Result<(), Box<dyn std::error::Error + 
     info!("Running legacy autonomous workflow test");
 
     // Create test environment
-    let env = TestEnvironment::new().await?;
+    let _env = TestEnvironment::new().await?;
     info!("✅ Test environment initialized");
 
     // Create services with real integrations
-    let ollama = OllamaService::with_model("gemma3n:e2b").await?;
-    let postgres = PostgresService::new().await?;
+    let _ollama = OllamaService::with_model("gemma3n:e2b").await?;
+    let _postgres = PostgresService::new().await?;
 
     info!("🔧 Services configured for real integrations:");
     info!("   - Ollama: HTTP calls to localhost:11434");
@@ -92,10 +92,13 @@ async fn run_legacy_autonomous_test() -> Result<(), Box<dyn std::error::Error + 
     {
         error!("❌ Autonomous workflow test requires 'full' feature");
         std::process::exit(1);
+        // Note: Code below is unreachable when 'full' feature is disabled
     }
 
-    info!("🧹 Cleaning up test environment...");
-    env.cleanup().await?;
+    #[cfg(feature = "full")]
+    {
+        info!("🧹 Cleaning up test environment...");
+        _env.cleanup().await?;
     info!("✅ Cleanup complete");
 
     info!("🎉 Legacy autonomous workflow E2E test completed successfully!");

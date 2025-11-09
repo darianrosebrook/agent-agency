@@ -50,10 +50,7 @@ pub fn process_user_data(input: &str) -> Result<HashMap<String, String>, String>
             // Process age
             match trimmed.parse::<u32>() {
                 Ok(age) => {
-                    if age < 0 {
-                        return Err("Age cannot be negative".to_string());
-                    }
-
+                    // Note: age is u32, so it cannot be negative
                     if age > 150 {
                         return Err("Age too high".to_string());
                     }

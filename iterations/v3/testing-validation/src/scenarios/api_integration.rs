@@ -13,7 +13,7 @@ use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceMana
 
 /// Test the API integration endpoints
 pub async fn run_api_integration_tests(
-    env: &TestEnvironment,
+    _env: &TestEnvironment,
     services: &LocalServiceManager,
 ) -> TestResult {
     let start_time = Instant::now();
