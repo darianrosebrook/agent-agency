@@ -359,6 +359,7 @@ struct WorkflowSummary {
 /// Workflow manager for coordinating multiple council sessions
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct WorkflowManager {
     active_workflows: HashMap<String, CouncilWorkflow>,
     completed_workflows: Vec<CouncilWorkflow>,
@@ -471,6 +472,7 @@ impl WorkflowManager {
 /// Workflow statistics
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct WorkflowStatistics {
     pub total_active: usize,
     pub total_completed: usize,

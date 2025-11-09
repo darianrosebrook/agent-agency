@@ -148,6 +148,7 @@ pub struct RefinementLoopCoordinator {
 /// Internal refinement state
 #[derive(Debug, Clone)]
 struct RefinementState {
+    #[allow(dead_code)] // Reserved for future use
     task_id: Uuid,
     current_iteration: u32,
     quality_scores: Vec<f64>,

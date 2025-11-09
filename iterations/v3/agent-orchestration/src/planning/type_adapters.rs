@@ -19,6 +19,7 @@ use crate::types::TaskScope;
 
 // Deprecated ChangeBudget for adapter conversions (use contracts directly)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct ChangeBudget {
     pub max_files: u32,
     pub max_loc: u32,

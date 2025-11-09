@@ -24,9 +24,11 @@ pub struct ToolChainBridge {
     tool_chain_planner: std::sync::Arc<ExternalToolChainPlanner>,
 
     /// Schema registry for tool I/O validation
+    #[allow(dead_code)] // Reserved for future use
     schema_registry: std::sync::Arc<ExternalSchemaRegistry>,
 
     /// Tool registry for accessing available tools
+    #[allow(dead_code)] // Reserved for future use
     tool_registry: std::sync::Arc<ExternalToolRegistry>,
 }
 

@@ -28,6 +28,7 @@ pub enum JudgeType {
 /// Judge configuration
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct JudgeConfig {
     pub judge_id: String,
     pub judge_type: JudgeType,
@@ -42,6 +43,7 @@ struct JudgeConfig {
 /// Judge contribution in a council session
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct JudgeContribution {
     pub judge_id: String,
     pub judge_type: JudgeType,
@@ -55,6 +57,7 @@ struct JudgeContribution {
 /// Token usage statistics
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct TokenUsage {
     pub prompt_tokens: u32,
     pub completion_tokens: u32,
@@ -64,6 +67,7 @@ struct TokenUsage {
 /// Review context provided to judges
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct ReviewContext {
     pub working_spec: agent_agency_contracts::working_spec::WorkingSpec,
     pub planning_metadata: Option<PlanningMetadata>,
@@ -76,6 +80,7 @@ struct ReviewContext {
 /// Planning metadata from the planning agent
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct PlanningMetadata {
     pub planning_duration: std::time::Duration,
     pub refinement_iterations: u32,
@@ -86,6 +91,7 @@ struct PlanningMetadata {
 /// Previous review in the session
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct PreviousReview {
     pub judge_id: String,
     pub judge_type: JudgeType,
@@ -96,6 +102,7 @@ struct PreviousReview {
 /// Verdict summary for previous reviews
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 enum VerdictSummary {
     Approved { confidence: f64 },
     RequestedRefinement { change_count: usize },
@@ -143,6 +150,7 @@ pub enum JudgeHealthStatus {
 /// Judge performance metrics
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
+#[allow(dead_code)] // Reserved for future use
 struct JudgePerformanceStats {
     pub total_evaluations: u64,
     pub successful_evaluations: u64,
@@ -156,6 +164,7 @@ struct JudgePerformanceStats {
 /// Judge evaluation context
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct JudgeEvaluationContext {
     #[schemars(with = "String")]
     pub task_id: Uuid,
@@ -169,6 +178,7 @@ struct JudgeEvaluationContext {
 /// Judge evaluation result
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 enum JudgeEvaluationResult {
     Success(JudgeContribution),
     RetryableFailure {

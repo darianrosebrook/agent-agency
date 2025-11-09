@@ -26,6 +26,7 @@ pub struct WorkerExecutionBridge {
     worker_pool: Arc<MCPWorkerPool>,
     
     /// Task executor for individual task execution
+    #[allow(dead_code)] // Reserved for future use
     task_executor: Arc<TaskExecutor>,
 }
 

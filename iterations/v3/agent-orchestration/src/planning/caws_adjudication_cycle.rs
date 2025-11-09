@@ -58,6 +58,7 @@ pub struct ClaimExtractionResults {
 
 /// CAWS Adjudication Cycle coordinator
 pub struct CawsAdjudicationCycle {
+    #[allow(dead_code)] // Reserved for future use
     council: Arc<Council>,
     council_integration: Arc<dyn CouncilIntegration>,
     debate_scorer: Arc<CawsDebateScorer>,
@@ -68,6 +69,7 @@ pub struct CawsAdjudicationCycle {
     #[cfg(feature = "mcp")]
     tool_registry: Option<Arc<CawsToolRegistry>>,
     #[cfg(not(feature = "mcp"))]
+    #[allow(dead_code)] // Reserved for future use
     tool_registry: Option<()>, // Placeholder when mcp feature disabled
     
     /// CAWS quality gates executor for waiver-aware gate checking

@@ -25,6 +25,7 @@ struct ReviewContext {
 
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 enum ReviewPriority {
     Low,
     Normal,

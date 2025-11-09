@@ -23,6 +23,7 @@ pub struct QualityAssuranceJudge {
     config: JudgeConfig,
     health_metrics: JudgeHealthMetrics,
     #[serde(skip)]
+    #[allow(dead_code)] // Reserved for future use
     last_review_time: Option<Instant>,
 }
 

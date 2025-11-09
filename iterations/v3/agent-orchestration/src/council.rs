@@ -192,6 +192,7 @@ pub struct CouncilSession {
     aggregation_result: Option<AggregationResult>,
     pub final_decision: Option<FinalDecision>,
     #[serde(skip)]
+    #[allow(dead_code)] // Reserved for future use
     start_time: DateTime<Utc>,
     #[serde(skip)]
     pub end_time: Option<DateTime<Utc>>,

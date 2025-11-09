@@ -202,6 +202,7 @@ impl PlanningEngineImpl {
 /// Simple working spec provider for PlanGenerationContext
 struct RealWorkingSpecProvider {
     task_descriptor: TaskDescriptor,
+    #[allow(dead_code)] // Reserved for future use
     db_ops: Arc<dyn DatabaseOperations>,
 }
 
@@ -524,6 +525,7 @@ impl crate::planning::plan_types::WorkingSpecProvider for RealWorkingSpecProvide
 /// Real task descriptor provider for PlanGenerationContext
 struct RealTaskDescriptorProvider {
     task_descriptor: TaskDescriptor,
+    #[allow(dead_code)] // Reserved for future use
     db_ops: Arc<dyn DatabaseOperations>,
 }
 

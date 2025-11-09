@@ -54,8 +54,10 @@ pub enum WorkerLifecycleEvent {
 /// Worker assignment tracking
 #[derive(Debug, Clone)]
 struct WorkerAssignment {
+    #[allow(dead_code)] // Reserved for future use
     worker_id: Uuid,
     milestone_id: String,
+    #[allow(dead_code)] // Reserved for future use
     assigned_at: chrono::DateTime<chrono::Utc>,
     status: AssignmentStatus,
     artifacts: Option<ExecutionArtifacts>,
@@ -65,6 +67,7 @@ struct WorkerAssignment {
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum AssignmentStatus {
     Assigned,
+    #[allow(dead_code)] // Reserved for future use
     InProgress,
     Completed,
     Failed,

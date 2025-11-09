@@ -57,9 +57,11 @@ pub struct ScopeGuard {
     lock_directory: PathBuf,
 
     /// Maximum time to wait for lock acquisition
+    #[allow(dead_code)] // Reserved for future use
     max_wait_duration: Duration,
 
     /// Lock cleanup interval
+    #[allow(dead_code)] // Reserved for future use
     cleanup_interval: Duration,
 
     /// Semaphore to limit concurrent lock operations

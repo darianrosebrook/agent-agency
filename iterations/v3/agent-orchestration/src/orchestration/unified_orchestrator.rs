@@ -106,6 +106,7 @@ pub struct UnifiedOrchestrator {
     plan_generator: Arc<PlanGenerator>,
     
     /// Plan executor for executing plans
+    #[allow(dead_code)] // Reserved for future use
     plan_executor: Arc<PlanExecutor>,
     
     /// Parallel coordinator for parallel milestone execution
@@ -130,6 +131,7 @@ pub struct UnifiedOrchestrator {
     worker_lifecycle_manager: Arc<WorkerLifecycleManager>,
     
     /// Worker assignment strategy for intelligent worker selection
+    #[allow(dead_code)] // Reserved for future use
     worker_assignment_strategy: Option<Arc<WorkerAssignmentStrategy>>,
     
     /// Reflexive learner for continuous learning from outcomes
@@ -139,9 +141,11 @@ pub struct UnifiedOrchestrator {
     #[cfg(feature = "memory")]
     memory_system: Option<Arc<MemorySystem>>,
     #[cfg(not(feature = "memory"))]
+    #[allow(dead_code)] // Reserved for future use
     memory_system: Option<()>, // Placeholder when memory feature disabled
     
     /// Active worktrees (worker_id -> worktree_path)
+    #[allow(dead_code)] // Reserved for future use
     active_worktrees: Arc<tokio::sync::RwLock<HashMap<Uuid, PathBuf>>>,
     
     /// Stored context IDs for task resumption (task_id -> context_id)

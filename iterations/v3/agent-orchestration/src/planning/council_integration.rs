@@ -64,6 +64,7 @@ pub struct WorkPresentationResult {
 /// Council integration implementation using Council
 pub struct CouncilIntegrationImpl {
     council: Arc<Council>,
+    #[allow(dead_code)] // Reserved for future use
     config: CouncilConfig,
 }
 

@@ -409,6 +409,7 @@ impl Eq for TaskEntry {}
 /// Errors that can occur in frontier operations
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Error)]
+#[allow(dead_code)] // Reserved for future use
 enum FrontierError {
     #[error("Task queue is full")]
     QueueFull,

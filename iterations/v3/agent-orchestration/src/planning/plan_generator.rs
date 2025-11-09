@@ -42,6 +42,7 @@ pub struct PlanGenerator {
     legacy_adapter: Option<LegacyPlanAdapter>,
 
     /// Planning constraints
+    #[allow(dead_code)] // Reserved for future use
     constraints: PlanningConstraints,
 
     /// CoreML manager for AI-assisted planning (optional)

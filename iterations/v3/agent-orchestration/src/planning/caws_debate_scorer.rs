@@ -75,6 +75,7 @@ pub struct DebateScoringResult {
 
 /// CAWS Debate Scorer
 pub struct CawsDebateScorer {
+    #[allow(dead_code)] // Reserved for future use
     council: Arc<Council>,
     /// Optional rubric engine for task-surface-specific weights
     rubric_engine: Option<Arc<RubricEngine>>,

@@ -127,9 +127,11 @@ pub struct StreamingTaskExecutor {
 #[derive(Debug, Clone)]
 struct TaskExecution {
     /// Task ID
+    #[allow(dead_code)] // Reserved for future use
     task_id: Uuid,
     
     /// Milestone being executed
+    #[allow(dead_code)] // Reserved for future use
     milestone: Milestone,
     
     /// Current execution state
@@ -145,6 +147,7 @@ struct TaskExecution {
     current_chunk_index: Option<usize>,
     
     /// Execution start time
+    #[allow(dead_code)] // Reserved for future use
     start_time: chrono::DateTime<Utc>,
     
     /// Last update time

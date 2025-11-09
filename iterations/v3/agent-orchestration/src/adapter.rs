@@ -50,6 +50,7 @@ pub struct LegacyOrchestratorAdapter {
     /// Audit trail manager
     audit_trail: Arc<AuditTrailManager>,
     /// Configuration
+    #[allow(dead_code)] // Reserved for future use
     config: OrchestratorConfig,
     #[cfg(feature = "memory")]
     /// Memory system for learning and context retention (shared across components)

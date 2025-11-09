@@ -40,12 +40,15 @@ pub trait KnowledgeSeeker: Send + Sync {
 #[derive(Debug, Clone)]
 struct OperationContext {
     /// Operation ID for correlation
+    #[allow(dead_code)] // Reserved for future use
     pub operation_id: String,
     /// Start time
+    #[allow(dead_code)] // Reserved for future use
     pub start_time: Instant,
     /// Operation type
     pub operation_type: String,
     /// Parent operation ID (if nested)
+    #[allow(dead_code)] // Reserved for future use
     pub parent_operation_id: Option<String>,
     /// Correlation ID for distributed tracing
     pub correlation_id: Option<String>,
@@ -124,6 +127,7 @@ enum DataContent {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 enum ProcessedContentData {
     Text(String),
     Binary(Vec<u8>),
@@ -132,6 +136,7 @@ enum ProcessedContentData {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct ProcessedContent {
     pub id: ProcessingId,
     pub data: DataContent,
@@ -142,6 +147,7 @@ struct ProcessedContent {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct ProcessingOutput {
     pub processed_content: Vec<ProcessedContent>,
     pub metadata: HashMap<String, serde_json::Value>,
@@ -159,6 +165,7 @@ struct ExtractedEntity {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct VisualElement {
     pub element_type: VisualElementType,
     pub bounding_box: Option<(f32, f32, f32, f32)>,
@@ -168,6 +175,7 @@ struct VisualElement {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 enum VisualElementType {
     Text,
     Image,
@@ -198,14 +206,17 @@ struct ExtractedTopic {
 
 #[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct IngestionStage ;
 
 #[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct EnrichmentStage ;
 
 #[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct IndexingStage ;
 
 
@@ -354,10 +365,12 @@ impl Default for WorkerPoolConfig {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct WorkerHandle ;
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 enum WorkerSpecialty {
     General,
     CodeAnalysis,
@@ -367,6 +380,7 @@ enum WorkerSpecialty {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct WorkerCapabilities ;
 
 impl Default for WorkerCapabilities {
@@ -377,6 +391,7 @@ impl Default for WorkerCapabilities {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 enum WorkerHealth {
     Healthy,
     Degraded,
@@ -411,6 +426,7 @@ enum BlockData {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct EnrichedContent {
     pub content: String,
     pub entities: Vec<ExtractedEntity>,
@@ -1255,6 +1271,7 @@ fn convert_ingestion_output_to_blocks(output: BlockData) -> Result<Vec<Block>> {
 /// File type enumeration
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 enum FileType {
     Video,
     Slides,

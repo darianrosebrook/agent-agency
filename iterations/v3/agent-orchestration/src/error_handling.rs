@@ -320,9 +320,13 @@ pub struct CircuitBreakerStats {
 
 #[derive(Debug, Clone)]
 struct StateChange {
+    #[allow(dead_code)] // Reserved for future use
     pub timestamp: Instant,
+    #[allow(dead_code)] // Reserved for future use
     pub from_state: CircuitBreakerState,
+    #[allow(dead_code)] // Reserved for future use
     pub to_state: CircuitBreakerState,
+    #[allow(dead_code)] // Reserved for future use
     pub reason: String,
 }
 
@@ -767,6 +771,7 @@ pub struct RecoveryOrchestrator {
     /// Retry configurations by error type
     retry_configs: HashMap<ErrorCategory, ErrorHandlingRetryConfig>,
     /// Recovery strategies by error pattern
+    #[allow(dead_code)] // Reserved for future use
     recovery_strategies: HashMap<String, Vec<RecoveryStrategy>>,
 }
 

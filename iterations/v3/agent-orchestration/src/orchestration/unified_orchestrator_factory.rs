@@ -295,6 +295,7 @@ impl UnifiedOrchestratorFactory {
         use crate::audit_trail::{AuditTrailManager, AuditConfig};
         let audit_trail_manager = Arc::new(AuditTrailManager::new(AuditConfig::default()));
         struct AuditTrailAdapter {
+            #[allow(dead_code)] // Reserved for future use
             manager: Arc<AuditTrailManager>,
         }
         #[async_trait]

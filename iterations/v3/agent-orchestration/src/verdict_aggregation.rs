@@ -88,6 +88,7 @@ fn string_to_judge_verdict(_s: &str) -> Result<JudgeVerdict, CouncilError> {
 // Missing enum definitions
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 enum RiskSeverity {
     Low,
     Medium,
@@ -97,6 +98,7 @@ enum RiskSeverity {
 
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct RiskFactor {
     pub factor_type: String,
     pub severity: RiskSeverity,
@@ -114,6 +116,7 @@ enum ConsensusStrength {
 
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 enum EffortComplexity {
     Low,
     Medium,
@@ -250,6 +253,7 @@ pub struct AggregatedRiskAssessment {
 /// Issue summary for reporting
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct IssueSummary {
     pub category: String,
     pub severity: IssueSeverity,

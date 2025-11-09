@@ -1617,6 +1617,7 @@ impl PlanExecutor {
 /// Milestone execution result
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct MilestoneExecutionResult {
     /// Milestone identifier
     pub milestone_id: String,
@@ -1749,6 +1750,7 @@ mod tests {
 /// Status of quality gate verification
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 enum QualityGateStatus {
     Passed,
     Failed,
@@ -1758,6 +1760,7 @@ enum QualityGateStatus {
 /// Status of milestone execution
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 enum MilestoneStatus {
     Pending,
     InProgress,

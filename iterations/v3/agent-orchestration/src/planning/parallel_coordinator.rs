@@ -56,9 +56,13 @@ pub struct ParallelCoordinator {
 /// Execution context for tracking milestone execution
 #[derive(Debug, Clone)]
 struct ExecutionContext {
+    #[allow(dead_code)] // Reserved for future use
     milestone_id: String,
+    #[allow(dead_code)] // Reserved for future use
     worker_id: Uuid,
+    #[allow(dead_code)] // Reserved for future use
     worktree_id: Option<Uuid>,
+    #[allow(dead_code)] // Reserved for future use
     started_at: chrono::DateTime<chrono::Utc>,
 }
 

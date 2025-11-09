@@ -1396,6 +1396,7 @@ mod auditors {
     struct CommandAudit {
         command_id: String,
         command: String,
+        #[allow(dead_code)] // Reserved for future use
         start_time: Instant,
         correlation_id: Option<String>,
     }

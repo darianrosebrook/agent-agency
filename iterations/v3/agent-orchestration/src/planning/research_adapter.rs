@@ -25,6 +25,7 @@ use crate::planning::evidence::{ResearchEvidenceCollector, ResearchEvidence as P
 #[cfg(feature = "research")]
 pub struct ResearchEvidenceAdapter {
     /// The underlying evidence collector implementation
+    #[allow(dead_code)] // Reserved for future use
     evidence_collector: Arc<agent_research::evidence::collector::EvidenceCollector>,
 }
 

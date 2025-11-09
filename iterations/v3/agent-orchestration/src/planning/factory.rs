@@ -430,6 +430,7 @@ impl PlanningSystemComponents {
 /// Planning system configuration
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct PlanningSystemConfig {
     /// Enable planning system integration
     pub enable_planning_integration: bool,
@@ -459,6 +460,7 @@ struct PlanningSystemConfig {
 /// Planning storage configuration
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct PlanningStorageConfig {
     /// Enable file-based storage
     pub enable_file_storage: bool,
@@ -476,6 +478,7 @@ struct PlanningStorageConfig {
 /// Evidence collection configuration
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct EvidenceCollectionConfig {
     /// Evidence retention period (days)
     pub retention_days: u32,

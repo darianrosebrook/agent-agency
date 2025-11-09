@@ -50,6 +50,7 @@ pub struct OrchestratorPlanningIntegration {
     council_monitor: Arc<CouncilMonitor>,
 
     /// TODO integration for quality gates
+    #[allow(dead_code)] // Reserved for future use
     todo_integration: Arc<dyn crate::planning::plan_executor::TodoInterface>,
 
     /// Council plan review for pre-execution assessment
@@ -519,6 +520,7 @@ trait MockWorkerPoolTrait: Send + Sync {
 struct MockWorkerHandle {
     id: Uuid,
     capabilities: Vec<String>,
+    #[allow(dead_code)] // Reserved for future use
     specialty: String,
     /// Mock health status
     health_status: WorkerHealthStatus,
@@ -531,15 +533,20 @@ struct MockWorkerHandle {
 enum WorkerHealthStatus {
     Healthy,
     Degraded,
+    #[allow(dead_code)] // Reserved for future use
     Unhealthy,
 }
 
 /// Mock worker performance metrics
 #[derive(Debug, Clone)]
 struct MockWorkerPerformance {
+    #[allow(dead_code)] // Reserved for future use
     tasks_completed: u32,
+    #[allow(dead_code)] // Reserved for future use
     tasks_failed: u32,
+    #[allow(dead_code)] // Reserved for future use
     avg_completion_time_ms: f64,
+    #[allow(dead_code)] // Reserved for future use
     success_rate: f64,
     current_load: f64,
 }
@@ -751,6 +758,7 @@ impl crate::planning::plan_executor::WorkerPool for WorkerPoolAdapter {
 // Mock implementations for integration (would be replaced with real implementations)
 
 /// Mock worker pool for integration
+#[allow(dead_code)] // Reserved for future use
 struct MockWorkerPool;
 
 impl MockWorkerPool {
@@ -800,6 +808,7 @@ impl crate::planning::plan_executor::WorkerPool for MockWorkerPool {
 }
 
 /// Mock audit trail for integration
+#[allow(dead_code)] // Reserved for future use
 struct MockAuditTrail;
 
 impl MockAuditTrail {

@@ -26,6 +26,7 @@ pub struct TaskScope {
 /// Memory-informed orchestration decision
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct MemoryInformedDecision {
     /// Whether parallel execution is preferred based on historical success
     pub prefers_parallel: bool,
@@ -71,6 +72,7 @@ pub enum ExecutionStatus {
 /// Quality report from orchestration
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)] // Reserved for future use
 struct QualityReport {
     /// Overall quality score (0.0 to 1.0)
     pub score: f32,
