@@ -676,11 +676,11 @@ impl UnifiedOrchestrator {
                         let similar_plans: Vec<HistoricalPlan> = cross_session_contexts.iter()
                             .map(|ctx| {
                                 // Use task_id as plan identifier (convert string to Uuid if possible)
-                                let plan_id = uuid::Uuid::parse_str(&ctx.task_id)
+                                let _plan_id = uuid::Uuid::parse_str(&ctx.task_id)
                                     .unwrap_or_else(|_| uuid::Uuid::new_v4());
                                 
                                 HistoricalPlan {
-                                    plan_id,
+                                    plan_id: _plan_id,
                                     complexity_score: 0.5, // Default - TaskContext doesn't have complexity info
                                     execution_time_ms: 0, // Default - TaskContext doesn't have execution time
                                     successful: true, // Default - assume success if context exists
@@ -754,7 +754,7 @@ impl UnifiedOrchestrator {
             use crate::judge_backup::types::ReviewContext;
             use crate::decision_making::FinalDecision;
             
-            let review_context = ReviewContext {
+            let _review_context = ReviewContext {
                 session_id: format!("examination_{}", plan_id),
                 working_spec: serde_json::to_string(&working_spec)
                     .map_err(|e| anyhow::anyhow!("Failed to serialize working spec for council review: {}", e))?,
@@ -1693,14 +1693,14 @@ impl CouncilReviewer for UnifiedCouncilReviewer {
         use crate::judge_backup::types::ReviewContext;
         use crate::decision_making::FinalDecision;
         
-        let review_context = ReviewContext {
+        let _review_context = ReviewContext {
             session_id: format!("review_{}", Uuid::new_v4()),
             working_spec: serde_json::to_string(working_spec)
                 .map_err(|e| anyhow::anyhow!("Failed to serialize working spec: {}", e))?,
-            risk_tier: working_spec.risk_tier as u8,
-            previous_reviews: vec![],
-            constraints: std::collections::HashMap::new(),
-        };
+                risk_tier: working_spec.risk_tier as u8,
+                previous_reviews: vec![],
+                constraints: std::collections::HashMap::new(),
+            };
         
         let session = self.council.conduct_review(working_spec.clone(), review_context).await
             .map_err(|e| anyhow::anyhow!("Council review failed: {:?}", e))?;

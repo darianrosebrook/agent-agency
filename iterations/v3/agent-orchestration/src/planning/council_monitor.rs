@@ -165,7 +165,7 @@ impl CouncilMonitor {
     /// Check if plan execution is allowed by consulting the council
     pub async fn check_execution_allowed(&self, plan: &ExecutionPlan) -> Result<bool> {
         // Convert execution plan to working spec for council review
-        let working_spec = self.plan_to_working_spec(plan)?;
+        let _working_spec = self.plan_to_working_spec(plan)?;
 
         // Create review context
         let context = ReviewContext {
@@ -311,7 +311,7 @@ impl CouncilMonitor {
             self.log_intervention_request(plan_id, reason).await?;
 
             // Trigger a council review for the intervention
-            let review_context = ReviewContext {
+            let _review_context = ReviewContext {
                 plan_id: plan_id.to_string(),
                 execution_id: Uuid::new_v4(),
                 review_type: "intervention".to_string(),
@@ -389,7 +389,7 @@ impl CouncilMonitor {
         info!("Council approval requested: {} phase for plan {}", phase, plan.id);
 
         // Create a review context for approval
-        let review_context = ReviewContext {
+        let _review_context = ReviewContext {
             plan_id: plan.id.to_string(),
             execution_id: Uuid::new_v4(),
             review_type: format!("{}_approval", phase),
@@ -440,7 +440,7 @@ impl CouncilMonitor {
         let violations = self.check_violations(plan_id).await?;
 
         // Query the council for specific recommendations based on plan execution
-        let review_context = ReviewContext {
+        let _review_context = ReviewContext {
             plan_id: plan_id.to_string(),
             execution_id: Uuid::new_v4(),
             review_type: "recommendations".to_string(),

@@ -134,7 +134,7 @@ impl OrchestratorPlanningIntegration {
         &self,
         task_descriptor: &TaskDescriptor,
     ) -> Result<PlanningTaskResult> {
-        let task_id = task_descriptor.task_id;
+        let _task_id = task_descriptor.task_id;
 
         // 1. Generate execution plan using planning system
         let execution_plan = self.generate_execution_plan(task_descriptor).await?;
@@ -176,7 +176,7 @@ impl OrchestratorPlanningIntegration {
     /// Generate execution plan from task descriptor
     async fn generate_execution_plan(&self, task_descriptor: &TaskDescriptor) -> Result<PlanningExecutionPlan> {
         // Convert task descriptor to working spec
-        let working_spec = agent_agency_contracts::WorkingSpec {
+        let _working_spec = agent_agency_contracts::WorkingSpec {
             version: "1.0".to_string(),
             id: task_descriptor.task_id.to_string(),
             title: format!("Task: {}", task_descriptor.task_id),
@@ -896,7 +896,7 @@ mod tests {
     #[test]
     fn test_planning_task_result_creation() {
         // Test that PlanningTaskResult can be created
-        let task_id = Uuid::new_v4();
+        let _task_id = Uuid::new_v4();
         let execution_plan = crate::planning::plan_types::ExecutionPlan {
             contract_plan: agent_agency_contracts::planning_io::ExecutionPlan {
                 id: Uuid::new_v4(),
@@ -1106,11 +1106,11 @@ mod tests {
     #[test]
     fn test_planning_status_creation() {
         // Test that PlanningStatus can be created
-        let task_id = Uuid::new_v4();
-        let plan_id = Uuid::new_v4();
+        let _task_id = Uuid::new_v4();
+        let _plan_id = Uuid::new_v4();
         let status = PlanningStatus {
-            task_id,
-            plan_id,
+            task_id: _task_id,
+            plan_id: _plan_id,
             state: agent_agency_contracts::planning_io::PlanState::Draft,
             progress: 0.0,
             quality_verified: false,

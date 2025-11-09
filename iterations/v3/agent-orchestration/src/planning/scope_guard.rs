@@ -227,7 +227,7 @@ impl ScopeGuard {
     }
 
     /// Check if scope is valid (within allowed boundaries)
-    pub async fn validate_scope(&self, milestone_id: &str, scope: &MilestoneScope) -> Result<bool> {
+    pub async fn validate_scope(&self, _milestone_id: &str, scope: &MilestoneScope) -> Result<bool> {
         // TODO: Validate scope against CAWS working spec:
         // 1. Spec validation: Validate scope against working spec
         //    - Retrieve working spec for milestone
