@@ -797,6 +797,7 @@ impl AuditTrailManager {
     }
 
     /// Persist audit event to database
+    #[allow(dead_code)] // Reserved for future use
     async fn persist_audit_event(&self, pool: &PgPool, event: &AuditEvent) -> Result<(), AuditError> {
         // Create audit_events table if it doesn't exist
         self.ensure_audit_table_exists(pool).await?;
@@ -834,6 +835,7 @@ impl AuditTrailManager {
     }
 
     /// Ensure audit_events table exists
+    #[allow(dead_code)] // Reserved for future use
     async fn ensure_audit_table_exists(&self, pool: &PgPool) -> Result<(), AuditError> {
         sqlx::query(
             r#"
@@ -2089,4 +2091,5 @@ mod auditors {
 }
 
 // Re-export auditors for convenience
+#[allow(ambiguous_glob_reexports)]
 pub use auditors::*;

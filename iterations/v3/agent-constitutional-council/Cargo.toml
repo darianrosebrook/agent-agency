@@ -29,5 +29,5 @@ agent-agency-contracts = { path = "../agent-agency-contracts" }
 agent-orchestration = { path = "../agent-orchestration" }
 
 [dev-dependencies]
-tokio = { version = "1", features = ["full"] }
+tokio.workspace = true
 reqwest = { version = "0.11", features = ["json"] }

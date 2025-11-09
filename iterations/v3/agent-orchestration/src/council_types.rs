@@ -5,6 +5,7 @@ use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 
 // Re-export types for backward compatibility
+#[allow(ambiguous_glob_reexports)]
 pub use agent_agency_contracts::types::prelude::*;  // Includes TaskPriority and RiskTier
 pub use agent_agency_contracts::working_spec::{
     WorkingSpec, WorkingSpecConstraints, WorkingSpecContext, TestPlan, RollbackPlan

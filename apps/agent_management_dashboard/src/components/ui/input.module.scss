@@ -1,0 +1,59 @@
+@use '../../styles/_tokens' as *;
+@use '../../styles/_mixins' as *;
+
+.input {
+  display: flex;
+  height: 2.25rem; // h-9
+  width: 100%;
+  min-width: 0;
+  border-radius: $radius-md;
+  border: 1px solid var(--input);
+  background-color: var(--input-background);
+  padding: $spacing-2 $spacing-3;
+  font-size: $font-size-base;
+  transition: color $transition-fast, box-shadow $transition-fast;
+  outline: none;
+  
+  &::placeholder {
+    color: var(--muted-foreground);
+  }
+  
+  &::file-selector-button {
+    display: inline-flex;
+    height: 1.75rem; // h-7
+    border: 0;
+    background-color: transparent;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: var(--foreground);
+  }
+  
+  &:focus-visible {
+    @include focus-ring(var(--ring), 3px);
+  }
+  
+  &:disabled {
+    @include disabled-state;
+  }
+  
+  &[aria-invalid='true'] {
+    border-color: var(--destructive);
+    
+    &:focus-visible {
+      box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive) 20%, transparent);
+    }
+  }
+  
+  @include dark-mode {
+    background-color: color-mix(in oklch, var(--input) 30%, transparent);
+    
+    &[aria-invalid='true']:focus-visible {
+      box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive) 40%, transparent);
+    }
+  }
+  
+  @include md {
+    font-size: $font-size-sm;
+  }
+}
+

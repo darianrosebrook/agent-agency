@@ -11,6 +11,24 @@ export function WorkHistoryTabContent() {
           View and analyze your team&apos;s work history, time tracking, and
           productivity metrics.
         </p>
+        {/* TODO: Replace hardcoded work history metrics with data from v3 database with the following requirements:
+        // 1. Work history data fetching: Load team work history and productivity metrics
+        //    - Data source: GET /api/projects/:projectId/work-history endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
+        //    - Database tables: PostgreSQL `tasks`, `worker_assignments`, and `telemetry` tables
+        //    - Aggregate task completion statistics, time tracking, and productivity metrics
+        // 2. Time tracking: Calculate time spent on tasks
+        //    - Aggregate time from task timestamps (created_at, updated_at, completed_at)
+        //    - Calculate average completion time per task
+        //    - Track time spent by worker/agent
+        // 3. Productivity metrics: Calculate team productivity indicators
+        //    - Total tasks completed
+        //    - Tasks completed this week/month
+        //    - Average completion time
+        //    - Task completion rate trends
+        // 4. Data visualization: Display metrics in charts and graphs
+        //    - Time-series charts showing productivity over time
+        //    - Bar charts comparing team member productivity
+        //    - Pie charts showing task distribution by status */}
         <div className="mt-[31.996px] grid grid-cols-3 gap-[15.994px]">
           {[
             'Total Tasks',

@@ -646,6 +646,7 @@ impl CouncilMonitor {
     }
 
     /// Create review context for council evaluation
+    #[allow(dead_code)] // Reserved for future use
     fn create_review_context(&self, plan: &ExecutionPlan) -> HashMap<String, serde_json::Value> {
         let mut context = HashMap::new();
 
@@ -667,6 +668,7 @@ impl CouncilMonitor {
     }
 
     /// Determine review priority based on plan characteristics
+    #[allow(dead_code)] // Reserved for future use
     fn determine_review_priority(&self, plan: &ExecutionPlan) -> ReviewPriority {
         // High risk plans get higher priority
         if let Some(qg) = &plan.contract_plan.quality_gates {

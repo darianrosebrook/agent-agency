@@ -40,6 +40,22 @@ export function FileDropzoneModal({
     // Simulate file upload
     setIsUploading(true);
 
+    // TODO: Replace mock file upload with real file upload to v3 file operations service with the following requirements:
+    // 1. File upload: Upload files to v3 file operations service
+    //    - Data source: POST /api/projects/:projectId/files/upload endpoint in `iterations/v3/data-infrastructure/src/file_operations` service
+    //    - Handle file upload with progress tracking
+    //    - Support multiple file types and sizes
+    // 2. File metadata persistence: Save file metadata to database
+    //    - Data source: POST /api/projects/:projectId/files endpoint to persist file metadata
+    //    - Database table: PostgreSQL `project_files` or similar table
+    //    - Store file names, paths, sizes, and upload timestamps
+    // 3. File structure update: Update project file tree after upload
+    //    - Refresh file tree from GET /api/projects/:projectId/files endpoint
+    //    - Update workspace file tree component with new files
+    // 4. Error handling: Handle upload errors and display user-friendly messages
+    //    - Validate file types and sizes before upload
+    //    - Display error messages for failed uploads
+    //    - Provide retry functionality for failed uploads
     // Simulate processing delay
     setTimeout(() => {
       const mockFiles = ["design-system.sketch", "components.tsx", "README.md"];

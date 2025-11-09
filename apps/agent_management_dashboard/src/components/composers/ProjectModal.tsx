@@ -221,6 +221,7 @@ export function NewProjectModal({
             </MetadataRow>
 
             {/* Assignees */}
+            {/* TODO: Replace text input with user selection dropdown from v3 database (see TaskModal.tsx for detailed requirements) */}
             <MetadataRow label="Assignees">
               <div className="flex items-center gap-2">
                 {assignees ? (

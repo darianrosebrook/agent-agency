@@ -1,0 +1,196 @@
+/**
+ * Error types and utilities for consistent error handling
+ * 
+ * Provides standardized error types and error response formats
+ * for API communication and user-facing error messages.
+ * 
+ * @author @darianrosebrook
+ */
+
+/**
+ * Standard error response format from API
+ */
+export interface ApiErrorResponse {
+  error: {
+    code: string;
+    message: string;
+    details?: Record<string, unknown>;
+    timestamp?: string;
+  };
+}
+
+/**
+ * Error codes for different error types
+ */
+export enum ErrorCode {
+  // Network errors
+  NETWORK_ERROR = 'NETWORK_ERROR',
+  TIMEOUT = 'TIMEOUT',
+  CONNECTION_FAILED = 'CONNECTION_FAILED',
+
+  // API errors
+  BAD_REQUEST = 'BAD_REQUEST',
+  UNAUTHORIZED = 'UNAUTHORIZED',
+  FORBIDDEN = 'FORBIDDEN',
+  NOT_FOUND = 'NOT_FOUND',
+  CONFLICT = 'CONFLICT',
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
+  RATE_LIMIT = 'RATE_LIMIT',
+  SERVER_ERROR = 'SERVER_ERROR',
+
+  // Application errors
+  INVALID_STATE = 'INVALID_STATE',
+  OPERATION_FAILED = 'OPERATION_FAILED',
+  RESOURCE_NOT_FOUND = 'RESOURCE_NOT_FOUND',
+  PERMISSION_DENIED = 'PERMISSION_DENIED',
+
+  // Streaming errors
+  STREAM_ERROR = 'STREAM_ERROR',
+  STREAM_CLOSED = 'STREAM_CLOSED',
+  STREAM_TIMEOUT = 'STREAM_TIMEOUT',
+}
+
+/**
+ * User-friendly error messages mapped to error codes
+ */
+export const ErrorMessages: Record<ErrorCode, string> = {
+  [ErrorCode.NETWORK_ERROR]: 'Unable to connect to the server. Please check your internet connection.',
+  [ErrorCode.TIMEOUT]: 'The request took too long. Please try again.',
+  [ErrorCode.CONNECTION_FAILED]: 'Failed to connect to the server. Please try again later.',
+  [ErrorCode.BAD_REQUEST]: 'Invalid request. Please check your input and try again.',
+  [ErrorCode.UNAUTHORIZED]: 'You are not authorized. Please log in and try again.',
+  [ErrorCode.FORBIDDEN]: 'You do not have permission to perform this action.',
+  [ErrorCode.NOT_FOUND]: 'The requested resource was not found.',
+  [ErrorCode.CONFLICT]: 'This action conflicts with existing data. Please refresh and try again.',
+  [ErrorCode.VALIDATION_ERROR]: 'Invalid data provided. Please check your input.',
+  [ErrorCode.RATE_LIMIT]: 'Too many requests. Please wait a moment and try again.',
+  [ErrorCode.SERVER_ERROR]: 'Server error occurred. Please try again later.',
+  [ErrorCode.INVALID_STATE]: 'Invalid application state. Please refresh the page.',
+  [ErrorCode.OPERATION_FAILED]: 'Operation failed. Please try again.',
+  [ErrorCode.RESOURCE_NOT_FOUND]: 'Resource not found.',
+  [ErrorCode.PERMISSION_DENIED]: 'Permission denied.',
+  [ErrorCode.STREAM_ERROR]: 'Error occurred while streaming response.',
+  [ErrorCode.STREAM_CLOSED]: 'Stream connection closed unexpectedly.',
+  [ErrorCode.STREAM_TIMEOUT]: 'Stream timeout. Please try again.',
+};
+
+/**
+ * Custom error class for application errors
+ */
+export class AppError extends Error {
+  constructor(
+    public code: ErrorCode,
+    message?: string,
+    public details?: Record<string, unknown>
+  ) {
+    super(message || ErrorMessages[code]);
+    this.name = 'AppError';
+  }
+
+  /**
+   * Get user-friendly error message
+   */
+  getUserMessage(): string {
+    return this.message || ErrorMessages[this.code];
+  }
+
+  /**
+   * Check if error is retryable
+   */
+  isRetryable(): boolean {
+    return [
+      ErrorCode.NETWORK_ERROR,
+      ErrorCode.TIMEOUT,
+      ErrorCode.CONNECTION_FAILED,
+      ErrorCode.SERVER_ERROR,
+      ErrorCode.STREAM_ERROR,
+      ErrorCode.STREAM_TIMEOUT,
+    ].includes(this.code);
+  }
+}
+
+/**
+ * Parse API error response to AppError
+ */
+export function parseApiError(error: unknown): AppError {
+  // Handle fetch errors
+  if (error instanceof TypeError && error.message.includes('fetch')) {
+    return new AppError(ErrorCode.NETWORK_ERROR, 'Network request failed');
+  }
+
+  // Handle API error response
+  if (typeof error === 'object' && error !== null) {
+    const apiError = error as ApiErrorResponse;
+    if (apiError.error) {
+      const code = Object.values(ErrorCode).find(
+        (c) => c === apiError.error.code
+      ) || ErrorCode.OPERATION_FAILED;
+      return new AppError(code, apiError.error.message, apiError.error.details);
+    }
+
+    // Handle FastAPI-style errors
+    if ('detail' in apiError) {
+      return new AppError(
+        ErrorCode.BAD_REQUEST,
+        String(apiError.detail)
+      );
+    }
+
+    // Handle standard Error objects
+    if ('message' in apiError) {
+      const message = String(apiError.message);
+      if (message.includes('401') || message.includes('Unauthorized')) {
+        return new AppError(ErrorCode.UNAUTHORIZED);
+      }
+      if (message.includes('403') || message.includes('Forbidden')) {
+        return new AppError(ErrorCode.FORBIDDEN);
+      }
+      if (message.includes('404') || message.includes('Not Found')) {
+        return new AppError(ErrorCode.NOT_FOUND);
+      }
+      if (message.includes('429') || message.includes('Rate Limit')) {
+        return new AppError(ErrorCode.RATE_LIMIT);
+      }
+      if (message.includes('500') || message.includes('Server Error')) {
+        return new AppError(ErrorCode.SERVER_ERROR);
+      }
+      return new AppError(ErrorCode.OPERATION_FAILED, message);
+    }
+  }
+
+  // Handle string errors
+  if (typeof error === 'string') {
+    return new AppError(ErrorCode.OPERATION_FAILED, error);
+  }
+
+  // Default fallback
+  return new AppError(
+    ErrorCode.OPERATION_FAILED,
+    'An unexpected error occurred'
+  );
+}
+
+/**
+ * Check if error is a network error
+ */
+export function isNetworkError(error: unknown): boolean {
+  if (error instanceof AppError) {
+    return [
+      ErrorCode.NETWORK_ERROR,
+      ErrorCode.TIMEOUT,
+      ErrorCode.CONNECTION_FAILED,
+    ].includes(error.code);
+  }
+  return false;
+}
+
+/**
+ * Check if error is retryable
+ */
+export function isRetryableError(error: unknown): boolean {
+  if (error instanceof AppError) {
+    return error.isRetryable();
+  }
+  return false;
+}
+

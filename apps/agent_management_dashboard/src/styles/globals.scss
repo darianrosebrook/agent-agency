@@ -1,0 +1,198 @@
+// Global Styles
+// Replaces Tailwind directives with base styles
+// @author @darianrosebrook
+
+@use './_tokens' as *;
+
+// CSS Variables for runtime theming (kept for dark mode support)
+:root {
+  --font-size: 16px;
+  --background: #{$color-background-light};
+  --foreground: #{$color-foreground-light};
+  --card: #{$color-card-light};
+  --card-foreground: #{$color-card-foreground-light};
+  --popover: #{$color-popover-light};
+  --popover-foreground: #{$color-popover-foreground-light};
+  --primary: #{$color-primary-light};
+  --primary-foreground: #{$color-primary-foreground-light};
+  --secondary: #{$color-secondary-light};
+  --secondary-foreground: #{$color-secondary-foreground-light};
+  --muted: #{$color-muted-light};
+  --muted-foreground: #{$color-muted-foreground-light};
+  --accent: #{$color-accent-light};
+  --accent-foreground: #{$color-accent-foreground-light};
+  --destructive: #{$color-destructive-light};
+  --destructive-foreground: #{$color-destructive-foreground-light};
+  --border: #{$color-border-light};
+  --input: #{$color-input-light};
+  --input-background: #{$color-input-background-light};
+  --switch-background: #{$color-switch-background-light};
+  --font-weight-semibold: #{$font-weight-semibold};
+  --font-weight-medium: #{$font-weight-medium};
+  --font-weight-normal: #{$font-weight-normal};
+  --ring: #{$color-ring-light};
+  --chart-1: #{$color-chart-1-light};
+  --chart-2: #{$color-chart-2-light};
+  --chart-3: #{$color-chart-3-light};
+  --chart-4: #{$color-chart-4-light};
+  --chart-5: #{$color-chart-5-light};
+  --radius: #{$radius-lg};
+  --sidebar: #{$color-sidebar-light};
+  --sidebar-foreground: #{$color-sidebar-foreground-light};
+  --sidebar-primary: #{$color-sidebar-primary-light};
+  --sidebar-primary-foreground: #{$color-sidebar-primary-foreground-light};
+  --sidebar-accent: #{$color-sidebar-accent-light};
+  --sidebar-accent-foreground: #{$color-sidebar-accent-foreground-light};
+  --sidebar-border: #{$color-sidebar-border-light};
+  --sidebar-ring: #{$color-sidebar-ring-light};
+}
+
+.dark {
+  --background: #{$color-background-dark};
+  --foreground: #{$color-foreground-dark};
+  --card: #{$color-card-dark};
+  --card-foreground: #{$color-card-foreground-dark};
+  --popover: #{$color-popover-dark};
+  --popover-foreground: #{$color-popover-foreground-dark};
+  --primary: #{$color-primary-dark};
+  --primary-foreground: #{$color-primary-foreground-dark};
+  --secondary: #{$color-secondary-dark};
+  --secondary-foreground: #{$color-secondary-foreground-dark};
+  --muted: #{$color-muted-dark};
+  --muted-foreground: #{$color-muted-foreground-dark};
+  --accent: #{$color-accent-dark};
+  --accent-foreground: #{$color-accent-foreground-dark};
+  --destructive: #{$color-destructive-dark};
+  --destructive-foreground: #{$color-destructive-foreground-dark};
+  --border: #{$color-border-dark};
+  --input: #{$color-input-dark};
+  --ring: #{$color-ring-dark};
+  --font-weight-semibold: #{$font-weight-semibold};
+  --font-weight-medium: #{$font-weight-medium};
+  --font-weight-normal: #{$font-weight-normal};
+  --chart-1: #{$color-chart-1-dark};
+  --chart-2: #{$color-chart-2-dark};
+  --chart-3: #{$color-chart-3-dark};
+  --chart-4: #{$color-chart-4-dark};
+  --chart-5: #{$color-chart-5-dark};
+  --sidebar: #{$color-sidebar-dark};
+  --sidebar-foreground: #{$color-sidebar-foreground-dark};
+  --sidebar-primary: #{$color-sidebar-primary-dark};
+  --sidebar-primary-foreground: #{$color-sidebar-primary-foreground-dark};
+  --sidebar-accent: #{$color-sidebar-accent-dark};
+  --sidebar-accent-foreground: #{$color-sidebar-accent-foreground-dark};
+  --sidebar-border: #{$color-sidebar-border-dark};
+  --sidebar-ring: #{$color-sidebar-ring-dark};
+}
+
+// Base reset styles
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+  border-color: $color-border-light;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: var(--font-size);
+  line-height: $line-height-normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: $font-family-sans;
+  background-color: var(--background);
+  color: var(--foreground);
+  line-height: $line-height-normal;
+  margin: 0;
+  padding: 0;
+}
+
+// Base typography (matching globals.css)
+:where(:not(:has([class*=' text-']), :not(:has([class^='text-'])))) {
+  h1 {
+    font-size: 96px;
+    font-weight: var(--font-weight-semibold);
+    line-height: 116px;
+  }
+
+  h2 {
+    font-size: 60px;
+    font-weight: var(--font-weight-semibold);
+    line-height: 60px;
+  }
+
+  h3 {
+    font-size: 48px;
+    font-weight: var(--font-weight-semibold);
+    line-height: 48px;
+  }
+
+  h4 {
+    font-size: 36px;
+    font-weight: var(--font-weight-semibold);
+    line-height: 40px;
+  }
+
+  h5 {
+    font-size: 24px;
+    font-weight: var(--font-weight-semibold);
+    line-height: 32px;
+  }
+
+  h6 {
+    font-size: 20px;
+    font-weight: var(--font-weight-semibold);
+    line-height: 28px;
+  }
+
+  p {
+    font-size: 16px;
+    font-weight: var(--font-weight-normal);
+    line-height: 24px;
+  }
+
+  label {
+    font-size: 16px;
+    font-weight: var(--font-weight-semibold);
+    line-height: 24px;
+  }
+
+  button {
+    font-size: 16px;
+    font-weight: var(--font-weight-semibold);
+    line-height: 24px;
+  }
+
+  input {
+    font-size: 16px;
+    font-weight: var(--font-weight-normal);
+    line-height: 24px;
+  }
+
+  small {
+    font-size: 14px;
+    font-weight: var(--font-weight-normal);
+    line-height: 20px;
+  }
+}
+
+// Animations
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+

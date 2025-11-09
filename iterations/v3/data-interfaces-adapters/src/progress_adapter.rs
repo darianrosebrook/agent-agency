@@ -115,7 +115,7 @@ impl ProgressTrackingService for ProgressTrackingServiceAdapter {
     
     async fn subscribe_progress(
         &self,
-        task_id: &Uuid,
+        _task_id: &Uuid,
     ) -> Result<ProgressStream, ServiceError> {
         // TODO: Implement actual progress stream with real-time updates
         //       Currently returns empty stream; should implement actual progress stream that delivers real-time progress updates for the task.

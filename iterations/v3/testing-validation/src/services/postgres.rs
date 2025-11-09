@@ -29,12 +29,53 @@ pub struct PostgresService {
 impl PostgresService {
     /// Create new PostgreSQL service instance
     pub async fn new() -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+        // Use environment variables if available, otherwise use defaults
+        // This allows tests to connect to the actual running database
+        let database_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgresql://postgres:agent_agency_secure_password_123@localhost:5433/agent_agency".to_string());
+        
+        // Parse database URL if provided
+        let (host, port, database, username, password) = if database_url.starts_with("postgresql://") || database_url.starts_with("postgres://") {
+            // Parse postgres://user:pass@host:port/db format
+            let url = database_url.strip_prefix("postgresql://")
+                .or_else(|| database_url.strip_prefix("postgres://"))
+                .unwrap();
+            
+            let parts: Vec<&str> = url.split('@').collect();
+            if parts.len() == 2 {
+                let auth = parts[0];
+                let host_db = parts[1];
+                
+                let auth_parts: Vec<&str> = auth.split(':').collect();
+                let username = auth_parts[0].to_string();
+                let password = auth_parts.get(1).unwrap_or(&"").to_string();
+                
+                let host_db_parts: Vec<&str> = host_db.split('/').collect();
+                let host_port = host_db_parts[0];
+                let database = host_db_parts.get(1).unwrap_or(&"postgres").to_string();
+                
+                let host_port_parts: Vec<&str> = host_port.split(':').collect();
+                let host = host_port_parts[0].to_string();
+                let port = host_port_parts.get(1)
+                    .and_then(|p| p.parse::<u16>().ok())
+                    .unwrap_or(5432);
+                
+                (host, port, database, username, password)
+            } else {
+                // Fallback to defaults
+                ("localhost".to_string(), 5433, "agent_agency".to_string(), "postgres".to_string(), "agent_agency_secure_password_123".to_string())
+            }
+        } else {
+            // Use defaults
+            ("localhost".to_string(), 5433, "agent_agency".to_string(), "postgres".to_string(), "agent_agency_secure_password_123".to_string())
+        };
+        
         Ok(Self {
-            host: "localhost".to_string(),
-            port: 5433,
-            database: "test_db".to_string(),
-            username: "test_user".to_string(),
-            password: "test_password".to_string(),
+            host,
+            port,
+            database,
+            username,
+            password,
             process_handle: None,
             pool: None,
             migrations_applied: false,

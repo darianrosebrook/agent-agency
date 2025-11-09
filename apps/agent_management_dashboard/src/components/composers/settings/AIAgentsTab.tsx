@@ -12,6 +12,17 @@ export function AIAgentsTabContent() {
           assistance.
         </p>
 
+        {/* TODO: Replace hardcoded agent list with data from v3 API with the following requirements:
+        // 1. Agent list fetching: Load configured AI agents from database
+        //    - Data source: GET /api/agents endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
+        //    - Database table: PostgreSQL `agents` table
+        //    - Include agent metadata: name, description, enabled status
+        // 2. Agent configuration: Handle agent enable/disable toggle
+        //    - Data source: PATCH /api/agents/:id endpoint to update enabled status
+        //    - Update local state optimistically with rollback on failure
+        // 3. Real-time updates: Refresh agent list when configuration changes
+        //    - Handle loading and error states
+        //    - Display user-friendly error messages */}
         <div className="space-y-[15.994px]">
           {[
             {

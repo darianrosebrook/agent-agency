@@ -1,5 +1,8 @@
 import type { Phase } from './types';
 
+// TODO: Remove hardcoded initial phases data - Replace with API call to fetch project phases from v3 database
+// Data source: GET /api/projects/:projectId/phases endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
+// Database tables: PostgreSQL `milestones` (phases) and `tasks` tables
 export const initialPhases: Phase[] = [
   {
     id: 'phase-1',

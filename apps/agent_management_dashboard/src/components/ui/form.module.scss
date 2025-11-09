@@ -1,0 +1,24 @@
+@use '../../styles/_tokens' as *;
+@use '../../styles/_mixins' as *;
+
+.item {
+  display: grid;
+  gap: $spacing-2;
+}
+
+.label {
+  &[data-error='true'] {
+    color: var(--destructive);
+  }
+}
+
+.description {
+  color: var(--muted-foreground);
+  font-size: $font-size-sm;
+}
+
+.message {
+  color: var(--destructive);
+  font-size: $font-size-sm;
+}
+

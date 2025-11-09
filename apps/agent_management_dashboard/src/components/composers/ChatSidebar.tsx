@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Plus, MessageSquare } from "lucide-react";
-import { useChatContext } from "../ChatContext";
+import { useChatStore } from "../../lib/stores";
 
 interface ChatGroup {
   id: string;
@@ -18,8 +18,23 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ onSelect }: ChatSidebarProps = {}) {
   const { chats, currentChatId, createNewChat, switchToChat } =
-    useChatContext();
+    useChatStore();
 
+  // TODO: Replace hardcoded chat groups with dynamic groups from v3 database with the following requirements:
+  // 1. Chat group fetching: Load chat groups and organization from database
+  //    - Data source: GET /api/chat/groups endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
+  //    - Database table: PostgreSQL `chat_groups` table (if exists) or derive from `chat_sessions` table
+  //    - Group chats by project, date, or custom categories
+  // 2. Dynamic group creation: Create groups based on chat metadata
+  //    - Group by project_id if chats are project-specific
+  //    - Group by date ranges (Today, This Week, This Month, Older)
+  //    - Support custom user-defined groups
+  // 3. Group membership: Track which chats belong to which groups
+  //    - Update group chatIds array based on chat metadata
+  //    - Calculate group counts dynamically from chat membership
+  // 4. Group persistence: Save group organization preferences
+  //    - Data source: POST /api/chat/groups endpoint to save group preferences
+  //    - Store user's preferred grouping method and custom groups
   const [groups, setGroups] = useState<ChatGroup[]>([
     {
       id: "recent",

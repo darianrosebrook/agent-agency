@@ -758,9 +758,9 @@ impl ParallelCoordinator {
 
     /// Initialize council session for plan execution
     async fn initialize_council_session(&self, plan_id: Uuid) -> Result<String> {
-        let _session_id = format!("session_{}", Uuid::new_v4());
+        let session_id = format!("session_{}", Uuid::new_v4());
         let mut sessions = self.council_sessions.write().await;
-        sessions.insert(plan_id, _session_id.clone());
+        sessions.insert(plan_id, session_id.clone());
 
         // Report plan start to council - pass the plan ID
         // Note: Temporarily disabled council monitor check due to type mismatch

@@ -55,6 +55,7 @@ pub mod caching;
 pub mod embedding;
 pub mod file_operations;
 pub mod file_operations_service;
+pub mod websocket;
 
 // Export core database types
 pub use database_config::DatabaseConfig;
@@ -192,7 +193,8 @@ pub struct AppState {
 // Re-export API and interface types (from consolidated interfaces and api-server crates)
 pub use api::types::{PersistedTask, TaskStoreTrait};
 pub use api::handlers::{list_tasks, get_task_status as get_task, submit_task, get_metrics as get_api_metrics};
-pub use api::handlers::{create_chat_session, get_websocket_config, list_waivers, create_waiver};
+pub use api::handlers::chat_handlers::create_chat_session as create_api_chat_session;
+pub use api::handlers::{get_chat_sessions, get_chat_messages, stream_agent_response, list_waivers, create_waiver};
 pub use api::handlers::{approve_waiver, get_task_provenance};
 pub use client::orchestrator::DatabaseClient as ApiDatabaseClient; // Complex DatabaseClient
 

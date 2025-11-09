@@ -3,14 +3,14 @@
 import { useState } from "react";
 import Container66 from "../imports/Container-16-2951";
 import { NewTaskModal } from "./NewTaskModal";
-import { useProjectContext } from "./ProjectContext";
+import { useProjectStore } from "../lib/stores";
 
 export function TasksTab() {
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<
     "backlog" | "todo" | "in-progress" | "done"
   >("backlog");
-  const { currentProjectId, addTask } = useProjectContext();
+  const { currentProjectId, addTask } = useProjectStore();
 
   const handleOpenModal = (
     status: "backlog" | "todo" | "in-progress" | "done"
@@ -31,9 +31,10 @@ export function TasksTab() {
   };
 
   return (
-    <div className="h-full w-full overflow-hidden bg-[#0d0d0d]">
-      <div className="h-full overflow-auto">
+    <div className="h-full w-full overflow-hidden bg-[#0d0d0d] min-h-0">
+      <div className="h-full overflow-auto min-h-0">
         <div
+          className="h-full w-full min-h-0"
           onClick={(e) => {
             // Check if clicked element is an "add" button based on class or parent
             const target = e.target as HTMLElement;

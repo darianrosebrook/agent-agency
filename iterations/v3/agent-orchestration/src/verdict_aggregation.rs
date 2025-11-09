@@ -576,6 +576,7 @@ impl VerdictAggregator {
     }
 
     /// Calculate effort estimate for refinement changes
+    #[allow(dead_code)] // Reserved for future use
     fn calculate_effort_estimate(&self, required_changes: &[RequiredChange]) -> AggregatedEffort {
         let total_effort_hours = required_changes.len() as f64 * 2.0; // Rough estimate
         let complexity = if required_changes.len() > 5 {
@@ -832,6 +833,7 @@ impl VerdictAggregator {
             .collect()
     }
 
+    #[allow(dead_code)] // Reserved for future use
     async fn make_council_decision_from_distribution(
         &self,
         distribution: &VerdictDistribution,
@@ -937,6 +939,7 @@ impl VerdictAggregator {
         }
     }
 
+    #[allow(dead_code)] // Reserved for future use
     fn aggregate_risk_assessments(&self, contributions: &[WeightedContribution]) -> AggregatedRiskAssessment {
         let mut risk_factors: Vec<String> = Vec::new();
         let mut mitigation_suggestions = Vec::new();
@@ -991,6 +994,7 @@ impl VerdictAggregator {
         }
     }
 
+    #[allow(dead_code)] // Reserved for future use
     fn calculate_weighted_quality_score(&self, contributions: &[WeightedContribution]) -> f64 {
         let mut total_score: f64 = 0.0;
         let mut total_weight: f64 = 0.0;
@@ -1097,6 +1101,7 @@ impl VerdictAggregator {
         })
     }
 
+    #[allow(dead_code)] // Reserved for future use
     fn calculate_highest_change_priority(&self, aggregated_changes: &AggregatedChanges) -> ChangePriority {
         if aggregated_changes.priority_distribution.contains_key(&ChangePriority::Critical) {
             ChangePriority::Critical
@@ -1127,6 +1132,7 @@ impl VerdictAggregator {
     }
 
     /// Calculate weighted risk average with confidence-based aggregation
+    #[allow(dead_code)] // Reserved for future use
     fn calculate_weighted_risk_average(
         &self,
         contributions: &[WeightedContribution],
@@ -1176,6 +1182,7 @@ impl VerdictAggregator {
     }
 
     /// Convert numerical risk score to risk level with calibrated thresholds
+    #[allow(dead_code)] // Reserved for future use
     fn score_to_risk_level(&self, score: f64) -> RiskLevel {
         // Calibrated thresholds based on risk tolerance
         // These can be adjusted based on historical performance and validation
@@ -1975,6 +1982,7 @@ impl ChangeDeduplicationEngine {
     }
 
     /// Get current performance metrics
+    #[allow(dead_code)] // Reserved for future use
     pub fn get_metrics(&self) -> &DeduplicationMetrics {
         &self.metrics
     }

@@ -4,11 +4,11 @@ import { useState } from "react";
 import { PanelRightOpen, PanelRightClose } from "lucide-react";
 import OverviewEditorImport from "../../imports/Container";
 import svgPaths from "../../imports/svg-8d8l4g1ml9";
-import { useProjectContext } from "../ProjectContext";
+import { useProjectStore } from "../../lib/stores";
 
 export function OverviewTab() {
   const [showMetadata, setShowMetadata] = useState(true);
-  const { getCurrentProject } = useProjectContext();
+  const { getCurrentProject } = useProjectStore();
   const currentProject = getCurrentProject();
 
   return (

@@ -1,0 +1,62 @@
+@use '../../styles/_tokens' as *;
+@use '../../styles/_mixins' as *;
+
+.checkbox {
+  width: 1rem; // size-4
+  height: 1rem;
+  flex-shrink: 0;
+  border-radius: 4px;
+  border: 1px solid var(--input);
+  background-color: var(--input-background);
+  box-shadow: $shadow-sm;
+  transition: box-shadow $transition-fast;
+  outline: none;
+  
+  &[data-state='checked'] {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    border-color: var(--primary);
+  }
+  
+  &:focus-visible {
+    @include focus-ring(var(--ring), 3px);
+  }
+  
+  &:disabled {
+    @include disabled-state;
+  }
+  
+  &[aria-invalid='true'] {
+    border-color: var(--destructive);
+    
+    &:focus-visible {
+      box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive) 20%, transparent);
+    }
+  }
+  
+  @include dark-mode {
+    background-color: color-mix(in oklch, var(--input) 30%, transparent);
+    
+    &[data-state='checked'] {
+      background-color: var(--primary);
+    }
+    
+    &[aria-invalid='true']:focus-visible {
+      box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive) 40%, transparent);
+    }
+  }
+}
+
+.indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: currentColor;
+  transition: none;
+  
+  svg {
+    width: 0.875rem; // size-3.5
+    height: 0.875rem;
+  }
+}
+

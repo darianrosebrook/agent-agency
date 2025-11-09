@@ -7,10 +7,11 @@ pub mod api;
 pub mod cli_interface;
 #[cfg(feature = "mcp")]
 pub mod mcp;
-pub mod websocket;
+// websocket module is declared in lib.rs, not here
 
 pub use api::{RestApi, ApiConfig};
 pub use cli_interface::{CliInterface, CliConfig};
 #[cfg(feature = "mcp")]
 pub use mcp::{McpServer, McpConfig};
-pub use websocket::{WebSocketApi, WebSocketApiConfig};
+// websocket exports are in lib.rs
+pub struct WebSocketApiConfig;

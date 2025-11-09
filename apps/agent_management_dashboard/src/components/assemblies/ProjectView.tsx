@@ -290,7 +290,7 @@ export function ProjectView({
       </div>
 
       {/* Tab Content Area */}
-      <div className="flex-1 w-full overflow-hidden">
+      <div className="flex-1 w-full overflow-hidden min-h-0">
         {activeTab === "overview" && <OverviewTab />}
         {activeTab === "workspace" && <WorkspaceTab />}
         {activeTab === "tasks" && <TasksTab />}

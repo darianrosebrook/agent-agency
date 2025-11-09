@@ -33,6 +33,7 @@ use system_acceleration::ane::infer::mistral::ConstitutionalVerdict;
 
 // External C functions for Core ML bridge
 extern "C" {
+    #[allow(dead_code)] // Reserved for future use
     fn agentbridge_run_inference(
         model_ref: u64,
         input_name: *const std::ffi::c_char,
@@ -45,7 +46,9 @@ extern "C" {
         out_error: *mut *mut std::ffi::c_char
     ) -> i32;
 
+    #[allow(dead_code)] // Reserved for future use
     fn agentbridge_free_string(ptr: *mut std::ffi::c_char);
+    #[allow(dead_code)] // Reserved for future use
     fn agentbridge_free_array_data(ptr: *mut f32);
 }
 
@@ -165,6 +168,7 @@ impl CoreMLManager {
     }
 
     /// Load FastViT vision model
+    #[allow(dead_code)] // Reserved for future use
     async fn load_fastvit_model(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // FastViT model not yet implemented in system-acceleration
         warn!("FastViT model loading not yet implemented");

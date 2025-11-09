@@ -1,3 +1,8 @@
+"use client";
+
+import { useMemo } from "react";
+import { useAnimatedValue } from "../hooks/useAnimatedValue";
+
 interface Task {
   name: string;
   progress: number;
@@ -17,10 +22,26 @@ export function MultiRingProgress({
   ],
   projectedTimeline = "15 business days",
 }: MultiRingProgressProps) {
-  // Calculate total progress (average of all tasks)
-  const totalProgress = (
-    tasks.reduce((sum, task) => sum + task.progress, 0) / tasks.length
-  ).toFixed(2);
+  // Animate individual task progress values - must call hooks at top level
+  const animatedProgress1 = useAnimatedValue(tasks[0]?.progress ?? 85);
+  const animatedProgress2 = useAnimatedValue(tasks[1]?.progress ?? 75);
+  const animatedProgress3 = useAnimatedValue(tasks[2]?.progress ?? 60);
+
+  // Create animated tasks array
+  const animatedTasks = useMemo(
+    () => [
+      { ...tasks[0], animatedProgress: animatedProgress1 },
+      { ...tasks[1], animatedProgress: animatedProgress2 },
+      { ...tasks[2], animatedProgress: animatedProgress3 },
+    ],
+    [tasks, animatedProgress1, animatedProgress2, animatedProgress3]
+  );
+
+  // Calculate total progress (average of all tasks) - animate this too
+  const totalProgressValue =
+    tasks.reduce((sum, task) => sum + task.progress, 0) / tasks.length;
+  const animatedTotalProgress = useAnimatedValue(totalProgressValue);
+  const totalProgress = animatedTotalProgress.toFixed(2);
 
   const centerX = 200;
   const centerY = 200;
@@ -32,6 +53,11 @@ export function MultiRingProgress({
     { radius: 135, innerRadius: 115, strokeWidth: 20 },
     { radius: 110, innerRadius: 90, strokeWidth: 20 },
   ];
+
+  // Format numbers to fixed decimal places to prevent hydration mismatches
+  const formatNumber = (value: number, decimals: number = 2): string => {
+    return value.toFixed(decimals);
+  };
 
   // Generate segments for a ring
   const generateRingSegments = (
@@ -49,29 +75,25 @@ export function MultiRingProgress({
       const startAngle = i * segmentAngle - 90;
       const endAngle = startAngle + segmentAngle - gapAngle;
 
-      const x1 = centerX + radius * Math.cos((startAngle * Math.PI) / 180);
-      const y1 = centerY + radius * Math.sin((startAngle * Math.PI) / 180);
-      const x2 = centerX + radius * Math.cos((endAngle * Math.PI) / 180);
-      const y2 = centerY + radius * Math.sin((endAngle * Math.PI) / 180);
-      const x3 = centerX + innerRadius * Math.cos((endAngle * Math.PI) / 180);
-      const y3 = centerY + innerRadius * Math.sin((endAngle * Math.PI) / 180);
-      const x4 = centerX + innerRadius * Math.cos((startAngle * Math.PI) / 180);
-      const y4 = centerY + innerRadius * Math.sin((startAngle * Math.PI) / 180);
+      // Calculate coordinates and format to fixed decimal places for consistent rendering
+      const x1 = formatNumber(centerX + radius * Math.cos((startAngle * Math.PI) / 180));
+      const y1 = formatNumber(centerY + radius * Math.sin((startAngle * Math.PI) / 180));
+      const x2 = formatNumber(centerX + radius * Math.cos((endAngle * Math.PI) / 180));
+      const y2 = formatNumber(centerY + radius * Math.sin((endAngle * Math.PI) / 180));
+      const x3 = formatNumber(centerX + innerRadius * Math.cos((endAngle * Math.PI) / 180));
+      const y3 = formatNumber(centerY + innerRadius * Math.sin((endAngle * Math.PI) / 180));
+      const x4 = formatNumber(centerX + innerRadius * Math.cos((startAngle * Math.PI) / 180));
+      const y4 = formatNumber(centerY + innerRadius * Math.sin((startAngle * Math.PI) / 180));
 
-      const pathData = `
-        M ${x1} ${y1}
-        A ${radius} ${radius} 0 0 1 ${x2} ${y2}
-        L ${x3} ${y3}
-        A ${innerRadius} ${innerRadius} 0 0 0 ${x4} ${y4}
-        Z
-      `;
+      // Build path data string with formatted numbers (single line)
+      const pathData = `M ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} L ${x3} ${y3} A ${innerRadius} ${innerRadius} 0 0 0 ${x4} ${y4} Z`;
 
       segments.push(
         <path
           key={`${radius}-${i}`}
           d={pathData}
           fill={i < completedSegments ? color : "#27272a"}
-          className="transition-colors duration-300"
+          className="transition-colors duration-500 ease-out"
         />
       );
     }
@@ -85,10 +107,11 @@ export function MultiRingProgress({
     const angles = [0, 45, 90, 135, 180, 225, 270, 315];
 
     for (const angle of angles) {
-      const x1 = centerX + 70 * Math.cos(((angle - 90) * Math.PI) / 180);
-      const y1 = centerY + 70 * Math.sin(((angle - 90) * Math.PI) / 180);
-      const x2 = centerX + 175 * Math.cos(((angle - 90) * Math.PI) / 180);
-      const y2 = centerY + 175 * Math.sin(((angle - 90) * Math.PI) / 180);
+      // Format coordinates to fixed decimal places for consistent rendering
+      const x1 = formatNumber(centerX + 70 * Math.cos(((angle - 90) * Math.PI) / 180));
+      const y1 = formatNumber(centerY + 70 * Math.sin(((angle - 90) * Math.PI) / 180));
+      const x2 = formatNumber(centerX + 175 * Math.cos(((angle - 90) * Math.PI) / 180));
+      const y2 = formatNumber(centerY + 175 * Math.sin(((angle - 90) * Math.PI) / 180));
 
       lines.push(
         <line
@@ -120,8 +143,9 @@ export function MultiRingProgress({
     ];
 
     return labels.map(({ angle, text }) => {
-      const x = centerX + 185 * Math.cos(((angle - 90) * Math.PI) / 180);
-      const y = centerY + 185 * Math.sin(((angle - 90) * Math.PI) / 180);
+      // Format coordinates to fixed decimal places for consistent rendering
+      const x = formatNumber(centerX + 185 * Math.cos(((angle - 90) * Math.PI) / 180));
+      const y = formatNumber(centerY + 185 * Math.sin(((angle - 90) * Math.PI) / 180));
 
       return (
         <text
@@ -145,9 +169,9 @@ export function MultiRingProgress({
   // Generate progress labels on the left
   const generateProgressLabels = () => {
     const yPositions = [
-      { y: 145, progress: tasks[0]?.progress ?? 85 },
-      { y: 200, progress: tasks[1]?.progress ?? 75 },
-      { y: 255, progress: tasks[2]?.progress ?? 60 },
+      { y: 145, progress: animatedTasks[0]?.animatedProgress ?? 85 },
+      { y: 200, progress: animatedTasks[1]?.animatedProgress ?? 75 },
+      { y: 255, progress: animatedTasks[2]?.animatedProgress ?? 60 },
     ];
 
     return yPositions.map(({ y, progress }, index) => (
@@ -157,13 +181,13 @@ export function MultiRingProgress({
         y={y}
         textAnchor="start"
         dominantBaseline="middle"
-        className="fill-neutral-50"
+        className="fill-neutral-50 transition-none"
         style={{
           fontSize: "14px",
           fontWeight: "500",
         }}
       >
-        {progress}%
+        {Math.round(progress)}%
       </text>
     ));
   };
@@ -250,16 +274,20 @@ export function MultiRingProgress({
               />
 
               {/* Progress rings (outermost to innermost) */}
-              {tasks.map((task, index) => (
-                <g key={task.name}>
-                  {generateRingSegments(
-                    task.progress,
-                    rings[index].radius,
-                    rings[index].innerRadius,
-                    task.color
-                  )}
-                </g>
-              ))}
+              {useMemo(
+                () =>
+                  animatedTasks.map((task, index) => (
+                    <g key={task.name}>
+                      {generateRingSegments(
+                        task.animatedProgress,
+                        rings[index].radius,
+                        rings[index].innerRadius,
+                        task.color
+                      )}
+                    </g>
+                  )),
+                [animatedTasks, rings]
+              )}
 
               {/* Percentage labels around chart */}
               {generatePercentageLabels()}

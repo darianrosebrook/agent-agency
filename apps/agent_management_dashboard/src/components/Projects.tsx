@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   FolderPlus,
   Plus,
@@ -12,10 +13,12 @@ import {
   ChevronsUpDown,
 } from "lucide-react";
 import { NewProjectModal } from "./NewProjectModal";
-import { ProjectView } from "./ProjectView";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { useProjectContext } from "./ProjectContext";
+import { useProjectStore } from "../lib/stores";
+import { ErrorDisplay } from "./ErrorDisplay";
+import { LoadingSpinner, PageLoading } from "./LoadingSpinner";
+import { ProjectCardSkeleton } from "./Skeleton";
 import {
   Table,
   TableBody,
@@ -36,13 +39,16 @@ type SortField = "name" | "createdAt" | "lastAccessed";
 type SortOrder = "asc" | "desc";
 
 export function Projects() {
+  const router = useRouter();
   const {
     projects,
     getCurrentProject,
     createProject,
     selectProject,
     clearCurrentProject,
-  } = useProjectContext();
+    isLoading,
+    error,
+  } = useProjectStore();
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAllRecent, setShowAllRecent] = useState(false);
@@ -55,6 +61,34 @@ export function Projects() {
 
   const currentProject = getCurrentProject();
 
+  // Show loading state
+  if (isLoading && projects.length === 0) {
+    return (
+      <div className="p-8">
+        <PageLoading text="Loading projects..." />
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error && projects.length === 0) {
+    return (
+      <div className="p-8">
+        <ErrorDisplay
+          error={error}
+          onRetry={async () => {
+            // Retry fetching projects
+            try {
+              await useProjectStore.getState().fetchProjects();
+            } catch {
+              // Error already handled in store
+            }
+          }}
+        />
+      </div>
+    );
+  }
+
   const handleCreateProject = (data: {
     name: string;
     summary?: string;
@@ -65,11 +99,17 @@ export function Projects() {
   };
 
   const handleProjectClick = (projectId: string) => {
+    if (!projectId || typeof projectId !== 'string') {
+      console.error('Invalid projectId:', projectId);
+      return;
+    }
     selectProject(projectId);
+    router.push(`/projects/${encodeURIComponent(projectId)}`);
   };
 
   const handleBackToProjects = () => {
     clearCurrentProject();
+    router.push("/projects");
   };
 
   const handleSort = (field: SortField) => {
@@ -205,17 +245,7 @@ export function Projects() {
     );
   }
 
-  // Project View (when a project is selected)
-  if (currentProject) {
-    return (
-      <ProjectView
-        projectName={currentProject.name}
-        onBackToProjects={handleBackToProjects}
-      />
-    );
-  }
-
-  // Projects List View (when there are projects but none selected)
+  // Projects List View
   return (
     <div className="p-8">
       {/* Header */}

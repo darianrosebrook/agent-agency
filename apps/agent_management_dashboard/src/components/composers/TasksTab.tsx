@@ -3,14 +3,14 @@
 import { useState } from "react";
 import Container66 from "../../imports/Container-16-2951";
 import { NewTaskModal } from "./TaskModal";
-import { useProjectContext } from "../ProjectContext";
+import { useProjectStore } from "../../lib/stores";
 
 export function TasksTab() {
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<
     "backlog" | "todo" | "in-progress" | "done"
   >("backlog");
-  const { currentProjectId, addTask } = useProjectContext();
+  const { currentProjectId, addTask } = useProjectStore();
 
   const handleOpenModal = (
     status: "backlog" | "todo" | "in-progress" | "done"

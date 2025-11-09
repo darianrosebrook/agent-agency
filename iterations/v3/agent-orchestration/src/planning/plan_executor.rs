@@ -912,6 +912,7 @@ impl PlanExecutor {
     }
 
     /// Execute a batch of milestones in parallel
+    #[allow(dead_code)] // Reserved for future use
     async fn execute_batch(
         &self,
         plan: &mut ExecutionPlan,
@@ -1013,11 +1014,12 @@ impl PlanExecutor {
     }
 
     /// Execute individual milestone
+    #[allow(dead_code)] // Reserved for future use
     async fn execute_milestone(&self, plan: ExecutionPlan, milestone_id: String) -> Result<MilestoneExecutionResult> {
         let milestone_start = Utc::now();
 
         // Find milestone
-        let _milestone = plan.contract_plan.milestones.iter()
+        let milestone = plan.contract_plan.milestones.iter()
             .find(|m| m.id == milestone_id)
             .ok_or_else(|| anyhow!("Milestone '{}' not found", milestone_id))?
             .clone();
@@ -1283,6 +1285,7 @@ impl PlanExecutor {
     }
 
     /// Create worker context from milestone
+    #[allow(dead_code)] // Reserved for future use
     fn create_worker_context(&self, milestone: &agent_agency_contracts::planning_io::Milestone) -> Result<agent_agency_contracts::WorkerContext> {
         Ok(agent_agency_contracts::WorkerContext {
             task_id: milestone.id.parse().unwrap_or(uuid::Uuid::new_v4()), // Use milestone ID as UUID if possible
@@ -1299,6 +1302,7 @@ impl PlanExecutor {
     }
 
     /// Map milestone priority to worker priority
+    #[allow(dead_code)] // Reserved for future use
     fn map_milestone_priority(&self, priority: agent_agency_contracts::planning_io::MilestonePriority) -> agent_agency_contracts::TaskPriority {
         match priority {
             agent_agency_contracts::planning_io::MilestonePriority::Low => agent_agency_contracts::TaskPriority::Low,
@@ -1309,6 +1313,7 @@ impl PlanExecutor {
     }
 
     /// Execute milestone with assigned worker
+    #[allow(dead_code)] // Reserved for future use
     async fn execute_with_worker(&self, worker: &WorkerInfo, context: &agent_agency_contracts::WorkerContext) -> Result<()> {
         // Execute using the worker's execution capabilities
         // Worker assignment validates capabilities before execution
@@ -1352,6 +1357,7 @@ impl PlanExecutor {
     }
 
     /// Update plan state for milestone completion
+    #[allow(dead_code)] // Reserved for future use
     async fn update_plan_state_for_milestone(&self, plan: &mut ExecutionPlan, milestone_id: &str, success: bool) -> Result<()> {
         if let Some(state) = &mut plan.execution_state {
             if success {
@@ -1557,6 +1563,7 @@ impl PlanExecutor {
     }
 
     /// Clone executor for parallel execution
+    #[allow(dead_code)] // Reserved for future use
     fn clone_executor(&self) -> Arc<Self> {
         // TODO: Implement proper executor cloning for parallel execution
         //       Currently uses basic Arc cloning; should ensure all internal state is properly cloned and thread-safe for parallel execution contexts.

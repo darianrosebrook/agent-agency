@@ -355,6 +355,7 @@ impl Council {
     }
 
     /// Initialize error handling components based on configuration
+    #[allow(dead_code)] // Reserved for future use
     fn initialize_error_handling(
         config: &CouncilConfig,
     ) -> (

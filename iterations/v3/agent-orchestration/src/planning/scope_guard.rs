@@ -363,6 +363,7 @@ impl ScopeGuard {
     }
 
     /// Check if we can wait for locks to be released
+    #[allow(dead_code)] // Reserved for future use
     async fn can_wait_for_locks(&self, conflicts: &[(PathBuf, FileLock)]) -> bool {
         // Check if any conflicting locks are older than our max wait time
         let now = Utc::now();
@@ -382,6 +383,7 @@ impl ScopeGuard {
     }
 
     /// Wait for a specific lock to be released
+    #[allow(dead_code)] // Reserved for future use
     async fn wait_for_lock_release(&self, file_path: &Path) -> Result<()> {
         let check_interval_ms = 100u64;
         let mut waited_ms = 0u64;

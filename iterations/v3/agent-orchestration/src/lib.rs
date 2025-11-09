@@ -243,6 +243,7 @@ pub mod evaluation;
 mod playground {
     // Re-export playground module if evaluation feature is enabled
     #[cfg(feature = "evaluation")]
+    #[allow(ambiguous_glob_reexports)]
     pub use crate::evaluation::playground::*;
     
     // TODO: Implement comprehensive test support without evaluation feature

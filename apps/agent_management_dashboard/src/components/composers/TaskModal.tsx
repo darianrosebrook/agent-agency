@@ -197,6 +197,19 @@ export function NewTaskModal({
             </MetadataRow>
 
             {/* Assignees */}
+            {/* TODO: Replace text input with user selection dropdown from v3 database with the following requirements:
+            // 1. User list fetching: Load project team members or available users from database
+            //    - Data source: GET /api/projects/:projectId/members or GET /api/users endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
+            //    - Database table: PostgreSQL `project_members` or `users` table
+            //    - Include user names, IDs, emails, and avatars
+            // 2. Multi-select support: Allow assigning multiple users to a task
+            //    - Support selecting multiple users from dropdown
+            //    - Display selected users as chips/badges with avatars
+            //    - Store array of user IDs when task is created/updated
+            // 3. User display: Show user avatars and names
+            //    - Display user avatar (or initials) and name
+            //    - Show "Unassigned" when no users are selected
+            //    - Handle user lookup and display gracefully */}
             <MetadataRow label="Assignees">
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center text-xs font-medium">
@@ -271,6 +284,19 @@ export function NewTaskModal({
                 </button>
                 {showProjectMenu && (
                   <div className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-xl py-2 z-10 min-w-[160px]">
+                    {/* TODO: Replace hardcoded project list with projects from v3 database with the following requirements:
+                    // 1. Project list fetching: Load available projects from database
+                    //    - Data source: GET /api/projects endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
+                    //    - Database table: PostgreSQL `projects` table
+                    //    - Include project names, IDs, and status for display
+                    // 2. Project selection: Allow selecting project for task assignment
+                    //    - Store selected project ID when task is created
+                    //    - Update task.project_id when project is selected
+                    //    - Support filtering projects by current user's access
+                    // 3. Project display: Show project name and status indicator
+                    //    - Display project name in dropdown
+                    //    - Show status indicator (green dot for active projects)
+                    //    - Handle empty project list gracefully */}
                     {["Spotify", "Netflix", "Amazon", "Google"].map((proj) => (
                       <button
                         key={proj}

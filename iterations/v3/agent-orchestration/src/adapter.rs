@@ -640,6 +640,7 @@ impl LegacyOrchestratorAdapter {
     }
 
     /// Convert task priority
+    #[allow(dead_code)] // Reserved for future use
     fn convert_priority(&self, priority: TaskPriority) -> agent_agency_contracts::types::data_processing::ProcessingPriority {
         match priority {
             TaskPriority::Low => agent_agency_contracts::types::data_processing::ProcessingPriority::Low,
@@ -652,6 +653,7 @@ impl LegacyOrchestratorAdapter {
     }
 
     /// Convert execution status
+    #[allow(dead_code)] // Reserved for future use
     fn convert_status(&self, status: crate::multimodal_orchestration::ProcessingStatus) -> ExecutionStatus {
         match status {
             crate::multimodal_orchestration::ProcessingStatus::Pending => ExecutionStatus::Pending,

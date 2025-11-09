@@ -15,6 +15,19 @@ export async function simulateAIResponse(
   const isFirstMessage = userMessages.length === 1;
 
   if (isFirstMessage) {
+    // TODO: Replace hardcoded task simulation with real AI task execution tracking from v3 API with the following requirements:
+    // 1. Task execution tracking: Track AI agent task execution in real-time
+    //    - Data source: WebSocket connection or SSE stream from `iterations/v3/agent-orchestration` crate
+    //    - Track task status changes: pending -> in-progress -> completed
+    //    - Include task names, timestamps, and execution results
+    // 2. Task result persistence: Save task execution results to database
+    //    - Data source: POST /api/chat/sessions/:sessionId/tasks endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
+    //    - Database table: PostgreSQL `chat_tasks` or `telemetry` table
+    //    - Store task execution metadata and results for analysis
+    // 3. Real-time updates: Stream task status updates to UI
+    //    - Use WebSocket or Server-Sent Events for live updates
+    //    - Update message tasks array as execution progresses
+    //    - Display task results when available
     // First response: acknowledge the request
     const tasks: Task[] = [
       {
@@ -94,6 +107,7 @@ Let me create a comprehensive project plan that breaks this down into manageable
       isGeneratingPlan: false,
     });
   } else {
+    // TODO: Replace hardcoded task simulation with real AI task execution tracking (see TODO above for details)
     // Regular response for subsequent messages
     const tasks: Task[] = [
       {

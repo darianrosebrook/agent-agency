@@ -717,6 +717,7 @@ impl AlgorithmicDecisionEngine {
     }
 
     /// Extract acceptance criteria from change description and rationale
+    #[allow(dead_code)] // Reserved for future use
     fn extract_acceptance_criteria(description: &str, rationale: &str) -> String {
         // TODO: Implement NLP-based acceptance criteria extraction with the following requirements:
         // 1. NLP parsing: Use NLP to parse natural language requirements

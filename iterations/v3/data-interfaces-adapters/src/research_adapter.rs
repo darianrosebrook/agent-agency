@@ -133,8 +133,8 @@ impl ResearchService for ResearchServiceAdapter {
     
     async fn refine_working_spec(
         &self,
-        spec: &mut WorkingSpec,
-        validation_issues: &[ValidationIssue],
+        _spec: &mut WorkingSpec,
+        _validation_issues: &[ValidationIssue],
     ) -> Result<(), ServiceError> {
         // TODO: Implement comprehensive working spec refinement
         //       Currently returns success as refinement is handled in plan_task; should implement comprehensive refinement that allows manual refinement of working spec based on validation issues for complete refinement support.

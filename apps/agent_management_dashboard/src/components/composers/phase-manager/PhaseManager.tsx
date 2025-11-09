@@ -10,6 +10,22 @@ export function PhaseManager({
   initialData = initialPhases,
   onSaveToProject,
 }: PhaseManagerProps) {
+  // TODO: Replace hardcoded initial phases with project phases from v3 database with the following requirements:
+  // 1. Phase data fetching: Load project phases and tasks from database
+  //    - Data source: GET /api/projects/:projectId/phases endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
+  //    - Database tables: PostgreSQL `milestones` (phases) and `tasks` tables
+  //    - Include phase numbers, titles, descriptions, and associated tasks
+  // 2. Task data fetching: Load tasks with subtasks and context chips
+  //    - Data source: GET /api/projects/:projectId/tasks endpoint returning tasks with subtasks
+  //    - Database table: PostgreSQL `tasks` table with subtask relationships
+  //    - Include task titles, descriptions, subtasks, and context chips
+  // 3. Phase persistence: Save phase and task updates to database
+  //    - Data source: PATCH /api/projects/:projectId/phases/:phaseId and PATCH /api/projects/:projectId/tasks/:taskId endpoints
+  //    - Update phase titles, descriptions, and task details
+  //    - Persist subtask additions, deletions, and completion status
+  // 4. Context chip persistence: Save context chip additions and removals
+  //    - Data source: POST /api/projects/:projectId/tasks/:taskId/context-chips and DELETE /api/projects/:projectId/tasks/:taskId/context-chips/:chipId endpoints
+  //    - Store file references, tool references, and other context data
   const [phases, setPhases] = useState<Phase[]>(initialData);
 
   const updateTaskTitle = (

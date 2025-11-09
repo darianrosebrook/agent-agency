@@ -1,0 +1,47 @@
+@use '../../styles/_tokens' as *;
+@use '../../styles/_mixins' as *;
+
+.root {
+  position: relative;
+}
+
+.viewport {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  transition: color $transition-fast, box-shadow $transition-fast;
+  outline: none;
+  
+  &:focus-visible {
+    @include focus-ring(var(--ring), 3px);
+    outline: 1px solid transparent;
+  }
+}
+
+.scrollbar {
+  display: flex;
+  touch-action: none;
+  padding: 1px; // p-px
+  transition: background-color $transition-fast;
+  user-select: none;
+  
+  &[data-orientation='vertical'] {
+    height: 100%;
+    width: 0.625rem; // w-2.5
+    border-left: 1px solid transparent;
+  }
+  
+  &[data-orientation='horizontal'] {
+    height: 0.625rem; // h-2.5
+    flex-direction: column;
+    border-top: 1px solid transparent;
+  }
+}
+
+.thumb {
+  position: relative;
+  flex: 1;
+  border-radius: $radius-full;
+  background-color: var(--border);
+}
+

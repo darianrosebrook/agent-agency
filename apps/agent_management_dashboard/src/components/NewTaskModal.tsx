@@ -197,6 +197,7 @@ export function NewTaskModal({
             </MetadataRow>
 
             {/* Assignees */}
+            {/* TODO: Replace text input with user selection dropdown from v3 database (see TaskModal.tsx for detailed requirements) */}
             <MetadataRow label="Assignees">
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center text-xs font-medium">
@@ -271,6 +272,7 @@ export function NewTaskModal({
                 </button>
                 {showProjectMenu && (
                   <div className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-xl py-2 z-10 min-w-[160px]">
+                    {/* TODO: Replace hardcoded project list with projects from v3 database (see TaskModal.tsx for detailed requirements) */}
                     {["Spotify", "Netflix", "Amazon", "Google"].map((proj) => (
                       <button
                         key={proj}

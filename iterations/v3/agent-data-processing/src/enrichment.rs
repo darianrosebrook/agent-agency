@@ -21,6 +21,8 @@ use std::sync::Mutex;
 
 #[cfg(feature = "coreml")]
 use system_acceleration::ane::infer::create_whisper_executor;
+#[cfg(feature = "coreml")]
+use system_acceleration::ane::models::whisper_model::WhisperInferenceOptions;
 
 /// Result from enrichment operations
 pub type EnrichmentResult = DataProcessingResult<ProcessingOutput>;

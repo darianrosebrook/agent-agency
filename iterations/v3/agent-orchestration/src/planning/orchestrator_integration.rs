@@ -134,7 +134,7 @@ impl OrchestratorPlanningIntegration {
         &self,
         task_descriptor: &TaskDescriptor,
     ) -> Result<PlanningTaskResult> {
-        let _task_id = task_descriptor.task_id;
+        let task_id = task_descriptor.task_id;
 
         // 1. Generate execution plan using planning system
         let execution_plan = self.generate_execution_plan(task_descriptor).await?;
@@ -176,7 +176,7 @@ impl OrchestratorPlanningIntegration {
     /// Generate execution plan from task descriptor
     async fn generate_execution_plan(&self, task_descriptor: &TaskDescriptor) -> Result<PlanningExecutionPlan> {
         // Convert task descriptor to working spec
-        let _working_spec = agent_agency_contracts::WorkingSpec {
+        let working_spec_value = agent_agency_contracts::WorkingSpec {
             version: "1.0".to_string(),
             id: task_descriptor.task_id.to_string(),
             title: format!("Task: {}", task_descriptor.task_id),
@@ -247,7 +247,7 @@ impl OrchestratorPlanningIntegration {
         }
         
         let plan_context = PlanGenerationContext {
-            working_spec_provider: Box::new(WorkingSpecWrapper(working_spec)),
+            working_spec_provider: Box::new(WorkingSpecWrapper(working_spec_value)),
             task_descriptor: Box::new(TaskDescriptorWrapper(task_descriptor.clone())),
             resource_inventory: crate::planning::plan_types::ResourceInventory::default(),
             constraints: crate::planning::plan_types::PlanningConstraints::default(),
@@ -414,6 +414,7 @@ struct PlanningStatus {
 }
 
 impl OrchestratorPlanningIntegration {
+    #[allow(dead_code)] // Reserved for future use
     fn calculate_progress(
         &self,
         plan: &PlanningExecutionPlan,

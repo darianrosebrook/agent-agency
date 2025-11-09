@@ -200,9 +200,9 @@ start_api_server() {
     cd "$V3_ROOT"
 
     # Build if needed
-    if [[ ! -f "target/debug/data-infrastructure" ]]; then
+    if [[ ! -f "target/debug/agent-agency-api-server" ]]; then
         log_info "Building API server..."
-        cargo build --package data-infrastructure --bin data-infrastructure
+        cargo build --package data-interfaces-adapters --bin agent-agency-api-server
     fi
 
     # Set environment variables for real integrations
@@ -213,7 +213,7 @@ start_api_server() {
     export RUST_BACKTRACE="${RUST_BACKTRACE:-1}"
 
     # Start API server
-    nohup cargo run --package data-infrastructure --bin data-infrastructure \
+    nohup cargo run --package data-interfaces-adapters --bin agent-agency-api-server \
         -- --host 127.0.0.1 --port $API_PORT --enable-cors \
         > "$LOG_DIR/api-server.log" 2>&1 &
 

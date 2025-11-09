@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Plus, MessageSquare } from "lucide-react";
-import { useChatContext } from "./ChatContext";
+import { useChatStore } from "../lib/stores";
 
 interface ChatGroup {
   id: string;
@@ -18,7 +18,7 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ onSelect }: ChatSidebarProps = {}) {
   const { chats, currentChatId, createNewChat, switchToChat } =
-    useChatContext();
+    useChatStore();
 
   const [groups, setGroups] = useState<ChatGroup[]>([
     {

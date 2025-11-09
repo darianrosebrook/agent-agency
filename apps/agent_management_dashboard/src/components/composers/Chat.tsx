@@ -6,28 +6,11 @@ import { FileDropzoneModal } from "./FileDropzone";
 import { Badge } from "../ui/badge";
 import { ChatMessage, ChatMessageSkeleton } from "../compounds";
 import svgPaths from "../../imports/svg-quupl4zjo1";
-import { useChatContext } from "../ChatContext";
+import { useChatStore } from "../../lib/stores";
+import type { Message, Task } from "../../lib/schemas/chat";
 import { simulateAIResponse } from "../ChatAIHelper";
 
-export interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: Date;
-  isLoading?: boolean;
-  tasks?: Task[];
-  contextFiles?: string[];
-  isPhasePlan?: boolean;
-  isGeneratingPlan?: boolean;
-}
-
-export interface Task {
-  id: string;
-  name: string;
-  status: "pending" | "in-progress" | "completed" | "failed";
-  result?: string;
-  timestamp: Date;
-}
+// Types imported from schemas
 
 export function Chat() {
   const {
@@ -36,7 +19,7 @@ export function Chat() {
     addMessageToCurrentChat,
     updateMessageInCurrentChat,
     currentChatId,
-  } = useChatContext();
+  } = useChatStore();
   const [contextFiles, setContextFiles] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [promptValue, setPromptValue] = useState("");

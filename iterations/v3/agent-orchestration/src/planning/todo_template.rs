@@ -681,6 +681,7 @@ impl TodoTemplateSystem {
     }
 
     /// Check if instance is complete
+    #[allow(dead_code)] // Reserved for future use
     fn is_instance_complete(&self, instance: &TodoInstance) -> bool {
         let template = self.get_template_for_instance(instance).unwrap();
         let total_steps = template.steps.len();
@@ -690,6 +691,7 @@ impl TodoTemplateSystem {
     }
 
     /// Mark instance as complete
+    #[allow(dead_code)] // Reserved for future use
     fn mark_instance_complete(&self, instance: &mut TodoInstance) {
         instance.current_step = None;
         // Could add completion timestamp, final verification, etc.

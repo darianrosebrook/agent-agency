@@ -38,7 +38,6 @@ impl DatabaseOperationsAdapter {
 impl DatabaseOperations for DatabaseOperationsAdapter {
     async fn get_workers(&self) -> Result<Vec<models::Worker>> {
         use data_infrastructure::models::Worker as DbWorker;
-        use sqlx::Row;
         
         // Query workers directly from database using sqlx
         let pool = self.db_client.pool();
@@ -1055,12 +1054,12 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
     }
 
     async fn get_waivers(&self, status: Option<String>) -> Result<Vec<models::Waiver>> {
-        use data_infrastructure::models::Waiver as DbWaiver;
+        
         
         let pool = self.db_client.pool();
         
         let query = if let Some(status_filter) = status {
-            sqlx::query_as::<_, DbWaiver>(
+            sqlx::query(
                 r#"
                 SELECT id, title, reason, description, gates, approved_by, impact_level,
                        mitigation_plan, expires_at, created_at, updated_at, status, metadata
@@ -1071,7 +1070,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
             )
             .bind(status_filter)
         } else {
-            sqlx::query_as::<_, DbWaiver>(
+            sqlx::query(
                 r#"
                 SELECT id, title, reason, description, gates, approved_by, impact_level,
                        mitigation_plan, expires_at, created_at, updated_at, status, metadata
@@ -1081,16 +1080,29 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
             )
         };
         
-        let db_waivers = query
+        let rows = query
             .fetch_all(pool)
             .await
             .map_err(|e| anyhow!("Failed to query waivers: {}", e))?;
         
         // Convert database waivers to orchestration models
         let mut waivers = Vec::new();
-        for db_waiver in db_waivers {
+        for row in rows {
+            let db_waiver_id: Uuid = row.try_get("id")?;
+            let db_waiver_title: String = row.try_get("title")?;
+            let db_waiver_reason: String = row.try_get("reason")?;
+            let db_waiver_description: String = row.try_get("description")?;
+            let db_waiver_gates: serde_json::Value = row.try_get("gates")?;
+            let db_waiver_approved_by: String = row.try_get("approved_by")?;
+            let db_waiver_impact_level: String = row.try_get("impact_level")?;
+            let db_waiver_mitigation_plan: Option<String> = row.try_get("mitigation_plan")?;
+            let db_waiver_expires_at: Option<chrono::DateTime<Utc>> = row.try_get("expires_at")?;
+            let db_waiver_created_at: chrono::DateTime<Utc> = row.try_get("created_at")?;
+            let db_waiver_updated_at: Option<chrono::DateTime<Utc>> = row.try_get("updated_at")?;
+            let db_waiver_status: String = row.try_get("status")?;
+            let db_waiver_metadata: serde_json::Value = row.try_get("metadata")?;
             // Extract gates from JSON if needed
-            let gates = if let Some(gates_json) = db_waiver.gates.as_array() {
+            let gates = if let Some(gates_json) = db_waiver_gates.as_array() {
                 gates_json
                     .iter()
                     .filter_map(|v| v.as_str())
@@ -1100,20 +1112,44 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                 vec![]
             };
             
+            // Extract plan_id from metadata or use a default
+            let plan_id = db_waiver_metadata.get("plan_id")
+                .and_then(|v| v.as_str())
+                .and_then(|s| Uuid::parse_str(s).ok())
+                .unwrap_or_else(|| Uuid::new_v4());
+            
+            // Extract waiver_type from metadata or use reason as type
+            let waiver_type = db_waiver_metadata.get("waiver_type")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| "general".to_string());
+            
+            // Store title and description in metadata if they exist
+            let mut metadata = match db_waiver_metadata {
+                serde_json::Value::Object(ref map) => map.clone(),
+                _ => serde_json::Map::new(),
+            };
+            metadata.insert("title".to_string(), serde_json::Value::String(db_waiver_title.clone()));
+            metadata.insert("description".to_string(), serde_json::Value::String(db_waiver_description.clone()));
+            if let Some(updated_at) = db_waiver_updated_at {
+                metadata.insert("updated_at".to_string(), serde_json::Value::String(updated_at.to_rfc3339()));
+            }
+            // Convert metadata Map to HashMap<String, serde_json::Value>
+            let metadata_map: std::collections::HashMap<String, serde_json::Value> = metadata.into_iter().collect();
+            
             waivers.push(models::Waiver {
-                id: db_waiver.id,
-                title: db_waiver.title,
-                reason: db_waiver.reason,
-                description: db_waiver.description,
+                id: db_waiver_id,
+                plan_id,
+                waiver_type,
+                reason: db_waiver_reason,
+                approved_by: db_waiver_approved_by,
+                status: db_waiver_status,
                 gates,
-                approved_by: db_waiver.approved_by,
-                impact_level: db_waiver.impact_level,
-                mitigation_plan: db_waiver.mitigation_plan,
-                expires_at: db_waiver.expires_at,
-                created_at: db_waiver.created_at,
-                updated_at: db_waiver.updated_at,
-                status: db_waiver.status,
-                metadata: db_waiver.metadata,
+                impact_level: db_waiver_impact_level,
+                mitigation_plan: db_waiver_mitigation_plan,
+                created_at: db_waiver_created_at,
+                expires_at: db_waiver_expires_at,
+                metadata: metadata_map,
             });
         }
         
@@ -1121,14 +1157,25 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
     }
 
     async fn create_waiver(&self, waiver: CreateWaiver) -> Result<models::Waiver> {
-        use data_infrastructure::models::Waiver as DbWaiver;
+        
         
         let pool = self.db_client.pool();
         let id = Uuid::new_v4();
         let now = Utc::now();
-        let gates_json = serde_json::to_value(&waiver.gates)
+        let gates_json = serde_json::to_value(&waiver.waived_gates)
             .map_err(|e| anyhow!("Failed to serialize gates: {}", e))?;
-        let metadata = waiver.metadata.unwrap_or_else(|| serde_json::json!({}));
+        
+        // Create metadata with plan_id
+        let mut metadata = serde_json::Map::new();
+        metadata.insert("plan_id".to_string(), serde_json::Value::String(waiver.plan_id.to_string()));
+        let metadata_value = serde_json::Value::Object(metadata);
+        
+        // Create waiver with default values for fields not in CreateWaiver
+        let title = format!("Waiver for plan {}", waiver.plan_id);
+        let description = waiver.reason.clone();
+        let approved_by = "system".to_string();
+        let impact_level = "medium".to_string();
+        let mitigation_plan = None::<String>;
         
         sqlx::query(
             r#"
@@ -1139,24 +1186,24 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
             "#
         )
         .bind(id)
-        .bind(&waiver.title)
+        .bind(&title)
         .bind(&waiver.reason)
-        .bind(&waiver.description)
+        .bind(&description)
         .bind(&gates_json)
-        .bind(&waiver.approved_by)
-        .bind(&waiver.impact_level)
-        .bind(&waiver.mitigation_plan)
-        .bind(waiver.expires_at)
+        .bind(&approved_by)
+        .bind(&impact_level)
+        .bind(mitigation_plan)
+        .bind(None::<chrono::DateTime<Utc>>)
         .bind(now)
         .bind(now)
         .bind("active")
-        .bind(&metadata)
+        .bind(&metadata_value)
         .execute(pool)
         .await
         .map_err(|e| anyhow!("Failed to create waiver: {}", e))?;
         
         // Fetch the created waiver
-        let db_waiver = sqlx::query_as::<_, DbWaiver>(
+        let row = sqlx::query(
             r#"
             SELECT id, title, reason, description, gates, approved_by, impact_level,
                    mitigation_plan, expires_at, created_at, updated_at, status, metadata
@@ -1169,8 +1216,23 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .await
         .map_err(|e| anyhow!("Failed to fetch created waiver: {}", e))?;
         
+        // Extract fields manually
+        let db_waiver_id: Uuid = row.try_get("id")?;
+        let db_waiver_title: String = row.try_get("title")?;
+        let db_waiver_reason: String = row.try_get("reason")?;
+        let db_waiver_description: String = row.try_get("description")?;
+        let db_waiver_gates: serde_json::Value = row.try_get("gates")?;
+        let db_waiver_approved_by: String = row.try_get("approved_by")?;
+        let db_waiver_impact_level: String = row.try_get("impact_level")?;
+        let db_waiver_mitigation_plan: Option<String> = row.try_get("mitigation_plan")?;
+        let db_waiver_expires_at: Option<chrono::DateTime<Utc>> = row.try_get("expires_at")?;
+        let db_waiver_created_at: chrono::DateTime<Utc> = row.try_get("created_at")?;
+        let db_waiver_updated_at: Option<chrono::DateTime<Utc>> = row.try_get("updated_at")?;
+        let db_waiver_status: String = row.try_get("status")?;
+        let db_waiver_metadata: serde_json::Value = row.try_get("metadata")?;
+        
         // Extract gates from JSON
-        let gates = if let Some(gates_json) = db_waiver.gates.as_array() {
+        let gates = if let Some(gates_json) = db_waiver_gates.as_array() {
             gates_json
                 .iter()
                 .filter_map(|v| v.as_str())
@@ -1180,98 +1242,65 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
             vec![]
         };
         
+        // Extract plan_id from metadata or use a default
+        let plan_id = db_waiver_metadata.get("plan_id")
+            .and_then(|v| v.as_str())
+            .and_then(|s| Uuid::parse_str(s).ok())
+            .unwrap_or_else(|| Uuid::new_v4());
+        
+        // Extract waiver_type from metadata or use reason as type
+        let waiver_type = db_waiver_metadata.get("waiver_type")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "general".to_string());
+        
+        // Store title and description in metadata if they exist
+        let mut metadata = match db_waiver_metadata {
+            serde_json::Value::Object(ref map) => map.clone(),
+            _ => serde_json::Map::new(),
+        };
+        metadata.insert("title".to_string(), serde_json::Value::String(db_waiver_title.clone()));
+        metadata.insert("description".to_string(), serde_json::Value::String(db_waiver_description.clone()));
+        if let Some(updated_at) = db_waiver_updated_at {
+            metadata.insert("updated_at".to_string(), serde_json::Value::String(updated_at.to_rfc3339()));
+        }
+        // Convert metadata Map to HashMap<String, serde_json::Value>
+        let metadata_map: std::collections::HashMap<String, serde_json::Value> = metadata.into_iter().collect();
+        
         Ok(models::Waiver {
-            id: db_waiver.id,
-            title: db_waiver.title,
-            reason: db_waiver.reason,
-            description: db_waiver.description,
+            id: db_waiver_id,
+            plan_id,
+            waiver_type,
+            reason: db_waiver_reason,
+            approved_by: db_waiver_approved_by,
+            status: db_waiver_status,
             gates,
-            approved_by: db_waiver.approved_by,
-            impact_level: db_waiver.impact_level,
-            mitigation_plan: db_waiver.mitigation_plan,
-            expires_at: db_waiver.expires_at,
-            created_at: db_waiver.created_at,
-            updated_at: db_waiver.updated_at,
-            status: db_waiver.status,
-            metadata: db_waiver.metadata,
+            impact_level: db_waiver_impact_level,
+            mitigation_plan: db_waiver_mitigation_plan,
+            created_at: db_waiver_created_at,
+            expires_at: db_waiver_expires_at,
+            metadata: metadata_map,
         })
     }
 
     async fn update_waiver(&self, id: Uuid, update: UpdateWaiver) -> Result<models::Waiver> {
-        use data_infrastructure::models::Waiver as DbWaiver;
+        
         
         let pool = self.db_client.pool();
         let now = Utc::now();
         
-        // Update individual fields if provided
-        if let Some(ref title) = update.title {
-            sqlx::query("UPDATE waivers SET title = $1, updated_at = $2 WHERE id = $3")
-                .bind(title)
-                .bind(now)
-                .bind(id)
-                .execute(pool)
-                .await
-                .map_err(|e| anyhow!("Failed to update waiver title: {}", e))?;
-        }
-        
-        if let Some(ref description) = update.description {
-            sqlx::query("UPDATE waivers SET description = $1, updated_at = $2 WHERE id = $3")
-                .bind(description)
-                .bind(now)
-                .bind(id)
-                .execute(pool)
-                .await
-                .map_err(|e| anyhow!("Failed to update waiver description: {}", e))?;
-        }
-        
-        if let Some(ref mitigation_plan) = update.mitigation_plan {
-            sqlx::query("UPDATE waivers SET mitigation_plan = $1, updated_at = $2 WHERE id = $3")
-                .bind(mitigation_plan)
-                .bind(now)
-                .bind(id)
-                .execute(pool)
-                .await
-                .map_err(|e| anyhow!("Failed to update waiver mitigation_plan: {}", e))?;
-        }
-        
-        if let Some(expires_at) = update.expires_at {
-            sqlx::query("UPDATE waivers SET expires_at = $1, updated_at = $2 WHERE id = $3")
-                .bind(expires_at)
-                .bind(now)
-                .bind(id)
-                .execute(pool)
-                .await
-                .map_err(|e| anyhow!("Failed to update waiver expires_at: {}", e))?;
-        }
-        
-        if let Some(ref status) = update.status {
+        // UpdateWaiver only has id and status fields (status is String, not Option)
+        // Update status if provided
+        if !update.status.is_empty() {
             sqlx::query("UPDATE waivers SET status = $1, updated_at = $2 WHERE id = $3")
-                .bind(status)
+                .bind(&update.status)
                 .bind(now)
                 .bind(id)
                 .execute(pool)
                 .await
                 .map_err(|e| anyhow!("Failed to update waiver status: {}", e))?;
-        }
-        
-        if let Some(ref metadata) = update.metadata {
-            sqlx::query("UPDATE waivers SET metadata = $1, updated_at = $2 WHERE id = $3")
-                .bind(metadata)
-                .bind(now)
-                .bind(id)
-                .execute(pool)
-                .await
-                .map_err(|e| anyhow!("Failed to update waiver metadata: {}", e))?;
-        }
-        
-        // Always update updated_at if no other fields were updated
-        if update.title.is_none()
-            && update.description.is_none()
-            && update.mitigation_plan.is_none()
-            && update.expires_at.is_none()
-            && update.status.is_none()
-            && update.metadata.is_none()
-        {
+        } else {
+            // Always update updated_at
             sqlx::query("UPDATE waivers SET updated_at = $1 WHERE id = $2")
                 .bind(now)
                 .bind(id)
@@ -1281,7 +1310,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         }
         
         // Fetch the updated waiver
-        let db_waiver = sqlx::query_as::<_, DbWaiver>(
+        let row = sqlx::query(
             r#"
             SELECT id, title, reason, description, gates, approved_by, impact_level,
                    mitigation_plan, expires_at, created_at, updated_at, status, metadata
@@ -1294,8 +1323,23 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .await
         .map_err(|e| anyhow!("Failed to fetch updated waiver: {}", e))?;
         
+        // Extract fields manually
+        let db_waiver_id: Uuid = row.try_get("id")?;
+        let db_waiver_title: String = row.try_get("title")?;
+        let db_waiver_reason: String = row.try_get("reason")?;
+        let db_waiver_description: String = row.try_get("description")?;
+        let db_waiver_gates: serde_json::Value = row.try_get("gates")?;
+        let db_waiver_approved_by: String = row.try_get("approved_by")?;
+        let db_waiver_impact_level: String = row.try_get("impact_level")?;
+        let db_waiver_mitigation_plan: Option<String> = row.try_get("mitigation_plan")?;
+        let db_waiver_expires_at: Option<chrono::DateTime<Utc>> = row.try_get("expires_at")?;
+        let db_waiver_created_at: chrono::DateTime<Utc> = row.try_get("created_at")?;
+        let db_waiver_updated_at: Option<chrono::DateTime<Utc>> = row.try_get("updated_at")?;
+        let db_waiver_status: String = row.try_get("status")?;
+        let db_waiver_metadata: serde_json::Value = row.try_get("metadata")?;
+        
         // Extract gates from JSON
-        let gates = if let Some(gates_json) = db_waiver.gates.as_array() {
+        let gates = if let Some(gates_json) = db_waiver_gates.as_array() {
             gates_json
                 .iter()
                 .filter_map(|v| v.as_str())
@@ -1305,20 +1349,44 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
             vec![]
         };
         
+        // Extract plan_id from metadata or use a default
+        let plan_id = db_waiver_metadata.get("plan_id")
+            .and_then(|v| v.as_str())
+            .and_then(|s| Uuid::parse_str(s).ok())
+            .unwrap_or_else(|| Uuid::new_v4());
+        
+        // Extract waiver_type from metadata or use reason as type
+        let waiver_type = db_waiver_metadata.get("waiver_type")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "general".to_string());
+        
+        // Store title and description in metadata if they exist
+        let mut metadata = match db_waiver_metadata {
+            serde_json::Value::Object(ref map) => map.clone(),
+            _ => serde_json::Map::new(),
+        };
+        metadata.insert("title".to_string(), serde_json::Value::String(db_waiver_title.clone()));
+        metadata.insert("description".to_string(), serde_json::Value::String(db_waiver_description.clone()));
+        if let Some(updated_at) = db_waiver_updated_at {
+            metadata.insert("updated_at".to_string(), serde_json::Value::String(updated_at.to_rfc3339()));
+        }
+        // Convert metadata Map to HashMap<String, serde_json::Value>
+        let metadata_map: std::collections::HashMap<String, serde_json::Value> = metadata.into_iter().collect();
+        
         Ok(models::Waiver {
-            id: db_waiver.id,
-            title: db_waiver.title,
-            reason: db_waiver.reason,
-            description: db_waiver.description,
+            id: db_waiver_id,
+            plan_id,
+            waiver_type,
+            reason: db_waiver_reason,
+            approved_by: db_waiver_approved_by,
+            status: db_waiver_status,
             gates,
-            approved_by: db_waiver.approved_by,
-            impact_level: db_waiver.impact_level,
-            mitigation_plan: db_waiver.mitigation_plan,
-            expires_at: db_waiver.expires_at,
-            created_at: db_waiver.created_at,
-            updated_at: db_waiver.updated_at,
-            status: db_waiver.status,
-            metadata: db_waiver.metadata,
+            impact_level: db_waiver_impact_level,
+            mitigation_plan: db_waiver_mitigation_plan,
+            created_at: db_waiver_created_at,
+            expires_at: db_waiver_expires_at,
+            metadata: metadata_map,
         })
     }
 }

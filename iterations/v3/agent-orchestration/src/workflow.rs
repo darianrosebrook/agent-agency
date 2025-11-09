@@ -338,6 +338,7 @@ impl CouncilWorkflow {
     }
 
     /// Get mutable access to the underlying session (for internal use)
+    #[allow(dead_code)] // Reserved for future use
     pub(crate) fn session_mut(&mut self) -> &mut CouncilSession {
         &mut self.session
     }

@@ -60,8 +60,8 @@ impl WorkerServiceAdapter {
 impl WorkerService for WorkerServiceAdapter {
     async fn execute_worker_task(
         &self,
-        spec: TaskSpec,
-        requirements: TaskRequirements,
+        _spec: TaskSpec,
+        _requirements: TaskRequirements,
     ) -> Result<TaskExecutionResult, ServiceError> {
         // TODO: Implement actual adapter logic
         // WorkerExecutor::execute_task expects TaskSpec and worker_id
@@ -115,7 +115,7 @@ impl WorkerService for WorkerServiceAdapter {
     
     async fn register_worker(
         &self,
-        registration: WorkerRegistration,
+        _registration: WorkerRegistration,
     ) -> Result<(), ServiceError> {
         // TODO: Implement actual worker registration
         // This should delegate to WorkerExecutor or worker registry

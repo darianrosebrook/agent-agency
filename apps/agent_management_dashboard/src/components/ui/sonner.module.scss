@@ -1,0 +1,12 @@
+@use '../../styles/_tokens' as *;
+@use '../../styles/_mixins' as *;
+
+// Sonner uses CSS variables for theming
+// Styles are handled by the sonner library itself
+// This file exists for consistency but contains minimal styles
+
+.toaster {
+  // Sonner handles its own styling via CSS variables
+  // Variables are set inline in the component
+}
+

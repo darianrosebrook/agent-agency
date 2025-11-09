@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { gsap } from "gsap";
 import {
   CheckCircle2,
   MoreVertical,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { useGSAPNumberAnimation } from "../hooks/useGSAPAnimation";
 
 interface Project {
   id: number;
@@ -22,6 +24,17 @@ interface RadialTaskProgressProps {
   totalSegments?: number;
 }
 
+// TODO: Replace hardcoded project data with data from v3 database with the following requirements:
+// 1. Recent projects fetching: Load recent projects sorted by last accessed
+//    - Data source: GET /api/projects?limit=6&sort=last_accessed endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
+//    - Database table: PostgreSQL `projects` table
+//    - Include project metadata: id, title, description, progress, status, dates
+// 2. Progress calculation: Calculate project progress from task completion
+//    - Aggregate completed tasks vs total tasks per project
+//    - Calculate progress percentage for display
+// 3. Data transformation: Format API response for component
+//    - Map API response to Project array with required fields
+//    - Handle date formatting and status mapping
 // Sample data for 6 recent projects
 const recentProjects: Project[] = [
   {
@@ -86,6 +99,15 @@ export function RadialTaskProgress({
 }: RadialTaskProgressProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const currentProject = recentProjects[currentIndex];
+  const svgRef = useRef<SVGSVGElement>(null);
+  const segmentsRef = useRef<SVGPathElement[]>([]);
+
+  // Use GSAP for smooth number animation
+  const animatedProgress = useGSAPNumberAnimation(
+    currentProject.progress,
+    0.8,
+    "power2.out"
+  );
 
   const handlePrevious = () => {
     setCurrentIndex((prev) =>
@@ -104,12 +126,18 @@ export function RadialTaskProgress({
   };
 
   const completedSegments = Math.round(
-    (currentProject.progress / 100) * totalSegments
+    (animatedProgress / 100) * totalSegments
   );
 
   // Generate radial segments
-  const generateSegments = () => {
-    const segments = [];
+  // Format numbers to fixed decimal places to prevent hydration mismatches
+  const formatNumber = (value: number, decimals: number = 2): string => {
+    return value.toFixed(decimals);
+  };
+
+  // Memoize segments to ensure consistent generation between server and client
+  const segments = useMemo(() => {
+    const segmentList = [];
     const segmentAngle = 360 / totalSegments;
     const gapAngle = 2; // Gap between segments
     const radius = 100;
@@ -121,35 +149,84 @@ export function RadialTaskProgress({
       const startAngle = i * segmentAngle - 90; // Start from top
       const endAngle = startAngle + segmentAngle - gapAngle;
 
-      const x1 = centerX + radius * Math.cos((startAngle * Math.PI) / 180);
-      const y1 = centerY + radius * Math.sin((startAngle * Math.PI) / 180);
-      const x2 = centerX + radius * Math.cos((endAngle * Math.PI) / 180);
-      const y2 = centerY + radius * Math.sin((endAngle * Math.PI) / 180);
-      const x3 = centerX + innerRadius * Math.cos((endAngle * Math.PI) / 180);
-      const y3 = centerY + innerRadius * Math.sin((endAngle * Math.PI) / 180);
-      const x4 = centerX + innerRadius * Math.cos((startAngle * Math.PI) / 180);
-      const y4 = centerY + innerRadius * Math.sin((startAngle * Math.PI) / 180);
+      // Calculate coordinates and format to fixed decimal places for consistent rendering
+      const x1 = formatNumber(centerX + radius * Math.cos((startAngle * Math.PI) / 180));
+      const y1 = formatNumber(centerY + radius * Math.sin((startAngle * Math.PI) / 180));
+      const x2 = formatNumber(centerX + radius * Math.cos((endAngle * Math.PI) / 180));
+      const y2 = formatNumber(centerY + radius * Math.sin((endAngle * Math.PI) / 180));
+      const x3 = formatNumber(centerX + innerRadius * Math.cos((endAngle * Math.PI) / 180));
+      const y3 = formatNumber(centerY + innerRadius * Math.sin((endAngle * Math.PI) / 180));
+      const x4 = formatNumber(centerX + innerRadius * Math.cos((startAngle * Math.PI) / 180));
+      const y4 = formatNumber(centerY + innerRadius * Math.sin((startAngle * Math.PI) / 180));
 
-      const pathData = `
-        M ${x1} ${y1}
-        A ${radius} ${radius} 0 0 1 ${x2} ${y2}
-        L ${x3} ${y3}
-        A ${innerRadius} ${innerRadius} 0 0 0 ${x4} ${y4}
-        Z
-      `;
+      // Build path data string with formatted numbers
+      const pathData = `M ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} L ${x3} ${y3} A ${innerRadius} ${innerRadius} 0 0 0 ${x4} ${y4} Z`;
 
-      segments.push(
+      segmentList.push(
         <path
           key={i}
+          ref={(el) => {
+            if (el) segmentsRef.current[i] = el;
+          }}
           d={pathData}
           fill={i < completedSegments ? "#fafafa" : "#454545"}
-          className="transition-colors duration-300"
         />
       );
     }
 
-    return segments;
-  };
+    return segmentList;
+  }, [totalSegments, completedSegments]);
+
+  // Animate segments with GSAP when progress changes
+  useEffect(() => {
+    if (segmentsRef.current.length === 0) return;
+
+    const completedCount = completedSegments;
+    
+    // Animate segments with stagger effect
+    segmentsRef.current.forEach((segment, index) => {
+      const isCompleted = index < completedCount;
+      const targetColor = isCompleted ? "#fafafa" : "#454545";
+      
+      gsap.to(segment, {
+        fill: targetColor,
+        duration: 0.3,
+        delay: index * 0.02, // Stagger delay
+        ease: "power2.out",
+      });
+    });
+  }, [completedSegments]);
+
+  // Initial animation on mount
+  useEffect(() => {
+    if (segmentsRef.current.length === 0 || !svgRef.current) return;
+
+    // Animate SVG entrance
+    gsap.fromTo(
+      svgRef.current,
+      { opacity: 0, scale: 0.9 },
+      {
+        opacity: 1,
+        scale: 1,
+        duration: 0.6,
+        ease: "back.out(1.7)",
+      }
+    );
+
+    // Animate segments entrance with stagger
+    gsap.fromTo(
+      segmentsRef.current,
+      { opacity: 0, scale: 0.8 },
+      {
+        opacity: 1,
+        scale: 1,
+        duration: 0.4,
+        stagger: 0.03,
+        delay: 0.2,
+        ease: "back.out(1.7)",
+      }
+    );
+  }, []);
 
   return (
     <div className="bg-neutral-950 relative rounded-[12px] size-full border border-[#cacaca]">
@@ -160,27 +237,28 @@ export function RadialTaskProgress({
             {/* Left side - Radial chart */}
             <div className="flex-shrink-0">
               <svg
+                ref={svgRef}
                 width="240"
                 height="240"
                 viewBox="0 0 240 240"
                 xmlns="http://www.w3.org/2000/svg"
                 className="transform -rotate-0"
               >
-                {generateSegments()}
+                {segments}
                 {/* Center circle with percentage */}
                 <circle cx="120" cy="120" r="65" fill="#0a0a0a" />
                 <text
                   x="120"
                   y="130"
                   textAnchor="middle"
-                  className="fill-neutral-50"
+                  className="fill-neutral-50 transition-none"
                   style={{
                     fontSize: "56px",
                     fontWeight: "300",
                     letterSpacing: "-2.8px",
                   }}
                 >
-                  {currentProject.progress}
+                  {animatedProgress}
                   <tspan
                     style={{
                       fontSize: "28px",

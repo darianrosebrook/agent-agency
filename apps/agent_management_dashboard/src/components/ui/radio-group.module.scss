@@ -1,0 +1,63 @@
+@use '../../styles/_tokens' as *;
+@use '../../styles/_mixins' as *;
+
+.radioGroup {
+  display: grid;
+  gap: $spacing-3;
+}
+
+.item {
+  aspect-ratio: 1;
+  width: 1rem; // size-4
+  height: 1rem;
+  flex-shrink: 0;
+  border-radius: $radius-full;
+  border: 1px solid var(--input);
+  background-color: var(--input-background);
+  box-shadow: $shadow-sm;
+  color: var(--primary);
+  transition: color $transition-fast, box-shadow $transition-fast;
+  outline: none;
+  
+  &:focus-visible {
+    @include focus-ring(var(--ring), 3px);
+  }
+  
+  &:disabled {
+    @include disabled-state;
+  }
+  
+  &[aria-invalid='true'] {
+    border-color: var(--destructive);
+    
+    &:focus-visible {
+      box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive) 20%, transparent);
+    }
+  }
+  
+  @include dark-mode {
+    background-color: color-mix(in oklch, var(--input) 30%, transparent);
+    
+    &[aria-invalid='true']:focus-visible {
+      box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive) 40%, transparent);
+    }
+  }
+}
+
+.indicator {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  svg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0.5rem; // size-2
+    height: 0.5rem;
+    transform: translate(-50%, -50%);
+    fill: var(--primary);
+  }
+}
+

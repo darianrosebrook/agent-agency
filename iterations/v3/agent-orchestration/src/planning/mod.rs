@@ -47,6 +47,7 @@ pub mod caws_quality_gates;
 pub mod model_lifecycle;
 
 // Re-export types for convenience
+#[allow(ambiguous_glob_reexports)]
 pub use orchestrator_integration::*;
 pub use plan_executor::*;
 pub use plan_types::*;

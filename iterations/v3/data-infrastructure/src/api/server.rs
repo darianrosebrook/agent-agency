@@ -204,6 +204,7 @@ impl RestApi {
         // The routes are created directly there with AppState
         let _state = ApiState {
             api: Arc::new(self.clone()),
+            websocket_manager: Arc::new(crate::websocket::WebSocketManager::new()),
         };
 
         // This router is not used in main.rs - routes are created directly there
@@ -632,4 +633,5 @@ impl RestApi {
 #[derive(Clone)]
 pub struct ApiState {
     pub api: Arc<RestApi>,
+    pub websocket_manager: Arc<crate::websocket::WebSocketManager>,
 }

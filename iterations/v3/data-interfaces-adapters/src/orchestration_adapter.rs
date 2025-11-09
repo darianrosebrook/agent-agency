@@ -424,6 +424,7 @@ impl UnifiedOrchestratorAdapter {
             // Create audit trail
             let audit_trail_manager = Arc::new(AuditTrailManager::new(AuditConfig::default()));
             struct AuditTrailAdapter {
+                #[allow(dead_code)] // Reserved for future use
                 manager: Arc<AuditTrailManager>,
             }
             #[async_trait::async_trait]
@@ -835,17 +836,17 @@ impl OrchestrationService for OrchestrationServiceAdapter {
         })
     }
     
-    async fn pause_task(&self, task_id: &Uuid) -> Result<(), ServiceError> {
+    async fn pause_task(&self, _task_id: &Uuid) -> Result<(), ServiceError> {
         // TODO: Implement actual pause logic
         Err(ServiceError::Internal("Pause not yet implemented".to_string()))
     }
     
-    async fn resume_task(&self, task_id: &Uuid) -> Result<(), ServiceError> {
+    async fn resume_task(&self, _task_id: &Uuid) -> Result<(), ServiceError> {
         // TODO: Implement actual resume logic
         Err(ServiceError::Internal("Resume not yet implemented".to_string()))
     }
     
-    async fn cancel_task(&self, task_id: &Uuid) -> Result<(), ServiceError> {
+    async fn cancel_task(&self, _task_id: &Uuid) -> Result<(), ServiceError> {
         // TODO: Implement actual cancel logic
         Err(ServiceError::Internal("Cancel not yet implemented".to_string()))
     }

@@ -1,0 +1,77 @@
+@use '../../styles/_tokens' as *;
+@use '../../styles/_mixins' as *;
+
+.root {
+  position: relative;
+}
+
+.content {
+  overflow: hidden;
+}
+
+.viewport {
+  display: flex;
+  
+  &[data-orientation='horizontal'] {
+    margin-left: -$spacing-4; // -ml-4
+  }
+  
+  &[data-orientation='vertical'] {
+    margin-top: -$spacing-4; // -mt-4
+    flex-direction: column;
+  }
+}
+
+.item {
+  min-width: 0;
+  flex-shrink: 0;
+  flex-grow: 0;
+  flex-basis: 100%;
+  
+  &[data-orientation='horizontal'] {
+    padding-left: $spacing-4; // pl-4
+  }
+  
+  &[data-orientation='vertical'] {
+    padding-top: $spacing-4; // pt-4
+  }
+}
+
+.previous {
+  position: absolute;
+  width: 2rem; // size-8
+  height: 2rem;
+  border-radius: $radius-full;
+  
+  &[data-orientation='horizontal'] {
+    top: 50%;
+    left: -3rem; // -left-12
+    transform: translateY(-50%);
+  }
+  
+  &[data-orientation='vertical'] {
+    top: -3rem; // -top-12
+    left: 50%;
+    transform: translateX(-50%) rotate(90deg);
+  }
+}
+
+.next {
+  position: absolute;
+  width: 2rem; // size-8
+  height: 2rem;
+  border-radius: $radius-full;
+  
+  &[data-orientation='horizontal'] {
+    top: 50%;
+    right: -3rem; // -right-12
+    transform: translateY(-50%);
+  }
+  
+  &[data-orientation='vertical'] {
+    bottom: -3rem; // -bottom-12
+    left: 50%;
+    transform: translateX(-50%) rotate(90deg);
+  }
+}
+

@@ -366,7 +366,7 @@ impl UnifiedOrchestrator {
         // Phase 0: Crash recovery - Check for resumable state by working_spec.id
         let mut recovered_state: Option<TaskExecutionState> = None;
         let mut is_resuming = false;
-        let _plan_id = {
+        let plan_id = {
             if let Some(ref persistence) = self.state_persistence {
                 // Look for resumable state by checking all resumable tasks
                 // and matching by working_spec.id
@@ -1521,6 +1521,7 @@ impl UnifiedOrchestrator {
     }
 
     /// Assign worker to milestone
+    #[allow(dead_code)] // Reserved for future use
     async fn assign_worker_to_milestone(
         &self,
         milestone: &Milestone,

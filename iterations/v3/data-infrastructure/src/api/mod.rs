@@ -32,4 +32,5 @@ pub use server::{RestApi, ApiState};
 
 // Re-export commonly used handler functions (only available with orchestration feature)
 #[cfg(feature = "orchestration")]
+#[allow(ambiguous_glob_reexports)]
 pub use handlers::*;

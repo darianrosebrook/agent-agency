@@ -203,6 +203,17 @@ interface ContextFileTreeProps {
 }
 
 function ContextFileTree({ onSelect }: ContextFileTreeProps) {
+  // TODO: Replace hardcoded file tree with project file structure from v3 file operations API with the following requirements:
+  // 1. File tree fetching: Load project file structure from API
+  //    - Data source: GET /api/projects/:id/files endpoint in `iterations/v3/data-infrastructure/src/file_operations` service
+  //    - Return hierarchical file tree structure with folders and files
+  //    - Include file metadata: name, path, type (file/folder), size, lastModified
+  // 2. Folder expansion: Handle folder expansion state and lazy loading
+  //    - Fetch nested folder contents when expanded
+  //    - Cache folder contents to avoid redundant API calls
+  // 3. File selection: Handle file selection and display in workspace panel
+  //    - Load file content when selected
+  //    - Handle file reading errors gracefully
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
     new Set(["src", "public"])
   );

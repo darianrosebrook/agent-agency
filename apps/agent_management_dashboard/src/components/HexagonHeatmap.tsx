@@ -88,6 +88,21 @@ export function HexagonHeatmap({
   radius = 12,
   hexSize = 16,
 }: HexagonHeatmapProps) {
+  // TODO: Replace hardcoded agent names and generated completion percentages with real task and agent data from v3 database with the following requirements:
+  // 1. Agent data fetching: Load configured AI agents from database
+  //    - Data source: GET /api/agents endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
+  //    - Database table: PostgreSQL `agents` table
+  //    - Include agent names, IDs, and status information
+  // 2. Task completion data: Fetch task completion statistics by agent
+  //    - Data source: GET /api/tasks/stats/by-agent endpoint aggregating task completion from PostgreSQL `tasks` and `worker_assignments` tables
+  //    - Calculate completion percentages per agent based on assigned tasks
+  //    - Include task names and IDs for tooltip display
+  // 3. Hexagon mapping: Map tasks to hexagon grid positions
+  //    - Use task IDs or sequential mapping to assign hexagon coordinates
+  //    - Preserve visual heatmap pattern while using real completion data
+  // 4. Real-time updates: Refresh data when tasks are updated
+  //    - Subscribe to task update events or poll for changes
+  //    - Update hexagon colors based on latest completion percentages
   // Generate hexagon spiral data with completion percentages
   const hexagons = useMemo(() => {
     const center: Axial = { q: 0, r: 0 };

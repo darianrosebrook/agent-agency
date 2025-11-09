@@ -14,6 +14,19 @@ import { Separator } from '../../ui/separator';
 import { Slider } from '../../ui/slider';
 
 export function TaskSettingsTabContent() {
+  // TODO: Replace hardcoded task settings with project task settings from v3 database with the following requirements:
+  // 1. Task settings fetching: Load project task workflow settings from database
+  //    - Data source: GET /api/projects/:projectId/settings/tasks endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
+  //    - Database table: PostgreSQL `project_settings` or `task_settings` table
+  //    - Include default status, auto-archive settings, dependency settings, etc.
+  // 2. Settings persistence: Save task workflow settings to database
+  //    - Data source: PATCH /api/projects/:projectId/settings/tasks endpoint
+  //    - Update default status, auto-archive days, dependency settings
+  //    - Persist priority level configuration and label settings
+  // 3. Settings validation: Validate settings before saving
+  //    - Ensure valid status values
+  //    - Validate numeric values (auto-archive days, priority levels)
+  //    - Handle validation errors gracefully
   return (
     <div className="space-y-6">
       {/* Task Workflow */}

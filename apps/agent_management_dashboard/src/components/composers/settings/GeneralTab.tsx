@@ -9,6 +9,23 @@ export function GeneralTabContent() {
   const [assignmentNotifs, setAssignmentNotifs] = useState(true);
   const [commentNotifs, setCommentNotifs] = useState(true);
   const [statusNotifs, setStatusNotifs] = useState(false);
+  // TODO: Replace hardcoded project data with data from v3 database with the following requirements:
+  // 1. Project data fetching: Load current project details from database
+  //    - Data source: GET /api/projects/:projectId endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
+  //    - Database table: PostgreSQL `projects` table
+  //    - Include project name, description, ID, created date, and settings
+  // 2. Project settings persistence: Save project settings updates to database
+  //    - Data source: PATCH /api/projects/:projectId endpoint to update project details
+  //    - Update project name, description, and notification preferences
+  //    - Persist collaboration settings and approval requirements
+  // 3. Project metadata display: Show project ID and creation date
+  //    - Display project ID from database (read-only)
+  //    - Format and display created_at timestamp from database
+  //    - Show last updated timestamp if available
+  // 4. Settings persistence: Save notification and collaboration preferences
+  //    - Data source: PATCH /api/projects/:projectId/settings endpoint
+  //    - Store notification preferences (assignment, comment, status)
+  //    - Store collaboration and approval settings
   const [projectName, setProjectName] = useState('My Kanban Project');
   const [description, setDescription] = useState(
     'A project management tool with kanban boards and timeline tracking.'
@@ -77,6 +94,7 @@ export function GeneralTabContent() {
                   </p>
                 </div>
                 <div className="bg-[#0d0d0d] h-[35.994px] opacity-50 relative rounded-[8px] shrink-0 w-full border-[0.909px] border-neutral-800 px-[12px] py-[4px] flex items-center">
+                  {/* TODO: Replace hardcoded project ID with project.id from v3 database */}
                   <p className="font-['Inter:Regular',sans-serif] leading-[20px] text-[#888888] text-[14px] tracking-[-0.1504px]">
                     proj_8k2m9n4p
                   </p>
@@ -90,6 +108,7 @@ export function GeneralTabContent() {
                   </p>
                 </div>
                 <div className="bg-[#0d0d0d] h-[35.994px] opacity-50 relative rounded-[8px] shrink-0 w-full border-[0.909px] border-neutral-800 px-[12px] py-[4px] flex items-center">
+                  {/* TODO: Replace hardcoded created date with project.created_at from v3 database, formatted as readable date */}
                   <p className="font-['Inter:Regular',sans-serif] leading-[20px] text-[#888888] text-[14px] tracking-[-0.1504px]">
                     November 1, 2024
                   </p>
@@ -119,6 +138,19 @@ export function GeneralTabContent() {
 
           <div className="content-stretch flex flex-col gap-[15.994px] h-[207.933px] items-start relative shrink-0 w-full">
             {/* Default Assignee */}
+            {/* TODO: Replace hardcoded "Auto-assign" with user selection dropdown from v3 database with the following requirements:
+            // 1. User list fetching: Load project team members from database
+            //    - Data source: GET /api/projects/:projectId/members endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
+            //    - Database table: PostgreSQL `project_members` or `users` table with project membership
+            //    - Include user names, IDs, and avatars
+            // 2. Default assignee selection: Allow selecting default assignee for new tasks
+            //    - Data source: PATCH /api/projects/:projectId/settings endpoint to update default_assignee_id
+            //    - Store selected user ID as default assignee
+            //    - Support "Auto-assign" option (round-robin or load-based)
+            // 3. User display: Show selected user name and avatar in dropdown
+            //    - Display user avatar and name when user is selected
+            //    - Show "Auto-assign" option when no specific user is selected
+            */}
             <div className="content-stretch flex flex-col gap-[5.994px] h-[55.987px] items-start relative shrink-0 w-full">
               <p className="font-['Inter:Medium',sans-serif] font-medium leading-[14px] text-[#d1d5dc] text-[14px] tracking-[-0.1504px]">
                 Default Assignee

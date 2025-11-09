@@ -27,6 +27,8 @@ pub struct ApiConfig {
     pub enable_rate_limiting: bool,
     /// Rate limit requests per minute
     pub rate_limit_per_minute: u32,
+    /// Redis URL for WebSocket session management (optional, enables multi-instance support)
+    pub redis_url: Option<String>,
 }
 
 /// Task submission request

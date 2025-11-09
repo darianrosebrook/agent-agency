@@ -31,7 +31,7 @@ pub async fn run_claim_verification_test(
     match test_claim_extraction(env, services).await {
         Ok(result) => {
             metrics.claims_extracted += result.claims_extracted;
-            metrics.disambiguations_resolved += result.disambiguations_resolved;
+            metrics.disambiguations_resolved += result.disambiguations_resolved as usize;
             if !result.passed {
                 passed = false;
                 errors.push(format!("Claim extraction failed: {}", result.error.unwrap_or_default()));
@@ -78,7 +78,7 @@ pub async fn run_claim_verification_test(
     // Test 4: Contextual disambiguation
     match test_contextual_disambiguation(env, services).await {
         Ok(result) => {
-            metrics.disambiguations_resolved += result.disambiguations_resolved;
+            metrics.disambiguations_resolved += result.disambiguations_resolved as usize;
             if !result.passed {
                 passed = false;
                 errors.push(format!("Contextual disambiguation failed: {}", result.error.unwrap_or_default()));

@@ -259,6 +259,7 @@ impl TodoIntegration {
     }
 
     /// Select appropriate template based on plan characteristics
+    #[allow(dead_code)] // Reserved for future use
     fn select_template_for_plan(&self, plan: &ExecutionPlan) -> Result<String> {
         // Simple template selection logic
         match plan.contract_plan.quality_gates.as_ref().map(|qg| qg.requires_manual_review).unwrap_or(false) {

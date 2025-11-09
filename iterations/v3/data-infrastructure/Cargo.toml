@@ -53,6 +53,10 @@ tempfile = "3.8"
 
 # Futures utilities (from data-consistency)
 futures-util = "0.3"
+futures = "0.3"
+
+# Redis for WebSocket session management
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
 
 # CRITICAL: DO NOT CHANGE THESE DEPENDENCIES - CoreML compatibility requires workspace-aligned versions
 # These dependencies were updated from specific versions to workspace versions to fix candle-core conflicts.
@@ -62,7 +66,7 @@ futures-util = "0.3"
 # Embedding-specific dependencies
 dashmap = "5.5"
 lru = "0.12"
-futures = "0.3"
+# futures is already declared above
 candle-core = { workspace = true }
 candle-transformers = { workspace = true }
 tokenizers = { workspace = true }

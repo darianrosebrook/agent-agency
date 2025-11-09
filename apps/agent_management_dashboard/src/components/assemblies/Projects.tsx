@@ -15,7 +15,7 @@ import { NewProjectModal } from "../composers/ProjectModal";
 import { ProjectView } from "./ProjectView";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { useProjectContext } from "../ProjectContext";
+import { useProjectStore } from "../../lib/stores";
 import {
   Table,
   TableBody,
@@ -42,7 +42,7 @@ export function Projects() {
     createProject,
     selectProject,
     clearCurrentProject,
-  } = useProjectContext();
+  } = useProjectStore();
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAllRecent, setShowAllRecent] = useState(false);

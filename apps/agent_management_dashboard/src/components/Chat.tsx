@@ -1,33 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { MessageSquare, X } from "lucide-react";
 import { FileDropzoneModal } from "./FileDropzoneModal";
 import { Badge } from "./ui/badge";
 import { ChatMessage, ChatMessageSkeleton } from "./compounds";
 import svgPaths from "../imports/svg-quupl4zjo1";
-import { useChatContext } from "./ChatContext";
-import { simulateAIResponse } from "./ChatAIHelper";
-
-export interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: Date;
-  isLoading?: boolean;
-  tasks?: Task[];
-  contextFiles?: string[];
-  isPhasePlan?: boolean;
-  isGeneratingPlan?: boolean;
-}
-
-export interface Task {
-  id: string;
-  name: string;
-  status: "pending" | "in-progress" | "completed" | "failed";
-  result?: string;
-  timestamp: Date;
-}
+import { useChatStore } from "../lib/stores";
+import { useStreamingResponse } from "../lib/hooks";
+import type { Message, Task } from "../lib/schemas/chat";
+import { ErrorDisplay } from "./ErrorDisplay";
+import { LoadingSpinner } from "./LoadingSpinner";
 
 export function Chat() {
   const {
@@ -36,13 +19,40 @@ export function Chat() {
     addMessageToCurrentChat,
     updateMessageInCurrentChat,
     currentChatId,
-  } = useChatContext();
+    isLoading,
+    error,
+  } = useChatStore();
   const [contextFiles, setContextFiles] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [promptValue, setPromptValue] = useState("");
 
   const currentChat = getCurrentChat();
   const messages = currentChat?.messages ?? [];
+
+  // Show error state if there's an error and no messages
+  if (error && messages.length === 0 && !currentChatId) {
+    return (
+      <div className="h-full flex items-center justify-center p-8">
+        <div className="max-w-2xl w-full">
+          <ErrorDisplay
+            error={error}
+            onRetry={async () => {
+              const store = useChatStore.getState();
+              store.clearError();
+              const chatId = store.currentChatId;
+              if (chatId) {
+                try {
+                  await store.fetchChatMessages(chatId);
+                } catch {
+                  // Error already handled in store
+                }
+              }
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   const handleFilesAdded = (files: string[]) => {
     setContextFiles([...contextFiles, ...files]);
@@ -52,7 +62,45 @@ export function Chat() {
     setContextFiles(contextFiles.filter((_, i) => i !== index));
   };
 
-  const handleSend = () => {
+  // Streaming response hook
+  const streamingRef = useRef<string | null>(null);
+  const { start: startStreaming } = useStreamingResponse({
+    url: '/api/chat/stream',
+    method: 'POST',
+    onChunk: (chunk: string) => {
+      if (streamingRef.current) {
+        // Get current message content and append chunk
+        const currentChat = getCurrentChat();
+        const currentMessage = currentChat?.messages.find(m => m.id === streamingRef.current);
+        const currentContent = currentMessage?.content || '';
+        
+        updateMessageInCurrentChat(streamingRef.current, {
+          content: currentContent + chunk,
+        });
+      }
+    },
+    onComplete: (fullContent: string) => {
+      if (streamingRef.current) {
+        updateMessageInCurrentChat(streamingRef.current, {
+          content: fullContent,
+          isLoading: false,
+        });
+        streamingRef.current = null;
+      }
+    },
+    onError: (error: Error) => {
+      console.error('Streaming error:', error);
+      if (streamingRef.current) {
+        updateMessageInCurrentChat(streamingRef.current, {
+          isLoading: false,
+          content: 'Sorry, there was an error generating the response. Please try again.',
+        });
+        streamingRef.current = null;
+      }
+    },
+  });
+
+  const handleSend = async () => {
     if (!promptValue.trim()) return;
 
     // Create a new chat if this is the first message
@@ -81,16 +129,41 @@ export function Chat() {
     addMessageToCurrentChat(userMessage);
     addMessageToCurrentChat(assistantMessage);
 
+    // Store assistant message ID for streaming updates
+    streamingRef.current = assistantMessage.id;
+
     setPromptValue("");
     setContextFiles([]);
 
-    // Simulate AI response with streaming tasks
-    simulateAIResponse(
-      assistantMessage.id,
-      messages,
-      updateMessageInCurrentChat,
-      addMessageToCurrentChat
-    );
+    // Start streaming response from API
+    // TODO: Replace with actual API endpoint when backend is ready
+    // For now, fallback to simulation if API is not available
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    
+    try {
+      startStreaming({
+        url: `${apiUrl}/api/chat/stream`,
+        method: 'POST',
+        body: {
+          agent_id: 'default-agent',
+          session_id: currentChatId || 'new-session',
+          message: userMessage.content,
+          context_files: contextFiles.length > 0 ? contextFiles : undefined,
+        },
+      });
+    } catch (error) {
+      // Fallback to simulation if API is not available
+      console.warn('API not available, using simulation:', error);
+      // Import dynamically to avoid breaking if not available
+      import('./ChatAIHelper').then(({ simulateAIResponse }) => {
+        simulateAIResponse(
+          assistantMessage.id,
+          messages,
+          updateMessageInCurrentChat,
+          addMessageToCurrentChat
+        );
+      });
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {

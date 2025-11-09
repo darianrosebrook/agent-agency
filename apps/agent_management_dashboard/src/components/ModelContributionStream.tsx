@@ -28,6 +28,17 @@ export function ModelContributionStream({
   title = "Model Contributions",
   subtitle = "Lines of code by AI model",
 }: ModelContributionStreamProps) {
+  // TODO: Replace mock data generation with API call to v3 telemetry service with the following requirements:
+  // 1. Model contribution data fetching: Load model usage statistics by month
+  //    - Data source: GET /api/telemetry/model-contributions endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
+  //    - Database table: PostgreSQL `telemetry` table
+  //    - Aggregate lines of code contributed by each AI model (gemma3n, qwen, instruct, mistral)
+  // 2. Time aggregation: Group contributions by month for stream chart
+  //    - Handle month boundaries and date range calculations
+  //    - Support configurable time ranges
+  // 3. Data transformation: Format API response for stream chart component
+  //    - Map API response to StreamDataPoint array with month and model-specific values
+  //    - Handle missing model data gracefully
   // Generate mock data for stream graph
   const generateData = (): StreamDataPoint[] => {
     const months = ["Jan", "Feb", "Mar", "Apr"];

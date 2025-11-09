@@ -26,6 +26,17 @@ export interface TimelineTask {
   description?: string;
 }
 
+// TODO: Replace mock timeline data with task and worker assignment data from v3 database with the following requirements:
+// 1. Timeline data fetching: Load tasks with worker assignments and dates
+//    - Data source: GET /api/projects/:id/tasks/timeline endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
+//    - Database tables: PostgreSQL `tasks` and `worker_assignments` tables
+//    - Include task metadata: id, title, worker, workerId, startDate, endDate, status, tags, description
+// 2. Worker information: Include worker name and ID for each task
+//    - Join worker_assignments table to get assigned worker details
+//    - Handle unassigned tasks gracefully
+// 3. Data transformation: Format API response for GanttChart component
+//    - Map API response to TimelineTask array with required fields
+//    - Handle date parsing and status mapping
 // Mock data for timeline tasks
 const mockTasks: TimelineTask[] = [
   {

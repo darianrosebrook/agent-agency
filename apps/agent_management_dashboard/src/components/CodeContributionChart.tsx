@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useState } from "react";
+import { useAnimatedValue } from "../hooks/useAnimatedValue";
 
 interface DataPoint {
   day: string;
@@ -28,6 +29,17 @@ export function CodeContributionChart({
   subtitle = "2 Agents over the last 30 days",
   days = 30,
 }: CodeContributionChartProps) {
+  // TODO: Replace mock data generation with API call to v3 telemetry service with the following requirements:
+  // 1. Contribution data fetching: Load code contribution statistics over time
+  //    - Data source: GET /api/telemetry/contributions?days={days} endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
+  //    - Database tables: PostgreSQL `provenance` and `telemetry` tables
+  //    - Aggregate accepted lines of code vs total lines by day
+  // 2. Time range handling: Use days prop to configure API request
+  //    - Pass days parameter to API endpoint query string
+  //    - Handle date range calculations and timezone issues
+  // 3. Data transformation: Format API response for chart component
+  //    - Map API response to DataPoint array with day, baseline (total), and contribution (accepted)
+  //    - Calculate total contribution for display
   // Generate mock data for the last N days
   const generateData = (): DataPoint[] => {
     const data: DataPoint[] = [];
@@ -69,10 +81,13 @@ export function CodeContributionChart({
     (sum, point) => sum + point.contribution,
     0
   );
+  
+  // Animate total contribution
+  const animatedTotalContribution = useAnimatedValue(totalContribution);
   const formattedTotal =
-    totalContribution >= 1000
-      ? `${(totalContribution / 1000).toFixed(1)}K`
-      : totalContribution.toString();
+    animatedTotalContribution >= 1000
+      ? `${(animatedTotalContribution / 1000).toFixed(1)}K`
+      : Math.round(animatedTotalContribution).toString();
 
   // Custom tooltip
   const CustomTooltip = ({

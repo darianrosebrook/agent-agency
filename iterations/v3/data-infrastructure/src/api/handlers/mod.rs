@@ -15,17 +15,28 @@ pub mod task_management;
 pub mod query_management;
 #[cfg(feature = "orchestration")]
 pub mod system_monitoring;
+#[cfg(feature = "orchestration")]
+pub mod chat_handlers;
 
 // Re-export all handlers for easy access
 #[cfg(feature = "orchestration")]
+#[allow(ambiguous_glob_reexports)]
 pub use waiver_management::*;
 #[cfg(feature = "orchestration")]
+#[allow(ambiguous_glob_reexports)]
 pub use slo_management::*;
 #[cfg(feature = "orchestration")]
+#[allow(ambiguous_glob_reexports)]
 pub use provenance_management::*;
 #[cfg(feature = "orchestration")]
+#[allow(ambiguous_glob_reexports)]
 pub use task_management::*;
 #[cfg(feature = "orchestration")]
+#[allow(ambiguous_glob_reexports)]
 pub use query_management::*;
 #[cfg(feature = "orchestration")]
+#[allow(ambiguous_glob_reexports)]
 pub use system_monitoring::*;
+#[cfg(feature = "orchestration")]
+#[allow(ambiguous_glob_reexports)]
+pub use chat_handlers::*;
