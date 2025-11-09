@@ -55,7 +55,7 @@ pub struct WorkspaceIntegrationHooks {
     workspace_manager: Arc<WorkspaceStateManager>,
     view_manager: Option<Arc<WorkspaceViewManager>>,
     config: WorkspaceConfig,
-    pre_processing_state: Option<StateId>,
+    _pre_processing_state: Option<StateId>,
 }
 
 impl WorkspaceIntegrationHooks {
@@ -86,7 +86,7 @@ impl WorkspaceIntegrationHooks {
             workspace_manager,
             view_manager,
             config: config.clone(),
-            pre_processing_state: None,
+            _pre_processing_state: None,
         })
     }
 

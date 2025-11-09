@@ -1,8 +1,7 @@
 # Unified Workspace State Manager API Design
 
 **Author:** @darianrosebrook  
-**Date:** January 2025  
-**Status:** API Design Specification
+API Design Specification
 
 ## Overview
 

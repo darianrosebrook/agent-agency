@@ -1,7 +1,6 @@
 # WorkingSpec Contract Documentation
 
 **Version**: 3.0.0  
-**Last Updated**: January 2025  
 **Author**: @darianrosebrook
 
 ---

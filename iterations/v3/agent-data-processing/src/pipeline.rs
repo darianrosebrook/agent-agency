@@ -450,6 +450,7 @@ pub struct DataPipeline {
     /// Keep domain-specific stages for backward compatibility
     domain_stages: Vec<Box<dyn PipelineStage>>,
     stages: Vec<Box<dyn PipelineStage>>,
+    #[allow(dead_code)] // Used in tests
     composite_stage: DataProcessingCompositeStage,
 }
 
@@ -676,6 +677,7 @@ impl DataPipeline {
     }
 
     /// Calculate total bytes processed from input and output
+    #[allow(dead_code)]
     fn calculate_bytes_processed(&self, input: &DataInput, output: &ProcessingOutput) -> DataProcessingResult<u64> {
         let mut total_bytes = 0u64;
 
@@ -692,6 +694,7 @@ impl DataPipeline {
     }
 
     /// Calculate bytes from input data
+    #[allow(dead_code)]
     fn calculate_input_bytes(&self, input: &DataInput) -> DataProcessingResult<u64> {
         let mut bytes = 0u64;
 
@@ -731,6 +734,7 @@ impl DataPipeline {
     }
 
     /// Calculate bytes from output data
+    #[allow(dead_code)]
     fn calculate_output_bytes(&self, output: &ProcessingOutput) -> DataProcessingResult<u64> {
         let mut bytes = 0u64;
 
@@ -747,6 +751,7 @@ impl DataPipeline {
     }
 
     /// Calculate bytes from processed content
+    #[allow(dead_code)]
     fn calculate_processed_content_bytes(&self, content: &ProcessedContent) -> DataProcessingResult<u64> {
         let mut bytes = 0u64;
 
@@ -798,6 +803,7 @@ impl DataPipeline {
     }
 
     /// Calculate bytes from extracted metadata
+    #[allow(dead_code)]
     fn calculate_extracted_metadata_bytes(&self, metadata: &HashMap<String, serde_json::Value>) -> DataProcessingResult<u64> {
         let json_size = serde_json::to_string(metadata)
             .map_err(|e| DataProcessingError::Serialization(e))?
@@ -806,6 +812,7 @@ impl DataPipeline {
     }
 
     /// Calculate bytes from processing stats
+    #[allow(dead_code)]
     fn calculate_processing_stats_bytes(&self, stats: &ProcessingStats) -> DataProcessingResult<u64> {
         let json_size = serde_json::to_string(stats)
             .map_err(|e| DataProcessingError::Serialization(e))?
@@ -814,6 +821,7 @@ impl DataPipeline {
     }
 
     /// Calculate input metadata bytes
+    #[allow(dead_code)]
     fn calculate_input_metadata_bytes(&self, input: &DataInput) -> DataProcessingResult<u64> {
         let mut bytes = 0u64;
 
@@ -842,6 +850,7 @@ impl DataPipeline {
     }
 
     /// Calculate metadata overhead
+    #[allow(dead_code)]
     fn calculate_metadata_overhead(&self, _input: &DataInput, _output: &ProcessingOutput) -> DataProcessingResult<u64> {
         // Estimate 10% overhead for metadata
         Ok(100) // Fixed overhead estimate

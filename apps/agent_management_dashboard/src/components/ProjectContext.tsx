@@ -58,7 +58,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   const getCurrentProject = () => {
     if (!currentProjectId) return null;
-    return projects.find((p) => p.id === currentProjectId) || null;
+    return projects.find((p) => p.id === currentProjectId) ?? null;
   };
 
   const createProject = (data: {
@@ -73,7 +73,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       name: data.name,
       summary: data.summary,
       description: data.description,
-      milestones: (data.milestones || []).map((title, index) => ({
+      milestones: (data.milestones ?? []).map((title, index) => ({
         id: `milestone-${Date.now()}-${index}`,
         title,
         completed: false,

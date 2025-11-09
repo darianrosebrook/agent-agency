@@ -39,7 +39,7 @@ Unprofessional:
 - "High throughput"
 ```
 
-### Implementation Status
+### Component Status
 **All completion claims must be falsifiable:**
 
 ```markdown

@@ -20,15 +20,7 @@ use chrono::Utc;
 use std::sync::Mutex;
 
 #[cfg(feature = "coreml")]
-use system_acceleration::ane::infer::{
-    WhisperInferenceExecutor, create_whisper_executor,
-    YOLOInferenceExecutor, create_yolo_executor,
-};
-#[cfg(feature = "coreml")]
-use system_acceleration::ane::models::{
-    whisper_model::{LoadedWhisperModel, WhisperInferenceOptions},
-    yolo_model::{LoadedYOLOModel, YOLOInferenceOptions},
-};
+use system_acceleration::ane::infer::create_whisper_executor;
 
 /// Result from enrichment operations
 pub type EnrichmentResult = DataProcessingResult<ProcessingOutput>;

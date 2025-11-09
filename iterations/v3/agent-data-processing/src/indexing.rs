@@ -805,7 +805,7 @@ impl VectorIndexer {
 
 /// Relationship record for indexing
 #[derive(Debug, Clone, JsonSchema)]
-struct RelationshipRecord {
+pub struct RelationshipRecord {
     _source_entity: String,
     _target_entity: String,
     relationship_type: String,

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { MessageSquare, X } from "lucide-react";
-import { FileDropzone } from "./FileDropzone";
+import { FileDropzoneModal } from "./FileDropzone";
 import { Badge } from "../ui/badge";
 import { ChatMessage, ChatMessageSkeleton } from "../compounds";
 import svgPaths from "../../imports/svg-quupl4zjo1";

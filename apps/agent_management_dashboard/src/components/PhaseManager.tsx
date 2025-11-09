@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import {
-  Plus,
   X,
   ChevronDown,
   Upload,
@@ -338,7 +337,7 @@ export function PhaseManager({
       <div className="mb-6">
         <h2 className="text-2xl text-white mb-2">Project Plan</h2>
         <p className="text-zinc-400 mb-4">
-          Here's a comprehensive plan for building your multi-modal RAG search
+          Here&apos;s a comprehensive plan for building your multi-modal RAG search
           UI tool
         </p>
 
@@ -413,7 +412,7 @@ export function PhaseManager({
                   </AccordionTrigger>
                   <AccordionContent className="px-6 pb-6 bg-[#0f0f0f]">
                     {/* Task Description (editable) */}
-                    {(task.description || true) && (
+                    {task.description && (
                       <div className="mb-4 ml-8">
                         <textarea
                           value={task.description}

@@ -2,7 +2,7 @@
 
 > Comprehensive multimodal retrieval-augmented generation for Apple Silicon, supporting videos, slides, diagrams, and transcripts with semantic awareness for local development work.
 
-**Status**: Foundation layer complete; placeholder implementations for Phase 2+ enrichers and integrations.
+Foundation layer implemented; placeholder implementations for advanced enrichers and integrations.
 
 ---
 
@@ -338,7 +338,7 @@ let watcher_config = Some(FileWatcherConfig {
 
 ---
 
-## Implementation Status & TODOs
+## Implementation Details
 
 ### Completed (Phase 1)
 
