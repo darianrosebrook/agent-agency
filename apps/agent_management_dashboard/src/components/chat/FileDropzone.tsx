@@ -101,7 +101,7 @@ export function FileDropzoneModal({
                 type="file"
                 multiple
                 onChange={handleFileSelect}
-                className="hidden"
+                className={styles.hidden}
                 {...({
                   webkitdirectory: "",
                   directory: "",
@@ -121,7 +121,7 @@ export function FileDropzoneModal({
                 </div>
               </div>
               {/* Animated dots */}
-              <div className="absolute inset-0 animate-spin-slow">
+              <div className={styles.spinnerContainer}>
                 {[...Array(8)].map((_, i) => (
                   <div
                     key={i}

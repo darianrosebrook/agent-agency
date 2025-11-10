@@ -186,7 +186,7 @@ export function NewProjectModal({
           <div className={styles.metadataGrid}>
             {/* Status */}
             <MetadataRow label="Status">
-              <div className="relative">
+              <div className={styles.relative}>
                 <StatusBadge
                   status={status}
                   config={projectStatusConfig[status]}
@@ -260,7 +260,7 @@ export function NewProjectModal({
 
             {/* Priority */}
             <MetadataRow label="Priority">
-              <div className="relative">
+              <div className={styles.relative}>
                 <PriorityIndicator
                   priority={priority}
                   config={priorityConfig[priority]}

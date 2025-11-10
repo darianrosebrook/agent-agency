@@ -289,7 +289,7 @@ function GeneralTabContent() {
                 </p>
                 <div className={styles.dropdownButtonIcon}>
                   <svg
-                    className="block size-full"
+                    className={styles.svgIcon}
                     fill="none"
                     preserveAspectRatio="none"
                     viewBox="0 0 16 16"
@@ -465,7 +465,7 @@ function GeneralTabContent() {
           <div className={styles.dangerZoneTitle}>
             <div className={styles.dangerZoneIcon}>
               <svg
-                className="block size-full"
+                className={styles.svgIcon}
                 fill="none"
                 preserveAspectRatio="none"
                 viewBox="0 0 20 20"
@@ -529,7 +529,7 @@ function GeneralTabContent() {
               <button className={cn(styles.dangerZoneButton, styles.dangerZoneButtonDelete)}>
                 <div className={styles.dangerZoneButtonIcon}>
                   <svg
-                    className="block size-full"
+                    className={styles.svgIcon}
                     fill="none"
                     preserveAspectRatio="none"
                     viewBox="0 0 16 16"

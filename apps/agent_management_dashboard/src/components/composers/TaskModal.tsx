@@ -168,7 +168,7 @@ export function NewTaskModal({
           <div className={styles.metadataGrid}>
             {/* Status */}
             <MetadataRow label="Status">
-              <div className="relative">
+              <div className={styles.relative}>
                 <StatusBadge
                   status={status}
                   config={taskStatusConfig[status]}
@@ -243,7 +243,7 @@ export function NewTaskModal({
 
             {/* Priority */}
             <MetadataRow label="Priority">
-              <div className="relative">
+              <div className={styles.relative}>
                 <PriorityIndicator
                   priority={priority}
                   config={priorityConfig[priority]}
@@ -273,7 +273,7 @@ export function NewTaskModal({
 
             {/* Project */}
             <MetadataRow label="Project">
-              <div className="relative">
+              <div className={styles.relative}>
                 <button
                   onClick={() => setShowProjectMenu(!showProjectMenu)}
                   className={styles.projectButton}

@@ -1,5 +1,11 @@
 @use "../../styles/design-tokens.scss" as *;
 
+.svgIcon {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .projectView {
   background-color: $color-dark-bg-secondary; // bg-[#0d0d0d]
   display: flex;

@@ -283,7 +283,7 @@ export function Chat() {
                   >
                     <div className={styles.promptSendIcon}>
                       <svg
-                        className="block size-full"
+                        className={styles.svgIcon}
                         fill="none"
                         preserveAspectRatio="none"
                         viewBox="0 0 20 20"

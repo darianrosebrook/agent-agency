@@ -101,7 +101,7 @@ export function FileDropzoneModal({
                 type="file"
                 multiple
                 onChange={handleFileSelect}
-                className="hidden"
+                className={styles.hidden}
                 {...({
                   webkitdirectory: "",
                   directory: "",

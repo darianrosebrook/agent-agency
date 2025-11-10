@@ -120,7 +120,7 @@ export function ProjectView({
                   {/* Search Icon */}
                   <div className={styles.searchIcon}>
                     <svg
-                      className="block size-full"
+                      className={styles.svgIcon}
                       fill="none"
                       preserveAspectRatio="none"
                       viewBox="0 0 16 16"
@@ -157,7 +157,7 @@ export function ProjectView({
                     <p className={styles.controlButtonText}>Status: All</p>
                     <div className={styles.controlButtonIcon}>
                       <svg
-                        className="block size-full"
+                        className={styles.svgIcon}
                         fill="none"
                         preserveAspectRatio="none"
                         viewBox="0 0 16 16"
@@ -183,7 +183,7 @@ export function ProjectView({
                   <div className={styles.controlButtonContent}>
                     <div className={styles.controlButtonIcon}>
                       <svg
-                        className="block size-full"
+                        className={styles.svgIcon}
                         fill="none"
                         preserveAspectRatio="none"
                         viewBox="0 0 16 16"
@@ -230,7 +230,7 @@ export function ProjectView({
                   />
                   <div className={styles.gridViewIcon}>
                     <svg
-                      className="block size-full"
+                      className={styles.svgIcon}
                       fill="none"
                       preserveAspectRatio="none"
                       viewBox="0 0 16 16"

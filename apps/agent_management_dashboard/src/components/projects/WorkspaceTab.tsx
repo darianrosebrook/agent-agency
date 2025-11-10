@@ -26,7 +26,7 @@ export function WorkspaceTab() {
               >
                 <div className={styles.expandButtonIcon}>
                   <svg
-                    className="block size-full"
+                    className={styles.svgIcon}
                     fill="none"
                     preserveAspectRatio="none"
                     viewBox="0 0 16 16"
@@ -67,7 +67,7 @@ export function WorkspaceTab() {
                   <div className={styles.sidebarHeaderTop}>
                     <div className={styles.sidebarHeaderIcon}>
                       <svg
-                        className="block size-full"
+                        className={styles.svgIcon}
                         fill="none"
                         preserveAspectRatio="none"
                         viewBox="0 0 16 16"
@@ -99,7 +99,7 @@ export function WorkspaceTab() {
                     >
                       <div className={styles.sidebarCollapseButtonIcon}>
                         <svg
-                          className="block size-full"
+                          className={styles.svgIcon}
                           fill="none"
                           preserveAspectRatio="none"
                           viewBox="0 0 16 16"
@@ -170,7 +170,7 @@ export function WorkspaceTab() {
                 {activeTab === "context" ? (
                   <ContextFileTree onSelect={setSelectedItem} />
                 ) : (
-                  <div className="h-full">
+                  <div className={styles.fullHeight}>
                     <ChatSidebar onSelect={setSelectedItem} />
                   </div>
                 )}
@@ -245,7 +245,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
         >
           <div className={styles.folderIcon}>
             <svg
-              className="block size-full"
+              className={styles.svgIcon}
               fill="none"
               preserveAspectRatio="none"
               viewBox="0 0 16 16"
@@ -265,7 +265,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
           </div>
           <div className={styles.folderIcon}>
             <svg
-              className="block size-full"
+              className={styles.svgIcon}
               fill="none"
               preserveAspectRatio="none"
               viewBox="0 0 16 16"
@@ -296,7 +296,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
             >
               <div className={styles.fileIcon}>
                 <svg
-                  className="block size-full"
+                  className={styles.svgIcon}
                   fill="none"
                   preserveAspectRatio="none"
                   viewBox="0 0 16 16"
@@ -312,7 +312,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
               </div>
               <div className={styles.fileIcon}>
                 <svg
-                  className="block size-full"
+                  className={styles.svgIcon}
                   fill="none"
                   preserveAspectRatio="none"
                   viewBox="0 0 16 16"
@@ -341,7 +341,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
             >
               <div className={styles.fileIcon}>
                 <svg
-                  className="block size-full"
+                  className={styles.svgIcon}
                   fill="none"
                   preserveAspectRatio="none"
                   viewBox="0 0 16 16"
@@ -357,7 +357,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
               </div>
               <div className={styles.fileIcon}>
                 <svg
-                  className="block size-full"
+                  className={styles.svgIcon}
                   fill="none"
                   preserveAspectRatio="none"
                   viewBox="0 0 16 16"
@@ -392,7 +392,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
         >
           <div className={styles.folderIcon}>
             <svg
-              className="block size-full"
+              className={styles.svgIcon}
               fill="none"
               preserveAspectRatio="none"
               viewBox="0 0 16 16"
@@ -412,7 +412,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
           </div>
           <div className={styles.folderIcon}>
             <svg
-              className="block size-full"
+              className={styles.svgIcon}
               fill="none"
               preserveAspectRatio="none"
               viewBox="0 0 16 16"
@@ -443,7 +443,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
             >
               <div className={styles.fileIcon}>
                 <svg
-                  className="block size-full"
+                  className={styles.svgIcon}
                   fill="none"
                   preserveAspectRatio="none"
                   viewBox="0 0 16 16"
@@ -500,7 +500,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
             >
               <div className={styles.fileIcon}>
                 <svg
-                  className="block size-full"
+                  className={styles.svgIcon}
                   fill="none"
                   preserveAspectRatio="none"
                   viewBox="0 0 16 16"
@@ -562,7 +562,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
       >
         <div className={styles.fileIcon}>
           <svg
-            className="block size-full"
+            className={styles.svgIcon}
             fill="none"
             preserveAspectRatio="none"
             viewBox="0 0 16 16"
@@ -614,7 +614,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
       >
         <div className={styles.fileIcon}>
           <svg
-            className="block size-full"
+            className={styles.svgIcon}
             fill="none"
             preserveAspectRatio="none"
             viewBox="0 0 16 16"
