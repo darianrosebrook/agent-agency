@@ -41,7 +41,7 @@
 //!     .record_command_complete(cmd_audit, exit_code, stdout, stderr, duration).await;
 //! ```
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
@@ -77,6 +77,8 @@ pub struct AuditTrailManager {
     decision_points_by_timestamp: Arc<RwLock<BTreeMap<DateTime<Utc>, Vec<usize>>>>,
     #[cfg(feature = "evaluation")]
     coordination_events_by_timestamp: Arc<RwLock<BTreeMap<DateTime<Utc>, Vec<usize>>>>,
+    #[cfg(feature = "evaluation")]
+    coordination_events_by_plan_id: Arc<RwLock<BTreeMap<Uuid, Vec<usize>>>>,
 }
 
 /// Configuration for audit trail system
@@ -336,6 +338,8 @@ impl AuditTrailManager {
             decision_points_by_timestamp: Arc::new(RwLock::new(BTreeMap::new())),
             #[cfg(feature = "evaluation")]
             coordination_events_by_timestamp: Arc::new(RwLock::new(BTreeMap::new())),
+            #[cfg(feature = "evaluation")]
+            coordination_events_by_plan_id: Arc::new(RwLock::new(BTreeMap::new())),
         }
     }
 
@@ -385,6 +389,8 @@ impl AuditTrailManager {
             decision_points_by_timestamp: Arc::new(RwLock::new(BTreeMap::new())),
             #[cfg(feature = "evaluation")]
             coordination_events_by_timestamp: Arc::new(RwLock::new(BTreeMap::new())),
+            #[cfg(feature = "evaluation")]
+            coordination_events_by_plan_id: Arc::new(RwLock::new(BTreeMap::new())),
         }
     }
 
@@ -524,36 +530,18 @@ impl AuditTrailManager {
             .flat_map(|(_, indices)| indices.iter().copied())
             .collect();
         
-        // Filter by plan_id if provided (requires checking event details)
+        // Filter by plan_id if provided using plan_id index for O(log n) performance
         if let Some(pid) = plan_id {
-            indices.retain(|idx| {
-                if let Some(event) = events.get(*idx) {
-                    // TODO: Implement plan_id-based event filtering:
-                    // 1. Event metadata: Add plan_id to event metadata
-                    //    - Extend CoordinationEvent with plan_id field
-                    //    - Store plan_id in event creation
-                    //    - Support plan_id retrieval from events
-                    // 2. Event filtering: Filter events by plan_id
-                    //    - Check event plan_id against filter plan_id
-                    //    - Support multiple plan_id filtering
-                    //    - Handle events without plan_id appropriately
-                    // 3. Event tracking: Track plan_id associations
-                    //    - Maintain plan_id to event mappings
-                    //    - Support plan_id-based event queries
-                    //    - Handle plan_id updates and changes
-                    // ACCEPTANCE CRITERIA:
-                    // - Events are filtered by plan_id correctly
-                    // - Plan_id is stored and retrievable from events
-                    // - Event filtering improves audit trail accuracy
-                    // DEPENDENCIES:
-                    // - CoordinationEvent extension (Required)
-                    // - Plan_id tracking system (Required)
-                    // PRIORITY: Medium
-                    true
-                } else {
-                    false
-                }
-            });
+            let plan_id_index = self.coordination_events_by_plan_id.read().await;
+            if let Some(plan_indices) = plan_id_index.get(&pid) {
+                // Use plan_id index to get event indices for this plan
+                // Intersect with timestamp-filtered indices
+                let plan_indices_set: HashSet<usize> = plan_indices.iter().copied().collect();
+                indices.retain(|idx| plan_indices_set.contains(idx));
+            } else {
+                // No events found for this plan_id - return empty result
+                indices.clear();
+            }
         }
         
         // Retrieve actual events
@@ -588,6 +576,29 @@ impl AuditTrailManager {
             .entry(event.timestamp)
             .or_insert_with(Vec::new)
             .push(index);
+        
+        // Update plan_id index for O(log n) queries
+        // Extract plan_id from event details if present
+        if let Some(plan_id_value) = event.details.get("plan_id") {
+            if let Some(plan_id_str) = plan_id_value.as_str() {
+                if let Ok(plan_id) = Uuid::parse_str(plan_id_str) {
+                    self.coordination_events_by_plan_id.write().await
+                        .entry(plan_id)
+                        .or_insert_with(Vec::new)
+                        .push(index);
+                }
+            } else if let Some(plan_id_json) = plan_id_value.as_object() {
+                // Handle JSON object format if needed
+                if let Some(plan_id_str) = plan_id_json.get("value").and_then(|v| v.as_str()) {
+                    if let Ok(plan_id) = Uuid::parse_str(plan_id_str) {
+                        self.coordination_events_by_plan_id.write().await
+                            .entry(plan_id)
+                            .or_insert_with(Vec::new)
+                            .push(index);
+                    }
+                }
+            }
+        }
         
         Ok(())
     }

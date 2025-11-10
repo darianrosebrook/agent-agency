@@ -5,6 +5,7 @@ pub mod orchestrator_integration;
 pub mod plan_executor;
 pub mod plan_types;
 pub mod plan_generator;
+pub mod graph_algorithms;
 pub mod storage;
 pub mod parallel_coordinator;
 pub mod worker_assignment;

@@ -487,16 +487,23 @@ impl CawsPlanBridge {
             }
         }
 
-        // TODO: Implement proper critical path calculation
-        //       Currently uses basic calculation; should use graph algorithms to calculate actual critical path through milestone dependencies.
-        let critical_path = if let Some(blocking) = milestones.iter().find(|m| m.is_blocking) {
-            vec![blocking.id.clone()]
-        } else {
-            vec![]
-        };
+        // Use shared graph algorithm for critical path calculation
+        let critical_path = crate::planning::graph_algorithms::calculate_critical_path(&nodes, &edges)
+            .unwrap_or_else(|_| {
+                // Fallback to blocking milestone if calculation fails
+                if let Some(blocking) = milestones.iter().find(|m| m.is_blocking) {
+                    vec![blocking.id.clone()]
+                } else {
+                    vec![]
+                }
+            });
 
-        // All milestones can run in parallel except for blocking ones
-        let parallel_groups = vec![milestones.iter().map(|m| m.id.clone()).collect()];
+        // Use shared graph algorithm for parallel group identification
+        let parallel_groups = crate::planning::graph_algorithms::identify_parallel_groups(&nodes, &edges)
+            .unwrap_or_else(|_| {
+                // Fallback to all milestones in single group if calculation fails
+                vec![milestones.iter().map(|m| m.id.clone()).collect()]
+            });
 
         DependencyGraph {
             nodes,

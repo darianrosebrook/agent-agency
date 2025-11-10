@@ -181,18 +181,29 @@ impl ToolChainBridge {
             .cloned()
             .collect();
 
-        // Calculate critical path
-        let critical_path = if !roots.is_empty() && !sinks.is_empty() {
-            vec![roots[0].clone(), sinks[0].clone()] // TODO: Implement proper critical path calculation
-        } else {
-            vec![]
-        };
+        // Use shared graph algorithm for critical path calculation
+        let critical_path = crate::planning::graph_algorithms::calculate_critical_path(&nodes, &edges)
+            .unwrap_or_else(|_| {
+                // Fallback to roots[0] -> sinks[0] if calculation fails
+                if !roots.is_empty() && !sinks.is_empty() {
+                    vec![roots[0].clone(), sinks[0].clone()]
+                } else {
+                    vec![]
+                }
+            });
+
+        // Use shared graph algorithm for parallel group identification
+        let parallel_groups = crate::planning::graph_algorithms::identify_parallel_groups(&nodes, &edges)
+            .unwrap_or_else(|_| {
+                // Fallback to roots and sinks groups if calculation fails
+                vec![roots, sinks]
+            });
 
         let dependency_graph = agent_agency_contracts::planning_io::DependencyGraph {
             nodes,
             edges,
             critical_path,
-            parallel_groups: vec![roots, sinks], // TODO: Implement proper parallel group detection
+            parallel_groups,
             has_cycles: false,
             cycles: vec![],
         };

@@ -172,6 +172,9 @@ pub struct AdvancedDependencyResolver {
 
     /// Milestone ID to node index mapping
     milestone_ids: HashMap<NodeIndex, String>,
+    
+    /// Original dependency graph (for critical path calculation with full node data)
+    original_graph: DependencyGraph,
 }
 
 impl AdvancedDependencyResolver {
@@ -202,6 +205,7 @@ impl AdvancedDependencyResolver {
             graph,
             node_indices,
             milestone_ids,
+            original_graph: dep_graph.clone(),
         })
     }
 
@@ -236,81 +240,63 @@ impl AdvancedDependencyResolver {
 
     /// Calculate longest path (critical path)
     pub fn critical_path(&self) -> Result<Vec<String>> {
-        // TODO: Implement comprehensive longest path algorithm for critical path
-        //       Currently returns topological order as approximation; should implement comprehensive longest path algorithm using topological sort and dynamic programming for accurate critical path calculation.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Longest path algorithm is implemented correctly
-        // - Topological sort and dynamic programming are used
-        // - Critical path calculation is accurate
-        // - Algorithm handles cycles and complex dependencies
-        //
-        // DEPENDENCIES:
-        // - Topological sort implementation (Required)
-        // - Dynamic programming utilities (Required)
-        // - Graph algorithm libraries (Optional)
-        //
-        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (dependency resolution functionality)
-        // - Change Budget: ~200 LOC
-        // - Reviewer Requirements: Graph algorithms and critical path analysis expertise
-        let topo_order = self.topological_order()?;
-        Ok(topo_order)
+        // Use shared graph algorithm with original dependency graph data
+        // This ensures we have full node metadata (estimated_time_ms, etc.) for accurate calculation
+        crate::planning::graph_algorithms::calculate_critical_path(
+            &self.original_graph.nodes,
+            &self.original_graph.edges
+        )
+        .or_else(|_| {
+            // Fallback to topological order if calculation fails
+            self.topological_order()
+        })
     }
 
     /// Find parallel execution opportunities
     pub fn parallel_groups(&self) -> Result<Vec<Vec<String>>> {
-        let topo_order = self.topological_order()?;
-        let mut groups: Vec<Vec<String>> = Vec::new();
-        let mut current_group: Vec<String> = Vec::new();
-        let mut processed = HashSet::new();
+        // Use shared graph algorithm for parallel group identification
+        // This provides more accurate grouping based on topological levels
+        crate::planning::graph_algorithms::identify_parallel_groups(
+            &self.original_graph.nodes,
+            &self.original_graph.edges
+        )
+        .or_else(|_| {
+            // Fallback to simple grouping if calculation fails
+            let topo_order = self.topological_order()?;
+            let mut groups: Vec<Vec<String>> = Vec::new();
+            let mut current_group: Vec<String> = Vec::new();
+            let mut processed = HashSet::new();
 
-        for milestone_id in topo_order {
-            if processed.contains(&milestone_id) {
-                continue;
-            }
-
-            // Check if this milestone can run in parallel with current group
-            let can_add = current_group.iter().all(|existing_id| {
-                !self.depends_on(existing_id, &milestone_id) &&
-                !self.depends_on(&milestone_id, existing_id)
-            });
-
-            if can_add && current_group.len() < 5 { // Limit group size
-                current_group.push(milestone_id.clone());
-            } else {
-                if !current_group.is_empty() {
-                    groups.push(current_group);
-                    current_group = Vec::new();
+            for milestone_id in topo_order {
+                if processed.contains(&milestone_id) {
+                    continue;
                 }
-                current_group.push(milestone_id.clone());
+
+                // Check if this milestone can run in parallel with current group
+                let can_add = current_group.iter().all(|existing_id| {
+                    !self.depends_on(existing_id, &milestone_id) &&
+                    !self.depends_on(&milestone_id, existing_id)
+                });
+
+                if can_add && current_group.len() < 5 { // Limit group size
+                    current_group.push(milestone_id.clone());
+                } else {
+                    if !current_group.is_empty() {
+                        groups.push(current_group);
+                        current_group = Vec::new();
+                    }
+                    current_group.push(milestone_id.clone());
+                }
+
+                processed.insert(milestone_id);
             }
 
-            processed.insert(milestone_id);
-        }
+            if !current_group.is_empty() {
+                groups.push(current_group);
+            }
 
-        if !current_group.is_empty() {
-            groups.push(current_group);
-        }
-
-        Ok(groups)
+            Ok(groups)
+        })
     }
 
     /// Check if milestone A depends on milestone B

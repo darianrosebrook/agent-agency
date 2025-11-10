@@ -8,12 +8,24 @@
 use std::path::{Path, PathBuf};
 use std::fs;
 use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use uuid::Uuid;
+use chrono::{DateTime, Utc};
+
+/// Scenario state tracking information
+#[derive(Debug, Clone)]
+pub struct ScenarioState {
+    pub scenario_id: String,
+    pub scenario_dir: PathBuf,
+    pub created_at: DateTime<Utc>,
+    pub last_accessed: DateTime<Utc>,
+}
 
 /// Playground manager for test environments
 pub struct PlaygroundManager {
     playground_root: PathBuf,
-    active_scenarios: HashMap<String, PathBuf>,
+    active_scenarios: Arc<RwLock<HashMap<String, ScenarioState>>>,
 }
 
 impl PlaygroundManager {
@@ -26,7 +38,7 @@ impl PlaygroundManager {
     pub fn with_root(root: PathBuf) -> Self {
         Self {
             playground_root: root,
-            active_scenarios: HashMap::new(),
+            active_scenarios: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -40,41 +52,18 @@ impl PlaygroundManager {
         fs::create_dir_all(&scenario_dir)
             .map_err(|e| format!("Failed to create playground directory: {}", e))?;
 
-        // TODO: Implement comprehensive active scenario tracking
-        //       Currently just ensures directory exists; should implement comprehensive tracking that stores active scenario state properly despite async context limitations for complete scenario management.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Active scenario is tracked properly
-        // - Tracking works in async context
-        // - Scenario state is persisted and retrievable
-        // - Tracking handles concurrent scenarios gracefully
-        //
-        // DEPENDENCIES:
-        // - Async-safe state tracking mechanism (Required)
-        // - Scenario state persistence (Required)
-        // - Concurrent scenario management (Required)
-        //
-        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (evaluation infrastructure enhancement)
-        // - Change Budget: ~150 LOC
-        // - Reviewer Requirements: Async state management and scenario tracking expertise
+        // Track active scenario with async-safe state management
+        let now = Utc::now();
+        let scenario_state = ScenarioState {
+            scenario_id: scenario_id.to_string(),
+            scenario_dir: scenario_dir.clone(),
+            created_at: now,
+            last_accessed: now,
+        };
+        
+        let mut active = self.active_scenarios.write().await;
+        active.insert(scenario_id.to_string(), scenario_state);
+        
         Ok(())
     }
 
@@ -82,12 +71,55 @@ impl PlaygroundManager {
     pub async fn cleanup_scenario(&self, scenario_id: &str) -> Result<(), String> {
         let scenario_dir = self.playground_root.join(scenario_id);
         
+        // Remove from active scenarios tracking
+        let mut active = self.active_scenarios.write().await;
+        active.remove(scenario_id);
+        
+        // Clean up directory
         if scenario_dir.exists() {
             fs::remove_dir_all(&scenario_dir)
                 .map_err(|e| format!("Failed to cleanup playground directory: {}", e))?;
         }
         
         Ok(())
+    }
+    
+    /// Get active scenario state
+    pub async fn get_scenario_state(&self, scenario_id: &str) -> Option<ScenarioState> {
+        let active = self.active_scenarios.read().await;
+        let state = active.get(scenario_id)?.clone();
+        
+        // Update last accessed time
+        drop(active);
+        let mut active = self.active_scenarios.write().await;
+        if let Some(state) = active.get_mut(scenario_id) {
+            state.last_accessed = Utc::now();
+        }
+        
+        Some(state)
+    }
+    
+    /// List all active scenarios
+    pub async fn list_active_scenarios(&self) -> Vec<ScenarioState> {
+        let active = self.active_scenarios.read().await;
+        active.values().cloned().collect()
+    }
+    
+    /// Check if a scenario is currently active
+    pub async fn is_scenario_active(&self, scenario_id: &str) -> bool {
+        let active = self.active_scenarios.read().await;
+        active.contains_key(scenario_id)
+    }
+    
+    /// Update scenario last accessed time
+    pub async fn touch_scenario(&self, scenario_id: &str) -> Result<(), String> {
+        let mut active = self.active_scenarios.write().await;
+        if let Some(state) = active.get_mut(scenario_id) {
+            state.last_accessed = Utc::now();
+            Ok(())
+        } else {
+            Err(format!("Scenario {} not found in active scenarios", scenario_id))
+        }
     }
 
     /// Get playground directory for a scenario

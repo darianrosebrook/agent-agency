@@ -6,10 +6,12 @@
 //! @author @darianrosebrook
 
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use std::collections::{HashMap, HashSet};
+use serde::{Serialize, Deserialize};
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 use chrono::Utc;
 use anyhow::{anyhow, Result};
+// Graph algorithms moved to shared module - no longer needed here
 use agent_agency_contracts::{
     *,
     planning_io::{ExecutionPlan as ContractExecutionPlan, Milestone as ContractMilestone, MilestoneState},
@@ -728,77 +730,14 @@ impl PlanGenerator {
         format!("Revert changes made for: {}", objective)
     }
 
-    fn calculate_critical_path(&self, _nodes: &HashMap<String, DependencyNode>, _edges: &[DependencyEdge]) -> Result<Vec<String>> {
-        // TODO: Implement proper critical path calculation
-        //       Currently returns empty path; should calculate critical path through dependency graph using longest path algorithm.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Implement longest path algorithm for DAG
-        // [ ] Calculate earliest start and finish times
-        // [ ] Calculate latest start and finish times
-        // [ ] Identify critical path nodes
-        // [ ] Handle multiple critical paths
-        // [ ] Support weighted edges for duration
-        // [ ] Add unit tests for critical path calculation
-        // [ ] Add integration tests with complex graphs
-        // [ ] Verify critical path accuracy
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Critical path is calculated correctly
-        // - Longest path algorithm is implemented properly
-        // - Multiple critical paths are handled
-        // - Weighted edges are supported
-        //
-        // DEPENDENCIES:
-        // - Graph algorithms library (Required)
-        // - Critical path calculation utilities (Required)
-        // - Path analysis utilities (Required)
-        //
-        // ESTIMATED EFFORT: 5-6 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (planning feature)
-        // - Change Budget: ~120 LOC
-        // - Reviewer Requirements: Graph algorithms and project management expertise
-        Ok(vec![]) // Temporary: empty until critical path calculation is implemented
+    fn calculate_critical_path(&self, nodes: &HashMap<String, DependencyNode>, edges: &[DependencyEdge]) -> Result<Vec<String>> {
+        // Use shared graph algorithm for critical path calculation
+        crate::planning::graph_algorithms::calculate_critical_path(nodes, edges)
     }
 
-    fn identify_parallel_groups(&self, _nodes: &HashMap<String, DependencyNode>, _edges: &[DependencyEdge]) -> Result<Vec<Vec<String>>> {
-        // TODO: Implement parallel group identification algorithm
-        //       Currently returns empty groups; should identify groups of nodes that can execute in parallel based on dependency analysis.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Build dependency graph from nodes and edges
-        // [ ] Identify independent node sets (no dependencies between them)
-        // [ ] Group nodes by dependency level (topological sort levels)
-        // [ ] Optimize groups for parallel execution efficiency
-        // [ ] Handle cycles and complex dependencies
-        // [ ] Add unit tests with various dependency graphs
-        // [ ] Add integration tests with real execution plans
-        // [ ] Performance: Group identification should complete in <10ms for typical graphs
-        // [ ] Documentation: Document parallel grouping algorithm
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Identifies groups of nodes that can execute in parallel
-        // - Groups respect dependency constraints
-        // - Optimizes for execution efficiency
-        // - Handles complex dependency structures
-        //
-        // DEPENDENCIES:
-        // - Dependency graph structure (Required)
-        // - Graph algorithms (topological sort, etc.) (Required)
-        //
-        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (planning feature)
-        // - Change Budget: ~150 LOC
-        // - Reviewer Requirements: Graph algorithms expertise
-        Ok(vec![])
+    fn identify_parallel_groups(&self, nodes: &HashMap<String, DependencyNode>, edges: &[DependencyEdge]) -> Result<Vec<Vec<String>>> {
+        // Use shared graph algorithm for parallel group identification
+        crate::planning::graph_algorithms::identify_parallel_groups(nodes, edges)
     }
 
     /// Generate milestone decomposition prompt and call AI
