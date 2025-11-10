@@ -27,6 +27,10 @@ impl SafeModelHandle {
         self.0.id()
     }
 
+    pub fn get_model_ref(&self) -> crate::ane::compat::coreml::ModelRef {
+        self.0
+    }
+
     /// Access the underlying model handle on the current thread
     /// Returns None if called on the wrong thread or if model was unloaded
     /// Never returns a fabricated handle - callers must handle None explicitly

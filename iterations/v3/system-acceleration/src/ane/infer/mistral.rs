@@ -265,7 +265,7 @@ async fn run_mistral_inference(
     use crate::ane::compat::coreml_module::run_inference;
     
     // Get the model reference from SafeModelHandle
-    let model_ref = model.handle.0; // SafeModelHandle(ModelRef)
+    let model_ref = model.handle.get_model_ref(); // SafeModelHandle.get_model_ref() returns ModelRef
     
     // Convert input tensor to f32 slice
     // Input tensor shape: [batch_size, sequence_length]

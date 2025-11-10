@@ -3135,8 +3135,74 @@ async fn execute_query_handler(
                 // - CAWS Tier: 2 (API server feature)
                 // - Change Budget: ~150 LOC
                 // - Reviewer Requirements: Database and serialization expertise
-                let results: Vec<JsonValue> = rows.into_iter().map(|_row| {
-                    serde_json::json!({})
+                
+                // Serialize rows to JSON with proper type handling
+                let results: Vec<JsonValue> = rows.into_iter().map(|row| {
+                    let mut json_obj = serde_json::Map::new();
+                    
+                    // Get column names from row
+                    let columns = row.columns();
+                    
+                    for column in columns {
+                        let column_name = column.name();
+                        
+                        // Try to get value based on PostgreSQL type
+                        // Handle common types with fallback to text
+                        let value: Option<serde_json::Value> = {
+                            // Try different type conversions by column name
+                            if let Ok(val) = row.try_get::<String, _>(column_name) {
+                                Some(serde_json::Value::String(val))
+                            } else if let Ok(val) = row.try_get::<Option<String>, _>(column_name) {
+                                val.map(serde_json::Value::String).or(Some(serde_json::Value::Null))
+                            } else if let Ok(val) = row.try_get::<i32, _>(column_name) {
+                                Some(serde_json::Value::Number(val.into()))
+                            } else if let Ok(val) = row.try_get::<Option<i32>, _>(column_name) {
+                                val.map(|v| serde_json::Value::Number(v.into())).or(Some(serde_json::Value::Null))
+                            } else if let Ok(val) = row.try_get::<i64, _>(column_name) {
+                                Some(serde_json::Value::Number(val.into()))
+                            } else if let Ok(val) = row.try_get::<Option<i64>, _>(column_name) {
+                                val.map(|v| serde_json::Value::Number(v.into())).or(Some(serde_json::Value::Null))
+                            } else if let Ok(val) = row.try_get::<f64, _>(column_name) {
+                                serde_json::Number::from_f64(val).map(serde_json::Value::Number)
+                            } else if let Ok(val) = row.try_get::<Option<f64>, _>(column_name) {
+                                val.and_then(|v| serde_json::Number::from_f64(v).map(serde_json::Value::Number)).or(Some(serde_json::Value::Null))
+                            } else if let Ok(val) = row.try_get::<bool, _>(column_name) {
+                                Some(serde_json::Value::Bool(val))
+                            } else if let Ok(val) = row.try_get::<Option<bool>, _>(column_name) {
+                                val.map(serde_json::Value::Bool).or(Some(serde_json::Value::Null))
+                            } else if let Ok(val) = row.try_get::<Uuid, _>(column_name) {
+                                Some(serde_json::Value::String(val.to_string()))
+                            } else if let Ok(val) = row.try_get::<Option<Uuid>, _>(column_name) {
+                                val.map(|v| serde_json::Value::String(v.to_string())).or(Some(serde_json::Value::Null))
+                            } else if let Ok(val) = row.try_get::<chrono::DateTime<chrono::Utc>, _>(column_name) {
+                                Some(serde_json::Value::String(val.to_rfc3339()))
+                            } else if let Ok(val) = row.try_get::<Option<chrono::DateTime<chrono::Utc>>, _>(column_name) {
+                                val.map(|v| serde_json::Value::String(v.to_rfc3339())).or(Some(serde_json::Value::Null))
+                            } else if let Ok(val) = row.try_get::<serde_json::Value, _>(column_name) {
+                                Some(val)
+                            } else if let Ok(val) = row.try_get::<Option<serde_json::Value>, _>(column_name) {
+                                val.or(Some(serde_json::Value::Null))
+                            } else {
+                                // Fallback: try to get as text or return null
+                                row.try_get::<String, _>(column_name).ok()
+                                    .map(serde_json::Value::String)
+                                    .or_else(|| {
+                                        row.try_get::<Option<String>, _>(column_name).ok().flatten()
+                                            .map(serde_json::Value::String)
+                                            .or(Some(serde_json::Value::Null))
+                                    })
+                            }
+                        };
+                        
+                        if let Some(json_val) = value {
+                            json_obj.insert(column_name.to_string(), json_val);
+                        } else {
+                            // If all conversions failed, insert null
+                            json_obj.insert(column_name.to_string(), serde_json::Value::Null);
+                        }
+                    }
+                    
+                    serde_json::Value::Object(json_obj)
                 }).collect();
 
                 Ok(Json(serde_json::json!({
@@ -4373,12 +4439,130 @@ async fn get_current_user_handler(
 }
 
 async fn refresh_token_handler(
-    State(_state): State<AppState>,
-    Json(_refresh_req): Json<RefreshTokenRequest>,
+    State(state): State<AppState>,
+    Json(refresh_req): Json<RefreshTokenRequest>,
 ) -> Result<Json<LoginResponse>, StatusCode> {
-    // TODO: Implement refresh token logic
-    // Need to add get_session_by_refresh_token_hash to DatabaseOperations
-    Err(StatusCode::NOT_IMPLEMENTED)
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    // Hash the refresh token for database lookup
+    let refresh_token_hash = hash_token(&refresh_req.refresh_token);
+    
+    // Query session by refresh_token_hash
+    let query = r#"
+        SELECT 
+            id, user_id, token_hash, refresh_token_hash, expires_at, 
+            refresh_expires_at, is_active, ip_address, user_agent, created_at, updated_at
+        FROM sessions
+        WHERE refresh_token_hash = $1
+        LIMIT 1
+    "#;
+    
+    let session_row = db.query_one_with_params(query, &[&refresh_token_hash]).await
+        .map_err(|e| {
+            error!("Database error during token refresh: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    
+    let session = session_row.ok_or_else(|| {
+        warn!("Refresh token not found");
+        StatusCode::UNAUTHORIZED
+    })?;
+    
+    // Extract session fields
+    let session_id: Uuid = session.get("id");
+    let user_id: Uuid = session.get("user_id");
+    let refresh_expires_at: Option<chrono::DateTime<chrono::Utc>> = session.try_get("refresh_expires_at").ok().flatten();
+    let is_active: bool = session.get("is_active");
+    
+    // Validate session is active
+    if !is_active {
+        warn!("Refresh attempt with inactive session: {}", session_id);
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+    
+    // Validate refresh token hasn't expired
+    if let Some(refresh_expires) = refresh_expires_at {
+        if Utc::now() > refresh_expires {
+            warn!("Refresh token expired for session: {}", session_id);
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+    }
+    
+    // Get user to generate new tokens with correct roles
+    let user = db.get_user(user_id).await
+        .map_err(|e| {
+            error!("Database error fetching user during refresh: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or(StatusCode::NOT_FOUND)?;
+    
+    // Check if user is active
+    if !user.is_active {
+        warn!("Refresh attempt for inactive user: {}", user_id);
+        return Err(StatusCode::FORBIDDEN);
+    }
+    
+    // Check if user is locked
+    if let Some(locked_until) = user.locked_until {
+        if Utc::now() < locked_until {
+            warn!("Refresh attempt for locked user: {}", user_id);
+            return Err(StatusCode::FORBIDDEN);
+        }
+    }
+    
+    // Generate new access token
+    let user_id_str = user.id.to_string();
+    let new_token = state.auth_service.generate_token(&user_id_str, &user.roles)
+        .map_err(|e| {
+            error!("Token generation error during refresh: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    
+    // Generate new refresh token (rotate for security)
+    let new_refresh_token = state.auth_service.generate_token(&user_id_str, &user.roles)
+        .map_err(|e| {
+            error!("Refresh token generation error: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    
+    let new_token_hash = hash_token(&new_token);
+    let new_refresh_token_hash = hash_token(&new_refresh_token);
+    
+    // Update session with new tokens
+    let expires_at = Utc::now() + ChronoDuration::hours(24);
+    let refresh_expires_at = Some(Utc::now() + ChronoDuration::days(7));
+    
+    let update = data_infrastructure::database_operations::UpdateSession {
+        token_hash: Some(new_token_hash),
+        refresh_token_hash: Some(new_refresh_token_hash),
+        expires_at: Some(expires_at),
+        refresh_expires_at: Some(refresh_expires_at),
+        is_active: None,
+    };
+    
+    match db.update_session(session_id, update).await {
+        Ok(_) => {
+            info!("Token refreshed successfully for user: {}", user_id);
+            
+            Ok(Json(LoginResponse {
+                token: new_token,
+                refresh_token: Some(new_refresh_token),
+                user: UserResponse {
+                    id: user.id.to_string(),
+                    email: user.email,
+                    username: user.username,
+                    name: user.name,
+                    roles: user.roles,
+                    is_active: user.is_active,
+                    last_login: user.last_login,
+                },
+            }))
+        }
+        Err(e) => {
+            error!("Failed to update session during refresh: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 async fn request_password_reset_handler(
