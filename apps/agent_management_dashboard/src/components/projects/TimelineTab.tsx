@@ -13,6 +13,7 @@ import {
 } from "../primitives/select";
 import { useProjectContext } from "./ProjectContext";
 import { getProjectTasks } from "../../lib/api/projects";
+import { getAgents, type Agent } from "../../lib/api/agents";
 import styles from "./TimelineTab.module.scss";
 
 export type ZoomLevel = "day" | "week" | "month" | "quarter";
@@ -34,11 +35,12 @@ export function TimelineTab() {
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>("week");
   const [selectedWorker, setSelectedWorker] = useState<string>("all");
   const [tasks, setTasks] = useState<TimelineTask[]>([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    async function fetchTasks() {
+    async function fetchData() {
       if (!currentProjectId) {
         setTasks([]);
         return;
@@ -48,10 +50,22 @@ export function TimelineTab() {
       setError(null);
 
       try {
-        const response = await getProjectTasks(currentProjectId);
+        // Fetch tasks and agents in parallel
+        const [tasksResponse, agentsData] = await Promise.all([
+          getProjectTasks(currentProjectId),
+          getAgents().catch(() => []), // Gracefully handle agent fetch failure
+        ]);
+
+        setAgents(agentsData);
+
+        // Create a map of agent IDs to agent names
+        const agentMap = new Map<string, string>();
+        agentsData.forEach((agent) => {
+          agentMap.set(agent.id, agent.name);
+        });
         
         // Transform API tasks to TimelineTask format
-        const timelineTasks: TimelineTask[] = response.tasks.map((task) => {
+        const timelineTasks: TimelineTask[] = tasksResponse.tasks.map((task) => {
           const startDate = new Date(task.created_at);
           const endDate = task.completed_at 
             ? new Date(task.completed_at)
@@ -74,11 +88,17 @@ export function TimelineTab() {
             tags.push(`Priority ${task.priority}`);
           }
 
+          // Get agent name from assignment
+          const workerId = task.assigned_worker_id ?? null;
+          const workerName = workerId && agentMap.has(workerId) 
+            ? agentMap.get(workerId)! 
+            : "Unassigned";
+
           return {
             id: task.task_id,
             title: task.title,
-            worker: "Unassigned", // TODO: Fetch worker details when worker assignment API is available
-            workerId: "unassigned",
+            worker: workerName,
+            workerId: workerId ?? "unassigned",
             startDate,
             endDate,
             status,
@@ -97,7 +117,7 @@ export function TimelineTab() {
       }
     }
 
-    fetchTasks();
+    fetchData();
   }, [currentProjectId]);
 
   const workers = Array.from(new Set(tasks.map((t) => t.worker)));

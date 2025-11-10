@@ -3068,6 +3068,7 @@ async fn get_project_tasks_handler(
                         "status": task.status,
                         "risk_tier": task.risk_tier,
                         "priority": task.priority,
+                        "assigned_worker_id": task.assigned_worker_id.map(|id| id.to_string()),
                         "created_at": task.created_at.to_rfc3339(),
                         "updated_at": task.updated_at.to_rfc3339(),
                         "completed_at": task.completed_at.map(|d| d.to_rfc3339()),

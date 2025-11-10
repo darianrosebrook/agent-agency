@@ -103,7 +103,11 @@ export class AppError extends Error {
    * Get user-friendly error message
    */
   getUserMessage(): string {
-    return this.message ?? ErrorMessages[this.code];
+    // Return message if it exists and is not empty, otherwise use error code message
+    const message = this.message?.trim();
+    return message && message.length > 0 
+      ? message 
+      : ErrorMessages[this.code];
   }
 
   /**
@@ -149,19 +153,35 @@ function mapErrorCode(backendCode: string): ErrorCode {
  */
 function showErrorToast(message: string, code: ErrorCode): void {
   try {
+    // Ensure we have a valid message
+    const displayMessage = message && message.trim() 
+      ? message 
+      : ErrorMessages[code] || 'An unexpected error occurred';
+    
     // Lazy import to avoid circular dependency with toast utilities
     import('../utils/toast').then(({ toastError }) => {
-      // Create a simple error object for toastError
-      const errorObj = new Error(message);
-      (errorObj as { code?: ErrorCode }).code = code;
-      toastError(errorObj);
-    }).catch(() => {
+      try {
+        // Create a simple error object for toastError
+        const errorObj = new Error(displayMessage);
+        (errorObj as { code?: ErrorCode }).code = code;
+        toastError(errorObj);
+      } catch (toastErr) {
+        // If toast call fails, log and fall back to console.error
+        console.error('Failed to show toast:', toastErr);
+        console.error(`[${code}]`, displayMessage);
+      }
+    }).catch((importErr) => {
       // If toast import fails, fall back to console.error
-      console.error(`[${code}]`, message);
+      console.error('Failed to import toast utilities:', importErr);
+      console.error(`[${code}]`, displayMessage);
     });
-  } catch {
+  } catch (err) {
     // If dynamic import is not available, use console.error
-    console.error(`[${code}]`, message);
+    const displayMessage = message && message.trim() 
+      ? message 
+      : ErrorMessages[code] || 'An unexpected error occurred';
+    console.error('Error showing toast:', err);
+    console.error(`[${code}]`, displayMessage);
   }
 }
 

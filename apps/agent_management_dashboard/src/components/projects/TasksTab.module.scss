@@ -13,4 +13,19 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  position: relative;
+  
+  &:has(.loadingMessage) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-8;
+  }
+}
+
+.loadingMessage {
+  font-family: $font-family-sans;
+  font-size: $font-size-base;
+  color: $color-gray-400;
+  text-align: center;
 }

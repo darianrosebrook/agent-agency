@@ -16,16 +16,27 @@ import { retryWithBackoff, RetryOptions } from './retry';
  */
 function showApiErrorToast(error: AppError): void {
   try {
+    const errorMessage = error.getUserMessage();
+    
     // Lazy import to avoid circular dependency with toast utilities
     import('./toast').then(({ toastError }) => {
-      toastError(error);
-    }).catch(() => {
+      try {
+        toastError(error);
+      } catch (toastErr) {
+        // If toast call fails, log and fall back to console.error
+        console.error('Failed to show toast:', toastErr);
+        console.error(`[${error.code}]`, errorMessage);
+      }
+    }).catch((importErr) => {
       // If toast import fails, fall back to console.error
-      console.error(`[${error.code}]`, error.getUserMessage());
+      console.error('Failed to import toast utilities:', importErr);
+      console.error(`[${error.code}]`, errorMessage);
     });
-  } catch {
+  } catch (err) {
     // If dynamic import is not available, use console.error
-    console.error(`[${error.code}]`, error.getUserMessage());
+    const errorMessage = error.getUserMessage();
+    console.error('Error showing toast:', err);
+    console.error(`[${error.code}]`, errorMessage);
   }
 }
 

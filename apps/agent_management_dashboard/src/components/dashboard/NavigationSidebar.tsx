@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Search,
   MessageSquare,
@@ -15,6 +15,7 @@ import {
   ChevronDown,
   FolderPlus,
   TestTube,
+  Bell,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -25,11 +26,13 @@ import {
   TooltipTrigger,
 } from "../primitives/tooltip";
 import { cn } from "../primitives/utils";
+import { getUnreadCount } from "@/lib/stores/notificationStore";
 import styles from "./NavigationSidebar.module.scss";
 
 export function Sidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const isActive = useCallback(
     (path: string) => {
@@ -40,6 +43,18 @@ export function Sidebar() {
 
   const toggleCollapse = useCallback(() => {
     setIsCollapsed((prev) => !prev);
+  }, []);
+
+  useEffect(() => {
+    // Update unread count
+    const updateUnreadCount = () => {
+      setUnreadCount(getUnreadCount());
+    };
+
+    updateUnreadCount();
+    // Check for new notifications every 5 seconds
+    const interval = setInterval(updateUnreadCount, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -334,6 +349,39 @@ export function Sidebar() {
               {isCollapsed && (
                 <TooltipContent side="right">
                   <p>Testing</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/notifications"
+                  className={cn(
+                    styles.navLink,
+                    isCollapsed
+                      ? styles.navLinkCollapsed
+                      : styles.navLinkExpanded,
+                    isActive("/notifications")
+                      ? styles.navLinkActive
+                      : styles.navLinkInactive
+                  )}
+                >
+                  <div className={styles.iconContainer}>
+                    <Bell className={styles.icon} />
+                    {unreadCount > 0 && (
+                      <span className={styles.unreadBadge}>
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  {!isCollapsed && (
+                    <span className={styles.navLinkText}>Notifications</span>
+                  )}
+                </Link>
+              </TooltipTrigger>
+              {isCollapsed && (
+                <TooltipContent side="right">
+                  <p>Notifications{unreadCount > 0 ? ` (${unreadCount})` : ''}</p>
                 </TooltipContent>
               )}
             </Tooltip>

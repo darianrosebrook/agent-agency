@@ -248,6 +248,7 @@ export interface ProjectTask {
   status: string;
   risk_tier?: string | null;
   priority?: number | null;
+  assigned_worker_id?: string | null;
   created_at: string;
   updated_at: string;
   completed_at?: string | null;

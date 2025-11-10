@@ -1279,6 +1279,7 @@ pub struct HybridTaskExecutor {
     // task_queue: Option<Arc<dyn crate::data_infrastructure::queue::TaskQueueService>>,
     audit_manager: Option<Arc<crate::audit_trail::AuditTrailManager>>,
     semaphore: tokio::sync::Semaphore,
+    active_tasks: Arc<tokio::sync::RwLock<std::collections::HashMap<Uuid, tokio_util::sync::CancellationToken>>>,
 }
 
 impl std::fmt::Debug for HybridTaskExecutor {
@@ -1308,6 +1309,7 @@ impl HybridTaskExecutor {
             // task_queue,
             audit_manager,
             semaphore,
+            active_tasks: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
         }
     }
 
@@ -1368,25 +1370,93 @@ impl TaskExecutor for HybridTaskExecutor {
         let is_sequential = self.should_execute_sequentially(&task_spec);
 
         let started_at = chrono::Utc::now();
+        let execution_id = uuid::Uuid::new_v4();
+
+        // Create cancellation token for this task
+        let cancellation_token = tokio_util::sync::CancellationToken::new();
+        {
+            let mut active_tasks = self.active_tasks.write().await;
+            active_tasks.insert(task_spec.id, cancellation_token.clone());
+        }
+
+        // Record execution start in audit trail
+        if let Some(audit) = &self.audit_manager {
+            if let Err(e) = audit.record_task_execution_start(
+                task_spec.id,
+                execution_id,
+                Some(worker_id),
+                None,
+            ).await {
+                warn!("Failed to record task execution start in audit trail: {}", e);
+            }
+        }
+
+        // Check for cancellation before execution
+        if cancellation_token.is_cancelled() {
+            // Remove task from active tasks
+            {
+                let mut active_tasks = self.active_tasks.write().await;
+                active_tasks.remove(&task_spec.id);
+            }
+            return Ok(TaskExecutionResult {
+                execution_id,
+                task_id: task_spec.id,
+                success: false,
+                output: "Task cancelled before execution".to_string(),
+                errors: vec!["Task was cancelled".to_string()],
+                metadata: std::collections::HashMap::new(),
+                started_at,
+                completed_at: started_at,
+                duration_ms: 0,
+                worker_id: Some(worker_id),
+            });
+        }
 
         if is_sequential {
             debug!("Executing task {} sequentially (hybrid mode)", task_spec.id);
 
-            // Sequential execution - no semaphore needed
-            let completed_at = started_at + chrono::Duration::milliseconds(1200);
+            // Sequential execution - simulate with cancellation check
+            tokio::time::sleep(tokio::time::Duration::from_millis(1200)).await;
+
+            // Check for cancellation during execution
+            let cancelled = cancellation_token.is_cancelled();
+            
+            // Remove task from active tasks
+            {
+                let mut active_tasks = self.active_tasks.write().await;
+                active_tasks.remove(&task_spec.id);
+            }
+
+            let completed_at = chrono::Utc::now();
             let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
+            
             let result = TaskExecutionResult {
-                execution_id: uuid::Uuid::new_v4(),
+                execution_id,
                 task_id: task_spec.id,
-                success: true,
-                output: "Task executed successfully (sequential in hybrid)".to_string(),
-                errors: vec![],
+                success: !cancelled,
+                output: if cancelled {
+                    "Task cancelled during execution".to_string()
+                } else {
+                    "Task executed successfully (sequential in hybrid)".to_string()
+                },
+                errors: if cancelled {
+                    vec!["Task was cancelled during execution".to_string()]
+                } else {
+                    vec![]
+                },
                 metadata: std::collections::HashMap::new(),
                 started_at,
                 completed_at,
                 duration_ms,
                 worker_id: Some(worker_id),
             };
+
+            // Record execution completion in audit trail
+            if let Some(audit) = &self.audit_manager {
+                if let Err(e) = audit.record_task_execution_completion(&result, None).await {
+                    warn!("Failed to record task execution completion in audit trail: {}", e);
+                }
+            }
 
             Ok(result)
         } else {
@@ -1396,20 +1466,69 @@ impl TaskExecutor for HybridTaskExecutor {
             let _permit = self.semaphore.acquire().await
                 .map_err(|e| format!("Failed to acquire execution permit: {}", e))?;
 
-            let completed_at = started_at + chrono::Duration::milliseconds(900);
+            // Check for cancellation after acquiring permit
+            if cancellation_token.is_cancelled() {
+                // Remove task from active tasks
+                {
+                    let mut active_tasks = self.active_tasks.write().await;
+                    active_tasks.remove(&task_spec.id);
+                }
+                return Ok(TaskExecutionResult {
+                    execution_id,
+                    task_id: task_spec.id,
+                    success: false,
+                    output: "Task cancelled before execution".to_string(),
+                    errors: vec!["Task was cancelled".to_string()],
+                    metadata: std::collections::HashMap::new(),
+                    started_at,
+                    completed_at: started_at,
+                    duration_ms: 0,
+                    worker_id: Some(worker_id),
+                });
+            }
+
+            // Simulate parallel execution with cancellation check
+            tokio::time::sleep(tokio::time::Duration::from_millis(900)).await;
+
+            // Check for cancellation during execution
+            let cancelled = cancellation_token.is_cancelled();
+            
+            // Remove task from active tasks
+            {
+                let mut active_tasks = self.active_tasks.write().await;
+                active_tasks.remove(&task_spec.id);
+            }
+
+            let completed_at = chrono::Utc::now();
             let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
+            
             let result = TaskExecutionResult {
-                execution_id: uuid::Uuid::new_v4(),
+                execution_id,
                 task_id: task_spec.id,
-                success: true,
-                output: "Task executed successfully (parallel in hybrid)".to_string(),
-                errors: vec![],
+                success: !cancelled,
+                output: if cancelled {
+                    "Task cancelled during execution".to_string()
+                } else {
+                    "Task executed successfully (parallel in hybrid)".to_string()
+                },
+                errors: if cancelled {
+                    vec!["Task was cancelled during execution".to_string()]
+                } else {
+                    vec![]
+                },
                 metadata: std::collections::HashMap::new(),
                 started_at,
                 completed_at,
                 duration_ms,
                 worker_id: Some(worker_id),
             };
+
+            // Record execution completion in audit trail
+            if let Some(audit) = &self.audit_manager {
+                if let Err(e) = audit.record_task_execution_completion(&result, None).await {
+                    warn!("Failed to record task execution completion in audit trail: {}", e);
+                }
+            }
 
             Ok(result)
         }
@@ -1481,11 +1600,79 @@ impl TaskExecutor for HybridTaskExecutor {
 
     async fn cancel_task_execution(
         &self,
-        _task_id: Uuid,
-        _worker_id: Uuid,
+        task_id: Uuid,
+        worker_id: Uuid,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // TODO: Implement task cancellation
-        Ok(())
+        info!("Cancelling task {} on worker {}", task_id, worker_id);
+
+        // Get cancellation token for this task
+        let cancellation_token = {
+            let active_tasks = self.active_tasks.read().await;
+            active_tasks.get(&task_id).cloned()
+        };
+
+        if let Some(token) = cancellation_token {
+            // Signal cancellation
+            token.cancel();
+            info!("Cancellation signal sent for task {}", task_id);
+
+            // Record cancellation in audit trail
+            if let Some(audit) = &self.audit_manager {
+                use crate::audit_trail::{AuditEvent, AuditCategory, AuditSeverity, AuditResult};
+                use chrono::Utc;
+                use std::collections::HashMap;
+
+                let event = AuditEvent {
+                    event_id: Uuid::new_v4(),
+                    timestamp: Utc::now(),
+                    correlation_id: None,
+                    parent_event_id: None,
+                    category: AuditCategory::Operation,
+                    severity: AuditSeverity::Info,
+                    actor: "orchestrator".to_string(),
+                    operation: "task_cancellation".to_string(),
+                    message: Some(format!("Task {} cancelled on worker {}", task_id, worker_id)),
+                    operation_id: Some(task_id.to_string()),
+                    target: Some(worker_id.to_string()),
+                    parameters: {
+                        let mut params = HashMap::new();
+                        params.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
+                        params.insert("worker_id".to_string(), serde_json::Value::String(worker_id.to_string()));
+                        params.insert("executor_type".to_string(), serde_json::Value::String("hybrid".to_string()));
+                        params
+                    },
+                    result: AuditResult::Success {
+                        data: Some(serde_json::json!({
+                            "cancelled": true,
+                            "task_id": task_id.to_string(),
+                        })),
+                    },
+                    performance: None,
+                    context: {
+                        let mut ctx = HashMap::new();
+                        ctx.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
+                        ctx.insert("worker_id".to_string(), serde_json::Value::String(worker_id.to_string()));
+                        ctx.insert("executor_type".to_string(), serde_json::Value::String("hybrid".to_string()));
+                        ctx
+                    },
+                    tags: vec!["orchestration".to_string(), "cancellation".to_string(), "task_management".to_string(), "hybrid_executor".to_string()],
+                };
+
+                tracing::info!(
+                    audit_event = ?event,
+                    category = ?event.category,
+                    operation = %event.operation,
+                    task_id = %task_id,
+                    worker_id = %worker_id,
+                    "Task cancellation recorded"
+                );
+            }
+
+            Ok(())
+        } else {
+            warn!("Task {} not found in active tasks - may have already completed", task_id);
+            Ok(())
+        }
     }
 }
 
@@ -1497,6 +1684,7 @@ pub struct AdaptiveTaskExecutor {
     // task_queue: Option<Arc<dyn crate::data_infrastructure::queue::TaskQueueService>>,
     audit_manager: Option<Arc<crate::audit_trail::AuditTrailManager>>,
     semaphore: tokio::sync::Semaphore,
+    active_tasks: Arc<tokio::sync::RwLock<std::collections::HashMap<Uuid, tokio_util::sync::CancellationToken>>>,
 }
 
 impl std::fmt::Debug for AdaptiveTaskExecutor {
@@ -1526,6 +1714,7 @@ impl AdaptiveTaskExecutor {
             // task_queue,
             audit_manager,
             semaphore,
+            active_tasks: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
         }
     }
 
@@ -1586,69 +1775,203 @@ impl TaskExecutor for AdaptiveTaskExecutor {
     ) -> Result<TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
         let strategy = self.adapt_strategy(&task_spec);
         let started_at = chrono::Utc::now();
+        let execution_id = uuid::Uuid::new_v4();
+
+        // Create cancellation token for this task
+        let cancellation_token = tokio_util::sync::CancellationToken::new();
+        {
+            let mut active_tasks = self.active_tasks.write().await;
+            active_tasks.insert(task_spec.id, cancellation_token.clone());
+        }
+
+        // Record execution start in audit trail
+        if let Some(audit) = &self.audit_manager {
+            if let Err(e) = audit.record_task_execution_start(
+                task_spec.id,
+                execution_id,
+                Some(worker_id),
+                None,
+            ).await {
+                warn!("Failed to record task execution start in audit trail: {}", e);
+            }
+        }
+
+        // Check for cancellation before execution
+        if cancellation_token.is_cancelled() {
+            // Remove task from active tasks
+            {
+                let mut active_tasks = self.active_tasks.write().await;
+                active_tasks.remove(&task_spec.id);
+            }
+            return Ok(TaskExecutionResult {
+                execution_id,
+                task_id: task_spec.id,
+                success: false,
+                output: "Task cancelled before execution".to_string(),
+                errors: vec!["Task was cancelled".to_string()],
+                metadata: std::collections::HashMap::new(),
+                started_at,
+                completed_at: started_at,
+                duration_ms: 0,
+                worker_id: Some(worker_id),
+            });
+        }
 
         debug!("Executing task {} with adaptive strategy: {:?}", task_spec.id, strategy);
 
-        match strategy {
+        let result = match strategy {
             ExecutionStrategy::Sequential => {
-                let completed_at = started_at + chrono::Duration::milliseconds(1300);
+                // Sequential execution - simulate with cancellation check
+                tokio::time::sleep(tokio::time::Duration::from_millis(1300)).await;
+                
+                let cancelled = cancellation_token.is_cancelled();
+                let completed_at = chrono::Utc::now();
                 let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
-                let result = TaskExecutionResult {
-                    execution_id: uuid::Uuid::new_v4(),
+                
+                TaskExecutionResult {
+                    execution_id,
                     task_id: task_spec.id,
-                    success: true,
-                    output: "Task executed successfully (adaptive sequential)".to_string(),
-                    errors: vec![],
+                    success: !cancelled,
+                    output: if cancelled {
+                        "Task cancelled during execution".to_string()
+                    } else {
+                        "Task executed successfully (adaptive sequential)".to_string()
+                    },
+                    errors: if cancelled {
+                        vec!["Task was cancelled during execution".to_string()]
+                    } else {
+                        vec![]
+                    },
                     metadata: std::collections::HashMap::new(),
                     started_at,
                     completed_at,
                     duration_ms,
                     worker_id: Some(worker_id),
-                };
-                Ok(result)
+                }
             },
             ExecutionStrategy::Parallel => {
                 let _permit = self.semaphore.acquire().await
                     .map_err(|e| format!("Failed to acquire execution permit: {}", e))?;
 
-                let completed_at = started_at + chrono::Duration::milliseconds(850);
+                // Check for cancellation after acquiring permit
+                if cancellation_token.is_cancelled() {
+                    // Remove task from active tasks
+                    {
+                        let mut active_tasks = self.active_tasks.write().await;
+                        active_tasks.remove(&task_spec.id);
+                    }
+                    return Ok(TaskExecutionResult {
+                        execution_id,
+                        task_id: task_spec.id,
+                        success: false,
+                        output: "Task cancelled before execution".to_string(),
+                        errors: vec!["Task was cancelled".to_string()],
+                        metadata: std::collections::HashMap::new(),
+                        started_at,
+                        completed_at: started_at,
+                        duration_ms: 0,
+                        worker_id: Some(worker_id),
+                    });
+                }
+
+                // Simulate parallel execution with cancellation check
+                tokio::time::sleep(tokio::time::Duration::from_millis(850)).await;
+                
+                let cancelled = cancellation_token.is_cancelled();
+                let completed_at = chrono::Utc::now();
                 let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
-                let result = TaskExecutionResult {
-                    execution_id: uuid::Uuid::new_v4(),
+                
+                TaskExecutionResult {
+                    execution_id,
                     task_id: task_spec.id,
-                    success: true,
-                    output: "Task executed successfully (adaptive parallel)".to_string(),
-                    errors: vec![],
+                    success: !cancelled,
+                    output: if cancelled {
+                        "Task cancelled during execution".to_string()
+                    } else {
+                        "Task executed successfully (adaptive parallel)".to_string()
+                    },
+                    errors: if cancelled {
+                        vec!["Task was cancelled during execution".to_string()]
+                    } else {
+                        vec![]
+                    },
                     metadata: std::collections::HashMap::new(),
                     started_at,
                     completed_at,
                     duration_ms,
                     worker_id: Some(worker_id),
-                };
-                Ok(result)
+                }
             },
             _ => {
                 // Fallback to parallel
                 let _permit = self.semaphore.acquire().await
                     .map_err(|e| format!("Failed to acquire execution permit: {}", e))?;
 
-                let completed_at = started_at + chrono::Duration::milliseconds(1000);
+                // Check for cancellation after acquiring permit
+                if cancellation_token.is_cancelled() {
+                    // Remove task from active tasks
+                    {
+                        let mut active_tasks = self.active_tasks.write().await;
+                        active_tasks.remove(&task_spec.id);
+                    }
+                    return Ok(TaskExecutionResult {
+                        execution_id,
+                        task_id: task_spec.id,
+                        success: false,
+                        output: "Task cancelled before execution".to_string(),
+                        errors: vec!["Task was cancelled".to_string()],
+                        metadata: std::collections::HashMap::new(),
+                        started_at,
+                        completed_at: started_at,
+                        duration_ms: 0,
+                        worker_id: Some(worker_id),
+                    });
+                }
+
+                // Simulate fallback execution with cancellation check
+                tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+                
+                let cancelled = cancellation_token.is_cancelled();
+                let completed_at = chrono::Utc::now();
                 let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
-                let result = TaskExecutionResult {
-                    execution_id: uuid::Uuid::new_v4(),
+                
+                TaskExecutionResult {
+                    execution_id,
                     task_id: task_spec.id,
-                    success: true,
-                    output: "Task executed successfully (adaptive fallback)".to_string(),
-                    errors: vec![],
+                    success: !cancelled,
+                    output: if cancelled {
+                        "Task cancelled during execution".to_string()
+                    } else {
+                        "Task executed successfully (adaptive fallback)".to_string()
+                    },
+                    errors: if cancelled {
+                        vec!["Task was cancelled during execution".to_string()]
+                    } else {
+                        vec![]
+                    },
                     metadata: std::collections::HashMap::new(),
                     started_at,
                     completed_at,
                     duration_ms,
                     worker_id: Some(worker_id),
-                };
-                Ok(result)
+                }
+            }
+        };
+
+        // Remove task from active tasks upon completion
+        {
+            let mut active_tasks = self.active_tasks.write().await;
+            active_tasks.remove(&task_spec.id);
+        }
+
+        // Record execution completion in audit trail
+        if let Some(audit) = &self.audit_manager {
+            if let Err(e) = audit.record_task_execution_completion(&result, None).await {
+                warn!("Failed to record task execution completion in audit trail: {}", e);
             }
         }
+
+        Ok(result)
     }
 
     async fn execute_task_with_circuit_breaker(
@@ -1717,11 +2040,79 @@ impl TaskExecutor for AdaptiveTaskExecutor {
 
     async fn cancel_task_execution(
         &self,
-        _task_id: Uuid,
-        _worker_id: Uuid,
+        task_id: Uuid,
+        worker_id: Uuid,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // TODO: Implement task cancellation
-        Ok(())
+        info!("Cancelling task {} on worker {}", task_id, worker_id);
+
+        // Get cancellation token for this task
+        let cancellation_token = {
+            let active_tasks = self.active_tasks.read().await;
+            active_tasks.get(&task_id).cloned()
+        };
+
+        if let Some(token) = cancellation_token {
+            // Signal cancellation
+            token.cancel();
+            info!("Cancellation signal sent for task {}", task_id);
+
+            // Record cancellation in audit trail
+            if let Some(audit) = &self.audit_manager {
+                use crate::audit_trail::{AuditEvent, AuditCategory, AuditSeverity, AuditResult};
+                use chrono::Utc;
+                use std::collections::HashMap;
+
+                let event = AuditEvent {
+                    event_id: Uuid::new_v4(),
+                    timestamp: Utc::now(),
+                    correlation_id: None,
+                    parent_event_id: None,
+                    category: AuditCategory::Operation,
+                    severity: AuditSeverity::Info,
+                    actor: "orchestrator".to_string(),
+                    operation: "task_cancellation".to_string(),
+                    message: Some(format!("Task {} cancelled on worker {}", task_id, worker_id)),
+                    operation_id: Some(task_id.to_string()),
+                    target: Some(worker_id.to_string()),
+                    parameters: {
+                        let mut params = HashMap::new();
+                        params.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
+                        params.insert("worker_id".to_string(), serde_json::Value::String(worker_id.to_string()));
+                        params.insert("executor_type".to_string(), serde_json::Value::String("adaptive".to_string()));
+                        params
+                    },
+                    result: AuditResult::Success {
+                        data: Some(serde_json::json!({
+                            "cancelled": true,
+                            "task_id": task_id.to_string(),
+                        })),
+                    },
+                    performance: None,
+                    context: {
+                        let mut ctx = HashMap::new();
+                        ctx.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
+                        ctx.insert("worker_id".to_string(), serde_json::Value::String(worker_id.to_string()));
+                        ctx.insert("executor_type".to_string(), serde_json::Value::String("adaptive".to_string()));
+                        ctx
+                    },
+                    tags: vec!["orchestration".to_string(), "cancellation".to_string(), "task_management".to_string(), "adaptive_executor".to_string()],
+                };
+
+                tracing::info!(
+                    audit_event = ?event,
+                    category = ?event.category,
+                    operation = %event.operation,
+                    task_id = %task_id,
+                    worker_id = %worker_id,
+                    "Task cancellation recorded"
+                );
+            }
+
+            Ok(())
+        } else {
+            warn!("Task {} not found in active tasks - may have already completed", task_id);
+            Ok(())
+        }
     }
 }
 

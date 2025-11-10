@@ -1,0 +1,375 @@
+@use "../../styles/design-tokens.scss" as *;
+
+.notificationsPage {
+  width: 100%;
+  min-height: 100%;
+  padding: $spacing-8;
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.notificationsHeader {
+  margin-bottom: $spacing-8;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-4;
+}
+
+.headerContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-4;
+}
+
+.headerTitleSection {
+  display: flex;
+  align-items: center;
+  gap: $spacing-4;
+}
+
+.headerIcon {
+  width: 2rem;
+  height: 2rem;
+  color: $color-white;
+}
+
+.notificationsTitle {
+  font-size: $font-size-3xl;
+  font-weight: $font-weight-normal;
+  line-height: 1.2;
+  color: $color-white;
+  margin-bottom: $spacing-1;
+}
+
+.notificationsDescription {
+  color: oklch(0.5 0 0);
+  font-size: $font-size-sm;
+}
+
+.unreadBadge {
+  background-color: $color-blue-600;
+  color: $color-white;
+  padding: $spacing-1 $spacing-3;
+  border-radius: $border-radius-full;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.headerActions {
+  display: flex;
+  gap: $spacing-2;
+  flex-wrap: wrap;
+}
+
+.actionButton {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  padding: $spacing-2 $spacing-4;
+  background-color: oklch(0.269 0 0);
+  border: 1px solid oklch(0.269 0 0);
+  border-radius: $border-radius-md;
+  color: $color-white;
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: oklch(0.3 0 0);
+    border-color: oklch(0.3 0 0);
+  }
+}
+
+.actionButtonDanger {
+  background-color: oklch(0.396 0.141 25.723);
+  border-color: oklch(0.396 0.141 25.723);
+
+  &:hover {
+    background-color: oklch(0.45 0.141 25.723);
+    border-color: oklch(0.45 0.141 25.723);
+  }
+}
+
+.actionButtonIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.notificationsContent {
+  background-color: #1a1a1a;
+  border: 1px solid oklch(0.269 0 0);
+  border-radius: 0.875rem;
+  padding: $spacing-6;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-6;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-4;
+  align-items: center;
+  padding-bottom: $spacing-4;
+  border-bottom: 1px solid oklch(0.269 0 0);
+}
+
+.filterGroup {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+}
+
+.filterIcon {
+  width: 1rem;
+  height: 1rem;
+  color: oklch(0.5 0 0);
+}
+
+.filterLabel {
+  color: oklch(0.5 0 0);
+  font-size: $font-size-sm;
+}
+
+.filterButton {
+  padding: $spacing-1 $spacing-3;
+  background-color: transparent;
+  border: 1px solid oklch(0.269 0 0);
+  border-radius: $border-radius-md;
+  color: oklch(0.7 0 0);
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: oklch(0.269 0 0);
+    color: $color-white;
+  }
+}
+
+.filterButtonActive {
+  background-color: $color-blue-600;
+  border-color: $color-blue-600;
+  color: $color-white;
+
+  &:hover {
+    background-color: $color-blue-700;
+    border-color: $color-blue-700;
+  }
+}
+
+.filterButtonError {
+  &.filterButtonActive {
+    background-color: $color-red-600;
+    border-color: $color-red-600;
+  }
+}
+
+.filterButtonWarning {
+  &.filterButtonActive {
+    background-color: $color-yellow-600;
+    border-color: $color-yellow-600;
+  }
+}
+
+.filterButtonInfo {
+  &.filterButtonActive {
+    background-color: $color-blue-600;
+    border-color: $color-blue-600;
+  }
+}
+
+.filterButtonSuccess {
+  &.filterButtonActive {
+    background-color: $color-green-600;
+    border-color: $color-green-600;
+  }
+}
+
+.notificationsList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2;
+}
+
+.notificationItem {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-4;
+  padding: $spacing-4;
+  background-color: oklch(0.2 0 0);
+  border: 1px solid oklch(0.269 0 0);
+  border-radius: $border-radius-md;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: oklch(0.22 0 0);
+    border-color: oklch(0.3 0 0);
+  }
+}
+
+.notificationItemUnread {
+  border-left: 3px solid $color-blue-600;
+  background-color: oklch(0.22 0 0);
+}
+
+.notificationItemError {
+  border-left-color: $color-red-600;
+}
+
+.notificationItemWarning {
+  border-left-color: $color-yellow-600;
+}
+
+.notificationItemInfo {
+  border-left-color: $color-blue-600;
+}
+
+.notificationItemSuccess {
+  border-left-color: $color-green-600;
+}
+
+.notificationContent {
+  display: flex;
+  gap: $spacing-3;
+  flex: 1;
+  min-width: 0;
+}
+
+.notificationIconContainer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  padding-top: $spacing-1;
+}
+
+.notificationIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.notificationText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2;
+}
+
+.notificationMessage {
+  color: $color-white;
+  font-size: $font-size-sm;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.notificationMeta {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  flex-wrap: wrap;
+}
+
+.notificationTimestamp {
+  color: oklch(0.5 0 0);
+  font-size: $font-size-xs;
+}
+
+.notificationErrorCode {
+  color: oklch(0.6 0 0);
+  font-size: $font-size-xs;
+  font-family: monospace;
+  background-color: oklch(0.15 0 0);
+  padding: $spacing-1 $spacing-2;
+  border-radius: $border-radius-sm;
+}
+
+.notificationDetails {
+  margin-top: $spacing-2;
+}
+
+.notificationDetailsSummary {
+  color: oklch(0.6 0 0);
+  font-size: $font-size-xs;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    color: oklch(0.7 0 0);
+  }
+}
+
+.notificationDetailsPre {
+  margin-top: $spacing-2;
+  padding: $spacing-3;
+  background-color: oklch(0.15 0 0);
+  border-radius: $border-radius-sm;
+  color: oklch(0.7 0 0);
+  font-size: $font-size-xs;
+  font-family: monospace;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.notificationActions {
+  display: flex;
+  gap: $spacing-1;
+  flex-shrink: 0;
+}
+
+.notificationActionButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: $border-radius-sm;
+  color: oklch(0.5 0 0);
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: oklch(0.269 0 0);
+    color: $color-white;
+  }
+}
+
+.notificationActionIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-16;
+  text-align: center;
+}
+
+.emptyStateIcon {
+  width: 4rem;
+  height: 4rem;
+  color: oklch(0.4 0 0);
+  margin-bottom: $spacing-4;
+}
+
+.emptyStateTitle {
+  color: $color-white;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-medium;
+  margin-bottom: $spacing-2;
+}
+
+.emptyStateDescription {
+  color: oklch(0.5 0 0);
+  font-size: $font-size-sm;
+}
+

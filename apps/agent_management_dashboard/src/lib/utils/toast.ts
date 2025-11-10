@@ -8,7 +8,8 @@
  */
 
 import { toast as sonnerToast, type ExternalToast, type Action } from 'sonner';
-import { parseApiError } from '../errors';
+import { parseApiError, ErrorMessages } from '../errors';
+import { addNotification, type NotificationType } from '../stores/notificationStore';
 import type React from 'react';
 
 /**
@@ -24,6 +25,12 @@ interface ToastOptions {
  * Show success toast
  */
 export function toastSuccess(message: string, options?: ToastOptions) {
+  // Persist notification
+  addNotification({
+    type: 'success',
+    message,
+  });
+
   const toastOptions: ExternalToast = {
     duration: options?.duration ?? 4000,
     ...(options?.action && { action: options.action }),
@@ -36,19 +43,58 @@ export function toastSuccess(message: string, options?: ToastOptions) {
  * Show error toast with error parsing
  */
 export function toastError(error: unknown, options?: ToastOptions) {
-  const appError = parseApiError(error);
-  const toastOptions: ExternalToast = {
-    duration: options?.duration ?? 6000,
-    ...(options?.action && { action: options.action }),
-    ...(options?.cancel && { cancel: options.cancel }),
-  };
-  return sonnerToast.error(appError.getUserMessage(), toastOptions);
+  try {
+    const appError = parseApiError(error);
+    const message = appError.getUserMessage();
+    
+    // Ensure we always have a valid, non-empty string message
+    let displayMessage: string;
+    if (typeof message === 'string' && message.trim().length > 0) {
+      displayMessage = message.trim();
+    } else {
+      // Fallback to error code message or default
+      displayMessage = ErrorMessages[appError.code] || 'An unexpected error occurred';
+    }
+    
+    // Ensure displayMessage is a string (defensive check)
+    if (typeof displayMessage !== 'string' || displayMessage.length === 0) {
+      displayMessage = 'An unexpected error occurred';
+    }
+    
+    // Persist notification
+    addNotification({
+      type: 'error',
+      message: displayMessage,
+      errorCode: appError.code,
+      errorDetails: appError.details,
+    });
+
+    const toastOptions: ExternalToast = {
+      duration: options?.duration ?? 6000,
+      ...(options?.action && { action: options.action }),
+      ...(options?.cancel && { cancel: options.cancel }),
+    };
+    
+    return sonnerToast.error(displayMessage, toastOptions);
+  } catch (err) {
+    // If anything fails, show a generic error toast
+    console.error('Error in toastError:', err);
+    return sonnerToast.error('An unexpected error occurred', {
+      duration: 6000,
+    });
+  }
 }
 
 /**
  * Show warning toast
  */
 export function toastWarning(message: string, options?: ToastOptions) {
+  // Persist notification
+  addNotification({
+    type: 'warning',
+    message,
+  });
+
   const toastOptions: ExternalToast = {
     duration: options?.duration ?? 5000,
     ...(options?.action && { action: options.action }),
@@ -61,6 +107,12 @@ export function toastWarning(message: string, options?: ToastOptions) {
  * Show info toast
  */
 export function toastInfo(message: string, options?: ToastOptions) {
+  // Persist notification
+  addNotification({
+    type: 'info',
+    message,
+  });
+
   const toastOptions: ExternalToast = {
     duration: options?.duration ?? 4000,
     ...(options?.action && { action: options.action }),
