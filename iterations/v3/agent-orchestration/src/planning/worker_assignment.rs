@@ -13,6 +13,7 @@ use rand::prelude::*;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 use uuid::Uuid;
 
 use agent_research::performance_tracker::PerformanceTracker;
@@ -61,7 +62,7 @@ impl std::fmt::Debug for WorkerAssignmentStrategy {
 /// Assignment configuration
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct AssignmentConfig {
+pub struct AssignmentConfig {
     /// Maximum load factor before worker is considered busy
     pub max_load_factor: f64,
 
@@ -923,6 +924,17 @@ impl WorkerAssignmentStrategy {
         Ok(available_workers)
     }
 
+    /// Get a worker by ID from database
+    pub async fn get_worker_by_id(&self, worker_id: Uuid) -> Result<Option<Worker>> {
+        let all_workers = self.db_ops.get_workers().await?;
+        Ok(all_workers.into_iter().find(|w| w.id == worker_id))
+    }
+
+    /// Get performance tracker if available
+    pub fn get_performance_tracker(&self) -> Option<Arc<PerformanceTracker>> {
+        self.performance_tracker.clone()
+    }
+
     /// Evaluate worker candidates for milestone assignment
     async fn evaluate_candidates(
         &self,
@@ -931,7 +943,98 @@ impl WorkerAssignmentStrategy {
     ) -> Result<Vec<WorkerCandidate>> {
         let mut candidates = Vec::new();
 
-        for worker in workers {
+        // TODO: Implement arbiter decision metadata extraction and worker pool filtering
+        //       <Extract arbiter decision metadata from milestone and use it to filter/prioritize workers>
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Extract arbiter metadata from milestone (arbiter_task_type, arbiter_risk_tier, arbiter_worker_pool, arbiter_confidence)
+        // [ ] Add metadata field to Milestone struct in agent-agency-contracts if not present, or use alternative mechanism
+        // [ ] Implement proper worker pool matching using Worker.metadata field instead of string contains
+        // [ ] Apply arbiter confidence score to worker candidate scoring (boost matching workers)
+        // [ ] Handle missing arbiter metadata gracefully (fallback to current behavior)
+        // [ ] API/data structures defined & stable (Milestone metadata access pattern)
+        // [ ] Error handling + validation aligned with error taxonomy (handle missing/invalid metadata)
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        //     - Test metadata extraction with valid arbiter data
+        //     - Test metadata extraction with missing arbiter data
+        //     - Test worker pool filtering with matching workers
+        //     - Test worker pool filtering with no matching workers (fallback)
+        //     - Test confidence score application to candidate scoring
+        // [ ] Integration tests for external systems/contracts
+        //     - Test integration with unified_orchestrator arbiter decision flow
+        //     - Test worker assignment with arbiter recommendations end-to-end
+        // [ ] Documentation: public API + system behavior
+        //     - Document arbiter metadata extraction mechanism
+        //     - Document worker pool filtering algorithm
+        //     - Document confidence score application
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        //     - Ensure metadata extraction doesn't add significant latency
+        //     - Worker filtering should be O(n) where n is worker count
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        //     - Validate arbiter metadata values (prevent injection)
+        //     - Ensure worker pool matching doesn't expose sensitive worker data
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        //     - Log arbiter metadata extraction success/failure
+        //     - Log worker pool filtering results (counts, matches)
+        //     - Track arbiter recommendation impact on worker selection
+        // [ ] Configurability and feature flags defined if relevant
+        //     - Feature flag to enable/disable arbiter filtering
+        //     - Configurable confidence threshold for applying arbiter recommendations
+        // [ ] Failure-mode cards documented (degradation paths)
+        //     - Fallback to all workers if arbiter metadata missing
+        //     - Fallback to all workers if pool filtering results in empty set
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Arbiter decision metadata (task_type, risk_tier, worker_pool, confidence) extracted from milestone
+        // - Workers filtered by arbiter-recommended pool when metadata available
+        // - Worker pool matching uses Worker.metadata field, not string contains
+        // - Arbiter confidence score boosts matching worker candidate scores
+        // - System gracefully handles missing arbiter metadata (no panics, fallback behavior)
+        // - Performance: metadata extraction + filtering adds <5ms latency for 100 workers
+        // - Integration: worker assignment respects arbiter recommendations from unified_orchestrator
+        //
+        // DEPENDENCIES:
+        // - Milestone metadata field or alternative mechanism (Required) - See unified_orchestrator.rs:1494-1509
+        // - Worker.metadata field for pool membership (Required) - Already exists in Worker struct
+        // - ArbiterPipelineOptimizer decision flow (Required) - See system-federated-ml/src/arbiter_pipeline.rs
+        // - Worker candidate scoring mechanism (Required) - Already exists in evaluate_candidates
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No – System works without arbiter filtering, but optimization is degraded
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (impacts worker assignment optimization, not critical path)
+        // - Change Budget: ~150 LOC (metadata extraction + filtering logic + tests)
+        // - Reviewer Requirements: Planning domain expertise, understanding of arbiter integration
+        let arbiter_worker_pool: Option<String> = None;
+        let arbiter_confidence = 0.5;
+        let arbiter_task_type: Option<String> = None;
+        let arbiter_risk_tier: Option<String> = None;
+
+        // Filter workers by arbiter worker pool recommendation if available
+        let filtered_workers: Vec<&Worker> = if let Some(ref recommended_pool) = arbiter_worker_pool {
+            // Filter workers that match the recommended pool
+            // PLACEHOLDER: Simple string matching - replace with Worker.metadata pool membership check
+            workers.iter()
+                .filter(|w| {
+                    // PLACEHOLDER: Simple matching - replace with proper pool metadata check
+                    w.name.contains(recommended_pool) || recommended_pool.contains(&w.name)
+                })
+                .collect()
+        } else {
+            // No arbiter recommendation, use all workers
+            workers.iter().collect()
+        };
+
+        // If filtering resulted in no workers, fall back to all workers
+        let workers_to_evaluate = if filtered_workers.is_empty() {
+            workers.iter().collect::<Vec<_>>()
+        } else {
+            filtered_workers
+        };
+
+        for worker in workers_to_evaluate {
             let capability_score = self.calculate_capability_score(milestone, worker);
             let load_factor = self.calculate_load_factor(worker).await?;
             let performance_score = self.get_performance_score(worker.id).await;
@@ -941,10 +1044,24 @@ impl WorkerAssignmentStrategy {
                 continue;
             }
 
+            // Apply arbiter optimization boost if worker matches recommended pool
+            let arbiter_boost = if let Some(ref recommended_pool) = arbiter_worker_pool {
+                if worker.name.contains(recommended_pool) || recommended_pool.contains(&worker.name) {
+                    // Boost score based on arbiter confidence (0.0 to 0.2 boost)
+                    arbiter_confidence * 0.2
+                } else {
+                    0.0
+                }
+            } else {
+                0.0
+            };
+
             // Calculate overall assignment score
             // Higher capability score and performance score, lower load factor = better
-            let assignment_score =
+            // Include arbiter boost if worker matches recommended pool
+            let base_assignment_score =
                 (capability_score * 0.5) + (performance_score * 0.3) + ((1.0 - load_factor) * 0.2);
+            let assignment_score = base_assignment_score + arbiter_boost;
 
             candidates.push(WorkerCandidate {
                 worker_id: worker.id,
@@ -954,6 +1071,9 @@ impl WorkerAssignmentStrategy {
                 assignment_score,
             });
         }
+
+        // Sort by assignment score (highest first) to prioritize arbiter-recommended workers
+        candidates.sort_by(|a, b| b.assignment_score.partial_cmp(&a.assignment_score).unwrap_or(std::cmp::Ordering::Equal));
 
         Ok(candidates)
     }
@@ -1137,10 +1257,12 @@ impl WorkerAssignmentStrategy {
             // - CAWS Tier: 2 (performance tracking functionality)
             // - Change Budget: ~150 LOC
             // - Reviewer Requirements: Performance tracking and worker-model mapping expertise
+            // Use worker_id as model_id for now (TODO: implement proper worker-to-model mapping)
+            // This assumes 1:1 mapping between workers and models
             match tracker.get_historical_performance(worker_id).await {
                 Ok(historical_results) => {
                     if !historical_results.is_empty() {
-                        // Calculate average benchmark score
+                        // Calculate average benchmark score from historical results
                         let avg_benchmark_score = historical_results.iter()
                             .map(|r| r.score)
                             .sum::<f64>() / historical_results.len() as f64;

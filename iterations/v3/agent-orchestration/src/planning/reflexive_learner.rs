@@ -10,8 +10,9 @@ use std::sync::Arc;
 use std::collections::HashMap;
 use anyhow::Result;
 use uuid::Uuid;
-use tracing::{info, warn, debug};
+use tracing::{info, warn, debug, error};
 use chrono::Utc;
+use tokio::time::interval;
 
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
 use agent_agency_contracts::planning_io::Milestone;
@@ -100,6 +101,9 @@ pub struct ReflexiveLearner {
     
     /// Learning configuration
     config: LearningConfig,
+    
+    /// Continuous learning loop task handle
+    learning_loop_handle: Arc<tokio::sync::RwLock<Option<tokio::task::JoinHandle<()>>>>,
 }
 
 /// Configuration for reflexive learning
@@ -143,7 +147,105 @@ impl ReflexiveLearner {
             worker_assignment_strategy,
             outcome_history: Arc::new(tokio::sync::RwLock::new(Vec::new())),
             config,
+            learning_loop_handle: Arc::new(tokio::sync::RwLock::new(None)),
         }
+    }
+
+    /// Start continuous learning loop that periodically analyzes accumulated outcomes
+    pub async fn start_continuous_learning(self: &Arc<Self>, interval_secs: u64) -> Result<()> {
+        if !self.config.enable_auto_adjustments {
+            debug!("ReflexiveLearner: auto-adjustments disabled, continuous learning not started");
+            return Ok(());
+        }
+
+        let learner = self.clone();
+        let interval_duration = std::time::Duration::from_secs(interval_secs);
+
+        let handle = tokio::spawn(async move {
+            let mut interval_timer = interval(interval_duration);
+            
+            loop {
+                interval_timer.tick().await;
+                
+                if let Err(e) = Self::process_accumulated_outcomes(&learner).await {
+                    warn!("Error in continuous learning loop: {}", e);
+                }
+            }
+        });
+
+        *self.learning_loop_handle.write().await = Some(handle);
+        info!("ReflexiveLearner: continuous learning loop started (interval: {}s)", interval_secs);
+        
+        Ok(())
+    }
+
+    /// Stop continuous learning loop
+    pub async fn stop_continuous_learning(&self) {
+        let mut handle_guard = self.learning_loop_handle.write().await;
+        if let Some(handle) = handle_guard.take() {
+            handle.abort();
+            info!("ReflexiveLearner: continuous learning loop stopped");
+        }
+    }
+
+    /// Process accumulated outcomes and generate routing adjustments
+    async fn process_accumulated_outcomes(learner: &Arc<ReflexiveLearner>) -> Result<()> {
+        let history = learner.outcome_history.read().await;
+        
+        // Need minimum outcomes before making adjustments
+        if history.len() < learner.config.min_outcomes_for_adjustment {
+            debug!(
+                "ReflexiveLearner: insufficient outcomes for continuous adjustment: {}/{}",
+                history.len(),
+                learner.config.min_outcomes_for_adjustment
+            );
+            return Ok(());
+        }
+
+        // Group outcomes by worker ID for analysis
+        let mut worker_outcomes: HashMap<Uuid, Vec<&LearningOutcome>> = HashMap::new();
+        for outcome in history.iter() {
+            worker_outcomes
+                .entry(outcome.worker_id)
+                .or_insert_with(Vec::new)
+                .push(outcome);
+        }
+
+        let mut all_adjustments = Vec::new();
+
+        // Analyze each worker's outcomes
+        for (worker_id, outcomes) in worker_outcomes.iter() {
+            if outcomes.len() >= learner.config.min_outcomes_for_adjustment {
+                // Create a synthetic outcome for analysis (using the most recent one)
+                if let Some(latest_outcome) = outcomes.last() {
+                    match learner.calculate_worker_adjustment(outcomes, latest_outcome) {
+                        Ok(adjustment) => {
+                            all_adjustments.push(adjustment);
+                        }
+                        Err(e) => {
+                            warn!("Failed to calculate adjustment for worker {}: {}", worker_id, e);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Apply all adjustments
+        for adjustment in &all_adjustments {
+            if let Err(e) = learner.apply_adjustment(adjustment).await {
+                warn!("Failed to apply routing adjustment: {}", e);
+            }
+        }
+
+        if !all_adjustments.is_empty() {
+            info!(
+                "ReflexiveLearner: processed {} accumulated outcomes, applied {} routing adjustments",
+                history.len(),
+                all_adjustments.len()
+            );
+        }
+
+        Ok(())
     }
 
     /// Process execution outcome and update learning
@@ -666,5 +768,15 @@ pub struct LearningStatistics {
     pub successful_outcomes: usize,
     pub success_rate: f64,
     pub average_quality: f64,
+}
+
+impl Drop for ReflexiveLearner {
+    fn drop(&mut self) {
+        // Stop continuous learning loop on drop
+        let rt = tokio::runtime::Runtime::new().ok();
+        if let Some(rt) = rt {
+            rt.block_on(self.stop_continuous_learning());
+        }
+    }
 }
 

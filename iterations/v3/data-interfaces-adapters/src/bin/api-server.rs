@@ -392,6 +392,58 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("🏥 Health check: http://{}/health", addr);
     info!("📊 API endpoints available at http://{}/api/v1", addr);
 
+    // Initialize and start ContinuousBenchmarker if research feature is enabled
+    #[cfg(feature = "research")]
+    {
+        use agent_research::benchmarking::{ContinuousBenchmarker, BenchmarkScheduler, DatasetManager};
+        use agent_research::benchmark_runner::BenchmarkRunner;
+        use agent_research::performance_tracker::PerformanceTracker;
+        use agent_research::scoring_system::MultiDimensionalScoringSystem;
+        use std::sync::Arc;
+
+        info!("🔬 Initializing ContinuousBenchmarker...");
+        
+        // Create all required dependencies
+        let scheduler = Arc::new(BenchmarkScheduler::new());
+        let dataset_manager = Arc::new(DatasetManager::new());
+        let benchmark_runner = Arc::new(BenchmarkRunner::new());
+        let performance_tracker = Arc::new(PerformanceTracker::new());
+        let scoring_system = Arc::new(MultiDimensionalScoringSystem::new());
+
+        // Create ContinuousBenchmarker
+        let continuous_benchmarker = Arc::new(ContinuousBenchmarker::new(
+            scheduler.clone(),
+            dataset_manager.clone(),
+            benchmark_runner.clone(),
+            performance_tracker.clone(),
+            scoring_system.clone(),
+        ));
+
+        // Start continuous benchmarking
+        match continuous_benchmarker.start().await {
+            Ok(_) => {
+                info!("✅ ContinuousBenchmarker started successfully");
+                
+                // Schedule default benchmarks (daily micro, weekly macro)
+                // Get active models from PerformanceTracker (empty initially, will be populated as models are registered)
+                let active_models = performance_tracker.get_active_models().await.unwrap_or_default();
+                if !active_models.is_empty() {
+                    if let Err(e) = scheduler.schedule_default_benchmarks(active_models).await {
+                        warn!("⚠️  Failed to schedule default benchmarks: {}", e);
+                    } else {
+                        info!("✅ Default benchmarks scheduled (daily micro, weekly macro)");
+                    }
+                } else {
+                    info!("📝 No active models found - benchmarks will be scheduled when models are registered");
+                }
+            }
+            Err(e) => {
+                warn!("⚠️  Failed to start ContinuousBenchmarker: {}", e);
+                warn!("   Continuous benchmarking will not be available");
+            }
+        }
+    }
+
     // Serve requests
     axum::serve(listener, app).await?;
 

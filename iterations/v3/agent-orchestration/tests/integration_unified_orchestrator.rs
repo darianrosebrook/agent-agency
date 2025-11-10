@@ -315,6 +315,10 @@ async fn create_test_orchestrator() -> anyhow::Result<UnifiedOrchestrator> {
         None, // session_manager - optional, not provided in test
         None, // state_persistence - optional, not provided in test
         None, // federated_learning - optional, not provided in test
+        #[cfg(feature = "runtime-optimization")]
+        None, // arbiter_optimizer - optional, not provided in test
+        #[cfg(not(feature = "runtime-optimization"))]
+        None,
     ))
     */
 }

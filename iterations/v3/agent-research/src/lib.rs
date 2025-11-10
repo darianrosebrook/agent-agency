@@ -94,7 +94,7 @@ impl ClaimExtractionAndVerificationProcessor {
             disambiguation_stage: disambiguation::minimal_stage(),
             qualification_stage: qualification::QualificationStage::new(),
             decomposition_stage: decomposition::DecompositionStage::new(),
-            verification_stage: None, // Temporarily disabled
+            verification_stage: Some(verification::MultiModalVerificationEngine::new()), // Re-enabled with CAWS-compliant validation
         }
     }
 

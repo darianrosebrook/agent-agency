@@ -260,7 +260,31 @@ impl UnifiedOrchestratorFactory {
         // Create worker lifecycle manager
         let worker_lifecycle_manager = Arc::new(WorkerLifecycleManager::new(council_integration.clone()));
 
-        // Create worker assignment strategy
+        // Create PerformanceTracker if research feature is enabled
+        #[cfg(feature = "research")]
+        let performance_tracker = {
+            use agent_research::performance_tracker::PerformanceTracker;
+            Some(Arc::new(PerformanceTracker::new()))
+        };
+        
+        #[cfg(not(feature = "research"))]
+        let performance_tracker = None;
+
+        // Create worker assignment strategy with PerformanceTracker if available
+        #[cfg(feature = "research")]
+        let worker_assignment_strategy = {
+            if let Some(ref tracker) = performance_tracker {
+                Arc::new(WorkerAssignmentStrategy::with_performance_tracker(
+                    db_ops.clone(),
+                    crate::planning::worker_assignment::AssignmentConfig::default(),
+                    tracker.clone(),
+                ))
+            } else {
+                Arc::new(WorkerAssignmentStrategy::new(db_ops.clone()))
+            }
+        };
+        
+        #[cfg(not(feature = "research"))]
         let worker_assignment_strategy = Arc::new(WorkerAssignmentStrategy::new(db_ops.clone()));
 
         // Create reflexive learner
@@ -268,6 +292,10 @@ impl UnifiedOrchestratorFactory {
             worker_assignment_strategy.clone(),
             LearningConfig::default(),
         ));
+        
+        // Clone for continuous learning loop (needed outside the cfg block)
+        #[cfg(all(feature = "research", feature = "memory"))]
+        let reflexive_learner_for_loop = Arc::clone(&reflexive_learner);
 
         // Create stub worker pool for PlanExecutor
         struct StubWorkerPool;
@@ -341,32 +369,62 @@ impl UnifiedOrchestratorFactory {
 
         // Create UnifiedOrchestrator
         #[cfg(all(feature = "research", feature = "memory"))]
-        let orchestrator = Arc::new(UnifiedOrchestrator::new(
-            config,
-            planning_components.plan_generator,
-            plan_executor,
-            planning_components.parallel_coordinator,
-            council,
-            worker_bridge,
-            None, // refinement_coordinator - optional
-            worktree_manager,
-            Some(adjudication_cycle),
-            worker_lifecycle_manager,
-            Some(worker_assignment_strategy),
-            Some(reflexive_learner),
-            #[cfg(feature = "memory")]
-            Some(memory_system),
-            #[cfg(not(feature = "memory"))]
-            None,
-            None, // turn_level_tracker - optional
-            None, // session_manager - optional
-            Some(state_persistence), // Enable state persistence for pause/resume/cancel
-            None, // federated_learning - optional
-        ));
+        let orchestrator = {
+            // Create ArbiterPipelineOptimizer if runtime-optimization feature is enabled
+            #[cfg(feature = "runtime-optimization")]
+            let arbiter_optimizer = {
+                use system_federated_ml::{ArbiterPipelineOptimizer, DecisionPipelineConfig};
+                match ArbiterPipelineOptimizer::new(DecisionPipelineConfig::default()).await {
+                    Ok(optimizer) => {
+                        info!("ArbiterPipelineOptimizer created successfully");
+                        Some(Arc::new(optimizer))
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to create ArbiterPipelineOptimizer: {}", e);
+                        None
+                    }
+                }
+            };
+            
+            Arc::new(UnifiedOrchestrator::new(
+                config,
+                planning_components.plan_generator,
+                plan_executor,
+                planning_components.parallel_coordinator,
+                council,
+                worker_bridge,
+                None, // refinement_coordinator - optional
+                worktree_manager,
+                Some(adjudication_cycle),
+                worker_lifecycle_manager,
+                Some(worker_assignment_strategy),
+                Some(reflexive_learner),
+                #[cfg(feature = "memory")]
+                Some(memory_system),
+                #[cfg(not(feature = "memory"))]
+                None,
+                None, // turn_level_tracker - optional
+                None, // session_manager - optional
+                Some(state_persistence), // Enable state persistence for pause/resume/cancel
+                None, // federated_learning - optional
+                #[cfg(feature = "runtime-optimization")]
+                arbiter_optimizer,
+            ))
+        };
 
         #[cfg(all(feature = "research", feature = "memory"))]
         {
             info!("UnifiedOrchestrator created successfully");
+            
+            // Start continuous learning loop for ReflexiveLearner
+            // Start continuous learning loop with 60 second interval
+            // This will periodically analyze accumulated outcomes and update routing policies
+            if let Err(e) = reflexive_learner_for_loop.start_continuous_learning(60).await {
+                warn!("Failed to start ReflexiveLearner continuous learning loop: {}", e);
+            } else {
+                info!("ReflexiveLearner continuous learning loop started");
+            }
+            
             Ok(orchestrator)
         }
     }

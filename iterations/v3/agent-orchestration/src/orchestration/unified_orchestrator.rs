@@ -56,6 +56,9 @@ use crate::orchestration::task_state_persistence::{
 
 use crate::learning::federated_learning::FederatedLearningEngine;
 
+#[cfg(feature = "runtime-optimization")]
+use system_federated_ml::{ArbiterPipelineOptimizer, DecisionPipelineConfig};
+
 /// Unified orchestrator configuration
 #[derive(Debug, Clone)]
 pub struct UnifiedOrchestratorConfig {
@@ -163,6 +166,10 @@ pub struct UnifiedOrchestrator {
     
     /// Federated learning engine for cross-tenant learning
     federated_learning: Option<Arc<FederatedLearningEngine>>,
+    
+    /// Arbiter pipeline optimizer for sub-50ms decision making
+    #[cfg(feature = "runtime-optimization")]
+    arbiter_optimizer: Option<Arc<ArbiterPipelineOptimizer>>,
 }
 
 impl UnifiedOrchestrator {
@@ -186,6 +193,8 @@ impl UnifiedOrchestrator {
         session_manager: Option<Arc<SessionManager>>,
         state_persistence: Option<Arc<dyn TaskStatePersistence>>,
         federated_learning: Option<Arc<FederatedLearningEngine>>,
+        #[cfg(feature = "runtime-optimization")]
+        arbiter_optimizer: Option<Arc<ArbiterPipelineOptimizer>>,
     ) -> Self {
         Self {
             config,
@@ -211,6 +220,8 @@ impl UnifiedOrchestrator {
             session_manager,
             state_persistence,
             federated_learning,
+            #[cfg(feature = "runtime-optimization")]
+            arbiter_optimizer,
         }
     }
 
@@ -1460,6 +1471,50 @@ impl UnifiedOrchestrator {
         // Use ParallelCoordinator to execute plan in parallel
         // Create a mutable copy for ParallelCoordinator
         let mut plan_for_execution = execution_plan.clone();
+        
+        // Use ArbiterPipelineOptimizer to make optimized decisions for each milestone
+        #[cfg(feature = "runtime-optimization")]
+        if let Some(ref optimizer) = self.arbiter_optimizer {
+            info!("Using ArbiterPipelineOptimizer for milestone decision optimization");
+            for milestone in &mut plan_for_execution.contract_plan.milestones {
+                // Create decision input from milestone
+                let task_description = format!("{}: {}", milestone.id, milestone.description);
+                let context = format!("milestone_id={}, dependencies={:?}", milestone.id, milestone.dependencies);
+                
+                // Make optimized decision
+                match optimizer.make_decision(&task_description, &context).await {
+                    Ok(decision) => {
+                        info!(
+                            "Arbiter decision for milestone {}: task_type={}, risk_tier={}, worker_pool={}, confidence={:.2}",
+                            milestone.id, decision.task_type, decision.risk_tier, decision.worker_pool, decision.confidence
+                        );
+                        
+                        // Store decision metadata in milestone for later use in worker assignment
+                        // The decision result can inform worker selection via worker_assignment_strategy
+                        milestone.metadata.insert(
+                            "arbiter_task_type".to_string(),
+                            serde_json::Value::String(decision.task_type),
+                        );
+                        milestone.metadata.insert(
+                            "arbiter_risk_tier".to_string(),
+                            serde_json::Value::String(decision.risk_tier),
+                        );
+                        milestone.metadata.insert(
+                            "arbiter_worker_pool".to_string(),
+                            serde_json::Value::String(decision.worker_pool),
+                        );
+                        milestone.metadata.insert(
+                            "arbiter_confidence".to_string(),
+                            serde_json::Value::Number(serde_json::Number::from_f64(decision.confidence).unwrap_or(serde_json::Number::from(0))),
+                        );
+                    }
+                    Err(e) => {
+                        warn!("ArbiterPipelineOptimizer decision failed for milestone {}: {}", milestone.id, e);
+                        // Continue execution without optimization
+                    }
+                }
+            }
+        }
         
         // Ensure parallel_batches is populated if empty (plan generator may not have populated it)
         if plan_for_execution.execution_context.parallel_batches.is_empty() && !plan_for_execution.contract_plan.milestones.is_empty() {

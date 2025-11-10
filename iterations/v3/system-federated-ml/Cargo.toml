@@ -65,9 +65,10 @@ tokio-util = { version = "0.7", features = ["time"] }
 lru = "0.12"
 
 # Local crate dependencies
-agent-orchestration = { path = "../agent-orchestration" }
+# agent-orchestration removed to break circular dependency - arbiter_pipeline doesn't need it
 agent-research = { path = "../agent-research" }
 system-observability = { path = "../system-observability" }
+system-configuration = { path = "../system-configuration" }
 agent-mcp = { path = "../agent-mcp" }
 agent-workers = { path = "../agent-workers" }
 system-acceleration = { path = "../system-acceleration" }

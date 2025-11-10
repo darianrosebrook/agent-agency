@@ -17,39 +17,44 @@ use std::collections::HashMap;
 use chrono::Utc;
 
 use crate::planning::worker_assignment::{WorkerAssignmentStrategy, WorkerPerformance};
-// PLACEHOLDER: agent_model_management module not available in v3
-// Will be re-added in v4 when model management is implemented
-// use agent_model_management::deployment::DeploymentOrchestrator;
-// use agent_model_management::types::{HotSwapStrategy, HotSwapResult};
 
-// Placeholder types for v3 compatibility
+#[cfg(feature = "model-management")]
+use agent_model_management::deployment::DeploymentOrchestrator;
+#[cfg(feature = "model-management")]
+use agent_model_management::types::{HotSwapStrategy, HotSwapResult};
+
+#[cfg(not(feature = "model-management"))]
+// Placeholder types when model-management feature is disabled
 #[derive(Debug, Clone)]
 pub enum HotSwapStrategy {
     Immediate,
     Gradual { steps: u32, interval_secs: u64 },
 }
 
+#[cfg(not(feature = "model-management"))]
 #[derive(Debug)]
 pub struct HotSwapResult {
     pub success: bool,
     pub message: String,
 }
 
+#[cfg(not(feature = "model-management"))]
 pub struct DeploymentOrchestrator;
 
+#[cfg(not(feature = "model-management"))]
 impl DeploymentOrchestrator {
     /// PLACEHOLDER: Perform hot-swap of model version for a worker
-    /// This is a stub implementation for v3. Real implementation will be in v4.
+    /// This is a stub implementation when model-management feature is disabled.
     pub async fn perform_hot_swap(
         &self,
         _model_id: &str,
         _new_version: &str,
         _strategy: HotSwapStrategy,
     ) -> Result<HotSwapResult> {
-        warn!("DeploymentOrchestrator::perform_hot_swap called but not implemented in v3");
+        warn!("DeploymentOrchestrator::perform_hot_swap called but model-management feature is disabled");
         Ok(HotSwapResult {
             success: false,
-            message: "Hot-swap not implemented in v3. Will be available in v4.".to_string(),
+            message: "Hot-swap not available - model-management feature disabled.".to_string(),
         })
     }
 }
@@ -222,48 +227,71 @@ impl ModelLifecycleManager {
                 // Trigger hot-swap
                 info!("Worker {}: triggering hot-swap due to performance degradation", worker_id);
                 
-                // Get worker model information
-                //
-                // TODO: Implement comprehensive worker model information retrieval
-                //       Currently uses placeholder approach; should implement comprehensive retrieval that accesses worker database to get actual model_id and queries for optimal new version for hot-swap operations.
-                //
-                // COMPLETION CHECKLIST:
-                // [ ] Primary functionality implemented
-                // [ ] API/data structures defined & stable
-                // [ ] Error handling + validation aligned with error taxonomy
-                // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-                // [ ] Integration tests for external systems/contracts
-                // [ ] Documentation: public API + system behavior
-                // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-                // [ ] Security posture reviewed (inputs, authz, sandboxing)
-                // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-                // [ ] Configurability and feature flags defined if relevant
-                // [ ] Failure-mode cards documented (degradation paths)
-                //
-                // ACCEPTANCE CRITERIA:
-                // - Worker database is accessed to get model_id
-                // - Model ID retrieval is accurate
-                // - Optimal new version is queried for hot-swap
-                // - Version selection considers performance and compatibility
-                //
-                // DEPENDENCIES:
-                // - Worker database access (Required)
-                // - Model version query system (Required)
-                // - Version selection logic (Required)
-                //
-                // ESTIMATED EFFORT: 8-12 hours (medium confidence)
-                // PRIORITY: Medium
-                // BLOCKING: No
-                //
-                // GOVERNANCE:
-                // - CAWS Tier: 2 (model lifecycle management functionality)
-                // - Change Budget: ~200 LOC
-                // - Reviewer Requirements: Database access and model versioning expertise
-                let model_id = format!("worker-{}", worker_id);
-                let new_version = "latest"; // In real implementation, would query for better version
+                // Get worker model information from database
+                let worker = match worker_assignment.get_worker_by_id(*worker_id).await {
+                    Ok(Some(w)) => w,
+                    Ok(None) => {
+                        warn!("Worker {}: not found in database, skipping hot-swap", worker_id);
+                        continue;
+                    }
+                    Err(e) => {
+                        error!("Worker {}: failed to retrieve worker from database: {}", worker_id, e);
+                        continue;
+                    }
+                };
+
+                // Use worker's model_name as the model_id for hot-swap
+                let current_model_id = worker.model_name.clone();
+                
+                // Query for optimal new version/model using PerformanceTracker if available
+                let (model_id, new_version) = if let Some(tracker) = worker_assignment.get_performance_tracker() {
+                    // Get all model performance data sorted by performance score (highest first)
+                    match tracker.get_model_performance().await {
+                        Ok(performances) => {
+                            // Find a better performing model with similar capabilities
+                            // For now, use the top-performing model if it's better than current
+                            // In the future, this could match by capabilities or model family
+                            if let Some(better_model) = performances.first() {
+                                if better_model.performance_score > performance.performance_score {
+                                    debug!(
+                                        "Worker {}: found better performing model {} (score: {:.2} vs {:.2}), swapping to new model",
+                                        worker_id,
+                                        better_model.model_name,
+                                        better_model.performance_score,
+                                        performance.performance_score
+                                    );
+                                    // Swap to the better model entirely (use its name as model_id, "latest" as version)
+                                    (better_model.model_name.clone(), "latest".to_string())
+                                } else {
+                                    // No better model found, use "latest" version of current model
+                                    debug!("Worker {}: no better model found, upgrading to latest version", worker_id);
+                                    (current_model_id, "latest".to_string())
+                                }
+                            } else {
+                                // No performance data available, use "latest" version of current model
+                                debug!("Worker {}: no performance data available, using latest version", worker_id);
+                                (current_model_id, "latest".to_string())
+                            }
+                        }
+                        Err(e) => {
+                            warn!("Worker {}: failed to query performance tracker: {}, using 'latest'", worker_id, e);
+                            (current_model_id, "latest".to_string())
+                        }
+                    }
+                } else {
+                    // PerformanceTracker not available, use "latest" version of current model
+                    (current_model_id, "latest".to_string())
+                };
+                
+                debug!(
+                    "Worker {}: hot-swapping model {} to version {}",
+                    worker_id,
+                    model_id,
+                    new_version
+                );
 
                 match deployment_orchestrator
-                    .perform_hot_swap(&model_id, new_version, config.swap_strategy.clone())
+                    .perform_hot_swap(&model_id, &new_version, config.swap_strategy.clone())
                     .await
                 {
                     Ok(result) => {

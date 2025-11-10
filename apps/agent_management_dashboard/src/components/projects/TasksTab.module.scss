@@ -218,3 +218,32 @@
   flex: 1;
 }
 
+.basis0 {
+  flex-basis: 0;
+}
+
+.grow {
+  flex-grow: 1;
+}
+
+.minHPx {
+  min-height: 1px;
+}
+
+.minWPx {
+  min-width: 1px;
+}
+
+.sizeFull {
+  width: 100%;
+  height: 100%;
+}
+
+.bgDarkPrimary {
+  background-color: $color-dark-bg-primary;
+}
+
+.bgDarkSecondary {
+  background-color: $color-dark-bg-secondary;
+}
+

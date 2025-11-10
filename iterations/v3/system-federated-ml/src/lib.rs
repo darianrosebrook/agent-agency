@@ -12,6 +12,7 @@
 //! 5. **Conflict Resolution Tools**: Debate orchestration, consensus building, evidence synthesis
 //! 6. **Workflow Tools**: Task decomposition, progress tracking, resource allocation
 
+pub mod arbiter_pipeline;
 pub mod claim_extraction;
 pub mod conflict_resolution_tools;
 pub mod evidence_collection_tools;
@@ -29,6 +30,7 @@ pub mod tool_discovery;
 pub mod tool_execution;
 pub mod tool_registry;
 
+pub use arbiter_pipeline::{ArbiterPipelineOptimizer, DecisionPipelineConfig, DecisionInput, DecisionResult};
 pub use conflict_resolution_tools::{ConflictResolutionTool, DebateOrchestrator, ConsensusBuilder};
 pub use evidence_collection_tools::{EvidenceCollectionTool}; // FactVerificationTool, SourceValidationTool - not implemented yet
 pub use executor::{ChainExecutor, ExecutionResult};

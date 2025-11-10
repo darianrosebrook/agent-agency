@@ -90,7 +90,7 @@ system-resilience = { path = "../system-resilience" }
 agent-research = { path = "../agent-research", optional = true }
 agent-model-management = { path = "../agent-model-management", optional = true }
 # agent-constitutional-council = { path = "../agent-constitutional-council", optional = true }  # Circular dependency - using local type definitions instead
-# system-federated-ml = { path = "../system-federated-ml", optional = true }  # Circular dependency - using local type definitions instead
+system-federated-ml = { path = "../system-federated-ml", optional = true }
 # agent-workers = { path = "../agent-workers", optional = true }  # Circular dependency - using local type definitions instead
 agent-data-processing = { path = "../agent-data-processing", optional = true }  
 development-tools = { path = "../development-tools", optional = true }
@@ -111,6 +111,7 @@ evaluation = []  # Gate evaluation framework behind feature flag
 council = []  # Feature flag for council functionality
 tool-chain = []  # Feature flag for tool-chain functionality
 mcp = []  # Feature flag for MCP functionality
+runtime-optimization = ["dep:system-federated-ml"]  # Feature flag for runtime optimization (ArbiterPipelineOptimizer)
 
 [dev-dependencies]
 insta = { version = "1.38", features = ["yaml"] }

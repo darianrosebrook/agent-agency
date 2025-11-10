@@ -1425,10 +1425,13 @@ function Text10() {
 function Container14() {
   return (
     <div
-      className="h-[19.993px] relative shrink-0 w-[58.53px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "19.993px", width: "58.53px" }}
       data-name="Container"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex gap-[5.994px] h-[19.993px] items-center relative w-[58.53px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.itemsCenter} ${styles.relative}`}
+        style={{ gap: "5.994px", height: "19.993px", width: "58.53px" }}
+      >
         <Icon11 />
         <Text10 />
       </div>
@@ -1571,7 +1574,8 @@ function Container16() {
 function Container17() {
   return (
     <div
-      className="absolute content-stretch flex gap-[15.994px] h-[19.993px] items-center left-[16.9px] top-[168.86px] w-[605.604px]"
+      className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.itemsCenter}`}
+      style={{ gap: "15.994px", height: "19.993px", left: "16.9px", top: "168.86px", width: "605.604px" }}
       data-name="Container"
     >
       <Container14 />
@@ -1605,10 +1609,13 @@ function KanbanCard1() {
 function Text13() {
   return (
     <div
-      className="h-[19.993px] relative shrink-0 w-[25.171px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "19.993px", width: "25.171px" }}
       data-name="Text"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[19.993px] relative w-[25.171px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.relative}`}
+        style={{ height: "19.993px", width: "25.171px" }}
+      >
         <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20} ${styles.left0} ${styles.notItalic} ${styles.text14} ${styles.textNowrap} ${styles.trackingNeg1504} ${styles.whitespacePre}`}
           style={{ color: "#cacaca", top: "0.36px" }}
         >
@@ -1622,7 +1629,8 @@ function Text13() {
 function StatusTag6() {
   return (
     <div
-      className="absolute bg-neutral-800 box-border content-stretch flex h-[31.982px] items-center left-0 pl-[11.996px] pr-0 py-0 rounded-[1.5252e+07px] top-0 w-[49.162px]"
+      className={`${styles.absolute} ${styles.bgNeutral800} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.itemsCenter} ${styles.left0} ${styles.pl0} ${styles.pr0} ${styles.py0}`}
+      style={{ height: "31.982px", paddingLeft: "11.996px", borderRadius: "15252000px", top: 0, width: "49.162px" }}
       data-name="StatusTag"
     >
       <Text13 />
@@ -1633,10 +1641,13 @@ function StatusTag6() {
 function Text14() {
   return (
     <div
-      className="h-[19.993px] relative shrink-0 w-[60.739px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "19.993px", width: "60.739px" }}
       data-name="Text"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[19.993px] relative w-[60.739px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.relative}`}
+        style={{ height: "19.993px", width: "60.739px" }}
+      >
         <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20} ${styles.left0} ${styles.notItalic} ${styles.text14} ${styles.textNowrap} ${styles.trackingNeg1504} ${styles.whitespacePre}`}
           style={{ color: "#cacaca", top: "0.36px" }}
         >
@@ -1650,7 +1661,8 @@ function Text14() {
 function StatusTag7() {
   return (
     <div
-      className="absolute bg-neutral-800 box-border content-stretch flex h-[31.982px] items-center left-[57.16px] pl-[11.996px] pr-0 py-0 rounded-[1.5252e+07px] top-0 w-[84.73px]"
+      className={`${styles.absolute} ${styles.bgNeutral800} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.itemsCenter} ${styles.pl0} ${styles.pr0} ${styles.py0}`}
+      style={{ height: "31.982px", left: "57.16px", paddingLeft: "11.996px", borderRadius: "15252000px", top: 0, width: "84.73px" }}
       data-name="StatusTag"
     >
       <Text14 />
@@ -1661,10 +1673,13 @@ function StatusTag7() {
 function Text15() {
   return (
     <div
-      className="h-[19.993px] relative shrink-0 w-[67.813px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "19.993px", width: "67.813px" }}
       data-name="Text"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[19.993px] relative w-[67.813px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.relative}`}
+        style={{ height: "19.993px", width: "67.813px" }}
+      >
         <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20} ${styles.left0} ${styles.notItalic} ${styles.text14} ${styles.textNowrap} ${styles.trackingNeg1504} ${styles.whitespacePre}`}
           style={{ color: "#cacaca", top: "0.36px" }}
         >
@@ -1678,7 +1693,8 @@ function Text15() {
 function StatusTag8() {
   return (
     <div
-      className="absolute bg-neutral-800 box-border content-stretch flex h-[31.982px] items-center left-[149.89px] pl-[11.996px] pr-0 py-0 rounded-[1.5252e+07px] top-0 w-[91.804px]"
+      className={`${styles.absolute} ${styles.bgNeutral800} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.itemsCenter} ${styles.pl0} ${styles.pr0} ${styles.py0}`}
+      style={{ height: "31.982px", left: "149.89px", paddingLeft: "11.996px", borderRadius: "15252000px", top: 0, width: "91.804px" }}
       data-name="StatusTag"
     >
       <Text15 />
@@ -1689,7 +1705,8 @@ function StatusTag8() {
 function Container18() {
   return (
     <div
-      className="absolute h-[31.982px] left-0 top-0 w-[241.69px]"
+      className={`${styles.absolute}`}
+      style={{ height: "31.982px", left: 0, top: 0, width: "241.69px" }}
       data-name="Container"
     >
       <StatusTag6 />
@@ -1753,7 +1770,8 @@ function Button6() {
 function Container19() {
   return (
     <div
-      className="absolute h-[31.982px] left-[16.9px] top-[16.9px] w-[605.604px]"
+      className={`${styles.absolute}`}
+        style={{ height: "31.982px", left: "16.9px", top: "16.9px", width: "605.604px" }}
       data-name="Container"
     >
       <Container18 />
@@ -1765,10 +1783,13 @@ function Container19() {
 function Heading3() {
   return (
     <div
-      className="absolute h-[23.999px] left-[16.9px] top-[60.88px] w-[605.604px]"
+      className={`${styles.absolute}`}
+        style={{ height: "23.999px", left: "16.9px", top: "60.88px", width: "605.604px" }}
       data-name="Heading 4"
     >
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[16px] text-nowrap text-white top-[-0.73px] tracking-[-0.3125px] whitespace-pre">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading24} ${styles.left0} ${styles.notItalic} ${styles.text16} ${styles.textNowrap} ${styles.textWhite} ${styles.trackingNeg3125} ${styles.whitespacePre}`}
+        style={{ top: "-0.73px" }}
+      >
         Add loading skeletons to task view
       </p>
     </div>
@@ -1778,10 +1799,13 @@ function Heading3() {
 function Paragraph2() {
   return (
     <div
-      className="absolute h-[19.993px] left-[16.9px] overflow-clip top-[92.88px] w-[605.604px]"
+      className={`${styles.absolute} ${styles.overflowClip}`}
+        style={{ height: "19.993px", left: "16.9px", top: "92.88px", width: "605.604px" }}
       data-name="Paragraph"
     >
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#cacaca] text-[14px] text-nowrap top-[0.36px] tracking-[-0.1504px] whitespace-pre">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20} ${styles.left0} ${styles.notItalic} ${styles.text14} ${styles.textNowrap} ${styles.trackingNeg1504} ${styles.whitespacePre}`}
+        style={{ color: "#cacaca", top: "0.36px" }}
+      >
         Improve perceived performance by adding skeleton screens.
       </p>
     </div>
@@ -1868,7 +1892,8 @@ function Button7() {
 function Container20() {
   return (
     <div
-      className="absolute h-[23.999px] left-[16.9px] top-[128.86px] w-[605.604px]"
+      className={`${styles.absolute}`}
+        style={{ height: "23.999px", left: "16.9px", top: "128.86px", width: "605.604px" }}
       data-name="Container"
     >
       <PrimitiveSpan6 />
@@ -1933,10 +1958,13 @@ function Icon16() {
 function Text16() {
   return (
     <div
-      className="basis-0 grow h-[19.993px] min-h-px min-w-px relative shrink-0"
+      className={`${styles.basis0} ${styles.grow} ${styles.minHPx} ${styles.minWPx} ${styles.relative} ${styles.shrink0}`}
+      style={{ height: "19.993px" }}
       data-name="Text"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[19.993px] relative w-full">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.relative} ${styles.wFull}`}
+        style={{ height: "19.993px" }}
+      >
         <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20} ${styles.left0} ${styles.notItalic} ${styles.text14} ${styles.textNowrap} ${styles.trackingNeg1504} ${styles.whitespacePre}`}
           style={{ color: "#cacaca", top: "0.36px" }}
         >
@@ -1950,10 +1978,13 @@ function Text16() {
 function Container21() {
   return (
     <div
-      className="h-[19.993px] relative shrink-0 w-[57.848px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "19.993px", width: "57.848px" }}
       data-name="Container"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex gap-[5.994px] h-[19.993px] items-center relative w-[57.848px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.itemsCenter} ${styles.relative}`}
+        style={{ gap: "5.994px", height: "19.993px", width: "57.848px" }}
+      >
         <Icon16 />
         <Text16 />
       </div>
@@ -1993,10 +2024,13 @@ function Icon17() {
 function Text17() {
   return (
     <div
-      className="h-[19.993px] relative shrink-0 w-[8.793px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "19.993px", width: "8.793px" }}
       data-name="Text"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[19.993px] relative w-[8.793px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.relative}`}
+        style={{ height: "19.993px", width: "8.793px" }}
+      >
         <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20} ${styles.left0} ${styles.notItalic} ${styles.text14} ${styles.textNowrap} ${styles.trackingNeg1504} ${styles.whitespacePre}`}
           style={{ color: "#cacaca", top: "0.36px" }}
         >
@@ -2010,10 +2044,13 @@ function Text17() {
 function Container22() {
   return (
     <div
-      className="h-[19.993px] relative shrink-0 w-[28.785px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "19.993px", width: "28.785px" }}
       data-name="Container"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex gap-[5.994px] h-[19.993px] items-center relative w-[28.785px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.itemsCenter} ${styles.relative}`}
+        style={{ gap: "5.994px", height: "19.993px", width: "28.785px" }}
+      >
         <Icon17 />
         <Text17 />
       </div>
@@ -2053,10 +2090,13 @@ function Icon18() {
 function Text18() {
   return (
     <div
-      className="h-[19.993px] relative shrink-0 w-[8.629px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "19.993px", width: "8.629px" }}
       data-name="Text"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[19.993px] relative w-[8.629px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.relative}`}
+        style={{ height: "19.993px", width: "8.629px" }}
+      >
         <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20} ${styles.left0} ${styles.notItalic} ${styles.text14} ${styles.textNowrap} ${styles.trackingNeg1504} ${styles.whitespacePre}`}
           style={{ color: "#cacaca", top: "0.36px" }}
         >
@@ -2070,10 +2110,13 @@ function Text18() {
 function Container23() {
   return (
     <div
-      className="h-[19.993px] relative shrink-0 w-[28.622px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "19.993px", width: "28.622px" }}
       data-name="Container"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex gap-[5.994px] h-[19.993px] items-center relative w-[28.622px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.itemsCenter} ${styles.relative}`}
+        style={{ gap: "5.994px", height: "19.993px", width: "28.622px" }}
+      >
         <Icon18 />
         <Text18 />
       </div>
@@ -2084,7 +2127,8 @@ function Container23() {
 function Container24() {
   return (
     <div
-      className="absolute content-stretch flex gap-[15.994px] h-[19.993px] items-center left-[16.9px] top-[168.86px] w-[605.604px]"
+      className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.itemsCenter}`}
+      style={{ gap: "15.994px", height: "19.993px", left: "16.9px", top: "168.86px", width: "605.604px" }}
       data-name="Container"
     >
       <Container21 />
@@ -2097,12 +2141,14 @@ function Container24() {
 function KanbanCard2() {
   return (
     <div
-      className="bg-[#1a1a1a] h-[205.753px] relative rounded-[10px] shrink-0 w-full"
+      className={`${styles.bgDarkSecondary} ${styles.relative} ${styles.rounded10} ${styles.shrink0} ${styles.wFull}`}
+      style={{ backgroundColor: "#1a1a1a", height: "205.753px" }}
       data-name="KanbanCard"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[10px]"
+        className={`${styles.absolute} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded10}`}
+        style={{ borderWidth: "0.909px", borderColor: "#262626" }}
       />
       <Container19 />
       <Heading3 />
@@ -2116,10 +2162,13 @@ function KanbanCard2() {
 function Container25() {
   return (
     <div
-      className="h-[641.25px] relative shrink-0 w-[639.41px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "641.25px", width: "639.41px" }}
       data-name="Container"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex flex-col gap-[11.996px] h-[641.25px] items-start relative w-[639.41px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flexCol} ${styles.itemsStart} ${styles.relative}`}
+        style={{ gap: "11.996px", height: "641.25px", width: "639.41px" }}
+      >
         <KanbanCard />
         <KanbanCard1 />
         <KanbanCard2 />
@@ -2145,11 +2194,16 @@ function KanbanColumn() {
 function Heading4() {
   return (
     <div
-      className="h-[23.999px] relative shrink-0 w-[81.506px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "23.999px", width: "81.506px" }}
       data-name="Heading 3"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[23.999px] relative w-[81.506px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[16px] text-nowrap text-white top-[-0.73px] tracking-[-0.3125px] whitespace-pre">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.relative}`}
+        style={{ height: "23.999px", width: "81.506px" }}
+      >
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading24} ${styles.left0} ${styles.notItalic} ${styles.text16} ${styles.textNowrap} ${styles.textWhite} ${styles.trackingNeg3125} ${styles.whitespacePre}`}
+          style={{ top: "-0.73px" }}
+        >
           In Progress
         </p>
       </div>
@@ -2160,11 +2214,16 @@ function Heading4() {
 function Text19() {
   return (
     <div
-      className="h-[19.993px] relative shrink-0 w-[48.189px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "19.993px", width: "48.189px" }}
       data-name="Text"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[19.993px] relative w-[48.189px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#cacaca] text-[14px] top-[0.36px] tracking-[-0.1504px] w-[49px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.relative}`}
+        style={{ height: "19.993px", width: "48.189px" }}
+      >
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20} ${styles.left0} ${styles.notItalic} ${styles.text14} ${styles.trackingNeg1504}`}
+          style={{ color: "#cacaca", top: "0.36px", width: "49px" }}
+        >
           1 Cards
         </p>
       </div>
@@ -2175,10 +2234,13 @@ function Text19() {
 function Container26() {
   return (
     <div
-      className="h-[23.999px] relative shrink-0 w-[137.692px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "23.999px", width: "137.692px" }}
       data-name="Container"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex gap-[7.997px] h-[23.999px] items-center relative w-[137.692px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gapSmall} ${styles.itemsCenter} ${styles.relative}`}
+        style={{ height: "23.999px", width: "137.692px" }}
+      >
         <Heading4 />
         <Text19 />
       </div>
@@ -2390,11 +2452,16 @@ function Icon21() {
 function Text20() {
   return (
     <div
-      className="h-[19.993px] relative shrink-0 w-[51.747px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "19.993px", width: "51.747px" }}
       data-name="Text"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[19.993px] relative w-[51.747px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#54a0ff] text-[14px] text-nowrap top-[0.36px] tracking-[-0.1504px] whitespace-pre">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.relative}`}
+        style={{ height: "19.993px", width: "51.747px" }}
+      >
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20} ${styles.left0} ${styles.notItalic} ${styles.text14} ${styles.textNowrap} ${styles.trackingNeg1504} ${styles.whitespacePre}`}
+          style={{ color: "#54a0ff", top: "0.36px" }}
+        >
           Medium
         </p>
       </div>
@@ -2405,7 +2472,8 @@ function Text20() {
 function StatusTag9() {
   return (
     <div
-      className="absolute bg-[#1f2d3a] box-border content-stretch flex gap-[5.994px] h-[31.982px] items-center left-0 pl-[11.996px] pr-0 py-0 rounded-[1.5252e+07px] top-0 w-[97.727px]"
+      className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.itemsCenter} ${styles.left0} ${styles.pl0} ${styles.pr0} ${styles.py0}`}
+      style={{ backgroundColor: "#1f2d3a", gap: "5.994px", height: "31.982px", paddingLeft: "11.996px", borderRadius: "15252000px", top: 0, width: "97.727px" }}
       data-name="StatusTag"
     >
       <Icon21 />
@@ -2417,10 +2485,13 @@ function StatusTag9() {
 function Text21() {
   return (
     <div
-      className="h-[19.993px] relative shrink-0 w-[60.739px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "19.993px", width: "60.739px" }}
       data-name="Text"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[19.993px] relative w-[60.739px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.relative}`}
+        style={{ height: "19.993px", width: "60.739px" }}
+      >
         <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20} ${styles.left0} ${styles.notItalic} ${styles.text14} ${styles.textNowrap} ${styles.trackingNeg1504} ${styles.whitespacePre}`}
           style={{ color: "#cacaca", top: "0.36px" }}
         >
@@ -2434,7 +2505,8 @@ function Text21() {
 function StatusTag10() {
   return (
     <div
-      className="absolute bg-neutral-800 box-border content-stretch flex h-[31.982px] items-center left-[105.72px] pl-[11.996px] pr-0 py-0 rounded-[1.5252e+07px] top-0 w-[84.73px]"
+      className={`${styles.absolute} ${styles.bgNeutral800} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.itemsCenter} ${styles.pl0} ${styles.pr0} ${styles.py0}`}
+      style={{ height: "31.982px", left: "105.72px", paddingLeft: "11.996px", borderRadius: "15252000px", top: 0, width: "84.73px" }}
       data-name="StatusTag"
     >
       <Text21 />
@@ -2445,10 +2517,13 @@ function StatusTag10() {
 function Text22() {
   return (
     <div
-      className="h-[19.993px] relative shrink-0 w-[69.261px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "19.993px", width: "69.261px" }}
       data-name="Text"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[19.993px] relative w-[69.261px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.relative}`}
+        style={{ height: "19.993px", width: "69.261px" }}
+      >
         <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20} ${styles.left0} ${styles.notItalic} ${styles.text14} ${styles.textNowrap} ${styles.trackingNeg1504} ${styles.whitespacePre}`}
           style={{ color: "#cacaca", top: "0.36px" }}
         >
@@ -2462,7 +2537,8 @@ function Text22() {
 function StatusTag11() {
   return (
     <div
-      className="absolute bg-neutral-800 box-border content-stretch flex h-[31.982px] items-center left-[198.45px] pl-[11.996px] pr-0 py-0 rounded-[1.5252e+07px] top-0 w-[93.253px]"
+      className={`${styles.absolute} ${styles.bgNeutral800} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.itemsCenter} ${styles.pl0} ${styles.pr0} ${styles.py0}`}
+      style={{ height: "31.982px", left: "198.45px", paddingLeft: "11.996px", borderRadius: "15252000px", top: 0, width: "93.253px" }}
       data-name="StatusTag"
     >
       <Text22 />
@@ -2473,7 +2549,8 @@ function StatusTag11() {
 function Container28() {
   return (
     <div
-      className="absolute h-[31.982px] left-0 top-0 w-[291.705px]"
+      className={`${styles.absolute}`}
+      style={{ height: "31.982px", left: 0, top: 0, width: "291.705px" }}
       data-name="Container"
     >
       <StatusTag9 />
@@ -2526,7 +2603,8 @@ function Icon22() {
 function Button10() {
   return (
     <div
-      className="absolute content-stretch flex items-center justify-center left-[589.61px] rounded-[8px] size-[20px] top-[-4px]"
+      className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.rounded8}`}
+      style={{ left: "589.61px", width: "20px", height: "20px", top: "-4px" }}
       data-name="Button"
     >
       <Icon22 />
@@ -2537,7 +2615,8 @@ function Button10() {
 function Container29() {
   return (
     <div
-      className="absolute h-[31.982px] left-[16.9px] top-[16.9px] w-[605.611px]"
+      className={`${styles.absolute}`}
+      style={{ height: "31.982px", left: "16.9px", top: "16.9px", width: "605.611px" }}
       data-name="Container"
     >
       <Container28 />
@@ -2549,10 +2628,13 @@ function Container29() {
 function Heading5() {
   return (
     <div
-      className="absolute h-[23.999px] left-[16.9px] top-[60.88px] w-[605.611px]"
+      className={`${styles.absolute}`}
+      style={{ height: "23.999px", left: "16.9px", top: "60.88px", width: "605.611px" }}
       data-name="Heading 4"
     >
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[16px] text-nowrap text-white top-[-0.73px] tracking-[-0.3125px] whitespace-pre">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading24} ${styles.left0} ${styles.notItalic} ${styles.text16} ${styles.textNowrap} ${styles.textWhite} ${styles.trackingNeg3125} ${styles.whitespacePre}`}
+        style={{ top: "-0.73px" }}
+      >
         Build column reorder functionality
       </p>
     </div>
@@ -2562,10 +2644,13 @@ function Heading5() {
 function Paragraph3() {
   return (
     <div
-      className="absolute h-[19.993px] left-[16.9px] overflow-clip top-[92.88px] w-[605.611px]"
+      className={`${styles.absolute} ${styles.overflowClip}`}
+      style={{ height: "19.993px", left: "16.9px", top: "92.88px", width: "605.611px" }}
       data-name="Paragraph"
     >
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#cacaca] text-[14px] text-nowrap top-[0.36px] tracking-[-0.1504px] whitespace-pre">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20} ${styles.left0} ${styles.notItalic} ${styles.text14} ${styles.textNowrap} ${styles.trackingNeg1504} ${styles.whitespacePre}`}
+        style={{ color: "#cacaca", top: "0.36px" }}
+      >
         Allow users to drag columns to rearrange kanban columns their own way.
       </p>
     </div>
@@ -2643,10 +2728,13 @@ function PrimitiveSpan8() {
 function Container30() {
   return (
     <div
-      className="h-[23.999px] relative shrink-0 w-[40px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "23.999px", width: "40px" }}
       data-name="Container"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[23.999px] relative w-[40px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.relative}`}
+        style={{ height: "23.999px", width: "40px" }}
+      >
         <PrimitiveSpan7 />
         <PrimitiveSpan8 />
       </div>
@@ -2689,10 +2777,13 @@ function Icon23() {
 function Button11() {
   return (
     <div
-      className="relative rounded-[8px] shrink-0 size-[23.999px]"
+      className={`${styles.relative} ${styles.rounded8} ${styles.shrink0}`}
+      style={{ width: "23.999px", height: "23.999px" }}
       data-name="Button"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex items-center justify-center pl-0 pr-[0.007px] py-0 relative size-[23.999px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.pl0} ${styles.prTiny} ${styles.py0} ${styles.relative}`}
+        style={{ width: "23.999px", height: "23.999px" }}
+      >
         <Icon23 />
       </div>
     </div>
@@ -2702,7 +2793,8 @@ function Button11() {
 function Container31() {
   return (
     <div
-      className="absolute content-stretch flex gap-[3.999px] h-[23.999px] items-center left-[16.9px] top-[128.86px] w-[605.611px]"
+      className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.itemsCenter}`}
+      style={{ gap: "3.999px", height: "23.999px", left: "16.9px", top: "128.86px", width: "605.611px" }}
       data-name="Container"
     >
       <Container30 />
@@ -2767,10 +2859,13 @@ function Icon24() {
 function Text23() {
   return (
     <div
-      className="h-[19.993px] relative shrink-0 w-[38.331px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "19.993px", width: "38.331px" }}
       data-name="Text"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[19.993px] relative w-[38.331px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.relative}`}
+        style={{ height: "19.993px", width: "38.331px" }}
+      >
         <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20} ${styles.left0} ${styles.notItalic} ${styles.text14} ${styles.textNowrap} ${styles.trackingNeg1504} ${styles.whitespacePre}`}
           style={{ color: "#cacaca", top: "0.36px" }}
         >
@@ -2784,10 +2879,13 @@ function Text23() {
 function Container32() {
   return (
     <div
-      className="h-[19.993px] relative shrink-0 w-[58.324px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "19.993px", width: "58.324px" }}
       data-name="Container"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex gap-[5.994px] h-[19.993px] items-center relative w-[58.324px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.itemsCenter} ${styles.relative}`}
+        style={{ gap: "5.994px", height: "19.993px", width: "58.324px" }}
+      >
         <Icon24 />
         <Text23 />
       </div>
@@ -2827,10 +2925,13 @@ function Icon25() {
 function Text24() {
   return (
     <div
-      className="h-[19.993px] relative shrink-0 w-[16.804px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "19.993px", width: "16.804px" }}
       data-name="Text"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[19.993px] relative w-[16.804px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.relative}`}
+        style={{ height: "19.993px", width: "16.804px" }}
+      >
         <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20} ${styles.left0} ${styles.notItalic} ${styles.text14} ${styles.textNowrap} ${styles.trackingNeg1504} ${styles.whitespacePre}`}
           style={{ color: "#cacaca", top: "0.36px" }}
         >
@@ -2844,10 +2945,13 @@ function Text24() {
 function Container33() {
   return (
     <div
-      className="h-[19.993px] relative shrink-0 w-[36.797px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "19.993px", width: "36.797px" }}
       data-name="Container"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex gap-[5.994px] h-[19.993px] items-center relative w-[36.797px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.itemsCenter} ${styles.relative}`}
+        style={{ gap: "5.994px", height: "19.993px", width: "36.797px" }}
+      >
         <Icon25 />
         <Text24 />
       </div>
@@ -2887,10 +2991,13 @@ function Icon26() {
 function Text25() {
   return (
     <div
-      className="h-[19.993px] relative shrink-0 w-[8.303px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "19.993px", width: "8.303px" }}
       data-name="Text"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[19.993px] relative w-[8.303px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.relative}`}
+        style={{ height: "19.993px", width: "8.303px" }}
+      >
         <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20} ${styles.left0} ${styles.notItalic} ${styles.text14} ${styles.textNowrap} ${styles.trackingNeg1504} ${styles.whitespacePre}`}
           style={{ color: "#cacaca", top: "0.36px" }}
         >
@@ -2904,10 +3011,13 @@ function Text25() {
 function Container34() {
   return (
     <div
-      className="h-[19.993px] relative shrink-0 w-[28.296px]"
+      className={`${styles.relative} ${styles.shrink0}`}
+      style={{ height: "19.993px", width: "28.296px" }}
       data-name="Container"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex gap-[5.994px] h-[19.993px] items-center relative w-[28.296px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.itemsCenter} ${styles.relative}`}
+        style={{ gap: "5.994px", height: "19.993px", width: "28.296px" }}
+      >
         <Icon26 />
         <Text25 />
       </div>
@@ -2918,7 +3028,8 @@ function Container34() {
 function Container35() {
   return (
     <div
-      className="absolute content-stretch flex gap-[15.994px] h-[19.993px] items-center left-[16.9px] top-[168.86px] w-[605.611px]"
+      className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.itemsCenter}`}
+      style={{ gap: "15.994px", height: "19.993px", left: "16.9px", top: "168.86px", width: "605.611px" }}
       data-name="Container"
     >
       <Container32 />
@@ -2952,7 +3063,8 @@ function KanbanCard3() {
 function KanbanColumn1() {
   return (
     <div
-      className="absolute content-stretch flex flex-col gap-[15.994px] h-[735.043px] items-start left-[655.4px] top-0 w-[639.418px]"
+      className={`${styles.absolute} ${styles.contentStretch} ${styles.flexCol} ${styles.itemsStart}`}
+        style={{ gap: "15.994px", height: "735.043px", left: "655.4px", top: 0, width: "639.418px" }}
       data-name="KanbanColumn"
     >
       <Container27 />
@@ -2969,7 +3081,9 @@ function Heading6() {
       data-name="Heading 3"
     >
       <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[23.999px] relative w-[68.665px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[16px] text-nowrap text-white top-[-0.73px] tracking-[-0.3125px] whitespace-pre">
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading24} ${styles.left0} ${styles.notItalic} ${styles.text16} ${styles.textNowrap} ${styles.textWhite} ${styles.trackingNeg3125} ${styles.whitespacePre}`}
+        style={{ top: "-0.73px" }}
+      >
           In Review
         </p>
       </div>
@@ -3275,7 +3389,8 @@ function Button14() {
 function Container39() {
   return (
     <div
-      className="absolute h-[31.982px] left-[16.9px] top-[16.9px] w-[605.604px]"
+      className={`${styles.absolute}`}
+        style={{ height: "31.982px", left: "16.9px", top: "16.9px", width: "605.604px" }}
       data-name="Container"
     >
       <Container38 />
@@ -3287,10 +3402,13 @@ function Container39() {
 function Heading7() {
   return (
     <div
-      className="absolute h-[23.999px] left-[16.9px] top-[60.88px] w-[605.604px]"
+      className={`${styles.absolute}`}
+        style={{ height: "23.999px", left: "16.9px", top: "60.88px", width: "605.604px" }}
       data-name="Heading 4"
     >
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[16px] text-nowrap text-white top-[-0.73px] tracking-[-0.3125px] whitespace-pre">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading24} ${styles.left0} ${styles.notItalic} ${styles.text16} ${styles.textNowrap} ${styles.textWhite} ${styles.trackingNeg3125} ${styles.whitespacePre}`}
+        style={{ top: "-0.73px" }}
+      >
         Refactor task card component for modularity
       </p>
     </div>
@@ -3871,7 +3989,8 @@ function Button16() {
 function Container46() {
   return (
     <div
-      className="absolute h-[31.982px] left-[16.9px] top-[16.9px] w-[605.604px]"
+      className={`${styles.absolute}`}
+        style={{ height: "31.982px", left: "16.9px", top: "16.9px", width: "605.604px" }}
       data-name="Container"
     >
       <Container45 />
@@ -3883,10 +4002,13 @@ function Container46() {
 function Heading8() {
   return (
     <div
-      className="absolute h-[23.999px] left-[16.9px] top-[60.88px] w-[605.604px]"
+      className={`${styles.absolute}`}
+        style={{ height: "23.999px", left: "16.9px", top: "60.88px", width: "605.604px" }}
       data-name="Heading 4"
     >
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[16px] text-nowrap text-white top-[-0.73px] tracking-[-0.3125px] whitespace-pre">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading24} ${styles.left0} ${styles.notItalic} ${styles.text16} ${styles.textNowrap} ${styles.textWhite} ${styles.trackingNeg3125} ${styles.whitespacePre}`}
+        style={{ top: "-0.73px" }}
+      >
         Document API endpoints for task CRUD operations
       </p>
     </div>
@@ -4299,7 +4421,8 @@ function Container53() {
 function KanbanColumn2() {
   return (
     <div
-      className="absolute content-stretch flex flex-col gap-[15.994px] h-[735.043px] items-start left-[1310.82px] top-0 w-[639.41px]"
+      className={`${styles.absolute} ${styles.contentStretch} ${styles.flexCol} ${styles.itemsStart}`}
+        style={{ gap: "15.994px", height: "735.043px", left: "1310.82px", top: 0, width: "639.41px" }}
       data-name="KanbanColumn"
     >
       <Container37 />
@@ -4316,7 +4439,9 @@ function Heading9() {
       data-name="Heading 3"
     >
       <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[23.999px] relative w-[38.31px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[16px] text-nowrap text-white top-[-0.73px] tracking-[-0.3125px] whitespace-pre">
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading24} ${styles.left0} ${styles.notItalic} ${styles.text16} ${styles.textNowrap} ${styles.textWhite} ${styles.trackingNeg3125} ${styles.whitespacePre}`}
+        style={{ top: "-0.73px" }}
+      >
           Done
         </p>
       </div>
@@ -4681,7 +4806,9 @@ function Heading10() {
       className="absolute h-[23.999px] left-[16.9px] top-[60.88px] w-[605.611px]"
       data-name="Heading 4"
     >
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[16px] text-nowrap text-white top-[-0.73px] tracking-[-0.3125px] whitespace-pre">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading24} ${styles.left0} ${styles.notItalic} ${styles.text16} ${styles.textNowrap} ${styles.textWhite} ${styles.trackingNeg3125} ${styles.whitespacePre}`}
+        style={{ top: "-0.73px" }}
+      >
         Create initial column layout (To Do, In Progress, Done)
       </p>
     </div>
@@ -4694,7 +4821,9 @@ function Paragraph6() {
       className="absolute h-[19.993px] left-[16.9px] overflow-clip top-[92.88px] w-[605.611px]"
       data-name="Paragraph"
     >
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#cacaca] text-[14px] text-nowrap top-[0.36px] tracking-[-0.1504px] whitespace-pre">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20} ${styles.left0} ${styles.notItalic} ${styles.text14} ${styles.textNowrap} ${styles.trackingNeg1504} ${styles.whitespacePre}`}
+        style={{ color: "#cacaca", top: "0.36px" }}
+      >
         Set up the foundational kanban board structure with properly spaced
         columns and styling.
       </p>
