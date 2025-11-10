@@ -17,7 +17,17 @@ export const TaskSchema = z.object({
   name: z.string(),
   status: z.enum(["pending", "in-progress", "completed", "failed"]),
   result: z.string().optional(),
-  timestamp: z.date().or(z.string().transform((str) => new Date(str))),
+  timestamp: z.date().or(z.string().transform((str, ctx) => {
+    const date = new Date(str);
+    if (isNaN(date.getTime())) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid date string",
+      });
+      return z.NEVER;
+    }
+    return date;
+  })),
 });
 
 /**
@@ -27,7 +37,17 @@ export const MessageSchema = z.object({
   id: z.string(),
   role: z.enum(["user", "assistant"]),
   content: z.string(),
-  timestamp: z.date().or(z.string().transform((str) => new Date(str))),
+  timestamp: z.date().or(z.string().transform((str, ctx) => {
+    const date = new Date(str);
+    if (isNaN(date.getTime())) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid date string",
+      });
+      return z.NEVER;
+    }
+    return date;
+  })),
   isLoading: z.boolean().optional(),
   tasks: z.array(TaskSchema).optional(),
   contextFiles: z.array(z.string()).optional(),
@@ -42,10 +62,30 @@ export const MessageSchema = z.object({
 export const ChatSessionSchema = z.object({
   id: z.string(),
   title: z.string(),
-  createdAt: z.date().or(z.string().transform((str) => new Date(str))),
+  createdAt: z.date().or(z.string().transform((str, ctx) => {
+    const date = new Date(str);
+    if (isNaN(date.getTime())) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid date string",
+      });
+      return z.NEVER;
+    }
+    return date;
+  })),
   updatedAt: z
     .date()
-    .or(z.string().transform((str) => new Date(str)))
+    .or(z.string().transform((str, ctx) => {
+      const date = new Date(str);
+      if (isNaN(date.getTime())) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Invalid date string",
+        });
+        return z.NEVER;
+      }
+      return date;
+    }))
     .optional(),
   messageCount: z.number().int().nonnegative().default(0),
   groupId: z.string().optional(),
@@ -58,7 +98,17 @@ export const ChatDataSchema = z.object({
   id: z.string(),
   title: z.string(),
   messages: z.array(MessageSchema).default([]),
-  createdAt: z.date().or(z.string().transform((str) => new Date(str))),
+  createdAt: z.date().or(z.string().transform((str, ctx) => {
+    const date = new Date(str);
+    if (isNaN(date.getTime())) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid date string",
+      });
+      return z.NEVER;
+    }
+    return date;
+  })),
   groupId: z.string().optional(),
 });
 
@@ -68,8 +118,28 @@ export const ChatDataSchema = z.object({
 export const ChatSessionResponseSchema = z.object({
   id: z.string(),
   title: z.string(),
-  created_at: z.string().transform((str) => new Date(str)),
-  updated_at: z.string().transform((str) => new Date(str)),
+  created_at: z.string().transform((str, ctx) => {
+    const date = new Date(str);
+    if (isNaN(date.getTime())) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid date string",
+      });
+      return z.NEVER;
+    }
+    return date;
+  }),
+  updated_at: z.string().transform((str, ctx) => {
+    const date = new Date(str);
+    if (isNaN(date.getTime())) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid date string",
+      });
+      return z.NEVER;
+    }
+    return date;
+  }),
   message_count: z.number().int().nonnegative().default(0),
 });
 
@@ -90,7 +160,7 @@ export const ChatMessageResponseSchema = z.object({
     }
     return date;
   }),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const ChatMessagesResponseSchema = z.array(ChatMessageResponseSchema);

@@ -193,14 +193,15 @@ export function useWebSocket(options: WebSocketOptions) {
 
       wsRef.current = ws;
     } catch (error) {
-      setState({
+      setState((prev) => ({
+        ...prev,
         connected: false,
         connecting: false,
         error:
           error instanceof Error
             ? error
             : new Error("Failed to create WebSocket"),
-      });
+      }));
     }
   }, [
     url,

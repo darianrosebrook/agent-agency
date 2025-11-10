@@ -65,6 +65,8 @@ use tracing::{info, error, warn};
 use sha2::{Sha256, Digest};
 use chrono::{DateTime, Utc, Duration as ChronoDuration};
 use system_quality_security::{AuthService, AuthConfig, authentication::PasswordPolicy};
+use totp_rs::{Secret, TOTP, Algorithm};
+use base32;
 
 // Database integration
 use data_infrastructure::database_config::DatabaseConfig;
@@ -4137,6 +4139,8 @@ struct LoginRequest {
     email: Option<String>,
     username: Option<String>,
     password: String,
+    totp_code: Option<String>, // Optional TOTP code for 2FA
+    recovery_code: Option<String>, // Optional recovery code for 2FA
 }
 
 #[derive(Debug, Serialize)]
@@ -4346,6 +4350,70 @@ async fn login_handler(
         
         warn!("Failed login attempt for user: {}", user.id);
         return Err(StatusCode::UNAUTHORIZED);
+    }
+
+    // Check if 2FA is enabled and verify code if provided
+    let two_fa = db.get_two_factor_auth(user.id, Some("totp")).await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    
+    if let Some(two_fa_config) = two_fa {
+        if two_fa_config.is_enabled {
+            // 2FA is enabled - require code
+            let code_provided = login_req.totp_code.as_ref().or(login_req.recovery_code.as_ref());
+            
+            if code_provided.is_none() {
+                // Password correct but 2FA code required
+                return Err(StatusCode::UNAUTHORIZED); // Return 401 to indicate 2FA required
+            }
+            
+            let code = code_provided.unwrap();
+            let mut code_valid = false;
+            
+            // Check recovery code first
+            if two_fa_config.backup_codes.contains(code) {
+                // Valid recovery code - remove it
+                let mut updated_backup_codes = two_fa_config.backup_codes.clone();
+                updated_backup_codes.retain(|c| c != code);
+                
+                let update = data_infrastructure::database_operations::UpdateTwoFactorAuth {
+                    secret_encrypted: None,
+                    backup_codes: Some(updated_backup_codes),
+                    is_enabled: None,
+                };
+                
+                let _ = db.update_two_factor_auth(user.id, "totp", update).await;
+                code_valid = true;
+            } else if let Some(totp_code) = &login_req.totp_code {
+                // Verify TOTP code
+                let secret_base32 = two_fa_config.secret_encrypted.clone();
+                
+                let secret = Secret::Encoded(secret_base32)
+                    .to_bytes()
+                    .map_err(|e| {
+                        error!("Failed to decode TOTP secret: {}", e);
+                        StatusCode::INTERNAL_SERVER_ERROR
+                    })?;
+                
+                let totp = TOTP::new(
+                    Algorithm::SHA1,
+                    6,
+                    1,
+                    0,
+                    secret,
+                ).map_err(|e| {
+                    error!("Failed to create TOTP instance: {}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?;
+
+                // Verify with tolerance window of ±1 step
+                code_valid = totp.check(totp_code, 1).is_ok();
+            }
+            
+            if !code_valid {
+                warn!("Invalid 2FA code for user: {}", user.id);
+                return Err(StatusCode::UNAUTHORIZED);
+            }
+        }
     }
 
     // Reset failed attempts on successful login
@@ -5575,17 +5643,59 @@ async fn setup_2fa_handler(
     let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
     let user_id = get_user_id_from_auth(&headers, db).await?;
 
-    // PLACEHOLDER: Generate TOTP secret and backup codes
-    // In production, use a proper TOTP library like `totp-lite` or `oath`
+    // Get user info for QR code label
+    let user = db.get_user(user_id).await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    // Generate TOTP secret (20 bytes = 160 bits, standard for TOTP)
     use rand::Rng;
     let mut rng = rand::thread_rng();
     let secret_bytes: Vec<u8> = (0..20).map(|_| rng.gen()).collect();
-    let secret_encrypted = base64::encode(&secret_bytes); // PLACEHOLDER: Should be encrypted
     
+    // Encode secret as base32 (standard for TOTP)
+    // base32 crate 0.4 uses RFC4648 alphabet without padding
+    let secret_base32 = base32::encode(base32::Alphabet::RFC4648 { padding: false }, &secret_bytes);
+    
+    // Create TOTP instance
+    let secret = Secret::Encoded(secret_base32.clone())
+        .to_bytes()
+        .map_err(|e| {
+            error!("Failed to decode TOTP secret: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    
+    let totp = TOTP::new(
+        Algorithm::SHA1,
+        6, // 6-digit codes
+        1, // 1 step = 30 seconds
+        0, // Skew = 0 (no tolerance window, handled in verification)
+        secret,
+    ).map_err(|e| {
+        error!("Failed to create TOTP instance: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    // Generate QR code URL (otpauth:// format)
+    let issuer = "Agent Agency V3";
+    let account_name = user.email.clone();
+    let qr_url = format!(
+        "otpauth://totp/{}:{}?secret={}&issuer={}&algorithm=SHA1&digits=6&period=30",
+        urlencoding::encode(issuer),
+        urlencoding::encode(&account_name),
+        secret_base32,
+        urlencoding::encode(issuer)
+    );
+
+    // Hash the secret before storing (we'll decrypt it for verification)
+    // For now, store base32 encoded (in production, encrypt this)
+    let secret_encrypted = secret_base32; // PLACEHOLDER: Should be encrypted with proper key management
+    
+    // Generate recovery codes (8-digit codes)
     let backup_codes: Vec<String> = (0..10)
         .map(|_| {
-            let code: u32 = rng.gen_range(100000..999999);
-            code.to_string()
+            let code: u32 = rng.gen_range(10000000..99999999);
+            format!("{:08}", code)
         })
         .collect();
 
@@ -5602,8 +5712,10 @@ async fn setup_2fa_handler(
             Ok(Json(serde_json::json!({
                 "status": "setup",
                 "method": req.method,
+                "secret": secret_base32, // Return secret for manual entry
+                "qr_url": qr_url,
                 "backup_codes": backup_codes,
-                "message": "Verify with code to enable 2FA"
+                "message": "Scan QR code with authenticator app or enter secret manually. Verify with code to enable 2FA."
             })))
         }
         Err(e) => {
@@ -5626,16 +5738,55 @@ async fn verify_2fa_handler(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;
 
-    // PLACEHOLDER: Verify TOTP code
-    // In production, use a proper TOTP library to verify the code against secret_encrypted
-    // For now, accept any code (NOT SECURE - must implement proper verification)
-    let code_valid = true; // PLACEHOLDER: Should verify against secret_encrypted
+    let mut code_valid = false;
+
+    // Check if code is a recovery code first
+    if two_fa.backup_codes.contains(&req.code) {
+        // Valid recovery code - remove it from the list
+        let mut updated_backup_codes = two_fa.backup_codes.clone();
+        updated_backup_codes.retain(|code| code != &req.code);
+        
+        let update = data_infrastructure::database_operations::UpdateTwoFactorAuth {
+            secret_encrypted: None,
+            backup_codes: Some(updated_backup_codes),
+            is_enabled: None,
+        };
+        
+        let _ = db.update_two_factor_auth(user_id, &req.method, update).await;
+        code_valid = true;
+    } else {
+        // Verify TOTP code
+        // Decode the stored secret (in production, decrypt first)
+        let secret_base32 = two_fa.secret_encrypted.clone();
+        
+        let secret = Secret::Encoded(secret_base32)
+            .to_bytes()
+            .map_err(|e| {
+                error!("Failed to decode TOTP secret: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+        
+        let totp = TOTP::new(
+            Algorithm::SHA1,
+            6,
+            1,
+            0,
+            secret,
+        ).map_err(|e| {
+            error!("Failed to create TOTP instance: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+        // Verify the code with a tolerance window of ±1 step (30 seconds)
+        // This handles clock skew and user delay
+        code_valid = totp.check(&req.code, 1).is_ok();
+    }
 
     if !code_valid {
         return Err(StatusCode::UNAUTHORIZED);
     }
 
-    // Enable 2FA
+    // Enable 2FA (if not already enabled)
     let update = data_infrastructure::database_operations::UpdateTwoFactorAuth {
         secret_encrypted: None,
         backup_codes: None,

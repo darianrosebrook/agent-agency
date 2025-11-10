@@ -74,3 +74,4 @@ Example CI integration:
     cargo run --bin validate_schema -- --database-url $DATABASE_URL
 ```
 
+

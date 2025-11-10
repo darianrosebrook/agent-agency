@@ -6,3 +6,4 @@ export function calculateTaskProgress(task: Task): number {
   return Math.round((completed / task.subtasks.length) * 100);
 }
 
+

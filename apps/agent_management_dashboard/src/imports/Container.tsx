@@ -1264,7 +1264,7 @@ function ImagePlaceholderImage() {
       <img
         alt=""
         className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none rounded-[10px] size-full"
-        src={imgImagePlaceholderImage}
+        src={typeof imgImagePlaceholderImage === 'string' ? imgImagePlaceholderImage : imgImagePlaceholderImage.src}
       />
     </div>
   );

@@ -7,22 +7,17 @@
  * @author @darianrosebrook
  */
 
-import { toast as sonnerToast, type ExternalToast } from 'sonner';
+import { toast as sonnerToast, type ExternalToast, type Action } from 'sonner';
 import { parseApiError, ErrorCode, type AppError } from '../errors';
+import type React from 'react';
 
 /**
  * Toast notification options
  */
 interface ToastOptions {
   duration?: number;
-  action?: {
-    label: string;
-    onClick: () => void;
-  };
-  cancel?: {
-    label: string;
-    onClick?: () => void;
-  };
+  action?: Action | React.ReactNode;
+  cancel?: Action | React.ReactNode;
 }
 
 /**
@@ -31,13 +26,9 @@ interface ToastOptions {
 export function toastSuccess(message: string, options?: ToastOptions) {
   const toastOptions: ExternalToast = {
     duration: options?.duration || 4000,
+    ...(options?.action && { action: options.action }),
+    ...(options?.cancel && { cancel: options.cancel }),
   };
-  if (options?.action) {
-    toastOptions.action = options.action;
-  }
-  if (options?.cancel) {
-    toastOptions.cancel = options.cancel;
-  }
   return sonnerToast.success(message, toastOptions);
 }
 
@@ -48,13 +39,9 @@ export function toastError(error: unknown, options?: ToastOptions) {
   const appError = parseApiError(error);
   const toastOptions: ExternalToast = {
     duration: options?.duration || 6000,
+    ...(options?.action && { action: options.action }),
+    ...(options?.cancel && { cancel: options.cancel }),
   };
-  if (options?.action) {
-    toastOptions.action = options.action;
-  }
-  if (options?.cancel) {
-    toastOptions.cancel = options.cancel;
-  }
   return sonnerToast.error(appError.getUserMessage(), toastOptions);
 }
 
@@ -64,13 +51,9 @@ export function toastError(error: unknown, options?: ToastOptions) {
 export function toastWarning(message: string, options?: ToastOptions) {
   const toastOptions: ExternalToast = {
     duration: options?.duration || 5000,
+    ...(options?.action && { action: options.action }),
+    ...(options?.cancel && { cancel: options.cancel }),
   };
-  if (options?.action) {
-    toastOptions.action = options.action;
-  }
-  if (options?.cancel) {
-    toastOptions.cancel = options.cancel;
-  }
   return sonnerToast.warning(message, toastOptions);
 }
 
@@ -80,13 +63,9 @@ export function toastWarning(message: string, options?: ToastOptions) {
 export function toastInfo(message: string, options?: ToastOptions) {
   const toastOptions: ExternalToast = {
     duration: options?.duration || 4000,
+    ...(options?.action && { action: options.action }),
+    ...(options?.cancel && { cancel: options.cancel }),
   };
-  if (options?.action) {
-    toastOptions.action = options.action;
-  }
-  if (options?.cancel) {
-    toastOptions.cancel = options.cancel;
-  }
   return sonnerToast.info(message, toastOptions);
 }
 
@@ -94,7 +73,8 @@ export function toastInfo(message: string, options?: ToastOptions) {
  * Show loading toast (returns dismiss function)
  */
 export function toastLoading(message: string): () => void {
-  return sonnerToast.loading(message);
+  const toastId = sonnerToast.loading(message);
+  return () => sonnerToast.dismiss(toastId);
 }
 
 /**

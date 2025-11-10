@@ -89,3 +89,4 @@ INSERT INTO migration_log (version, description, applied_at)
 VALUES ('016', 'Create authentication tables', NOW())
 ON CONFLICT (version) DO NOTHING;
 
+

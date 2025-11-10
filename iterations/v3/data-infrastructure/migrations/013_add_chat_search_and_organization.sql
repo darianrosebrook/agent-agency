@@ -439,3 +439,4 @@ INSERT INTO migration_log (version, description, applied_at)
 VALUES ('013', 'add_chat_search_and_organization', NOW())
 ON CONFLICT (version) DO NOTHING;
 
+

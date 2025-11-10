@@ -127,7 +127,7 @@ export function ChatSidebar({ onSelect }: ChatSidebarProps = {}) {
                             : styles.chatItemInactive
                         )}
                       >
-                        <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+                        <MessageSquare className={styles.chatItemIcon} />
                         <span className={styles.chatItemText}>
                           {chat.title}
                         </span>

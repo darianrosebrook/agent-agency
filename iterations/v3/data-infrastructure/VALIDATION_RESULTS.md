@@ -70,3 +70,4 @@ DATABASE_URL="postgresql://postgres:agent_agency_secure_password_123@localhost:5
   cargo run --features schema-validation --bin validate_schema
 ```
 
+

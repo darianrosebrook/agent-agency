@@ -283,3 +283,4 @@ let messages = chat_service.search_messages(
 
 The advanced features are now in place. The migration is ready to apply, and the chat service includes search, organization, and bulk operation capabilities. Ready for testing or frontend integration.
 
+

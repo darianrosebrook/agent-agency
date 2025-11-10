@@ -153,3 +153,4 @@ COMMENT ON COLUMN api_keys.key_prefix IS 'First 8 characters of the key for iden
 COMMENT ON COLUMN api_keys.scopes IS 'Array of permission scopes for this API key';
 COMMENT ON COLUMN two_factor_auth.secret_encrypted IS 'Encrypted TOTP secret or other 2FA secret';
 
+

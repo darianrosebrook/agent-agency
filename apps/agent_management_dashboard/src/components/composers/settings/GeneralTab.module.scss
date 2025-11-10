@@ -1,0 +1,648 @@
+@use '../../../styles/tokens' as *;
+
+.generalTab {
+  height: 84.5375rem; // h-[1352.6px]
+  position: relative;
+  flex-shrink: 0;
+  width: 76.000625rem; // w-[1216.01px]
+}
+
+.generalTabInner {
+  background-clip: padding-box;
+  border: 0;
+  border-color: transparent;
+  border-style: solid;
+  box-sizing: border-box;
+  height: 84.5375rem; // h-[1352.6px]
+  position: relative;
+  width: 76.000625rem; // w-[1216.01px]
+}
+
+// Project Details Section
+.projectDetailsSection {
+  position: absolute;
+  background-color: #1a1a1a; // bg-[#1a1a1a]
+  height: 23.859625rem; // h-[381.754px]
+  left: 0;
+  border-radius: 0.625rem; // rounded-[10px]
+  top: 0;
+  width: 76.000625rem; // w-[1216.01px]
+}
+
+.projectDetailsBorder {
+  position: absolute;
+  border-width: 0.909px;
+  border-color: rgb(38, 38, 38); // border-neutral-800
+  border-style: solid;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 0.625rem; // rounded-[10px]
+}
+
+.sectionHeading {
+  position: absolute;
+  height: 1.7498125rem; // h-[27.997px]
+  left: 1.556875rem; // left-[24.91px]
+  top: 1.556875rem; // top-[24.91px]
+  width: 72.886875rem; // w-[1166.19px]
+}
+
+.sectionHeadingText {
+  position: absolute;
+  font-family: 'Inter', sans-serif;
+  line-height: 1.75rem; // leading-[28px]
+  left: 0;
+  font-style: normal;
+  font-size: 1.25rem; // text-[20px]
+  white-space: nowrap;
+  color: white; // text-white
+  top: -0.01125rem; // top-[-0.18px]
+  letter-spacing: -0.4492px; // tracking-[-0.4492px]
+  white-space: pre;
+}
+
+.projectDetailsContent {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 0.999625rem; // gap-[15.994px]
+  height: 14.2471875rem; // h-[227.955px]
+  align-items: flex-start;
+  left: 1.556875rem; // left-[24.91px]
+  top: 4.30625rem; // top-[68.9px]
+  width: 72.886875rem; // w-[1166.19px]
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.374625rem; // gap-[5.994px]
+  height: 3.4991875rem; // h-[55.987px]
+  align-items: flex-start;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.formFieldLabel {
+  display: flex;
+  gap: 0.5rem; // gap-[8px]
+  height: 0.8749375rem; // h-[13.999px]
+  align-items: center;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.formFieldLabelText {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500; // font-medium
+  line-height: 0.8749375rem; // leading-[14px]
+  font-style: normal;
+  position: relative;
+  flex-shrink: 0;
+  color: #d1d5dc; // text-[#d1d5dc]
+  font-size: 0.875rem; // text-[14px]
+  white-space: nowrap;
+  letter-spacing: -0.1504px; // tracking-[-0.1504px]
+  white-space: pre;
+}
+
+.formInput {
+  background-color: #0d0d0d; // bg-[#0d0d0d]
+  height: 2.249625rem; // h-[35.994px]
+  position: relative;
+  border-radius: 0.5rem; // rounded-[8px]
+  flex-shrink: 0;
+  width: 100%; // w-full
+  border-width: 0.909px;
+  border-color: rgb(38, 38, 38); // border-neutral-800
+  padding-inline: 0.75rem; // px-[12px]
+  padding-block: 0.25rem; // py-[4px]
+  font-family: 'Inter', sans-serif;
+  line-height: 1.25rem; // leading-[20px]
+  font-size: 0.875rem; // text-[14px]
+  color: white; // text-white
+  letter-spacing: -0.1504px; // tracking-[-0.1504px]
+
+  &:focus {
+    outline: none; // focus:outline-none
+    border-color: #2d7ff9; // focus:border-[#2d7ff9]
+  }
+}
+
+.formTextarea {
+  background-color: #0d0d0d; // bg-[#0d0d0d]
+  height: 3.9999375rem; // h-[63.999px]
+  position: relative;
+  border-radius: 0.5rem; // rounded-[8px]
+  flex-shrink: 0;
+  width: 100%; // w-full
+  border-width: 0.909px;
+  border-color: rgb(38, 38, 38); // border-neutral-800
+  padding-inline: 0.8068125rem; // px-[12.909px]
+  padding-block: 0.5568125rem; // py-[8.909px]
+  font-family: 'Inter', sans-serif;
+  line-height: 1.25rem; // leading-[20px]
+  font-size: 0.875rem; // text-[14px]
+  color: white; // text-white
+  letter-spacing: -0.1504px; // tracking-[-0.1504px]
+  resize: none; // resize-none
+
+  &:focus {
+    outline: none; // focus:outline-none
+    border-color: #2d7ff9; // focus:border-[#2d7ff9]
+  }
+}
+
+.projectIdCreatedContainer {
+  height: 3.4991875rem; // h-[55.987px]
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.projectIdField {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 0.374625rem; // gap-[5.994px]
+  height: 3.4991875rem; // h-[55.987px]
+  align-items: flex-start;
+  left: 0;
+  top: 0;
+  width: 35.9436875rem; // w-[575.099px]
+}
+
+.createdField {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 0.374625rem; // gap-[5.994px]
+  height: 3.4991875rem; // h-[55.987px]
+  align-items: flex-start;
+  left: 36.943125rem; // left-[591.09px]
+  top: 0;
+  width: 35.9436875rem; // w-[575.099px]
+}
+
+.readOnlyField {
+  background-color: #0d0d0d; // bg-[#0d0d0d]
+  height: 2.249625rem; // h-[35.994px]
+  opacity: 0.5; // opacity-50
+  position: relative;
+  border-radius: 0.5rem; // rounded-[8px]
+  flex-shrink: 0;
+  width: 100%; // w-full
+  border-width: 0.909px;
+  border-color: rgb(38, 38, 38); // border-neutral-800
+  padding-inline: 0.75rem; // px-[12px]
+  padding-block: 0.25rem; // py-[4px]
+  display: flex;
+  align-items: center;
+}
+
+.readOnlyFieldText {
+  font-family: 'Inter', sans-serif;
+  line-height: 1.25rem; // leading-[20px]
+  color: #888888; // text-[#888888]
+  font-size: 0.875rem; // text-[14px]
+  letter-spacing: -0.1504px; // tracking-[-0.1504px]
+}
+
+.saveChangesButton {
+  position: absolute;
+  background-color: #2d7ff9; // bg-[#2d7ff9]
+  box-sizing: border-box;
+  display: flex;
+  gap: 0.5rem; // gap-[8px]
+  height: 2.249625rem; // h-[35.994px]
+  align-items: center;
+  justify-content: center;
+  left: 66.595rem; // left-[1065.52px]
+  padding-inline: $spacing-4; // px-[16px]
+  padding-block: 0.5rem; // py-[8px]
+  border-radius: 0.5rem; // rounded-[8px]
+  top: 20.053125rem; // top-[320.85px]
+  width: 7.848875rem; // w-[125.582px]
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: #2570d9; // hover:bg-[#2570d9]
+  }
+}
+
+.saveChangesButtonText {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500; // font-medium
+  line-height: 1.25rem; // leading-[20px]
+  font-style: normal;
+  position: relative;
+  flex-shrink: 0;
+  font-size: 0.875rem; // text-[14px]
+  white-space: nowrap;
+  color: white; // text-white
+  letter-spacing: -0.1504px; // tracking-[-0.1504px]
+  white-space: pre;
+}
+
+// Team Settings Section
+.teamSettingsSection {
+  position: absolute;
+  background-color: #1a1a1a; // bg-[#1a1a1a]
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 0.999625rem; // gap-[15.994px]
+  height: 18.85875rem; // h-[301.74px]
+  align-items: flex-start;
+  left: 0;
+  padding-bottom: 0.0568125rem; // pb-[0.909px]
+  padding-top: 1.55675rem; // pt-[24.908px]
+  padding-inline: 1.55675rem; // px-[24.908px]
+  border-radius: 0.625rem; // rounded-[10px]
+  top: 25.359375rem; // top-[405.75px]
+  width: 76.000625rem; // w-[1216.01px]
+}
+
+.teamSettingsBorder {
+  position: absolute;
+  border-width: 0.909px;
+  border-color: rgb(38, 38, 38); // border-neutral-800
+  border-style: solid;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 0.625rem; // rounded-[10px]
+}
+
+.teamSettingsContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.999625rem; // gap-[15.994px]
+  height: 12.9958125rem; // h-[207.933px]
+  align-items: flex-start;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.defaultAssigneeButton {
+  background-color: #0d0d0d; // bg-[#0d0d0d]
+  height: 2.249625rem; // h-[35.994px]
+  position: relative;
+  border-radius: 0.5rem; // rounded-[8px]
+  flex-shrink: 0;
+  width: 100%; // w-full
+  border-width: 0.909px;
+  border-color: rgb(38, 38, 38); // border-neutral-800
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: 0.8065625rem; // px-[12.905px]
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: #1a1a1a; // hover:bg-[#1a1a1a]
+  }
+}
+
+.defaultAssigneeButtonText {
+  font-family: 'Inter', sans-serif;
+  line-height: 1.25rem; // leading-[20px]
+  font-size: 0.875rem; // text-[14px]
+  color: white; // text-white
+  letter-spacing: -0.1504px; // tracking-[-0.1504px]
+}
+
+.defaultAssigneeButtonIcon {
+  position: relative;
+  flex-shrink: 0;
+  width: 0.999625rem; // size-[15.994px]
+  height: 0.999625rem; // size-[15.994px]
+}
+
+.defaultAssigneeButtonIconSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.toggleRow {
+  display: flex;
+  height: 3.7486875rem; // h-[59.979px]
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.toggleRowLabel {
+  height: 2.2491875rem; // h-[35.987px]
+  position: relative;
+  flex-shrink: 0;
+}
+
+.toggleRowLabelText {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500; // font-medium
+  line-height: 0.8749375rem; // leading-[14px]
+  color: #d1d5dc; // text-[#d1d5dc]
+  font-size: 0.875rem; // text-[14px]
+  letter-spacing: -0.1504px; // tracking-[-0.1504px]
+}
+
+.toggleRowDescription {
+  font-family: 'Inter', sans-serif;
+  line-height: 1.25rem; // leading-[20px]
+  color: #888888; // text-[#888888]
+  font-size: 0.875rem; // text-[14px]
+  letter-spacing: -0.1504px; // tracking-[-0.1504px]
+  margin-top: 0.12475rem; // mt-[1.996px]
+}
+
+.toggleSwitch {
+  height: 1.1496875rem; // h-[18.395px]
+  position: relative;
+  border-radius: 15252000px; // rounded-[1.5252e+07px]
+  flex-shrink: 0;
+  width: 1.99975rem; // w-[31.996px]
+  transition: background-color $transition-normal;
+}
+
+.toggleSwitchActive {
+  background-color: #030213; // bg-[#030213]
+}
+
+.toggleSwitchInactive {
+  background-color: #cbced4; // bg-[#cbced4]
+}
+
+.toggleSwitchThumb {
+  background-color: white; // bg-white
+  position: relative;
+  border-radius: 15252000px; // rounded-[1.5252e+07px]
+  flex-shrink: 0;
+  width: 0.999625rem; // size-[15.994px]
+  height: 0.999625rem; // size-[15.994px]
+  transition: transform $transition-normal;
+  margin-top: 0.0568125rem; // mt-[0.909px]
+  margin-left: 0.0568125rem; // ml-[0.909px]
+}
+
+.toggleSwitchThumbActive {
+  transform: translateX(0.9314375rem); // translate-x-[14.903px]
+}
+
+.toggleSwitchThumbInactive {
+  transform: translateX(0.0568125rem); // translate-x-[0.909px]
+}
+
+// Notifications Section
+.notificationsSection {
+  position: absolute;
+  background-color: #1a1a1a; // bg-[#1a1a1a]
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 0.999625rem; // gap-[15.994px]
+  height: 20.232125rem; // h-[323.714px]
+  align-items: flex-start;
+  left: 0;
+  padding-bottom: 0.0568125rem; // pb-[0.909px]
+  padding-top: 1.55675rem; // pt-[24.908px]
+  padding-inline: 1.55675rem; // px-[24.908px]
+  border-radius: 0.625rem; // rounded-[10px]
+  top: 45.718125rem; // top-[731.49px]
+  width: 76.000625rem; // w-[1216.01px]
+}
+
+.notificationsBorder {
+  position: absolute;
+  border-width: 0.909px;
+  border-color: rgb(38, 38, 38); // border-neutral-800
+  border-style: solid;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 0.625rem; // rounded-[10px]
+}
+
+.notificationsContent {
+  height: 14.36925rem; // h-[229.908px]
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.notificationRow {
+  position: absolute;
+  display: flex;
+  height: 3.7486875rem; // h-[59.979px]
+  align-items: center;
+  justify-content: space-between;
+  left: 0;
+  width: 72.886875rem; // w-[1166.19px]
+}
+
+.notificationRowFirst {
+  top: 0;
+}
+
+.notificationRowSecond {
+  top: 5.310625rem; // top-[84.96px]
+}
+
+.notificationRowThird {
+  top: 10.620625rem; // top-[169.93px]
+}
+
+.notificationDivider {
+  position: absolute;
+  background-color: rgb(38, 38, 38); // bg-neutral-800
+  height: 0.062125rem; // h-[0.994px]
+  left: 0;
+  width: 72.886875rem; // w-[1166.19px]
+}
+
+.notificationDividerFirst {
+  top: 4.498125rem; // top-[71.97px]
+}
+
+.notificationDividerSecond {
+  top: 9.80875rem; // top-[156.94px]
+}
+
+// Danger Zone Section
+.dangerZoneSection {
+  position: absolute;
+  background-color: #1a1a1a; // bg-[#1a1a1a]
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 0.999625rem; // gap-[15.994px]
+  height: 17.0871875rem; // h-[273.395px]
+  align-items: flex-start;
+  left: 0;
+  padding-bottom: 0.0568125rem; // pb-[0.909px]
+  padding-top: 1.55675rem; // pt-[24.908px]
+  padding-inline: 1.55675rem; // px-[24.908px]
+  border-radius: 0.625rem; // rounded-[10px]
+  top: 67.45rem; // top-[1079.2px]
+  width: 76.000625rem; // w-[1216.01px]
+}
+
+.dangerZoneBorder {
+  position: absolute;
+  border-width: 0.909px;
+  border-color: #5c1515; // border-[#5c1515]
+  border-style: solid;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 0.625rem; // rounded-[10px]
+}
+
+.dangerZoneIcon {
+  position: absolute;
+  left: 0;
+  width: 1.25rem; // size-[20px]
+  top: 0.25rem; // top-[4px]
+}
+
+.dangerZoneIconSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.dangerZoneTitle {
+  position: absolute;
+  font-family: 'Inter', sans-serif;
+  line-height: 1.75rem; // leading-[28px]
+  left: 1.75rem; // left-[28px]
+  font-style: normal;
+  color: #ff6b6b; // text-[#ff6b6b]
+  font-size: 1.25rem; // text-[20px]
+  white-space: nowrap;
+  top: -0.01125rem; // top-[-0.18px]
+  letter-spacing: -0.4492px; // tracking-[-0.4492px]
+  white-space: pre;
+}
+
+.dangerZoneContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.999625rem; // gap-[15.994px]
+  height: 11.22425rem; // h-[179.588px]
+  align-items: flex-start;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.dangerZoneItem {
+  height: 5.1123125rem; // h-[81.797px]
+  position: relative;
+  border-radius: 0.625rem; // rounded-[10px]
+  flex-shrink: 0;
+  width: 100%; // w-full
+  border-width: 0.909px;
+  border-color: rgb(38, 38, 38); // border-neutral-800
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: 1.0564375rem; // px-[16.903px]
+}
+
+.dangerZoneItemDelete {
+  border-color: #5c1515; // border-[#5c1515]
+}
+
+.dangerZoneItemContent {
+  height: 2.999375rem; // h-[47.99px]
+  position: relative;
+  flex-shrink: 0;
+}
+
+.dangerZoneItemTitle {
+  font-family: 'Inter', sans-serif;
+  line-height: 1.5rem; // leading-[24px]
+  font-size: 1rem; // text-[16px]
+  color: white; // text-white
+  letter-spacing: -0.3125px; // tracking-[-0.3125px]
+}
+
+.dangerZoneItemDescription {
+  font-family: 'Inter', sans-serif;
+  line-height: 1.25rem; // leading-[20px]
+  color: #888888; // text-[#888888]
+  font-size: 0.875rem; // text-[14px]
+  letter-spacing: -0.1504px; // tracking-[-0.1504px]
+  margin-top: 0.2499375rem; // mt-[3.999px]
+}
+
+.archiveButton {
+  background-color: rgb(24, 24, 27); // bg-zinc-900
+  height: 2.249625rem; // h-[35.994px]
+  border-radius: 0.5rem; // rounded-[8px]
+  width: 5.2210625rem; // w-[83.537px]
+  border-width: 0.909px;
+  border-color: #5c1515; // border-[#5c1515]
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: rgb(243, 244, 246); // hover:bg-gray-100
+  }
+}
+
+.archiveButtonText {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500; // font-medium
+  line-height: 1.25rem; // leading-[20px]
+  color: #ff6b6b; // text-[#ff6b6b]
+  font-size: 0.875rem; // text-[14px]
+  letter-spacing: -0.1504px; // tracking-[-0.1504px]
+}
+
+.deleteButton {
+  background-color: white; // bg-white
+  height: 2.249625rem; // h-[35.994px]
+  border-radius: 0.5rem; // rounded-[8px]
+  width: 6.2841875rem; // w-[100.547px]
+  border-width: 0.909px;
+  border-color: #5c1515; // border-[#5c1515]
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem; // gap-[8px]
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: rgb(243, 244, 246); // hover:bg-gray-100
+  }
+}
+
+.deleteButtonIcon {
+  position: relative;
+  width: 0.999625rem; // size-[15.994px]
+  height: 0.999625rem; // size-[15.994px]
+}
+
+.deleteButtonIconSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.deleteButtonText {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500; // font-medium
+  line-height: 1.25rem; // leading-[20px]
+  color: #ff6b6b; // text-[#ff6b6b]
+  font-size: 0.875rem; // text-[14px]
+  letter-spacing: -0.1504px; // tracking-[-0.1504px]
+}
+
+

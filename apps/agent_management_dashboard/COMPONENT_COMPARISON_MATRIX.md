@@ -136,3 +136,4 @@ Manual testing needed to verify:
 3. Interactive states (hover, active, focus) work correctly
 4. Dark theme appearance matches old Tailwind version
 
+

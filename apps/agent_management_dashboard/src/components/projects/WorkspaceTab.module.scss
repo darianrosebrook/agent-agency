@@ -207,12 +207,12 @@
 }
 
 .tabButtonActive {
-  background-color: #1a1a1a; // bg-[#1a1a1a]
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
 }
 
 .tabButtonInactive {
   &:hover {
-    background-color: rgba(26, 26, 26, 0.5); // hover:bg-[#1a1a1a]/50
+    background-color: rgba($color-dark-bg-primary, 0.5); // hover:bg-[#1a1a1a]/50
   }
 }
 
@@ -225,11 +225,11 @@
 }
 
 .tabButtonTextActive {
-  color: white; // text-white
+  color: $color-white; // text-white
 }
 
 .tabButtonTextInactive {
-  color: #888888; // text-[#888888]
+  color: $color-gray-500; // text-[#888888] -> gray-500
 }
 
 .tabContent {
@@ -272,8 +272,8 @@
 }
 
 .bentoPanel {
-  background-color: #1a1a1a; // bg-[#1a1a1a]
-  border: 1px solid #1e2939; // border border-[#1e2939]
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border: 1px solid $color-slate-800; // border border-[#1e2939] -> slate-800
   border-radius: 1rem; // rounded-[16px]
   padding: $spacing-4;
   display: flex;
@@ -290,7 +290,7 @@
 }
 
 .bentoPanelText {
-  color: #4a5565; // text-[#4a5565]
+  color: $color-slate-600; // text-[#4a5565] -> slate-600
   font-size: 1rem; // text-[16px]
 }
 
@@ -347,7 +347,7 @@
   transition: background-color $transition-normal;
 
   &:hover {
-    background-color: #252525; // hover:bg-[#252525]
+    background-color: $color-dark-bg-hover; // hover:bg-[#252525]
   }
 }
 
@@ -361,7 +361,7 @@
   font-family: 'Inter', sans-serif;
   font-weight: 400;
   line-height: 1.25rem; // leading-[20px]
-  color: #d1d5dc; // text-[#d1d5dc]
+  color: $color-gray-300; // text-[#d1d5dc] -> gray-300
   font-size: 0.875rem; // text-[14px]
   letter-spacing: -0.1504px; // tracking-[-0.1504px]
 }
@@ -385,7 +385,7 @@
   transition: background-color $transition-normal;
 
   &:hover {
-    background-color: #252525; // hover:bg-[#252525]
+    background-color: $color-dark-bg-hover; // hover:bg-[#252525]
   }
 }
 
@@ -403,7 +403,7 @@
   font-family: 'Inter', sans-serif;
   font-weight: 400;
   line-height: 1.25rem; // leading-[20px]
-  color: #d1d5dc; // text-[#d1d5dc]
+  color: $color-gray-300; // text-[#d1d5dc] -> gray-300
   font-size: 0.875rem; // text-[14px]
   letter-spacing: -0.1504px; // tracking-[-0.1504px]
 }

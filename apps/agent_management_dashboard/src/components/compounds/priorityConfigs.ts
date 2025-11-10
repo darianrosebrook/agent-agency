@@ -8,3 +8,4 @@ export const priorityConfig: Record<Priority, PriorityConfig> = {
   high: { label: 'High', color: 'text-red-500', icon: '▲▲' },
 };
 
+

@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import svgPaths from '../../../imports/svg-pj3tus7kw0';
+import { cn } from '../../ui/utils';
+import styles from './GeneralTab.module.scss';
 
 export function GeneralTabContent() {
   const [collaboration, setCollaboration] = useState(true);
@@ -33,33 +35,30 @@ export function GeneralTabContent() {
 
   return (
     <div
-      className="h-[1352.6px] relative shrink-0 w-[1216.01px]"
+      className={styles.generalTab}
       data-name="ProjectSettings"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[1352.6px] relative w-[1216.01px]">
+      <div className={styles.generalTabInner}>
         {/* Project Details Section */}
         <div
-          className="absolute bg-[#1a1a1a] h-[381.754px] left-0 rounded-[10px] top-0 w-[1216.01px]"
+          className={styles.projectDetailsSection}
           data-name="Container"
         >
           <div
             aria-hidden="true"
-            className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[10px]"
+            className={styles.projectDetailsBorder}
           />
-          <div
-            className="absolute h-[27.997px] left-[24.91px] top-[24.91px] w-[1166.19px]"
-            data-name="Heading 2"
-          >
-            <p className="absolute font-['Inter:Regular',sans-serif] leading-[28px] left-0 not-italic text-[20px] text-nowrap text-white top-[-0.18px] tracking-[-0.4492px] whitespace-pre">
+          <div className={styles.sectionHeading}>
+            <p className={styles.sectionHeadingText}>
               Project Details
             </p>
           </div>
 
-          <div className="absolute content-stretch flex flex-col gap-[15.994px] h-[227.955px] items-start left-[24.91px] top-[68.9px] w-[1166.19px]">
+          <div className={styles.projectDetailsContent}>
             {/* Project Name */}
-            <div className="content-stretch flex flex-col gap-[5.994px] h-[55.987px] items-start relative shrink-0 w-full">
-              <div className="content-stretch flex gap-[8px] h-[13.999px] items-center relative shrink-0 w-full">
-                <p className="font-['Inter:Medium',sans-serif] font-medium leading-[14px] not-italic relative shrink-0 text-[#d1d5dc] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">
+            <div className={styles.formField}>
+              <div className={styles.formFieldLabel}>
+                <p className={styles.formFieldLabelText}>
                   Project Name
                 </p>
               </div>
@@ -67,49 +66,49 @@ export function GeneralTabContent() {
                 type="text"
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
-                className="bg-[#0d0d0d] h-[35.994px] relative rounded-[8px] shrink-0 w-full border-[0.909px] border-neutral-800 px-[12px] py-[4px] font-['Inter:Regular',sans-serif] leading-[20px] text-[14px] text-white tracking-[-0.1504px] focus:outline-none focus:border-[#2d7ff9]"
+                className={styles.formInput}
               />
             </div>
 
             {/* Description */}
-            <div className="content-stretch flex flex-col gap-[5.994px] h-[83.992px] items-start relative shrink-0 w-full">
-              <div className="content-stretch flex gap-[8px] h-[13.999px] items-center relative shrink-0 w-full">
-                <p className="font-['Inter:Medium',sans-serif] font-medium leading-[14px] not-italic relative shrink-0 text-[#d1d5dc] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">
+            <div className={styles.formField}>
+              <div className={styles.formFieldLabel}>
+                <p className={styles.formFieldLabelText}>
                   Description
                 </p>
               </div>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="bg-[#0d0d0d] h-[63.999px] relative rounded-[8px] shrink-0 w-full border-[0.909px] border-neutral-800 px-[12.909px] py-[8.909px] font-['Inter:Regular',sans-serif] leading-[20px] text-[14px] text-white tracking-[-0.1504px] resize-none focus:outline-none focus:border-[#2d7ff9]"
+                className={styles.formTextarea}
               />
             </div>
 
             {/* Project ID and Created */}
-            <div className="h-[55.987px] relative shrink-0 w-full">
-              <div className="absolute content-stretch flex flex-col gap-[5.994px] h-[55.987px] items-start left-0 top-0 w-[575.099px]">
-                <div className="content-stretch flex gap-[8px] h-[13.999px] items-center relative shrink-0 w-full">
-                  <p className="font-['Inter:Medium',sans-serif] font-medium leading-[14px] not-italic relative shrink-0 text-[#d1d5dc] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">
+            <div className={styles.projectIdCreatedContainer}>
+              <div className={styles.projectIdField}>
+                <div className={styles.formFieldLabel}>
+                  <p className={styles.formFieldLabelText}>
                     Project ID
                   </p>
                 </div>
-                <div className="bg-[#0d0d0d] h-[35.994px] opacity-50 relative rounded-[8px] shrink-0 w-full border-[0.909px] border-neutral-800 px-[12px] py-[4px] flex items-center">
+                <div className={styles.readOnlyField}>
                   {/* TODO: Replace hardcoded project ID with project.id from v3 database */}
-                  <p className="font-['Inter:Regular',sans-serif] leading-[20px] text-[#888888] text-[14px] tracking-[-0.1504px]">
+                  <p className={styles.readOnlyFieldText}>
                     proj_8k2m9n4p
                   </p>
                 </div>
               </div>
 
-              <div className="absolute content-stretch flex flex-col gap-[5.994px] h-[55.987px] items-start left-[591.09px] top-0 w-[575.099px]">
-                <div className="content-stretch flex gap-[8px] h-[13.999px] items-center relative shrink-0 w-full">
-                  <p className="font-['Inter:Medium',sans-serif] font-medium leading-[14px] not-italic relative shrink-0 text-[#d1d5dc] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">
+              <div className={styles.createdField}>
+                <div className={styles.formFieldLabel}>
+                  <p className={styles.formFieldLabelText}>
                     Created
                   </p>
                 </div>
-                <div className="bg-[#0d0d0d] h-[35.994px] opacity-50 relative rounded-[8px] shrink-0 w-full border-[0.909px] border-neutral-800 px-[12px] py-[4px] flex items-center">
+                <div className={styles.readOnlyField}>
                   {/* TODO: Replace hardcoded created date with project.created_at from v3 database, formatted as readable date */}
-                  <p className="font-['Inter:Regular',sans-serif] leading-[20px] text-[#888888] text-[14px] tracking-[-0.1504px]">
+                  <p className={styles.readOnlyFieldText}>
                     November 1, 2024
                   </p>
                 </div>
@@ -117,26 +116,26 @@ export function GeneralTabContent() {
             </div>
           </div>
 
-          <button className="absolute bg-[#2d7ff9] box-border content-stretch flex gap-[8px] h-[35.994px] items-center justify-center left-[1065.52px] px-[16px] py-[8px] rounded-[8px] top-[320.85px] w-[125.582px] hover:bg-[#2570d9] transition-colors">
-            <p className="font-['Inter:Medium',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[14px] text-nowrap text-white tracking-[-0.1504px] whitespace-pre">
+          <button className={styles.saveChangesButton}>
+            <p className={styles.saveChangesButtonText}>
               Save Changes
             </p>
           </button>
         </div>
 
         {/* Team Settings Section */}
-        <div className="absolute bg-[#1a1a1a] box-border content-stretch flex flex-col gap-[15.994px] h-[301.74px] items-start left-0 pb-[0.909px] pt-[24.908px] px-[24.908px] rounded-[10px] top-[405.75px] w-[1216.01px]">
+        <div className={styles.teamSettingsSection}>
           <div
             aria-hidden="true"
-            className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[10px]"
+            className={styles.teamSettingsBorder}
           />
-          <div className="h-[27.997px] relative shrink-0 w-full">
-            <p className="absolute font-['Inter:Regular',sans-serif] leading-[28px] left-0 not-italic text-[20px] text-nowrap text-white top-[-0.18px] tracking-[-0.4492px] whitespace-pre">
+          <div className={styles.sectionHeading}>
+            <p className={styles.sectionHeadingText}>
               Team Settings
             </p>
           </div>
 
-          <div className="content-stretch flex flex-col gap-[15.994px] h-[207.933px] items-start relative shrink-0 w-full">
+          <div className={styles.teamSettingsContent}>
             {/* Default Assignee */}
             {/* TODO: Replace hardcoded "Auto-assign" with user selection dropdown from v3 database with the following requirements:
             // 1. User list fetching: Load project team members from database
@@ -151,17 +150,17 @@ export function GeneralTabContent() {
             //    - Display user avatar and name when user is selected
             //    - Show "Auto-assign" option when no specific user is selected
             */}
-            <div className="content-stretch flex flex-col gap-[5.994px] h-[55.987px] items-start relative shrink-0 w-full">
-              <p className="font-['Inter:Medium',sans-serif] font-medium leading-[14px] text-[#d1d5dc] text-[14px] tracking-[-0.1504px]">
+            <div className={styles.formField}>
+              <p className={styles.formFieldLabelText}>
                 Default Assignee
               </p>
-              <button className="bg-[#0d0d0d] h-[35.994px] relative rounded-[8px] shrink-0 w-full border-[0.909px] border-neutral-800 flex items-center justify-between px-[12.905px] hover:bg-[#1a1a1a] transition-colors">
-                <p className="font-['Inter:Regular',sans-serif] leading-[20px] text-[14px] text-white tracking-[-0.1504px]">
+              <button className={styles.defaultAssigneeButton}>
+                <p className={styles.defaultAssigneeButtonText}>
                   Auto-assign
                 </p>
-                <div className="relative shrink-0 size-[15.994px]">
+                <div className={styles.defaultAssigneeButtonIcon}>
                   <svg
-                    className="block size-full"
+                    className={styles.defaultAssigneeButtonIconSvg}
                     fill="none"
                     preserveAspectRatio="none"
                     viewBox="0 0 16 16"
@@ -180,57 +179,53 @@ export function GeneralTabContent() {
             </div>
 
             {/* Team Collaboration Toggle */}
-            <div className="content-stretch flex h-[59.979px] items-center justify-between relative shrink-0 w-full">
-              <div className="h-[35.987px] relative shrink-0 w-[268.615px]">
-                <p className="font-['Inter:Medium',sans-serif] font-medium leading-[14px] text-[#d1d5dc] text-[14px] tracking-[-0.1504px]">
+            <div className={styles.toggleRow}>
+              <div className={styles.toggleRowLabel}>
+                <p className={styles.toggleRowLabelText}>
                   Allow team collaboration
                 </p>
-                <p className="font-['Inter:Regular',sans-serif] leading-[20px] text-[#888888] text-[14px] tracking-[-0.1504px] mt-[1.996px]">
+                <p className={styles.toggleRowDescription}>
                   Team members can edit tasks and boards
                 </p>
               </div>
               <button
                 onClick={() => setCollaboration(!collaboration)}
-                className={`h-[18.395px] relative rounded-[1.5252e+07px] shrink-0 w-[31.996px] transition-colors ${
-                  collaboration ? 'bg-[#030213]' : 'bg-[#cbced4]'
-                }`}
+                className={cn(
+                  styles.toggleSwitch,
+                  collaboration ? styles.toggleSwitchActive : styles.toggleSwitchInactive
+                )}
               >
                 <div
-                  className={`bg-white relative rounded-[1.5252e+07px] shrink-0 size-[15.994px] transition-transform ${
-                    collaboration
-                      ? 'translate-x-[14.903px]'
-                      : 'translate-x-[0.909px]'
-                  } mt-[0.909px] ${
-                    collaboration ? 'ml-[0.909px]' : 'ml-[0.909px]'
-                  }`}
+                  className={cn(
+                    styles.toggleSwitchThumb,
+                    collaboration ? styles.toggleSwitchThumbActive : styles.toggleSwitchThumbInactive
+                  )}
                 />
               </button>
             </div>
 
             {/* Require Approval Toggle */}
-            <div className="content-stretch flex h-[59.979px] items-center justify-between relative shrink-0 w-full">
-              <div className="h-[35.987px] relative shrink-0 w-[310.277px]">
-                <p className="font-['Inter:Medium',sans-serif] font-medium leading-[14px] text-[#d1d5dc] text-[14px] tracking-[-0.1504px]">
+            <div className={styles.toggleRow}>
+              <div className={styles.toggleRowLabel}>
+                <p className={styles.toggleRowLabelText}>
                   Require approval for done tasks
                 </p>
-                <p className="font-['Inter:Regular',sans-serif] leading-[20px] text-[#888888] text-[14px] tracking-[-0.1504px] mt-[1.996px]">
+                <p className={styles.toggleRowDescription}>
                   Tasks must be reviewed before marking as done
                 </p>
               </div>
               <button
                 onClick={() => setRequireApproval(!requireApproval)}
-                className={`h-[18.395px] relative rounded-[1.5252e+07px] shrink-0 w-[31.996px] transition-colors ${
-                  requireApproval ? 'bg-[#030213]' : 'bg-[#cbced4]'
-                }`}
+                className={cn(
+                  styles.toggleSwitch,
+                  requireApproval ? styles.toggleSwitchActive : styles.toggleSwitchInactive
+                )}
               >
                 <div
-                  className={`bg-white relative rounded-[1.5252e+07px] shrink-0 size-[15.994px] transition-transform ${
-                    requireApproval
-                      ? 'translate-x-[14.903px]'
-                      : 'translate-x-[0.909px]'
-                  } mt-[0.909px] ${
-                    requireApproval ? 'ml-[0.909px]' : 'ml-[0.909px]'
-                  }`}
+                  className={cn(
+                    styles.toggleSwitchThumb,
+                    requireApproval ? styles.toggleSwitchThumbActive : styles.toggleSwitchThumbInactive
+                  )}
                 />
               </button>
             </div>
@@ -238,102 +233,96 @@ export function GeneralTabContent() {
         </div>
 
         {/* Notifications Section */}
-        <div className="absolute bg-[#1a1a1a] box-border content-stretch flex flex-col gap-[15.994px] h-[323.714px] items-start left-0 pb-[0.909px] pt-[24.908px] px-[24.908px] rounded-[10px] top-[731.49px] w-[1216.01px]">
+        <div className={styles.notificationsSection}>
           <div
             aria-hidden="true"
-            className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[10px]"
+            className={styles.notificationsBorder}
           />
-          <div className="h-[27.997px] relative shrink-0 w-full">
-            <p className="absolute font-['Inter:Regular',sans-serif] leading-[28px] left-0 not-italic text-[20px] text-nowrap text-white top-[-0.18px] tracking-[-0.4492px] whitespace-pre">
+          <div className={styles.sectionHeading}>
+            <p className={styles.sectionHeadingText}>
               Notifications
             </p>
           </div>
 
-          <div className="h-[229.908px] relative shrink-0 w-full">
+          <div className={styles.notificationsContent}>
             {/* Task Assignments */}
-            <div className="absolute content-stretch flex h-[59.979px] items-center justify-between left-0 top-0 w-[1166.19px]">
-              <div className="h-[35.987px] relative shrink-0 w-[234.822px]">
-                <p className="font-['Inter:Medium',sans-serif] font-medium leading-[14px] text-[#d1d5dc] text-[14px] tracking-[-0.1504px]">
+            <div className={cn(styles.notificationRow, styles.notificationRowFirst)}>
+              <div className={styles.toggleRowLabel}>
+                <p className={styles.toggleRowLabelText}>
                   Task assignments
                 </p>
-                <p className="font-['Inter:Regular',sans-serif] leading-[20px] text-[#888888] text-[14px] tracking-[-0.1504px] mt-[1.996px]">
+                <p className={styles.toggleRowDescription}>
                   Get notified when assigned to a task
                 </p>
               </div>
               <button
                 onClick={() => setAssignmentNotifs(!assignmentNotifs)}
-                className={`h-[18.395px] relative rounded-[1.5252e+07px] shrink-0 w-[31.996px] transition-colors ${
-                  assignmentNotifs ? 'bg-[#030213]' : 'bg-[#cbced4]'
-                }`}
+                className={cn(
+                  styles.toggleSwitch,
+                  assignmentNotifs ? styles.toggleSwitchActive : styles.toggleSwitchInactive
+                )}
               >
                 <div
-                  className={`bg-white relative rounded-[1.5252e+07px] shrink-0 size-[15.994px] transition-transform ${
-                    assignmentNotifs
-                      ? 'translate-x-[14.903px]'
-                      : 'translate-x-[0.909px]'
-                  } mt-[0.909px] ${
-                    assignmentNotifs ? 'ml-[0.909px]' : 'ml-[0.909px]'
-                  }`}
+                  className={cn(
+                    styles.toggleSwitchThumb,
+                    assignmentNotifs ? styles.toggleSwitchThumbActive : styles.toggleSwitchThumbInactive
+                  )}
                 />
               </button>
             </div>
 
-            <div className="absolute bg-neutral-800 h-[0.994px] left-0 top-[71.97px] w-[1166.19px]" />
+            <div className={cn(styles.notificationDivider, styles.notificationDividerFirst)} />
 
             {/* Task Comments */}
-            <div className="absolute content-stretch flex h-[59.979px] items-center justify-between left-0 top-[84.96px] w-[1166.19px]">
-              <div className="h-[35.987px] relative shrink-0 w-[284.489px]">
-                <p className="font-['Inter:Medium',sans-serif] font-medium leading-[14px] text-[#d1d5dc] text-[14px] tracking-[-0.1504px]">
+            <div className={cn(styles.notificationRow, styles.notificationRowSecond)}>
+              <div className={styles.toggleRowLabel}>
+                <p className={styles.toggleRowLabelText}>
                   Task comments
                 </p>
-                <p className="font-['Inter:Regular',sans-serif] leading-[20px] text-[#888888] text-[14px] tracking-[-0.1504px] mt-[1.996px]">
+                <p className={styles.toggleRowDescription}>
                   Get notified of new comments on your tasks
                 </p>
               </div>
               <button
                 onClick={() => setCommentNotifs(!commentNotifs)}
-                className={`h-[18.395px] relative rounded-[1.5252e+07px] shrink-0 w-[31.996px] transition-colors ${
-                  commentNotifs ? 'bg-[#030213]' : 'bg-[#cbced4]'
-                }`}
+                className={cn(
+                  styles.toggleSwitch,
+                  commentNotifs ? styles.toggleSwitchActive : styles.toggleSwitchInactive
+                )}
               >
                 <div
-                  className={`bg-white relative rounded-[1.5252e+07px] shrink-0 size-[15.994px] transition-transform ${
-                    commentNotifs
-                      ? 'translate-x-[14.903px]'
-                      : 'translate-x-[0.909px]'
-                  } mt-[0.909px] ${
-                    commentNotifs ? 'ml-[0.909px]' : 'ml-[0.909px]'
-                  }`}
+                  className={cn(
+                    styles.toggleSwitchThumb,
+                    commentNotifs ? styles.toggleSwitchThumbActive : styles.toggleSwitchThumbInactive
+                  )}
                 />
               </button>
             </div>
 
-            <div className="absolute bg-neutral-800 h-[0.994px] left-0 top-[156.94px] w-[1166.19px]" />
+            <div className={cn(styles.notificationDivider, styles.notificationDividerSecond)} />
 
             {/* Status Changes */}
-            <div className="absolute content-stretch flex h-[59.979px] items-center justify-between left-0 top-[169.93px] w-[1166.19px]">
-              <div className="h-[35.987px] relative shrink-0 w-[247.23px]">
-                <p className="font-['Inter:Medium',sans-serif] font-medium leading-[14px] text-[#d1d5dc] text-[14px] tracking-[-0.1504px]">
+            <div className={cn(styles.notificationRow, styles.notificationRowThird)}>
+              <div className={styles.toggleRowLabel}>
+                <p className={styles.toggleRowLabelText}>
                   Status changes
                 </p>
-                <p className="font-['Inter:Regular',sans-serif] leading-[20px] text-[#888888] text-[14px] tracking-[-0.1504px] mt-[1.996px]">
+                <p className={styles.toggleRowDescription}>
                   Get notified when task status changes
                 </p>
               </div>
               <button
                 onClick={() => setStatusNotifs(!statusNotifs)}
-                className={`h-[18.395px] relative rounded-[1.5252e+07px] shrink-0 w-[31.996px] transition-colors ${
-                  statusNotifs ? 'bg-[#030213]' : 'bg-[#cbced4]'
-                }`}
+                className={cn(
+                  styles.toggleSwitch,
+                  statusNotifs ? styles.toggleSwitchActive : styles.toggleSwitchInactive
+                )}
               >
                 <div
-                  className={`bg-white relative rounded-[1.5252e+07px] shrink-0 size-[15.994px] transition-transform ${
-                    statusNotifs
-                      ? 'translate-x-[14.903px]'
-                      : 'translate-x-[0.909px]'
-                  } mt-[0.909px] ${
-                    statusNotifs ? 'ml-[0.909px]' : 'ml-[0.909px]'
-                  }`}
+                  className={cn(
+                    styles.toggleSwitchThumb,
+                    statusNotifs ? styles.toggleSwitchThumbActive : styles.toggleSwitchThumbInactive
+                  )}
                 />
               </button>
             </div>
