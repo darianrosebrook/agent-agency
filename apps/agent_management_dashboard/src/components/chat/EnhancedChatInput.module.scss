@@ -1,0 +1,447 @@
+@use "../../styles/design-tokens.scss" as *;
+
+.container {
+  width: 100%;
+  max-width: 48rem; // max-w-3xl
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-6; // space-y-6
+}
+
+// Header Section
+.header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-4; // space-y-4
+}
+
+.title {
+  font-size: $font-size-4xl; // text-4xl
+  font-weight: $font-weight-semibold;
+  color: $color-white;
+  margin: 0;
+}
+
+.caption {
+  color: $color-gray-400; // text-muted-foreground
+  transition: opacity $transition-normal;
+  margin: 0;
+}
+
+// Context Items
+.contextItems {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-2; // gap-2
+  padding-bottom: $spacing-2; // pb-2
+}
+
+.contextItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  background-color: rgba($color-gray-800, 0.5); // bg-muted/50
+  border: 1px solid $color-gray-800; // border-border
+  border-radius: $border-radius-lg; // rounded-lg
+  transition: all $transition-normal;
+  cursor: pointer;
+  padding: $spacing-2; // p-2
+  padding-right: $spacing-8; // pr-8
+  animation: slideInFromLeft 0.3s ease-out forwards;
+  opacity: 0;
+
+  &:hover {
+    background-color: $color-gray-800; // hover:bg-muted
+  }
+
+  &.contextItemExpanded {
+    width: 100%;
+    padding: $spacing-3; // p-3
+  }
+}
+
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.contextItemContent {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  flex: 1;
+  min-width: 0;
+}
+
+.contextIconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem; // w-6
+  height: 1.5rem; // h-6
+  border-radius: $border-radius-sm; // rounded
+  background-color: $color-dark-bg-primary; // bg-background
+  border: 1px solid $color-gray-800; // border-border
+}
+
+.contextIcon {
+  width: 0.75rem; // h-3
+  height: 0.75rem; // w-3
+  color: $color-gray-400;
+}
+
+.contextItemText {
+  flex: 1;
+  min-width: 0;
+}
+
+.contextItemTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-white;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contextItemPreview {
+  font-size: $font-size-xs;
+  color: $color-gray-400; // text-muted-foreground
+  margin-top: $spacing-1; // mt-1
+}
+
+.contextItemRemove {
+  position: absolute;
+  top: $spacing-2; // top-2
+  right: $spacing-2; // right-2
+  padding: $spacing-1; // p-1
+  border-radius: 9999px; // rounded-full
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: $color-dark-bg-primary; // hover:bg-background
+  }
+}
+
+.contextItemRemoveIcon {
+  width: 0.75rem; // h-3
+  height: 0.75rem; // w-3
+  color: $color-gray-400;
+}
+
+// Input Section
+.inputSection {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-3; // space-y-3
+}
+
+.inputContainer {
+  position: relative;
+  border-radius: $border-radius-xl; // rounded-xl
+  border: 2px solid $color-gray-800; // border-2 border-border
+  background-color: $color-dark-bg-primary; // bg-input
+  transition: all $transition-normal;
+
+  &:hover {
+    border-color: rgba($color-blue-500, 0.5); // hover:border-ring/50
+  }
+
+  &.inputContainerDragging {
+    border-color: $color-blue-500; // border-workspace-accent
+    background-color: rgba($color-blue-500, 0.05); // bg-workspace-accent/5
+  }
+}
+
+.dragOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba($color-blue-500, 0.05); // bg-workspace-accent/5
+  border-radius: $border-radius-xl; // rounded-xl
+  z-index: 10;
+  pointer-events: none;
+  gap: $spacing-2; // space-y-2
+}
+
+.dragIcon {
+  width: 2rem; // h-8
+  height: 2rem; // w-8
+  margin: 0 auto;
+  color: $color-blue-500; // text-workspace-accent
+}
+
+.dragText {
+  color: $color-blue-500; // text-workspace-accent
+  font-weight: $font-weight-medium;
+  margin: 0;
+}
+
+.inputWrapper {
+  position: relative;
+}
+
+.placeholder {
+  position: absolute;
+  inset: 0;
+  padding: $spacing-4; // px-4
+  padding-top: $spacing-4; // pt-4
+  pointer-events: none;
+  color: $color-gray-400; // text-muted-foreground
+  transition: opacity $transition-normal;
+}
+
+.contentEditable {
+  width: 100%;
+  padding: $spacing-4; // px-4
+  padding-top: $spacing-4; // pt-4
+  padding-bottom: 4rem; // pb-16
+  background-color: transparent;
+  color: $color-white; // text-body
+  font-size: $font-size-base;
+  line-height: 1.5;
+  min-height: 8.75rem; // min-h-[140px]
+  outline: none;
+  transition: all $transition-normal;
+
+  &:focus {
+    outline: none;
+  }
+
+  &[contenteditable] {
+    outline: none;
+  }
+}
+
+// Input Footer
+.inputFooter {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-3; // px-3 py-3
+  border-top: 1px solid rgba($color-gray-800, 0.5); // border-t border-border/50
+}
+
+.inputFooterLeft {
+  display: flex;
+  align-items: center;
+  gap: $spacing-1; // gap-1
+}
+
+.inputFooterRight {
+  display: flex;
+  align-items: center;
+  gap: $spacing-1; // gap-1
+}
+
+.footerButton {
+  height: 2rem; // h-8
+  width: 2rem; // w-8
+  padding: 0; // p-0
+  border-radius: 9999px; // rounded-full
+  background-color: transparent;
+  border: 1px solid rgba($color-gray-400, 0.3); // Very thin light gray outline
+  color: $color-white;
+
+  &:hover {
+    background-color: rgba($color-gray-800, 0.5);
+    border-color: rgba($color-gray-400, 0.5);
+  }
+}
+
+.footerIcon {
+  width: 1rem; // h-4
+  height: 1rem; // w-4
+  color: $color-white;
+}
+
+.dropdownContent {
+  width: 14rem; // w-48 or w-56
+}
+
+.modeSelect {
+  height: 2rem !important; // h-8
+  min-width: 6.875rem; // w-[110px]
+  padding: 0 $spacing-3 !important; // px-3
+  font-size: $font-size-xs; // text-xs
+  background-color: transparent !important;
+  border: 1px solid rgba($color-gray-400, 0.3) !important; // Very thin light gray outline
+  border-radius: 9999px !important; // rounded-full (circular like icon buttons)
+  color: $color-white !important;
+  transition: all $transition-normal;
+  width: auto !important;
+
+  &:hover {
+    background-color: rgba($color-gray-800, 0.5) !important;
+    border-color: rgba($color-gray-400, 0.5) !important;
+  }
+
+  &:focus-visible {
+    outline: none !important;
+    border-color: rgba($color-blue-500, 0.5) !important;
+    box-shadow: 0 0 0 2px rgba($color-blue-500, 0.2) !important;
+  }
+
+  // Override default select trigger styles
+  &[data-slot='select-trigger'] {
+    background-color: transparent !important;
+    border: 1px solid rgba($color-gray-400, 0.3) !important;
+    border-radius: 9999px !important;
+    color: $color-white !important;
+
+    &:hover {
+      background-color: rgba($color-gray-800, 0.5) !important;
+      border-color: rgba($color-gray-400, 0.5) !important;
+    }
+  }
+
+  // Style the value text
+  [data-slot='select-value'] {
+    color: $color-white !important;
+  }
+
+  // Style the chevron icon
+  svg {
+    color: $color-white !important;
+    opacity: 0.7;
+  }
+}
+
+.sendButton {
+  height: 2rem; // h-8
+  padding-left: $spacing-4; // px-4
+  padding-right: $spacing-4; // px-4
+  gap: $spacing-2; // gap-2
+  border-radius: 9999px; // rounded-full
+}
+
+// Chat Menu Item
+.chatMenuItem {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-1; // gap-1
+}
+
+.chatMenuItemTitle {
+  font-weight: $font-weight-medium;
+}
+
+.chatMenuItemTime {
+  font-size: $font-size-xs;
+  color: $color-gray-400; // text-muted-foreground
+}
+
+// Style Badge
+.styleBadge {
+  margin-left: auto;
+  font-size: $font-size-xs;
+}
+
+// Switch Row
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-1_5 $spacing-2; // px-2 py-1.5
+  font-size: $font-size-sm;
+}
+
+// Timing Options
+.timingIconNow {
+  color: $color-yellow-500; // text-yellow-500
+}
+
+.timingIconSoon {
+  color: $color-blue-500; // text-blue-500
+}
+
+.timingIconAfter {
+  color: rgb(168, 85, 247); // text-purple-500 (purple not in tokens)
+}
+
+.timingOption {
+  display: flex;
+  flex-direction: column;
+}
+
+.timingDescription {
+  font-size: $font-size-xs;
+  color: $color-gray-400; // text-muted-foreground
+}
+
+// Active Settings
+.activeSettings {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2; // gap-2
+}
+
+.activeSettingsLabel {
+  color: $color-gray-400; // text-muted-foreground
+  font-size: $font-size-xs;
+}
+
+.activeBadge {
+  font-size: $font-size-xs;
+}
+
+// Help Section
+.helpSection {
+  padding-top: $spacing-6; // pt-6
+  border-top: 1px solid $color-gray-800; // border-t border-border
+}
+
+.helpGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-4; // gap-4
+  font-size: $font-size-sm;
+}
+
+.helpItem {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-1; // space-y-1
+}
+
+.helpTitle {
+  font-weight: $font-weight-medium;
+  color: $color-white;
+  margin: 0;
+}
+
+.helpDescription {
+  color: $color-gray-400; // text-muted-foreground
+  margin: 0;
+}
+
+.kbd {
+  padding: $spacing-1 $spacing-1_5; // px-1.5 py-0.5
+  background-color: $color-gray-800; // bg-muted
+  border-radius: $border-radius-sm; // rounded
+  font-size: $font-size-xs;
+  font-family: monospace;
+  color: $color-white;
+}
+

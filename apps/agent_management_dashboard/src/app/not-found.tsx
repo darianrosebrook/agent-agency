@@ -76,6 +76,11 @@ export default function NotFound() {
               </Link>
             </li>
             <li>
+              <Link href="/testing" className={styles.pagesLink}>
+                Testing
+              </Link>
+            </li>
+            <li>
               <Link href="/settings" className={styles.pagesLink}>
                 Settings
               </Link>
@@ -86,6 +91,3 @@ export default function NotFound() {
     </div>
   );
 }
-
-
-

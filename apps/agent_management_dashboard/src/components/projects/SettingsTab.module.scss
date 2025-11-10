@@ -4,7 +4,7 @@
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background-color: $color-dark-bg-secondary; // bg-[#0d0d0d]
+  background-color: $color-dark-bg-secondary;
 }
 
 .settingsTabContent {
@@ -13,186 +13,105 @@
 }
 
 .settingsContainer {
-  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 1.99975rem; // gap-[31.996px]
-  align-items: flex-start;
-  padding-bottom: 0;
-  padding-top: 1.99975rem; // pt-[31.996px]
-  padding-inline: 1.99975rem; // px-[31.996px]
+  gap: $spacing-8;
+  padding: $spacing-8;
   width: 100%;
 }
 
-.headingContainer {
-  display: flex;
-  height: 2.249625rem; // h-[35.994px]
-  align-items: flex-start;
-  position: relative;
-  flex-shrink: 0;
-  width: 100%;
-}
-
-.headingText {
-  flex-basis: 0;
-  font-family: 'Inter', sans-serif;
-  flex-grow: 1;
-  line-height: 2.25rem; // leading-[36px]
-  min-height: 1px;
-  min-width: 1px;
-  font-style: normal;
-  position: relative;
-  flex-shrink: 0;
-  font-size: 1.875rem; // text-[30px]
-  color: $color-white; // text-white
-  letter-spacing: 0.3955px; // tracking-[0.3955px]
-}
-
-.paragraphContainer {
-  height: 1.4999375rem; // h-[23.999px]
-  position: relative;
-  flex-shrink: 0;
-  width: 100%;
-}
-
-.paragraphText {
-  position: absolute;
-  font-family: 'Inter', sans-serif;
-  line-height: 1.5rem; // leading-[24px]
-  left: 0;
-  font-style: normal;
-  color: $color-gray-500; // text-[#888888] -> gray-500
-  font-size: 1rem; // text-[16px]
-  white-space: nowrap;
-  top: -0.045625rem; // top-[-0.73px]
-  letter-spacing: -0.3125px; // tracking-[-0.3125px]
-  white-space: pre;
-}
-
-.container {
+// Header Section
+.header {
   display: flex;
   flex-direction: column;
-  gap: 0.4998125rem; // gap-[7.997px]
-  height: 4.249375rem; // h-[67.99px]
-  align-items: flex-start;
-  position: relative;
-  flex-shrink: 0;
-  width: 100%;
+  gap: $spacing-2;
 }
 
-.contentContainer {
-  display: flex;
-  flex-direction: column;
-  gap: 1.99975rem; // gap-[31.996px]
-  align-items: flex-start;
-  position: relative;
-  flex-shrink: 0;
-  width: 100%;
+.heading {
+  margin: 0;
+  font-family: $font-family-sans;
+  font-size: $font-size-3xl;
+  font-weight: $font-weight-normal;
+  line-height: 2.25rem;
+  color: $color-white;
+  letter-spacing: 0.3955px;
 }
 
+.description {
+  margin: 0;
+  font-family: $font-family-sans;
+  font-size: $font-size-base;
+  line-height: 1.5rem;
+  color: $color-gray-500;
+  letter-spacing: -0.3125px;
+}
+
+// Tab Navigation
 .tabList {
-  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
-  height: 2.249625rem; // h-[35.994px]
   position: relative;
-  border-radius: 0.875rem; // rounded-[14px]
-  flex-shrink: 0;
-  width: 23.153875rem; // w-[370.462px]
+  background-color: $color-dark-bg-primary;
+  border-radius: $border-radius-lg;
+  border: 1px solid $color-neutral-800;
+  width: fit-content;
 }
 
 .tabListBorder {
   position: absolute;
-  border-width: 0.909px;
-  border-color: $color-neutral-800; // border-neutral-800
-  border-style: solid;
   inset: 0;
+  border: 1px solid $color-neutral-800;
+  border-radius: $border-radius-lg;
   pointer-events: none;
-  border-radius: 0.875rem; // rounded-[14px]
 }
 
 .tabListContent {
-  background-clip: padding-box;
-  border: 0;
-  border-color: transparent;
-  border-style: solid;
-  box-sizing: border-box;
-  height: 2.249625rem; // h-[35.994px]
+  display: flex;
+  gap: $spacing-1;
+  padding: $spacing-1;
   position: relative;
-  width: 23.153875rem; // w-[370.462px]
 }
 
 .tabButton {
-  position: absolute;
-  box-sizing: border-box;
+  position: relative;
   display: flex;
-  gap: 0.375rem; // gap-[6px]
-  height: 1.573625rem; // h-[25.178px]
   align-items: center;
   justify-content: center;
-  padding-inline: 0.5568125rem; // px-[8.909px]
-  padding-block: 0.3068125rem; // py-[4.909px]
-  border-radius: 0.875rem; // rounded-[14px]
-  top: 0.338125rem; // top-[5.41px]
+  padding: $spacing-2 $spacing-3;
+  border-radius: $border-radius-lg;
+  border: none;
+  background: transparent;
+  cursor: pointer;
   transition: background-color $transition-normal;
 }
 
-.tabButtonGeneral {
-  left: 0.306875rem; // left-[4.91px]
-  width: 4.318625rem; // w-[69.098px]
-}
-
-.tabButtonWorkHistory {
-  left: 4.625625rem; // left-[74.01px]
-  width: 6.4741875rem; // w-[103.587px]
-}
-
-.tabButtonAIAgents {
-  left: 11.099375rem; // left-[177.59px]
-  width: 5.076375rem; // w-[81.222px]
-}
-
-.tabButtonTaskSettings {
-  left: 16.175625rem; // left-[258.81px]
-  width: 6.67125rem; // w-[106.74px]
-}
-
 .tabButtonActive {
-  background-color: $color-gray-800; // bg-[#2d2d2d] -> gray-800
+  background-color: $color-gray-800;
 }
 
 .tabButtonInactive {
   &:hover {
-    background-color: $color-dark-bg-hover; // hover:bg-[#252525]
+    background-color: $color-dark-bg-hover;
   }
 }
 
-.tabButtonBorder {
-  position: absolute;
-  border-width: 0.909px;
-  border-color: rgba(0, 0, 0, 0); // border-[rgba(0,0,0,0)]
-  border-style: solid;
-  inset: 0;
-  pointer-events: none;
-  border-radius: 0.875rem; // rounded-[14px]
-}
-
 .tabButtonText {
-  font-family: 'Inter', sans-serif;
-  font-weight: 500; // font-medium
-  line-height: 1.25rem; // leading-[20px]
-  font-style: normal;
-  position: relative;
-  flex-shrink: 0;
-  font-size: 0.875rem; // text-[14px]
+  font-family: $font-family-sans;
+  font-weight: $font-weight-medium;
+  font-size: $font-size-sm;
+  line-height: 1.25rem;
+  letter-spacing: -0.1504px;
   white-space: nowrap;
-  letter-spacing: -0.1504px; // tracking-[-0.1504px]
-  white-space: pre;
 }
 
 .tabButtonTextActive {
-  color: $color-white; // text-white
+  color: $color-white;
 }
 
 .tabButtonTextInactive {
-  color: $color-gray-300; // text-[#cccccc] -> gray-300
+  color: $color-gray-300;
 }
 
+// Tab Content
+.tabContent {
+  flex: 1;
+  min-height: 0;
+}

@@ -8,8 +8,10 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 use uuid::Uuid;
-use tracing::{debug, warn};
-
+use tracing::{debug, warn, info};
+use std::collections::HashMap;
+use std::path::PathBuf;
+use agent_workers::{MCPWorkerPool, TaskDefinition, TaskResult, TaskPriority as WorkerTaskPriority};
 use agent_agency_contracts::task_executor::{TaskExecutor, TaskSpec, TaskExecutionResult, TaskExecutorHealth, TaskExecutionStats};
 
 /// Execution strategy for task execution
@@ -64,6 +66,8 @@ pub struct TaskExecutorFactory {
     default_config: TaskExecutorConfig,
     /// Worker pool integration (if available)
     worker_pool: Option<Arc<dyn crate::planning::plan_executor::WorkerPool>>,
+    /// MCP worker pool for real task execution (if available)
+    mcp_worker_pool: Option<Arc<MCPWorkerPool>>,
     /// Task queue service (if available) - TODO: Enable when data-infrastructure integration is available
     task_queue: Option<Arc<dyn std::marker::Send + std::marker::Sync + 'static>>, // Placeholder for TaskQueueService
     /// Audit trail manager for logging
@@ -76,6 +80,7 @@ impl TaskExecutorFactory {
         Self {
             default_config: TaskExecutorConfig::default(),
             worker_pool: None,
+            mcp_worker_pool: None,
             task_queue: None,
             audit_manager: None,
         }
@@ -90,6 +95,12 @@ impl TaskExecutorFactory {
     /// Configure with worker pool integration
     pub fn with_worker_pool(mut self, worker_pool: Arc<dyn crate::planning::plan_executor::WorkerPool>) -> Self {
         self.worker_pool = Some(worker_pool);
+        self
+    }
+
+    /// Configure with MCP worker pool for real task execution
+    pub fn with_mcp_worker_pool(mut self, mcp_worker_pool: Arc<MCPWorkerPool>) -> Self {
+        self.mcp_worker_pool = Some(mcp_worker_pool);
         self
     }
 
@@ -133,6 +144,7 @@ impl TaskExecutorFactory {
         let executor = SequentialTaskExecutor::new(
             config.clone(),
             self.worker_pool.clone(),
+            self.mcp_worker_pool.clone(),
             // TODO: Enable task_queue when data-infrastructure integration is available
             // self.task_queue.clone(),
             self.audit_manager.clone(),
@@ -148,6 +160,7 @@ impl TaskExecutorFactory {
         let executor = ParallelTaskExecutor::new(
             config.clone(),
             self.worker_pool.clone(),
+            self.mcp_worker_pool.clone(),
             // TODO: Enable task_queue when data-infrastructure integration is available
             // self.task_queue.clone(),
             self.audit_manager.clone(),
@@ -211,9 +224,11 @@ impl TaskExecutorFactory {
 pub struct SequentialTaskExecutor {
     config: TaskExecutorConfig,
     worker_pool: Option<Arc<dyn crate::planning::plan_executor::WorkerPool>>,
+    mcp_worker_pool: Option<Arc<MCPWorkerPool>>,
     // TODO: Enable task_queue when data-infrastructure integration is available
     // task_queue: Option<Arc<dyn crate::data_infrastructure::queue::TaskQueueService>>,
     audit_manager: Option<Arc<crate::audit_trail::AuditTrailManager>>,
+    circuit_breaker: Option<Arc<crate::error_handling::CircuitBreaker>>,
 }
 
 impl std::fmt::Debug for SequentialTaskExecutor {
@@ -221,7 +236,9 @@ impl std::fmt::Debug for SequentialTaskExecutor {
         f.debug_struct("SequentialTaskExecutor")
             .field("config", &self.config)
             .field("worker_pool", &self.worker_pool.as_ref().map(|_| "Some(WorkerPool)"))
+            .field("mcp_worker_pool", &self.mcp_worker_pool.as_ref().map(|_| "Some(MCPWorkerPool)"))
             .field("audit_manager", &self.audit_manager)
+            .field("circuit_breaker", &self.circuit_breaker.as_ref().map(|_| "Some(CircuitBreaker)"))
             .finish()
     }
 }
@@ -230,15 +247,180 @@ impl SequentialTaskExecutor {
     fn new(
         config: TaskExecutorConfig,
         worker_pool: Option<Arc<dyn crate::planning::plan_executor::WorkerPool>>,
+        mcp_worker_pool: Option<Arc<MCPWorkerPool>>,
         // TODO: Enable task_queue when data-infrastructure integration is available
         // task_queue: Option<Arc<dyn crate::data_infrastructure::queue::TaskQueueService>>,
         audit_manager: Option<Arc<crate::audit_trail::AuditTrailManager>>,
     ) -> Self {
+        // Create circuit breaker for task execution resilience
+        let circuit_breaker = if config.enable_health_monitoring {
+            Some(Arc::new(crate::error_handling::CircuitBreaker::new(
+                "task_executor_sequential".to_string(),
+                crate::error_handling::ErrorHandlingCircuitBreakerConfig::default(),
+            )))
+        } else {
+            None
+        };
+
         Self {
             config,
             worker_pool,
+            mcp_worker_pool,
             // task_queue,
             audit_manager,
+            circuit_breaker,
+        }
+    }
+
+    /// Convert TaskSpec to TaskDefinition for MCPWorkerPool execution
+    fn task_spec_to_task_definition(
+        &self,
+        task_spec: &TaskSpec,
+        worktree_path: Option<&PathBuf>,
+    ) -> Result<TaskDefinition, Box<dyn std::error::Error + Send + Sync>> {
+        // Extract required tools from task spec
+        let mut required_tools = Vec::new();
+        
+        // Add tools based on task scope
+        if let Some(scope) = &task_spec.scope {
+            if !scope.files_affected.is_empty() || !scope.domains.is_empty() {
+                required_tools.push("file_edit".to_string());
+                required_tools.push("file_read".to_string());
+            }
+        }
+        
+        // Add tools from required capabilities
+        for capability in &task_spec.required_capabilities {
+            match capability.as_str() {
+                "file_editing" | "code_editing" => {
+                    if !required_tools.contains(&"file_edit".to_string()) {
+                        required_tools.push("file_edit".to_string());
+                    }
+                    if !required_tools.contains(&"file_read".to_string()) {
+                        required_tools.push("file_read".to_string());
+                    }
+                }
+                "code_analysis" => {
+                    required_tools.push("file_read".to_string());
+                }
+                _ => {
+                    // Map other capabilities to tools as needed
+                    debug!("Unmapped capability: {}", capability);
+                }
+            }
+        }
+
+        // Default to file editing tools if no tools specified
+        if required_tools.is_empty() {
+            required_tools.push("file_edit".to_string());
+            required_tools.push("file_read".to_string());
+        }
+
+        // Convert priority
+        let priority: WorkerTaskPriority = match task_spec.priority {
+            agent_agency_contracts::types::planning::TaskPriority::Low => WorkerTaskPriority::Low,
+            agent_agency_contracts::types::planning::TaskPriority::Normal => WorkerTaskPriority::Medium,
+            agent_agency_contracts::types::planning::TaskPriority::Medium => WorkerTaskPriority::Medium,
+            agent_agency_contracts::types::planning::TaskPriority::High => WorkerTaskPriority::High,
+            agent_agency_contracts::types::planning::TaskPriority::Urgent => WorkerTaskPriority::High,
+            agent_agency_contracts::types::planning::TaskPriority::Critical => WorkerTaskPriority::Critical,
+        };
+
+        // Build task parameters from task spec
+        let mut parameters = HashMap::new();
+        parameters.insert("title".to_string(), serde_json::json!(task_spec.title));
+        parameters.insert("description".to_string(), serde_json::json!(task_spec.description));
+        
+        if let Some(scope) = &task_spec.scope {
+            parameters.insert("scope".to_string(), serde_json::json!({
+                "domains": scope.domains,
+                "files_affected": scope.files_affected,
+                "max_loc": scope.max_loc,
+            }));
+        }
+        
+        if let Some(worktree_path) = worktree_path {
+            parameters.insert("worktree_path".to_string(), serde_json::json!(worktree_path.display().to_string()));
+        }
+        
+        // Add context information
+        for (key, value) in &task_spec.context {
+            parameters.insert(format!("context_{}", key), value.clone());
+        }
+
+        // Create task name
+        let task_name = format!("task_{}", task_spec.id);
+
+        Ok(TaskDefinition {
+            id: task_spec.id,
+            name: task_name,
+            description: task_spec.description.clone(),
+            required_tools,
+            parameters,
+            timeout_seconds: task_spec.timeout_seconds.map(|t| t as u32),
+            priority,
+            deadline: None,
+            metadata: {
+                let mut metadata = HashMap::new();
+                if let Some(working_spec_id) = &task_spec.working_spec_id {
+                    metadata.insert("working_spec_id".to_string(), serde_json::json!(working_spec_id));
+                }
+                if let Some(risk_tier) = task_spec.risk_tier {
+                    metadata.insert("risk_tier".to_string(), serde_json::json!(risk_tier));
+                }
+                if let Some(ref caws_spec) = task_spec.caws_spec {
+                    metadata.insert("caws_spec".to_string(), serde_json::json!(caws_spec));
+                }
+                metadata
+            },
+        })
+    }
+
+    /// Convert TaskResult to TaskExecutionResult
+    fn task_result_to_execution_result(
+        &self,
+        task_result: &TaskResult,
+        task_spec: &TaskSpec,
+        started_at: chrono::DateTime<chrono::Utc>,
+    ) -> TaskExecutionResult {
+        let completed_at = started_at + chrono::Duration::milliseconds(task_result.execution_time_ms as i64);
+        let duration_ms = task_result.execution_time_ms;
+
+        // Extract worker_id from worker_breakdown if available
+        let worker_id = task_result.worker_breakdown.first()
+            .map(|breakdown| breakdown.worker_id.0);
+
+        TaskExecutionResult {
+            execution_id: uuid::Uuid::new_v4(),
+            task_id: task_result.task_id.0,
+            success: task_result.success,
+            output: task_result.summary.clone(),
+            errors: task_result.errors.clone(),
+            metadata: {
+                let mut metadata = HashMap::new();
+                metadata.insert("execution_time_ms".to_string(), serde_json::json!(duration_ms));
+                metadata.insert("subtasks_completed".to_string(), serde_json::json!(task_result.subtasks_completed));
+                metadata.insert("total_subtasks".to_string(), serde_json::json!(task_result.total_subtasks));
+                if let Some(tool_used) = &task_result.tool_used {
+                    metadata.insert("tool_used".to_string(), serde_json::json!(tool_used));
+                }
+                if let Some(error_message) = &task_result.error_message {
+                    metadata.insert("error_message".to_string(), serde_json::json!(error_message));
+                }
+                // Add quality scores to metadata
+                for (key, value) in &task_result.quality_scores {
+                    metadata.insert(format!("quality_{}", key), serde_json::json!(value));
+                }
+                // Add task result metadata
+                for (key, value) in &task_result.metadata {
+                    metadata.insert(format!("result_{}", key), value.clone());
+                }
+                metadata
+            },
+            started_at,
+            completed_at,
+            duration_ms,
+            worker_id,
         }
     }
 }
@@ -252,64 +434,87 @@ impl TaskExecutor for SequentialTaskExecutor {
     ) -> Result<TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
         debug!("Executing task {} sequentially on worker {}", task_spec.id, worker_id);
 
+        // Implemented: Real worker execution via MCPWorkerPool
+        let started_at = chrono::Utc::now();
+        let execution_id = uuid::Uuid::new_v4();
+
         // Record execution start in audit trail
         if let Some(audit) = &self.audit_manager {
-            // TODO: Record task execution start
+            if let Err(e) = audit.record_task_execution_start(
+                task_spec.id,
+                execution_id,
+                Some(worker_id),
+                None, // correlation_id can be added if available
+            ).await {
+                warn!("Failed to record task execution start in audit trail: {}", e);
+            }
         }
 
-        // TODO: Integrate with actual worker execution for sequential task execution
-        //       Currently simulates execution with fixed timing; should integrate with actual worker execution infrastructure.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Submit task to worker pool for sequential execution
-        // [ ] Wait for worker to accept and execute task
-        // [ ] Track actual execution start and completion times
-        // [ ] Handle worker execution errors
-        // [ ] Support task cancellation and timeout
-        // [ ] Add unit tests for worker integration
-        // [ ] Add integration tests with real workers
-        // [ ] Verify sequential execution ordering
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Tasks are executed by actual workers
-        // - Execution timing reflects real worker performance
-        // - Worker errors are handled gracefully
-        // - Sequential execution ordering is maintained
-        //
-        // DEPENDENCIES:
-        // - Worker pool infrastructure (Required)
-        // - Task submission API (Required)
-        // - Worker execution tracking (Required)
-        //
-        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-        // PRIORITY: High
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (core orchestration feature)
-        // - Change Budget: ~80 LOC
-        // - Reviewer Requirements: Task orchestration expertise
-        let started_at = chrono::Utc::now(); // Temporary: simulated timing until worker integration
-        let completed_at = started_at + chrono::Duration::milliseconds(1000);
-
-        let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
-
-        let result = TaskExecutionResult {
-            execution_id: uuid::Uuid::new_v4(),
-            task_id: task_spec.id,
-            success: true,
-            output: "Task executed successfully (sequential)".to_string(),
-            errors: vec![],
-            metadata: std::collections::HashMap::new(),
-            started_at,
-            completed_at,
-            duration_ms,
-            worker_id: Some(worker_id),
+        // Check if MCP worker pool is available
+        let mcp_pool = match &self.mcp_worker_pool {
+            Some(pool) => pool,
+            None => {
+                warn!("MCP worker pool not available, falling back to simulation");
+                // Fallback to simulation if MCP pool not available
+                let completed_at = started_at + chrono::Duration::milliseconds(1000);
+                let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
+                return Ok(TaskExecutionResult {
+                    execution_id: uuid::Uuid::new_v4(),
+                    task_id: task_spec.id,
+                    success: false,
+                    output: "MCP worker pool not configured".to_string(),
+                    errors: vec!["MCP worker pool not available".to_string()],
+                    metadata: HashMap::new(),
+                    started_at,
+                    completed_at,
+                    duration_ms,
+                    worker_id: Some(worker_id),
+                });
+            }
         };
+
+        // Convert TaskSpec to TaskDefinition
+        let task_def = match self.task_spec_to_task_definition(&task_spec, None) {
+            Ok(def) => def,
+            Err(e) => {
+                return Err(format!("Failed to convert TaskSpec to TaskDefinition: {}", e).into());
+            }
+        };
+
+        info!("Executing task {} via MCPWorkerPool", task_spec.id);
+
+        // Execute task via MCP worker pool
+        let task_result = match mcp_pool.execute_task(task_def).await {
+            Ok(result) => result,
+            Err(e) => {
+                let completed_at = chrono::Utc::now();
+                let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
+                return Ok(TaskExecutionResult {
+                    execution_id: uuid::Uuid::new_v4(),
+                    task_id: task_spec.id,
+                    success: false,
+                    output: format!("Worker execution failed: {}", e),
+                    errors: vec![format!("Worker execution error: {}", e)],
+                    metadata: HashMap::new(),
+                    started_at,
+                    completed_at,
+                    duration_ms,
+                    worker_id: Some(worker_id),
+                });
+            }
+        };
+
+        // Convert TaskResult to TaskExecutionResult
+        let mut result = self.task_result_to_execution_result(&task_result, &task_spec, started_at);
+        
+        // Ensure execution_id matches what we recorded at start
+        result.execution_id = execution_id;
 
         // Record execution completion in audit trail
         if let Some(audit) = &self.audit_manager {
-            // TODO: Record task execution completion
+            if let Err(e) = audit.record_task_execution_completion(&result, None).await {
+                warn!("Failed to record task execution completion in audit trail: {}", e);
+            }
         }
 
         Ok(result)
@@ -321,39 +526,63 @@ impl TaskExecutor for SequentialTaskExecutor {
         worker_id: Uuid,
         circuit_breaker_enabled: bool,
     ) -> Result<TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
-        // TODO: Implement circuit breaker logic for task execution
-        //       Currently delegates to regular execute_task; should implement circuit breaker pattern for resilience.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Check circuit breaker state before execution
-        // [ ] Track execution failures and successes
-        // [ ] Open circuit after failure threshold
-        // [ ] Attempt half-open state after timeout
-        // [ ] Close circuit after success threshold
-        // [ ] Add unit tests for circuit breaker logic
-        // [ ] Add integration tests with failure scenarios
-        // [ ] Verify circuit breaker effectiveness
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Circuit breaker prevents execution when circuit is open
-        // - Failure tracking triggers circuit opening correctly
-        // - Half-open state allows limited retry attempts
-        // - Circuit closes after successful recovery
-        //
-        // DEPENDENCIES:
-        // - Circuit breaker infrastructure (Required)
-        // - Failure tracking utilities (Required)
-        // - State management utilities (Required)
-        //
-        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (resilience feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Resilience patterns expertise
-        self.execute_task(task_spec, worker_id).await // Temporary: delegate until circuit breaker is implemented
+        // Use circuit breaker if enabled and available
+        if circuit_breaker_enabled {
+            if let Some(ref cb) = self.circuit_breaker {
+                // Check circuit breaker state before execution
+                let state = cb.get_state().await;
+                match state {
+                    crate::error_handling::CircuitBreakerState::Open => {
+                        // Circuit is open - check if recovery timeout has elapsed
+                        let stats = cb.get_stats().await;
+                        if let Some(last_failure) = stats.last_failure_time {
+                            let elapsed = last_failure.elapsed();
+                            let recovery_timeout = std::time::Duration::from_secs(60); // Default recovery timeout
+                            if elapsed < recovery_timeout {
+                                // Circuit is open and recovery timeout hasn't elapsed - reject immediately
+                                return Err(format!(
+                                    "Circuit breaker is open for task executor (last failure: {:?} ago, recovery timeout: {:?})",
+                                    elapsed, recovery_timeout
+                                ).into());
+                            }
+                            // Recovery timeout elapsed - circuit breaker will transition to half-open on next attempt
+                            debug!("Circuit breaker recovery timeout elapsed, allowing execution attempt");
+                        } else {
+                            // No previous failure recorded, but circuit is open - reject
+                            return Err("Circuit breaker is open for task executor".into());
+                        }
+                    }
+                    crate::error_handling::CircuitBreakerState::HalfOpen => {
+                        // Half-open state - allow execution but circuit breaker will track it
+                        debug!("Circuit breaker in half-open state, allowing execution attempt");
+                    }
+                    crate::error_handling::CircuitBreakerState::Closed => {
+                        // Circuit is closed - normal operation
+                    }
+                }
+
+                // Execute task and track result in circuit breaker
+                let result = self.execute_task(task_spec.clone(), worker_id).await;
+                
+                // Record result in circuit breaker
+                match &result {
+                    Ok(_) => {
+                        cb.record_success().await;
+                    }
+                    Err(_) => {
+                        cb.record_failure().await;
+                    }
+                }
+
+                result
+            } else {
+                warn!("Circuit breaker requested but not available, using regular execution");
+                self.execute_task(task_spec, worker_id).await
+            }
+        } else {
+            // Circuit breaker disabled, use regular execution
+            self.execute_task(task_spec, worker_id).await
+        }
     }
 
     async fn health_check(&self) -> Result<TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>> {
@@ -393,10 +622,12 @@ impl TaskExecutor for SequentialTaskExecutor {
 pub struct ParallelTaskExecutor {
     config: TaskExecutorConfig,
     worker_pool: Option<Arc<dyn crate::planning::plan_executor::WorkerPool>>,
+    mcp_worker_pool: Option<Arc<MCPWorkerPool>>,
     // TODO: Enable task_queue when data-infrastructure integration is available
     // task_queue: Option<Arc<dyn crate::data_infrastructure::queue::TaskQueueService>>,
     audit_manager: Option<Arc<crate::audit_trail::AuditTrailManager>>,
     semaphore: tokio::sync::Semaphore,
+    circuit_breaker: Option<Arc<crate::error_handling::CircuitBreaker>>,
 }
 
 impl std::fmt::Debug for ParallelTaskExecutor {
@@ -404,8 +635,10 @@ impl std::fmt::Debug for ParallelTaskExecutor {
         f.debug_struct("ParallelTaskExecutor")
             .field("config", &self.config)
             .field("worker_pool", &self.worker_pool.as_ref().map(|_| "Some(WorkerPool)"))
+            .field("mcp_worker_pool", &self.mcp_worker_pool.as_ref().map(|_| "Some(MCPWorkerPool)"))
             .field("audit_manager", &self.audit_manager)
             .field("semaphore", &format!("Semaphore(permits: {})", self.semaphore.available_permits()))
+            .field("circuit_breaker", &self.circuit_breaker.as_ref().map(|_| "Some(CircuitBreaker)"))
             .finish()
     }
 }
@@ -414,18 +647,184 @@ impl ParallelTaskExecutor {
     fn new(
         config: TaskExecutorConfig,
         worker_pool: Option<Arc<dyn crate::planning::plan_executor::WorkerPool>>,
+        mcp_worker_pool: Option<Arc<MCPWorkerPool>>,
         // TODO: Enable task_queue when data-infrastructure integration is available
         // task_queue: Option<Arc<dyn crate::data_infrastructure::queue::TaskQueueService>>,
         audit_manager: Option<Arc<crate::audit_trail::AuditTrailManager>>,
     ) -> Self {
         let semaphore = tokio::sync::Semaphore::new(config.max_concurrent_tasks);
 
+        // Create circuit breaker for task execution resilience
+        let circuit_breaker = if config.enable_health_monitoring {
+            Some(Arc::new(crate::error_handling::CircuitBreaker::new(
+                "task_executor_parallel".to_string(),
+                crate::error_handling::ErrorHandlingCircuitBreakerConfig::default(),
+            )))
+        } else {
+            None
+        };
+
         Self {
             config,
             worker_pool,
+            mcp_worker_pool,
             // task_queue,
             audit_manager,
             semaphore,
+            circuit_breaker,
+        }
+    }
+
+    /// Convert TaskSpec to TaskDefinition for MCPWorkerPool execution
+    /// (Shared implementation with SequentialTaskExecutor)
+    fn task_spec_to_task_definition(
+        &self,
+        task_spec: &TaskSpec,
+        worktree_path: Option<&PathBuf>,
+    ) -> Result<TaskDefinition, Box<dyn std::error::Error + Send + Sync>> {
+        // Extract required tools from task spec
+        let mut required_tools = Vec::new();
+        
+        // Add tools based on task scope
+        if let Some(scope) = &task_spec.scope {
+            if !scope.files_affected.is_empty() || !scope.domains.is_empty() {
+                required_tools.push("file_edit".to_string());
+                required_tools.push("file_read".to_string());
+            }
+        }
+        
+        // Add tools from required capabilities
+        for capability in &task_spec.required_capabilities {
+            match capability.as_str() {
+                "file_editing" | "code_editing" => {
+                    if !required_tools.contains(&"file_edit".to_string()) {
+                        required_tools.push("file_edit".to_string());
+                    }
+                    if !required_tools.contains(&"file_read".to_string()) {
+                        required_tools.push("file_read".to_string());
+                    }
+                }
+                "code_analysis" => {
+                    required_tools.push("file_read".to_string());
+                }
+                _ => {
+                    debug!("Unmapped capability: {}", capability);
+                }
+            }
+        }
+
+        // Default to file editing tools if no tools specified
+        if required_tools.is_empty() {
+            required_tools.push("file_edit".to_string());
+            required_tools.push("file_read".to_string());
+        }
+
+        // Convert priority
+        let priority: WorkerTaskPriority = match task_spec.priority {
+            agent_agency_contracts::types::planning::TaskPriority::Low => WorkerTaskPriority::Low,
+            agent_agency_contracts::types::planning::TaskPriority::Normal => WorkerTaskPriority::Medium,
+            agent_agency_contracts::types::planning::TaskPriority::Medium => WorkerTaskPriority::Medium,
+            agent_agency_contracts::types::planning::TaskPriority::High => WorkerTaskPriority::High,
+            agent_agency_contracts::types::planning::TaskPriority::Urgent => WorkerTaskPriority::High,
+            agent_agency_contracts::types::planning::TaskPriority::Critical => WorkerTaskPriority::Critical,
+        };
+
+        // Build task parameters from task spec
+        let mut parameters = HashMap::new();
+        parameters.insert("title".to_string(), serde_json::json!(task_spec.title));
+        parameters.insert("description".to_string(), serde_json::json!(task_spec.description));
+        
+        if let Some(scope) = &task_spec.scope {
+            parameters.insert("scope".to_string(), serde_json::json!({
+                "domains": scope.domains,
+                "files_affected": scope.files_affected,
+                "max_loc": scope.max_loc,
+            }));
+        }
+        
+        if let Some(worktree_path) = worktree_path {
+            parameters.insert("worktree_path".to_string(), serde_json::json!(worktree_path.display().to_string()));
+        }
+        
+        // Add context information
+        for (key, value) in &task_spec.context {
+            parameters.insert(format!("context_{}", key), value.clone());
+        }
+
+        // Create task name
+        let task_name = format!("task_{}", task_spec.id);
+
+        Ok(TaskDefinition {
+            id: task_spec.id,
+            name: task_name,
+            description: task_spec.description.clone(),
+            required_tools,
+            parameters,
+            timeout_seconds: task_spec.timeout_seconds.map(|t| t as u32),
+            priority,
+            deadline: None,
+            metadata: {
+                let mut metadata = HashMap::new();
+                if let Some(working_spec_id) = &task_spec.working_spec_id {
+                    metadata.insert("working_spec_id".to_string(), serde_json::json!(working_spec_id));
+                }
+                if let Some(risk_tier) = task_spec.risk_tier {
+                    metadata.insert("risk_tier".to_string(), serde_json::json!(risk_tier));
+                }
+                if let Some(ref caws_spec) = task_spec.caws_spec {
+                    metadata.insert("caws_spec".to_string(), serde_json::json!(caws_spec));
+                }
+                metadata
+            },
+        })
+    }
+
+    /// Convert TaskResult to TaskExecutionResult
+    /// (Shared implementation with SequentialTaskExecutor)
+    fn task_result_to_execution_result(
+        &self,
+        task_result: &TaskResult,
+        task_spec: &TaskSpec,
+        started_at: chrono::DateTime<chrono::Utc>,
+    ) -> TaskExecutionResult {
+        let completed_at = started_at + chrono::Duration::milliseconds(task_result.execution_time_ms as i64);
+        let duration_ms = task_result.execution_time_ms;
+
+        // Extract worker_id from worker_breakdown if available
+        let worker_id = task_result.worker_breakdown.first()
+            .map(|breakdown| breakdown.worker_id.0);
+
+        TaskExecutionResult {
+            execution_id: uuid::Uuid::new_v4(),
+            task_id: task_result.task_id.0,
+            success: task_result.success,
+            output: task_result.summary.clone(),
+            errors: task_result.errors.clone(),
+            metadata: {
+                let mut metadata = HashMap::new();
+                metadata.insert("execution_time_ms".to_string(), serde_json::json!(duration_ms));
+                metadata.insert("subtasks_completed".to_string(), serde_json::json!(task_result.subtasks_completed));
+                metadata.insert("total_subtasks".to_string(), serde_json::json!(task_result.total_subtasks));
+                if let Some(tool_used) = &task_result.tool_used {
+                    metadata.insert("tool_used".to_string(), serde_json::json!(tool_used));
+                }
+                if let Some(error_message) = &task_result.error_message {
+                    metadata.insert("error_message".to_string(), serde_json::json!(error_message));
+                }
+                // Add quality scores to metadata
+                for (key, value) in &task_result.quality_scores {
+                    metadata.insert(format!("quality_{}", key), serde_json::json!(value));
+                }
+                // Add task result metadata
+                for (key, value) in &task_result.metadata {
+                    metadata.insert(format!("result_{}", key), value.clone());
+                }
+                metadata
+            },
+            started_at,
+            completed_at,
+            duration_ms,
+            worker_id,
         }
     }
 }
@@ -443,63 +842,87 @@ impl TaskExecutor for ParallelTaskExecutor {
         let _permit = self.semaphore.acquire().await
             .map_err(|e| format!("Failed to acquire execution permit: {}", e))?;
 
+        // Implemented: Real worker execution via MCPWorkerPool with parallel concurrency control
+        let started_at = chrono::Utc::now();
+        let execution_id = uuid::Uuid::new_v4();
+
         // Record execution start in audit trail
         if let Some(audit) = &self.audit_manager {
-            // TODO: Record task execution start
+            if let Err(e) = audit.record_task_execution_start(
+                task_spec.id,
+                execution_id,
+                Some(worker_id),
+                None, // correlation_id can be added if available
+            ).await {
+                warn!("Failed to record task execution start in audit trail: {}", e);
+            }
         }
 
-        // TODO: Integrate with actual worker execution for parallel task execution
-        //       Currently simulates execution with fixed timing; should integrate with actual worker execution infrastructure.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Submit tasks to worker pool for parallel execution
-        // [ ] Wait for workers to accept and execute tasks concurrently
-        // [ ] Track actual execution start and completion times
-        // [ ] Handle worker execution errors
-        // [ ] Support task cancellation and timeout
-        // [ ] Add unit tests for parallel worker integration
-        // [ ] Add integration tests with real workers
-        // [ ] Verify parallel execution concurrency
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Tasks are executed by actual workers in parallel
-        // - Execution timing reflects real worker performance
-        // - Worker errors are handled gracefully
-        // - Parallel execution maintains concurrency
-        //
-        // DEPENDENCIES:
-        // - Worker pool infrastructure (Required)
-        // - Task submission API (Required)
-        // - Worker execution tracking (Required)
-        //
-        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-        // PRIORITY: High
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (core orchestration feature)
-        // - Change Budget: ~80 LOC
-        // - Reviewer Requirements: Task orchestration expertise
-        let started_at = chrono::Utc::now(); // Temporary: simulated timing until worker integration
-        let completed_at = started_at + chrono::Duration::milliseconds(800);
-        let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
-
-        let result = TaskExecutionResult {
-            execution_id: uuid::Uuid::new_v4(),
-            task_id: task_spec.id,
-            success: true,
-            output: "Task executed successfully (parallel)".to_string(),
-            errors: vec![],
-            metadata: std::collections::HashMap::new(),
-            started_at,
-            completed_at,
-            duration_ms,
-            worker_id: Some(worker_id),
+        // Check if MCP worker pool is available
+        let mcp_pool = match &self.mcp_worker_pool {
+            Some(pool) => pool,
+            None => {
+                warn!("MCP worker pool not available, falling back to simulation");
+                // Fallback to simulation if MCP pool not available
+                let completed_at = started_at + chrono::Duration::milliseconds(800);
+                let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
+                return Ok(TaskExecutionResult {
+                    execution_id: uuid::Uuid::new_v4(),
+                    task_id: task_spec.id,
+                    success: false,
+                    output: "MCP worker pool not configured".to_string(),
+                    errors: vec!["MCP worker pool not available".to_string()],
+                    metadata: HashMap::new(),
+                    started_at,
+                    completed_at,
+                    duration_ms,
+                    worker_id: Some(worker_id),
+                });
+            }
         };
+
+        // Convert TaskSpec to TaskDefinition
+        let task_def = match self.task_spec_to_task_definition(&task_spec, None) {
+            Ok(def) => def,
+            Err(e) => {
+                return Err(format!("Failed to convert TaskSpec to TaskDefinition: {}", e).into());
+            }
+        };
+
+        info!("Executing task {} in parallel via MCPWorkerPool (permit acquired)", task_spec.id);
+
+        // Execute task via MCP worker pool (semaphore already acquired for concurrency control)
+        let task_result = match mcp_pool.execute_task(task_def).await {
+            Ok(result) => result,
+            Err(e) => {
+                let completed_at = chrono::Utc::now();
+                let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
+                return Ok(TaskExecutionResult {
+                    execution_id: uuid::Uuid::new_v4(),
+                    task_id: task_spec.id,
+                    success: false,
+                    output: format!("Worker execution failed: {}", e),
+                    errors: vec![format!("Worker execution error: {}", e)],
+                    metadata: HashMap::new(),
+                    started_at,
+                    completed_at,
+                    duration_ms,
+                    worker_id: Some(worker_id),
+                });
+            }
+        };
+
+        // Convert TaskResult to TaskExecutionResult
+        let mut result = self.task_result_to_execution_result(&task_result, &task_spec, started_at);
+        
+        // Ensure execution_id matches what we recorded at start
+        result.execution_id = execution_id;
 
         // Record execution completion in audit trail
         if let Some(audit) = &self.audit_manager {
-            // TODO: Record task execution completion
+            if let Err(e) = audit.record_task_execution_completion(&result, None).await {
+                warn!("Failed to record task execution completion in audit trail: {}", e);
+            }
         }
 
         Ok(result)
@@ -511,39 +934,64 @@ impl TaskExecutor for ParallelTaskExecutor {
         worker_id: Uuid,
         circuit_breaker_enabled: bool,
     ) -> Result<TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
-        // TODO: Implement circuit breaker logic for task execution
-        //       Currently delegates to regular execute_task; should implement circuit breaker pattern for resilience.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Check circuit breaker state before execution
-        // [ ] Track execution failures and successes
-        // [ ] Open circuit after failure threshold
-        // [ ] Attempt half-open state after timeout
-        // [ ] Close circuit after success threshold
-        // [ ] Add unit tests for circuit breaker logic
-        // [ ] Add integration tests with failure scenarios
-        // [ ] Verify circuit breaker effectiveness
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Circuit breaker prevents execution when circuit is open
-        // - Failure tracking triggers circuit opening correctly
-        // - Half-open state allows limited retry attempts
-        // - Circuit closes after successful recovery
-        //
-        // DEPENDENCIES:
-        // - Circuit breaker infrastructure (Required)
-        // - Failure tracking utilities (Required)
-        // - State management utilities (Required)
-        //
-        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (resilience feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Resilience patterns expertise
-        self.execute_task(task_spec, worker_id).await // Temporary: delegate until circuit breaker is implemented
+        // Use circuit breaker if enabled and available
+        if circuit_breaker_enabled {
+            if let Some(ref cb) = self.circuit_breaker {
+                // Check circuit breaker state before execution
+                let state = cb.get_state().await;
+                match state {
+                    crate::error_handling::CircuitBreakerState::Open => {
+                        // Circuit is open - check if recovery timeout has elapsed
+                        let stats = cb.get_stats().await;
+                        if let Some(last_failure) = stats.last_failure_time {
+                            let elapsed = last_failure.elapsed();
+                            // Use default recovery timeout (60 seconds)
+                            let recovery_timeout = std::time::Duration::from_secs(60);
+                            if elapsed < recovery_timeout {
+                                // Circuit is open and recovery timeout hasn't elapsed - reject immediately
+                                return Err(format!(
+                                    "Circuit breaker is open for task executor (last failure: {:?} ago, recovery timeout: {:?})",
+                                    elapsed, recovery_timeout
+                                ).into());
+                            }
+                            // Recovery timeout elapsed - circuit breaker will transition to half-open on next attempt
+                            debug!("Circuit breaker recovery timeout elapsed, allowing execution attempt");
+                        } else {
+                            // No previous failure recorded, but circuit is open - reject
+                            return Err("Circuit breaker is open for task executor".into());
+                        }
+                    }
+                    crate::error_handling::CircuitBreakerState::HalfOpen => {
+                        // Half-open state - allow execution but circuit breaker will track it
+                        debug!("Circuit breaker in half-open state, allowing execution attempt");
+                    }
+                    crate::error_handling::CircuitBreakerState::Closed => {
+                        // Circuit is closed - normal operation
+                    }
+                }
+
+                // Execute task and track result in circuit breaker
+                let result = self.execute_task(task_spec.clone(), worker_id).await;
+                
+                // Record result in circuit breaker
+                match &result {
+                    Ok(_) => {
+                        cb.record_success().await;
+                    }
+                    Err(_) => {
+                        cb.record_failure().await;
+                    }
+                }
+
+                result
+            } else {
+                warn!("Circuit breaker requested but not available, using regular execution");
+                self.execute_task(task_spec, worker_id).await
+            }
+        } else {
+            // Circuit breaker disabled, use regular execution
+            self.execute_task(task_spec, worker_id).await
+        }
     }
 
     async fn health_check(&self) -> Result<TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>> {

@@ -147,15 +147,100 @@ fn get_circuit_breaker_registry() -> CircuitBreaker {
 
 // use agent_agency_observability as observability; // Not available as dependency
 
-// Simple stub implementations for security functions
+// Database client for rate limiting persistence
+// Implemented locally to avoid circular dependency with agent-data-processing
 
-// Stub implementations for unavailable dependencies
-#[derive(Clone, Debug, JsonSchema)]
-pub struct DatabaseClient ;
+use sqlx::{PgPool, postgres::PgPoolOptions, Row, Postgres, Encode, Type};
+
+/// Query parameter wrapper for type-safe parameterized queries
+#[derive(Debug, Clone)]
+pub enum QueryParam {
+    String(String),
+    I32(i32),
+    I64(i64),
+    Uuid(uuid::Uuid),
+    Bool(bool),
+    Json(serde_json::Value),
+    Bytes(Vec<u8>),
+    Timestamp(chrono::DateTime<chrono::Utc>),
+    Null,
+}
+
+impl<'q> Encode<'q, Postgres> for QueryParam {
+    fn encode_by_ref(&self, buf: &mut <Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer) -> sqlx::encode::IsNull {
+        match self {
+            QueryParam::String(s) => <String as Encode<'q, Postgres>>::encode_by_ref(s, buf),
+            QueryParam::I32(i) => <i32 as Encode<'q, Postgres>>::encode_by_ref(i, buf),
+            QueryParam::I64(i) => <i64 as Encode<'q, Postgres>>::encode_by_ref(i, buf),
+            QueryParam::Uuid(u) => <uuid::Uuid as Encode<'q, Postgres>>::encode_by_ref(u, buf),
+            QueryParam::Bool(b) => <bool as Encode<'q, Postgres>>::encode_by_ref(b, buf),
+            QueryParam::Json(j) => <serde_json::Value as Encode<'q, Postgres>>::encode_by_ref(j, buf),
+            QueryParam::Bytes(b) => <Vec<u8> as Encode<'q, Postgres>>::encode_by_ref(b, buf),
+            QueryParam::Timestamp(t) => <chrono::DateTime<chrono::Utc> as Encode<'q, Postgres>>::encode_by_ref(t, buf),
+            QueryParam::Null => sqlx::encode::IsNull::Yes,
+        }
+    }
+}
+
+impl Type<Postgres> for QueryParam {
+    fn type_info() -> <Postgres as sqlx::Database>::TypeInfo {
+        <String as Type<Postgres>>::type_info()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct DatabaseClient {
+    pool: Arc<PgPool>,
+}
 
 impl DatabaseClient {
-    pub fn new() -> Self {
-        Self
+    pub async fn new(database_url: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+        let pool = PgPoolOptions::new()
+            .max_connections(10)
+            .connect(database_url)
+            .await?;
+        
+        Ok(Self {
+            pool: Arc::new(pool),
+        })
+    }
+
+    pub async fn execute_with_params(&self, query: &str, params: &[QueryParam]) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let mut query_builder = sqlx::query(query);
+        for param in params {
+            query_builder = match param {
+                QueryParam::String(s) => query_builder.bind(s),
+                QueryParam::I32(i) => query_builder.bind(i),
+                QueryParam::I64(i) => query_builder.bind(i),
+                QueryParam::Uuid(u) => query_builder.bind(u),
+                QueryParam::Bool(b) => query_builder.bind(b),
+                QueryParam::Json(j) => query_builder.bind(j),
+                QueryParam::Bytes(b) => query_builder.bind(b),
+                QueryParam::Timestamp(t) => query_builder.bind(t),
+                QueryParam::Null => query_builder.bind::<Option<String>>(None),
+            };
+        }
+        query_builder.execute(&*self.pool).await?;
+        Ok(())
+    }
+
+    pub async fn query_with_params(&self, query: &str, params: &[QueryParam]) -> Result<Vec<sqlx::postgres::PgRow>, Box<dyn std::error::Error + Send + Sync>> {
+        let mut query_builder = sqlx::query(query);
+        for param in params {
+            query_builder = match param {
+                QueryParam::String(s) => query_builder.bind(s),
+                QueryParam::I32(i) => query_builder.bind(i),
+                QueryParam::I64(i) => query_builder.bind(i),
+                QueryParam::Uuid(u) => query_builder.bind(u),
+                QueryParam::Bool(b) => query_builder.bind(b),
+                QueryParam::Json(j) => query_builder.bind(j),
+                QueryParam::Bytes(b) => query_builder.bind(b),
+                QueryParam::Timestamp(t) => query_builder.bind(t),
+                QueryParam::Null => query_builder.bind::<Option<String>>(None),
+            };
+        }
+        let rows = query_builder.fetch_all(&*self.pool).await?;
+        Ok(rows)
     }
 }
 
@@ -959,33 +1044,66 @@ impl AuthRateLimiter {
             tracing::info!("Loading persistent authentication rate limit data from database");
             
             // Load blocked IPs and their block expiration times
-            // TODO: Implement when DatabaseClient provides query methods
-            // Example: 
-            // let blocked_ips = db_client.query("SELECT ip, blocked_until FROM rate_limit_blocks WHERE blocked_until > NOW()").await?;
-            // for row in blocked_ips {
-            //     let ip: String = row.get("ip");
-            //     let blocked_until: Option<chrono::DateTime<chrono::Utc>> = row.get("blocked_until");
-            //     if let Some(until) = blocked_until {
-            //         let instant = Instant::now() + (until.timestamp() - chrono::Utc::now().timestamp()) as u64;
-            //         let mut attempts = self.ip_attempts.lock().await;
-            //         if let Some((_, count, _, risk_score)) = attempts.get_mut(&ip) {
-            //             *blocked_until = Some(instant);
-            //         } else {
-            //             attempts.insert(ip, (Instant::now(), 0, Some(instant), 0));
-            //         }
-            //     }
-            // }
+            let blocked_ips_query = "SELECT ip, blocked_until, risk_score FROM rate_limit_blocks WHERE blocked_until > NOW()";
+            match db_client.query_with_params(blocked_ips_query, &[]).await {
+                Ok(rows) => {
+                    let mut attempts = self.ip_attempts.lock().await;
+                    let now = Instant::now();
+                    let current_time = chrono::Utc::now();
+                    
+                    for row in rows {
+                        let ip: String = row.try_get("ip")
+                            .map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get ip from row: {}", e))) as Box<dyn std::error::Error + Send + Sync>)?;
+                        let blocked_until_dt: chrono::DateTime<chrono::Utc> = row.try_get("blocked_until")
+                            .map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get blocked_until from row: {}", e))) as Box<dyn std::error::Error + Send + Sync>)?;
+                        let risk_score: i32 = row.try_get("risk_score")
+                            .map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get risk_score from row: {}", e))) as Box<dyn std::error::Error + Send + Sync>)?;
+                        
+                        // Convert DateTime to Instant
+                        let duration_until_block = blocked_until_dt.signed_duration_since(current_time);
+                        if duration_until_block.num_seconds() > 0 {
+                            let blocked_until_instant = now + Duration::from_secs(duration_until_block.num_seconds() as u64);
+                            
+                            // Update or insert blocked IP
+                            if let Some(entry) = attempts.get(&ip) {
+                                // Update existing entry - preserve count
+                                let (_, count, _, _) = *entry;
+                                attempts.insert(ip.clone(), (Instant::now(), count, Some(blocked_until_instant), risk_score as u32));
+                            } else {
+                                // Insert new entry
+                                attempts.insert(ip.clone(), (Instant::now(), 0, Some(blocked_until_instant), risk_score as u32));
+                            }
+                        }
+                    }
+                    tracing::info!("Loaded {} blocked IPs from database", attempts.len());
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to load blocked IPs from database: {}", e);
+                    // Continue execution - rate limiting will work without persistence
+                }
+            }
             
             // Load suspicious IPs and their risk scores
-            // TODO: Implement when DatabaseClient provides query methods
-            // Example:
-            // let suspicious = db_client.query("SELECT ip, risk_score FROM rate_limit_suspicious").await?;
-            // let mut suspicious_map = self.suspicious_ips.lock().await;
-            // for row in suspicious {
-            //     let ip: String = row.get("ip");
-            //     let risk_score: u32 = row.get("risk_score");
-            //     suspicious_map.insert(ip, (Instant::now(), risk_score));
-            // }
+            let suspicious_query = "SELECT ip, risk_score FROM rate_limit_suspicious";
+            match db_client.query_with_params(suspicious_query, &[]).await {
+                Ok(rows) => {
+                    let mut suspicious_map = self.suspicious_ips.lock().await;
+                    
+                    for row in rows {
+                        let ip: String = row.try_get("ip")
+                            .map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get ip from row: {}", e))) as Box<dyn std::error::Error + Send + Sync>)?;
+                        let risk_score: i32 = row.try_get("risk_score")
+                            .map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get risk_score from row: {}", e))) as Box<dyn std::error::Error + Send + Sync>)?;
+                        
+                        suspicious_map.insert(ip, (Instant::now(), risk_score as u32));
+                    }
+                    tracing::info!("Loaded {} suspicious IPs from database", suspicious_map.len());
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to load suspicious IPs from database: {}", e);
+                    // Continue execution - rate limiting will work without persistence
+                }
+            }
             
             tracing::info!("Loaded persistent authentication rate limit data from database");
         }
@@ -1017,15 +1135,36 @@ impl AuthRateLimiter {
                 }
             }
             
-            // TODO: Implement when DatabaseClient provides execute methods
-            // Example:
-            // db_client.execute("DELETE FROM rate_limit_blocks").await?;
-            // for (ip, blocked_until, risk_score) in blocked_ips {
-            //     db_client.execute(
-            //         "INSERT INTO rate_limit_blocks (ip, blocked_until, risk_score) VALUES ($1, $2, $3) ON CONFLICT (ip) DO UPDATE SET blocked_until = $2, risk_score = $3",
-            //         &[&ip, &blocked_until, &risk_score]
-            //     ).await?;
-            // }
+            // Save blocked IPs to database
+            let blocked_ips_count = blocked_ips.len();
+            if !blocked_ips.is_empty() {
+                // Clear existing blocks and insert current ones
+                match db_client.execute_with_params("DELETE FROM rate_limit_blocks", &[]).await {
+                    Ok(_) => {
+                        for (ip, blocked_until, risk_score) in blocked_ips {
+                            let insert_query = "INSERT INTO rate_limit_blocks (ip, blocked_until, risk_score) VALUES ($1, $2, $3) ON CONFLICT (ip) DO UPDATE SET blocked_until = $2, risk_score = $3, updated_at = NOW()";
+                            let params = vec![
+                                QueryParam::String(ip.clone()),
+                                QueryParam::Timestamp(blocked_until),
+                                QueryParam::I32(risk_score as i32),
+                            ];
+                            
+                            if let Err(e) = db_client.execute_with_params(insert_query, &params).await {
+                                tracing::warn!("Failed to save blocked IP {} to database: {}", ip, e);
+                            }
+                        }
+                        tracing::debug!("Saved {} blocked IPs to database", blocked_ips_count);
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to clear rate_limit_blocks table: {}", e);
+                    }
+                }
+            } else {
+                // No blocked IPs - clear the table
+                if let Err(e) = db_client.execute_with_params("DELETE FROM rate_limit_blocks", &[]).await {
+                    tracing::warn!("Failed to clear rate_limit_blocks table: {}", e);
+                }
+            }
             
             // Save suspicious IPs
             let suspicious_ips = self.suspicious_ips.lock().await;
@@ -1033,16 +1172,36 @@ impl AuthRateLimiter {
             for (ip, (_, risk_score)) in suspicious_ips.iter() {
                 suspicious_vec.push((ip.clone(), *risk_score));
             }
+            let suspicious_count = suspicious_vec.len();
+            drop(suspicious_ips); // Release lock early
             
-            // TODO: Implement when DatabaseClient provides execute methods
-            // Example:
-            // db_client.execute("DELETE FROM rate_limit_suspicious").await?;
-            // for (ip, risk_score) in suspicious_vec {
-            //     db_client.execute(
-            //         "INSERT INTO rate_limit_suspicious (ip, risk_score) VALUES ($1, $2) ON CONFLICT (ip) DO UPDATE SET risk_score = $2",
-            //         &[&ip, &risk_score]
-            //     ).await?;
-            // }
+            if !suspicious_vec.is_empty() {
+                // Clear existing suspicious IPs and insert current ones
+                match db_client.execute_with_params("DELETE FROM rate_limit_suspicious", &[]).await {
+                    Ok(_) => {
+                        for (ip, risk_score) in suspicious_vec {
+                            let insert_query = "INSERT INTO rate_limit_suspicious (ip, risk_score) VALUES ($1, $2) ON CONFLICT (ip) DO UPDATE SET risk_score = $2, updated_at = NOW(), last_seen = NOW()";
+                            let params = vec![
+                                QueryParam::String(ip.clone()),
+                                QueryParam::I32(risk_score as i32),
+                            ];
+                            
+                            if let Err(e) = db_client.execute_with_params(insert_query, &params).await {
+                                tracing::warn!("Failed to save suspicious IP {} to database: {}", ip, e);
+                            }
+                        }
+                        tracing::debug!("Saved {} suspicious IPs to database", suspicious_count);
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to clear rate_limit_suspicious table: {}", e);
+                    }
+                }
+            } else {
+                // No suspicious IPs - clear the table
+                if let Err(e) = db_client.execute_with_params("DELETE FROM rate_limit_suspicious", &[]).await {
+                    tracing::warn!("Failed to clear rate_limit_suspicious table: {}", e);
+                }
+            }
             
             tracing::debug!("Saved persistent authentication rate limit data to database");
         }
@@ -1298,7 +1457,8 @@ impl MCPServer {
             .requests_per_minute
             .map(|limit| Arc::new(RateLimitMiddleware::new(Some(RateLimitConfig::default()), vec![])));
 
-        let slo_tracker = SLOTracker::new(Arc::new(DatabaseClient::new()));
+        // SLOTracker uses the provided database client
+        let slo_tracker = SLOTracker::new(db_client.clone());
 
         // Create FileOperationsService for file tools
         #[cfg(feature = "file-operations")]

@@ -563,6 +563,27 @@ impl CircuitBreaker {
             }
         }
     }
+
+    /// Record a failed operation
+    /// 
+    /// Updates circuit breaker statistics and transitions state if failure threshold is exceeded.
+    pub async fn record_failure(&self) {
+        let mut stats = self.stats.write().await;
+        stats.total_requests += 1;
+        stats.failed_requests += 1;
+        stats.consecutive_failures += 1;
+        stats.last_failure_time = Some(Instant::now());
+
+        // Check if we should open the circuit
+        if stats.consecutive_failures >= self.config.failure_threshold as u32 {
+            drop(stats);
+            self.transition_to_open("Failure threshold exceeded".to_string()).await;
+        } else if *self.state.read().await == CircuitBreakerState::HalfOpen {
+            // Any failure in half-open state sends us back to open
+            drop(stats);
+            self.transition_to_open("Failure during recovery attempt".to_string()).await;
+        }
+    }
 }
 
 impl Default for CircuitBreaker {

@@ -83,49 +83,108 @@ impl MemoryIntegrationHooks {
         let memories = self.memory_manager.search_memories(memory_query).await
             .map_err(|e| DataProcessingError::Other(format!("Failed to search memories: {:?}", e)))?;
 
-        // TODO: Implement relevance scoring for memory search results
-        // - [ ] Calculate relevance scores based on query similarity
-        // - [ ] Rank results by relevance score
-        // - [ ] Apply relevance threshold to filter low-scoring results
-        // - [ ] Add configurable result limit
-        // - [ ] Add unit tests with various query types
-        // - [ ] Add integration tests with real memory search
-        // TODO: Implement relevance scoring and result limiting
-        //       Currently returns all results; should implement relevance scoring and configurable result limiting for better search quality.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Relevance scoring is implemented correctly
-        // - Results are sorted by relevance
-        // - Result limit is configurable
-        // - Scoring improves search quality
-        //
-        // DEPENDENCIES:
-        // - Relevance scoring algorithms (Required)
-        // - Result limiting utilities (Required)
-        // - Configuration infrastructure (Required)
-        //
-        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (search feature enhancement)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Search ranking expertise
-        Ok(memories) // Temporary: all results until relevance scoring and limiting
+        // Implemented: Relevance scoring for memory search results
+        // Calculates relevance scores based on query similarity, ranks results, and applies threshold/limit
+        
+        use tracing::debug;
+        use std::collections::HashSet;
+        
+        if memories.is_empty() {
+            return Ok(Vec::new());
+        }
+        
+        // Extract query text from context for similarity calculation
+        let query_text = format!(
+            "{} {}",
+            query.context.description.clone(),
+            query.context.keywords.join(" ")
+        ).to_lowercase();
+        
+        // Tokenize query text for keyword matching
+        let query_tokens: HashSet<String> = query_text
+            .split_whitespace()
+            .map(|s| s.trim_matches(|c: char| !c.is_alphanumeric()).to_lowercase())
+            .filter(|s| s.len() > 2) // Filter out very short tokens
+            .collect();
+        
+        // Calculate relevance scores for each memory
+        let mut scored_memories: Vec<(AgentExperience, f64)> = Vec::new();
+        
+        for memory in memories {
+            // Build memory text from input, output, and context
+            let memory_text = format!(
+                "{} {} {}",
+                memory.input.clone(),
+                memory.output.clone(),
+                serde_json::to_string(&memory.context).unwrap_or_default()
+            ).to_lowercase();
+            
+            // Tokenize memory text
+            let memory_tokens: HashSet<String> = memory_text
+                .split_whitespace()
+                .map(|s| s.trim_matches(|c: char| !c.is_alphanumeric()).to_lowercase())
+                .filter(|s| s.len() > 2)
+                .collect();
+            
+            // Calculate keyword overlap score (Jaccard similarity)
+            let intersection: usize = query_tokens.intersection(&memory_tokens).count();
+            let union: usize = query_tokens.union(&memory_tokens).count();
+            let keyword_score = if union > 0 {
+                intersection as f64 / union as f64
+            } else {
+                0.0
+            };
+            
+            // Calculate substring match score (for exact phrase matches)
+            let substring_score = if query_text.len() > 5 && memory_text.contains(&query_text) {
+                0.3 // Bonus for exact phrase match
+            } else {
+                0.0
+            };
+            
+            // Calculate context relevance (task_type match)
+            let context_score = if let Some(ref task_type) = memory_query.task_type {
+                if memory.context.task_type == *task_type {
+                    0.2 // Bonus for matching task type
+                } else {
+                    0.0
+                }
+            } else {
+                0.0
+            };
+            
+            // Combine scores (weighted sum)
+            let relevance_score = (keyword_score * 0.6) + (substring_score * 0.3) + (context_score * 0.1);
+            
+            scored_memories.push((memory, relevance_score));
+        }
+        
+        // Sort by relevance score (descending)
+        scored_memories.sort_by(|a, b| {
+            b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal)
+        });
+        
+        // Apply relevance threshold and limit
+        let threshold = self.config.memory_relevance_threshold;
+        let limit = self.config.max_context_memories;
+        
+        let filtered_memories: Vec<AgentExperience> = scored_memories
+            .into_iter()
+            .filter(|(_, score)| *score >= threshold)
+            .take(limit)
+            .map(|(memory, _)| memory)
+            .collect();
+        
+        debug!(
+            "Relevance scoring: {} memories scored, {} passed threshold ({}), {} returned (limit: {})",
+            scored_memories.len(),
+            filtered_memories.len(),
+            threshold,
+            filtered_memories.len().min(limit),
+            limit
+        );
+        
+        Ok(filtered_memories)
     }
 
     /// Get memory system statistics

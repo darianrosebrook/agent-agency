@@ -8,12 +8,14 @@
 //! - Feature implementation task
 
 use std::path::PathBuf;
-use tracing::{info, warn};
+use std::time::Instant;
+use tracing::{info, warn, error};
 use serde::{Deserialize, Serialize};
 
+use crate::harness::{TestEnvironment, LocalServiceManager};
 use crate::quality_analyzers::{
     ReasoningDepthScore, DecisionQualityScore, CouncilTransparencyScore,
-    VerdictReasoningQualityScore,
+    VerdictReasoningQualityScore, CodeQualityScore, WritingQualityScore,
     OverallQualityScore
 };
 #[cfg(feature = "full")]

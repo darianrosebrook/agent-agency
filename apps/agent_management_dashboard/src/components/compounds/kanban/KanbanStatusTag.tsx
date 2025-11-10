@@ -13,16 +13,16 @@ interface KanbanStatusTagProps {
 export function KanbanStatusTag({
   label,
   icon,
-  bgColor = "#262626",
+  bgColor = "#3a2f1f", // Match Figma default: bg-[#3a2f1f]
   textColor = "#cacaca",
   left = 0,
   width,
   className,
 }: KanbanStatusTagProps) {
-  const bgStyle = bgColor !== "#262626" ? { backgroundColor: bgColor } : undefined;
+  const bgStyle = bgColor !== "#3a2f1f" ? { backgroundColor: bgColor } : undefined;
   const textStyle = textColor !== "#cacaca" ? { color: textColor } : undefined;
   const widthStyle = width ? { width: `${width}px` } : undefined;
-  const leftStyle = left !== 0 ? { left: `${left}px` } : undefined;
+  // Note: left positioning is now handled by the container, not individual tags
 
   return (
     <div
@@ -30,7 +30,6 @@ export function KanbanStatusTag({
       style={{
         ...bgStyle,
         ...widthStyle,
-        ...leftStyle,
       }}
       data-name="StatusTag"
     >

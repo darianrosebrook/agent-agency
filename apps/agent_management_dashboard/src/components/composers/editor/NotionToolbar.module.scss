@@ -1,0 +1,54 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.toolbar {
+  position: absolute;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: $spacing-1;
+  background-color: #1a1a1a; // bg-[#1a1a1a]
+  border: 1px solid oklch(0.269 0 0); // border-gray-800
+  border-radius: $border-radius-md;
+  padding: $spacing-1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.toolbarButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: $border-radius-sm;
+  color: oklch(0.5 0 0); // text-gray-400
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &.active {
+    background-color: rgba(59, 130, 246, 0.2); // bg-blue-500/20
+    color: #3b82f6; // text-blue-500
+  }
+}
+
+.toolbarDivider {
+  width: 1px;
+  height: 20px;
+  background-color: oklch(0.269 0 0); // border-gray-800
+  margin: 0 $spacing-1;
+}
+
+
+

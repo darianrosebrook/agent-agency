@@ -1,12 +1,35 @@
 @use "../../../styles/design-tokens.scss" as *;
 
 .header {
-  height: 23.999px;
-  position: relative;
-  flex-shrink: 0;
-  width: 639.418px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
+  height: $kanban-header-height;
+  flex-shrink: 0;
 }
 
+.menuButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: $kanban-header-button-size;
+  height: $kanban-header-button-size;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  color: $kanban-text-secondary;
+  flex-shrink: 0;
+  
+  &:hover {
+    background-color: rgba(26, 26, 26, 0.5);
+  }
+}
+
+.icon {
+  display: block;
+  width: 15.994px;
+  height: 15.994px;
+}

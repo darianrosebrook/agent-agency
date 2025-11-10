@@ -1,7 +1,7 @@
 /**
  * Utility to safely get className as a string
  * Fixes issues where className might be a DOMTokenList instead of a string
- * 
+ *
  * @author @darianrosebrook
  */
 
@@ -9,7 +9,9 @@
  * Safely converts className to a string
  * Handles both string and DOMTokenList cases
  */
-export function getClassNameAsString(element: Element | null | undefined): string {
+export function getClassNameAsString(
+  element: Element | null | undefined
+): string {
   if (!element) {
     return "";
   }
@@ -39,38 +41,66 @@ export function polyfillClassNameSplit(): void {
   }
 
   // Only patch if not already patched
-  if ((window as unknown as { __classNameSplitPatched?: boolean }).__classNameSplitPatched) {
+  if (
+    (window as unknown as { __classNameSplitPatched?: boolean })
+      .__classNameSplitPatched
+  ) {
     return;
   }
 
   // Patch Element.prototype.className to always return a string
-  const originalClassNameDescriptor = Object.getOwnPropertyDescriptor(Element.prototype, "className");
+  try {
+    const originalClassNameDescriptor = Object.getOwnPropertyDescriptor(
+      Element.prototype,
+      "className"
+    );
 
-  if (originalClassNameDescriptor) {
-    Object.defineProperty(Element.prototype, "className", {
-      get: function (this: Element) {
-        const value = originalClassNameDescriptor.get?.call(this);
-        if (typeof value === "string") {
-          return value;
-        }
-        // If it's a DOMTokenList (SVG), convert to string
-        if (value && typeof value === "object" && "length" in value) {
-          return Array.from(value as DOMTokenList).join(" ");
-        }
-        return "";
-      },
-      set: function (this: Element, newValue: string) {
-        if (originalClassNameDescriptor.set) {
-          originalClassNameDescriptor.set.call(this, newValue);
-        } else {
-          this.setAttribute("class", newValue);
-        }
-      },
-      configurable: true,
-      enumerable: true,
-    });
+    if (originalClassNameDescriptor) {
+      Object.defineProperty(Element.prototype, "className", {
+        get: function (this: Element) {
+          try {
+            const getter = originalClassNameDescriptor.get;
+            const value =
+              getter && typeof getter === "function"
+                ? getter.call(this)
+                : this.getAttribute("class") ?? "";
 
-    (window as unknown as { __classNameSplitPatched?: boolean }).__classNameSplitPatched = true;
+            if (typeof value === "string") {
+              return value;
+            }
+            // If it's a DOMTokenList (SVG), convert to string
+            if (value && typeof value === "object" && "length" in value) {
+              return Array.from(value as DOMTokenList).join(" ");
+            }
+            return "";
+          } catch (error) {
+            // Fallback to getAttribute if getter fails
+            return this.getAttribute("class") ?? "";
+          }
+        },
+        set: function (this: Element, newValue: string) {
+          try {
+            const setter = originalClassNameDescriptor.set;
+            if (setter && typeof setter === "function") {
+              setter.call(this, newValue);
+            } else {
+              this.setAttribute("class", newValue);
+            }
+          } catch (error) {
+            // Fallback to setAttribute if setter fails
+            this.setAttribute("class", newValue);
+          }
+        },
+        configurable: true,
+        enumerable: true,
+      });
+
+      (
+        window as unknown as { __classNameSplitPatched?: boolean }
+      ).__classNameSplitPatched = true;
+    }
+  } catch (error) {
+    // Silently fail if polyfill cannot be applied
+    console.warn("Failed to apply className polyfill:", error);
   }
 }
-

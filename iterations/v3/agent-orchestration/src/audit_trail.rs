@@ -894,6 +894,170 @@ impl AuditTrailManager {
         }
     }
 
+    /// Record task execution start
+    /// 
+    /// Records when a task begins execution on a worker.
+    pub async fn record_task_execution_start(
+        &self,
+        task_id: Uuid,
+        execution_id: Uuid,
+        worker_id: Option<Uuid>,
+        correlation_id: Option<String>,
+    ) -> Result<(), AuditError> {
+        let execution_id_str = execution_id.to_string();
+        let worker_id_str = worker_id.map(|w| w.to_string()).unwrap_or_else(|| "unknown".to_string());
+        
+        let event = AuditEvent {
+            event_id: Uuid::new_v4(),
+            timestamp: Utc::now(),
+            correlation_id: correlation_id.clone(),
+            parent_event_id: None,
+            category: AuditCategory::Operation,
+            severity: AuditSeverity::Info,
+            actor: "orchestrator".to_string(),
+            operation: "task_execution_start".to_string(),
+            message: Some(format!("Task {} execution started on worker {}", task_id, worker_id_str)),
+            operation_id: Some(execution_id_str.clone()),
+            target: Some(worker_id_str.clone()),
+            parameters: {
+                let mut params = HashMap::new();
+                params.insert("execution_id".to_string(), serde_json::Value::String(execution_id_str.clone()));
+                params.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
+                if let Some(wid) = worker_id {
+                    params.insert("worker_id".to_string(), serde_json::Value::String(wid.to_string()));
+                }
+                params
+            },
+            result: AuditResult::InProgress,
+            performance: None,
+            context: {
+                let mut ctx = HashMap::new();
+                ctx.insert("execution_id".to_string(), serde_json::Value::String(execution_id_str));
+                ctx.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
+                if let Some(wid) = worker_id {
+                    ctx.insert("worker_id".to_string(), serde_json::Value::String(wid.to_string()));
+                }
+                ctx
+            },
+            tags: vec!["orchestration".to_string(), "execution".to_string(), "task_start".to_string()],
+        };
+
+        // Log the audit event using structured logging
+        tracing::info!(
+            audit_event = ?event,
+            category = ?event.category,
+            operation = %event.operation,
+            task_id = %task_id,
+            execution_id = %execution_id,
+            worker_id = ?worker_id,
+            "Task execution started"
+        );
+
+        Ok(())
+    }
+
+    /// Record task execution completion
+    /// 
+    /// Records when a task completes execution (success or failure).
+    pub async fn record_task_execution_completion(
+        &self,
+        result: &agent_agency_contracts::task_executor::TaskExecutionResult,
+        correlation_id: Option<String>,
+    ) -> Result<(), AuditError> {
+        let execution_id_str = result.execution_id.to_string();
+        let worker_id_str = result.worker_id.map(|w| w.to_string()).unwrap_or_else(|| "unknown".to_string());
+        
+        let event = AuditEvent {
+            event_id: Uuid::new_v4(),
+            timestamp: Utc::now(),
+            correlation_id: correlation_id.clone(),
+            parent_event_id: None,
+            category: AuditCategory::Operation,
+            severity: if result.success { AuditSeverity::Info } else { AuditSeverity::Warning },
+            actor: "orchestrator".to_string(),
+            operation: "task_execution_completion".to_string(),
+            message: Some(format!(
+                "Task {} execution {}",
+                result.task_id,
+                if result.success { "completed successfully" } else { "failed" }
+            )),
+            operation_id: Some(execution_id_str.clone()),
+            target: Some(worker_id_str.clone()),
+            parameters: {
+                let mut params = HashMap::new();
+                params.insert("execution_id".to_string(), serde_json::Value::String(execution_id_str.clone()));
+                params.insert("task_id".to_string(), serde_json::Value::String(result.task_id.to_string()));
+                params.insert("success".to_string(), serde_json::Value::Bool(result.success));
+                params.insert("error_count".to_string(), serde_json::Value::Number((result.errors.len() as u64).into()));
+                params.insert("duration_ms".to_string(), serde_json::Value::Number((result.duration_ms as u64).into()));
+                if let Some(wid) = result.worker_id {
+                    params.insert("worker_id".to_string(), serde_json::Value::String(wid.to_string()));
+                }
+                params
+            },
+            result: if result.success {
+                AuditResult::Success {
+                    data: Some(serde_json::json!({
+                        "output": result.output,
+                        "duration_ms": result.duration_ms,
+                    })),
+                }
+            } else {
+                AuditResult::Failure {
+                    error_message: result.errors.join("; "),
+                    error_code: Some("task_execution_failed".to_string()),
+                    recoverable: true,
+                }
+            },
+            performance: Some(AuditPerformance {
+                duration: std::time::Duration::from_millis(result.duration_ms),
+                cpu_time_us: None,
+                memory_bytes: None,
+                io_operations: None,
+                network_bytes: None,
+            }),
+            context: {
+                let mut ctx = HashMap::new();
+                ctx.insert("execution_id".to_string(), serde_json::Value::String(execution_id_str));
+                ctx.insert("task_id".to_string(), serde_json::Value::String(result.task_id.to_string()));
+                ctx.insert("duration_ms".to_string(), serde_json::Value::Number((result.duration_ms as u64).into()));
+                ctx.insert("success".to_string(), serde_json::Value::Bool(result.success));
+                if let Some(wid) = result.worker_id {
+                    ctx.insert("worker_id".to_string(), serde_json::Value::String(wid.to_string()));
+                }
+                ctx
+            },
+            tags: {
+                let mut tags = vec![
+                    "orchestration".to_string(),
+                    "execution".to_string(),
+                    "task_completion".to_string(),
+                ];
+                if result.success {
+                    tags.push("success".to_string());
+                } else {
+                    tags.push("failure".to_string());
+                }
+                tags
+            },
+        };
+
+        // Log the audit event using structured logging
+        tracing::info!(
+            audit_event = ?event,
+            category = ?event.category,
+            operation = %event.operation,
+            task_id = %result.task_id,
+            execution_id = %result.execution_id,
+            worker_id = ?result.worker_id,
+            success = result.success,
+            duration_ms = result.duration_ms,
+            "Task execution completed"
+        );
+
+        Ok(())
+    }
+
     /// Record execution result for audit trail
     /// Note: TaskExecutionResult (contract type) doesn't contain artifacts/working_spec/quality_report
     /// These should be stored/retrieved separately if needed

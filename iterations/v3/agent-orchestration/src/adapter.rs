@@ -194,6 +194,76 @@ impl LegacyOrchestratorAdapter {
     /// Main orchestration function that coordinates the entire task execution process
     /// This adapts the old `orchestrate_task` function to work with the new architecture
     /// Returns TaskExecutionResult (from contracts) - working_spec, artifacts, and quality_report
+    /// Extract consensus result from council session final_decision
+    /// 
+    /// Maps FinalDecision enum variants to ConsensusResult with accurate
+    /// approval status, confidence, and reasoning extracted from council verdict.
+    fn extract_consensus_from_session(session: &crate::council::CouncilSession) -> crate::council_types::ConsensusResult {
+        use crate::decision_making::FinalDecision;
+        
+        match &session.final_decision {
+            Some(FinalDecision::Proceed { confidence, .. }) => {
+                crate::council_types::ConsensusResult {
+                    approved: true,
+                    confidence: *confidence,
+                    reason: format!(
+                        "Council approved with confidence {:.2}",
+                        confidence
+                    ),
+                }
+            }
+            Some(FinalDecision::Refine { refinement_directive, .. }) => {
+                let changes_summary = refinement_directive.required_changes
+                    .iter()
+                    .map(|c| c.description.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                crate::council_types::ConsensusResult {
+                    approved: false,
+                    confidence: 0.6, // Medium confidence that refinement will help
+                    reason: format!(
+                        "Council requested {} refinement(s): {}",
+                        refinement_directive.required_changes.len(),
+                        if changes_summary.is_empty() {
+                            "See refinement directive".to_string()
+                        } else {
+                            changes_summary
+                        }
+                    ),
+                }
+            }
+            Some(FinalDecision::Reject { reason, .. }) => {
+                crate::council_types::ConsensusResult {
+                    approved: false,
+                    confidence: 0.9, // High confidence in rejection
+                    reason: format!("Council rejected: {}", reason),
+                }
+            }
+            Some(FinalDecision::Escalate { reason, .. }) => {
+                crate::council_types::ConsensusResult {
+                    approved: false,
+                    confidence: 0.5, // Low confidence - needs human decision
+                    reason: format!("Council escalated to human decision: {}", reason),
+                }
+            }
+            None => {
+                // Fallback if final_decision is not populated (shouldn't happen with conduct_review)
+                warn!(
+                    session_id = %session.session_id,
+                    "Council session completed without final_decision - using fallback"
+                );
+                crate::council_types::ConsensusResult {
+                    approved: false,
+                    confidence: 0.3,
+                    reason: format!(
+                        "Council session {} completed without final decision",
+                        session.session_id
+                    ),
+                }
+            }
+        }
+    }
+
     /// should be stored/retrieved separately
     pub async fn orchestrate_task(
         &self,
@@ -222,57 +292,40 @@ impl LegacyOrchestratorAdapter {
         }
 
         // Step 2: Evaluate task with council
-        // Use start_session which returns a session (simpler API)
-        let council_session = self.council.start_session(desc).await?;
-        // TODO: Use conduct_review for full review with final_decision populated
-        // - [ ] Replace start_session with conduct_review for full council review
-        // - [ ] Extract final_decision from council review result
-        // - [ ] Map council decision to ConsensusResult with accurate approval status
-        // - [ ] Calculate confidence from actual council consensus strength
-        // - [ ] Extract reasoning from council review verdict
-        // - [ ] Add unit tests with mock council reviews
-        // - [ ] Add integration tests with real council review flow
-        //
-        // TODO: Implement comprehensive council consensus result extraction
-        //       Currently approves with medium confidence since start_session doesn't populate final_decision; should implement comprehensive extraction that extracts final_decision from council review result, maps to ConsensusResult with accurate approval status, and calculates confidence from actual council consensus strength.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - final_decision is extracted from council review result
-        // - Council decision is mapped to ConsensusResult accurately
-        // - Confidence is calculated from actual consensus strength
-        // - Reasoning is extracted from council review verdict
-        //
-        // DEPENDENCIES:
-        // - Council review result parsing (Required)
-        // - Consensus strength calculation (Required)
-        // - Verdict extraction utilities (Required)
-        //
-        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (council integration functionality)
-        // - Change Budget: ~200 LOC
-        // - Reviewer Requirements: Council integration and consensus analysis expertise
-        let consensus_result = crate::council_types::ConsensusResult {
-            approved: true,
-            confidence: 0.7,
-            reason: format!("Council session {} initialized", council_session.session_id),
+        // Conduct full council review to get final_decision populated
+        use crate::judge_backup::types::ReviewContext;
+        use crate::decision_making::FinalDecision;
+        use uuid::Uuid;
+        
+        // Convert working spec to JSON string for review context
+        let working_spec_json = serde_json::to_string(spec)
+            .map_err(|e| anyhow::anyhow!("Failed to serialize working spec: {}", e))?;
+        
+        // Determine risk tier from task descriptor priority
+        let risk_tier = match desc.priority {
+            agent_agency_contracts::types::planning::TaskPriority::Critical 
+            | agent_agency_contracts::types::planning::TaskPriority::High 
+            | agent_agency_contracts::types::planning::TaskPriority::Urgent => 1,
+            agent_agency_contracts::types::planning::TaskPriority::Normal 
+            | agent_agency_contracts::types::planning::TaskPriority::Medium => 2,
+            agent_agency_contracts::types::planning::TaskPriority::Low => 3,
         };
+        
+        // Create review context
+        let review_context = ReviewContext {
+            session_id: format!("orchestration_{}", Uuid::new_v4()),
+            working_spec: working_spec_json,
+            risk_tier,
+            previous_reviews: vec![],
+            constraints: std::collections::HashMap::new(),
+        };
+        
+        // Conduct full council review
+        let council_session = self.council.conduct_review(spec.clone(), review_context).await
+            .map_err(|e| anyhow::anyhow!("Council review failed: {:?}", e))?;
+        
+        // Extract consensus result from council session final_decision
+        let consensus_result = Self::extract_consensus_from_session(&council_session);
 
         // Council approval is determined by the approved field
 

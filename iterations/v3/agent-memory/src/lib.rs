@@ -211,7 +211,10 @@ impl MemorySystem {
             (*db_pool).clone(),
             Arc::clone(&workspace_registry)
         ).await?;
-        let context_manager = MemoryContextManager::new(config.context_config.clone()).await?;
+        let context_manager = MemoryContextManager::new_with_db(
+            config.context_config.clone(),
+            Some((*db_pool).clone())
+        ).await?;
 
         Ok(Self {
             manager,

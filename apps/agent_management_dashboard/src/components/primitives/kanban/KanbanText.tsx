@@ -12,14 +12,14 @@ interface KanbanTextProps {
 export function KanbanText({
   children,
   size = "14",
-  color = "#cacaca",
+  color = "#888888", // Changed default from #cacaca to #888888 to match old Tailwind version
   weight = "normal",
   width,
   className,
 }: KanbanTextProps) {
   const sizeClass = size === "14" ? styles.text14 : styles.text16;
   const weightClass = weight === "normal" ? styles.fontNormal : styles.fontBold;
-  const colorStyle = color !== "#cacaca" ? { color } : undefined;
+  const colorStyle = color !== "#888888" ? { color } : undefined;
   const widthStyle = width ? { width: typeof width === "number" ? `${width}px` : width } : undefined;
 
   return (

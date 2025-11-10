@@ -12,138 +12,12 @@ import styles from "./SettingsTab.module.scss";
 
 type ManageTabType = "general" | "workHistory" | "aiAgents" | "taskSettings";
 
-function Heading() {
-  return (
-    <div className={styles.headingContainer} data-name="Heading 1">
-      <p className={styles.headingText}>Project Settings</p>
-    </div>
-  );
-}
-
-function Paragraph() {
-  return (
-    <div className={styles.paragraphContainer} data-name="Paragraph">
-      <p className={styles.paragraphText}>
-        Manage your project configuration and team
-      </p>
-    </div>
-  );
-}
-
-function Container() {
-  return (
-    <div className={styles.container} data-name="Container">
-      <Heading />
-      <Paragraph />
-    </div>
-  );
-}
-
-interface TabListProps {
-  activeTab: ManageTabType;
-  onTabChange: (tab: ManageTabType) => void;
-}
-
-function TabList({ activeTab, onTabChange }: TabListProps) {
-  return (
-    <div className={styles.tabList} data-name="Tab List">
-      <div aria-hidden="true" className={styles.tabListBorder} />
-      <div className={styles.tabListContent}>
-        <button
-          onClick={() => onTabChange("general")}
-          className={cn(
-            styles.tabButton,
-            styles.tabButtonGeneral,
-            activeTab === "general"
-              ? styles.tabButtonActive
-              : styles.tabButtonInactive
-          )}
-        >
-          <div aria-hidden="true" className={styles.tabButtonBorder} />
-          <p
-            className={cn(
-              styles.tabButtonText,
-              activeTab === "general"
-                ? styles.tabButtonTextActive
-                : styles.tabButtonTextInactive
-            )}
-          >
-            General
-          </p>
-        </button>
-
-        <button
-          onClick={() => onTabChange("workHistory")}
-          className={cn(
-            styles.tabButton,
-            styles.tabButtonWorkHistory,
-            activeTab === "workHistory"
-              ? styles.tabButtonActive
-              : styles.tabButtonInactive
-          )}
-        >
-          <div aria-hidden="true" className={styles.tabButtonBorder} />
-          <p
-            className={cn(
-              styles.tabButtonText,
-              activeTab === "workHistory"
-                ? styles.tabButtonTextActive
-                : styles.tabButtonTextInactive
-            )}
-          >
-            Work History
-          </p>
-        </button>
-
-        <button
-          onClick={() => onTabChange("aiAgents")}
-          className={cn(
-            styles.tabButton,
-            styles.tabButtonAIAgents,
-            activeTab === "aiAgents"
-              ? styles.tabButtonActive
-              : styles.tabButtonInactive
-          )}
-        >
-          <div aria-hidden="true" className={styles.tabButtonBorder} />
-          <p
-            className={cn(
-              styles.tabButtonText,
-              activeTab === "aiAgents"
-                ? styles.tabButtonTextActive
-                : styles.tabButtonTextInactive
-            )}
-          >
-            AI Agents
-          </p>
-        </button>
-
-        <button
-          onClick={() => onTabChange("taskSettings")}
-          className={cn(
-            styles.tabButton,
-            styles.tabButtonTaskSettings,
-            activeTab === "taskSettings"
-              ? styles.tabButtonActive
-              : styles.tabButtonInactive
-          )}
-        >
-          <div aria-hidden="true" className={styles.tabButtonBorder} />
-          <p
-            className={cn(
-              styles.tabButtonText,
-              activeTab === "taskSettings"
-                ? styles.tabButtonTextActive
-                : styles.tabButtonTextInactive
-            )}
-          >
-            Task Settings
-          </p>
-        </button>
-      </div>
-    </div>
-  );
-}
+const TABS: Array<{ id: ManageTabType; label: string }> = [
+  { id: "general", label: "General" },
+  { id: "workHistory", label: "Work History" },
+  { id: "aiAgents", label: "AI Agents" },
+  { id: "taskSettings", label: "Task Settings" },
+];
 
 export function ManageTab() {
   const [activeTab, setActiveTab] = useState<ManageTabType>("general");
@@ -152,10 +26,47 @@ export function ManageTab() {
     <div className={styles.settingsTab}>
       <div className={styles.settingsTabContent}>
         <div className={styles.settingsContainer}>
-          <Container />
-          <div className={styles.contentContainer}>
-            <TabList activeTab={activeTab} onTabChange={setActiveTab} />
+          {/* Header Section */}
+          <div className={styles.header}>
+            <h1 className={styles.heading}>Project Settings</h1>
+            <p className={styles.description}>
+              Manage your project configuration and team
+            </p>
+          </div>
 
+          {/* Tab Navigation */}
+          <div className={styles.tabList}>
+            <div aria-hidden="true" className={styles.tabListBorder} />
+            <div className={styles.tabListContent}>
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    styles.tabButton,
+                    activeTab === tab.id
+                      ? styles.tabButtonActive
+                      : styles.tabButtonInactive
+                  )}
+                  type="button"
+                >
+                  <span
+                    className={cn(
+                      styles.tabButtonText,
+                      activeTab === tab.id
+                        ? styles.tabButtonTextActive
+                        : styles.tabButtonTextInactive
+                    )}
+                  >
+                    {tab.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tab Content */}
+          <div className={styles.tabContent}>
             {activeTab === "general" && <GeneralTabContent />}
             {activeTab === "workHistory" && <WorkHistoryTabContent />}
             {activeTab === "aiAgents" && <AIAgentsTabContent />}

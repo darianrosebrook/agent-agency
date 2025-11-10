@@ -1,50 +1,56 @@
 /**
  * Next.js API Proxy Route
- * 
+ *
  * Proxies requests from the frontend to the Rust API server.
- * This allows the frontend to make requests to /api/proxy/api/v1/* 
+ * This allows the frontend to make requests to /api/proxy/api/v1/*
  * which get forwarded to http://localhost:8080/api/v1/*
- * 
+ *
  * @author @darianrosebrook
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
-const API_SERVER_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const API_SERVER_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return proxyRequest(request, params, 'GET');
+  const resolvedParams = await params;
+  return proxyRequest(request, resolvedParams, "GET");
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return proxyRequest(request, params, 'POST');
+  const resolvedParams = await params;
+  return proxyRequest(request, resolvedParams, "POST");
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return proxyRequest(request, params, 'PUT');
+  const resolvedParams = await params;
+  return proxyRequest(request, resolvedParams, "PUT");
 }
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { path: string[] }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return proxyRequest(request, params, 'PATCH');
+  const resolvedParams = await params;
+  return proxyRequest(request, resolvedParams, "PATCH");
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return proxyRequest(request, params, 'DELETE');
+  const resolvedParams = await params;
+  return proxyRequest(request, resolvedParams, "DELETE");
 }
 
 async function proxyRequest(
@@ -55,11 +61,11 @@ async function proxyRequest(
   try {
     // Reconstruct the API path
     const pathSegments = params.path || [];
-    const apiPath = pathSegments.join('/');
-    
+    const apiPath = pathSegments.join("/");
+
     // Build the full URL
     const url = new URL(`${API_SERVER_URL}/${apiPath}`);
-    
+
     // Copy query parameters
     request.nextUrl.searchParams.forEach((value, key) => {
       url.searchParams.append(key, value);
@@ -67,7 +73,7 @@ async function proxyRequest(
 
     // Get request body if present
     let body: string | undefined;
-    if (method !== 'GET' && method !== 'DELETE') {
+    if (method !== "GET" && method !== "DELETE") {
       try {
         body = await request.text();
       } catch {
@@ -80,9 +86,9 @@ async function proxyRequest(
     request.headers.forEach((value, key) => {
       const lowerKey = key.toLowerCase();
       if (
-        lowerKey !== 'host' &&
-        lowerKey !== 'connection' &&
-        lowerKey !== 'content-length'
+        lowerKey !== "host" &&
+        lowerKey !== "connection" &&
+        lowerKey !== "content-length"
       ) {
         headers.set(key, value);
       }
@@ -96,10 +102,10 @@ async function proxyRequest(
     });
 
     // Get response body
-    const contentType = response.headers.get('content-type') || '';
+    const contentType = response.headers.get("content-type") ?? "";
     let responseBody: string | object;
-    
-    if (contentType.includes('application/json')) {
+
+    if (contentType.includes("application/json")) {
       responseBody = await response.json();
     } else {
       responseBody = await response.text();
@@ -109,18 +115,17 @@ async function proxyRequest(
     return NextResponse.json(responseBody, {
       status: response.status,
       headers: {
-        'Content-Type': contentType || 'application/json',
+        "Content-Type": contentType || "application/json",
       },
     });
   } catch (error) {
-    console.error('Proxy error:', error);
+    console.error("Proxy error:", error);
     return NextResponse.json(
       {
-        error: 'Proxy request failed',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        error: "Proxy request failed",
+        message: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
   }
 }
-

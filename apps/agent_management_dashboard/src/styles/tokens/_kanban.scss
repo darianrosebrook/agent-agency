@@ -1,0 +1,62 @@
+// Kanban Board Design Tokens
+// All Kanban-specific measurements and values
+
+// Column dimensions
+$kanban-column-width: 639.41px;
+$kanban-column-height: 735.043px;
+$kanban-column-gap: 15.994px;
+
+// Card dimensions
+$kanban-card-height: 205.753px;
+$kanban-card-border-width: 0.909px;
+$kanban-card-border-radius: 10px;
+$kanban-card-padding-x: 16.9px;
+$kanban-card-content-width: 605.604px;
+
+// Card content positioning (absolute positions from top)
+$kanban-card-status-tags-top: 16.9px;
+$kanban-card-status-tags-height: 31.982px;
+$kanban-card-title-top: 60.88px;
+$kanban-card-description-top: 92.88px;
+$kanban-card-metadata-top: 128.86px;
+$kanban-card-bottom-metadata-top: 168.86px;
+
+// Spacing within cards
+$kanban-card-status-tags-gap: 5.994px;
+$kanban-card-metadata-gap: 3.999px;
+$kanban-card-cards-gap: 11.996px;
+
+// Header dimensions
+$kanban-header-height: 23.999px;
+$kanban-header-button-size: 23.999px;
+$kanban-header-title-gap: 7.997px;
+
+// Add button dimensions
+$kanban-add-button-height: 41.804px;
+$kanban-add-button-padding-x: 0.909px;
+$kanban-add-button-padding-y: 0.909px;
+
+// Board container
+$kanban-board-bg: #0d0d0d;
+$kanban-board-padding-x: 23.999px;
+$kanban-board-padding-y: 23.999px;
+$kanban-board-padding-right: 23.998px;
+
+// Cards container
+$kanban-cards-container-height: 641.25px;
+
+// Colors
+$kanban-card-bg: #1a1a1a;
+$kanban-card-border-color: $color-neutral-800;
+$kanban-text-primary: $color-white;
+$kanban-text-secondary: #888888;
+
+// Status tag colors
+$kanban-tag-priority-high-bg: #3a2f1f;
+$kanban-tag-priority-high-text: #ff9f43;
+$kanban-tag-priority-medium-bg: #1f2d3a;
+$kanban-tag-priority-medium-text: #54a0ff;
+$kanban-tag-default-bg: $color-neutral-800;
+$kanban-tag-default-text: $kanban-text-secondary;
+
+

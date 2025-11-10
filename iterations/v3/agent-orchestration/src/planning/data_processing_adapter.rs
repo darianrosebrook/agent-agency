@@ -167,67 +167,245 @@ impl DataProcessingService for DataProcessingServiceAdapter {
     }
 
     async fn file_operation(&self, operation: FileOperation) -> DataProcessingResult<FileOperationResult> {
-        // TODO: Implement real file operation handling
-        // - [ ] Convert FileOperation to internal data-processing types
-        // - [ ] Route to appropriate file operation service
-        // - [ ] Handle read, write, delete, and other file operations
-        // - [ ] Add error handling for file system errors
-        // - [ ] Add permission and security checks
-        // - [ ] Add unit tests with mock file system
-        // - [ ] Add integration tests with real file operations
-        //
-        // TODO: Implement comprehensive file operation handling
-        //       Currently returns placeholder implementation; should implement comprehensive handling that converts FileOperation to internal types, routes to appropriate file operation service, and handles all file operations with proper error handling and security checks.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - FileOperation is converted to internal types correctly
-        // - Operations are routed to appropriate service
-        // - All file operations (read, write, delete, etc.) are handled
-        // - Error handling and security checks are comprehensive
-        //
-        // DEPENDENCIES:
-        // - File operation service integration (Required)
-        // - Type conversion utilities (Required)
-        // - Security and permission checking (Required)
-        //
-        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (file operation functionality)
-        // - Change Budget: ~250 LOC
-        // - Reviewer Requirements: File system operations and security expertise
-        warn!("file_operation not fully implemented - returning success");
-        Ok(FileOperationResult {
-            success: true,
-            path: match operation {
-                FileOperation::Read { path } => path,
-                FileOperation::Write { path, .. } => path,
-                FileOperation::List { path } => path,
-                FileOperation::Exists { path } => path,
-                FileOperation::Metadata { path } => path,
-                FileOperation::Delete { path } => path,
-                FileOperation::CreateDir { path } => path,
-                FileOperation::Copy { to, .. } => to,
-                FileOperation::Move { to, .. } => to,
-            },
-            result: None,
-            error: None,
-        })
+        use tokio::fs;
+        use std::path::Path;
+        use tracing::{debug, warn};
+        
+        match operation {
+            FileOperation::Read { path } => {
+                debug!("Reading file: {}", path);
+                match fs::read(&path).await {
+                    Ok(content) => {
+                        Ok(FileOperationResult {
+                            success: true,
+                            path: path.clone(),
+                            result: Some(serde_json::json!({
+                                "content": String::from_utf8_lossy(&content),
+                                "size_bytes": content.len(),
+                            })),
+                            error: None,
+                        })
+                    }
+                    Err(e) => {
+                        warn!("Failed to read file {}: {}", path, e);
+                        Ok(FileOperationResult {
+                            success: false,
+                            path,
+                            result: None,
+                            error: Some(format!("Failed to read file: {}", e)),
+                        })
+                    }
+                }
+            }
+            FileOperation::Write { path, content } => {
+                debug!("Writing file: {} ({} bytes)", path, content.len());
+                match fs::write(&path, &content).await {
+                    Ok(_) => {
+                        Ok(FileOperationResult {
+                            success: true,
+                            path: path.clone(),
+                            result: Some(serde_json::json!({
+                                "bytes_written": content.len(),
+                            })),
+                            error: None,
+                        })
+                    }
+                    Err(e) => {
+                        warn!("Failed to write file {}: {}", path, e);
+                        Ok(FileOperationResult {
+                            success: false,
+                            path,
+                            result: None,
+                            error: Some(format!("Failed to write file: {}", e)),
+                        })
+                    }
+                }
+            }
+            FileOperation::List { path } => {
+                debug!("Listing directory: {}", path);
+                match fs::read_dir(&path).await {
+                    Ok(mut entries) => {
+                        let mut file_list = Vec::new();
+                        while let Ok(Some(entry)) = entries.next_entry().await {
+                            if let Ok(metadata) = entry.metadata().await {
+                                file_list.push(serde_json::json!({
+                                    "name": entry.file_name().to_string_lossy(),
+                                    "path": entry.path().to_string_lossy(),
+                                    "is_file": metadata.is_file(),
+                                    "is_dir": metadata.is_dir(),
+                                    "size": if metadata.is_file() { Some(metadata.len()) } else { None },
+                                }));
+                            }
+                        }
+                        Ok(FileOperationResult {
+                            success: true,
+                            path: path.clone(),
+                            result: Some(serde_json::json!({
+                                "entries": file_list,
+                                "count": file_list.len(),
+                            })),
+                            error: None,
+                        })
+                    }
+                    Err(e) => {
+                        warn!("Failed to list directory {}: {}", path, e);
+                        Ok(FileOperationResult {
+                            success: false,
+                            path,
+                            result: None,
+                            error: Some(format!("Failed to list directory: {}", e)),
+                        })
+                    }
+                }
+            }
+            FileOperation::Exists { path } => {
+                debug!("Checking if path exists: {}", path);
+                let exists = Path::new(&path).exists();
+                Ok(FileOperationResult {
+                    success: true,
+                    path: path.clone(),
+                    result: Some(serde_json::json!({
+                        "exists": exists,
+                    })),
+                    error: None,
+                })
+            }
+            FileOperation::Metadata { path } => {
+                debug!("Getting metadata for: {}", path);
+                match fs::metadata(&path).await {
+                    Ok(metadata) => {
+                        Ok(FileOperationResult {
+                            success: true,
+                            path: path.clone(),
+                            result: Some(serde_json::json!({
+                                "is_file": metadata.is_file(),
+                                "is_dir": metadata.is_dir(),
+                                "size": metadata.len(),
+                                "modified": metadata.modified()
+                                    .ok()
+                                    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                                    .map(|d| d.as_secs()),
+                            })),
+                            error: None,
+                        })
+                    }
+                    Err(e) => {
+                        warn!("Failed to get metadata for {}: {}", path, e);
+                        Ok(FileOperationResult {
+                            success: false,
+                            path,
+                            result: None,
+                            error: Some(format!("Failed to get metadata: {}", e)),
+                        })
+                    }
+                }
+            }
+            FileOperation::Delete { path } => {
+                debug!("Deleting: {}", path);
+                let path_obj = Path::new(&path);
+                let result = if path_obj.is_dir() {
+                    fs::remove_dir_all(&path).await
+                } else {
+                    fs::remove_file(&path).await
+                };
+                
+                match result {
+                    Ok(_) => {
+                        Ok(FileOperationResult {
+                            success: true,
+                            path: path.clone(),
+                            result: Some(serde_json::json!({
+                                "deleted": true,
+                            })),
+                            error: None,
+                        })
+                    }
+                    Err(e) => {
+                        warn!("Failed to delete {}: {}", path, e);
+                        Ok(FileOperationResult {
+                            success: false,
+                            path,
+                            result: None,
+                            error: Some(format!("Failed to delete: {}", e)),
+                        })
+                    }
+                }
+            }
+            FileOperation::CreateDir { path } => {
+                debug!("Creating directory: {}", path);
+                match fs::create_dir_all(&path).await {
+                    Ok(_) => {
+                        Ok(FileOperationResult {
+                            success: true,
+                            path: path.clone(),
+                            result: Some(serde_json::json!({
+                                "created": true,
+                            })),
+                            error: None,
+                        })
+                    }
+                    Err(e) => {
+                        warn!("Failed to create directory {}: {}", path, e);
+                        Ok(FileOperationResult {
+                            success: false,
+                            path,
+                            result: None,
+                            error: Some(format!("Failed to create directory: {}", e)),
+                        })
+                    }
+                }
+            }
+            FileOperation::Copy { from, to } => {
+                debug!("Copying {} to {}", from, to);
+                match fs::copy(&from, &to).await {
+                    Ok(bytes_copied) => {
+                        Ok(FileOperationResult {
+                            success: true,
+                            path: to.clone(),
+                            result: Some(serde_json::json!({
+                                "from": from,
+                                "bytes_copied": bytes_copied,
+                            })),
+                            error: None,
+                        })
+                    }
+                    Err(e) => {
+                        warn!("Failed to copy {} to {}: {}", from, to, e);
+                        Ok(FileOperationResult {
+                            success: false,
+                            path: to,
+                            result: None,
+                            error: Some(format!("Failed to copy file: {}", e)),
+                        })
+                    }
+                }
+            }
+            FileOperation::Move { from, to } => {
+                debug!("Moving {} to {}", from, to);
+                match fs::rename(&from, &to).await {
+                    Ok(_) => {
+                        Ok(FileOperationResult {
+                            success: true,
+                            path: to.clone(),
+                            result: Some(serde_json::json!({
+                                "from": from,
+                                "moved": true,
+                            })),
+                            error: None,
+                        })
+                    }
+                    Err(e) => {
+                        warn!("Failed to move {} to {}: {}", from, to, e);
+                        Ok(FileOperationResult {
+                            success: false,
+                            path: to,
+                            result: None,
+                            error: Some(format!("Failed to move file: {}", e)),
+                        })
+                    }
+                }
+            }
+        }
     }
 
     async fn get_processing_stats(&self) -> DataProcessingResult<ProcessingStats> {

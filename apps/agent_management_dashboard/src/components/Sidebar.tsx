@@ -14,6 +14,7 @@ import {
   Moon,
   ChevronDown,
   FolderPlus,
+  TestTube,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -102,7 +103,9 @@ export function Sidebar() {
                   href="/chat"
                   className={cn(
                     styles.quickLink,
-                    isCollapsed ? styles.quickLinkCollapsed : styles.quickLinkExpanded
+                    isCollapsed
+                      ? styles.quickLinkCollapsed
+                      : styles.quickLinkExpanded
                   )}
                 >
                   <MessageSquare className={styles.icon} />
@@ -123,7 +126,9 @@ export function Sidebar() {
                   href="/projects"
                   className={cn(
                     styles.quickLink,
-                    isCollapsed ? styles.quickLinkCollapsed : styles.quickLinkExpanded
+                    isCollapsed
+                      ? styles.quickLinkCollapsed
+                      : styles.quickLinkExpanded
                   )}
                 >
                   <FileSignature className={styles.icon} />
@@ -157,8 +162,12 @@ export function Sidebar() {
                   href="/"
                   className={cn(
                     styles.navLink,
-                    isCollapsed ? styles.navLinkCollapsed : styles.navLinkExpanded,
-                    isActive("/") ? styles.navLinkActive : styles.navLinkInactive
+                    isCollapsed
+                      ? styles.navLinkCollapsed
+                      : styles.navLinkExpanded,
+                    isActive("/")
+                      ? styles.navLinkActive
+                      : styles.navLinkInactive
                   )}
                 >
                   <LayoutGrid className={styles.icon} />
@@ -179,7 +188,9 @@ export function Sidebar() {
                   className={cn(
                     styles.navLink,
                     styles.navLinkInactive,
-                    isCollapsed ? styles.navLinkCollapsed : styles.navLinkExpanded
+                    isCollapsed
+                      ? styles.navLinkCollapsed
+                      : styles.navLinkExpanded
                   )}
                 >
                   <TrendingUp className={styles.icon} />
@@ -200,12 +211,16 @@ export function Sidebar() {
                   className={cn(
                     styles.navLink,
                     styles.navLinkInactive,
-                    isCollapsed ? styles.navLinkCollapsed : styles.navLinkExpanded
+                    isCollapsed
+                      ? styles.navLinkCollapsed
+                      : styles.navLinkExpanded
                   )}
                 >
                   <FileCode className={styles.icon} />
                   {!isCollapsed && (
-                    <span className={styles.navLinkText}>Rules & Governance</span>
+                    <span className={styles.navLinkText}>
+                      Rules & Governance
+                    </span>
                   )}
                 </button>
               </TooltipTrigger>
@@ -221,7 +236,9 @@ export function Sidebar() {
                   className={cn(
                     styles.navLink,
                     styles.navLinkInactive,
-                    isCollapsed ? styles.navLinkCollapsed : styles.navLinkExpanded
+                    isCollapsed
+                      ? styles.navLinkCollapsed
+                      : styles.navLinkExpanded
                   )}
                 >
                   <HeartPulse className={styles.icon} />
@@ -242,7 +259,9 @@ export function Sidebar() {
                   href="/phase-planner"
                   className={cn(
                     styles.navLink,
-                    isCollapsed ? styles.navLinkCollapsed : styles.navLinkExpanded,
+                    isCollapsed
+                      ? styles.navLinkCollapsed
+                      : styles.navLinkExpanded,
                     isActive("/phase-planner")
                       ? styles.navLinkActive
                       : styles.navLinkInactive
@@ -262,11 +281,39 @@ export function Sidebar() {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
+                <Link
+                  href="/testing"
+                  className={cn(
+                    styles.navLink,
+                    isCollapsed
+                      ? styles.navLinkCollapsed
+                      : styles.navLinkExpanded,
+                    isActive("/testing")
+                      ? styles.navLinkActive
+                      : styles.navLinkInactive
+                  )}
+                >
+                  <TestTube className={styles.icon} />
+                  {!isCollapsed && (
+                    <span className={styles.navLinkText}>Testing</span>
+                  )}
+                </Link>
+              </TooltipTrigger>
+              {isCollapsed && (
+                <TooltipContent side="right">
+                  <p>Testing</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <button
                   className={cn(
                     styles.navLink,
                     styles.navLinkInactive,
-                    isCollapsed ? styles.navLinkCollapsed : styles.navLinkExpanded
+                    isCollapsed
+                      ? styles.navLinkCollapsed
+                      : styles.navLinkExpanded
                   )}
                 >
                   <Settings className={styles.icon} />

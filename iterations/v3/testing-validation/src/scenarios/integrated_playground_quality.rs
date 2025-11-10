@@ -14,7 +14,6 @@ use std::path::PathBuf;
 use tracing::{info, warn};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use std::process::Command;
 
 use crate::harness::{TestEnvironment, LocalServiceManager};
 use crate::quality_analyzers::{
@@ -89,12 +88,12 @@ pub async fn run_integrated_test(
     info!("Starting integrated test: {} ({})", scenario_id, file_type);
 
     // Step 1: Playground Test - Functional Correctness
-    let playground_result = run_playground_test(env, services, scenario_id, file_type).await;
+    let (playground_result, agent) = run_playground_test(env, services, scenario_id, file_type).await;
 
     // Step 2: Quality Evaluation - Only if playground test passed
     let quality_result = if playground_result.fixed {
         info!("Playground test passed, running quality evaluation...");
-        Some(run_quality_evaluation(env, &playground_result, playground_result.fixed_file_path.clone()).await)
+        Some(run_quality_evaluation(env, &playground_result, playground_result.fixed_file_path.clone(), agent.as_ref()).await)
     } else {
         warn!("Playground test failed, skipping quality evaluation");
         None
@@ -124,14 +123,14 @@ async fn run_playground_test(
     services: &LocalServiceManager,
     scenario_id: &str,
     file_type: &str,
-) -> PlaygroundTestResult {
+) -> (PlaygroundTestResult, Option<Arc<SelfPromptingAgent>>) {
     info!("Running playground test for {} with real agent execution", file_type);
 
     let playground = PlaygroundManager::new();
     
     // Setup playground scenario
     if let Err(e) = playground.setup_scenario(scenario_id).await {
-        return PlaygroundTestResult {
+        return (PlaygroundTestResult {
             scenario_id: scenario_id.to_string(),
             file_name: format!("broken-{}.rs", file_type),
             fixed: false,
@@ -141,7 +140,7 @@ async fn run_playground_test(
             decision_points: vec![],
             fixed_file_path: None,
             error_message: Some(format!("Failed to setup playground: {}", e)),
-        };
+        }, None);
     }
 
     // Create broken file
@@ -150,7 +149,7 @@ async fn run_playground_test(
         "typescript" => "broken-types.ts",
         "python" => "broken-python.py",
         _ => {
-            return PlaygroundTestResult {
+            return (PlaygroundTestResult {
                 scenario_id: scenario_id.to_string(),
                 file_name: format!("broken-{}.rs", file_type),
                 fixed: false,
@@ -160,7 +159,7 @@ async fn run_playground_test(
                 decision_points: vec![],
                 fixed_file_path: None,
             error_message: Some(format!("Unknown file type: {}", file_type)),
-            };
+            }, None);
         }
     };
 
@@ -168,7 +167,7 @@ async fn run_playground_test(
     let broken_files = match playground.scaffold_comprehensive_broken_files(scenario_id).await {
         Ok(files) => files,
         Err(e) => {
-            return PlaygroundTestResult {
+            return (PlaygroundTestResult {
                 scenario_id: scenario_id.to_string(),
                 file_name: file_name.to_string(),
                 fixed: false,
@@ -178,7 +177,7 @@ async fn run_playground_test(
                 decision_points: vec![],
                 fixed_file_path: None,
             error_message: Some(format!("Failed to scaffold broken files: {}", e)),
-            };
+            }, None);
         }
     };
 
@@ -188,7 +187,7 @@ async fn run_playground_test(
         .cloned();
 
     if target_file.is_none() {
-        return PlaygroundTestResult {
+        return (PlaygroundTestResult {
             scenario_id: scenario_id.to_string(),
             file_name: file_name.to_string(),
             fixed: false,
@@ -198,7 +197,7 @@ async fn run_playground_test(
             decision_points: vec![],
             fixed_file_path: None,
             error_message: Some(format!("Target file {} not found", file_name)),
-        };
+        }, None);
     }
 
     let target_file_path = target_file.unwrap();
@@ -211,7 +210,7 @@ async fn run_playground_test(
     let workspace = match env.create_workspace(&format!("playground_{}", scenario_id)).await {
         Ok(ws) => ws,
         Err(e) => {
-            return PlaygroundTestResult {
+            return (PlaygroundTestResult {
                 scenario_id: scenario_id.to_string(),
                 file_name: file_name.to_string(),
                 fixed: false,
@@ -221,7 +220,7 @@ async fn run_playground_test(
                 decision_points: vec![],
                 fixed_file_path: None,
                 error_message: Some(format!("Failed to create workspace: {}", e)),
-            };
+            }, None);
         }
     };
 
@@ -314,9 +313,9 @@ path = "src/lib.rs"
     };
 
     let agent = match SelfPromptingAgent::new(agent_config, model_registry, evaluator).await {
-        Ok(agent) => agent,
+        Ok(agent) => Arc::new(agent),
         Err(e) => {
-            return PlaygroundTestResult {
+            return (PlaygroundTestResult {
                 scenario_id: scenario_id.to_string(),
                 file_name: file_name.to_string(),
                 fixed: false,
@@ -326,7 +325,7 @@ path = "src/lib.rs"
                 decision_points: vec![],
                 fixed_file_path: None,
                 error_message: Some(format!("Failed to initialize SelfPromptingAgent: {}", e)),
-            };
+            }, None);
         }
     };
 
@@ -334,7 +333,7 @@ path = "src/lib.rs"
     let language_instructions = build_language_specific_instructions(file_type);
     
     // Create task for fixing the broken code with language-specific instructions and self-review
-    let mut task = SelfPromptingTask {
+    let task = SelfPromptingTask {
         id: Uuid::new_v4(),
         description: format!(
             "Fix all compilation errors, type errors, and code quality issues in {}. Remove duplicate definitions, fix type mismatches, add missing imports, fix return types, add proper error handling, and address TODO/PLACEHOLDER/MOCK_DATA comments.\n\n\
@@ -388,9 +387,15 @@ path = "src/lib.rs"
         },
     };
 
+    // Store original file content for comparison BEFORE agent execution
+    let original_content = std::fs::read_to_string(&workspace_file_path)
+        .ok()
+        .unwrap_or_default();
+    info!("Original file content length: {} chars", original_content.len());
+
     // Execute task with compilation feedback loop
     let (execution_result, _final_task) = run_playground_test_with_feedback(
-        &agent,
+        agent.as_ref(),
         task,
         &workspace_file_path,
         file_type,
@@ -400,7 +405,7 @@ path = "src/lib.rs"
     let execution_result = match execution_result {
         Ok(result) => result,
         Err(e) => {
-            return PlaygroundTestResult {
+            return (PlaygroundTestResult {
                 scenario_id: scenario_id.to_string(),
                 file_name: file_name.to_string(),
                 fixed: false,
@@ -410,17 +415,11 @@ path = "src/lib.rs"
                 decision_points: vec![],
                 fixed_file_path: None,
                 error_message: Some(format!("Agent execution failed: {}", e)),
-            };
+            }, Some(agent));
         }
     };
 
-    // Store original file content for comparison
-    let original_content = std::fs::read_to_string(&workspace_file_path)
-        .ok()
-        .unwrap_or_default();
-    info!("Original file content length: {} chars", original_content.len());
-
-    // Artifacts were already written by run_playground_test_with_feedback
+    // Run agent with feedback loop - artifacts will be written during iterations
     // Check file modification and final compilation status
     info!("Checking final compilation status for file: {:?}", workspace_file_path);
     info!("File exists: {}", workspace_file_path.exists());
@@ -480,7 +479,7 @@ path = "src/lib.rs"
     let _ = playground.cleanup_scenario(scenario_id).await;
     // TestWorkspace cleanup is handled by TempDir drop
 
-    PlaygroundTestResult {
+    (PlaygroundTestResult {
         scenario_id: scenario_id.to_string(),
         file_name: file_name.to_string(),
         fixed,
@@ -490,7 +489,7 @@ path = "src/lib.rs"
         decision_points: decision_summaries,
         fixed_file_path: if fixed { Some(workspace_file_path) } else { None },
         error_message: None,
-    }
+    }, Some(agent))
 }
 
 /// Step 2: Run quality evaluation on fixed code using REAL fixed file
@@ -499,6 +498,7 @@ async fn run_quality_evaluation(
     _env: &TestEnvironment,
     playground_result: &PlaygroundTestResult,
     fixed_file_path: Option<PathBuf>,
+    agent: Option<&SelfPromptingAgent>,
 ) -> QualityEvaluationResult {
     info!("Running quality evaluation on fixed code");
 
@@ -539,20 +539,56 @@ async fn run_quality_evaluation(
         }
     };
 
-    // Calculate overall score (using scores, not structs)
-    // NOTE: Council transparency uses placeholder value (0.7) because:
-    // 1. Playground tests focus on functional correctness and code quality, not council evaluation
-    // 2. Council evaluation requires a different test setup (verdict records, judge coordination)
-    // 3. Council transparency is better tested in dedicated council evaluation scenarios
-    // 4. The placeholder value (0.7) represents "good" council transparency for calculation purposes
-    // TODO: Consider integrating council evaluation if playground tests need full quality assessment
-    let council_transparency_placeholder = 0.7;
+    // Calculate council transparency score
+    // For playground tests, council evaluation is not part of the test flow,
+    // so we use a documented default value. In real evaluation scenarios with council sessions,
+    // this would be extracted from the CouncilSession or VerdictRecord and passed to this function.
+    // 
+    // This default (0.7) represents "good" council transparency for calculation purposes
+    // and ensures overall score calculation works correctly. Council transparency is better
+    // evaluated in dedicated council evaluation scenarios that include verdict records.
+    // 
+    // NOTE: This is intentional - playground tests focus on code fixing and quality,
+    // not council evaluation. To evaluate council transparency, use dedicated council
+    // evaluation scenarios that provide VerdictRecord data.
+    let council_transparency_score = 0.7;
+    
     let overall_score = OverallQualityScore::calculate(
         reasoning_depth.score,
         decision_quality.score,
-        council_transparency_placeholder,
+        council_transparency_score,
         code_quality.score,
     );
+
+    // Send learning signal for quality evaluation result
+    if let Some(agent) = agent {
+        if let Some(learning_bridge) = agent.learning_bridge() {
+            use agent_research::self_prompting_agent::learning_bridge::LearningSignal;
+            use chrono::Utc;
+            
+            let signal = LearningSignal {
+                signal_type: "quality_evaluation".to_string(),
+                value: overall_score.score,
+                context: format!(
+                    "quality_evaluation_reasoning:{:.2}_decision:{:.2}_code:{:.2}_overall:{:.2}",
+                    reasoning_depth.score,
+                    decision_quality.score,
+                    code_quality.score,
+                    overall_score.score
+                ),
+                timestamp: Utc::now(),
+            };
+            
+            match learning_bridge.process_signal(signal).await {
+                Ok(_) => {
+                    info!("Sent learning signal for quality evaluation: overall_score={:.2}", overall_score.score);
+                }
+                Err(e) => {
+                    warn!("Failed to send quality evaluation learning signal: {}", e);
+                }
+            }
+        }
+    }
 
     // Check success criteria
     let mut success_criteria_met = Vec::new();
@@ -600,11 +636,12 @@ async fn run_quality_evaluation(
 #[cfg(feature = "full")]
 async fn run_playground_test_with_feedback(
     agent: &SelfPromptingAgent,
-    mut task: SelfPromptingTask,
+    task: SelfPromptingTask,
     workspace_file_path: &PathBuf,
     file_type: &str,
     max_iterations: usize,
 ) -> (Result<agent_research::self_prompting_agent::loop_controller::SelfPromptingResult, String>, SelfPromptingTask) {
+    let mut task = task; // Make mutable for updates
     use agent_research::self_prompting_agent::loop_controller::SelfPromptingResult;
     
     let mut all_events = Vec::new();
@@ -621,14 +658,24 @@ async fn run_playground_test_with_feedback(
             }
         };
         
-        // Collect events
+        // Collect events and extract fields before moving result
         all_events.extend(result.events.clone());
-        // Store result for final return (can't clone, so we'll reconstruct from last iteration)
-        last_result = Some(result);
+        let result_task = result.task.clone();
+        let result_task_result = result.result.clone();
+        let result_iterations = result.iterations;
+        let result_artifacts = result.result.artifacts.clone();
+        
+        // Store result for final return
+        last_result = Some(agent_research::self_prompting_agent::loop_controller::SelfPromptingResult {
+            task: result_task.clone(),
+            result: result_task_result.clone(),
+            iterations: result_iterations,
+            events: result.events.clone(),
+        });
         
         // Write artifacts to file system for compilation check
         let mut artifacts_written = 0;
-        for artifact in &result.result.artifacts {
+        for artifact in &result_artifacts {
             // Strip markdown code fences
             let mut cleaned_content = artifact.content.clone();
             cleaned_content = cleaned_content.trim_start().to_string();
@@ -672,23 +719,75 @@ async fn run_playground_test_with_feedback(
             }
         }
         
+        info!("Iteration {}: {} artifacts found, {} artifacts written", iteration, result.result.artifacts.len(), artifacts_written);
         if artifacts_written == 0 && !result.result.artifacts.is_empty() {
             warn!("No artifacts written in iteration {}, continuing...", iteration);
+            for (idx, artifact) in result.result.artifacts.iter().enumerate() {
+                warn!("  Artifact {}: file_path={:?}, content_length={}", idx, artifact.file_path, artifact.content.len());
+            }
+        } else if result.result.artifacts.is_empty() {
+            warn!("No artifacts produced by agent in iteration {}", iteration);
         }
         
         // Check compilation after this iteration
         let compilation_success = check_code_compiles(workspace_file_path, file_type).await;
         
+        // Send learning signal for compilation result
+        if let Some(learning_bridge) = agent.learning_bridge() {
+            use agent_research::self_prompting_agent::learning_bridge::LearningSignal;
+            use chrono::Utc;
+            
+            let compilation_errors = if !compilation_success {
+                extract_compilation_feedback(workspace_file_path, file_type, iteration).await
+                    .lines()
+                    .filter(|line| line.trim().starts_with("error") || line.trim().starts_with("Error"))
+                    .take(5)
+                    .map(|s| s.trim().to_string())
+                    .collect::<Vec<_>>()
+                    .join("; ")
+            } else {
+                String::new()
+            };
+            
+            let signal = LearningSignal {
+                signal_type: if compilation_success {
+                    "compilation_success".to_string()
+                } else {
+                    "compilation_failure".to_string()
+                },
+                value: if compilation_success { 1.0 } else { 0.0 },
+                context: format!(
+                    "{}_compilation_iteration_{}_errors:{}",
+                    file_type,
+                    iteration,
+                    if compilation_errors.is_empty() { "none" } else { &compilation_errors }
+                ),
+                timestamp: Utc::now(),
+            };
+            
+            match learning_bridge.process_signal(signal).await {
+                Ok(_) => {
+                    info!("Sent learning signal for compilation {} at iteration {}", 
+                        if compilation_success { "success" } else { "failure" }, iteration);
+                }
+                Err(e) => {
+                    warn!("Failed to send learning signal: {}", e);
+                }
+            }
+        }
+        
         if compilation_success {
             info!("Compilation succeeded at iteration {} - early stopping", iteration);
-            // Create result with merged events
-            let final_result = agent_research::self_prompting_agent::loop_controller::SelfPromptingResult {
-                task: result.task,
-                result: result.result,
-                iterations: result.iterations,
-                events: all_events,
-            };
-            return (Ok(final_result), task);
+            // Create result with merged events (use stored values)
+            if let Some(stored_result) = last_result {
+                let final_result = agent_research::self_prompting_agent::loop_controller::SelfPromptingResult {
+                    task: stored_result.task,
+                    result: stored_result.result,
+                    iterations: stored_result.iterations,
+                    events: all_events,
+                };
+                return (Ok(final_result), task);
+            }
         }
         
         // Compilation failed - extract feedback and add to task for next iteration
@@ -701,6 +800,23 @@ async fn run_playground_test_with_feedback(
             
             info!("Compilation failed at iteration {}, adding feedback for next iteration", iteration);
             info!("Compilation feedback: {}", compilation_feedback);
+            
+            // Get learning recommendations if learning is enabled
+            if let Some(learning_bridge) = agent.learning_bridge() {
+                match learning_bridge.get_recommendations(&format!("{}_code_fixing", file_type)).await {
+                    Ok(recommendations) => {
+                        if !recommendations.is_empty() {
+                            info!("Learning system provided {} recommendations", recommendations.len());
+                            for rec in recommendations {
+                                task.refinement_context.push(format!("Learning insight: {}", rec));
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Failed to get learning recommendations: {}", e);
+                    }
+                }
+            }
             
             // Add compilation feedback to refinement context
             task.refinement_context.push(compilation_feedback);

@@ -6,12 +6,14 @@
 use crate::evaluation::framework::{EvaluationEngine, EvaluationScenario, AgentEvaluation, BehaviorImportance};
 use crate::evaluation::determinism::{Clock, ThreadSafeRngSource};
 use crate::evaluation::playground::PlaygroundManager;
+use crate::evaluation::contracts::{Oracle, OracleResult};
 use crate::chain_of_thought::{DecisionPoint, CoordinationEvent};
 use crate::audit_trail::AuditEvent;
 use async_trait::async_trait;
 use std::sync::Arc;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use tracing::{debug, warn};
 
 /// Scenario execution result
 #[derive(Debug, Clone)]
@@ -33,6 +35,7 @@ pub struct ScenarioRunner {
     playground: PlaygroundManager,
     clock: Option<Arc<dyn Clock>>,
     rng_source: Option<Arc<ThreadSafeRngSource>>,
+    oracle: Option<Arc<dyn Oracle>>,
 }
 
 impl ScenarioRunner {
@@ -43,6 +46,7 @@ impl ScenarioRunner {
             playground,
             clock: None,
             rng_source: None,
+            oracle: None,
         }
     }
 
@@ -58,6 +62,39 @@ impl ScenarioRunner {
             playground,
             clock: Some(clock),
             rng_source: Some(rng_source),
+            oracle: None,
+        }
+    }
+
+    /// Create scenario runner with Oracle for ground truth verification
+    pub fn with_oracle(
+        engine: EvaluationEngine,
+        playground: PlaygroundManager,
+        oracle: Arc<dyn Oracle>,
+    ) -> Self {
+        Self {
+            engine,
+            playground,
+            clock: None,
+            rng_source: None,
+            oracle: Some(oracle),
+        }
+    }
+
+    /// Create scenario runner with both determinism controls and Oracle
+    pub fn with_determinism_and_oracle(
+        engine: EvaluationEngine,
+        playground: PlaygroundManager,
+        clock: Arc<dyn Clock>,
+        rng_source: Arc<ThreadSafeRngSource>,
+        oracle: Arc<dyn Oracle>,
+    ) -> Self {
+        Self {
+            engine,
+            playground,
+            clock: Some(clock),
+            rng_source: Some(rng_source),
+            oracle: Some(oracle),
         }
     }
 
@@ -107,9 +144,16 @@ impl ScenarioRunner {
         };
 
         // Verify ground truth using oracle
-        let oracle_result = self.verify_with_oracle(scenario, &decisions, &coordination_events).await;
+        let oracle_result = self.verify_with_oracle(scenario, &decisions, &coordination_events, &audit_entries).await;
 
-        let success = oracle_result.is_ok() && oracle_result.unwrap();
+        let success = match oracle_result {
+            Ok(result) => result.correct,
+            Err(e) => {
+                warn!("Oracle verification failed: {}, using fallback", e);
+                // Fallback to heuristic verification if Oracle fails
+                self.heuristic_verification(scenario, &decisions, &coordination_events)
+            }
+        };
 
         // Clean up playground
         self.playground.cleanup_scenario(&scenario.scenario_id).await?;
@@ -145,54 +189,55 @@ impl ScenarioRunner {
     }
 
     /// Verify execution against oracle (ground truth)
+    /// 
+    /// Uses Oracle trait if available, otherwise falls back to heuristic verification.
     async fn verify_with_oracle(
         &self,
         scenario: &EvaluationScenario,
         decisions: &[DecisionPoint],
         events: &[CoordinationEvent],
-    ) -> Result<bool, String> {
-        // TODO: Implement comprehensive Oracle-based verification
-        //       Currently uses simple heuristic-based verification; should implement comprehensive verification that uses the Oracle trait for accurate scenario behavior validation.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Oracle trait is used for verification
-        // - Verification is accurate and comprehensive
-        // - Heuristic fallback is available if Oracle unavailable
-        // - Verification handles edge cases and errors gracefully
-        //
-        // DEPENDENCIES:
-        // - Oracle trait implementation (Required)
-        // - Oracle integration utilities (Required)
-        // - Verification fallback mechanisms (Optional)
-        //
-        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (evaluation verification functionality)
-        // - Change Budget: ~200 LOC
-        // - Reviewer Requirements: Oracle pattern and scenario verification expertise
+        audit_entries: &[AuditEvent],
+    ) -> Result<OracleResult, String> {
+        // Use Oracle if available
+        if let Some(ref oracle) = self.oracle {
+            debug!("Using Oracle '{}' for verification", oracle.id());
+            return oracle.verify(scenario, decisions, events, audit_entries);
+        }
+
+        // Fallback to heuristic verification if no Oracle available
+        debug!("No Oracle available, using heuristic verification");
+        let correct = self.heuristic_verification(scenario, decisions, events);
+        
+        Ok(OracleResult {
+            correct,
+            confidence: if correct { 0.7 } else { 0.3 }, // Medium confidence for heuristic
+            explanation: format!(
+                "Heuristic verification: {} critical behaviors checked",
+                scenario.expected_behaviors.iter()
+                    .filter(|b| matches!(b.importance, BehaviorImportance::Critical))
+                    .count()
+            ),
+            issues: vec![],
+        })
+    }
+
+    /// Heuristic-based verification fallback
+    /// 
+    /// Verifies critical behaviors using simple pattern matching.
+    /// This is a fallback when no Oracle is available.
+    fn heuristic_verification(
+        &self,
+        scenario: &EvaluationScenario,
+        decisions: &[DecisionPoint],
+        events: &[CoordinationEvent],
+    ) -> bool {
         // Check if scenario has expected behaviors
-            let critical_behaviors: Vec<_> = scenario.expected_behaviors.iter()
+        let critical_behaviors: Vec<_> = scenario.expected_behaviors.iter()
             .filter(|b| matches!(b.importance, BehaviorImportance::Critical))
             .collect();
 
         if critical_behaviors.is_empty() {
-            return Ok(true); // No critical behaviors to verify
+            return true; // No critical behaviors to verify
         }
 
         // Verify each critical behavior
@@ -219,11 +264,11 @@ impl ScenarioRunner {
             };
 
             if !verified {
-                return Ok(false);
+                return false;
             }
         }
 
-        Ok(true)
+        true
     }
 
     /// Get current time (uses clock if available, otherwise system time)
@@ -251,13 +296,16 @@ pub trait AgentExecutor: Send + Sync {
 }
 
 /// Helper function to run a scenario (convenience wrapper)
+/// 
+/// Uses heuristic Oracle by default for verification.
 pub async fn run_scenario(
     scenario: EvaluationScenario,
     agent_executor: &dyn AgentExecutor,
 ) -> Result<AgentEvaluation, String> {
     let engine = EvaluationEngine::new();
     let playground = PlaygroundManager::new();
-    let runner = ScenarioRunner::new(engine, playground);
+    let oracle = crate::evaluation::contracts::HeuristicOracle::new();
+    let runner = ScenarioRunner::with_oracle(engine, playground, oracle);
     
     runner.run_and_evaluate(&scenario, agent_executor).await
 }

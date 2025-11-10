@@ -1,307 +1,257 @@
 @use "../../styles/design-tokens.scss" as *;
 
 .projectView {
-  background-color: $color-dark-bg-secondary; // bg-[#0d0d0d]
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  position: relative;
   width: 100%;
-  height: 100%; // size-full
+  height: 100%;
+  background-color: $color-dark-bg-secondary;
 }
 
 .headerContainer {
   position: relative;
   flex-shrink: 0;
   width: 100%;
-  border-bottom: 1px solid $color-neutral-800; // border-b border-neutral-800
+  border-bottom: 1px solid $color-neutral-800;
 }
 
 .headerContent {
-  background-clip: padding-box;
-  border: 0;
-  border-color: transparent;
-  border-style: solid;
-  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 0.999625rem; // gap-[15.994px]
+  gap: $spacing-4;
   align-items: flex-start;
-  padding-bottom: 0.0568125rem; // pb-[0.909px]
-  padding-left: 1.4999375rem; // pl-[23.999px]
-  padding-right: 1.499875rem; // pr-[23.998px]
-  padding-top: 0.999625rem; // pt-[15.994px]
-  position: relative;
+  padding: $spacing-4 $spacing-6;
+  padding-bottom: 0.0568125rem; // Specific design requirement: 0.909px
   width: 100%;
 }
 
 .breadcrumbTitleContainer {
   display: flex;
   flex-direction: column;
-  gap: 0.2499375rem; // gap-[3.999px]
+  gap: $spacing-1;
   align-items: flex-start;
-  position: relative;
-  flex-shrink: 0;
   width: 100%;
 }
 
 .breadcrumbContainer {
-  height: 1.2495625rem; // h-[19.993px]
-  position: relative;
-  flex-shrink: 0;
+  height: 1.2495625rem; // Specific design requirement: 19.993px
   width: 100%;
 }
 
 .breadcrumbLink {
-  font-family: 'Inter', sans-serif;
-  font-weight: 400;
-  line-height: 1.25rem; // leading-[20px]
-  font-style: normal;
-  color: $color-zinc-500; // text-[#888888] -> gray-500
-  font-size: 0.875rem; // text-[14px]
-  letter-spacing: -0.1504px; // tracking-[-0.1504px]
+  font-family: $font-family-sans;
+  font-weight: $font-weight-normal;
+  font-size: $font-size-sm;
+  line-height: 1.25rem;
+  color: $color-zinc-500;
+  letter-spacing: -0.1504px;
   cursor: pointer;
   transition: color $transition-normal;
 
   &:hover {
-    color: $color-zinc-300; // hover:text-gray-300
+    color: $color-zinc-300;
   }
 }
 
 .breadcrumbPage {
-  font-family: 'Inter', sans-serif;
-  font-weight: 400;
-  line-height: 1.25rem; // leading-[20px]
-  font-style: normal;
-  color: $color-zinc-500; // text-[#888888] -> gray-500
-  font-size: 0.875rem; // text-[14px]
-  letter-spacing: -0.1504px; // tracking-[-0.1504px]
+  font-family: $font-family-sans;
+  font-weight: $font-weight-normal;
+  font-size: $font-size-sm;
+  line-height: 1.25rem;
+  color: $color-zinc-500;
+  letter-spacing: -0.1504px;
 }
 
 .breadcrumbSeparatorIcon {
-  width: 0.75rem; // w-3
-  height: 0.75rem; // h-3
-  color: $color-zinc-500; // text-[#888888] -> gray-500
+  width: $spacing-3;
+  height: $spacing-3;
+  color: $color-zinc-500;
 }
 
 .svgFullSize {
-  display: block; // block
-  width: 100%; // size-full
-  height: 100%; // size-full
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .headingContainer {
-  height: 1.99975rem; // h-[31.996px]
-  position: relative;
-  flex-shrink: 0;
+  height: 2rem;
   width: 100%;
 }
 
 .heading {
-  position: absolute;
-  font-family: 'Inter', sans-serif;
-  font-weight: 400;
-  line-height: 2rem; // leading-[32px]
-  left: 0;
-  font-style: normal;
-  font-size: 1.5rem; // text-[24px]
+  margin: 0;
+  font-family: $font-family-sans;
+  font-weight: $font-weight-normal;
+  font-size: $font-size-2xl;
+  line-height: 2rem;
+  color: $color-white;
+  letter-spacing: 0.0703px;
   white-space: nowrap;
-  color: $color-white; // text-white
-  top: -0.01125rem; // top-[-0.18px]
-  letter-spacing: 0.0703px; // tracking-[0.0703px]
-  white-space: pre;
 }
 
 .tabsControlsContainer {
   display: flex;
-  height: 2.249625rem; // h-[35.994px]
   align-items: center;
   justify-content: space-between;
-  position: relative;
-  flex-shrink: 0;
   width: 100%;
+  height: 2.249625rem; // Specific design requirement: 35.994px
 }
 
 .tabsContainer {
-  height: 2.249625rem; // h-[35.994px]
-  position: relative;
-  flex-shrink: 0;
+  height: 2.249625rem; // Specific design requirement: 35.994px
 }
 
 .tabsList {
-  background-clip: padding-box;
-  border: 0;
-  border-color: transparent;
-  border-style: solid;
-  box-sizing: border-box;
-  height: 2.249625rem; // h-[35.994px]
-  position: relative;
   display: flex;
-  gap: 1.5rem; // gap-[24px]
+  gap: $spacing-6;
   align-items: flex-start;
+  height: 2.249625rem; // Specific design requirement: 35.994px
 }
 
 .tabButton {
   position: relative;
-  height: 2.249625rem; // h-[35.994px]
+  height: 2.249625rem; // Specific design requirement: 35.994px
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
 }
 
 .tabLabel {
-  font-family: 'Inter', sans-serif;
-  font-weight: 400;
-  line-height: 1.5rem; // leading-[24px]
-  font-style: normal;
-  font-size: 1rem; // text-[16px]
+  font-family: $font-family-sans;
+  font-weight: $font-weight-normal;
+  font-size: $font-size-base;
+  line-height: 1.5rem;
+  letter-spacing: -0.3125px;
   white-space: nowrap;
-  letter-spacing: -0.3125px; // tracking-[-0.3125px]
-  white-space: pre;
   transition: color $transition-normal;
 }
 
 .tabLabelActive {
-  color: $color-white; // text-white
+  color: $color-white;
 }
 
 .tabLabelInactive {
-  color: $color-zinc-500; // text-[#888888] -> gray-500
+  color: $color-zinc-500;
 
   &:hover {
-    color: $color-zinc-300; // hover:text-gray-300
+    color: $color-zinc-300;
   }
 }
 
 .tabIndicator {
   position: absolute;
-  background-color: $color-white; // bg-white
-  height: 0.12475rem; // h-[1.996px]
+  bottom: 0;
   left: 0;
-  top: 2.125rem; // top-[34px]
   right: 0;
+  height: 0.12475rem; // Specific design requirement: 1.996px
+  background-color: $color-white;
 }
 
 .controlsContainer {
-  height: 2.249625rem; // h-[35.994px]
-  position: relative;
-  flex-shrink: 0;
+  height: 2.249625rem; // Specific design requirement: 35.994px
 }
 
 .controlsList {
-  background-clip: padding-box;
-  border: 0;
-  border-color: transparent;
-  border-style: solid;
-  box-sizing: border-box;
-  height: 2.249625rem; // h-[35.994px]
-  position: relative;
   display: flex;
-  gap: 0.75rem; // gap-[12px]
+  gap: $spacing-3;
   align-items: center;
+  height: 2.249625rem; // Specific design requirement: 35.994px
 }
 
 .searchContainer {
   position: relative;
-  height: 2.249625rem; // h-[35.994px]
-  width: 15.999625rem; // w-[255.994px]
-  flex-shrink: 0;
+  height: 2.249625rem; // Specific design requirement: 35.994px
+  width: 15.999625rem; // Specific design requirement: 255.994px
 }
 
 .searchBox {
+  position: relative;
   background-color: $color-dark-bg-primary;
-  height: 2.249625rem; // h-[35.994px]
-  border-radius: 0.5rem; // rounded-[8px]
-  width: 15.999625rem; // w-[255.994px]
+  height: 2.249625rem; // Specific design requirement: 35.994px
+  border-radius: $border-radius-md;
+  width: 15.999625rem; // Specific design requirement: 255.994px
 }
 
 .searchInput {
-  box-sizing: border-box;
   display: flex;
-  height: 2.249625rem; // h-[35.994px]
   align-items: center;
-  overflow: clip;
-  padding-left: 2.25rem; // pl-[36px]
-  padding-right: $spacing-12; // pr-[48px]
-  padding-block: 0.25rem; // py-[4px]
-  position: relative;
+  height: 2.249625rem; // Specific design requirement: 35.994px
+  padding-left: 2.25rem; // Specific design requirement: 36px for icon space
+  padding-right: $spacing-12;
+  padding-block: $spacing-1;
+  width: 100%;
   border-radius: inherit;
-  width: 15.999625rem; // w-[255.994px]
+  overflow: clip;
 }
 
 .searchPlaceholder {
-  font-family: 'Inter', sans-serif;
-  font-weight: 400;
-  line-height: normal;
-  font-style: normal;
-  position: relative;
-  flex-shrink: 0;
-  color: $color-zinc-500; // text-[#888888] -> gray-500
-  font-size: 0.875rem; // text-[14px]
+  font-family: $font-family-sans;
+  font-weight: $font-weight-normal;
+  font-size: $font-size-sm;
+  color: $color-zinc-500;
+  letter-spacing: -0.1504px;
   white-space: nowrap;
-  letter-spacing: -0.1504px; // tracking-[-0.1504px]
-  white-space: pre;
 }
 
 .searchBorder {
   position: absolute;
-  border-width: 0.909px;
-  border-color: $color-neutral-800; // border-neutral-800
-  border-style: solid;
   inset: 0;
+  border: 1px solid $color-neutral-800;
+  border-radius: $border-radius-md;
   pointer-events: none;
-  border-radius: 0.5rem; // rounded-[8px]
 }
 
 .searchIcon {
   position: absolute;
-  left: 0.75rem; // left-[12px]
-  width: 0.999625rem; // size-[15.994px]
-  height: 0.999625rem; // size-[15.994px]
-  top: 0.625rem; // top-[10px]
+  left: $spacing-3;
+  top: 0.625rem; // Specific design requirement: 10px
+  width: 0.999625rem; // Specific design requirement: 15.994px
+  height: 0.999625rem; // Specific design requirement: 15.994px
 }
 
 .keyboardShortcut {
   position: absolute;
-  height: 1.0000625rem; // h-[16.001px]
-  left: 14.158125rem; // left-[226.53px]
-  top: 0.625rem; // top-[10px]
-  width: 1.0915625rem; // w-[17.465px]
+  right: $spacing-12;
+  top: 0.625rem; // Specific design requirement: 10px
+  height: 1rem;
+  width: 1.0915625rem; // Specific design requirement: 17.465px
 }
 
 .keyboardShortcutText {
-  position: absolute;
-  font-family: 'Inter', sans-serif;
-  font-weight: 400;
-  line-height: 1rem; // leading-[16px]
-  left: 0;
-  font-style: normal;
-  color: $color-zinc-500; // text-[#888888] -> gray-500
-  font-size: 0.75rem; // text-[12px]
+  font-family: $font-family-sans;
+  font-weight: $font-weight-normal;
+  font-size: $font-size-xs;
+  line-height: 1rem;
+  color: $color-zinc-500;
   white-space: nowrap;
-  top: 0.02875rem; // top-[0.46px]
-  white-space: pre;
 }
 
 .controlButton {
-  background-color: $color-dark-bg-primary;
-  height: 2.249625rem; // h-[35.994px]
-  border-radius: 0.5rem; // rounded-[8px]
-  padding-inline: $spacing-4; // px-4
   position: relative;
-  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  height: 2.249625rem; // Specific design requirement: 35.994px
+  padding-inline: $spacing-4;
+  background-color: $color-dark-bg-primary;
+  border-radius: $border-radius-md;
+  border: none;
+  cursor: pointer;
   transition: background-color $transition-normal;
 
   &:hover {
-    background-color: $color-dark-bg-hover; // hover:bg-[#252525]
+    background-color: $color-dark-bg-hover;
   }
 }
 
 .controlButtonBorder {
   position: absolute;
-  border-width: 0.909px;
-  border-color: $color-neutral-800; // border-neutral-800
-  border-style: solid;
   inset: 0;
+  border: 1px solid $color-neutral-800;
+  border-radius: $border-radius-md;
   pointer-events: none;
-  border-radius: 0.5rem; // rounded-[8px]
 }
 
 .controlButtonContent {
@@ -313,44 +263,43 @@
 }
 
 .controlButtonText {
-  font-family: 'Inter', sans-serif;
-  font-weight: 500; // font-medium
-  line-height: 1.25rem; // leading-[20px]
-  font-style: normal;
-  font-size: 0.875rem; // text-[14px]
-  color: $color-white; // text-white
-  letter-spacing: -0.1504px; // tracking-[-0.1504px]
+  font-family: $font-family-sans;
+  font-weight: $font-weight-medium;
+  font-size: $font-size-sm;
+  line-height: 1.25rem;
+  color: $color-white;
+  letter-spacing: -0.1504px;
 }
 
 .controlButtonIcon {
-  width: 0.999625rem; // size-[15.994px]
-  height: 0.999625rem; // size-[15.994px]
+  width: 0.999625rem; // Specific design requirement: 15.994px
+  height: 0.999625rem; // Specific design requirement: 15.994px
   flex-shrink: 0;
 }
 
 .gridViewButton {
-  background-color: $color-dark-bg-primary;
-  box-sizing: border-box;
+  position: relative;
   display: flex;
-  height: 2.249625rem; // h-[35.994px]
   align-items: center;
   justify-content: center;
-  padding: 0.0568125rem; // p-[0.909px]
-  border-radius: 0.5rem; // rounded-[8px]
-  width: 2.61275rem; // w-[41.804px]
-  flex-shrink: 0;
-  position: relative;
+  width: 2.61275rem; // Specific design requirement: 41.804px
+  height: 2.249625rem; // Specific design requirement: 35.994px
+  padding: 0.0568125rem; // Specific design requirement: 0.909px
+  background-color: $color-dark-bg-primary;
+  border-radius: $border-radius-md;
+  border: none;
+  cursor: pointer;
   transition: background-color $transition-normal;
 
   &:hover {
-    background-color: $color-dark-bg-hover; // hover:bg-[#252525]
+    background-color: $color-dark-bg-hover;
   }
 }
 
 .gridViewIcon {
+  width: 0.999625rem; // Specific design requirement: 15.994px
+  height: 0.999625rem; // Specific design requirement: 15.994px
   flex-shrink: 0;
-  width: 0.999625rem; // size-[15.994px]
-  height: 0.999625rem; // size-[15.994px]
 }
 
 .tabContentArea {
@@ -359,4 +308,3 @@
   overflow: hidden;
   min-height: 0;
 }
-

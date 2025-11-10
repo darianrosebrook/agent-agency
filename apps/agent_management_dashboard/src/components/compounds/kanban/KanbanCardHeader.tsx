@@ -14,10 +14,9 @@ export function KanbanCardHeader({
   className,
 }: KanbanCardHeaderProps) {
   return (
-    <div className={`${styles.header} ${className || ""}`}>
+    <div className={`${styles.header} ${className ?? ""}`}>
       <KanbanHeading width="auto">{title}</KanbanHeading>
       <KanbanText>{cardCount} Cards</KanbanText>
     </div>
   );
 }
-

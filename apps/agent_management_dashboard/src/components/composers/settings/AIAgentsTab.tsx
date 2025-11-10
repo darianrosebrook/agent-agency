@@ -1,68 +1,69 @@
 'use client';
 
+import { useState } from "react";
 import { cn } from "../../primitives/utils";
+import { KanbanHeading } from "../../primitives/kanban/KanbanHeading";
+import { KanbanText } from "../../primitives/kanban/KanbanText";
 import styles from "./AIAgentsTab.module.scss";
 
 export function AIAgentsTabContent() {
+  // TODO: Replace hardcoded agent list with data from v3 API
+  const [agents, setAgents] = useState([
+    {
+      id: 1,
+      name: 'Task Suggester',
+      description: 'Automatically suggests task breakdowns and subtasks',
+      enabled: true,
+    },
+    {
+      id: 2,
+      name: 'Priority Optimizer',
+      description: 'Analyzes and recommends task prioritization',
+      enabled: true,
+    },
+    {
+      id: 3,
+      name: 'Deadline Predictor',
+      description: 'Estimates realistic completion dates based on history',
+      enabled: false,
+    },
+  ]);
+
+  const toggleAgent = (id: number) => {
+    setAgents(agents.map(agent =>
+      agent.id === id ? { ...agent, enabled: !agent.enabled } : agent
+    ));
+  };
+
   return (
     <div className={styles.aiAgentsTab}>
       <div className={styles.aiAgentsCard}>
-        <h2 className={styles.cardTitle}>
+        <KanbanHeading size="lg" className={styles.cardTitle}>
           AI Agents
-        </h2>
-        <p className={styles.cardDescription}>
+        </KanbanHeading>
+        <KanbanText size="sm" className={styles.cardDescription}>
           Configure AI agents to automate tasks and provide intelligent
           assistance.
-        </p>
+        </KanbanText>
 
-        {/* TODO: Replace hardcoded agent list with data from v3 API with the following requirements:
-        // 1. Agent list fetching: Load configured AI agents from database
-        //    - Data source: GET /api/agents endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
-        //    - Database table: PostgreSQL `agents` table
-        //    - Include agent metadata: name, description, enabled status
-        // 2. Agent configuration: Handle agent enable/disable toggle
-        //    - Data source: PATCH /api/agents/:id endpoint to update enabled status
-        //    - Update local state optimistically with rollback on failure
-        // 3. Real-time updates: Refresh agent list when configuration changes
-        //    - Handle loading and error states
-        //    - Display user-friendly error messages */}
         <div className={styles.agentsList}>
-          {[
-            {
-              name: 'Task Suggester',
-              description:
-                'Automatically suggests task breakdowns and subtasks',
-              enabled: true,
-            },
-            {
-              name: 'Priority Optimizer',
-              description: 'Analyzes and recommends task prioritization',
-              enabled: true,
-            },
-            {
-              name: 'Deadline Predictor',
-              description:
-                'Estimates realistic completion dates based on history',
-              enabled: false,
-            },
-          ].map((agent, i) => (
-            <div
-              key={i}
-              className={styles.agentCard}
-            >
+          {agents.map((agent) => (
+            <div key={agent.id} className={styles.agentCard}>
               <div className={styles.agentInfo}>
-                <p className={styles.agentName}>
+                <KanbanText size="sm" className={styles.agentName}>
                   {agent.name}
-                </p>
-                <p className={styles.agentDescription}>
+                </KanbanText>
+                <KanbanText size="xs" className={styles.agentDescription}>
                   {agent.description}
-                </p>
+                </KanbanText>
               </div>
-              <div
+              <button
+                onClick={() => toggleAgent(agent.id)}
                 className={cn(
                   styles.toggleSwitch,
                   agent.enabled ? styles.toggleSwitchEnabled : styles.toggleSwitchDisabled
                 )}
+                type="button"
               >
                 <div
                   className={cn(
@@ -70,7 +71,7 @@ export function AIAgentsTabContent() {
                     agent.enabled ? styles.toggleThumbEnabled : styles.toggleThumbDisabled
                   )}
                 />
-              </div>
+              </button>
             </div>
           ))}
         </div>
@@ -78,4 +79,3 @@ export function AIAgentsTabContent() {
     </div>
   );
 }
-

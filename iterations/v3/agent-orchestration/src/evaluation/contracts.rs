@@ -100,6 +100,105 @@ pub struct OracleResult {
     pub issues: Vec<String>,
 }
 
+/// Default heuristic-based Oracle implementation
+/// 
+/// Uses pattern matching on decisions and events to verify expected behaviors.
+/// This is a fallback Oracle that provides basic verification when no specialized
+/// Oracle is available.
+pub struct HeuristicOracle;
+
+impl HeuristicOracle {
+    /// Create new heuristic Oracle
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self)
+    }
+}
+
+impl Oracle for HeuristicOracle {
+    fn id(&self) -> &str {
+        "heuristic"
+    }
+    
+    fn verify(
+        &self,
+        scenario: &EvaluationScenario,
+        decisions: &[DecisionPoint],
+        events: &[CoordinationEvent],
+        _audit_entries: &[AuditEvent],
+    ) -> Result<OracleResult, String> {
+        use crate::evaluation::framework::BehaviorImportance;
+        
+        // Check if scenario has expected behaviors
+        let critical_behaviors: Vec<_> = scenario.expected_behaviors.iter()
+            .filter(|b| matches!(b.importance, BehaviorImportance::Critical))
+            .collect();
+
+        if critical_behaviors.is_empty() {
+            return Ok(OracleResult {
+                correct: true,
+                confidence: 1.0,
+                explanation: "No critical behaviors to verify".to_string(),
+                issues: vec![],
+            });
+        }
+
+        let mut issues = Vec::new();
+        let mut verified_count = 0;
+
+        // Verify each critical behavior
+        for behavior in &critical_behaviors {
+            let behavior_name = behavior.behavior.as_str();
+            let verified = match behavior_name {
+                "problem_identification" => {
+                    decisions.iter().any(|d| {
+                        d.reasoning.to_lowercase().contains("problem") ||
+                        d.reasoning.to_lowercase().contains("issue") ||
+                        d.reasoning.to_lowercase().contains("error")
+                    })
+                }
+                "reasoning_transparency" => {
+                    decisions.iter().any(|d| !d.reasoning.is_empty() && d.reasoning.len() > 20)
+                }
+                "solution_exploration" => {
+                    decisions.iter().any(|d| d.alternatives.len() > 1)
+                }
+                "risk_assessment" => {
+                    decisions.iter().any(|d| d.risk_assessment.is_some())
+                }
+                _ => {
+                    // Unknown behavior - log but don't fail
+                    issues.push(format!("Unknown behavior '{}' - cannot verify", behavior_name));
+                    true
+                }
+            };
+
+            if verified {
+                verified_count += 1;
+            } else {
+                issues.push(format!("Critical behavior '{}' not verified", behavior_name));
+            }
+        }
+
+        let correct = verified_count == critical_behaviors.len();
+        let confidence = if critical_behaviors.is_empty() {
+            1.0
+        } else {
+            verified_count as f64 / critical_behaviors.len() as f64
+        };
+
+        Ok(OracleResult {
+            correct,
+            confidence,
+            explanation: format!(
+                "Heuristic verification: {}/{} critical behaviors verified",
+                verified_count,
+                critical_behaviors.len()
+            ),
+            issues,
+        })
+    }
+}
+
 /// Composite evaluator that combines multiple evaluators
 pub struct CompositeEvaluator {
     evaluators: Vec<Arc<dyn Evaluator>>,

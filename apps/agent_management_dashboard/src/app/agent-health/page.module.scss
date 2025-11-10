@@ -125,3 +125,347 @@
   font-size: $font-size-sm; // text-sm
 }
 
+// Services Section
+.servicesSection {
+  margin-bottom: $spacing-8;
+}
+
+.servicesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: $spacing-4;
+}
+
+.serviceCard {
+  background-color: #0d0d0d; // bg-[#0d0d0d]
+  border: 1px solid oklch(0.269 0 0); // border-gray-800
+  border-radius: $border-radius-md;
+  padding: $spacing-4;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-3;
+}
+
+.serviceHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.serviceName {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: white;
+}
+
+.statusIndicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.serviceInfo {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-1;
+}
+
+.serviceType {
+  font-size: $font-size-sm;
+  color: oklch(0.5 0 0); // text-gray-400
+}
+
+.serviceStatus {
+  font-size: $font-size-sm;
+  color: white;
+  font-weight: $font-weight-medium;
+}
+
+.servicePort {
+  font-size: $font-size-xs;
+  color: oklch(0.5 0 0); // text-gray-400
+  font-family: monospace;
+}
+
+.serviceNote {
+  font-size: $font-size-xs;
+  color: oklch(0.5 0 0); // text-gray-400
+  font-style: italic;
+}
+
+.serviceError {
+  font-size: $font-size-xs;
+  color: #ef4444; // text-red-500
+  margin-top: $spacing-1;
+}
+
+.serviceWarning {
+  font-size: $font-size-xs;
+  color: #f59e0b; // text-yellow-500
+  background-color: rgba(245, 158, 11, 0.1);
+  padding: $spacing-2;
+  border-radius: $border-radius-sm;
+  margin-top: $spacing-2;
+}
+
+// System Metrics
+.systemMetrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: $spacing-4;
+  margin-bottom: $spacing-8;
+}
+
+.metricCard {
+  background-color: #0d0d0d; // bg-[#0d0d0d]
+  border: 1px solid oklch(0.269 0 0); // border-gray-800
+  border-radius: $border-radius-md;
+  padding: $spacing-4;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2;
+}
+
+.metricLabel {
+  font-size: $font-size-sm;
+  color: oklch(0.5 0 0); // text-gray-400
+}
+
+.metricValue {
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-bold;
+  color: white;
+}
+
+// Alerts Section
+.alertsSection {
+  margin-bottom: $spacing-8;
+}
+
+.alertsList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-3;
+}
+
+.alertItem {
+  background-color: #0d0d0d; // bg-[#0d0d0d]
+  border: 1px solid oklch(0.269 0 0); // border-gray-800
+  border-left-width: 4px;
+  border-radius: $border-radius-md;
+  padding: $spacing-4;
+  display: flex;
+  gap: $spacing-3;
+}
+
+.alertSeverity {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  text-transform: uppercase;
+  padding: $spacing-1 $spacing-2;
+  border-radius: $border-radius-sm;
+  align-self: flex-start;
+}
+
+.alertContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-1;
+}
+
+.alertTitle {
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  color: white;
+}
+
+.alertMessage {
+  font-size: $font-size-sm;
+  color: oklch(0.5 0 0); // text-gray-400
+}
+
+.alertSource {
+  font-size: $font-size-xs;
+  color: oklch(0.5 0 0); // text-gray-400
+}
+
+// Agents Section
+.agentsSection {
+  margin-bottom: $spacing-8;
+}
+
+.agentsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: $spacing-4;
+}
+
+.agentCard {
+  background-color: #0d0d0d; // bg-[#0d0d0d]
+  border: 1px solid oklch(0.269 0 0); // border-gray-800
+  border-radius: $border-radius-md;
+  padding: $spacing-4;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #3b82f6; // border-blue-500
+    transform: translateY(-2px);
+  }
+}
+
+.agentCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-3;
+}
+
+.agentName {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: white;
+}
+
+.agentInfo {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-1;
+  margin-bottom: $spacing-3;
+}
+
+.agentType {
+  font-size: $font-size-sm;
+  color: oklch(0.5 0 0); // text-gray-400
+}
+
+.agentSpecialty {
+  font-size: $font-size-xs;
+  color: oklch(0.5 0 0); // text-gray-400
+}
+
+.agentMetrics {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2;
+  margin-bottom: $spacing-3;
+  font-size: $font-size-sm;
+}
+
+.metricRow {
+  display: flex;
+  justify-content: space-between;
+  color: oklch(0.5 0 0); // text-gray-400
+
+  span:last-child {
+    color: white;
+    font-weight: $font-weight-medium;
+  }
+}
+
+.agentActions {
+  display: flex;
+  gap: $spacing-2;
+}
+
+.actionButton {
+  flex: 1;
+  padding: $spacing-2 $spacing-3;
+  background-color: #1a1a1a; // bg-[#1a1a1a]
+  border: 1px solid oklch(0.269 0 0); // border-gray-800
+  border-radius: $border-radius-sm;
+  color: white;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background-color: #2a2a2a;
+    border-color: #3b82f6; // border-blue-500
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// Agent Details
+.agentDetails {
+  margin-top: $spacing-8;
+  background-color: #0d0d0d; // bg-[#0d0d0d]
+  border: 1px solid oklch(0.269 0 0); // border-gray-800
+  border-radius: $border-radius-md;
+  padding: $spacing-6;
+}
+
+.detailsSection {
+  margin-bottom: $spacing-6;
+
+  h3 {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: white;
+    margin-bottom: $spacing-4;
+  }
+}
+
+.detailsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: $spacing-3;
+  font-size: $font-size-sm;
+  color: oklch(0.5 0 0); // text-gray-400
+
+  strong {
+    color: white;
+    font-weight: $font-weight-semibold;
+  }
+}
+
+.logsList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2;
+}
+
+.logEntry {
+  background-color: #1a1a1a; // bg-[#1a1a1a]
+  border: 1px solid oklch(0.269 0 0); // border-gray-800
+  border-radius: $border-radius-sm;
+  padding: $spacing-3;
+}
+
+.logHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-2;
+}
+
+.logLevel {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  text-transform: uppercase;
+  padding: $spacing-1 $spacing-2;
+  border-radius: $border-radius-sm;
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.logTime {
+  font-size: $font-size-xs;
+  color: oklch(0.5 0 0); // text-gray-400
+}
+
+.logMessage {
+  font-size: $font-size-sm;
+  color: white;
+  font-family: monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+

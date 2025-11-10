@@ -2,20 +2,22 @@
 
 .column {
   position: absolute;
-  align-content: stretch;
-  display: flex;
-  flex-direction: column;
-  gap: 15.994px;
-  align-items: flex-start;
-  height: 735.043px;
   top: 0;
-  width: 639.41px;
-}
-
-.cardsContainer {
   display: flex;
   flex-direction: column;
-  gap: 11.996px;
-  width: 100%;
+  gap: $kanban-column-gap;
+  align-items: flex-start;
+  width: $kanban-column-width;
+  height: $kanban-column-height;
+  background-color: transparent;
 }
 
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: $kanban-card-cards-gap;
+  width: 100%;
+  height: $kanban-cards-container-height;
+  min-height: 0;
+  flex-shrink: 0;
+}

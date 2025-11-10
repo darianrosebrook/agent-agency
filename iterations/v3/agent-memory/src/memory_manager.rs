@@ -140,6 +140,11 @@ impl MemoryManager {
         Ok(memory_id)
     }
 
+    /// Get the database pool (for components that need direct database access)
+    pub fn db_pool(&self) -> &PgPool {
+        &self.db_pool
+    }
+    
     /// Retrieve a memory by ID
     pub async fn retrieve_memory(&self, memory_id: MemoryId) -> MemoryResult<AgentExperience> {
         let row = sqlx::query(
@@ -343,6 +348,89 @@ impl MemoryManager {
         Ok(deleted_count)
     }
 
+    /// Get all memories with their embeddings for consolidation
+    /// Returns a vector of (memory_id, embedding) tuples
+    pub async fn get_all_memories_with_embeddings(&self) -> MemoryResult<Vec<(MemoryId, Vec<f32>)>> {
+        use sqlx::Row;
+        use tracing::debug;
+        
+        // Apply workspace filtering based on isolation level
+        let workspace_filter = self.get_workspace_filter();
+        
+        let query = sqlx::query(
+            r#"
+            SELECT me.memory_id, me.embedding
+            FROM memory_embeddings me
+            WHERE ($1::uuid IS NULL OR me.workspace_id = $1 OR me.workspace_id IS NULL)
+              AND me.embedding IS NOT NULL
+            ORDER BY me.last_accessed DESC
+            "#
+        )
+        .bind(workspace_filter);
+        
+        let rows = query.fetch_all(&self.db_pool).await?;
+        
+        let mut results = Vec::new();
+        for row in rows {
+            let memory_id: MemoryId = row.try_get("memory_id")?;
+            // Extract embedding vector (pgvector VECTOR type is converted to Vec<f32> by sqlx)
+            if let Ok(embedding) = row.try_get::<Option<Vec<f32>>, _>("embedding") {
+                if let Some(emb) = embedding {
+                    if !emb.is_empty() {
+                        results.push((memory_id, emb));
+                    }
+                }
+            }
+        }
+        
+        debug!("Fetched {} memories with embeddings for consolidation", results.len());
+        Ok(results)
+    }
+    
+    /// Get embeddings for specific memory IDs
+    /// Returns a vector of (memory_id, embedding) tuples
+    pub async fn get_embeddings_by_ids(&self, memory_ids: &[MemoryId]) -> MemoryResult<Vec<(MemoryId, Vec<f32>)>> {
+        use sqlx::Row;
+        use tracing::debug;
+        
+        if memory_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        
+        // Apply workspace filtering based on isolation level
+        let workspace_filter = self.get_workspace_filter();
+        
+        let query = sqlx::query(
+            r#"
+            SELECT me.memory_id, me.embedding
+            FROM memory_embeddings me
+            WHERE me.memory_id = ANY($1::uuid[])
+              AND ($2::uuid IS NULL OR me.workspace_id = $2 OR me.workspace_id IS NULL)
+              AND me.embedding IS NOT NULL
+            "#
+        )
+        .bind(memory_ids)
+        .bind(workspace_filter);
+        
+        let rows = query.fetch_all(&self.db_pool).await?;
+        
+        let mut results = Vec::new();
+        for row in rows {
+            let memory_id: MemoryId = row.try_get("memory_id")?;
+            // Extract embedding vector (pgvector VECTOR type is converted to Vec<f32> by sqlx)
+            if let Ok(embedding) = row.try_get::<Option<Vec<f32>>, _>("embedding") {
+                if let Some(emb) = embedding {
+                    if !emb.is_empty() {
+                        results.push((memory_id, emb));
+                    }
+                }
+            }
+        }
+        
+        debug!("Fetched {} embeddings for {} requested memory IDs", results.len(), memory_ids.len());
+        Ok(results)
+    }
+    
     /// Get memory statistics
     pub async fn get_memory_stats(&self) -> MemoryResult<MemoryStats> {
         let row = sqlx::query(

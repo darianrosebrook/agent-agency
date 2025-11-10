@@ -14,6 +14,7 @@ import {
   Moon,
   ChevronDown,
   FolderPlus,
+  TestTube,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -307,6 +308,32 @@ export function Sidebar() {
               {isCollapsed && (
                 <TooltipContent side="right">
                   <p>Phase Planner</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/testing"
+                  className={cn(
+                    styles.navLink,
+                    isCollapsed
+                      ? styles.navLinkCollapsed
+                      : styles.navLinkExpanded,
+                    isActive("/testing")
+                      ? styles.navLinkActive
+                      : styles.navLinkInactive
+                  )}
+                >
+                  <TestTube className={styles.icon} />
+                  {!isCollapsed && (
+                    <span className={styles.navLinkText}>Testing</span>
+                  )}
+                </Link>
+              </TooltipTrigger>
+              {isCollapsed && (
+                <TooltipContent side="right">
+                  <p>Testing</p>
                 </TooltipContent>
               )}
             </Tooltip>

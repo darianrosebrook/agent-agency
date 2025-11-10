@@ -3,7 +3,8 @@
 //! Manages the Mistral CoreML model instance used for task orchestration
 //! in autonomous testing scenarios.
 
-use tracing::info;
+use tracing::{info, warn};
+use std::sync::Arc;
 #[cfg(feature = "full")]
 use agent_orchestration::coreml::{CoreMLManager, CoreMLModelType};
 use std::path::PathBuf;
@@ -69,8 +70,7 @@ impl OrchestratorService {
                 }
 
                 let model_count = manager.model_count().await;
-                // ANE availability check - method may not exist, use fallback
-                let ane_available = false; // TODO: Check actual CoreMLManager API for ANE availability method
+                let ane_available = manager.is_ane_available();
                 info!("CoreML orchestrator service started with {} models loaded, ANE available: {}",
                     model_count, ane_available);
             } else {
@@ -111,7 +111,7 @@ impl OrchestratorService {
             // Check if CoreML manager is initialized and Mistral model is loaded
             if let Some(manager) = &self.coreml_manager {
                 // Service is healthy if ANE is available or at least CPU models are loaded
-                let ane_available = false; // TODO: Check actual CoreMLManager API for ANE availability method
+                let ane_available = manager.is_ane_available();
                 let has_mistral = self.mistral_model.is_some();
                 let model_count = manager.model_count().await > 0;
 

@@ -11,6 +11,7 @@ use crate::self_prompting_agent::loop_controller::{SelfPromptingLoop, SelfPrompt
 use crate::self_prompting_agent::models::ModelRegistry;
 use crate::self_prompting_agent::sandbox::SandboxEnvironment;
 use crate::self_prompting_agent::prompting_types::{Task, SelfPromptingAgentError, AutonomousMode, SafetyMode};
+use crate::self_prompting_agent::learning_bridge::LearningBridge;
 
 /// Configuration for the self-prompting agent
 
@@ -22,6 +23,7 @@ pub struct SelfPromptingAgentConfig {
     pub enable_git_snapshots: bool,
     pub execution_mode: AutonomousMode,
     pub safety_mode: SafetyMode,
+    pub enable_learning: bool,
 }
 
 impl Default for SelfPromptingAgentConfig {
@@ -33,6 +35,7 @@ impl Default for SelfPromptingAgentConfig {
             enable_git_snapshots: true,
             execution_mode: AutonomousMode::Auto,
             safety_mode: SafetyMode::Sandbox,
+            enable_learning: true,
         }
     }
 }
@@ -45,6 +48,7 @@ pub struct SelfPromptingAgent {
     loop_controller: SelfPromptingLoop,
     sandbox: Option<SandboxEnvironment>,
     event_sender: Option<mpsc::UnboundedSender<SelfPromptingEvent>>,
+    learning_bridge: Option<Arc<LearningBridge>>,
 }
 
 impl SelfPromptingAgent {
@@ -71,6 +75,13 @@ impl SelfPromptingAgent {
             None
         };
 
+        // Initialize learning bridge if enabled
+        let learning_bridge = if config.enable_learning {
+            Some(Arc::new(LearningBridge::new()))
+        } else {
+            None
+        };
+
         Ok(Self {
             config,
             model_registry,
@@ -78,6 +89,7 @@ impl SelfPromptingAgent {
             loop_controller,
             sandbox,
             event_sender: Some(event_tx),
+            learning_bridge,
         })
     }
 
@@ -127,7 +139,8 @@ impl SelfPromptingAgent {
                 "model_providers": true,
                 "evaluation_framework": true,
                 "sandbox_environment": self.sandbox.is_some(),
-                "loop_controller": true
+                "loop_controller": true,
+                "learning_enabled": self.learning_bridge.is_some()
             }
         })
     }

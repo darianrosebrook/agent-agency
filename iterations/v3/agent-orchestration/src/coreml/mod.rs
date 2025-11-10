@@ -138,6 +138,12 @@ impl CoreMLManager {
         cfg!(target_os = "macos") && std::env::consts::ARCH == "aarch64"
     }
 
+    /// Check if Apple Neural Engine is available on this system
+    /// Returns true if ANE acceleration is available, false otherwise
+    pub fn is_ane_available(&self) -> bool {
+        self.ane_available
+    }
+
     /// Load all available Core ML models
     pub async fn load_available_models(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("Loading available Core ML models from {:?}", self.model_base_path);
@@ -353,11 +359,6 @@ impl CoreMLManager {
             .filter(|model| model.metadata.model_type == model_type)
             .cloned()
             .collect()
-    }
-
-    /// Check if ANE acceleration is available
-    pub fn is_ane_available(&self) -> bool {
-        self.ane_available
     }
 
     /// Get loaded model count

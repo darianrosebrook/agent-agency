@@ -26,28 +26,26 @@ interface ProjectViewProps {
 
 type TabType = "overview" | "workspace" | "tasks" | "timeline" | "manage";
 
+const TABS: Array<{ id: TabType; label: string }> = [
+  { id: "overview", label: "Overview" },
+  { id: "workspace", label: "Workspace" },
+  { id: "tasks", label: "Tasks" },
+  { id: "timeline", label: "Timeline" },
+  { id: "manage", label: "Manage Project" },
+];
+
 export function ProjectView({
   projectName,
   onBackToProjects,
 }: ProjectViewProps) {
   const [activeTab, setActiveTab] = useState<TabType>("overview");
 
-  const tabs = [
-    { id: "overview" as TabType, label: "Overview" },
-    { id: "workspace" as TabType, label: "Workspace" },
-    { id: "tasks" as TabType, label: "Tasks" },
-    { id: "timeline" as TabType, label: "Timeline" },
-    { id: "manage" as TabType, label: "Manage Project" },
-  ];
-
   return (
     <div className={styles.projectView}>
-      {/* Header Container */}
       <div className={styles.headerContainer}>
         <div className={styles.headerContent}>
           {/* Breadcrumb and Title */}
           <div className={styles.breadcrumbTitleContainer}>
-            {/* Breadcrumb */}
             <div className={styles.breadcrumbContainer}>
               <Breadcrumb>
                 <BreadcrumbList>
@@ -71,9 +69,8 @@ export function ProjectView({
               </Breadcrumb>
             </div>
 
-            {/* Heading */}
             <div className={styles.headingContainer}>
-              <p className={styles.heading}>{projectName}</p>
+              <h1 className={styles.heading}>{projectName}</h1>
             </div>
           </div>
 
@@ -82,13 +79,14 @@ export function ProjectView({
             {/* Tabs */}
             <div className={styles.tabsContainer}>
               <div className={styles.tabsList}>
-                {tabs.map((tab) => (
+                {TABS.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={styles.tabButton}
+                    type="button"
                   >
-                    <p
+                    <span
                       className={cn(
                         styles.tabLabel,
                         activeTab === tab.id
@@ -97,7 +95,7 @@ export function ProjectView({
                       )}
                     >
                       {tab.label}
-                    </p>
+                    </span>
                     {activeTab === tab.id && (
                       <div className={styles.tabIndicator} />
                     )}
@@ -113,11 +111,10 @@ export function ProjectView({
                 <div className={styles.searchContainer}>
                   <div className={styles.searchBox}>
                     <div className={styles.searchInput}>
-                      <p className={styles.searchPlaceholder}>Search</p>
+                      <span className={styles.searchPlaceholder}>Search</span>
                     </div>
                     <div aria-hidden="true" className={styles.searchBorder} />
                   </div>
-                  {/* Search Icon */}
                   <div className={styles.searchIcon}>
                     <svg
                       className={styles.svgFullSize}
@@ -141,20 +138,19 @@ export function ProjectView({
                       />
                     </svg>
                   </div>
-                  {/* Keyboard Shortcut */}
                   <div className={styles.keyboardShortcut}>
-                    <p className={styles.keyboardShortcutText}>⌘F</p>
+                    <span className={styles.keyboardShortcutText}>⌘F</span>
                   </div>
                 </div>
 
                 {/* Status Button */}
-                <button className={styles.controlButton}>
+                <button className={styles.controlButton} type="button">
                   <div
                     aria-hidden="true"
                     className={styles.controlButtonBorder}
                   />
                   <div className={styles.controlButtonContent}>
-                    <p className={styles.controlButtonText}>Status: All</p>
+                    <span className={styles.controlButtonText}>Status: All</span>
                     <div className={styles.controlButtonIcon}>
                       <svg
                         className={styles.svgFullSize}
@@ -175,7 +171,7 @@ export function ProjectView({
                 </button>
 
                 {/* Sort Button */}
-                <button className={styles.controlButton}>
+                <button className={styles.controlButton} type="button">
                   <div
                     aria-hidden="true"
                     className={styles.controlButtonBorder}
@@ -218,12 +214,12 @@ export function ProjectView({
                         />
                       </svg>
                     </div>
-                    <p className={styles.controlButtonText}>Sort</p>
+                    <span className={styles.controlButtonText}>Sort</span>
                   </div>
                 </button>
 
                 {/* Grid View Button */}
-                <button className={styles.gridViewButton}>
+                <button className={styles.gridViewButton} type="button">
                   <div
                     aria-hidden="true"
                     className={styles.controlButtonBorder}

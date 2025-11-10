@@ -1,33 +1,10 @@
+"use client";
+
 import { KanbanColumnHeader } from "./KanbanColumnHeader";
 import { KanbanCard } from "./KanbanCard";
+import { KanbanAddButton } from "../../primitives/kanban/KanbanAddButton";
+import type { KanbanColumnProps } from "./types";
 import styles from "./KanbanColumn.module.scss";
-
-interface KanbanCardData {
-  title: string;
-  description?: string;
-  statusTags?: Array<{
-    label: string;
-    icon?: React.ReactNode;
-    bgColor?: string;
-    textColor?: string;
-  }>;
-  metadata?: Array<{
-    icon: React.ReactNode | { path: string | string[]; size?: number };
-    text: string;
-  }>;
-  priority?: "low" | "medium" | "high";
-  height?: number;
-}
-
-interface KanbanColumnProps {
-  status: "backlog" | "todo" | "in-progress" | "done";
-  title: string;
-  cardCount: number;
-  cards: KanbanCardData[];
-  onAddTask?: () => void;
-  left?: number;
-  className?: string;
-}
 
 export function KanbanColumn({
   status,
@@ -47,23 +24,20 @@ export function KanbanColumn({
       <KanbanColumnHeader
         title={title}
         cardCount={cardCount}
-        status={status}
         onAddTask={onAddTask}
       />
-      <div className={styles.cardsContainer}>
+      
+      <KanbanAddButton
+        status={status}
+        icon={<span>+</span>}
+        onClick={onAddTask}
+      />
+      
+      <div className={styles.cards}>
         {cards.map((card, index) => (
-          <KanbanCard
-            key={index}
-            title={card.title}
-            description={card.description}
-            statusTags={card.statusTags}
-            metadata={card.metadata}
-            priority={card.priority}
-            height={card.height}
-          />
+          <KanbanCard key={index} {...card} />
         ))}
       </div>
     </div>
   );
 }
-

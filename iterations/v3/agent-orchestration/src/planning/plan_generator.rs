@@ -926,45 +926,78 @@ impl DependencyAnalysis {
         self.dependencies.get(criterion_id).cloned().unwrap_or_default()
     }
 
-    fn is_blocking_criterion(&self, _criterion_id: &str) -> bool {
-        // TODO: Implement criterion blocking analysis
-        //       Currently returns false; should analyze criterion dependencies to determine if a criterion blocks others.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Build criterion dependency graph
-        // [ ] Analyze blocking relationships between criteria
-        // [ ] Detect circular blocking dependencies
-        // [ ] Add unit tests with various criterion relationships
-        // [ ] Add integration tests with real working specs
-        // [ ] Performance: Blocking check should complete in <1ms
-        // [ ] Documentation: Document blocking analysis algorithm
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Accurately identifies blocking criteria
-        // - Handles complex dependency structures
-        // - Detects circular dependencies
-        // - Returns correct blocking status
-        //
-        // DEPENDENCIES:
-        // - Criterion dependency graph (Required)
-        // - Graph analysis algorithms (Required)
-        //
-        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (planning feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Graph algorithms expertise
+    fn is_blocking_criterion(&self, criterion_id: &str) -> bool {
+        // A criterion blocks others if:
+        // 1. It's explicitly marked as blocking in blocking_items
+        // 2. Other criteria depend on it (it's a dependency for others)
+        // 3. It has dependencies that are blocking (transitive blocking)
+        
+        // Check if explicitly marked as blocking
+        if self.blocking_items.contains(criterion_id) {
+            return true;
+        }
+        
+        // Check if other criteria depend on this criterion
+        // A criterion blocks others if it appears as a dependency for other criteria
+        for (dependent_id, deps) in &self.dependencies {
+            if deps.contains(&criterion_id.to_string()) {
+                // This criterion is a dependency for another criterion, so it blocks that one
+                return true;
+            }
+        }
+        
+        // Check transitive blocking: if this criterion depends on blocking items
+        if let Some(deps) = self.dependencies.get(criterion_id) {
+            for dep in deps {
+                if self.is_blocking_criterion(dep) {
+                    // This criterion depends on a blocking criterion, so it's also blocking
+                    return true;
+                }
+            }
+        }
+        
         false
     }
 
     fn get_blocking_reason(&self, criterion_id: &str) -> Option<String> {
-        if self.is_blocking_criterion(criterion_id) {
+        if !self.is_blocking_criterion(criterion_id) {
+            return None;
+        }
+        
+        // Build detailed blocking reason
+        let mut reasons = Vec::new();
+        
+        // Check if explicitly marked as blocking
+        if self.blocking_items.contains(criterion_id) {
+            reasons.push("explicitly marked as blocking".to_string());
+        }
+        
+        // Check which criteria depend on this one
+        let mut dependent_criteria = Vec::new();
+        for (dependent_id, deps) in &self.dependencies {
+            if deps.contains(&criterion_id.to_string()) {
+                dependent_criteria.push(dependent_id.clone());
+            }
+        }
+        
+        if !dependent_criteria.is_empty() {
+            reasons.push(format!("blocks {} dependent criteria", dependent_criteria.len()));
+        }
+        
+        // Check transitive blocking
+        if let Some(deps) = self.dependencies.get(criterion_id) {
+            let blocking_deps: Vec<_> = deps.iter()
+                .filter(|dep| self.is_blocking_criterion(dep))
+                .collect();
+            if !blocking_deps.is_empty() {
+                reasons.push(format!("depends on {} blocking criteria", blocking_deps.len()));
+            }
+        }
+        
+        if reasons.is_empty() {
             Some("Blocks dependent milestones".to_string())
         } else {
-            None
+            Some(format!("Blocks dependent milestones: {}", reasons.join(", ")))
         }
     }
 

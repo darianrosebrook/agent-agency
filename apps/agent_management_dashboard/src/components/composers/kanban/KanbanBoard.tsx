@@ -1,63 +1,28 @@
 "use client";
 
 import { KanbanColumn } from "./KanbanColumn";
+import type { KanbanBoardProps } from "./types";
 import styles from "./KanbanBoard.module.scss";
 
-interface KanbanCardData {
-  title: string;
-  description?: string;
-  statusTags?: Array<{
-    label: string;
-    icon?: React.ReactNode;
-    bgColor?: string;
-    textColor?: string;
-  }>;
-  metadata?: Array<{
-    icon: React.ReactNode | { path: string | string[]; size?: number };
-    text: string;
-  }>;
-  priority?: "low" | "medium" | "high";
-  height?: number;
-}
-
-interface KanbanColumnConfig {
-  status: "backlog" | "todo" | "in-progress" | "done";
-  title: string;
-  cardCount: number;
-  cards: KanbanCardData[];
-  onAddTask?: () => void;
-}
-
-interface KanbanBoardProps {
-  columns: KanbanColumnConfig[];
-  onAddTask?: (status: "backlog" | "todo" | "in-progress" | "done") => void;
-  className?: string;
-}
+// Design token values (matching _kanban.scss)
+const COLUMN_WIDTH = 639.41;
+const COLUMN_GAP = 15.994;
 
 export function KanbanBoard({
   columns,
   onAddTask,
   className,
 }: KanbanBoardProps) {
-  const columnWidth = 639.41;
-  const columnGap = 15.994;
-
   return (
-    <div
-      className={`${styles.board} ${className || ""}`}
-      data-name="KanbanBoard"
-    >
-      <div className={styles.boardContent}>
-        <div className={styles.columnsContainer}>
+    <div className={`${styles.board} ${className || ""}`} data-name="KanbanBoard">
+      <div className={styles.content}>
+        <div className={styles.columns}>
           {columns.map((column, index) => {
-            const left = index * (columnWidth + columnGap);
+            const left = index * (COLUMN_WIDTH + COLUMN_GAP);
             return (
               <KanbanColumn
                 key={column.status}
-                status={column.status}
-                title={column.title}
-                cardCount={column.cardCount}
-                cards={column.cards}
+                {...column}
                 onAddTask={() => onAddTask?.(column.status)}
                 left={left}
               />
@@ -68,4 +33,3 @@ export function KanbanBoard({
     </div>
   );
 }
-

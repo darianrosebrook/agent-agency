@@ -1,106 +1,89 @@
-@use "design-tokens" as *;
+@use "../../../styles/design-tokens.scss" as *;
 
 .aiAgentsTab {
-  min-height: 37.5rem; // min-h-[600px]
-  padding: 1.99975rem; // p-[31.996px]
+  min-height: 37.5rem;
+  padding: $spacing-xl;
 }
 
 .aiAgentsCard {
-  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
-  border-radius: 0.625rem; // rounded-[10px]
-  padding: 1.55675rem; // p-[24.908px]
-  border-width: 0.909px;
-  border-color: $color-neutral-800; // border-neutral-800
-  border-style: solid;
+  background-color: $color-dark-bg-primary;
+  border-radius: $border-radius-lg;
+  padding: $spacing-6;
+  border: 1px solid $color-neutral-800;
 }
 
 .cardTitle {
-  font-family: 'Inter:Regular', sans-serif;
-  font-size: $font-size-xl; // text-[20px]
-  line-height: 1.75rem; // leading-[28px]
-  color: $color-white; // text-white
-  letter-spacing: -0.4492px; // tracking-[-0.4492px]
-  margin-bottom: 0.99975rem; // mb-[15.994px]
+  margin: 0 0 $spacing-4 0;
 }
 
 .cardDescription {
-  font-family: 'Inter:Regular', sans-serif;
-  font-size: $font-size-sm; // text-[14px]
-  line-height: 1.25rem; // leading-[20px]
-  color: $color-gray-500; // text-[#888888]
-  letter-spacing: -0.1504px; // tracking-[-0.1504px]
-  margin-bottom: 1.99975rem; // mb-[31.996px]
+  margin: 0 0 $spacing-xl 0;
 }
 
 .agentsList {
   display: flex;
   flex-direction: column;
-  gap: 0.99975rem; // space-y-[15.994px]
+  gap: $spacing-4;
 }
 
 .agentCard {
-  background-color: $color-dark-bg-secondary; // bg-[#0d0d0d]
-  border-radius: 0.5rem; // rounded-[8px]
-  padding: $spacing-4; // p-[16px]
-  border-width: 0.909px;
-  border-color: $color-neutral-800; // border-neutral-800
-  border-style: solid;
-  display: flex; // flex
-  align-items: center; // items-center
-  justify-content: space-between; // justify-between
+  background-color: $color-dark-bg-secondary;
+  border-radius: $border-radius-md;
+  padding: $spacing-4;
+  border: 1px solid $color-neutral-800;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .agentInfo {
-  // Container for agent name and description
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-1;
+  flex: 1;
 }
 
 .agentName {
-  font-family: 'Inter:Medium', sans-serif;
-  font-size: $font-size-sm; // text-[14px]
-  color: $color-white; // text-white
-  letter-spacing: -0.1504px; // tracking-[-0.1504px]
-  margin-bottom: 0.25rem; // mb-[4px]
+  margin: 0;
 }
 
 .agentDescription {
-  font-family: 'Inter:Regular', sans-serif;
-  font-size: $font-size-sm; // text-[14px]
-  color: $color-gray-500; // text-[#888888]
-  letter-spacing: -0.1504px; // tracking-[-0.1504px]
+  margin: 0;
 }
 
 .toggleSwitch {
-  height: 1.1496875rem; // h-[18.395px]
-  width: 1.99975rem; // w-[31.996px]
-  border-radius: 999999px; // rounded-[1.5252e+07px] (essentially full)
+  position: relative;
+  width: 2.75rem;
+  height: 1.5rem;
+  border-radius: $border-radius-full;
+  border: none;
+  cursor: pointer;
+  transition: background-color $transition-normal;
+  flex-shrink: 0;
 }
 
 .toggleSwitchEnabled {
-  background-color: #030213; // bg-[#030213]
+  background-color: #030213;
 }
 
 .toggleSwitchDisabled {
-  background-color: #cbced4; // bg-[#cbced4]
+  background-color: #cbced4;
 }
 
 .toggleThumb {
-  background-color: $color-white; // bg-white
-  position: relative;
-  border-radius: 999999px; // rounded-[1.5252e+07px]
-  flex-shrink: 0;
-  width: 0.9996875rem; // size-[15.994px]
-  height: 0.9996875rem; // size-[15.994px]
-  transition: transform $transition-normal; // transition-transform
-  margin-top: 0.0568125rem; // mt-[0.909px]
+  position: absolute;
+  top: 0.125rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: $border-radius-full;
+  background-color: $color-white;
+  transition: transform $transition-normal;
 }
 
 .toggleThumbEnabled {
-  transform: translateX(0.9314375rem); // translate-x-[14.903px]
-  margin-left: 0.0568125rem; // ml-[0.909px]
+  transform: translateX(1.25rem);
 }
 
 .toggleThumbDisabled {
-  transform: translateX(0.0568125rem); // translate-x-[0.909px]
-  margin-left: 0.0568125rem; // ml-[0.909px]
+  transform: translateX(0.125rem);
 }
-

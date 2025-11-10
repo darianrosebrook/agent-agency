@@ -22,6 +22,7 @@ use chrono::Utc;
 use anyhow::Result;
 use tracing::warn;
 use tokio::sync::RwLock;
+use sqlx::Row;
 
 /// Adapter for orchestration service using UnifiedOrchestrator
 pub struct UnifiedOrchestratorAdapter {
@@ -440,51 +441,68 @@ impl UnifiedOrchestratorAdapter {
             struct AuditTrailAdapter {
                 #[allow(dead_code)] // Reserved for future use
                 manager: Arc<AuditTrailManager>,
+                db_ops: Option<Arc<dyn agent_orchestration::planning::DatabaseOperations>>,
             }
             #[async_trait::async_trait]
             impl agent_orchestration::planning::plan_executor::AuditTrail for AuditTrailAdapter {
                 async fn log_event(&self, event: agent_orchestration::planning::plan_executor::AuditEvent) -> Result<()> {
-                    // TODO: Convert and persist audit trail entry
-                    //       Currently only logs via tracing; should convert audit event to audit trail entry and persist to database.
-                    //
-                    // COMPLETION CHECKLIST:
-                    // [ ] Primary functionality implemented
-                    // [ ] API/data structures defined & stable
-                    // [ ] Error handling + validation aligned with error taxonomy
-                    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-                    // [ ] Integration tests for external systems/contracts
-                    // [ ] Documentation: public API + system behavior
-                    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-                    // [ ] Security posture reviewed (inputs, authz, sandboxing)
-                    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-                    // [ ] Configurability and feature flags defined if relevant
-                    // [ ] Failure-mode cards documented (degradation paths)
-                    //
-                    // ACCEPTANCE CRITERIA:
-                    // - Audit events are converted correctly
-                    // - Entries are persisted to database
-                    // - Persistence works reliably
-                    // - Error handling works for persistence failures
-                    //
-                    // DEPENDENCIES:
-                    // - Database connection (Required)
-                    // - Audit trail entry conversion utilities (Required)
-                    // - Database persistence infrastructure (Required)
-                    //
-                    // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-                    // PRIORITY: Medium
-                    // BLOCKING: No
-                    //
-                    // GOVERNANCE:
-                    // - CAWS Tier: 2 (audit trail feature)
-                    // - Change Budget: ~80 LOC
-                    // - Reviewer Requirements: Database and audit trail expertise
-                    tracing::info!("Audit event: {:?}", event); // Temporary: tracing log until database persistence
+                    // Log via tracing for observability
+                    tracing::info!(
+                        event_type = ?event.event_type,
+                        plan_id = %event.plan_id,
+                        milestone_id = ?event.milestone_id,
+                        worker_id = ?event.worker_id,
+                        description = %event.description,
+                        "Audit event logged"
+                    );
+
+                    // Persist to database via DatabaseOperationsAdapter if available
+                    if let Some(ref db_ops) = self.db_ops {
+                        use agent_orchestration::planning::data_infrastructure_types::CreateAuditTrailEntry;
+                        use std::collections::HashMap;
+                        
+                        // Convert AuditEvent to CreateAuditTrailEntry
+                        let event_type_str = format!("{:?}", event.event_type);
+                        
+                        // Build metadata map including plan_id, milestone_id, worker_id, and original metadata
+                        let mut metadata: HashMap<String, serde_json::Value> = HashMap::new();
+                        metadata.insert("plan_id".to_string(), serde_json::json!(event.plan_id.to_string()));
+                        if let Some(ref milestone_id) = event.milestone_id {
+                            metadata.insert("milestone_id".to_string(), serde_json::json!(milestone_id));
+                        }
+                        if let Some(worker_id) = event.worker_id {
+                            metadata.insert("worker_id".to_string(), serde_json::json!(worker_id.to_string()));
+                        }
+                        // Merge original metadata
+                        for (k, v) in &event.metadata {
+                            metadata.insert(k.clone(), v.clone());
+                        }
+                        
+                        let audit_entry = CreateAuditTrailEntry {
+                            event_type: event_type_str,
+                            description: event.description,
+                            metadata,
+                        };
+                        
+                        match db_ops.create_audit_trail_entry(audit_entry).await {
+                            Ok(_) => {
+                                tracing::debug!("Audit event persisted to database via DatabaseOperationsAdapter: plan_id={}", event.plan_id);
+                            }
+                            Err(e) => {
+                                // Log error but don't fail - audit logging should be best-effort
+                                tracing::warn!("Failed to persist audit event to database: {}", e);
+                            }
+                        }
+                    } else {
+                        tracing::debug!("Database operations adapter not available, audit event logged via tracing only");
+                    }
+
                     Ok(())
                 }
             }
             let audit_trail = Arc::new(AuditTrailAdapter {
                 manager: audit_trail_manager.clone(),
+                db_ops: Some(db_ops.clone()),
             }) as Arc<dyn agent_orchestration::planning::plan_executor::AuditTrail>;
             
             // Create PlanExecutor for UnifiedOrchestrator
@@ -721,6 +739,8 @@ impl OrchestrationService for UnifiedOrchestratorAdapter {
 /// Legacy adapter for orchestration service (kept for backward compatibility)
 pub struct OrchestrationServiceAdapter {
     adapter: Arc<LegacyOrchestratorAdapter>,
+    /// Optional database client for querying task execution states
+    db_client: Option<Arc<data_infrastructure::simple_client::DatabaseClient>>,
 }
 
 impl OrchestrationServiceAdapter {
@@ -731,6 +751,21 @@ impl OrchestrationServiceAdapter {
             .map_err(|e| ServiceError::Internal(format!("Failed to create adapter: {}", e)))?;
         Ok(Self {
             adapter: Arc::new(adapter),
+            db_client: None,
+        })
+    }
+    
+    /// Create with database client for task status queries
+    pub async fn new_with_db(
+        config: OrchestratorConfig,
+        db_client: Option<Arc<data_infrastructure::simple_client::DatabaseClient>>,
+    ) -> Result<Self, ServiceError> {
+        let adapter = LegacyOrchestratorAdapter::new(config)
+            .await
+            .map_err(|e| ServiceError::Internal(format!("Failed to create adapter: {}", e)))?;
+        Ok(Self {
+            adapter: Arc::new(adapter),
+            db_client,
         })
     }
     
@@ -805,64 +840,177 @@ impl OrchestrationService for OrchestrationServiceAdapter {
     }
     
     async fn get_task_status(&self, task_id: &Uuid) -> Result<TaskStatus, ServiceError> {
-        // TODO: Retrieve actual task status from database
-        //       Currently returns placeholder; should retrieve actual task status from database for the given task ID.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Task status is retrieved from database correctly
-        // - Status information is accurate
-        // - Missing tasks are handled gracefully
-        // - Error handling works for query failures
-        //
-        // DEPENDENCIES:
-        // - Database connection (Required)
-        // - Task status table schema (Required)
-        // - Status query utilities (Required)
-        //
-        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (database query feature)
-        // - Change Budget: ~80 LOC
-        // - Reviewer Requirements: Database and task management expertise
-        Ok(TaskStatus { // Temporary: placeholder until database retrieval
+        // Query task execution state from database if available
+        if let Some(ref db_client) = self.db_client {
+            use sqlx::Row;
+            
+            let query = r#"
+                SELECT status, state_data, created_at, last_updated
+                FROM task_execution_states
+                WHERE task_id = $1
+            "#;
+            
+            let pool = db_client.pool();
+            match sqlx::query(query)
+                .bind(task_id)
+                .fetch_optional(pool)
+                .await {
+                Ok(Some(row)) => {
+                        let status_str: String = row.try_get("status")
+                            .map_err(|e| ServiceError::Internal(format!("Failed to get status: {}", e)))?;
+                        let state_data: serde_json::Value = row.try_get("state_data")
+                            .map_err(|e| ServiceError::Internal(format!("Failed to get state_data: {}", e)))?;
+                        let created_at: chrono::DateTime<chrono::Utc> = row.try_get("created_at")
+                            .map_err(|e| ServiceError::Internal(format!("Failed to get created_at: {}", e)))?;
+                        let last_updated: chrono::DateTime<chrono::Utc> = row.try_get("last_updated")
+                            .map_err(|e| ServiceError::Internal(format!("Failed to get last_updated: {}", e)))?;
+                        
+                        // Convert database status to TaskStatusEnum
+                        let status = match status_str.as_str() {
+                            "pending" => TaskStatusEnum::Pending,
+                            "running" => TaskStatusEnum::Running,
+                            "paused" => TaskStatusEnum::Paused,
+                            "completed" => TaskStatusEnum::Completed,
+                            "failed" | "crashed" => TaskStatusEnum::Failed,
+                            "cancelled" => TaskStatusEnum::Cancelled,
+                            _ => TaskStatusEnum::Pending,
+                        };
+                        
+                        // Extract progress percentage from state_data JSONB
+                        let progress_percent = state_data
+                            .get("progress_percentage")
+                            .and_then(|v| v.as_f64())
+                            .map(|p| p as u8);
+                        
+                        // Extract error message from state_data JSONB
+                        let error_message = state_data
+                            .get("error")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string());
+                        
+                        return Ok(TaskStatus {
+                            task_id: *task_id,
+                            status,
+                            progress_percent,
+                            error_message,
+                            created_at,
+                            updated_at: last_updated,
+                        })
+                }
+                Ok(None) => {
+                    // Task not found in database
+                }
+                Err(e) => {
+                    warn!("Failed to query task status from database: {}", e);
+                    // Fall through to return pending status
+                }
+            }
+        }
+        
+        // Fallback: return pending status if database query fails or db_client not available
+        Ok(TaskStatus {
             task_id: *task_id,
-            status: TaskStatusEnum::Running,
+            status: TaskStatusEnum::Pending,
             progress_percent: None,
-            error_message: None,
+            error_message: Some("Task status not available - database query failed or database not configured".to_string()),
             created_at: Utc::now(),
             updated_at: Utc::now(),
         })
     }
     
-    async fn pause_task(&self, _task_id: &Uuid) -> Result<(), ServiceError> {
-        // TODO: Implement actual pause logic
-        Err(ServiceError::Internal("Pause not yet implemented".to_string()))
+    async fn pause_task(&self, task_id: &Uuid) -> Result<(), ServiceError> {
+        // Update task status in database to 'paused'
+        if let Some(ref db_client) = self.db_client {
+            let query = r#"
+                UPDATE task_execution_states
+                SET status = 'paused', last_updated = NOW()
+                WHERE task_id = $1
+            "#;
+            
+            let pool = db_client.pool();
+            match sqlx::query(query)
+                .bind(task_id)
+                .execute(pool)
+                .await {
+                Ok(_) => {
+                    tracing::info!("Paused task {} in database", task_id);
+                    Ok(())
+                }
+                Err(e) => {
+                    warn!("Failed to pause task {} in database: {}", task_id, e);
+                    Err(ServiceError::Internal(format!("Failed to pause task: {}", e)))
+                }
+            }
+        } else {
+            Err(ServiceError::Internal(
+                "Pause operation requires database client. Use UnifiedOrchestratorAdapter for full pause/resume support.".to_string()
+            ))
+        }
     }
     
-    async fn resume_task(&self, _task_id: &Uuid) -> Result<(), ServiceError> {
-        // TODO: Implement actual resume logic
-        Err(ServiceError::Internal("Resume not yet implemented".to_string()))
+    async fn resume_task(&self, task_id: &Uuid) -> Result<(), ServiceError> {
+        // Update task status in database to 'running'
+        if let Some(ref db_client) = self.db_client {
+            let query = r#"
+                UPDATE task_execution_states
+                SET status = 'running', last_updated = NOW()
+                WHERE task_id = $1 AND status = 'paused'
+            "#;
+            
+            let pool = db_client.pool();
+            match sqlx::query(query)
+                .bind(task_id)
+                .execute(pool)
+                .await {
+                Ok(_) => {
+                    tracing::info!("Resumed task {} in database", task_id);
+                    Ok(())
+                }
+                Err(e) => {
+                    warn!("Failed to resume task {} in database: {}", task_id, e);
+                    Err(ServiceError::Internal(format!("Failed to resume task: {}", e)))
+                }
+            }
+        } else {
+            Err(ServiceError::Internal(
+                "Resume operation requires database client. Use UnifiedOrchestratorAdapter for full pause/resume support.".to_string()
+            ))
+        }
     }
     
-    async fn cancel_task(&self, _task_id: &Uuid) -> Result<(), ServiceError> {
-        // TODO: Implement actual cancel logic
-        Err(ServiceError::Internal("Cancel not yet implemented".to_string()))
+    async fn cancel_task(&self, task_id: &Uuid) -> Result<(), ServiceError> {
+        // Update task status in database to 'cancelled'
+        if let Some(ref db_client) = self.db_client {
+            let query = r#"
+                UPDATE task_execution_states
+                SET status = 'cancelled', last_updated = NOW(),
+                    state_data = jsonb_set(
+                        COALESCE(state_data, '{}'::jsonb),
+                        '{error}',
+                        '"Task cancelled by user"'::jsonb
+                    )
+                WHERE task_id = $1
+            "#;
+            
+            let pool = db_client.pool();
+            match sqlx::query(query)
+                .bind(task_id)
+                .execute(pool)
+                .await {
+                Ok(_) => {
+                    tracing::info!("Cancelled task {} in database", task_id);
+                    Ok(())
+                }
+                Err(e) => {
+                    warn!("Failed to cancel task {} in database: {}", task_id, e);
+                    Err(ServiceError::Internal(format!("Failed to cancel task: {}", e)))
+                }
+            }
+        } else {
+            Err(ServiceError::Internal(
+                "Cancel operation requires database client. Use UnifiedOrchestratorAdapter for full cancel support.".to_string()
+            ))
+        }
     }
 }
 

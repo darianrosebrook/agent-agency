@@ -12,6 +12,7 @@ const Chat = dynamic(
         <div className={styles.loadingText}>Loading chat...</div>
       </div>
     ),
+    ssr: false,
   }
 );
 
@@ -26,6 +27,7 @@ const ChatSidebar = dynamic(
         <div className={styles.sidebarLoadingText}>Loading sidebar...</div>
       </div>
     ),
+    ssr: false,
   }
 );
 

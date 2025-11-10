@@ -7,3 +7,5 @@ export const priorityConfig: Record<Priority, PriorityConfig> = {
   medium: { label: "Medium", color: "", icon: "▲" }, // Now handled by SCSS module classes
   high: { label: "High", color: "", icon: "▲▲" }, // Now handled by SCSS module classes
 };
+
+

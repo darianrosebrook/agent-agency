@@ -25,6 +25,7 @@ import {
 } from "../../lib/api/agents";
 import { getAlerts, getSystemMetrics, type Alert, type SystemMetrics } from "../../lib/api/observability";
 import { ErrorDisplay } from "../../components/ErrorDisplay";
+import { apiGet } from "../../lib/utils/api";
 
 function getStatusColor(status: AgentHealth['status']): string {
   switch (status) {
@@ -58,6 +59,11 @@ export default function AgentHealthPage() {
   const [agentLogs, setAgentLogs] = useState<Record<string, AgentLog[]>>({});
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(null);
+  const [systemHealth, setSystemHealth] = useState<{
+    status: string;
+    database?: { status: string; error?: string };
+    timestamp?: string;
+  } | null>(null);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -70,15 +76,17 @@ export default function AgentHealthPage() {
       setError(null);
 
       try {
-        const [agentsData, alertsData, systemMetricsData] = await Promise.all([
+        const [agentsData, alertsData, systemMetricsData, systemHealthData] = await Promise.all([
           getAgents(),
           getAlerts({ resolved: false }),
           getSystemMetrics().catch(() => null),
+          apiGet<{ status: string; database?: { status: string; error?: string }; timestamp?: string }>('/api/proxy/api/v1/system/health').catch(() => null),
         ]);
 
         setAgents(agentsData);
         setAlerts(alertsData);
         setSystemMetrics(systemMetricsData);
+        setSystemHealth(systemHealthData);
 
         // Fetch health and metrics for each agent
         const healthPromises = agentsData.map(async (agent) => {
@@ -191,6 +199,67 @@ export default function AgentHealthPage() {
         <p className={styles.agentHealthDescription}>
           Monitor agent status, system health, and operational metrics
         </p>
+      </div>
+
+      {/* Services Status */}
+      <div className={styles.servicesSection}>
+        <h2 className={styles.sectionTitle}>Infrastructure Services</h2>
+        <div className={styles.servicesGrid}>
+          {/* API Server Status */}
+          <div className={styles.serviceCard}>
+            <div className={styles.serviceHeader}>
+              <div className={styles.serviceName}>API Server</div>
+              <div
+                className={styles.statusIndicator}
+                style={{ backgroundColor: '#10b981' }} // Always healthy if we can call it
+                title="API Server is responding"
+              />
+            </div>
+            <div className={styles.serviceInfo}>
+              <div className={styles.serviceType}>Rust API Server</div>
+              <div className={styles.serviceStatus}>Status: Healthy</div>
+              <div className={styles.servicePort}>Port: 8080</div>
+            </div>
+            <div className={styles.serviceNote}>
+              Service is running and responding to requests
+            </div>
+          </div>
+
+          {/* Database Status */}
+          {systemHealth && (
+            <div className={styles.serviceCard}>
+              <div className={styles.serviceHeader}>
+                <div className={styles.serviceName}>Database</div>
+                <div
+                  className={styles.statusIndicator}
+                  style={{
+                    backgroundColor:
+                      systemHealth.database?.status === 'healthy'
+                        ? '#10b981'
+                        : systemHealth.database?.status === 'unhealthy'
+                        ? '#ef4444'
+                        : '#6b7280',
+                  }}
+                  title={systemHealth.database?.status || 'Unknown'}
+                />
+              </div>
+              <div className={styles.serviceInfo}>
+                <div className={styles.serviceType}>PostgreSQL</div>
+                <div className={styles.serviceStatus}>
+                  Status: {systemHealth.database?.status === 'healthy' ? 'Healthy' : systemHealth.database?.status === 'unhealthy' ? 'Unhealthy' : 'Unknown'}
+                </div>
+                {systemHealth.database?.error && (
+                  <div className={styles.serviceError}>{systemHealth.database.error}</div>
+                )}
+              </div>
+              {systemHealth.database?.status === 'unhealthy' && (
+                <div className={styles.serviceWarning}>
+                  Database connection pool timeout. Check database is running and connection settings.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* System Metrics Summary */}

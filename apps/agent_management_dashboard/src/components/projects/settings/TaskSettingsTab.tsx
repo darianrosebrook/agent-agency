@@ -272,7 +272,7 @@ export function TaskSettingsTabContent() {
             <Label className={styles.labelWithMargin}>
               Estimated time alerts
             </Label>
-            <p className={styles.settingDescription} style={{ marginBottom: '0.75rem' }}>
+            <p className={cn(styles.settingDescription, styles.settingDescriptionWithMargin)}>
               Alert when task exceeds estimated time by:
             </p>
             <div className={styles.sliderContainer}>

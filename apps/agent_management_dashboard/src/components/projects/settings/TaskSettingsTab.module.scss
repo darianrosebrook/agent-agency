@@ -65,6 +65,10 @@
   color: $color-gray-500; // text-[#888888]
 }
 
+.settingDescriptionWithMargin {
+  margin-bottom: $spacing-3; // mb-3
+}
+
 .separator {
   background-color: $color-neutral-800; // bg-[#262626]
 }

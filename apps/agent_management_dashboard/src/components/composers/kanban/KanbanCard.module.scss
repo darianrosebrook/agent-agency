@@ -1,64 +1,73 @@
 @use "../../../styles/design-tokens.scss" as *;
 
 .card {
-  background-color: #1a1a1a;
   position: relative;
-  border-radius: 10px;
+  background-color: $kanban-card-bg;
+  border-radius: $kanban-card-border-radius;
+  width: 100%;
+  min-height: $kanban-card-height;
   flex-shrink: 0;
-  width: 100%;
 }
 
-.borderOverlay {
+.border {
   position: absolute;
-  border-width: 0.909px;
-  border-color: $color-neutral-800;
-  border-style: solid;
   inset: 0;
+  border: $kanban-card-border-width solid $kanban-card-border-color;
+  border-radius: $kanban-card-border-radius;
   pointer-events: none;
-  border-radius: 10px;
 }
 
-.cardContent {
-  background-clip: padding-box;
-  border-width: 0;
-  border-color: transparent;
-  border-style: solid;
-  box-sizing: border-box;
-  height: 100%;
-  position: relative;
-  width: 100%;
-  padding: 16px;
+.statusTags {
+  position: absolute;
+  left: $kanban-card-padding-x;
+  top: $kanban-card-status-tags-top;
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.statusTagsContainer {
-  position: relative;
-  height: 31.982px;
-  display: flex;
-  gap: 8px;
+  gap: $kanban-card-status-tags-gap;
+  align-items: center;
+  height: $kanban-card-status-tags-height;
+  width: $kanban-card-content-width;
+  max-width: calc(100% - #{$kanban-card-padding-x * 2});
 }
 
 .title {
+  position: absolute;
+  left: $kanban-card-padding-x;
+  top: $kanban-card-title-top;
+  width: $kanban-card-content-width;
+  max-width: calc(100% - #{$kanban-card-padding-x * 2});
+  margin: 0;
   font-size: 16px;
   font-weight: 400;
   line-height: 24px;
-  color: $color-white;
-  margin: 0;
+  color: $kanban-text-primary;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .description {
+  position: absolute;
+  left: $kanban-card-padding-x;
+  top: $kanban-card-description-top;
+  width: $kanban-card-content-width;
+  max-width: calc(100% - #{$kanban-card-padding-x * 2});
+  margin: 0;
   font-size: 14px;
   line-height: 20px;
-  color: #cacaca;
-  margin: 0;
+  color: $kanban-text-secondary;
+  white-space: nowrap;
   overflow: clip;
+  text-overflow: ellipsis;
 }
 
-.metadataContainer {
+.metadata {
+  position: absolute;
+  left: $kanban-card-padding-x;
+  top: $kanban-card-metadata-top;
   display: flex;
-  gap: 15.994px;
+  gap: $kanban-card-metadata-gap;
+  align-items: center;
   flex-wrap: wrap;
+  width: $kanban-card-content-width;
+  max-width: calc(100% - #{$kanban-card-padding-x * 2});
 }
-

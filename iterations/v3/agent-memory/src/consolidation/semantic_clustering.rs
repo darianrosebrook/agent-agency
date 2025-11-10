@@ -339,45 +339,143 @@ impl HierarchicalClustering {
             });
         }
 
-        // TODO: Implement comprehensive cluster merging with distance threshold
-        //       Currently returns clusters as-is; should continue merging based on distance threshold until desired number is reached.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Clusters are merged based on distance threshold
-        // - Merging continues until target count reached
-        // - Distance calculation is accurate
-        // - Merging preserves semantic coherence
-        //
-        // DEPENDENCIES:
-        // - Distance calculation utilities (Required)
-        // - Cluster merging algorithms (Required)
-        // - Threshold configuration (Required)
-        //
-        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (clustering feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Clustering algorithm expertise
-        clusters // Temporary: return as-is until comprehensive merging
+        // Implemented: Comprehensive cluster merging with distance threshold
+        // Merges clusters based on distance threshold until target count reached or no more merges possible
+        
+        // Default distance threshold: 0.5 (can be made configurable)
+        // This represents a reasonable semantic similarity threshold for embeddings
+        let distance_threshold = 0.5;
+        
+        // Target: reduce to approximately 10% of original clusters, but at least 1
+        let target_cluster_count = (clusters.len() as f32 * 0.1).max(1.0) as usize;
+        
+        // Continue merging until target count reached or no more merges possible
+        while clusters.len() > target_cluster_count {
+            // Find the closest pair of clusters
+            let mut best_pair: Option<(usize, usize, f32)> = None;
+            let mut min_distance = f32::INFINITY;
+            
+            for i in 0..clusters.len() {
+                for j in (i + 1)..clusters.len() {
+                    let distance = self.calculate_cluster_distance(&clusters[i], &clusters[j]);
+                    
+                    if distance < min_distance && distance <= distance_threshold {
+                        min_distance = distance;
+                        best_pair = Some((i, j, distance));
+                    }
+                }
+            }
+            
+            // If no pair found within threshold, stop merging
+            if let Some((idx1, idx2, _)) = best_pair {
+                // Merge clusters: idx2 into idx1 (always merge into smaller index to maintain order)
+                let cluster2 = clusters.remove(idx2);
+                let cluster1 = &mut clusters[idx1];
+                
+                // Merge member memories
+                cluster1.member_memories.extend(cluster2.member_memories);
+                
+                // Recalculate centroid as weighted average of embeddings
+                cluster1.centroid_embedding = self.calculate_centroid(
+                    &cluster1.member_memories,
+                    &memory_embeddings
+                );
+                
+                // Update cluster metadata
+                cluster1.cluster_id = format!("merged_{}", chrono::Utc::now().timestamp_millis());
+                cluster1.last_updated = chrono::Utc::now();
+                
+                // Recalculate importance score (average of merged clusters)
+                cluster1.importance_score = (cluster1.importance_score + cluster2.importance_score) / 2.0;
+            } else {
+                // No more merges possible within threshold
+                break;
+            }
+        }
+        
+        clusters
     }
-
+    
+    /// Calculate distance between two clusters based on linkage method
+    fn calculate_cluster_distance(&self, cluster1: &MemoryCluster, cluster2: &MemoryCluster) -> f32 {
+        match self.linkage_method {
+            LinkageMethod::Single => {
+                // Single linkage: minimum distance between any two points in clusters
+                // For efficiency, use centroid distance as approximation
+                self.euclidean_distance(&cluster1.centroid_embedding, &cluster2.centroid_embedding)
+            }
+            LinkageMethod::Complete => {
+                // Complete linkage: maximum distance between any two points in clusters
+                // For efficiency, use centroid distance as approximation
+                self.euclidean_distance(&cluster1.centroid_embedding, &cluster2.centroid_embedding)
+            }
+            LinkageMethod::Average => {
+                // Average linkage: average distance between all pairs
+                // Use centroid distance as approximation
+                self.euclidean_distance(&cluster1.centroid_embedding, &cluster2.centroid_embedding)
+            }
+            LinkageMethod::Ward => {
+                // Ward's method: minimizes increase in within-cluster variance
+                // Use centroid distance weighted by cluster sizes
+                let base_distance = self.euclidean_distance(&cluster1.centroid_embedding, &cluster2.centroid_embedding);
+                let size1 = cluster1.member_memories.len() as f32;
+                let size2 = cluster2.member_memories.len() as f32;
+                base_distance * (size1 * size2 / (size1 + size2)).sqrt()
+            }
+        }
+    }
+    
+    /// Calculate centroid embedding for a cluster from its member memories
+    fn calculate_centroid(
+        &self,
+        member_memories: &[crate::memory_types::MemoryId],
+        memory_embeddings: &[(crate::memory_types::MemoryId, Vec<f32>)],
+    ) -> Vec<f32> {
+        if member_memories.is_empty() {
+            return Vec::new();
+        }
+        
+        // Create a lookup map for quick access
+        let embedding_map: std::collections::HashMap<_, _> = memory_embeddings
+            .iter()
+            .map(|(id, emb)| (id, emb))
+            .collect();
+        
+        // Find embeddings for member memories
+        let embeddings: Vec<&Vec<f32>> = member_memories
+            .iter()
+            .filter_map(|id| embedding_map.get(id).copied())
+            .collect();
+        
+        if embeddings.is_empty() {
+            return Vec::new();
+        }
+        
+        let dimension = embeddings[0].len();
+        let mut centroid = vec![0.0; dimension];
+        
+        // Calculate average of all embeddings
+        for embedding in &embeddings {
+            for (i, &value) in embedding.iter().enumerate() {
+                if i < dimension {
+                    centroid[i] += value;
+                }
+            }
+        }
+        
+        let count = embeddings.len() as f32;
+        for value in &mut centroid {
+            *value /= count;
+        }
+        
+        centroid
+    }
+    
+    /// Calculate Euclidean distance between two vectors
     fn euclidean_distance(&self, a: &[f32], b: &[f32]) -> f32 {
+        if a.len() != b.len() {
+            return f32::INFINITY;
+        }
         a.iter()
             .zip(b.iter())
             .map(|(x, y)| (x - y).powi(2))

@@ -1,0 +1,294 @@
+@use "../../styles/design-tokens.scss" as *;
+
+.testingContainer {
+  padding: $spacing-lg;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  margin-bottom: $spacing-xl;
+}
+
+.title {
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-bold;
+  color: $color-white; // text-white
+  margin: 0 0 $spacing-sm 0;
+}
+
+.description {
+  font-size: $font-size-base;
+  color: $color-gray-400; // text-gray-400
+  margin: 0;
+}
+
+.content {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $spacing-xl;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.scenariosSection {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.sectionTitle {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+  color: $color-white; // text-white
+  margin: 0 0 $spacing-md 0;
+}
+
+.scenariosGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $spacing-md;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.scenarioCard {
+  border: 1px solid $color-gray-800; // border-gray-800
+  border-radius: $border-radius-md;
+  padding: $spacing-md;
+  background: $color-dark-bg-secondary; // bg-[#0d0d0d]
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: $color-blue-500; // border-blue-500
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  &.selected {
+    border-color: $color-blue-500; // border-blue-500
+    background: rgba(59, 130, 246, 0.1); // bg-blue-500/10
+  }
+}
+
+.scenarioHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-sm;
+}
+
+.scenarioName {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-white; // text-white
+  margin: 0;
+}
+
+.scenarioType {
+  font-size: $font-size-sm;
+  padding: $spacing-xs $spacing-sm;
+  background: $color-blue-900; // bg-blue-900
+  border-radius: $border-radius-sm;
+  color: $color-blue-300; // text-blue-300
+  text-transform: uppercase;
+  font-weight: $font-weight-medium;
+}
+
+.scenarioDescription {
+  font-size: $font-size-sm;
+  color: $color-gray-400; // text-gray-400
+  margin: 0 0 $spacing-md 0;
+  line-height: 1.5;
+}
+
+.runButton {
+  width: 100%;
+  padding: $spacing-sm $spacing-md;
+  background: $color-blue-600; // bg-blue-600
+  color: $color-white; // text-white
+  border: none;
+  border-radius: $border-radius-md;
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: $color-blue-700; // hover:bg-blue-700
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.actionsSection {
+  margin-top: $spacing-md;
+}
+
+.runAllButton {
+  width: 100%;
+  padding: $spacing-md;
+  background: $color-dark-bg-primary; // bg-[#0a0a0a]
+  color: $color-white; // text-white
+  border: 1px solid $color-gray-800; // border-gray-800
+  border-radius: $border-radius-md;
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: $color-dark-bg-hover; // hover:bg-[#1a1a1a]
+    border-color: $color-blue-500; // border-blue-500
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.resultsSection {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.resultCard {
+  border: 1px solid $color-gray-800; // border-gray-800
+  border-radius: $border-radius-md;
+  padding: $spacing-lg;
+  background: $color-dark-bg-secondary; // bg-[#0d0d0d]
+}
+
+.resultHeader {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-md;
+  align-items: center;
+  margin-bottom: $spacing-md;
+  padding-bottom: $spacing-md;
+  border-bottom: 1px solid $color-gray-800; // border-gray-800
+}
+
+.statusBadge {
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $border-radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  text-transform: uppercase;
+
+  &.statusSuccess {
+    background: rgba(34, 197, 94, 0.1);
+    color: rgb(34, 197, 94);
+  }
+
+  &.statusError {
+    background: rgba(239, 68, 68, 0.1);
+    color: rgb(239, 68, 68);
+  }
+
+  &.statusRunning {
+    background: rgba(59, 130, 246, 0.1);
+    color: rgb(59, 130, 246);
+  }
+}
+
+.scenarioId {
+  font-size: $font-size-sm;
+  color: $color-gray-400; // text-gray-400
+  font-family: monospace;
+}
+
+.timestamp {
+  font-size: $font-size-sm;
+  color: $color-gray-400; // text-gray-400
+  margin-left: auto;
+}
+
+.resultMeta {
+  margin-bottom: $spacing-md;
+  font-size: $font-size-sm;
+  color: $color-gray-400; // text-gray-400
+}
+
+.outputSection {
+  margin-bottom: $spacing-md;
+}
+
+.outputTitle {
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  color: $color-white; // text-white
+  margin: 0 0 $spacing-sm 0;
+}
+
+.outputContent {
+  background: $color-dark-bg-primary; // bg-[#0a0a0a]
+  border: 1px solid $color-gray-800; // border-gray-800
+  border-radius: $border-radius-sm;
+  padding: $spacing-md;
+  font-family: monospace;
+  font-size: $font-size-sm;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: $color-gray-200; // text-gray-200
+  margin: 0;
+
+  &.errorOutput {
+    color: $color-red-500; // text-red-500
+  }
+}
+
+.reportSection {
+  margin-top: $spacing-md;
+}
+
+.reportContent {
+  background: $color-dark-bg-primary; // bg-[#0a0a0a]
+  border: 1px solid $color-gray-800; // border-gray-800
+  border-radius: $border-radius-sm;
+  padding: $spacing-md;
+  font-size: $font-size-sm;
+  line-height: 1.6;
+  color: $color-gray-200; // text-gray-200
+}
+
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl;
+  gap: $spacing-md;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid $color-gray-800; // border-gray-800
+  border-top-color: $color-blue-500; // border-blue-500
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loadingNote {
+  font-size: $font-size-sm;
+  color: $color-gray-400; // text-gray-400
+  text-align: center;
+}

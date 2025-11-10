@@ -3,9 +3,10 @@
 .header {
   position: relative;
   flex-shrink: 0;
-  height: 23.999px;
+  height: 24px;
   display: flex;
-  gap: 7.997px;
+  gap: 8px;
   align-items: center;
+  width: fit-content; // Allow header to size to content, not full width
 }
 

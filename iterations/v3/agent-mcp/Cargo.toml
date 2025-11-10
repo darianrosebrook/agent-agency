@@ -37,6 +37,11 @@ system-common-interfaces = { path = "../system-common-interfaces" }
 # Common types and abstractions
 system-configuration = { path = "../system-configuration" }
 
+# Database dependencies for rate limiting persistence
+sqlx = { workspace = true, features = ["postgres", "chrono", "uuid"] }
+chrono.workspace = true
+uuid.workspace = true
+
 # MCP-specific dependencies
 jsonrpc-core = "18.0"
 jsonrpc-derive = "18.0"
@@ -45,12 +50,10 @@ jsonrpc-http-server = "18.0"
 tokio-tungstenite = "0.21"
 futures-util = "0.3"
 url = "2.4"
-uuid.workspace = true
 
 # Tool discovery and management
 dashmap = "5.5"
 parking_lot = "0.12"
-chrono.workspace = true
 tokio-util = "0.7"
 
 # CAWS integration
