@@ -155,13 +155,24 @@ impl PostgresService {
     async fn initialize_pool(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("Initializing PostgreSQL connection pool...");
 
-        let connection_string = format!(
-            "host={} port={} dbname={} user={} password={}",
-            self.host, self.port, self.database, self.username, self.password
-        );
+        // Build connection string - only include password if it's not empty
+        let connection_string = if self.password.is_empty() {
+            format!(
+                "host={} port={} dbname={} user={}",
+                self.host, self.port, self.database, self.username
+            )
+        } else {
+            format!(
+                "host={} port={} dbname={} user={} password={}",
+                self.host, self.port, self.database, self.username, self.password
+            )
+        };
+
+        info!("Connecting to PostgreSQL: {}:{} database: {} user: {}", 
+              self.host, self.port, self.database, self.username);
 
         let manager = PostgresConnectionManager::new_from_stringlike(&connection_string, NoTls)
-            .map_err(|e| format!("Failed to create connection manager: {}", e))?;
+            .map_err(|e| format!("Failed to create connection manager: {} (connection string: {})", e, connection_string))?;
 
         let pool = Pool::builder()
             .max_size(10) // Maximum connections in pool

@@ -244,7 +244,8 @@ impl TaskStatePersistence for DatabaseTaskStatePersistence {
         let status_str = Self::status_to_string(&state.status);
 
         // Upsert state (insert or update)
-        self.db_client.execute(
+        // Use sqlx directly since DatabaseClient::execute doesn't support parameterized queries
+        sqlx::query(
             r#"
             INSERT INTO task_execution_states (task_id, state_data, status, checkpoint_at, last_updated)
             VALUES ($1, $2, $3, $4, $5)
@@ -254,14 +255,13 @@ impl TaskStatePersistence for DatabaseTaskStatePersistence {
                 checkpoint_at = EXCLUDED.checkpoint_at,
                 last_updated = EXCLUDED.last_updated
             "#,
-            &[
-                &state.task_id,
-                &state_json,
-                &status_str,
-                &state.checkpoint_at,
-                &Utc::now(),
-            ],
         )
+        .bind(state.task_id)
+        .bind(&state_json)
+        .bind(&status_str)
+        .bind(state.checkpoint_at)
+        .bind(Utc::now())
+        .execute(self.db_client.pool())
         .await
         .context("Failed to save task execution state to database")?;
 
@@ -272,14 +272,16 @@ impl TaskStatePersistence for DatabaseTaskStatePersistence {
     async fn load_state(&self, task_id: Uuid) -> Result<Option<TaskExecutionState>> {
         debug!("Loading task execution state for task {}", task_id);
 
-        let row = self.db_client.query_one(
+        // Use sqlx directly since DatabaseClient::query_one doesn't support parameterized queries properly
+        let row = sqlx::query(
             r#"
             SELECT state_data, status, checkpoint_at, last_updated
             FROM task_execution_states
             WHERE task_id = $1
             "#,
-            &[&task_id],
         )
+        .bind(task_id)
+        .fetch_optional(self.db_client.pool())
         .await
         .context("Failed to query task execution state from database")?;
 
@@ -305,15 +307,16 @@ impl TaskStatePersistence for DatabaseTaskStatePersistence {
     async fn list_resumable_tasks(&self) -> Result<Vec<Uuid>> {
         debug!("Listing resumable tasks");
 
-        let rows = self.db_client.query(
+        // Use sqlx directly since DatabaseClient::query doesn't support parameterized queries properly
+        let rows = sqlx::query(
             r#"
             SELECT task_id
             FROM task_execution_states
             WHERE status IN ('paused', 'crashed', 'running')
             ORDER BY last_updated DESC
             "#,
-            &[],
         )
+        .fetch_all(self.db_client.pool())
         .await
         .context("Failed to query resumable tasks from database")?;
 
@@ -332,20 +335,19 @@ impl TaskStatePersistence for DatabaseTaskStatePersistence {
         debug!("Deleting task execution state for task {}", task_id);
 
         // Delete checkpoints first (foreign key constraint)
-        self.db_client.execute(
-            "DELETE FROM task_state_checkpoints WHERE task_id = $1",
-            &[&task_id],
-        )
-        .await
-        .context("Failed to delete task state checkpoints")?;
+        // Use sqlx directly since DatabaseClient::execute doesn't support parameterized queries
+        sqlx::query("DELETE FROM task_state_checkpoints WHERE task_id = $1")
+            .bind(task_id)
+            .execute(self.db_client.pool())
+            .await
+            .context("Failed to delete task state checkpoints")?;
 
         // Delete state
-        self.db_client.execute(
-            "DELETE FROM task_execution_states WHERE task_id = $1",
-            &[&task_id],
-        )
-        .await
-        .context("Failed to delete task execution state from database")?;
+        sqlx::query("DELETE FROM task_execution_states WHERE task_id = $1")
+            .bind(task_id)
+            .execute(self.db_client.pool())
+            .await
+            .context("Failed to delete task execution state from database")?;
 
         debug!("Successfully deleted task execution state for task {}", task_id);
         Ok(())
@@ -354,14 +356,16 @@ impl TaskStatePersistence for DatabaseTaskStatePersistence {
     async fn has_resumable_state(&self, task_id: Uuid) -> Result<bool> {
         debug!("Checking if task {} has resumable state", task_id);
 
-        let row = self.db_client.query_one(
+        // Use sqlx directly since DatabaseClient::query_one doesn't support parameterized queries properly
+        let row = sqlx::query(
             r#"
             SELECT status
             FROM task_execution_states
             WHERE task_id = $1 AND status IN ('paused', 'crashed', 'running')
             "#,
-            &[&task_id],
         )
+        .bind(task_id)
+        .fetch_optional(self.db_client.pool())
         .await
         .context("Failed to check resumable state in database")?;
 
@@ -383,17 +387,17 @@ impl TaskStatePersistence for DatabaseTaskStatePersistence {
             .context("Failed to serialize TaskExecutionState to JSON for checkpoint")?;
 
         // Create checkpoint record
-        self.db_client.execute(
+        // Use sqlx directly since DatabaseClient::execute doesn't support parameterized queries
+        sqlx::query(
             r#"
             INSERT INTO task_state_checkpoints (task_id, checkpoint_timestamp, state_data)
             VALUES ($1, $2, $3)
             "#,
-            &[
-                &task_id,
-                &Utc::now(),
-                &state_json,
-            ],
         )
+        .bind(task_id)
+        .bind(Utc::now())
+        .bind(&state_json)
+        .execute(self.db_client.pool())
         .await
         .context("Failed to create checkpoint in database")?;
 
@@ -404,15 +408,17 @@ impl TaskStatePersistence for DatabaseTaskStatePersistence {
     async fn list_checkpoints(&self, task_id: Uuid) -> Result<Vec<DateTime<Utc>>> {
         debug!("Listing checkpoints for task {}", task_id);
 
-        let rows = self.db_client.query(
+        // Use sqlx directly since DatabaseClient::query doesn't support parameterized queries properly
+        let rows = sqlx::query(
             r#"
             SELECT checkpoint_timestamp
             FROM task_state_checkpoints
             WHERE task_id = $1
             ORDER BY checkpoint_timestamp DESC
             "#,
-            &[&task_id],
         )
+        .bind(task_id)
+        .fetch_all(self.db_client.pool())
         .await
         .context("Failed to query checkpoints from database")?;
 

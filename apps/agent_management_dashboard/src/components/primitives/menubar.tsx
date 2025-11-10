@@ -209,7 +209,7 @@ function MenubarSubTrigger({
       {...props}
     >
       {children}
-      <ChevronRightIcon className="ml-auto h-4 w-4" />
+      <ChevronRightIcon className={styles.menubarSubTriggerIcon} />
     </MenubarPrimitive.SubTrigger>
   );
 }

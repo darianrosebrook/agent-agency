@@ -144,7 +144,7 @@ export function GeneralTabContent() {
                 </p>
                 <div className={styles.defaultAssigneeIcon}>
                   <svg
-                    className="block size-full"
+                          className={styles.svgIcon}
                     fill="none"
                     preserveAspectRatio="none"
                     viewBox="0 0 16 16"
@@ -322,7 +322,7 @@ export function GeneralTabContent() {
           <div className={styles.dangerZoneHeading}>
             <div className={styles.dangerZoneIcon}>
               <svg
-                className="block size-full"
+                          className={styles.svgIcon}
                 fill="none"
                 preserveAspectRatio="none"
                 viewBox="0 0 20 20"
@@ -386,7 +386,7 @@ export function GeneralTabContent() {
               <button className={styles.dangerZoneButtonDelete}>
                 <div className={styles.dangerZoneButtonIcon}>
                   <svg
-                    className="block size-full"
+                          className={styles.svgIcon}
                     fill="none"
                     preserveAspectRatio="none"
                     viewBox="0 0 16 16"

@@ -71,7 +71,7 @@ function EditorToolbar() {
       <button className={`${styles.toolbarButton} ${styles.toolbarButtonBold}`}>
         <div className={styles.toolbarDropdownIcon}>
           <svg
-            className="block size-full"
+                          className={styles.svgIcon}
             fill="none"
             preserveAspectRatio="none"
             viewBox="0 0 16 16"
@@ -98,7 +98,7 @@ function EditorToolbar() {
       <button className={`${styles.toolbarButton} ${styles.toolbarButtonItalic}`}>
         <div className={styles.toolbarDropdownIcon}>
           <svg
-            className="block size-full"
+                          className={styles.svgIcon}
             fill="none"
             preserveAspectRatio="none"
             viewBox="0 0 16 16"
@@ -131,7 +131,7 @@ function EditorToolbar() {
         </span>
         <div className={styles.toolbarDropdownIcon}>
           <svg
-            className="block size-full"
+                          className={styles.svgIcon}
             fill="none"
             preserveAspectRatio="none"
             viewBox="0 0 16 16"

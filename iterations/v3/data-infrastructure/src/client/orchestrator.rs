@@ -62,11 +62,39 @@ pub struct DatabaseClient {
 
 impl DatabaseClient {
     /// Execute a parameterized query
-    pub async fn execute(&self, query: &str, _params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<sqlx::postgres::PgQueryResult> {
-        sqlx::query(query)
-            .execute(&self.pool)
-        .await
-            .context("Failed to execute query")
+    /// 
+    /// Note: This implementation has limitations with dynamic parameter binding.
+    /// For proper parameterized queries, consider using sqlx::query! macro at compile time
+    /// or refactoring to use explicit types instead of trait objects.
+    pub async fn execute(&self, query: &str, params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<sqlx::postgres::PgQueryResult> {
+        // sqlx doesn't support dynamic parameter binding with trait objects easily
+        // We need to use a workaround: execute the query directly on the pool with manual parameter handling
+        // For now, if parameters are provided, we'll need to use sqlx::query with manual binding
+        // This is a limitation - proper fix would require compile-time query checking with sqlx::query!
+        
+        if params.is_empty() {
+            sqlx::query(query)
+                .execute(&self.pool)
+                .await
+                .context("Failed to execute query")
+        } else {
+            // Use sqlx::query_scalar or query_as for parameterized queries
+            // But for execute, we need to use query with bind
+            // Since we can't easily bind trait objects, we'll use a workaround:
+            // Execute the query using the pool directly with parameter substitution
+            // WARNING: This is not ideal - proper solution would use sqlx::query! macro
+            
+            // For now, return an error indicating this needs to be fixed
+            // The proper fix is to use sqlx::query! macro or refactor to use concrete types
+            Err(anyhow::anyhow!(
+                "Parameterized queries with trait objects are not fully supported. \
+                Consider using sqlx::query! macro for compile-time query checking, \
+                or refactor to use concrete parameter types. \
+                Query: {}, Parameters: {}",
+                query.chars().take(100).collect::<String>(),
+                params.len()
+            ))
+        }
     }
 
     /// Execute a query and return rows

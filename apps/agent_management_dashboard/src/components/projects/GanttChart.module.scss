@@ -1,0 +1,275 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.ganttChart {
+  min-width: max-content; // min-w-max
+}
+
+.timelineHeader {
+  position: sticky; // sticky
+  top: 0; // top-0
+  z-index: 20; // z-20
+  background-color: $color-dark-bg-secondary; // bg-[#0d0d0d]
+  border-bottom: 1px solid $color-neutral-800; // border-b border-[#262626]
+}
+
+.timelineHeaderContent {
+  display: flex; // flex
+}
+
+.memberColumn {
+  width: 16rem; // w-64
+  border-right: 1px solid $color-neutral-800; // border-r border-[#262626]
+  padding-inline: $spacing-4; // px-4
+  padding-block: $spacing-3; // py-3
+}
+
+.memberColumnHeader {
+  color: $color-gray-500; // text-[#888888]
+  font-size: $font-size-sm; // text-sm
+}
+
+.timeColumnsContainer {
+  flex: 1; // flex-1
+  display: flex; // flex
+}
+
+.timeColumn {
+  border-right: 1px solid $color-neutral-800; // border-r border-[#262626]
+  padding-inline: $spacing-2; // px-2
+  padding-block: $spacing-3; // py-3
+  text-align: center; // text-center
+}
+
+.timeColumnHeader {
+  color: $color-gray-500; // text-[#888888]
+  font-size: $font-size-xs; // text-xs
+}
+
+.timelineRows {
+  position: relative; // relative
+}
+
+.timelineRow {
+  display: flex; // flex
+  border-bottom: 1px solid $color-neutral-800; // border-b border-[#262626]
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: rgba($color-dark-bg-primary, 0.3); // hover:bg-[#1a1a1a]/30
+  }
+}
+
+.workerInfo {
+  width: 16rem; // w-64
+  border-right: 1px solid $color-neutral-800; // border-r border-[#262626]
+  padding-inline: $spacing-4; // px-4
+  padding-block: $spacing-6; // py-6
+  display: flex; // flex
+  align-items: center; // items-center
+  gap: $spacing-3; // gap-3
+}
+
+.workerAvatar {
+  width: $spacing-8; // w-8
+  height: $spacing-8; // h-8
+}
+
+.workerInfoContent {
+  flex: 1; // flex-1
+  min-width: 0; // min-w-0
+}
+
+.workerName {
+  color: $color-white; // text-white
+  font-size: $font-size-sm; // text-sm
+  overflow: hidden; // truncate
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workerStats {
+  color: $color-gray-500; // text-[#888888]
+  font-size: $font-size-xs; // text-xs
+}
+
+.taskTimeline {
+  flex: 1; // flex-1
+  position: relative; // relative
+}
+
+.backgroundGrid {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+.gridColumn {
+  border-right: 1px solid $color-dark-bg-primary; // border-r border-[#1a1a1a]
+}
+
+.taskBar {
+  position: absolute;
+  top: 0.5rem; // top-2
+  border-radius: 0.5rem; // rounded-lg
+  border-left-width: 4px; // border-l-4
+  padding-inline: $spacing-3; // px-3
+  cursor: pointer;
+  transition: all $transition-normal;
+
+  &:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); // hover:shadow-lg
+    z-index: 10; // hover:z-10
+  }
+}
+
+.taskBarDetailed {
+  height: 3rem; // h-12
+  padding-block: 0.375rem; // py-1.5
+}
+
+.taskBarGrouped {
+  height: 2.5rem; // h-10
+  padding-block: $spacing-2; // py-2
+}
+
+.taskBarHovered {
+  box-shadow: 0 0 0 2px rgba($color-white, 0.2); // ring-2 ring-white/20
+}
+
+// Status colors
+.taskStatusCompleted {
+  background-color: #1f3a2d; // bg-[#1f3a2d]
+  border-color: #5cd18c; // border-[#5cd18c]
+}
+
+.taskStatusInProgress {
+  background-color: #1f2d3a; // bg-[#1f2d3a]
+  border-color: #54a0ff; // border-[#54a0ff]
+}
+
+.taskStatusPending {
+  background-color: #2a2a2a; // bg-[#2a2a2a]
+  border-color: $color-gray-500; // border-[#888888]
+}
+
+.taskStatusDefault {
+  background-color: #262626; // bg-[#262626]
+  border-color: #404040; // border-[#404040]
+}
+
+.taskTitle {
+  color: $color-white; // text-white
+  font-size: $font-size-xs; // text-xs
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 0.125rem; // mb-0.5
+}
+
+.taskTags {
+  display: flex;
+  gap: 0.25rem; // gap-1
+}
+
+.taskTag {
+  font-size: 0.625rem; // text-[10px]
+  color: $color-gray-500; // text-[#888888]
+  background-color: #262626; // bg-[#262626]
+  padding-inline: 0.375rem; // px-1.5
+  padding-block: 0.125rem; // py-0.5
+  border-radius: 0.25rem; // rounded
+}
+
+.taskBarContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.taskBarTitle {
+  color: $color-white; // text-white
+  font-size: $font-size-xs; // text-xs
+}
+
+.taskBarCount {
+  font-size: 0.625rem; // text-[10px]
+  color: $color-gray-500; // text-[#888888]
+  margin-left: $spacing-2; // ml-2
+}
+
+.tooltipContent {
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border-color: $color-neutral-800; // border-[#262626]
+  color: $color-white; // text-white
+  max-width: 18rem; // max-w-xs
+}
+
+.tooltipContentLarge {
+  max-width: 28rem; // max-w-md
+}
+
+.tooltipInner {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2; // space-y-2
+}
+
+.tooltipTitle {
+  font-weight: $font-weight-semibold; // font-semibold
+}
+
+.tooltipDescription {
+  font-size: $font-size-sm; // text-sm
+  color: $color-gray-500; // text-[#888888]
+}
+
+.tooltipDates {
+  display: flex;
+  gap: $spacing-2; // gap-2
+  font-size: $font-size-xs; // text-xs
+  color: $color-gray-500; // text-[#888888]
+}
+
+.tooltipTags {
+  display: flex;
+  gap: 0.375rem; // gap-1.5
+  flex-wrap: wrap;
+}
+
+.tooltipTag {
+  font-size: $font-size-xs; // text-xs
+  background-color: #262626; // bg-[#262626]
+  padding-inline: $spacing-2; // px-2
+  padding-block: 0.125rem; // py-0.5
+  border-radius: 0.25rem; // rounded
+}
+
+.tooltipGroupTitle {
+  font-weight: $font-weight-semibold; // font-semibold
+  font-size: $font-size-sm; // text-sm
+}
+
+.tooltipGroupList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem; // space-y-1.5
+  max-height: 12rem; // max-h-48
+  overflow-y: auto;
+}
+
+.tooltipGroupItem {
+  font-size: $font-size-xs; // text-xs
+  border-left-width: 2px; // border-l-2
+  border-color: #404040; // border-[#404040]
+  padding-left: $spacing-2; // pl-2
+}
+
+.tooltipGroupItemTitle {
+  color: $color-white; // text-white
+}
+
+.tooltipGroupItemDate {
+  color: $color-gray-500; // text-[#888888]
+  font-size: 0.625rem; // text-[10px]
+}
+

@@ -255,6 +255,12 @@
   }
 }
 
+.menubarSubTriggerIcon {
+  margin-left: auto; // ml-auto
+  width: 1rem; // h-4 w-4
+  height: 1rem;
+}
+
 .menubarSubContent {
   z-index: 50;
   min-width: 8rem;

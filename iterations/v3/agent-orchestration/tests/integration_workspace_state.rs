@@ -22,7 +22,9 @@ mod tests {
     use agent_memory::embedding_integration::EmbeddingIntegration;
     use agent_memory::memory_types::MemoryConfig;
     use data_infrastructure::DatabaseClient;
-    use data_infrastructure::DatabaseConfig;
+    use data_infrastructure::database_config::DatabaseConfig;
+    #[cfg(feature = "evaluation")]
+    use testing_validation::database_lifecycle::TestDatabaseManager;
     use system_resilience::workspace_state::{
         UnifiedWorkspaceStateManagerBuilder, UnifiedWorkspaceConfig,
         FileWatchConfig, ContextGenerationConfig, MetricsConfig,
@@ -34,17 +36,66 @@ mod tests {
         UnifiedWorkspaceSetupConfig, setup_unified_workspace,
     };
 
+    /// Helper to create a test database with automatic setup and cleanup
+    #[cfg(feature = "evaluation")]
+    async fn create_test_database() -> (TestDatabaseManager, DatabaseClient) {
+        // Get base database URL (without database name)
+        let base_url = std::env::var("DATABASE_URL")
+            .map(|url| {
+                if let Some(last_slash) = url.rfind('/') {
+                    url[..last_slash].to_string()
+                } else {
+                    url
+                }
+            })
+            .unwrap_or_else(|_| "postgresql://postgres@localhost:5432".to_string());
+        
+        let admin_url = format!("{}/postgres", base_url);
+        
+        // Create isolated test database
+        let test_db = TestDatabaseManager::new(&admin_url, None)
+            .await
+            .expect("Failed to create test database");
+        
+        // Initialize schema (applies all migrations)
+        test_db.initialize_schema()
+            .await
+            .expect("Failed to initialize test database schema");
+        
+        // Create database client for the test database
+        let config = DatabaseConfig {
+            database_url: test_db.database_url(),
+            pool_max: Some(5),
+            connection_timeout: Some(30),
+            query_timeout: Some(60),
+            ..Default::default()
+        };
+        
+        let db_client = DatabaseClient::new(config).await
+            .expect("Failed to create test database client");
+        
+        (test_db, db_client)
+    }
+
     /// Helper to create a test database client
+    #[cfg(feature = "evaluation")]
+    async fn create_test_db_client() -> DatabaseClient {
+        let (_, client) = create_test_database().await;
+        client
+    }
+
+    /// Legacy helper without evaluation feature
+    #[cfg(not(feature = "evaluation"))]
     async fn create_test_db_client() -> DatabaseClient {
         let database_url = std::env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgresql://localhost:5432/agent_agency_test".to_string());
         
         let config = DatabaseConfig {
-            connection_string: database_url,
-            max_connections: 5,
-            min_connections: 1,
-            acquire_timeout_secs: 30,
-            idle_timeout_secs: 600,
+            database_url: database_url.clone(),
+            pool_max: Some(5),
+            connection_timeout: Some(30),
+            query_timeout: Some(60),
+            ..Default::default()
         };
         
         DatabaseClient::new(config).await

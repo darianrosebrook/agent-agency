@@ -45,6 +45,11 @@
   }
 }
 
+.dialogContentNoPadding {
+  overflow: hidden;
+  padding: 0;
+}
+
 .dialogClose {
   position: absolute;
   top: $spacing-4;

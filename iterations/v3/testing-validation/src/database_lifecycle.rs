@@ -9,7 +9,7 @@ use anyhow::{Context, Result};
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::sync::Arc;
 use std::path::PathBuf;
-use tracing::{debug, info, warn};
+use tracing::{debug, info, warn, error};
 use uuid::Uuid;
 use chrono::Utc;
 
@@ -178,7 +178,19 @@ impl TestDatabaseManager {
             // Split on semicolons that are not inside dollar quotes
             if ch == ';' && !in_dollar_quote {
                 let trimmed = current_statement.trim();
-                if !trimmed.is_empty() && !trimmed.starts_with("--") {
+                // Don't filter out SQL statements even if they have leading comments
+                // Check if this is actually a SQL statement (CREATE, ALTER, INSERT, etc.)
+                let is_sql_statement = trimmed.to_uppercase().contains("CREATE") ||
+                    trimmed.to_uppercase().contains("ALTER") ||
+                    trimmed.to_uppercase().contains("INSERT") ||
+                    trimmed.to_uppercase().contains("UPDATE") ||
+                    trimmed.to_uppercase().contains("DELETE") ||
+                    trimmed.to_uppercase().contains("DROP") ||
+                    trimmed.to_uppercase().contains("GRANT") ||
+                    trimmed.to_uppercase().contains("REVOKE") ||
+                    trimmed.to_uppercase().contains("TRUNCATE");
+                
+                if !trimmed.is_empty() && (is_sql_statement || !trimmed.starts_with("--")) {
                     statements.push(trimmed.to_string());
                 }
                 current_statement.clear();
@@ -219,50 +231,86 @@ impl TestDatabaseManager {
         
         info!("Found {} migration files", migration_files.len());
         
+        if migration_files.is_empty() {
+            warn!("No migration files found in directory: {:?}", migrations_dir);
+            return Err(anyhow::anyhow!("No migration files found"));
+        }
+        
         // Apply each migration
         for migration_file in &migration_files {
             let migration_name = migration_file.file_name()
                 .and_then(|n| n.to_str())
                 .unwrap_or("unknown");
             
-            info!("Applying migration: {}", migration_name);
+            info!("Applying migration: {} ({})", migration_name, migration_file.display());
             
             let migration_sql = std::fs::read_to_string(migration_file)
                 .context(format!("Failed to read migration file: {}", migration_file.display()))?;
             
-            // Execute migration in a transaction
-            let mut tx = self.pool.begin().await?;
+            info!("Migration {} contains {} bytes of SQL", migration_name, migration_sql.len());
             
             // Use proper SQL statement splitting (handles dollar-quoted strings, etc.)
             let statements = Self::split_sql_statements(&migration_sql);
+            info!("Migration {} split into {} statements", migration_name, statements.len());
+            
+            if statements.is_empty() {
+                warn!("Migration {} had no executable statements after splitting", migration_name);
+                continue;
+            }
+            
+            // Execute migration in a transaction
+            let mut tx = self.pool.begin().await
+                .context("Failed to begin transaction")?;
             
             let mut statements_executed = 0;
             let mut statements_failed = 0;
+            let mut last_error: Option<String> = None;
             
             for (idx, statement) in statements.iter().enumerate() {
                 let trimmed = statement.trim();
-                if trimmed.is_empty() || trimmed.starts_with("--") {
+                
+                // Skip empty statements
+                if trimmed.is_empty() {
                     continue;
                 }
                 
-                // Skip block comments
-                if trimmed.starts_with("/*") || trimmed.starts_with("*") {
+                // Check if this is a SQL statement (don't filter these out even if they have comments)
+                let is_sql_statement = trimmed.to_uppercase().contains("CREATE") ||
+                    trimmed.to_uppercase().contains("ALTER") ||
+                    trimmed.to_uppercase().contains("INSERT") ||
+                    trimmed.to_uppercase().contains("UPDATE") ||
+                    trimmed.to_uppercase().contains("DELETE") ||
+                    trimmed.to_uppercase().contains("DROP") ||
+                    trimmed.to_uppercase().contains("GRANT") ||
+                    trimmed.to_uppercase().contains("REVOKE") ||
+                    trimmed.to_uppercase().contains("TRUNCATE") ||
+                    trimmed.to_uppercase().contains("SELECT");
+                
+                // Skip pure comments (not SQL statements)
+                if !is_sql_statement && (trimmed.starts_with("--") || trimmed.starts_with("/*") || trimmed.starts_with("*")) {
                     continue;
                 }
+                
+                // Log first few characters of statement for debugging
+                let statement_preview = trimmed.chars().take(80).collect::<String>();
+                debug!("Executing statement {}: {}", idx + 1, statement_preview);
                 
                 match sqlx::query(trimmed).execute(&mut *tx).await {
-                    Ok(_) => {
+                    Ok(result) => {
                         statements_executed += 1;
-                        debug!("Migration {} statement {} executed", migration_name, idx + 1);
+                        debug!("Migration {} statement {} executed successfully (rows affected: {})", 
+                               migration_name, idx + 1, result.rows_affected());
                     }
                     Err(e) => {
                         let error_str = e.to_string();
+                        last_error = Some(error_str.clone());
                         // Some errors are expected (like IF NOT EXISTS)
                         if error_str.contains("already exists") {
                             debug!("Migration {} statement {} skipped (already exists)", migration_name, idx + 1);
                         } else {
                             // Log the error - some statements might fail if dependencies don't exist yet
-                            warn!("Migration {} statement {} failed: {} - {}", migration_name, idx + 1, trimmed.chars().take(50).collect::<String>(), error_str);
+                            warn!("Migration {} statement {} failed: {} - Error: {}", 
+                                  migration_name, idx + 1, statement_preview, error_str);
                             statements_failed += 1;
                         }
                     }
@@ -270,12 +318,40 @@ impl TestDatabaseManager {
             }
             
             // Commit transaction
-            tx.commit().await?;
+            match tx.commit().await {
+                Ok(_) => {
+                    info!("Migration {} committed: {} statements executed, {} warnings", 
+                          migration_name, statements_executed, statements_failed);
+                }
+                Err(e) => {
+                    error!("Failed to commit migration {}: {}", migration_name, e);
+                    if let Some(err) = last_error {
+                        error!("Last error was: {}", err);
+                    }
+                    return Err(anyhow::anyhow!("Failed to commit migration {}: {}", migration_name, e));
+                }
+            }
+        }
+        
+        // Verify critical tables exist
+        info!("Verifying critical tables were created...");
+        let critical_tables = ["tasks", "workers", "task_execution_states"];
+        for table_name in &critical_tables {
+            let exists: bool = sqlx::query_scalar(
+                "SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' AND table_name = $1
+                )"
+            )
+            .bind(table_name)
+            .fetch_one(&*self.pool)
+            .await
+            .unwrap_or(false);
             
-            if statements_executed > 0 {
-                info!("Migration {} applied: {} statements executed, {} warnings", migration_name, statements_executed, statements_failed);
+            if exists {
+                info!("✅ Table '{}' exists", table_name);
             } else {
-                warn!("Migration {} had no statements executed", migration_name);
+                warn!("❌ Table '{}' does NOT exist after migrations", table_name);
             }
         }
         
@@ -287,23 +363,29 @@ impl TestDatabaseManager {
     fn get_migrations_directory(&self) -> Result<PathBuf> {
         // Try to find migrations directory relative to workspace root
         let current_dir = std::env::current_dir()?;
+        info!("Current directory: {}", current_dir.display());
         
         // Look for migrations in data-infrastructure/migrations
         let possible_paths = vec![
             current_dir.join("iterations/v3/data-infrastructure/migrations"),
             current_dir.join("../data-infrastructure/migrations"),
             current_dir.join("../../data-infrastructure/migrations"),
+            current_dir.join("data-infrastructure/migrations"),
             PathBuf::from("iterations/v3/data-infrastructure/migrations"),
         ];
         
+        info!("Searching for migrations directory in {} possible locations", possible_paths.len());
         for path in &possible_paths {
+            info!("Checking: {} (exists: {})", path.display(), path.exists());
             if path.exists() && path.is_dir() {
+                info!("✅ Found migrations directory: {}", path.display());
                 return Ok(path.clone());
             }
         }
         
         Err(anyhow::anyhow!(
-            "Could not find migrations directory. Tried: {:?}",
+            "Could not find migrations directory. Current dir: {}. Tried: {:?}",
+            current_dir.display(),
             possible_paths
         ))
     }

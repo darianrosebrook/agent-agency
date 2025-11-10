@@ -99,7 +99,7 @@ export function WorkspaceTab() {
                     >
                       <div className={styles.sidebarCollapseButtonIcon}>
                         <svg
-                          className="block size-full"
+                          className={styles.svgIcon}
                           fill="none"
                           preserveAspectRatio="none"
                           viewBox="0 0 16 16"

@@ -161,20 +161,21 @@ fn create_test_state(task_id: Uuid, status: ExecutionStateStatus) -> TaskExecuti
 
 /// Helper to create a test task in the database
 async fn create_test_task(db_client: &DatabaseClient, task_id: Uuid) -> Result<()> {
-    db_client.execute(
+    // Use sqlx directly on the pool for proper parameter binding
+    // The DatabaseClient::execute method doesn't support parameterized queries with trait objects
+    sqlx::query(
         r#"
         INSERT INTO tasks (id, title, description, priority, status)
         VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT (id) DO NOTHING
         "#,
-        &[
-            &task_id,
-            &"Test Task".to_string(),
-            &"Test task for state persistence".to_string(),
-            &5,
-            &"pending".to_string(),
-        ],
     )
+    .bind(task_id)
+    .bind("Test Task")
+    .bind("Test task for state persistence")
+    .bind(5i32)
+    .bind("pending")
+    .execute(db_client.pool())
     .await?;
     Ok(())
 }
@@ -182,6 +183,11 @@ async fn create_test_task(db_client: &DatabaseClient, task_id: Uuid) -> Result<(
 #[tokio::test]
 #[ignore] // Requires database - run with --ignored flag
 async fn test_database_persistence_save_and_load() {
+    // Initialize tracing for test output
+    let _ = tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .try_init();
+    
     // Create isolated test database with automatic migrations
     let (test_db, db_client) = create_test_database().await;
     let db_client = Arc::new(db_client);

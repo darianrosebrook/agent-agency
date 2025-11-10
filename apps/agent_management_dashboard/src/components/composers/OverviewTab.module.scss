@@ -1,5 +1,11 @@
 @use "../../styles/design-tokens.scss" as *;
 
+.svgIcon {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .overviewTab {
   position: relative;
   height: 100%;

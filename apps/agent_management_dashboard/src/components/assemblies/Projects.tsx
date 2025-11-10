@@ -175,7 +175,7 @@ export function Projects() {
         <div className={styles.header}>
           <div className={styles.headerTop}>
             <FolderPlus className={styles.icon} />
-            <span className="text-sm">Projects</span>
+            <span className={styles.headerTopText}>Projects</span>
           </div>
           <h1 className={styles.headerTitle}>Projects</h1>
         </div>
@@ -241,7 +241,7 @@ export function Projects() {
           <div className={styles.headerLeft}>
             <div className={styles.headerTop}>
               <FolderPlus className={styles.icon} />
-              <span className="text-sm">Projects</span>
+              <span className={styles.headerTopText}>Projects</span>
             </div>
             <h1 className={styles.headerTitle}>Projects</h1>
           </div>
@@ -249,7 +249,7 @@ export function Projects() {
             onClick={() => setIsNewProjectModalOpen(true)}
             className={styles.newProjectButton}
           >
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className={styles.iconWithMargin} />
             New Project
           </Button>
         </div>
@@ -276,14 +276,14 @@ export function Projects() {
       <div className={styles.recentProjectsSection}>
         <div className={styles.recentProjectsHeader}>
           <h2 className={styles.recentProjectsTitle}>
-            <Clock className="w-5 h-5 text-gray-400" />
+            <Clock className={styles.iconMediumGray} />
             Recent Projects
           </h2>
           {filteredProjects.length > 6 && (
             <Button
               variant="ghost"
               onClick={() => setShowAllRecent(!showAllRecent)}
-              className="text-blue-500 hover:text-blue-400 hover:bg-transparent"
+              className={styles.seeMoreButton}
             >
               {showAllRecent ? "Show Less" : "See More"}
             </Button>
@@ -304,7 +304,7 @@ export function Projects() {
               >
                 <div className={styles.projectCardContent}>
                   <div className={styles.projectCardIcon}>
-                    <FolderPlus className="w-6 h-6 text-gray-600 group-hover:text-blue-500 transition-colors" />
+                    <FolderPlus className={styles.iconLargeCard} />
                   </div>
                   <div className={styles.projectCardDetails}>
                     <h3 className={styles.projectCardName}>{project.name}</h3>
@@ -371,8 +371,8 @@ export function Projects() {
                 <TableRow
                   className={styles.tableRowLoading}
                 >
-                  <TableCell colSpan={4} className="py-8">
-                    <div className="flex items-center justify-center">
+                  <TableCell colSpan={4} className={styles.tableLoadingCell}>
+                    <div className={styles.tableLoadingContent}>
                       <ProjectListSkeleton count={pageSize} />
                     </div>
                   </TableCell>
@@ -395,7 +395,7 @@ export function Projects() {
                     <TableCell className={styles.tableCell}>
                       <div className={styles.tableCellIcon}>
                         <div className={styles.tableCellIconBox}>
-                          <FolderPlus className="w-4 h-4 text-gray-600" />
+                          <FolderPlus className={styles.iconTable} />
                         </div>
                         {project.name}
                       </div>

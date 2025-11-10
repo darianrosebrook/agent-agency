@@ -78,7 +78,7 @@ function PaginationPrevious({
       {...props}
     >
       <ChevronLeftIcon />
-      <span className="hidden sm:block">Previous</span>
+      <span className={styles.paginationText}>Previous</span>
     </PaginationLink>
   );
 }
@@ -94,7 +94,7 @@ function PaginationNext({
       className={cn(styles.paginationNext, className)}
       {...props}
     >
-      <span className="hidden sm:block">Next</span>
+      <span className={styles.paginationText}>Next</span>
       <ChevronRightIcon />
     </PaginationLink>
   );
@@ -111,7 +111,7 @@ function PaginationEllipsis({
       className={cn(styles.paginationEllipsis, className)}
       {...props}
     >
-      <MoreHorizontalIcon className="size-4" />
+      <MoreHorizontalIcon className={styles.paginationEllipsisIcon} />
       <span className="sr-only">More pages</span>
     </span>
   );

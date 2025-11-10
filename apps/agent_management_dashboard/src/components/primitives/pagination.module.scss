@@ -40,3 +40,16 @@
   justify-content: center;
 }
 
+.paginationEllipsisIcon {
+  width: 1rem; // size-4
+  height: 1rem;
+}
+
+.paginationText {
+  display: none; // hidden
+
+  @media (min-width: $breakpoint-sm) {
+    display: block; // sm:block
+  }
+}
+

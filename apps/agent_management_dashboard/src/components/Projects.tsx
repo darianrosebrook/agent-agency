@@ -209,7 +209,7 @@ export function Projects() {
         <div className={styles.header}>
           <div className={styles.headerTop}>
             <FolderPlus className={styles.icon} />
-            <span className="text-sm">Projects</span>
+            <span className={styles.headerTopText}>Projects</span>
           </div>
           <h1 className={styles.headerTitle}>Projects</h1>
         </div>
@@ -265,7 +265,7 @@ export function Projects() {
           <div className={styles.headerLeft}>
             <div className={styles.headerTop}>
               <FolderPlus className={styles.icon} />
-              <span className="text-sm">Projects</span>
+              <span className={styles.headerTopText}>Projects</span>
             </div>
             <h1 className={styles.headerTitle}>Projects</h1>
           </div>

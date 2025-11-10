@@ -16,6 +16,10 @@
   margin-bottom: $spacing-4;
 }
 
+.headerTopText {
+  font-size: $font-size-sm; // text-sm
+}
+
 .headerTitle {
   font-size: $font-size-3xl; // text-3xl
   color: $color-white; // text-white

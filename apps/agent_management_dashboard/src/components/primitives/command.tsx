@@ -42,7 +42,7 @@ function CommandDialog({
         <DialogTitle>{title}</DialogTitle>
         <DialogDescription>{description}</DialogDescription>
       </DialogHeader>
-      <DialogContent className="overflow-hidden p-0">
+      <DialogContent className={styles.dialogContentNoPadding}>
         <Command>
           {children}
         </Command>

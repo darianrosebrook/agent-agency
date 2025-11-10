@@ -99,7 +99,7 @@ export function Chat() {
               variant="secondary"
               className={styles.contextFileBadge}
             >
-              <span className="text-sm">{file}</span>
+              <span className={styles.contextFileText}>{file}</span>
               <button
                 onClick={() => removeFile(index)}
                 className={styles.contextFileRemove}
@@ -144,7 +144,7 @@ export function Chat() {
                     >
                       <div className={styles.promptButtonIcon}>
                         <svg
-                          className="block size-full"
+                          className={styles.svgIcon}
                           fill="none"
                           preserveAspectRatio="none"
                           viewBox="0 0 16 16"
@@ -176,7 +176,7 @@ export function Chat() {
                     >
                       <div className={styles.promptButtonIcon}>
                         <svg
-                          className="block size-full"
+                          className={styles.svgIcon}
                           fill="none"
                           preserveAspectRatio="none"
                           viewBox="0 0 16 16"
@@ -229,7 +229,7 @@ export function Chat() {
                     >
                       <div className={styles.promptButtonIcon}>
                         <svg
-                          className="block size-full"
+                          className={styles.svgIcon}
                           fill="none"
                           preserveAspectRatio="none"
                           viewBox="0 0 16 16"
