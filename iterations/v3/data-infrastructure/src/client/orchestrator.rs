@@ -24,13 +24,16 @@ use super::super::database_operations::{
     UpdatePlanningSession, CreateEvidenceArtifact, UpdateEvidenceArtifact,
     CreatePlanningAuditEvent, CreateExecutionPlan, UpdateExecutionPlan,
     CreateWaiver, UpdateWaiver, CreateUser, UpdateUser, CreateSession, UpdateSession,
-    CreatePasswordResetToken
+    CreatePasswordResetToken, CreateUserSetting, UpdateUserSetting, CreateAppSetting,
+    UpdateAppSetting, CreateIntegration, UpdateIntegration, CreateApiKey, UpdateApiKey,
+    CreateTwoFactorAuth, UpdateTwoFactorAuth
 };
 use super::super::database_audit::DatabaseAuditLogger;
 use super::super::models::{
     Judge, Worker, Task, TaskExecution, CouncilVerdict, JudgeEvaluation, AuditTrailEntry,
     PlanningTelemetry, Milestone, PlanningSession, EvidenceArtifact, PlanningAuditEvent,
-    ExecutionPlan, Waiver, User, Session, PasswordResetToken
+    ExecutionPlan, Waiver, User, Session, PasswordResetToken, UserSetting, AppSetting,
+    Integration, ApiKey, TwoFactorAuth
 };
 use crate::connection_manager::{ConnectionPoolManager, PooledDatabaseClient};
 use crate::database_config::DatabaseConfig;
@@ -1865,6 +1868,599 @@ impl DatabaseOperations for DatabaseClient {
             .await?;
         
         Ok(result.rows_affected() as usize)
+    }
+
+    // User settings operations
+    async fn create_user_setting(&self, setting: CreateUserSetting) -> Result<UserSetting> {
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            INSERT INTO user_settings (
+                id, user_id, setting_key, setting_value, setting_type, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+            ON CONFLICT (user_id, setting_key) 
+            DO UPDATE SET 
+                setting_value = EXCLUDED.setting_value,
+                setting_type = EXCLUDED.setting_type,
+                updated_at = EXCLUDED.updated_at
+            "#
+        )
+        .bind(id)
+        .bind(setting.user_id)
+        .bind(&setting.setting_key)
+        .bind(&setting.setting_value)
+        .bind(&setting.setting_type)
+        .bind(now)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+        
+        self.get_user_setting(setting.user_id, &setting.setting_key).await?
+            .ok_or_else(|| anyhow::anyhow!("Failed to retrieve created user setting"))
+    }
+
+    async fn get_user_setting(&self, user_id: Uuid, setting_key: &str) -> Result<Option<UserSetting>> {
+        sqlx::query_as::<_, UserSetting>(
+            r#"
+            SELECT id, user_id, setting_key, setting_value, setting_type, created_at, updated_at
+            FROM user_settings
+            WHERE user_id = $1 AND setting_key = $2
+            "#
+        )
+        .bind(user_id)
+        .bind(setting_key)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to query user setting")
+    }
+
+    async fn get_user_settings(&self, user_id: Uuid, setting_type: Option<&str>) -> Result<Vec<UserSetting>> {
+        let query = if let Some(st) = setting_type {
+            sqlx::query_as::<_, UserSetting>(
+                r#"
+                SELECT id, user_id, setting_key, setting_value, setting_type, created_at, updated_at
+                FROM user_settings
+                WHERE user_id = $1 AND setting_type = $2
+                ORDER BY setting_key
+                "#
+            )
+            .bind(user_id)
+            .bind(st)
+        } else {
+            sqlx::query_as::<_, UserSetting>(
+                r#"
+                SELECT id, user_id, setting_key, setting_value, setting_type, created_at, updated_at
+                FROM user_settings
+                WHERE user_id = $1
+                ORDER BY setting_key
+                "#
+            )
+            .bind(user_id)
+        };
+        
+        query.fetch_all(&self.pool)
+            .await
+            .context("Failed to query user settings")
+    }
+
+    async fn update_user_setting(&self, user_id: Uuid, setting_key: &str, update: UpdateUserSetting) -> Result<UserSetting> {
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            UPDATE user_settings
+            SET setting_value = COALESCE($1, setting_value),
+                setting_type = COALESCE($2, setting_type),
+                updated_at = $3
+            WHERE user_id = $4 AND setting_key = $5
+            "#
+        )
+        .bind(&update.setting_value)
+        .bind(&update.setting_type)
+        .bind(now)
+        .bind(user_id)
+        .bind(setting_key)
+        .execute(&self.pool)
+        .await?;
+        
+        self.get_user_setting(user_id, setting_key).await?
+            .ok_or_else(|| anyhow::anyhow!("User setting not found after update"))
+    }
+
+    async fn delete_user_setting(&self, user_id: Uuid, setting_key: &str) -> Result<()> {
+        sqlx::query("DELETE FROM user_settings WHERE user_id = $1 AND setting_key = $2")
+            .bind(user_id)
+            .bind(setting_key)
+            .execute(&self.pool)
+            .await?;
+        
+        Ok(())
+    }
+
+    // App settings operations
+    async fn create_app_setting(&self, setting: CreateAppSetting) -> Result<AppSetting> {
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            INSERT INTO app_settings (
+                id, setting_key, setting_value, setting_type, description, is_public, created_by, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            "#
+        )
+        .bind(id)
+        .bind(&setting.setting_key)
+        .bind(&setting.setting_value)
+        .bind(&setting.setting_type)
+        .bind(&setting.description)
+        .bind(setting.is_public)
+        .bind(&setting.created_by)
+        .bind(now)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+        
+        self.get_app_setting(&setting.setting_key).await?
+            .ok_or_else(|| anyhow::anyhow!("Failed to retrieve created app setting"))
+    }
+
+    async fn get_app_setting(&self, setting_key: &str) -> Result<Option<AppSetting>> {
+        sqlx::query_as::<_, AppSetting>(
+            r#"
+            SELECT id, setting_key, setting_value, setting_type, description, is_public, created_by, created_at, updated_at, updated_by
+            FROM app_settings
+            WHERE setting_key = $1
+            "#
+        )
+        .bind(setting_key)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to query app setting")
+    }
+
+    async fn get_app_settings(&self, setting_type: Option<&str>, is_public: Option<bool>) -> Result<Vec<AppSetting>> {
+        let mut query_builder = sqlx::QueryBuilder::new(
+            r#"
+            SELECT id, setting_key, setting_value, setting_type, description, is_public, created_by, created_at, updated_at, updated_by
+            FROM app_settings
+            WHERE 1=1
+            "#
+        );
+        
+        if let Some(st) = setting_type {
+            query_builder.push(" AND setting_type = ");
+            query_builder.push_bind(st);
+        }
+        
+        if let Some(ip) = is_public {
+            query_builder.push(" AND is_public = ");
+            query_builder.push_bind(ip);
+        }
+        
+        query_builder.push(" ORDER BY setting_key");
+        
+        let query = query_builder.build_query_as::<AppSetting>();
+        query.fetch_all(&self.pool)
+            .await
+            .context("Failed to query app settings")
+    }
+
+    async fn update_app_setting(&self, setting_key: &str, update: UpdateAppSetting) -> Result<AppSetting> {
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            UPDATE app_settings
+            SET setting_value = COALESCE($1, setting_value),
+                setting_type = COALESCE($2, setting_type),
+                description = COALESCE($3, description),
+                is_public = COALESCE($4, is_public),
+                updated_by = $5,
+                updated_at = $6
+            WHERE setting_key = $7
+            "#
+        )
+        .bind(&update.setting_value)
+        .bind(&update.setting_type)
+        .bind(&update.description)
+        .bind(update.is_public)
+        .bind(&update.updated_by)
+        .bind(now)
+        .bind(setting_key)
+        .execute(&self.pool)
+        .await?;
+        
+        self.get_app_setting(setting_key).await?
+            .ok_or_else(|| anyhow::anyhow!("App setting not found after update"))
+    }
+
+    async fn delete_app_setting(&self, setting_key: &str) -> Result<()> {
+        sqlx::query("DELETE FROM app_settings WHERE setting_key = $1")
+            .bind(setting_key)
+            .execute(&self.pool)
+            .await?;
+        
+        Ok(())
+    }
+
+    // Integration operations
+    async fn create_integration(&self, integration: CreateIntegration) -> Result<Integration> {
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            INSERT INTO integrations (
+                id, name, integration_type, provider, configuration, credentials, is_active, is_enabled, created_by, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            "#
+        )
+        .bind(id)
+        .bind(&integration.name)
+        .bind(&integration.integration_type)
+        .bind(&integration.provider)
+        .bind(&integration.configuration)
+        .bind(&integration.credentials)
+        .bind(integration.is_active)
+        .bind(integration.is_enabled)
+        .bind(&integration.created_by)
+        .bind(now)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+        
+        self.get_integration(id).await?
+            .ok_or_else(|| anyhow::anyhow!("Failed to retrieve created integration"))
+    }
+
+    async fn get_integration(&self, id: Uuid) -> Result<Option<Integration>> {
+        sqlx::query_as::<_, Integration>(
+            r#"
+            SELECT id, name, integration_type, provider, configuration, credentials, is_active, is_enabled,
+                   last_sync_at, sync_status, sync_error, created_by, created_at, updated_at, updated_by
+            FROM integrations
+            WHERE id = $1
+            "#
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to query integration")
+    }
+
+    async fn get_integrations(&self, provider: Option<&str>, is_active: Option<bool>) -> Result<Vec<Integration>> {
+        let mut query_builder = sqlx::QueryBuilder::new(
+            r#"
+            SELECT id, name, integration_type, provider, configuration, credentials, is_active, is_enabled,
+                   last_sync_at, sync_status, sync_error, created_by, created_at, updated_at, updated_by
+            FROM integrations
+            WHERE 1=1
+            "#
+        );
+        
+        if let Some(p) = provider {
+            query_builder.push(" AND provider = ");
+            query_builder.push_bind(p);
+        }
+        
+        if let Some(ia) = is_active {
+            query_builder.push(" AND is_active = ");
+            query_builder.push_bind(ia);
+        }
+        
+        query_builder.push(" ORDER BY name");
+        
+        let query = query_builder.build_query_as::<Integration>();
+        query.fetch_all(&self.pool)
+            .await
+            .context("Failed to query integrations")
+    }
+
+    async fn update_integration(&self, id: Uuid, update: UpdateIntegration) -> Result<Integration> {
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            UPDATE integrations
+            SET name = COALESCE($1, name),
+                configuration = COALESCE($2, configuration),
+                credentials = COALESCE($3, credentials),
+                is_active = COALESCE($4, is_active),
+                is_enabled = COALESCE($5, is_enabled),
+                updated_by = $6,
+                updated_at = $7
+            WHERE id = $8
+            "#
+        )
+        .bind(&update.name)
+        .bind(&update.configuration)
+        .bind(&update.credentials)
+        .bind(update.is_active)
+        .bind(update.is_enabled)
+        .bind(&update.updated_by)
+        .bind(now)
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
+        
+        self.get_integration(id).await?
+            .ok_or_else(|| anyhow::anyhow!("Integration not found after update"))
+    }
+
+    async fn delete_integration(&self, id: Uuid) -> Result<()> {
+        sqlx::query("DELETE FROM integrations WHERE id = $1")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        
+        Ok(())
+    }
+
+    // API key operations
+    async fn create_api_key(&self, api_key: CreateApiKey) -> Result<ApiKey> {
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            INSERT INTO api_keys (
+                id, user_id, key_name, key_hash, key_prefix, scopes, rate_limit_per_minute,
+                rate_limit_per_hour, rate_limit_per_day, expires_at, is_active, is_revoked,
+                created_at, updated_at, created_by
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, false, $11, $12, $13)
+            "#
+        )
+        .bind(id)
+        .bind(api_key.user_id)
+        .bind(&api_key.key_name)
+        .bind(&api_key.key_hash)
+        .bind(&api_key.key_prefix)
+        .bind(&api_key.scopes)
+        .bind(api_key.rate_limit_per_minute)
+        .bind(api_key.rate_limit_per_hour)
+        .bind(api_key.rate_limit_per_day)
+        .bind(&api_key.expires_at)
+        .bind(now)
+        .bind(now)
+        .bind(&api_key.created_by)
+        .execute(&self.pool)
+        .await?;
+        
+        self.get_api_key(id).await?
+            .ok_or_else(|| anyhow::anyhow!("Failed to retrieve created API key"))
+    }
+
+    async fn get_api_key(&self, id: Uuid) -> Result<Option<ApiKey>> {
+        sqlx::query_as::<_, ApiKey>(
+            r#"
+            SELECT id, user_id, key_name, key_hash, key_prefix, scopes, rate_limit_per_minute,
+                   rate_limit_per_hour, rate_limit_per_day, last_used_at, expires_at, is_active,
+                   is_revoked, revoked_at, revoked_reason, created_at, updated_at, created_by
+            FROM api_keys
+            WHERE id = $1
+            "#
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to query API key")
+    }
+
+    async fn get_api_key_by_hash(&self, key_hash: &str) -> Result<Option<ApiKey>> {
+        sqlx::query_as::<_, ApiKey>(
+            r#"
+            SELECT id, user_id, key_name, key_hash, key_prefix, scopes, rate_limit_per_minute,
+                   rate_limit_per_hour, rate_limit_per_day, last_used_at, expires_at, is_active,
+                   is_revoked, revoked_at, revoked_reason, created_at, updated_at, created_by
+            FROM api_keys
+            WHERE key_hash = $1 AND is_active = true AND is_revoked = false
+            AND (expires_at IS NULL OR expires_at > NOW())
+            "#
+        )
+        .bind(key_hash)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to query API key by hash")
+    }
+
+    async fn get_user_api_keys(&self, user_id: Uuid, is_active: Option<bool>) -> Result<Vec<ApiKey>> {
+        let query = if let Some(ia) = is_active {
+            sqlx::query_as::<_, ApiKey>(
+                r#"
+                SELECT id, user_id, key_name, key_hash, key_prefix, scopes, rate_limit_per_minute,
+                       rate_limit_per_hour, rate_limit_per_day, last_used_at, expires_at, is_active,
+                       is_revoked, revoked_at, revoked_reason, created_at, updated_at, created_by
+                FROM api_keys
+                WHERE user_id = $1 AND is_active = $2
+                ORDER BY created_at DESC
+                "#
+            )
+            .bind(user_id)
+            .bind(ia)
+        } else {
+            sqlx::query_as::<_, ApiKey>(
+                r#"
+                SELECT id, user_id, key_name, key_hash, key_prefix, scopes, rate_limit_per_minute,
+                       rate_limit_per_hour, rate_limit_per_day, last_used_at, expires_at, is_active,
+                       is_revoked, revoked_at, revoked_reason, created_at, updated_at, created_by
+                FROM api_keys
+                WHERE user_id = $1
+                ORDER BY created_at DESC
+                "#
+            )
+            .bind(user_id)
+        };
+        
+        query.fetch_all(&self.pool)
+            .await
+            .context("Failed to query user API keys")
+    }
+
+    async fn update_api_key(&self, id: Uuid, update: UpdateApiKey) -> Result<ApiKey> {
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            UPDATE api_keys
+            SET key_name = COALESCE($1, key_name),
+                scopes = COALESCE($2, scopes),
+                rate_limit_per_minute = COALESCE($3, rate_limit_per_minute),
+                rate_limit_per_hour = COALESCE($4, rate_limit_per_hour),
+                rate_limit_per_day = COALESCE($5, rate_limit_per_day),
+                expires_at = COALESCE($6, expires_at),
+                is_active = COALESCE($7, is_active),
+                updated_at = $8
+            WHERE id = $9
+            "#
+        )
+        .bind(&update.key_name)
+        .bind(&update.scopes)
+        .bind(update.rate_limit_per_minute)
+        .bind(update.rate_limit_per_hour)
+        .bind(update.rate_limit_per_day)
+        .bind(&update.expires_at)
+        .bind(update.is_active)
+        .bind(now)
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
+        
+        self.get_api_key(id).await?
+            .ok_or_else(|| anyhow::anyhow!("API key not found after update"))
+    }
+
+    async fn revoke_api_key(&self, id: Uuid, reason: Option<String>) -> Result<()> {
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            UPDATE api_keys
+            SET is_revoked = true,
+                is_active = false,
+                revoked_at = $1,
+                revoked_reason = $2,
+                updated_at = $3
+            WHERE id = $4
+            "#
+        )
+        .bind(now)
+        .bind(&reason)
+        .bind(now)
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
+        
+        Ok(())
+    }
+
+    async fn delete_api_key(&self, id: Uuid) -> Result<()> {
+        sqlx::query("DELETE FROM api_keys WHERE id = $1")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        
+        Ok(())
+    }
+
+    // Two-factor authentication operations
+    async fn create_two_factor_auth(&self, two_fa: CreateTwoFactorAuth) -> Result<TwoFactorAuth> {
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            INSERT INTO two_factor_auth (
+                id, user_id, method, secret_encrypted, backup_codes, is_enabled, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            ON CONFLICT (user_id, method)
+            DO UPDATE SET
+                secret_encrypted = EXCLUDED.secret_encrypted,
+                backup_codes = EXCLUDED.backup_codes,
+                is_enabled = EXCLUDED.is_enabled,
+                updated_at = EXCLUDED.updated_at
+            "#
+        )
+        .bind(id)
+        .bind(two_fa.user_id)
+        .bind(&two_fa.method)
+        .bind(&two_fa.secret_encrypted)
+        .bind(&two_fa.backup_codes)
+        .bind(two_fa.is_enabled)
+        .bind(now)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+        
+        self.get_two_factor_auth(two_fa.user_id, Some(&two_fa.method)).await?
+            .ok_or_else(|| anyhow::anyhow!("Failed to retrieve created two-factor auth"))
+    }
+
+    async fn get_two_factor_auth(&self, user_id: Uuid, method: Option<&str>) -> Result<Option<TwoFactorAuth>> {
+        let query = if let Some(m) = method {
+            sqlx::query_as::<_, TwoFactorAuth>(
+                r#"
+                SELECT id, user_id, method, secret_encrypted, backup_codes, is_enabled, last_used_at, created_at, updated_at
+                FROM two_factor_auth
+                WHERE user_id = $1 AND method = $2
+                "#
+            )
+            .bind(user_id)
+            .bind(m)
+        } else {
+            sqlx::query_as::<_, TwoFactorAuth>(
+                r#"
+                SELECT id, user_id, method, secret_encrypted, backup_codes, is_enabled, last_used_at, created_at, updated_at
+                FROM two_factor_auth
+                WHERE user_id = $1
+                ORDER BY method
+                LIMIT 1
+                "#
+            )
+            .bind(user_id)
+        };
+        
+        query.fetch_optional(&self.pool)
+            .await
+            .context("Failed to query two-factor auth")
+    }
+
+    async fn update_two_factor_auth(&self, user_id: Uuid, method: &str, update: UpdateTwoFactorAuth) -> Result<TwoFactorAuth> {
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            UPDATE two_factor_auth
+            SET secret_encrypted = COALESCE($1, secret_encrypted),
+                backup_codes = COALESCE($2, backup_codes),
+                is_enabled = COALESCE($3, is_enabled),
+                updated_at = $4
+            WHERE user_id = $5 AND method = $6
+            "#
+        )
+        .bind(&update.secret_encrypted)
+        .bind(&update.backup_codes)
+        .bind(update.is_enabled)
+        .bind(now)
+        .bind(user_id)
+        .bind(method)
+        .execute(&self.pool)
+        .await?;
+        
+        self.get_two_factor_auth(user_id, Some(method)).await?
+            .ok_or_else(|| anyhow::anyhow!("Two-factor auth not found after update"))
+    }
+
+    async fn delete_two_factor_auth(&self, user_id: Uuid, method: &str) -> Result<()> {
+        sqlx::query("DELETE FROM two_factor_auth WHERE user_id = $1 AND method = $2")
+            .bind(user_id)
+            .bind(method)
+            .execute(&self.pool)
+            .await?;
+        
+        Ok(())
     }
 }
 

@@ -109,6 +109,42 @@ pub trait DatabaseOperations {
     async fn get_password_reset_token(&self, token_hash: &str) -> Result<Option<PasswordResetToken>>;
     async fn mark_password_reset_token_used(&self, id: Uuid) -> Result<()>;
     async fn cleanup_expired_password_reset_tokens(&self) -> Result<usize>;
+
+    // User settings operations
+    async fn create_user_setting(&self, setting: CreateUserSetting) -> Result<UserSetting>;
+    async fn get_user_setting(&self, user_id: Uuid, setting_key: &str) -> Result<Option<UserSetting>>;
+    async fn get_user_settings(&self, user_id: Uuid, setting_type: Option<&str>) -> Result<Vec<UserSetting>>;
+    async fn update_user_setting(&self, user_id: Uuid, setting_key: &str, update: UpdateUserSetting) -> Result<UserSetting>;
+    async fn delete_user_setting(&self, user_id: Uuid, setting_key: &str) -> Result<()>;
+
+    // App settings operations
+    async fn create_app_setting(&self, setting: CreateAppSetting) -> Result<AppSetting>;
+    async fn get_app_setting(&self, setting_key: &str) -> Result<Option<AppSetting>>;
+    async fn get_app_settings(&self, setting_type: Option<&str>, is_public: Option<bool>) -> Result<Vec<AppSetting>>;
+    async fn update_app_setting(&self, setting_key: &str, update: UpdateAppSetting) -> Result<AppSetting>;
+    async fn delete_app_setting(&self, setting_key: &str) -> Result<()>;
+
+    // Integration operations
+    async fn create_integration(&self, integration: CreateIntegration) -> Result<Integration>;
+    async fn get_integration(&self, id: Uuid) -> Result<Option<Integration>>;
+    async fn get_integrations(&self, provider: Option<&str>, is_active: Option<bool>) -> Result<Vec<Integration>>;
+    async fn update_integration(&self, id: Uuid, update: UpdateIntegration) -> Result<Integration>;
+    async fn delete_integration(&self, id: Uuid) -> Result<()>;
+
+    // API key operations
+    async fn create_api_key(&self, api_key: CreateApiKey) -> Result<ApiKey>;
+    async fn get_api_key(&self, id: Uuid) -> Result<Option<ApiKey>>;
+    async fn get_api_key_by_hash(&self, key_hash: &str) -> Result<Option<ApiKey>>;
+    async fn get_user_api_keys(&self, user_id: Uuid, is_active: Option<bool>) -> Result<Vec<ApiKey>>;
+    async fn update_api_key(&self, id: Uuid, update: UpdateApiKey) -> Result<ApiKey>;
+    async fn revoke_api_key(&self, id: Uuid, reason: Option<String>) -> Result<()>;
+    async fn delete_api_key(&self, id: Uuid) -> Result<()>;
+
+    // Two-factor authentication operations
+    async fn create_two_factor_auth(&self, two_fa: CreateTwoFactorAuth) -> Result<TwoFactorAuth>;
+    async fn get_two_factor_auth(&self, user_id: Uuid, method: Option<&str>) -> Result<Option<TwoFactorAuth>>;
+    async fn update_two_factor_auth(&self, user_id: Uuid, method: &str, update: UpdateTwoFactorAuth) -> Result<TwoFactorAuth>;
+    async fn delete_two_factor_auth(&self, user_id: Uuid, method: &str) -> Result<()>;
 }
 
 /// Input types for database operations
@@ -490,6 +526,107 @@ pub struct CreatePasswordResetToken {
     #[schemars(with = "String")]
     pub expires_at: DateTime<Utc>,
     pub ip_address: Option<String>,
+}
+
+// Settings management input types
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateUserSetting {
+    #[schemars(with = "String")]
+    pub user_id: Uuid,
+    pub setting_key: String,
+    pub setting_value: serde_json::Value,
+    pub setting_type: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UpdateUserSetting {
+    pub setting_value: Option<serde_json::Value>,
+    pub setting_type: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateAppSetting {
+    pub setting_key: String,
+    pub setting_value: serde_json::Value,
+    pub setting_type: String,
+    pub description: Option<String>,
+    pub is_public: bool,
+    pub created_by: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UpdateAppSetting {
+    pub setting_value: Option<serde_json::Value>,
+    pub setting_type: Option<String>,
+    pub description: Option<String>,
+    pub is_public: Option<bool>,
+    pub updated_by: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateIntegration {
+    pub name: String,
+    pub integration_type: String,
+    pub provider: String,
+    pub configuration: serde_json::Value,
+    pub credentials: serde_json::Value,
+    pub is_active: bool,
+    pub is_enabled: bool,
+    pub created_by: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UpdateIntegration {
+    pub name: Option<String>,
+    pub configuration: Option<serde_json::Value>,
+    pub credentials: Option<serde_json::Value>,
+    pub is_active: Option<bool>,
+    pub is_enabled: Option<bool>,
+    pub updated_by: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateApiKey {
+    #[schemars(with = "String")]
+    pub user_id: Uuid,
+    pub key_name: String,
+    pub key_hash: String,
+    pub key_prefix: String,
+    pub scopes: Vec<String>,
+    pub rate_limit_per_minute: Option<i32>,
+    pub rate_limit_per_hour: Option<i32>,
+    pub rate_limit_per_day: Option<i32>,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub created_by: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UpdateApiKey {
+    pub key_name: Option<String>,
+    pub scopes: Option<Vec<String>>,
+    pub rate_limit_per_minute: Option<i32>,
+    pub rate_limit_per_hour: Option<i32>,
+    pub rate_limit_per_day: Option<i32>,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub is_active: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateTwoFactorAuth {
+    #[schemars(with = "String")]
+    pub user_id: Uuid,
+    pub method: String,
+    pub secret_encrypted: String,
+    pub backup_codes: Vec<String>,
+    pub is_enabled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UpdateTwoFactorAuth {
+    pub secret_encrypted: Option<String>,
+    pub backup_codes: Option<Vec<String>>,
+    pub is_enabled: Option<bool>,
 }
 
 /// Factory function to create a database operations instance
