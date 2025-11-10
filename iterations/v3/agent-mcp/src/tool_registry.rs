@@ -6,6 +6,7 @@ use crate::mcp_types::*;
 use crate::tools::DocQualityValidator;
 use crate::tools::file_editing_tools::FileEditingToolExecutor;
 use crate::tools::coreml_ingestion_tools::{CoreMLIngestionExecutor, PlaceholderCoreMLIngestionExecutor};
+use crate::tools::notification_tools::{execute_notification_tool, NotificationToolConfig};
 // Memory system disabled due to cyclic dependencies
 // #[cfg(feature = "memory")]
 // use agent_memory::MemorySystem;
@@ -301,6 +302,15 @@ impl ToolRegistry {
         }
         info!("Registered CoreML ingestion tools (MCP only, not exposed via REST API)");
 
+        // Register notification tools
+        use crate::tools::create_notification_tools;
+        let notification_config = NotificationToolConfig::default();
+        let notification_tools = create_notification_tools(Some(notification_config));
+        for tool in notification_tools {
+            self.register_tool(tool).await?;
+        }
+        info!("Registered notification tools");
+
         // Memory tools disabled due to cyclic dependencies
         // let memory_tools = create_memory_tools();
         // for tool in memory_tools {
@@ -500,6 +510,11 @@ impl ToolRegistry {
         // Check for CoreML ingestion tools first (by name)
         if matches!(tool.name.as_str(), "transcribe_audio" | "detect_objects" | "extract_text_from_image" | "process_video") {
             return self.execute_coreml_tool(tool, request).await;
+        }
+        
+        // Check for notification tools (by name)
+        if tool.name == "send_notification" {
+            return self.execute_notification_tool(tool, request).await;
         }
         
         // Route based on tool capabilities
@@ -761,6 +776,32 @@ impl ToolRegistry {
                 Err(anyhow::anyhow!("Unknown CoreML tool: {}", tool.name))
             },
         }
+    }
+
+    /// Execute a notification tool
+    async fn execute_notification_tool(
+        &self,
+        tool: &MCPTool,
+        request: &ToolExecutionRequest,
+    ) -> Result<serde_json::Value> {
+        info!("Executing notification tool: {}", tool.name);
+
+        // Get dashboard URL from tool metadata or environment
+        let dashboard_url = tool.metadata
+            .get("dashboard_url")
+            .and_then(|v| v.as_str())
+            .unwrap_or_else(|| {
+                std::env::var("DASHBOARD_URL")
+                    .unwrap_or_else(|_| "http://localhost:3000".to_string())
+                    .as_str()
+            })
+            .to_string();
+
+        let config = NotificationToolConfig {
+            dashboard_url,
+        };
+
+        execute_notification_tool(tool, request, Some(config)).await
     }
 
     /// Execute a general tool in sandboxed environment

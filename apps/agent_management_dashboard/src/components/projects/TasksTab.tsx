@@ -142,7 +142,7 @@ export function TasksTab() {
           
           const cardMetadata: KanbanMetadata[] = [];
           
-          // Show assigned agent if available
+          // Show assigned agent or orchestrator if unassigned
           if (task.assigned_worker_id) {
             const agent = agents.find((a) => a.id === task.assigned_worker_id);
             if (agent) {
@@ -151,6 +151,12 @@ export function TasksTab() {
                 text: agent.name,
               });
             }
+          } else {
+            // Show orchestrator for unassigned tasks (planning/coordination phase)
+            cardMetadata.push({
+              icon: { path: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z", size: 16 },
+              text: "Orchestrator",
+            });
           }
           
           return {

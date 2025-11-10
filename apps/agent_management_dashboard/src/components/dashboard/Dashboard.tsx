@@ -54,6 +54,11 @@ const AgentActivityChart = lazy(() =>
     default: mod.AgentActivityChart,
   }))
 );
+const AnalyticsMetrics = lazy(() =>
+  import("../AnalyticsMetrics").then((mod) => ({
+    default: mod.AnalyticsMetrics,
+  }))
+);
 
 const ChartSkeleton = () => (
   <div className={styles.chartSkeleton}>
@@ -116,10 +121,7 @@ export function Dashboard() {
         {/* Task Progress Chart - spans 2 rows and 5 columns */}
         <div className={cn(styles.colSpan5, styles.rowSpan2)}>
           <Suspense fallback={<ChartSkeleton />}>
-            <TaskProgressChart
-              completedTasks={taskStats?.completed ?? 19}
-              totalTasks={taskStats?.total ?? 40}
-            />
+            <TaskProgressChart />
           </Suspense>
         </div>
 
@@ -139,26 +141,8 @@ export function Dashboard() {
 
         {/* Multi-Ring Progress - spans 6 rows and 4 columns */}
         <div className={cn(styles.colSpan4, styles.rowSpan6)}>
-          {/* TODO: Replace hardcoded progress data with project milestone data from v3 database with the following requirements:
-          // 1. Milestone data fetching: Load project milestones with progress calculations
-          //    - Data source: GET /api/projects/:id/milestones endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
-          //    - Database table: PostgreSQL `milestones` table
-          //    - Calculate progress percentage based on completed tasks per milestone
-          // 2. Timeline estimation: Calculate projected timeline from milestone data
-          //    - Use milestone completion dates and task estimates
-          //    - Handle missing or incomplete milestone data
-          // 3. Data transformation: Format API response for MultiRingProgress component
-          //    - Map API response to tasks array with name, progress, and color
-          //    - Calculate projectedTimeline string from milestone dates */}
           <Suspense fallback={<ChartSkeleton />}>
-            <MultiRingProgress
-              tasks={[
-                { name: "Progress 1", progress: 85, color: "#e0e7ff" },
-                { name: "Progress 2", progress: 75, color: "#818cf8" },
-                { name: "Progress 3", progress: 60, color: "#6366f1" },
-              ]}
-              projectedTimeline="15 business days"
-            />
+            <MultiRingProgress />
           </Suspense>
         </div>
 
@@ -197,6 +181,13 @@ export function Dashboard() {
             <ServerEfficiencyChart
               title="Server Efficiency Analysis"
             />
+          </Suspense>
+        </div>
+
+        {/* Analytics Metrics - spans 2 rows and 8 columns */}
+        <div className={cn(styles.colSpan8, styles.rowSpan2)}>
+          <Suspense fallback={<ChartSkeleton />}>
+            <AnalyticsMetrics title="Analytics Overview" />
           </Suspense>
         </div>
 

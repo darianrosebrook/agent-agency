@@ -7,11 +7,15 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Sidebar as NavigationSidebar } from "@/components/dashboard/NavigationSidebar";
 import { Toaster } from "@/components/primitives/sonner";
 import { ProjectProvider } from "@/components/ProjectContext";
+import { useNotificationSync } from "@/hooks/useNotificationSync";
 import { polyfillClassNameSplit } from "@/lib/utils/className-fix";
 import styles from "./providers.module.scss";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
+
+  // Sync server notifications to client store and trigger toasts
+  useNotificationSync(mounted);
 
   // Fix className.split issue for SVG elements and DOMTokenList
   useEffect(() => {

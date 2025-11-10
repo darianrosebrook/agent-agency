@@ -31,6 +31,7 @@ import {
   type Notification,
   type NotificationType,
 } from "@/lib/stores/notificationStore";
+import { toastError, toastWarning, toastInfo, toastSuccess } from "@/lib/utils/toast";
 import { cn } from "@/components/primitives/utils";
 import styles from "./page.module.scss";
 
@@ -38,6 +39,7 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<NotificationType | "all">("all");
   const [showRead, setShowRead] = useState(true);
+  const [lastNotificationId, setLastNotificationId] = useState<string | null>(null);
 
   useEffect(() => {
     loadNotifications();
@@ -48,6 +50,41 @@ export default function NotificationsPage() {
 
   const loadNotifications = () => {
     const all = getNotifications();
+    
+    // Check for new notifications and trigger toasts
+    if (all.length > 0) {
+      const lastNotification = all.find(n => n.id === lastNotificationId);
+      const lastTimestamp = lastNotification?.timestamp ?? 0;
+      
+      const newNotifications = all.filter(n => 
+        !n.read && 
+        n.timestamp > lastTimestamp
+      );
+      
+      newNotifications.forEach(notification => {
+        // Trigger toast for new unread notifications
+        switch (notification.type) {
+          case 'error':
+            toastError(notification.message);
+            break;
+          case 'warning':
+            toastWarning(notification.message);
+            break;
+          case 'info':
+            toastInfo(notification.message);
+            break;
+          case 'success':
+            toastSuccess(notification.message);
+            break;
+        }
+      });
+      
+      // Update last notification ID to the most recent one
+      if (all[0] && (!lastNotificationId || all[0].timestamp > lastTimestamp)) {
+        setLastNotificationId(all[0].id);
+      }
+    }
+    
     setNotifications(all);
   };
 

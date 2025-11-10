@@ -18,6 +18,7 @@ import {
 } from "../../lib/api/agents";
 import { ErrorDisplay } from "../../components/ErrorDisplay";
 import { BentoPanel } from "../../components/compounds/BentoPanel";
+import { AgentActivityChart } from "../../components/AgentActivityChart";
 
 /**
  * Agent Stats Page
@@ -348,16 +349,14 @@ export default function AgentStatsPage() {
           </BentoPanel>
         )}
 
-        {/* Activity Data Info */}
+        {/* Agent Activity Chart */}
         {activity.length > 0 && (
           <BentoPanel className={styles.section}>
-            <h2 className={styles.sectionTitle}>Activity Data</h2>
-            <p className={styles.infoText}>
-              {activity.length} activity data points collected for the selected time range.
-            </p>
-            <p className={styles.infoNote}>
-              Note: Time-series charts and visualizations will be added in a future update.
-            </p>
+            <AgentActivityChart
+              title="Agent Activity Over Time"
+              subtitle={`${activity.length} data points for ${timeRange === "7d" ? "last 7 days" : timeRange === "30d" ? "last 30 days" : timeRange === "90d" ? "last 90 days" : "all time"}`}
+              days={timeRange === "7d" ? 7 : timeRange === "30d" ? 30 : timeRange === "90d" ? 90 : 365}
+            />
           </BentoPanel>
         )}
 

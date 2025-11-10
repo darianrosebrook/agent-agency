@@ -1,36 +1,115 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useAnimatedValue } from "../hooks/useAnimatedValue";
+import { getTasksStats, type TasksStats } from "../lib/api/tasks";
 import styles from "./TaskProgressChart.module.scss";
 
 interface TaskProgressChartProps {
   completedTasks?: number;
   totalTasks?: number;
   categories?: string[];
+  projectId?: string;
 }
 
 export function TaskProgressChart({
-  // TODO: Replace default props with data fetched from v3 API with the following requirements:
-  // 1. Task statistics fetching: Load task completion statistics from API
-  //    - Data source: GET /api/projects/:id/tasks/stats endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
-  //    - Database table: PostgreSQL `tasks` table with aggregation queries
-  //    - Include completedTasks count, totalTasks count, and category breakdowns
-  // 2. Props handling: Accept projectId prop to fetch project-specific statistics
-  //    - Fetch statistics when projectId changes
-  //    - Handle loading and error states
-  // 3. Data transformation: Format API response for component props
-  //    - Map API response to completedTasks, totalTasks, and categories props
-  //    - Handle edge cases (zero tasks, all completed, etc.)
-  completedTasks = 19,
-  totalTasks = 40,
-  categories = ["dev", "design"],
+  completedTasks: providedCompletedTasks,
+  totalTasks: providedTotalTasks,
+  categories: providedCategories,
+  projectId,
 }: TaskProgressChartProps) {
+  const [taskStats, setTaskStats] = useState<TasksStats | null>(null);
+  const [isLoading, setIsLoading] = useState(!providedCompletedTasks && !providedTotalTasks);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    // If props are provided, use them and skip API call
+    if (providedCompletedTasks !== undefined && providedTotalTasks !== undefined) {
+      setIsLoading(false);
+      return;
+    }
+
+    async function fetchTaskStats() {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const stats = await getTasksStats();
+        setTaskStats(stats);
+      } catch (err) {
+        console.error("Failed to fetch task stats:", err);
+        setError(err instanceof Error ? err : new Error("Failed to load task statistics"));
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchTaskStats();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchTaskStats, 30000);
+    return () => clearInterval(interval);
+  }, [providedCompletedTasks, providedTotalTasks]);
+
+  // Use provided props or API data
+  const completedTasks = providedCompletedTasks ?? taskStats?.completed ?? 0;
+  const totalTasks = providedTotalTasks ?? taskStats?.total ?? 0;
+  
+  // Extract categories from task types if available, otherwise use defaults
+  const categories = providedCategories ?? (taskStats ? ["all"] : ["dev", "design"]);
+
   // Animate values when props change
   const animatedCompletedTasks = useAnimatedValue(completedTasks);
   const animatedTotalTasks = useAnimatedValue(totalTasks);
   const animatedPercentage = useAnimatedValue(
-    Math.round((completedTasks / totalTasks) * 100)
+    totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
   );
+
+  if (isLoading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.innerContainer}>
+          <div className={styles.content}>
+            <div className={styles.header}>
+              <div className={styles.headerTop}>
+                <div className={styles.categories}>
+                  <div className={styles.categoryBadge}>
+                    <div className={styles.categoryBadgeInner}>
+                      <div className={styles.categoryText}>
+                        <p className={styles.categoryTextParagraph}>Loading...</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.innerContainer}>
+          <div className={styles.content}>
+            <div className={styles.header}>
+              <div className={styles.headerTop}>
+                <div className={styles.categories}>
+                  <div className={styles.categoryBadge}>
+                    <div className={styles.categoryBadgeInner}>
+                      <div className={styles.categoryText}>
+                        <p className={styles.categoryTextParagraph}>Error: {error.message}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>

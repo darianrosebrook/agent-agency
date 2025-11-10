@@ -89,16 +89,17 @@ export function TimelineTab() {
           }
 
           // Get agent name from assignment
+          // If unassigned, treat as orchestrator-managed (planning/coordination phase)
           const workerId = task.assigned_worker_id ?? null;
           const workerName = workerId && agentMap.has(workerId) 
             ? agentMap.get(workerId)! 
-            : "Unassigned";
+            : "Orchestrator";
 
           return {
             id: task.task_id,
             title: task.title,
             worker: workerName,
-            workerId: workerId ?? "unassigned",
+            workerId: workerId ?? "orchestrator",
             startDate,
             endDate,
             status,
