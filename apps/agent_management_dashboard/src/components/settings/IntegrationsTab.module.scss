@@ -1,0 +1,45 @@
+@use '../../../styles/tokens' as *;
+
+.integrationsTab {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-6;
+}
+
+.loading {
+  padding: $spacing-8;
+  text-align: center;
+  color: oklch(0.5 0 0);
+}
+
+.integrationsList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-4;
+}
+
+.integrationItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-4;
+  background-color: #0f0f0f;
+  border-radius: $spacing-md;
+  
+  h4 {
+    margin: 0 0 $spacing-2 0;
+    color: white;
+  }
+  
+  p {
+    margin: $spacing-1 0;
+    color: oklch(0.5 0 0);
+    font-size: $font-size-sm;
+  }
+}
+
+.integrationActions {
+  display: flex;
+  gap: $spacing-2;
+}
+

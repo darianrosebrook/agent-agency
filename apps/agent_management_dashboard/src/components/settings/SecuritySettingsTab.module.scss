@@ -1,0 +1,65 @@
+@use '../../../styles/tokens' as *;
+
+.securityTab {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-6;
+}
+
+.loading {
+  padding: $spacing-8;
+  text-align: center;
+  color: oklch(0.5 0 0);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-4;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2;
+}
+
+.twoFAEnabled {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-4;
+}
+
+.setupMode {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-4;
+}
+
+.qrCode {
+  display: flex;
+  justify-content: center;
+  padding: $spacing-4;
+  background-color: white;
+  border-radius: $spacing-md;
+}
+
+.backupCodes {
+  margin-top: $spacing-4;
+  padding: $spacing-4;
+  background-color: #0f0f0f;
+  border-radius: $spacing-md;
+  
+  ul {
+    list-style: none;
+    padding: 0;
+    margin-top: $spacing-2;
+    
+    li {
+      padding: $spacing-1;
+      font-family: monospace;
+      color: white;
+    }
+  }
+}
+
