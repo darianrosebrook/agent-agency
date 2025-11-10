@@ -2,16 +2,16 @@
 
 .phaseItem {
   margin-bottom: $spacing-6; // mb-6
-  background-color: #1a1a1a; // bg-[#1a1a1a]
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
   border-radius: $spacing-xl; // rounded-xl
-  border: 1px solid oklch(0.269 0 0); // border border-zinc-800
+  border: 1px solid $color-zinc-800; // border border-zinc-800
   overflow: hidden;
 }
 
 .phaseHeader {
   padding-inline: $spacing-6; // px-6
   padding-block: $spacing-5; // py-5
-  border-bottom: 1px solid oklch(0.269 0 0); // border-b border-zinc-800
+  border-bottom: 1px solid $color-zinc-800; // border-b border-zinc-800
 }
 
 .phaseHeaderTop {
@@ -23,20 +23,20 @@
 
 .phaseTitle {
   font-size: $font-size-xl; // text-xl
-  color: white; // text-white
+  color: $color-white; // text-white
 }
 
 .phaseBadge {
   padding-inline: $spacing-3; // px-3
   padding-block: $spacing-1; // py-1
-  background-color: oklch(0.269 0 0); // bg-zinc-800
-  color: oklch(0.5 0 0); // text-zinc-300
+  background-color: $color-zinc-800; // bg-zinc-800
+  color: $color-zinc-300; // text-zinc-300
   font-size: $font-size-sm; // text-sm
   border-radius: 9999px; // rounded-full
 }
 
 .phaseDescription {
-  color: oklch(0.5 0 0); // text-zinc-400
+  color: $color-zinc-400; // text-zinc-400
   font-size: $font-size-sm; // text-sm
 }
 

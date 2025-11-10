@@ -4,8 +4,8 @@
   position: relative;
   width: 100%;
   height: 100%;
-  background-color: #111111;
+  background-color: $color-gray-900; // bg-[#111111] -> gray-900
   border-radius: 0.75rem; // rounded-[12px]
-  border: 1px solid #cacaca;
+  border: 1px solid $color-gray-300; // border-[#cacaca] -> gray-300
 }
 

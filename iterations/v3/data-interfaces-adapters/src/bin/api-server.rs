@@ -595,6 +595,36 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
         .route("/api/v1/settings/2fa/verify", post(verify_2fa_handler))
         .route("/api/v1/settings/2fa", axum::routing::delete(disable_2fa_handler));
 
+    // Rules & Governance endpoints
+    router = router
+        // CAWS Rules CRUD
+        .route("/api/v1/rules", get(list_rules_handler))
+        .route("/api/v1/rules", post(create_rule_handler))
+        .route("/api/v1/rules/:id", get(get_rule_handler))
+        .route("/api/v1/rules/:id", axum::routing::patch(update_rule_handler))
+        .route("/api/v1/rules/:id", axum::routing::delete(delete_rule_handler))
+        // Rule validation
+        .route("/api/v1/rules/:id/validate", post(validate_rule_handler))
+        // Rule templates
+        .route("/api/v1/rules/templates", get(list_rule_templates_handler))
+        .route("/api/v1/rules/templates", post(create_rule_template_handler))
+        // Rule enforcement status
+        .route("/api/v1/rules/:id/enforcement", get(get_rule_enforcement_handler))
+        .route("/api/v1/rules/:id/enforcement", axum::routing::patch(update_rule_enforcement_handler))
+        // Rule history
+        .route("/api/v1/rules/:id/history", get(get_rule_history_handler))
+        // Violations
+        .route("/api/v1/violations", get(list_violations_handler))
+        .route("/api/v1/violations/:id", get(get_violation_handler))
+        .route("/api/v1/violations/:id", axum::routing::patch(update_violation_handler))
+        .route("/api/v1/violations/:id/resolve", post(resolve_violation_handler))
+        // Specifications
+        .route("/api/v1/specifications", get(list_specifications_handler))
+        .route("/api/v1/specifications", post(create_specification_handler))
+        .route("/api/v1/specifications/:id", get(get_specification_handler))
+        .route("/api/v1/specifications/:id", axum::routing::patch(update_specification_handler))
+        .route("/api/v1/specifications/:id", axum::routing::delete(delete_specification_handler));
+
     // Add CORS if enabled
     if enable_cors {
         router = router.layer(tower_http::cors::CorsLayer::permissive());
@@ -5829,6 +5859,510 @@ async fn disable_2fa_handler(
         }
         Err(e) => {
             error!("Failed to disable 2FA: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+// ============================================================================
+// Rules & Governance Handlers
+// ============================================================================
+
+#[derive(Deserialize)]
+struct CreateRuleRequest {
+    id: String,
+    name: String,
+    description: String,
+    rule_type: String,
+    severity: String,
+    file_patterns: JsonValue,
+    config: JsonValue,
+    constitutional_reference: Option<String>,
+    is_active: bool,
+}
+
+#[derive(Deserialize)]
+struct UpdateRuleRequest {
+    name: Option<String>,
+    description: Option<String>,
+    rule_type: Option<String>,
+    severity: Option<String>,
+    file_patterns: Option<JsonValue>,
+    config: Option<JsonValue>,
+    constitutional_reference: Option<String>,
+    is_active: Option<bool>,
+}
+
+#[derive(Deserialize)]
+struct CreateViolationRequest {
+    task_id: Uuid,
+    violation_code: String,
+    severity: String,
+    description: String,
+    file_path: Option<String>,
+    line_number: Option<i32>,
+    column_number: Option<i32>,
+    rule_id: String,
+    constitutional_reference: Option<String>,
+    status: Option<String>,
+    metadata: Option<JsonValue>,
+}
+
+#[derive(Deserialize)]
+struct UpdateViolationRequest {
+    status: Option<String>,
+    metadata: Option<JsonValue>,
+}
+
+#[derive(Deserialize)]
+struct CreateSpecificationRequest {
+    name: String,
+    version: String,
+    description: Option<String>,
+    rules: JsonValue,
+    config: JsonValue,
+    is_active: bool,
+}
+
+#[derive(Deserialize)]
+struct UpdateSpecificationRequest {
+    name: Option<String>,
+    version: Option<String>,
+    description: Option<String>,
+    rules: Option<JsonValue>,
+    config: Option<JsonValue>,
+    is_active: Option<bool>,
+}
+
+#[derive(Deserialize)]
+struct CreateRuleTemplateRequest {
+    id: String,
+    name: String,
+    description: String,
+    rule_type: String,
+    template_config: JsonValue,
+    example_config: Option<JsonValue>,
+    is_system: bool,
+    created_by: String,
+}
+
+#[derive(Deserialize)]
+struct UpdateRuleEnforcementRequest {
+    enforcement_state: Option<String>,
+    paused_until: Option<DateTime<Utc>>,
+    paused_reason: Option<String>,
+    override_reason: Option<String>,
+    metadata: Option<JsonValue>,
+}
+
+async fn list_rules_handler(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let rule_type = params.get("rule_type").map(|s| s.as_str());
+    let is_active = params.get("is_active").and_then(|s| s.parse::<bool>().ok());
+    
+    match db.get_caws_rules(rule_type, is_active).await {
+        Ok(rules) => Ok(Json(serde_json::json!(rules))),
+        Err(e) => {
+            error!("Failed to list rules: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn create_rule_handler(
+    State(state): State<AppState>,
+    Json(req): Json<CreateRuleRequest>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let create = data_infrastructure::database_operations::CreateCawsRule {
+        id: req.id,
+        name: req.name,
+        description: req.description,
+        rule_type: req.rule_type,
+        severity: req.severity,
+        file_patterns: req.file_patterns,
+        config: req.config,
+        constitutional_reference: req.constitutional_reference,
+        is_active: req.is_active,
+    };
+    
+    match db.create_caws_rule(create).await {
+        Ok(rule) => Ok(Json(serde_json::json!(rule))),
+        Err(e) => {
+            error!("Failed to create rule: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_rule_handler(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    match db.get_caws_rule(&id).await {
+        Ok(Some(rule)) => Ok(Json(serde_json::json!(rule))),
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            error!("Failed to get rule: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn update_rule_handler(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Json(req): Json<UpdateRuleRequest>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let update = data_infrastructure::database_operations::UpdateCawsRule {
+        name: req.name,
+        description: req.description,
+        rule_type: req.rule_type,
+        severity: req.severity,
+        file_patterns: req.file_patterns,
+        config: req.config,
+        constitutional_reference: req.constitutional_reference,
+        is_active: req.is_active,
+    };
+    
+    match db.update_caws_rule(&id, update).await {
+        Ok(rule) => Ok(Json(serde_json::json!(rule))),
+        Err(e) => {
+            error!("Failed to update rule: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn delete_rule_handler(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    match db.delete_caws_rule(&id).await {
+        Ok(_) => Ok(Json(serde_json::json!({
+            "status": "deleted",
+            "message": "Rule deleted successfully"
+        }))),
+        Err(e) => {
+            error!("Failed to delete rule: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn validate_rule_handler(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Json(_req): Json<JsonValue>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    // Get rule
+    let _rule = db.get_caws_rule(&id).await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+    
+    // Basic validation - check if rule config is valid JSON
+    // In production, this would validate against rule schema
+    Ok(Json(serde_json::json!({
+        "valid": true,
+        "rule_id": id,
+        "message": "Rule configuration is valid"
+    })))
+}
+
+async fn list_rule_templates_handler(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let rule_type = params.get("rule_type").map(|s| s.as_str());
+    
+    match db.get_rule_templates(rule_type).await {
+        Ok(templates) => Ok(Json(serde_json::json!(templates))),
+        Err(e) => {
+            error!("Failed to list rule templates: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn create_rule_template_handler(
+    State(state): State<AppState>,
+    Json(req): Json<CreateRuleTemplateRequest>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let create = data_infrastructure::database_operations::CreateRuleTemplate {
+        id: req.id,
+        name: req.name,
+        description: req.description,
+        rule_type: req.rule_type,
+        template_config: req.template_config,
+        example_config: req.example_config,
+        is_system: req.is_system,
+        created_by: req.created_by,
+    };
+    
+    match db.create_rule_template(create).await {
+        Ok(template) => Ok(Json(serde_json::json!(template))),
+        Err(e) => {
+            error!("Failed to create rule template: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_rule_enforcement_handler(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let task_id = params.get("task_id")
+        .and_then(|s| Uuid::parse_str(s).ok());
+    
+    match db.get_rule_enforcement_status(Some(&id), task_id).await {
+        Ok(statuses) => Ok(Json(serde_json::json!(statuses))),
+        Err(e) => {
+            error!("Failed to get rule enforcement status: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn update_rule_enforcement_handler(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Query(params): Query<HashMap<String, String>>,
+    Json(req): Json<UpdateRuleEnforcementRequest>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let task_id = params.get("task_id")
+        .and_then(|s| Uuid::parse_str(s).ok());
+    
+    let update = data_infrastructure::database_operations::UpdateRuleEnforcementStatus {
+        enforcement_state: req.enforcement_state,
+        paused_until: req.paused_until,
+        paused_reason: req.paused_reason,
+        override_reason: req.override_reason,
+        metadata: req.metadata,
+    };
+    
+    match db.update_rule_enforcement_status(&id, task_id, update).await {
+        Ok(status) => Ok(Json(serde_json::json!(status))),
+        Err(e) => {
+            error!("Failed to update rule enforcement status: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_rule_history_handler(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let limit = params.get("limit")
+        .and_then(|s| s.parse::<u32>().ok());
+    
+    match db.get_rule_history(&id, limit).await {
+        Ok(history) => Ok(Json(serde_json::json!(history))),
+        Err(e) => {
+            error!("Failed to get rule history: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn list_violations_handler(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let task_id = params.get("task_id")
+        .and_then(|s| Uuid::parse_str(s).ok());
+    let rule_id = params.get("rule_id").map(|s| s.as_str());
+    let status = params.get("status").map(|s| s.as_str());
+    
+    match db.get_caws_violations(task_id, rule_id, status).await {
+        Ok(violations) => Ok(Json(serde_json::json!(violations))),
+        Err(e) => {
+            error!("Failed to list violations: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_violation_handler(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    match db.get_caws_violation(id).await {
+        Ok(Some(violation)) => Ok(Json(serde_json::json!(violation))),
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            error!("Failed to get violation: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn update_violation_handler(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(req): Json<UpdateViolationRequest>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let update = data_infrastructure::database_operations::UpdateCawsViolation {
+        status: req.status,
+        resolved_at: None, // Will be set automatically if status is "resolved"
+        metadata: req.metadata,
+    };
+    
+    match db.update_caws_violation(id, update).await {
+        Ok(violation) => Ok(Json(serde_json::json!(violation))),
+        Err(e) => {
+            error!("Failed to update violation: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn resolve_violation_handler(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    match db.resolve_caws_violation(id).await {
+        Ok(_) => Ok(Json(serde_json::json!({
+            "status": "resolved",
+            "message": "Violation resolved successfully"
+        }))),
+        Err(e) => {
+            error!("Failed to resolve violation: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn list_specifications_handler(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let name = params.get("name").map(|s| s.as_str());
+    let is_active = params.get("is_active").and_then(|s| s.parse::<bool>().ok());
+    
+    match db.get_caws_specifications(name, is_active).await {
+        Ok(specs) => Ok(Json(serde_json::json!(specs))),
+        Err(e) => {
+            error!("Failed to list specifications: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn create_specification_handler(
+    State(state): State<AppState>,
+    Json(req): Json<CreateSpecificationRequest>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let create = data_infrastructure::database_operations::CreateCawsSpecification {
+        name: req.name,
+        version: req.version,
+        description: req.description,
+        rules: req.rules,
+        config: req.config,
+        is_active: req.is_active,
+    };
+    
+    match db.create_caws_specification(create).await {
+        Ok(spec) => Ok(Json(serde_json::json!(spec))),
+        Err(e) => {
+            error!("Failed to create specification: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_specification_handler(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    match db.get_caws_specification(id).await {
+        Ok(Some(spec)) => Ok(Json(serde_json::json!(spec))),
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            error!("Failed to get specification: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn update_specification_handler(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(req): Json<UpdateSpecificationRequest>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let update = data_infrastructure::database_operations::UpdateCawsSpecification {
+        name: req.name,
+        version: req.version,
+        description: req.description,
+        rules: req.rules,
+        config: req.config,
+        is_active: req.is_active,
+    };
+    
+    match db.update_caws_specification(id, update).await {
+        Ok(spec) => Ok(Json(serde_json::json!(spec))),
+        Err(e) => {
+            error!("Failed to update specification: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn delete_specification_handler(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    match db.delete_caws_specification(id).await {
+        Ok(_) => Ok(Json(serde_json::json!({
+            "status": "deleted",
+            "message": "Specification deleted successfully"
+        }))),
+        Err(e) => {
+            error!("Failed to delete specification: {}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }

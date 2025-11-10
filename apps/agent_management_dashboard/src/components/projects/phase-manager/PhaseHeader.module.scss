@@ -6,12 +6,12 @@
 
 .phaseTitle {
   font-size: $font-size-2xl; // text-2xl
-  color: white; // text-white
+  color: $color-white; // text-white
   margin-bottom: $spacing-2; // mb-2
 }
 
 .phaseDescription {
-  color: oklch(0.5 0 0); // text-zinc-400
+  color: $color-zinc-400; // text-zinc-400
   margin-bottom: $spacing-4; // mb-4
 }
 

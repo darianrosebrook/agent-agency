@@ -1,7 +1,7 @@
 @use '../../../styles/tokens' as *;
 
 .taskItem {
-  border-bottom: 1px solid oklch(0.269 0 0); // border-b border-zinc-800
+  border-bottom: 1px solid $color-zinc-800; // border-b border-zinc-800
 
   &:last-child {
     border-bottom: 0; // last:border-0
@@ -14,7 +14,7 @@
   transition: background-color $transition-normal;
 
   &:hover {
-    background-color: #1f1f1f; // hover:bg-[#1f1f1f]
+    background-color: $color-dark-bg-hover-alt; // hover:bg-[#1f1f1f]
     text-decoration: none; // hover:no-underline
   }
 }
@@ -36,12 +36,12 @@
 .taskProgressIcon {
   width: $spacing-5; // w-5
   height: $spacing-5; // h-5
-  color: oklch(0.5 0 0); // text-zinc-500
+  color: $color-zinc-500; // text-zinc-500
 }
 
 .taskProgressText {
   font-size: $font-size-sm; // text-sm
-  color: oklch(0.5 0 0); // text-zinc-400
+  color: $color-zinc-400; // text-zinc-400
 }
 
 .taskTitleInput {
@@ -49,11 +49,11 @@
   background-color: transparent; // bg-transparent
   border: none;
   outline: none;
-  color: oklch(0.75 0 0); // text-zinc-100
+  color: $color-zinc-100; // text-zinc-100
   transition: box-shadow $transition-normal;
 
   &:focus {
-    box-shadow: 0 0 0 2px #3b82f6; // focus:ring-2 focus:ring-blue-500
+    box-shadow: 0 0 0 2px $color-blue-500; // focus:ring-2 focus:ring-blue-500
   }
   border-radius: $spacing-xs; // rounded
   padding-inline: $spacing-2; // px-2
@@ -64,7 +64,7 @@
 .taskContent {
   padding-inline: $spacing-6; // px-6
   padding-bottom: $spacing-6; // pb-6
-  background-color: #0f0f0f; // bg-[#0f0f0f]
+  background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
 }
 
 .taskDescriptionContainer {
@@ -77,13 +77,13 @@
   background-color: transparent; // bg-transparent
   border: none;
   outline: none;
-  color: oklch(0.5 0 0); // text-zinc-400
+  color: $color-zinc-400; // text-zinc-400
   font-size: $font-size-sm; // text-sm
   resize: none;
   transition: box-shadow $transition-normal;
 
   &:focus {
-    box-shadow: 0 0 0 2px #3b82f6; // focus:ring-2 focus:ring-blue-500
+    box-shadow: 0 0 0 2px $color-blue-500; // focus:ring-2 focus:ring-blue-500
   }
   border-radius: $spacing-xs; // rounded
   padding-inline: $spacing-2; // px-2

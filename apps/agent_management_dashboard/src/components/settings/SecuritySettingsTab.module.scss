@@ -9,7 +9,7 @@
 .loading {
   padding: $spacing-8;
   text-align: center;
-  color: oklch(0.5 0 0);
+  color: $color-zinc-400;
 }
 
 .form {
@@ -40,14 +40,14 @@
   display: flex;
   justify-content: center;
   padding: $spacing-4;
-  background-color: white;
+  background-color: $color-white;
   border-radius: $spacing-md;
 }
 
 .backupCodes {
   margin-top: $spacing-4;
   padding: $spacing-4;
-  background-color: #0f0f0f;
+  background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
   border-radius: $spacing-md;
   
   ul {
@@ -58,7 +58,7 @@
     li {
       padding: $spacing-1;
       font-family: monospace;
-      color: white;
+      color: $color-white;
     }
   }
 }

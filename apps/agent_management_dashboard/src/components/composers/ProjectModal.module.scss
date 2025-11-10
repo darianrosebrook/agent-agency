@@ -12,11 +12,11 @@
 }
 
 .modalContent {
-  background-color: rgb(39, 39, 42); // bg-zinc-800
+  background-color: $color-zinc-800; // bg-zinc-800
   border-radius: $spacing-lg; // rounded-lg
   width: 100%; // w-full
   max-width: 42rem; // max-w-2xl
-  color: white; // text-white
+  color: $color-white; // text-white
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); // shadow-2xl
 }
 
@@ -25,15 +25,15 @@
   align-items: center;
   justify-content: space-between;
   padding: $spacing-4; // p-4
-  border-bottom: 1px solid rgb(63, 63, 70); // border-b border-zinc-700
+  border-bottom: 1px solid $color-zinc-700; // border-b border-zinc-700
 }
 
 .closeButton {
-  color: rgb(156, 163, 175); // text-gray-400
+  color: $color-gray-400; // text-gray-400
   transition: color $transition-normal;
 
   &:hover {
-    color: white; // hover:text-white
+    color: $color-white; // hover:text-white
   }
 }
 
@@ -47,7 +47,7 @@
   align-items: center;
   gap: $spacing-2; // gap-2
   font-size: $font-size-sm; // text-sm
-  color: rgb(156, 163, 175); // text-gray-400
+  color: $color-gray-400; // text-gray-400
 }
 
 .headerActions {
@@ -61,7 +61,7 @@
   border-radius: calc(var(--radius) - 2px); // rounded
 
   &:hover {
-    background-color: rgb(63, 63, 70); // hover:bg-zinc-700
+    background-color: $color-zinc-700; // hover:bg-zinc-700
   }
 }
 
@@ -82,12 +82,12 @@
   background-color: transparent; // bg-transparent
   border: none;
   outline: none;
-  color: white; // text-white
+  color: $color-white; // text-white
   font-size: $font-size-2xl; // text-2xl
   font-weight: $font-weight-semibold; // font-semibold
 
   &::placeholder {
-    color: rgb(75, 85, 99); // placeholder:text-gray-600
+    color: $color-gray-600; // placeholder:text-gray-600
   }
 
   margin-bottom: $spacing-2; // mb-2
@@ -106,18 +106,18 @@
   border: none;
   outline: none;
   font-size: $font-size-sm; // text-sm
-  color: rgb(156, 163, 175); // text-gray-400
+  color: $color-gray-400; // text-gray-400
   resize: none;
   line-height: 1.625; // leading-relaxed
 
   &::placeholder {
-    color: rgb(75, 85, 99); // placeholder:text-gray-600
+    color: $color-gray-600; // placeholder:text-gray-600
   }
 }
 
 .descriptionDisplay {
   font-size: $font-size-sm; // text-sm
-  color: rgb(156, 163, 175); // text-gray-400
+  color: $color-gray-400; // text-gray-400
   line-height: 1.625; // leading-relaxed
   cursor: text;
 }
@@ -134,7 +134,7 @@
   top: 100%; // top-full
   left: 0;
   margin-top: $spacing-2; // mt-2
-  background-color: white; // bg-white
+  background-color: $color-white; // bg-white
   border-radius: $spacing-lg; // rounded-lg
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); // shadow-xl
   padding-block: $spacing-2; // py-2
@@ -152,7 +152,7 @@
   transition: background-color $transition-normal;
 
   &:hover {
-    background-color: rgb(243, 244, 246); // hover:bg-gray-100
+    background-color: $color-gray-100; // hover:bg-gray-100
   }
 }
 
@@ -165,7 +165,7 @@
 .assigneeAvatar {
   width: $spacing-5; // w-5
   height: $spacing-5; // h-5
-  background-color: #f97316; // bg-orange-500
+  background-color: $color-orange-500; // bg-orange-500
   border-radius: 9999px; // rounded-full
   display: flex;
   align-items: center;
@@ -178,10 +178,10 @@
   background-color: transparent; // bg-transparent
   border: none;
   outline: none;
-  color: white; // text-white
+  color: $color-white; // text-white
 
   &::placeholder {
-    color: rgb(75, 85, 99); // placeholder:text-gray-600
+    color: $color-gray-600; // placeholder:text-gray-600
   }
 }
 
@@ -189,10 +189,10 @@
   background-color: transparent; // bg-transparent
   border: none;
   outline: none;
-  color: white; // text-white
+  color: $color-white; // text-white
 
   &::placeholder {
-    color: rgb(75, 85, 99); // placeholder:text-gray-600
+    color: $color-gray-600; // placeholder:text-gray-600
   }
 }
 
@@ -210,12 +210,12 @@
   background-color: transparent; // bg-transparent
   border: none;
   outline: none;
-  color: white; // text-white
+  color: $color-white; // text-white
   font-size: $font-size-xs; // text-xs
   min-width: 5rem; // min-w-[80px]
 
   &::placeholder {
-    color: rgb(75, 85, 99); // placeholder:text-gray-600
+    color: $color-gray-600; // placeholder:text-gray-600
   }
 }
 
@@ -226,33 +226,33 @@
   gap: $spacing-3; // gap-3
   padding-inline: $spacing-6; // px-6
   padding-block: $spacing-4; // py-4
-  border-top: 1px solid rgb(63, 63, 70); // border-t border-zinc-700
+  border-top: 1px solid $color-zinc-700; // border-t border-zinc-700
 }
 
 .cancelButton {
   padding-inline: $spacing-4; // px-4
   padding-block: $spacing-2; // py-2
-  color: rgb(156, 163, 175); // text-gray-400
+  color: $color-gray-400; // text-gray-400
   transition: color $transition-normal, background-color $transition-normal;
   border-radius: calc(var(--radius) - 2px); // rounded
 
   &:hover {
-    color: white; // hover:text-white
-    background-color: rgb(63, 63, 70); // hover:bg-zinc-700
+    color: $color-white; // hover:text-white
+    background-color: $color-zinc-700; // hover:bg-zinc-700
   }
 }
 
 .confirmButton {
   padding-inline: $spacing-4; // px-4
   padding-block: $spacing-2; // py-2
-  background-color: #2563eb; // bg-blue-600
-  color: white; // text-white
+  background-color: $color-blue-600; // bg-blue-600
+  color: $color-white; // text-white
   border-radius: 0.375rem; // rounded-md
   transition: background-color $transition-normal;
   font-weight: $font-weight-medium; // font-medium
 
   &:hover:not(:disabled) {
-    background-color: #1d4ed8; // hover:bg-blue-700
+    background-color: $color-blue-700; // hover:bg-blue-700
   }
 
   &:disabled {

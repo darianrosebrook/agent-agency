@@ -26,14 +26,17 @@ use super::super::database_operations::{
     CreateWaiver, UpdateWaiver, CreateUser, UpdateUser, CreateSession, UpdateSession,
     CreatePasswordResetToken, CreateUserSetting, UpdateUserSetting, CreateAppSetting,
     UpdateAppSetting, CreateIntegration, UpdateIntegration, CreateApiKey, UpdateApiKey,
-    CreateTwoFactorAuth, UpdateTwoFactorAuth
+    CreateTwoFactorAuth, UpdateTwoFactorAuth, CreateCawsRule, UpdateCawsRule,
+    CreateCawsViolation, UpdateCawsViolation, CreateCawsSpecification, UpdateCawsSpecification,
+    CreateRuleTemplate, RuleTemplate, RuleEnforcementStatus, UpdateRuleEnforcementStatus,
+    RuleHistory
 };
 use super::super::database_audit::DatabaseAuditLogger;
 use super::super::models::{
     Judge, Worker, Task, TaskExecution, CouncilVerdict, JudgeEvaluation, AuditTrailEntry,
     PlanningTelemetry, Milestone, PlanningSession, EvidenceArtifact, PlanningAuditEvent,
     ExecutionPlan, Waiver, User, Session, PasswordResetToken, UserSetting, AppSetting,
-    Integration, ApiKey, TwoFactorAuth
+    Integration, ApiKey, TwoFactorAuth, CawsRule, CawsViolation, CawsSpecification
 };
 use crate::connection_manager::{ConnectionPoolManager, PooledDatabaseClient};
 use crate::database_config::DatabaseConfig;
@@ -2461,6 +2464,830 @@ impl DatabaseOperations for DatabaseClient {
             .await?;
         
         Ok(())
+    }
+
+    // ============================================================================
+    // CAWS Rules Operations
+    // ============================================================================
+
+    async fn create_caws_rule(&self, rule: CreateCawsRule) -> Result<CawsRule> {
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            INSERT INTO caws_rules (
+                id, name, description, rule_type, severity, file_patterns,
+                config, constitutional_reference, is_active, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            "#
+        )
+        .bind(&rule.id)
+        .bind(&rule.name)
+        .bind(&rule.description)
+        .bind(&rule.rule_type)
+        .bind(&rule.severity)
+        .bind(&rule.file_patterns)
+        .bind(&rule.config)
+        .bind(&rule.constitutional_reference)
+        .bind(rule.is_active)
+        .bind(now)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+        
+        Ok(CawsRule {
+            id: rule.id,
+            name: rule.name,
+            description: rule.description,
+            rule_type: rule.rule_type,
+            severity: rule.severity,
+            file_patterns: rule.file_patterns,
+            config: rule.config,
+            constitutional_reference: rule.constitutional_reference,
+            is_active: rule.is_active,
+            created_at: now,
+            updated_at: now,
+        })
+    }
+
+    async fn get_caws_rule(&self, id: &str) -> Result<Option<CawsRule>> {
+        let row = sqlx::query_as::<_, CawsRule>(
+            "SELECT * FROM caws_rules WHERE id = $1"
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+        
+        Ok(row)
+    }
+
+    async fn get_caws_rules(&self, rule_type: Option<&str>, is_active: Option<bool>) -> Result<Vec<CawsRule>> {
+        let rules = match (rule_type, is_active) {
+            (Some(rt), Some(active)) => {
+                sqlx::query_as::<_, CawsRule>(
+                    "SELECT * FROM caws_rules WHERE rule_type = $1 AND is_active = $2 ORDER BY created_at DESC"
+                )
+                .bind(rt)
+                .bind(active)
+                .fetch_all(&self.pool)
+                .await?
+            }
+            (Some(rt), None) => {
+                sqlx::query_as::<_, CawsRule>(
+                    "SELECT * FROM caws_rules WHERE rule_type = $1 ORDER BY created_at DESC"
+                )
+                .bind(rt)
+                .fetch_all(&self.pool)
+                .await?
+            }
+            (None, Some(active)) => {
+                sqlx::query_as::<_, CawsRule>(
+                    "SELECT * FROM caws_rules WHERE is_active = $1 ORDER BY created_at DESC"
+                )
+                .bind(active)
+                .fetch_all(&self.pool)
+                .await?
+            }
+            (None, None) => {
+                sqlx::query_as::<_, CawsRule>(
+                    "SELECT * FROM caws_rules ORDER BY created_at DESC"
+                )
+                .fetch_all(&self.pool)
+                .await?
+            }
+        };
+        
+        Ok(rules)
+    }
+
+    async fn update_caws_rule(&self, id: &str, update: UpdateCawsRule) -> Result<CawsRule> {
+        // Get old rule for history
+        let old_rule = self.get_caws_rule(id).await?;
+        
+        // Build update query dynamically
+        let mut set_clauses = Vec::new();
+        let mut bind_count = 1;
+        
+        if update.name.is_some() {
+            set_clauses.push(format!("name = ${}", bind_count));
+            bind_count += 1;
+        }
+        if update.description.is_some() {
+            set_clauses.push(format!("description = ${}", bind_count));
+            bind_count += 1;
+        }
+        if update.rule_type.is_some() {
+            set_clauses.push(format!("rule_type = ${}", bind_count));
+            bind_count += 1;
+        }
+        if update.severity.is_some() {
+            set_clauses.push(format!("severity = ${}", bind_count));
+            bind_count += 1;
+        }
+        if update.file_patterns.is_some() {
+            set_clauses.push(format!("file_patterns = ${}", bind_count));
+            bind_count += 1;
+        }
+        if update.config.is_some() {
+            set_clauses.push(format!("config = ${}", bind_count));
+            bind_count += 1;
+        }
+        if update.constitutional_reference.is_some() {
+            set_clauses.push(format!("constitutional_reference = ${}", bind_count));
+            bind_count += 1;
+        }
+        if update.is_active.is_some() {
+            set_clauses.push(format!("is_active = ${}", bind_count));
+            bind_count += 1;
+        }
+        
+        if set_clauses.is_empty() {
+            return old_rule.ok_or_else(|| anyhow::anyhow!("Rule not found"));
+        }
+        
+        set_clauses.push(format!("updated_at = ${}", bind_count));
+        bind_count += 1;
+        
+        let query_str = format!(
+            "UPDATE caws_rules SET {} WHERE id = ${}",
+            set_clauses.join(", "),
+            bind_count
+        );
+        
+        let mut query = sqlx::query(&query_str);
+        if let Some(name) = &update.name {
+            query = query.bind(name);
+        }
+        if let Some(description) = &update.description {
+            query = query.bind(description);
+        }
+        if let Some(rule_type) = &update.rule_type {
+            query = query.bind(rule_type);
+        }
+        if let Some(severity) = &update.severity {
+            query = query.bind(severity);
+        }
+        if let Some(file_patterns) = &update.file_patterns {
+            query = query.bind(file_patterns);
+        }
+        if let Some(config) = &update.config {
+            query = query.bind(config);
+        }
+        if let Some(ref constitutional_reference) = update.constitutional_reference {
+            query = query.bind(constitutional_reference);
+        }
+        if let Some(is_active) = update.is_active {
+            query = query.bind(is_active);
+        }
+        query = query.bind(Utc::now());
+        query = query.bind(id);
+        
+        query.execute(&self.pool).await?;
+        
+        // Record history
+        if let Some(old) = &old_rule {
+            sqlx::query(
+                r#"
+                INSERT INTO rule_history (rule_id, action, changed_by, old_values, new_values, change_reason)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                "#
+            )
+            .bind(id)
+            .bind("updated")
+            .bind("system")
+            .bind(serde_json::json!({
+                "name": old.name,
+                "description": old.description,
+                "is_active": old.is_active,
+            }))
+            .bind(serde_json::json!({
+                "name": update.name.as_ref().unwrap_or(&old.name),
+                "description": update.description.as_ref().unwrap_or(&old.description),
+                "is_active": update.is_active.unwrap_or(old.is_active),
+            }))
+            .bind(None::<String>)
+            .execute(&self.pool)
+            .await?;
+        }
+        
+        self.get_caws_rule(id).await?
+            .ok_or_else(|| anyhow::anyhow!("Rule not found after update"))
+    }
+
+    async fn delete_caws_rule(&self, id: &str) -> Result<()> {
+        // Record history before deletion
+        if let Some(rule) = self.get_caws_rule(id).await? {
+            sqlx::query(
+                r#"
+                INSERT INTO rule_history (rule_id, action, changed_by, old_values, change_reason)
+                VALUES ($1, $2, $3, $4, $5)
+                "#
+            )
+            .bind(id)
+            .bind("deleted")
+            .bind("system")
+            .bind(serde_json::json!({
+                "name": rule.name,
+                "description": rule.description,
+            }))
+            .bind(None::<String>)
+            .execute(&self.pool)
+            .await?;
+        }
+        
+        sqlx::query("DELETE FROM caws_rules WHERE id = $1")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        
+        Ok(())
+    }
+
+    // ============================================================================
+    // CAWS Violations Operations
+    // ============================================================================
+
+    async fn create_caws_violation(&self, violation: CreateCawsViolation) -> Result<CawsViolation> {
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            INSERT INTO caws_violations (
+                id, task_id, violation_code, severity, description, file_path,
+                line_number, column_number, rule_id, constitutional_reference,
+                status, created_at, metadata
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            "#
+        )
+        .bind(id)
+        .bind(violation.task_id)
+        .bind(&violation.violation_code)
+        .bind(&violation.severity)
+        .bind(&violation.description)
+        .bind(&violation.file_path)
+        .bind(violation.line_number)
+        .bind(violation.column_number)
+        .bind(&violation.rule_id)
+        .bind(&violation.constitutional_reference)
+        .bind(&violation.status)
+        .bind(now)
+        .bind(&violation.metadata)
+        .execute(&self.pool)
+        .await?;
+        
+        Ok(CawsViolation {
+            id,
+            task_id: violation.task_id,
+            violation_code: violation.violation_code,
+            severity: violation.severity,
+            description: violation.description,
+            file_path: violation.file_path,
+            line_number: violation.line_number,
+            column_number: violation.column_number,
+            rule_id: violation.rule_id,
+            constitutional_reference: violation.constitutional_reference,
+            status: violation.status,
+            created_at: now,
+            resolved_at: None,
+            metadata: violation.metadata,
+        })
+    }
+
+    async fn get_caws_violation(&self, id: Uuid) -> Result<Option<CawsViolation>> {
+        let row = sqlx::query_as::<_, CawsViolation>(
+            "SELECT * FROM caws_violations WHERE id = $1"
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+        
+        Ok(row)
+    }
+
+    async fn get_caws_violations(&self, task_id: Option<Uuid>, rule_id: Option<&str>, status: Option<&str>) -> Result<Vec<CawsViolation>> {
+        let mut query = String::from("SELECT * FROM caws_violations WHERE 1=1");
+        let mut bind_count = 1;
+        
+        if let Some(tid) = task_id {
+            query.push_str(&format!(" AND task_id = ${}", bind_count));
+            bind_count += 1;
+        }
+        
+        if let Some(rid) = rule_id {
+            query.push_str(&format!(" AND rule_id = ${}", bind_count));
+            bind_count += 1;
+        }
+        
+        if let Some(st) = status {
+            query.push_str(&format!(" AND status = ${}", bind_count));
+            bind_count += 1;
+        }
+        
+        query.push_str(" ORDER BY created_at DESC");
+        
+        let mut query_builder = sqlx::query_as::<_, CawsViolation>(&query);
+        if let Some(tid) = task_id {
+            query_builder = query_builder.bind(tid);
+        }
+        if let Some(rid) = rule_id {
+            query_builder = query_builder.bind(rid);
+        }
+        if let Some(st) = status {
+            query_builder = query_builder.bind(st);
+        }
+        
+        let violations = query_builder.fetch_all(&self.pool).await?;
+        Ok(violations)
+    }
+
+    async fn update_caws_violation(&self, id: Uuid, update: UpdateCawsViolation) -> Result<CawsViolation> {
+        let mut updates = Vec::new();
+        let mut bind_count = 1;
+        
+        if let Some(status) = &update.status {
+            updates.push(format!("status = ${}", bind_count));
+            bind_count += 1;
+        }
+        
+        if update.resolved_at.is_some() {
+            updates.push(format!("resolved_at = ${}", bind_count));
+            bind_count += 1;
+        }
+        
+        if let Some(metadata) = &update.metadata {
+            updates.push(format!("metadata = ${}", bind_count));
+            bind_count += 1;
+        }
+        
+        if updates.is_empty() {
+            return self.get_caws_violation(id).await?
+                .ok_or_else(|| anyhow::anyhow!("Violation not found"));
+        }
+        
+        let query_str = format!(
+            "UPDATE caws_violations SET {} WHERE id = ${}",
+            updates.join(", "),
+            bind_count
+        );
+        
+        let mut query = sqlx::query(&query_str);
+        if let Some(status) = &update.status {
+            query = query.bind(status);
+        }
+        if let Some(resolved_at) = update.resolved_at {
+            query = query.bind(resolved_at);
+        } else if update.status.as_ref().map(|s| s == "resolved").unwrap_or(false) {
+            query = query.bind(Utc::now());
+        }
+        if let Some(metadata) = &update.metadata {
+            query = query.bind(metadata);
+        }
+        query = query.bind(id);
+        
+        query.execute(&self.pool).await?;
+        
+        self.get_caws_violation(id).await?
+            .ok_or_else(|| anyhow::anyhow!("Violation not found after update"))
+    }
+
+    async fn resolve_caws_violation(&self, id: Uuid) -> Result<()> {
+        sqlx::query(
+            "UPDATE caws_violations SET status = 'resolved', resolved_at = NOW() WHERE id = $1"
+        )
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
+        
+        Ok(())
+    }
+
+    // ============================================================================
+    // CAWS Specifications Operations
+    // ============================================================================
+
+    async fn create_caws_specification(&self, spec: CreateCawsSpecification) -> Result<CawsSpecification> {
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            INSERT INTO caws_specifications (
+                id, name, version, description, rules, config, is_active, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            "#
+        )
+        .bind(id)
+        .bind(&spec.name)
+        .bind(&spec.version)
+        .bind(&spec.description)
+        .bind(&spec.rules)
+        .bind(&spec.config)
+        .bind(spec.is_active)
+        .bind(now)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+        
+        Ok(CawsSpecification {
+            id,
+            name: spec.name,
+            version: spec.version,
+            description: spec.description,
+            rules: spec.rules,
+            config: spec.config,
+            is_active: spec.is_active,
+            created_at: now,
+            updated_at: now,
+        })
+    }
+
+    async fn get_caws_specification(&self, id: Uuid) -> Result<Option<CawsSpecification>> {
+        let row = sqlx::query_as::<_, CawsSpecification>(
+            "SELECT * FROM caws_specifications WHERE id = $1"
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+        
+        Ok(row)
+    }
+
+    async fn get_caws_specifications(&self, name: Option<&str>, is_active: Option<bool>) -> Result<Vec<CawsSpecification>> {
+        let specs = match (name, is_active) {
+            (Some(n), Some(active)) => {
+                sqlx::query_as::<_, CawsSpecification>(
+                    "SELECT * FROM caws_specifications WHERE name = $1 AND is_active = $2 ORDER BY created_at DESC"
+                )
+                .bind(n)
+                .bind(active)
+                .fetch_all(&self.pool)
+                .await?
+            }
+            (Some(n), None) => {
+                sqlx::query_as::<_, CawsSpecification>(
+                    "SELECT * FROM caws_specifications WHERE name = $1 ORDER BY created_at DESC"
+                )
+                .bind(n)
+                .fetch_all(&self.pool)
+                .await?
+            }
+            (None, Some(active)) => {
+                sqlx::query_as::<_, CawsSpecification>(
+                    "SELECT * FROM caws_specifications WHERE is_active = $1 ORDER BY created_at DESC"
+                )
+                .bind(active)
+                .fetch_all(&self.pool)
+                .await?
+            }
+            (None, None) => {
+                sqlx::query_as::<_, CawsSpecification>(
+                    "SELECT * FROM caws_specifications ORDER BY created_at DESC"
+                )
+                .fetch_all(&self.pool)
+                .await?
+            }
+        };
+        
+        Ok(specs)
+    }
+
+    async fn update_caws_specification(&self, id: Uuid, update: UpdateCawsSpecification) -> Result<CawsSpecification> {
+        let mut updates = Vec::new();
+        let mut bind_count = 1;
+        
+        if let Some(name) = &update.name {
+            updates.push(format!("name = ${}", bind_count));
+            bind_count += 1;
+        }
+        if let Some(version) = &update.version {
+            updates.push(format!("version = ${}", bind_count));
+            bind_count += 1;
+        }
+        if update.description.is_some() {
+            updates.push(format!("description = ${}", bind_count));
+            bind_count += 1;
+        }
+        if let Some(rules) = &update.rules {
+            updates.push(format!("rules = ${}", bind_count));
+            bind_count += 1;
+        }
+        if let Some(config) = &update.config {
+            updates.push(format!("config = ${}", bind_count));
+            bind_count += 1;
+        }
+        if let Some(is_active) = update.is_active {
+            updates.push(format!("is_active = ${}", bind_count));
+            bind_count += 1;
+        }
+        
+        if updates.is_empty() {
+            return self.get_caws_specification(id).await?
+                .ok_or_else(|| anyhow::anyhow!("Specification not found"));
+        }
+        
+        updates.push(format!("updated_at = ${}", bind_count));
+        bind_count += 1;
+        
+        let query_str = format!(
+            "UPDATE caws_specifications SET {} WHERE id = ${}",
+            updates.join(", "),
+            bind_count
+        );
+        
+        let mut query = sqlx::query(&query_str);
+        if let Some(name) = &update.name {
+            query = query.bind(name);
+        }
+        if let Some(version) = &update.version {
+            query = query.bind(version);
+        }
+        if let Some(description) = &update.description {
+            query = query.bind(description);
+        }
+        if let Some(rules) = &update.rules {
+            query = query.bind(rules);
+        }
+        if let Some(config) = &update.config {
+            query = query.bind(config);
+        }
+        if let Some(is_active) = update.is_active {
+            query = query.bind(is_active);
+        }
+        query = query.bind(Utc::now());
+        query = query.bind(id);
+        
+        query.execute(&self.pool).await?;
+        
+        self.get_caws_specification(id).await?
+            .ok_or_else(|| anyhow::anyhow!("Specification not found after update"))
+    }
+
+    async fn delete_caws_specification(&self, id: Uuid) -> Result<()> {
+        sqlx::query("DELETE FROM caws_specifications WHERE id = $1")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        
+        Ok(())
+    }
+
+    // ============================================================================
+    // Rule Templates Operations
+    // ============================================================================
+
+    async fn get_rule_templates(&self, rule_type: Option<&str>) -> Result<Vec<RuleTemplate>> {
+        let query = if let Some(rt) = rule_type {
+            sqlx::query_as::<_, RuleTemplate>(
+                "SELECT * FROM rule_templates WHERE rule_type = $1 ORDER BY created_at DESC"
+            )
+            .bind(rt)
+        } else {
+            sqlx::query_as::<_, RuleTemplate>(
+                "SELECT * FROM rule_templates ORDER BY created_at DESC"
+            )
+        };
+        
+        let templates = query.fetch_all(&self.pool).await?;
+        Ok(templates)
+    }
+
+    async fn create_rule_template(&self, template: CreateRuleTemplate) -> Result<RuleTemplate> {
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            INSERT INTO rule_templates (
+                id, name, description, rule_type, template_config, example_config,
+                is_system, created_by, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            "#
+        )
+        .bind(&template.id)
+        .bind(&template.name)
+        .bind(&template.description)
+        .bind(&template.rule_type)
+        .bind(&template.template_config)
+        .bind(&template.example_config)
+        .bind(template.is_system)
+        .bind(&template.created_by)
+        .bind(now)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+        
+        Ok(RuleTemplate {
+            id: template.id,
+            name: template.name,
+            description: template.description,
+            rule_type: template.rule_type,
+            template_config: template.template_config,
+            example_config: template.example_config,
+            is_system: template.is_system,
+            created_by: template.created_by,
+            created_at: now,
+            updated_at: now,
+        })
+    }
+
+    // ============================================================================
+    // Rule Enforcement Status Operations
+    // ============================================================================
+
+    async fn get_rule_enforcement_status(&self, rule_id: Option<&str>, task_id: Option<Uuid>) -> Result<Vec<RuleEnforcementStatus>> {
+        let mut query = String::from("SELECT * FROM rule_enforcement_status WHERE 1=1");
+        let mut bind_count = 1;
+        
+        if rule_id.is_some() {
+            query.push_str(&format!(" AND rule_id = ${}", bind_count));
+            bind_count += 1;
+        }
+        
+        if task_id.is_some() {
+            query.push_str(&format!(" AND task_id = ${}", bind_count));
+            bind_count += 1;
+        }
+        
+        query.push_str(" ORDER BY created_at DESC");
+        
+        let mut query_builder = sqlx::query_as::<_, RuleEnforcementStatus>(&query);
+        if let Some(rid) = rule_id {
+            query_builder = query_builder.bind(rid);
+        }
+        if let Some(tid) = task_id {
+            query_builder = query_builder.bind(tid);
+        }
+        
+        let statuses = query_builder.fetch_all(&self.pool).await?;
+        Ok(statuses)
+    }
+
+    async fn update_rule_enforcement_status(&self, rule_id: &str, task_id: Option<Uuid>, status: UpdateRuleEnforcementStatus) -> Result<RuleEnforcementStatus> {
+        // Check if record exists
+        let existing = if let Some(tid) = task_id {
+            sqlx::query_as::<_, RuleEnforcementStatus>(
+                "SELECT * FROM rule_enforcement_status WHERE rule_id = $1 AND task_id = $2"
+            )
+            .bind(rule_id)
+            .bind(tid)
+            .fetch_optional(&self.pool)
+            .await?
+        } else {
+            sqlx::query_as::<_, RuleEnforcementStatus>(
+                "SELECT * FROM rule_enforcement_status WHERE rule_id = $1 AND task_id IS NULL"
+            )
+            .bind(rule_id)
+            .fetch_optional(&self.pool)
+            .await?
+        };
+        
+        if let Some(existing) = existing {
+            // Update existing
+            let mut updates = Vec::new();
+            let mut bind_count = 1;
+            
+            if let Some(state) = &status.enforcement_state {
+                updates.push(format!("enforcement_state = ${}", bind_count));
+                bind_count += 1;
+            }
+            if status.paused_until.is_some() {
+                updates.push(format!("paused_until = ${}", bind_count));
+                bind_count += 1;
+            }
+            if status.paused_reason.is_some() {
+                updates.push(format!("paused_reason = ${}", bind_count));
+                bind_count += 1;
+            }
+            if status.override_reason.is_some() {
+                updates.push(format!("override_reason = ${}", bind_count));
+                bind_count += 1;
+            }
+            if let Some(metadata) = &status.metadata {
+                updates.push(format!("metadata = ${}", bind_count));
+                bind_count += 1;
+            }
+            
+            if !updates.is_empty() {
+                updates.push(format!("updated_at = ${}", bind_count));
+                bind_count += 1;
+                
+                let where_clause = if task_id.is_some() {
+                    format!("rule_id = ${} AND task_id = ${}", bind_count, bind_count + 1)
+                } else {
+                    format!("rule_id = ${} AND task_id IS NULL", bind_count)
+                };
+                
+                let query_str = format!(
+                    "UPDATE rule_enforcement_status SET {} WHERE {}",
+                    updates.join(", "),
+                    where_clause
+                );
+                
+                let mut query = sqlx::query(&query_str);
+                if let Some(state) = &status.enforcement_state {
+                    query = query.bind(state);
+                }
+                if let Some(paused_until) = status.paused_until {
+                    query = query.bind(paused_until);
+                }
+                if let Some(reason) = &status.paused_reason {
+                    query = query.bind(reason);
+                }
+                if let Some(reason) = &status.override_reason {
+                    query = query.bind(reason);
+                }
+                if let Some(metadata) = &status.metadata {
+                    query = query.bind(metadata);
+                }
+                query = query.bind(Utc::now());
+                query = query.bind(rule_id);
+                if let Some(tid) = task_id {
+                    query = query.bind(tid);
+                }
+                
+                query.execute(&self.pool).await?;
+            }
+            
+            // Return updated record
+            if let Some(tid) = task_id {
+                sqlx::query_as::<_, RuleEnforcementStatus>(
+                    "SELECT * FROM rule_enforcement_status WHERE rule_id = $1 AND task_id = $2"
+                )
+                .bind(rule_id)
+                .bind(tid)
+                .fetch_one(&self.pool)
+                .await
+                .map_err(|e| anyhow::anyhow!("Failed to fetch updated status: {}", e))
+            } else {
+                sqlx::query_as::<_, RuleEnforcementStatus>(
+                    "SELECT * FROM rule_enforcement_status WHERE rule_id = $1 AND task_id IS NULL"
+                )
+                .bind(rule_id)
+                .fetch_one(&self.pool)
+                .await
+                .map_err(|e| anyhow::anyhow!("Failed to fetch updated status: {}", e))
+            }
+        } else {
+            // Create new
+            let id = Uuid::new_v4();
+            let now = Utc::now();
+            
+            sqlx::query(
+                r#"
+                INSERT INTO rule_enforcement_status (
+                    id, rule_id, task_id, enforcement_state, paused_until,
+                    paused_reason, override_reason, metadata, created_at, updated_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                "#
+            )
+            .bind(id)
+            .bind(rule_id)
+            .bind(task_id)
+            .bind(status.enforcement_state.as_deref().unwrap_or("active"))
+            .bind(status.paused_until)
+            .bind(&status.paused_reason)
+            .bind(&status.override_reason)
+            .bind(status.metadata.unwrap_or_else(|| serde_json::json!({})))
+            .bind(now)
+            .bind(now)
+            .execute(&self.pool)
+            .await?;
+            
+            if let Some(tid) = task_id {
+                sqlx::query_as::<_, RuleEnforcementStatus>(
+                    "SELECT * FROM rule_enforcement_status WHERE id = $1"
+                )
+                .bind(id)
+                .fetch_one(&self.pool)
+                .await
+                .map_err(|e| anyhow::anyhow!("Failed to fetch created status: {}", e))
+            } else {
+                sqlx::query_as::<_, RuleEnforcementStatus>(
+                    "SELECT * FROM rule_enforcement_status WHERE id = $1"
+                )
+                .bind(id)
+                .fetch_one(&self.pool)
+                .await
+                .map_err(|e| anyhow::anyhow!("Failed to fetch created status: {}", e))
+            }
+        }
+    }
+
+    // ============================================================================
+    // Rule History Operations
+    // ============================================================================
+
+    async fn get_rule_history(&self, rule_id: &str, limit: Option<u32>) -> Result<Vec<RuleHistory>> {
+        let limit_val = limit.unwrap_or(100);
+        let history = sqlx::query_as::<_, RuleHistory>(
+            "SELECT * FROM rule_history WHERE rule_id = $1 ORDER BY created_at DESC LIMIT $2"
+        )
+        .bind(rule_id)
+        .bind(limit_val as i64)
+        .fetch_all(&self.pool)
+        .await?;
+        
+        Ok(history)
     }
 }
 

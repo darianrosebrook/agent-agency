@@ -145,6 +145,38 @@ pub trait DatabaseOperations {
     async fn get_two_factor_auth(&self, user_id: Uuid, method: Option<&str>) -> Result<Option<TwoFactorAuth>>;
     async fn update_two_factor_auth(&self, user_id: Uuid, method: &str, update: UpdateTwoFactorAuth) -> Result<TwoFactorAuth>;
     async fn delete_two_factor_auth(&self, user_id: Uuid, method: &str) -> Result<()>;
+
+    // CAWS Rules operations
+    async fn create_caws_rule(&self, rule: CreateCawsRule) -> Result<CawsRule>;
+    async fn get_caws_rule(&self, id: &str) -> Result<Option<CawsRule>>;
+    async fn get_caws_rules(&self, rule_type: Option<&str>, is_active: Option<bool>) -> Result<Vec<CawsRule>>;
+    async fn update_caws_rule(&self, id: &str, update: UpdateCawsRule) -> Result<CawsRule>;
+    async fn delete_caws_rule(&self, id: &str) -> Result<()>;
+
+    // CAWS Violations operations
+    async fn create_caws_violation(&self, violation: CreateCawsViolation) -> Result<CawsViolation>;
+    async fn get_caws_violation(&self, id: Uuid) -> Result<Option<CawsViolation>>;
+    async fn get_caws_violations(&self, task_id: Option<Uuid>, rule_id: Option<&str>, status: Option<&str>) -> Result<Vec<CawsViolation>>;
+    async fn update_caws_violation(&self, id: Uuid, update: UpdateCawsViolation) -> Result<CawsViolation>;
+    async fn resolve_caws_violation(&self, id: Uuid) -> Result<()>;
+
+    // CAWS Specifications operations
+    async fn create_caws_specification(&self, spec: CreateCawsSpecification) -> Result<CawsSpecification>;
+    async fn get_caws_specification(&self, id: Uuid) -> Result<Option<CawsSpecification>>;
+    async fn get_caws_specifications(&self, name: Option<&str>, is_active: Option<bool>) -> Result<Vec<CawsSpecification>>;
+    async fn update_caws_specification(&self, id: Uuid, update: UpdateCawsSpecification) -> Result<CawsSpecification>;
+    async fn delete_caws_specification(&self, id: Uuid) -> Result<()>;
+
+    // Rule templates operations
+    async fn get_rule_templates(&self, rule_type: Option<&str>) -> Result<Vec<RuleTemplate>>;
+    async fn create_rule_template(&self, template: CreateRuleTemplate) -> Result<RuleTemplate>;
+
+    // Rule enforcement status operations
+    async fn get_rule_enforcement_status(&self, rule_id: Option<&str>, task_id: Option<Uuid>) -> Result<Vec<RuleEnforcementStatus>>;
+    async fn update_rule_enforcement_status(&self, rule_id: &str, task_id: Option<Uuid>, status: UpdateRuleEnforcementStatus) -> Result<RuleEnforcementStatus>;
+
+    // Rule history operations
+    async fn get_rule_history(&self, rule_id: &str, limit: Option<u32>) -> Result<Vec<RuleHistory>>;
 }
 
 /// Input types for database operations
@@ -627,6 +659,147 @@ pub struct UpdateTwoFactorAuth {
     pub secret_encrypted: Option<String>,
     pub backup_codes: Option<Vec<String>>,
     pub is_enabled: Option<bool>,
+}
+
+// ============================================================================
+// CAWS Rules Types
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateCawsRule {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub rule_type: String,
+    pub severity: String,
+    pub file_patterns: serde_json::Value,
+    pub config: serde_json::Value,
+    pub constitutional_reference: Option<String>,
+    pub is_active: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UpdateCawsRule {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub rule_type: Option<String>,
+    pub severity: Option<String>,
+    pub file_patterns: Option<serde_json::Value>,
+    pub config: Option<serde_json::Value>,
+    pub constitutional_reference: Option<String>,
+    pub is_active: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateCawsViolation {
+    #[schemars(with = "String")]
+    pub task_id: Uuid,
+    pub violation_code: String,
+    pub severity: String,
+    pub description: String,
+    pub file_path: Option<String>,
+    pub line_number: Option<i32>,
+    pub column_number: Option<i32>,
+    pub rule_id: String,
+    pub constitutional_reference: Option<String>,
+    pub status: String,
+    pub metadata: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UpdateCawsViolation {
+    pub status: Option<String>,
+    pub resolved_at: Option<DateTime<Utc>>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateCawsSpecification {
+    pub name: String,
+    pub version: String,
+    pub description: Option<String>,
+    pub rules: serde_json::Value,
+    pub config: serde_json::Value,
+    pub is_active: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UpdateCawsSpecification {
+    pub name: Option<String>,
+    pub version: Option<String>,
+    pub description: Option<String>,
+    pub rules: Option<serde_json::Value>,
+    pub config: Option<serde_json::Value>,
+    pub is_active: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
+pub struct RuleTemplate {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub rule_type: String,
+    pub template_config: serde_json::Value,
+    pub example_config: Option<serde_json::Value>,
+    pub is_system: bool,
+    pub created_by: String,
+    #[schemars(with = "String")]
+    pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateRuleTemplate {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub rule_type: String,
+    pub template_config: serde_json::Value,
+    pub example_config: Option<serde_json::Value>,
+    pub is_system: bool,
+    pub created_by: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
+pub struct RuleEnforcementStatus {
+    #[schemars(with = "String")]
+    pub id: Uuid,
+    pub rule_id: String,
+    #[schemars(with = "String")]
+    pub task_id: Option<Uuid>,
+    pub enforcement_state: String,
+    pub paused_until: Option<DateTime<Utc>>,
+    pub paused_reason: Option<String>,
+    pub override_reason: Option<String>,
+    pub metadata: serde_json::Value,
+    #[schemars(with = "String")]
+    pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UpdateRuleEnforcementStatus {
+    pub enforcement_state: Option<String>,
+    pub paused_until: Option<DateTime<Utc>>,
+    pub paused_reason: Option<String>,
+    pub override_reason: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
+pub struct RuleHistory {
+    #[schemars(with = "String")]
+    pub id: Uuid,
+    pub rule_id: String,
+    pub action: String,
+    pub changed_by: String,
+    pub old_values: Option<serde_json::Value>,
+    pub new_values: Option<serde_json::Value>,
+    pub change_reason: Option<String>,
+    #[schemars(with = "String")]
+    pub created_at: DateTime<Utc>,
 }
 
 /// Factory function to create a database operations instance

@@ -124,10 +124,27 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         
         info!("Persisted execution plan {} to database", plan.id);
         
+        let session_id = Uuid::new_v4();
+        let working_spec_id = format!("PLAN-{}", plan.id);
+        
         Ok(models::ExecutionPlan {
             id: plan.id,
+            session_id,
+            working_spec_id,
             title: plan.title,
-            overview: plan.overview,
+            overview: Some(plan.overview),
+            state: "draft".to_string(),
+            milestones: serde_json::json!([]),
+            dependency_graph: serde_json::json!({}),
+            change_budget: serde_json::json!({}),
+            quality_gates: serde_json::json!({}),
+            evidence_requirements: serde_json::json!([]),
+            active_waivers: serde_json::json!([]),
+            metadata: serde_json::json!({}),
+            created_at: now,
+            updated_at: now,
+            approved_at: None,
+            completed_at: None,
         })
     }
 
@@ -137,7 +154,10 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         // Query execution plan from database
         let row = sqlx::query(
             r#"
-            SELECT id, title, overview, state
+            SELECT id, session_id, working_spec_id, title, overview, state,
+                   milestones, dependency_graph, change_budget, quality_gates,
+                   evidence_requirements, active_waivers, metadata,
+                   created_at, updated_at, approved_at, completed_at
             FROM execution_plans
             WHERE id = $1
             "#,
@@ -147,10 +167,31 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .await
         .map_err(|e| anyhow!("Failed to query execution plan: {}", e))?;
         
-        Ok(row.map(|r: sqlx::postgres::PgRow| models::ExecutionPlan {
-            id: r.get("id"),
-            title: r.get("title"),
-            overview: r.try_get::<Option<String>, _>("overview").ok().flatten().unwrap_or_default(),
+        Ok(row.map(|r: sqlx::postgres::PgRow| {
+            let id: Uuid = r.get("id");
+            let session_id: Uuid = r.get("session_id");
+            let working_spec_id: String = r.get("working_spec_id");
+            let state: String = r.get("state");
+            
+            models::ExecutionPlan {
+                id,
+                session_id,
+                working_spec_id,
+                title: r.get("title"),
+                overview: r.try_get::<Option<String>, _>("overview").ok().flatten(),
+                state,
+                milestones: r.try_get::<serde_json::Value, _>("milestones").unwrap_or_else(|_| serde_json::json!([])),
+                dependency_graph: r.try_get::<serde_json::Value, _>("dependency_graph").unwrap_or_else(|_| serde_json::json!({})),
+                change_budget: r.try_get::<serde_json::Value, _>("change_budget").unwrap_or_else(|_| serde_json::json!({})),
+                quality_gates: r.try_get::<serde_json::Value, _>("quality_gates").unwrap_or_else(|_| serde_json::json!({})),
+                evidence_requirements: r.try_get::<serde_json::Value, _>("evidence_requirements").unwrap_or_else(|_| serde_json::json!([])),
+                active_waivers: r.try_get::<serde_json::Value, _>("active_waivers").unwrap_or_else(|_| serde_json::json!([])),
+                metadata: r.try_get::<serde_json::Value, _>("metadata").unwrap_or_else(|_| serde_json::json!({})),
+                created_at: r.get("created_at"),
+                updated_at: r.get("updated_at"),
+                approved_at: r.try_get::<Option<chrono::DateTime<Utc>>, _>("approved_at").ok().flatten(),
+                completed_at: r.try_get::<Option<chrono::DateTime<Utc>>, _>("completed_at").ok().flatten(),
+            }
         }))
     }
 
@@ -160,7 +201,10 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         // Query all execution plans from database
         let rows = sqlx::query(
             r#"
-            SELECT id, title, overview, state
+            SELECT id, session_id, working_spec_id, title, overview, state,
+                   milestones, dependency_graph, change_budget, quality_gates,
+                   evidence_requirements, active_waivers, metadata,
+                   created_at, updated_at, approved_at, completed_at
             FROM execution_plans
             ORDER BY created_at DESC
             "#,
@@ -169,10 +213,31 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .await
         .map_err(|e| anyhow!("Failed to query execution plans: {}", e))?;
         
-        Ok(rows.into_iter().map(|r: sqlx::postgres::PgRow| models::ExecutionPlan {
-            id: r.get("id"),
-            title: r.get("title"),
-            overview: r.try_get::<Option<String>, _>("overview").ok().flatten().unwrap_or_default(),
+        Ok(rows.into_iter().map(|r: sqlx::postgres::PgRow| {
+            let id: Uuid = r.get("id");
+            let session_id: Uuid = r.get("session_id");
+            let working_spec_id: String = r.get("working_spec_id");
+            let state: String = r.get("state");
+            
+            models::ExecutionPlan {
+                id,
+                session_id,
+                working_spec_id,
+                title: r.get("title"),
+                overview: r.try_get::<Option<String>, _>("overview").ok().flatten(),
+                state,
+                milestones: r.try_get::<serde_json::Value, _>("milestones").unwrap_or_else(|_| serde_json::json!([])),
+                dependency_graph: r.try_get::<serde_json::Value, _>("dependency_graph").unwrap_or_else(|_| serde_json::json!({})),
+                change_budget: r.try_get::<serde_json::Value, _>("change_budget").unwrap_or_else(|_| serde_json::json!({})),
+                quality_gates: r.try_get::<serde_json::Value, _>("quality_gates").unwrap_or_else(|_| serde_json::json!({})),
+                evidence_requirements: r.try_get::<serde_json::Value, _>("evidence_requirements").unwrap_or_else(|_| serde_json::json!([])),
+                active_waivers: r.try_get::<serde_json::Value, _>("active_waivers").unwrap_or_else(|_| serde_json::json!([])),
+                metadata: r.try_get::<serde_json::Value, _>("metadata").unwrap_or_else(|_| serde_json::json!({})),
+                created_at: r.get("created_at"),
+                updated_at: r.get("updated_at"),
+                approved_at: r.try_get::<Option<chrono::DateTime<Utc>>, _>("approved_at").ok().flatten(),
+                completed_at: r.try_get::<Option<chrono::DateTime<Utc>>, _>("completed_at").ok().flatten(),
+            }
         }).collect())
     }
 

@@ -330,15 +330,15 @@ export function GeneralTabContent() {
         </div>
 
         {/* Danger Zone Section */}
-        <div className="absolute bg-[#1a1a1a] box-border content-stretch flex flex-col gap-[15.994px] h-[273.395px] items-start left-0 pb-[0.909px] pt-[24.908px] px-[24.908px] rounded-[10px] top-[1079.2px] w-[1216.01px]">
+        <div className={styles.dangerZoneSection}>
           <div
             aria-hidden="true"
-            className="absolute border-[#5c1515] border-[0.909px] border-solid inset-0 pointer-events-none rounded-[10px]"
+            className={styles.dangerZoneBorder}
           />
-          <div className="h-[27.997px] relative shrink-0 w-full">
-            <div className="absolute left-0 size-[20px] top-[4px]">
+          <div className={styles.sectionHeading}>
+            <div className={styles.dangerZoneIcon}>
               <svg
-                className="block size-full"
+                className={styles.dangerZoneIconSvg}
                 fill="none"
                 preserveAspectRatio="none"
                 viewBox="0 0 20 20"
@@ -366,43 +366,43 @@ export function GeneralTabContent() {
                 />
               </svg>
             </div>
-            <p className="absolute font-['Inter:Regular',sans-serif] leading-[28px] left-[28px] not-italic text-[#ff6b6b] text-[20px] text-nowrap top-[-0.18px] tracking-[-0.4492px] whitespace-pre">
+            <p className={styles.dangerZoneTitle}>
               Danger Zone
             </p>
           </div>
 
-          <div className="content-stretch flex flex-col gap-[15.994px] h-[179.588px] items-start relative shrink-0 w-full">
+          <div className={styles.dangerZoneContent}>
             {/* Archive Project */}
-            <div className="h-[81.797px] relative rounded-[10px] shrink-0 w-full border-[0.909px] border-neutral-800 flex items-center justify-between px-[16.903px]">
-              <div className="h-[47.99px] relative shrink-0 w-[384.631px]">
-                <p className="font-['Inter:Regular',sans-serif] leading-[24px] text-[16px] text-white tracking-[-0.3125px]">
+            <div className={styles.dangerZoneItem}>
+              <div className={styles.dangerZoneItemContent}>
+                <p className={styles.dangerZoneItemTitle}>
                   Archive this project
                 </p>
-                <p className="font-['Inter:Regular',sans-serif] leading-[20px] text-[#888888] text-[14px] tracking-[-0.1504px] mt-[3.999px]">
+                <p className={styles.dangerZoneItemDescription}>
                   Make the project read-only and hide it from your dashboard
                 </p>
               </div>
-              <button className="bg-zinc-900 h-[35.994px] rounded-[8px] w-[83.537px] border-[#5c1515] border-[0.909px] flex items-center justify-center hover:bg-gray-100 transition-colors">
-                <p className="font-['Inter:Medium',sans-serif] font-medium leading-[20px] text-[#ff6b6b] text-[14px] tracking-[-0.1504px]">
+              <button className={styles.archiveButton}>
+                <p className={styles.archiveButtonText}>
                   Archive
                 </p>
               </button>
             </div>
 
             {/* Delete Project */}
-            <div className="h-[81.797px] relative rounded-[10px] shrink-0 w-full border-[#5c1515] border-[0.909px] flex items-center justify-between px-[16.903px]">
-              <div className="h-[47.99px] relative shrink-0 w-[315.646px]">
-                <p className="font-['Inter:Regular',sans-serif] leading-[24px] text-[16px] text-white tracking-[-0.3125px]">
+            <div className={cn(styles.dangerZoneItem, styles.dangerZoneItemDelete)}>
+              <div className={styles.dangerZoneItemContent}>
+                <p className={styles.dangerZoneItemTitle}>
                   Delete this project
                 </p>
-                <p className="font-['Inter:Regular',sans-serif] leading-[20px] text-[#888888] text-[14px] tracking-[-0.1504px] mt-[3.999px]">
+                <p className={styles.dangerZoneItemDescription}>
                   Permanently delete this project and all of its data
                 </p>
               </div>
-              <button className="bg-white h-[35.994px] rounded-[8px] w-[100.547px] border-[#5c1515] border-[0.909px] flex items-center justify-center gap-[8px] hover:bg-gray-100 transition-colors">
-                <div className="relative size-[15.994px]">
+              <button className={styles.deleteButton}>
+                <div className={styles.deleteButtonIcon}>
                   <svg
-                    className="block size-full"
+                    className={styles.deleteButtonIconSvg}
                     fill="none"
                     preserveAspectRatio="none"
                     viewBox="0 0 16 16"
@@ -444,7 +444,7 @@ export function GeneralTabContent() {
                     />
                   </svg>
                 </div>
-                <p className="font-['Inter:Medium',sans-serif] font-medium leading-[20px] text-[#ff6b6b] text-[14px] tracking-[-0.1504px]">
+                <p className={styles.deleteButtonText}>
                   Delete
                 </p>
               </button>

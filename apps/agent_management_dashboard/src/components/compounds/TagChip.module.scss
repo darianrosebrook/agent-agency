@@ -5,7 +5,7 @@
   align-items: center;
   gap: $spacing-1;
   padding: $spacing-1 $spacing-2;
-  background-color: oklch(0.269 0 0); // bg-zinc-700 equivalent
+  background-color: $color-zinc-700; // bg-zinc-700
   border-radius: calc(var(--radius) - 2px);
   font-size: $font-size-xs;
   transition: background-color $transition-normal;
@@ -14,7 +14,7 @@
     cursor: pointer;
 
     &:hover {
-      background-color: oklch(0.3 0 0); // hover:bg-zinc-600 equivalent
+      background-color: $color-zinc-600; // hover:bg-zinc-600
     }
   }
 }
@@ -22,10 +22,10 @@
 .tagChipIcon {
   width: 0.75rem; // w-3
   height: 0.75rem; // h-3
-  color: oklch(0.5 0 0); // text-gray-400 equivalent
+  color: $color-gray-400; // text-gray-400
 
   &:hover {
-    color: white;
+    color: $color-white;
   }
 }
 

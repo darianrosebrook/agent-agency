@@ -13,7 +13,7 @@
   height: 2rem; // h-8
   width: 12rem; // w-48
   margin-bottom: $spacing-2;
-  background-color: rgb(31, 41, 55); // bg-gray-800
+  background-color: $color-gray-800; // bg-gray-800
 }
 
 .headerDescription {
@@ -21,7 +21,7 @@
   width: 100%;
   max-width: 36rem; // max-w-xl
   margin-bottom: $spacing-4;
-  background-color: rgb(31, 41, 55); // bg-gray-800
+  background-color: $color-gray-800; // bg-gray-800
 }
 
 .headerActions {
@@ -32,7 +32,7 @@
 
 .headerAction {
   height: 2.5rem; // h-10
-  background-color: rgb(31, 41, 55); // bg-gray-800
+  background-color: $color-gray-800; // bg-gray-800
 }
 
 .headerActionFirst {
@@ -45,15 +45,15 @@
 
 .phaseCard {
   margin-bottom: $spacing-6;
-  background-color: #1a1a1a;
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
   border-radius: 0.75rem; // rounded-xl
-  border: 1px solid rgb(31, 41, 55); // border-gray-800
+  border: 1px solid $color-gray-800; // border-gray-800
   overflow: hidden;
 }
 
 .phaseHeader {
   padding: $spacing-5 $spacing-6;
-  border-bottom: 1px solid rgb(31, 41, 55); // border-b border-gray-800
+  border-bottom: 1px solid $color-gray-800; // border-b border-gray-800
 }
 
 .phaseHeaderTop {
@@ -65,7 +65,7 @@
 
 .phaseTitle {
   height: 1.5rem; // h-6
-  background-color: rgb(31, 41, 55); // bg-gray-800
+  background-color: $color-gray-800; // bg-gray-800
 }
 
 .phaseTitleFirst {
@@ -81,16 +81,16 @@
   height: 1rem; // h-4
   width: 100%;
   max-width: 32rem; // max-w-2xl
-  background-color: rgb(31, 41, 55); // bg-gray-800
+  background-color: $color-gray-800; // bg-gray-800
 }
 
 .taskList {
-  border-top: 1px solid rgb(31, 41, 55); // divide-y divide-gray-800
+  border-top: 1px solid $color-gray-800; // divide-y divide-gray-800
 }
 
 .taskItem {
   padding: $spacing-4 $spacing-6;
-  border-top: 1px solid rgb(31, 41, 55); // divide-y divide-gray-800
+  border-top: 1px solid $color-gray-800; // divide-y divide-gray-800
 
   &:first-child {
     border-top: none;
@@ -107,12 +107,12 @@
   height: 1.25rem; // h-5
   width: 1.25rem; // w-5
   border-radius: 9999px; // rounded-full
-  background-color: rgb(31, 41, 55); // bg-gray-800
+  background-color: $color-gray-800; // bg-gray-800
 }
 
 .taskText {
   height: 1.25rem; // h-5
   width: 16rem; // w-64
-  background-color: rgb(31, 41, 55); // bg-gray-800
+  background-color: $color-gray-800; // bg-gray-800
 }
 

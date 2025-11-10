@@ -747,13 +747,13 @@ pub struct CawsSpecification {
     pub id: Uuid,
     pub name: String,
     pub version: String,
-    pub specification: serde_json::Value,
+    pub description: Option<String>,
+    pub rules: serde_json::Value,
+    pub config: serde_json::Value,
     pub is_active: bool,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub updated_at: DateTime<Utc>,
 }
 

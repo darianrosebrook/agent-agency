@@ -17,11 +17,11 @@
 }
 
 .subtaskIconCompleted {
-  color: #10b981; // text-green-500
+  color: $color-green-500; // text-green-500
 }
 
 .subtaskIconIncomplete {
-  color: oklch(0.5 0 0); // text-zinc-500
+  color: $color-zinc-500; // text-zinc-500
 }
 
 .subtaskText {
@@ -30,25 +30,25 @@
 }
 
 .subtaskTextCompleted {
-  color: oklch(0.5 0 0); // text-zinc-500
+  color: $color-zinc-500; // text-zinc-500
   text-decoration: line-through; // line-through
 }
 
 .subtaskTextIncomplete {
-  color: oklch(0.5 0 0); // text-zinc-300
+  color: $color-zinc-300; // text-zinc-300
 }
 
 .subtaskDelete {
   opacity: 0;
   transition: opacity $transition-normal, color $transition-normal;
-  color: oklch(0.5 0 0); // text-zinc-500
+  color: $color-zinc-500; // text-zinc-500
 
   .subtaskItem:hover & {
     opacity: 1; // group-hover:opacity-100
   }
 
   &:hover {
-    color: #ef4444; // hover:text-red-500
+    color: $color-red-500; // hover:text-red-500
   }
 }
 

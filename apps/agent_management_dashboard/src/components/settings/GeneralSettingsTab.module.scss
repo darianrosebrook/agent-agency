@@ -9,7 +9,7 @@
 .loading {
   padding: $spacing-8;
   text-align: center;
-  color: oklch(0.5 0 0);
+  color: $color-zinc-400;
 }
 
 .form {
@@ -26,15 +26,15 @@
 
 .select {
   padding: $spacing-2 $spacing-3;
-  background-color: #0f0f0f;
-  border: 1px solid oklch(0.269 0 0);
+  background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
+  border: 1px solid $color-zinc-800;
   border-radius: $spacing-md;
-  color: white;
+  color: $color-white;
   font-size: $font-size-sm;
   
   &:focus {
     outline: none;
-    border-color: oklch(0.6 0 0);
+    border-color: $color-zinc-400;
   }
 }
 

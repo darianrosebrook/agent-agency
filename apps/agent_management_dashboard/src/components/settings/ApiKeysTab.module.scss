@@ -9,13 +9,13 @@
 .loading {
   padding: $spacing-8;
   text-align: center;
-  color: oklch(0.5 0 0);
+  color: $color-zinc-400;
 }
 
 .newKeyAlert {
   padding: $spacing-4;
-  background-color: #0f0f0f;
-  border: 1px solid oklch(0.6 0 0);
+  background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
+  border: 1px solid $color-zinc-400;
   border-radius: $spacing-md;
   margin-bottom: $spacing-4;
   
@@ -23,7 +23,7 @@
     display: block;
     padding: $spacing-2;
     margin: $spacing-2 0;
-    background-color: #1a1a1a;
+    background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
     border-radius: $spacing-sm;
     font-family: monospace;
     word-break: break-all;
@@ -33,7 +33,7 @@
 .createForm {
   margin-top: $spacing-4;
   padding: $spacing-4;
-  background-color: #0f0f0f;
+  background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
   border-radius: $spacing-md;
   display: flex;
   flex-direction: column;
@@ -58,17 +58,17 @@
   justify-content: space-between;
   align-items: center;
   padding: $spacing-4;
-  background-color: #0f0f0f;
+  background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
   border-radius: $spacing-md;
   
   h4 {
     margin: 0 0 $spacing-2 0;
-    color: white;
+    color: $color-white;
   }
   
   p {
     margin: $spacing-1 0;
-    color: oklch(0.5 0 0);
+    color: $color-zinc-400;
     font-size: $font-size-sm;
   }
 }

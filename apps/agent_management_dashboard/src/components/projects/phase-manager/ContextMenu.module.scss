@@ -1,14 +1,14 @@
 @use '../../../styles/tokens' as *;
 
 .contextMenuButton {
-  background-color: oklch(0.145 0 0); // bg-zinc-950
-  color: oklch(0.5 0 0); // text-zinc-300
-  border-color: oklch(0.269 0 0); // border-zinc-700
+  background-color: $color-zinc-950; // bg-zinc-950
+  color: $color-zinc-300; // text-zinc-300
+  border-color: $color-zinc-700; // border-zinc-700
   transition: background-color $transition-normal, color $transition-normal;
 
   &:hover {
-    background-color: oklch(0.269 0 0); // hover:bg-zinc-800
-    color: oklch(0.95 0 0); // hover:text-zinc-100
+    background-color: $color-zinc-800; // hover:bg-zinc-800
+    color: $color-zinc-100; // hover:text-zinc-100
   }
 }
 
@@ -20,19 +20,19 @@
 
 .dropdownMenuContent {
   width: 14rem; // w-56
-  background-color: #1a1a1a; // bg-[#1a1a1a]
-  border-color: oklch(0.269 0 0); // border-zinc-700
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border-color: $color-zinc-700; // border-zinc-700
 }
 
 .dropdownMenuItem {
   cursor: pointer;
-  color: oklch(0.5 0 0); // text-zinc-300
+  color: $color-zinc-300; // text-zinc-300
   transition: background-color $transition-normal, color $transition-normal;
 
   &:hover,
   &:focus {
-    background-color: oklch(0.269 0 0); // hover:bg-zinc-800 focus:bg-zinc-800
-    color: oklch(0.95 0 0); // hover:text-zinc-100 focus:text-zinc-100
+    background-color: $color-zinc-800; // hover:bg-zinc-800 focus:bg-zinc-800
+    color: $color-zinc-100; // hover:text-zinc-100 focus:text-zinc-100
   }
 }
 
@@ -43,7 +43,7 @@
 }
 
 .dropdownMenuSubContent {
-  background-color: #1a1a1a; // bg-[#1a1a1a]
-  border-color: oklch(0.269 0 0); // border-zinc-700
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border-color: $color-zinc-700; // border-zinc-700
 }
 
