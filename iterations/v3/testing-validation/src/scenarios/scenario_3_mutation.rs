@@ -7,6 +7,7 @@
 //! 4. Council validates functionality, coverage, and CAWS compliance
 
 use std::time::Instant;
+use std::sync::Arc;
 use tracing::{info, error};
 
 use crate::harness::{TestEnvironment, LocalServiceManager, AssertionFramework};
@@ -63,31 +64,52 @@ pub async fn run_test(
     }
 
     // Initialize real SelfPromptingAgent for code generation
-    let model_registry = services.ollama().await?;
+    // Create ModelRegistry from OllamaService
+    let ollama_service = services.ollama();
+    let ollama_lock = ollama_service.lock().await;
+    let base_url = "http://localhost:11434".to_string(); // Default Ollama URL
+    let default_model = "gemma3n:e2b".to_string();
+    drop(ollama_lock); // Release lock
+    
+    let mut model_registry = ModelRegistry::new();
+    let ollama_provider = Arc::new(OllamaProvider::new(
+        base_url,
+        default_model,
+    ));
+    model_registry.register_provider("ollama".to_string(), ollama_provider);
+    let model_registry = Arc::new(model_registry);
+
     let evaluator = Arc::new(agent_research::self_prompting_agent::evaluation::EvaluationOrchestrator::new());
 
-    let agent_config = agent_research::self_prompting_agent::SelfPromptingAgentConfig {
+    #[cfg(feature = "full")]
+    use agent_research::self_prompting_agent::self_prompting_agent::SelfPromptingAgentConfig;
+    #[cfg(feature = "full")]
+    use agent_research::self_prompting_agent::prompting_types::{AutonomousMode, SafetyMode};
+    let agent_config = SelfPromptingAgentConfig {
         max_iterations: 5,
         enable_sandbox: true,
         sandbox_path: Some(workspace.path().to_string_lossy().to_string()),
         enable_git_snapshots: true,
-        execution_mode: agent_research::self_prompting_agent::ExecutionMode::Auto,
-        safety_mode: agent_research::self_prompting_agent::SafetyMode::Sandbox,
+        execution_mode: AutonomousMode::Auto,
+        safety_mode: SafetyMode::Sandbox,
     };
 
-    let agent = agent_research::self_prompting_agent::SelfPromptingAgent::new(
+    let agent = match agent_research::self_prompting_agent::SelfPromptingAgent::new(
         agent_config,
         model_registry,
         evaluator,
-    ).await.map_err(|e| {
-        TestResult {
-            scenario: Scenario::Scenario3Mutation,
-            passed: false,
-            duration_ms: start_time.elapsed().as_millis() as u64,
-            error_message: Some(format!("Failed to initialize SelfPromptingAgent: {}", e)),
-            metrics: TestMetrics::default(),
+    ).await {
+        Ok(agent) => agent,
+        Err(e) => {
+            return TestResult {
+                scenario: Scenario::Scenario3Mutation,
+                passed: false,
+                duration_ms: start_time.elapsed().as_millis() as u64,
+                error_message: Some(format!("Failed to initialize SelfPromptingAgent: {}", e)),
+                metrics: TestMetrics::default(),
+            };
         }
-    })?;
+    };
 
     // Create task for implementing JSON schema validator
     let task = agent_research::self_prompting_agent::Task {
@@ -113,15 +135,18 @@ pub async fn run_test(
     };
 
     // Execute the code generation task
-    let generation_result = agent.execute_task(task).await.map_err(|e| {
-        TestResult {
-            scenario: Scenario::Scenario3Mutation,
-            passed: false,
-            duration_ms: start_time.elapsed().as_millis() as u64,
-            error_message: Some(format!("Code generation failed: {}", e)),
-            metrics: TestMetrics::default(),
+    let generation_result = match agent.execute_task(task).await {
+        Ok(result) => result,
+        Err(e) => {
+            return TestResult {
+                scenario: Scenario::Scenario3Mutation,
+                passed: false,
+                duration_ms: start_time.elapsed().as_millis() as u64,
+                error_message: Some(format!("Code generation failed: {}", e)),
+                metrics: TestMetrics::default(),
+            };
         }
-    })?;
+    };
 
     // Record metrics from the generation process
     env.record_metric("generation_iterations", generation_result.iterations as f64).await;
@@ -129,19 +154,30 @@ pub async fn run_test(
 
     // Test compilation of generated code
     assertions.assert_code_compiles(
-        &workspace.execute_command("cargo", &["check"]).await.unwrap_or_default(),
+        &workspace.execute_command("cargo", &["check"]).await.unwrap_or_else(|_| crate::harness::default_process_output()),
         "Generated validator should compile"
     );
 
     // Test execution of generated tests
     assertions.assert_tests_pass(
-        &workspace.execute_command("cargo", &["test"]).await.unwrap_or_default(),
+        &workspace.execute_command("cargo", &["test"]).await.unwrap_or_else(|_| crate::harness::default_process_output()),
         "Generated tests should pass"
     );
 
     // Validate that the generated code actually implements the required functionality
     // Check that key validation functions exist
-    let lib_content = std::fs::read_to_string(workspace.path().join("src/lib.rs"))?;
+    let lib_content = match std::fs::read_to_string(workspace.path().join("src/lib.rs")) {
+        Ok(content) => content,
+        Err(e) => {
+            return TestResult {
+                scenario: Scenario::Scenario3Mutation,
+                passed: false,
+                duration_ms: start_time.elapsed().as_millis() as u64,
+                error_message: Some(format!("Failed to read lib.rs: {}", e)),
+                metrics: TestMetrics::default(),
+            };
+        }
+    };
     let has_validator_struct = lib_content.contains("struct JsonSchemaValidator");
     let has_validate_method = lib_content.contains("fn validate");
     let has_error_handling = lib_content.contains("ValidationError") || lib_content.contains("Result");
@@ -174,7 +210,18 @@ pub async fn run_test(
     }
 
     // Check that tests were generated
-    let test_content = std::fs::read_to_string(workspace.path().join("tests/validator_tests.rs"))?;
+    let test_content = match std::fs::read_to_string(workspace.path().join("tests/validator_tests.rs")) {
+        Ok(content) => content,
+        Err(e) => {
+            return TestResult {
+                scenario: Scenario::Scenario3Mutation,
+                passed: false,
+                duration_ms: start_time.elapsed().as_millis() as u64,
+                error_message: Some(format!("Failed to read test file: {}", e)),
+                metrics: TestMetrics::default(),
+            };
+        }
+    };
     let has_tests = test_content.contains("#[test]") && test_content.contains("JsonSchemaValidator");
 
     if !has_tests {
@@ -188,7 +235,7 @@ pub async fn run_test(
 
     // For mutation testing, we'll implement a basic check since cargo-mutants may not be available
     // Check that the code has sufficient test coverage by running tests with coverage if available
-    let test_output = workspace.execute_command("cargo", &["test", "--", "--nocapture"]).await.unwrap_or_default();
+    let test_output = workspace.execute_command("cargo", &["test", "--", "--nocapture"]).await.unwrap_or_else(|_| crate::harness::default_process_output());
     if test_output.status.success() {
         // Simple heuristic: if tests pass and we have multiple test functions, assume reasonable coverage
         let test_function_count = test_content.matches("#[test]").count();
@@ -277,7 +324,7 @@ pub async fn run_test(
         } else {
             None
         },
-        metrics: metrics.clone(),
+        metrics: TestMetrics::default(), // TODO: Convert HashMap to TestMetrics if needed
     }
 }
 

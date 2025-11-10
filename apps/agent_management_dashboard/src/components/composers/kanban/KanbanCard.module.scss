@@ -1,0 +1,64 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.card {
+  background-color: #1a1a1a;
+  position: relative;
+  border-radius: 10px;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.borderOverlay {
+  position: absolute;
+  border-width: 0.909px;
+  border-color: $color-neutral-800;
+  border-style: solid;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 10px;
+}
+
+.cardContent {
+  background-clip: padding-box;
+  border-width: 0;
+  border-color: transparent;
+  border-style: solid;
+  box-sizing: border-box;
+  height: 100%;
+  position: relative;
+  width: 100%;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.statusTagsContainer {
+  position: relative;
+  height: 31.982px;
+  display: flex;
+  gap: 8px;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+  color: $color-white;
+  margin: 0;
+}
+
+.description {
+  font-size: 14px;
+  line-height: 20px;
+  color: #cacaca;
+  margin: 0;
+  overflow: clip;
+}
+
+.metadataContainer {
+  display: flex;
+  gap: 15.994px;
+  flex-wrap: wrap;
+}
+

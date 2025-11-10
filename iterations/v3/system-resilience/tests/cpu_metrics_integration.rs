@@ -18,20 +18,21 @@ mod cpu_metrics_tests {
     /// Test CPU metrics collection on the current platform
     #[tokio::test]
     async fn test_cpu_metrics_collection() {
+        let limit_config = system_resilience::memory::MemoryLimitConfig {
+            max_heap_mb: 1024,
+            max_stack_mb: 128,
+            warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+            critical_threshold_percent: 0.75, // 768 MB / 1024 MB
+            enable_gc_pressure: true,
+            gc_pressure_threshold_mb: 256.0,
+            monitoring_interval_ms: 1000,
+        };
         let config = system_resilience::memory::MemoryManagementConfig {
-            monitor_config: system_resilience::memory::MemoryLimitConfig {
-                max_heap_mb: 1024,
-                max_stack_mb: 128,
-                warning_threshold_mb: 512,
-                critical_threshold_mb: 768,
-                enable_gc_pressure: true,
-                gc_pressure_threshold_mb: 256,
-                monitoring_interval_ms: 1000,
-            },
-            enable_object_pooling: true,
-            database_connection_pool_size: 10,
-            llm_client_pool_size: 5,
+            enable_gc: true,
             enable_leak_detection: false,
+            enable_allocation_tracking: true,
+            limits: limit_config.clone(),
+            monitor_config: limit_config,
             leak_detection_threshold_mb: 100,
         };
 
@@ -96,20 +97,21 @@ mod cpu_metrics_tests {
     /// Test CPU metrics stability over time
     #[tokio::test]
     async fn test_cpu_metrics_stability() {
+        let limit_config = system_resilience::memory::MemoryLimitConfig {
+            max_heap_mb: 1024,
+            max_stack_mb: 128,
+            warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+            critical_threshold_percent: 0.75, // 768 MB / 1024 MB
+            enable_gc_pressure: true,
+            gc_pressure_threshold_mb: 256.0,
+            monitoring_interval_ms: 1000,
+        };
         let config = system_resilience::memory::MemoryManagementConfig {
-            monitor_config: system_resilience::memory::MemoryLimitConfig {
-                max_heap_mb: 1024,
-                max_stack_mb: 128,
-                warning_threshold_mb: 512,
-                critical_threshold_mb: 768,
-                enable_gc_pressure: true,
-                gc_pressure_threshold_mb: 256,
-                monitoring_interval_ms: 1000,
-            },
-            enable_object_pooling: true,
-            database_connection_pool_size: 10,
-            llm_client_pool_size: 5,
+            enable_gc: true,
             enable_leak_detection: false,
+            enable_allocation_tracking: true,
+            limits: limit_config.clone(),
+            monitor_config: limit_config,
             leak_detection_threshold_mb: 100,
         };
 
@@ -153,20 +155,21 @@ mod cpu_metrics_tests {
     /// Test CPU metrics under load simulation
     #[tokio::test]
     async fn test_cpu_metrics_under_load() {
+        let limit_config = system_resilience::memory::MemoryLimitConfig {
+            max_heap_mb: 1024,
+            max_stack_mb: 128,
+            warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+            critical_threshold_percent: 0.75, // 768 MB / 1024 MB
+            enable_gc_pressure: true,
+            gc_pressure_threshold_mb: 256.0,
+            monitoring_interval_ms: 1000,
+        };
         let config = system_resilience::memory::MemoryManagementConfig {
-            monitor_config: system_resilience::memory::MemoryLimitConfig {
-                max_heap_mb: 1024,
-                max_stack_mb: 128,
-                warning_threshold_mb: 512,
-                critical_threshold_mb: 768,
-                enable_gc_pressure: true,
-                gc_pressure_threshold_mb: 256,
-                monitoring_interval_ms: 1000,
-            },
-            enable_object_pooling: true,
-            database_connection_pool_size: 10,
-            llm_client_pool_size: 5,
+            enable_gc: true,
             enable_leak_detection: false,
+            enable_allocation_tracking: true,
+            limits: limit_config.clone(),
+            monitor_config: limit_config,
             leak_detection_threshold_mb: 100,
         };
 
@@ -212,20 +215,21 @@ mod cpu_metrics_tests {
     /// Test CPU metrics error handling
     #[tokio::test]
     async fn test_cpu_metrics_error_handling() {
+        let limit_config = system_resilience::memory::MemoryLimitConfig {
+            max_heap_mb: 1024,
+            max_stack_mb: 128,
+            warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+            critical_threshold_percent: 0.75, // 768 MB / 1024 MB
+            enable_gc_pressure: true,
+            gc_pressure_threshold_mb: 256.0,
+            monitoring_interval_ms: 1000,
+        };
         let config = system_resilience::memory::MemoryManagementConfig {
-            monitor_config: system_resilience::memory::MemoryLimitConfig {
-                max_heap_mb: 1024,
-                max_stack_mb: 128,
-                warning_threshold_mb: 512,
-                critical_threshold_mb: 768,
-                enable_gc_pressure: true,
-                gc_pressure_threshold_mb: 256,
-                monitoring_interval_ms: 1000,
-            },
-            enable_object_pooling: true,
-            database_connection_pool_size: 10,
-            llm_client_pool_size: 5,
+            enable_gc: true,
             enable_leak_detection: false,
+            enable_allocation_tracking: true,
+            limits: limit_config.clone(),
+            monitor_config: limit_config,
             leak_detection_threshold_mb: 100,
         };
 
@@ -263,20 +267,21 @@ mod cpu_metrics_tests {
     /// Test CPU metrics integration with memory stats
     #[tokio::test]
     async fn test_cpu_memory_stats_integration() {
+        let limit_config = system_resilience::memory::MemoryLimitConfig {
+            max_heap_mb: 1024,
+            max_stack_mb: 128,
+            warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+            critical_threshold_percent: 0.75, // 768 MB / 1024 MB
+            enable_gc_pressure: true,
+            gc_pressure_threshold_mb: 256.0,
+            monitoring_interval_ms: 1000,
+        };
         let config = system_resilience::memory::MemoryManagementConfig {
-            monitor_config: system_resilience::memory::MemoryLimitConfig {
-                max_heap_mb: 1024,
-                max_stack_mb: 128,
-                warning_threshold_mb: 512,
-                critical_threshold_mb: 768,
-                enable_gc_pressure: true,
-                gc_pressure_threshold_mb: 256,
-                monitoring_interval_ms: 1000,
-            },
-            enable_object_pooling: true,
-            database_connection_pool_size: 10,
-            llm_client_pool_size: 5,
+            enable_gc: true,
             enable_leak_detection: false,
+            enable_allocation_tracking: true,
+            limits: limit_config.clone(),
+            monitor_config: limit_config,
             leak_detection_threshold_mb: 100,
         };
 
@@ -307,20 +312,21 @@ mod cpu_metrics_tests {
     /// Test CPU metrics frequency monitoring
     #[tokio::test]
     async fn test_cpu_frequency_monitoring() {
+        let limit_config = system_resilience::memory::MemoryLimitConfig {
+            max_heap_mb: 1024,
+            max_stack_mb: 128,
+            warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+            critical_threshold_percent: 0.75, // 768 MB / 1024 MB
+            enable_gc_pressure: true,
+            gc_pressure_threshold_mb: 256.0,
+            monitoring_interval_ms: 1000,
+        };
         let config = system_resilience::memory::MemoryManagementConfig {
-            monitor_config: system_resilience::memory::MemoryLimitConfig {
-                max_heap_mb: 1024,
-                max_stack_mb: 128,
-                warning_threshold_mb: 512,
-                critical_threshold_mb: 768,
-                enable_gc_pressure: true,
-                gc_pressure_threshold_mb: 256,
-                monitoring_interval_ms: 1000,
-            },
-            enable_object_pooling: true,
-            database_connection_pool_size: 10,
-            llm_client_pool_size: 5,
+            enable_gc: true,
             enable_leak_detection: false,
+            enable_allocation_tracking: true,
+            limits: limit_config.clone(),
+            monitor_config: limit_config,
             leak_detection_threshold_mb: 100,
         };
 

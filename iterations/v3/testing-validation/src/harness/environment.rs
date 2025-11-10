@@ -119,5 +119,59 @@ impl TestWorkspace {
 
         Ok(())
     }
+
+    /// Execute a command in the workspace directory
+    pub async fn execute_command(&self, cmd: &str, args: &[&str]) -> Result<std::process::Output> {
+        use std::process::Command;
+        let output = Command::new(cmd)
+            .args(args)
+            .current_dir(&self.path)
+            .output()?;
+        Ok(output)
+    }
+}
+
+/// Create a default process output for error cases
+pub fn default_process_output() -> std::process::Output {
+    use std::process::{Command, ExitStatus};
+    
+    // Create a default exit status by running a command that fails
+    // This is cross-platform compatible
+    let status = Command::new("false")
+        .output()
+        .map(|o| o.status)
+        .unwrap_or_else(|_| {
+            // Fallback: create exit status manually if false command doesn't exist
+            #[cfg(unix)]
+            {
+                use std::os::unix::process::ExitStatusExt;
+                ExitStatus::from_raw(1)
+            }
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::ExitStatusExt;
+                ExitStatus::from_raw(1)
+            }
+            #[cfg(not(any(unix, windows)))]
+            {
+                // For other platforms, try to create a failed status
+                // This is a best-effort fallback
+                Command::new("sh")
+                    .args(&["-c", "exit 1"])
+                    .status()
+                    .unwrap_or_else(|_| {
+                        // Last resort: we can't create a proper exit status
+                        // Return a status that indicates failure
+                        // Note: This may not compile on all platforms
+                        ExitStatus::from_raw(1)
+                    })
+            }
+        });
+    
+    std::process::Output {
+        status,
+        stdout: vec![],
+        stderr: vec![],
+    }
 }
 

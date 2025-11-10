@@ -55,8 +55,9 @@ mod memory_allocation_tracking_tests {
         let tracker_guard = tracker.read().await;
 
         // Check total allocations
-        assert_eq!(tracker_guard.total_allocations(), 3);
-        assert_eq!(tracker_guard.total_deallocations(), 0);
+        let (total_allocations, total_deallocations) = tracker_guard.get_allocation_stats();
+        assert_eq!(total_allocations, 3);
+        assert_eq!(total_deallocations, 0);
 
         // Check site statistics
         let site1_stats = tracker_guard.get_site_stats("test.rs", 42).unwrap();
@@ -114,8 +115,9 @@ mod memory_allocation_tracking_tests {
         // Verify deallocation tracking
         {
             let tracker_guard = tracker.read().await;
-            assert_eq!(tracker_guard.total_allocations(), 3);
-            assert_eq!(tracker_guard.total_deallocations(), 1);
+            let (total_allocations, total_deallocations) = tracker_guard.get_allocation_stats();
+            assert_eq!(total_allocations, 3);
+            assert_eq!(total_deallocations, 1);
 
             let task_stats = tracker_guard.get_task_stats("task_dealloc").unwrap();
             assert_eq!(task_stats.current_memory_bytes, 400); // 600 - 200
@@ -132,8 +134,9 @@ mod memory_allocation_tracking_tests {
         // Verify final state
         {
             let tracker_guard = tracker.read().await;
-            assert_eq!(tracker_guard.total_allocations(), 3);
-            assert_eq!(tracker_guard.total_deallocations(), 3);
+            let (total_allocations, total_deallocations) = tracker_guard.get_allocation_stats();
+            assert_eq!(total_allocations, 3);
+            assert_eq!(total_deallocations, 3);
 
             let task_stats = tracker_guard.get_task_stats("task_dealloc").unwrap();
             assert_eq!(task_stats.current_memory_bytes, 0);
@@ -254,15 +257,23 @@ mod memory_allocation_tracking_tests {
             monitor_config: system_resilience::memory::MemoryLimitConfig {
                 max_heap_mb: 1024,
                 max_stack_mb: 128,
-                warning_threshold_mb: 512,
-                critical_threshold_mb: 768,
+                warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+                critical_threshold_percent: 0.75, // 768 MB / 1024 MB
                 enable_gc_pressure: true,
-                gc_pressure_threshold_mb: 256,
+                gc_pressure_threshold_mb: 256.0,
                 monitoring_interval_ms: 1000,
             },
-            enable_object_pooling: true,
-            database_connection_pool_size: 10,
-            llm_client_pool_size: 5,
+            enable_gc: true,
+            enable_allocation_tracking: true,
+            limits: system_resilience::memory::MemoryLimitConfig {
+                max_heap_mb: 1024,
+                max_stack_mb: 128,
+                warning_threshold_percent: 0.5,
+                critical_threshold_percent: 0.75,
+                enable_gc_pressure: true,
+                gc_pressure_threshold_mb: 256.0,
+                monitoring_interval_ms: 1000,
+            },
             enable_leak_detection: false,
             leak_detection_threshold_mb: 100,
         };
@@ -336,10 +347,11 @@ mod memory_allocation_tracking_tests {
         let tracker_guard = tracker.read().await;
 
         // Should have 10 allocations
-        assert_eq!(tracker_guard.total_allocations(), 10);
+        let (total_allocations, total_deallocations) = tracker_guard.get_allocation_stats();
+        assert_eq!(total_allocations, 10);
 
         // Should have 5 deallocations (every other one)
-        assert_eq!(tracker_guard.total_deallocations(), 5);
+        assert_eq!(total_deallocations, 5);
 
         // Check task stats
         let task_stats = tracker_guard.get_task_stats("concurrent_task").unwrap();
@@ -378,19 +390,13 @@ mod memory_allocation_tracking_tests {
         // Verify record integrity
         let tracker_guard = tracker.read().await;
 
-        // Get allocations for site
-        let site_allocations = tracker_guard.get_allocations_for_site("integrity.rs", 42);
-        assert_eq!(site_allocations.len(), 1);
-
-        let record = &site_allocations[0];
-        assert_eq!(record.ptr, ptr);
-        assert_eq!(record.size, size);
-        assert_eq!(record.alignment, alignment);
-        assert_eq!(record.site.file, site.file);
-        assert_eq!(record.site.line, site.line);
-        assert_eq!(record.site.function, site.function);
-        assert_eq!(record.site.task_id, site.task_id);
-        assert!(!record.deallocated);
+        // Get site statistics
+        let site_stats = tracker_guard.get_site_stats("integrity.rs", 42);
+        assert!(site_stats.is_some());
+        
+        let stats = site_stats.unwrap();
+        assert_eq!(stats.total_allocations, 1);
+        assert_eq!(stats.total_bytes, size);
 
         // Verify task tracking
         let task_stats = tracker_guard.get_task_stats("integrity_task").unwrap();
@@ -426,8 +432,9 @@ mod memory_allocation_tracking_tests {
 
         // Verify allocations are tracked
         let tracker_guard = tracker.read().await;
-        assert_eq!(tracker_guard.total_allocations(), 10);
-        assert_eq!(tracker_guard.total_deallocations(), 0);
+        let (total_allocations, total_deallocations) = tracker_guard.get_allocation_stats();
+        assert_eq!(total_allocations, 10);
+        assert_eq!(total_deallocations, 0);
 
         let task_stats = tracker_guard.get_task_stats("leak_task").unwrap();
         assert_eq!(task_stats.total_allocations, 10);

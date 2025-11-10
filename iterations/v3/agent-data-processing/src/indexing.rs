@@ -1394,7 +1394,7 @@ impl SimpleHnswIndex {
         Ok(similarities)
     }
 
-    fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+    pub(crate) fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
         let dot_product: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
         let norm_a: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
         let norm_b: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
@@ -1971,11 +1971,11 @@ mod tests {
     fn test_cosine_similarity() {
         let a = vec![1.0, 2.0, 3.0];
         let b = vec![1.0, 2.0, 3.0];
-        let similarity = cosine_similarity(&a, &b);
+        let similarity = SimpleHnswIndex::cosine_similarity(&a, &b);
         assert_eq!(similarity, 1.0);
 
         let c = vec![-1.0, -2.0, -3.0];
-        let similarity_opposite = cosine_similarity(&a, &c);
+        let similarity_opposite = SimpleHnswIndex::cosine_similarity(&a, &c);
         assert_eq!(similarity_opposite, -1.0);
     }
 }

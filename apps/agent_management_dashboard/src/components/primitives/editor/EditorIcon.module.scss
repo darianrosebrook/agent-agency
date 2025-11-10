@@ -1,0 +1,15 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.editorIcon {
+  position: relative;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.svgIcon {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+

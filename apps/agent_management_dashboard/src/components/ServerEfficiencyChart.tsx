@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { BentoPanel } from "./compounds";
 import { ArrowUpRight } from "lucide-react";
 import { useAnimatedValue } from "../hooks/useAnimatedValue";
+import { getEfficiencyMetrics, type EfficiencyMetrics } from "../lib/api/observability";
 import styles from "./ServerEfficiencyChart.module.scss";
 
 interface ServerEfficiencyChartProps {
@@ -11,68 +12,92 @@ interface ServerEfficiencyChartProps {
   efficiency?: number;
 }
 
+interface AnimatedBarProps {
+  height: number;
+}
+
+function AnimatedBar({ height }: AnimatedBarProps) {
+  const animatedHeight = useAnimatedValue(height);
+  return (
+    <div
+      className={styles.bar}
+      style={{ height: `${animatedHeight}%` }}
+    >
+      <div className={styles.barTop} />
+    </div>
+  );
+}
+
 export function ServerEfficiencyChart({
   title = "Server Efficiency Analysis",
-  efficiency = 55,
+  efficiency: initialEfficiency = 55,
 }: ServerEfficiencyChartProps) {
+  const [efficiencyMetrics, setEfficiencyMetrics] = useState<EfficiencyMetrics[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const metrics = await getEfficiencyMetrics();
+        setEfficiencyMetrics(metrics);
+      } catch (err) {
+        console.error("Failed to fetch efficiency metrics:", err);
+        setError(err instanceof Error ? err : new Error("Failed to load efficiency metrics"));
+        setEfficiencyMetrics([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Calculate efficiency from metrics or use initial
+  const efficiency = useMemo(() => {
+    if (efficiencyMetrics.length === 0) return initialEfficiency;
+    const avgEfficiency = efficiencyMetrics.reduce(
+      (sum, m) => sum + m.efficiency_score,
+      0
+    ) / efficiencyMetrics.length;
+    return Math.round(avgEfficiency);
+  }, [efficiencyMetrics, initialEfficiency]);
+
+  // Generate bars from efficiency metrics (take last 8 data points)
+  const bars = useMemo(() => {
+    if (efficiencyMetrics.length === 0) {
+      return [
+        { height: 30 },
+        { height: 45 },
+        { height: 65 },
+        { height: 50 },
+        { height: 85 },
+        { height: 40 },
+        { height: 70 },
+        { height: 90 },
+      ];
+    }
+
+    // Take last 8 metrics and map efficiency_score to bar height
+    const recentMetrics = efficiencyMetrics.slice(-8);
+    return recentMetrics.map((metric) => ({
+      height: Math.round(metric.efficiency_score),
+    }));
+  }, [efficiencyMetrics]);
+
   // Animate efficiency percentage
   const animatedEfficiency = useAnimatedValue(efficiency);
 
-  // TODO: Replace hardcoded bar data with observability metrics from v3 API with the following requirements:
-  // 1. Efficiency metrics fetching: Load server efficiency time-series data
-  //    - Data source: GET /api/observability/efficiency endpoint from `iterations/v3/system-observability` crate
-  //    - Return server efficiency metrics over time
-  //    - Include efficiency percentage and time-series bar data
-  // 2. Real-time updates: Refresh efficiency metrics periodically
-  //    - Poll API endpoint at configurable intervals
-  //    - Handle loading and error states
-  // 3. Data transformation: Format API response for chart component
-  //    - Map API response to bars array with height values
-  //    - Calculate overall efficiency percentage for display
-  // Generate bar data with varying heights
-  const bars = [
-    { height: 30 },
-    { height: 45 },
-    { height: 65 },
-    { height: 50 },
-    { height: 85 },
-    { height: 40 },
-    { height: 70 },
-    { height: 90 },
-  ];
-
-  // Animate bar heights - must call hooks at top level
-  const animatedBar1 = useAnimatedValue(bars[0]?.height ?? 30);
-  const animatedBar2 = useAnimatedValue(bars[1]?.height ?? 45);
-  const animatedBar3 = useAnimatedValue(bars[2]?.height ?? 65);
-  const animatedBar4 = useAnimatedValue(bars[3]?.height ?? 50);
-  const animatedBar5 = useAnimatedValue(bars[4]?.height ?? 85);
-  const animatedBar6 = useAnimatedValue(bars[5]?.height ?? 40);
-  const animatedBar7 = useAnimatedValue(bars[6]?.height ?? 70);
-  const animatedBar8 = useAnimatedValue(bars[7]?.height ?? 90);
-
-  const animatedBars = useMemo(
-    () => [
-      animatedBar1,
-      animatedBar2,
-      animatedBar3,
-      animatedBar4,
-      animatedBar5,
-      animatedBar6,
-      animatedBar7,
-      animatedBar8,
-    ],
-    [
-      animatedBar1,
-      animatedBar2,
-      animatedBar3,
-      animatedBar4,
-      animatedBar5,
-      animatedBar6,
-      animatedBar7,
-      animatedBar8,
-    ]
-  );
+  // Animate bar heights - use bars directly since useAnimatedValue handles updates
+  const animatedBars = useMemo(() => {
+    return bars.map((bar) => bar.height);
+  }, [bars]);
 
   return (
     <BentoPanel>
@@ -92,14 +117,8 @@ export function ServerEfficiencyChart({
 
         {/* Bar Chart */}
         <div className={styles.barChart}>
-          {animatedBars.map((animatedHeight, index) => (
-            <div
-              key={index}
-              className={styles.bar}
-              style={{ height: `${animatedHeight}%` }}
-            >
-              <div className={styles.barTop} />
-            </div>
+          {animatedBars.map((height, index) => (
+            <AnimatedBar key={index} height={height} />
           ))}
         </div>
       </div>

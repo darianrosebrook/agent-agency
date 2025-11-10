@@ -1,0 +1,13 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.icon {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+

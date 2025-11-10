@@ -1,15 +1,189 @@
 "use client";
 
 /**
- * Agent Health Page - Stub Implementation
+ * Agent Health Page
  * 
- * This page monitors the health, status, and operational metrics of AI agents,
+ * Monitors the health, status, and operational metrics of AI agents,
  * including system resources, error rates, and performance indicators.
+ * 
+ * @author @darianrosebrook
  */
 
+import { useState, useEffect } from "react";
 import styles from "./page.module.scss";
+import {
+  getAgents,
+  getAgentHealth,
+  getAgentMetrics,
+  getAgentLogs,
+  restartAgent,
+  stopAgent,
+  type Agent,
+  type AgentHealth,
+  type AgentMetrics,
+  type AgentLog,
+} from "../../lib/api/agents";
+import { getAlerts, getSystemMetrics, type Alert, type SystemMetrics } from "../../lib/api/observability";
+import { ErrorDisplay } from "../../components/ErrorDisplay";
+
+function getStatusColor(status: AgentHealth['status']): string {
+  switch (status) {
+    case 'healthy':
+      return '#10b981'; // green
+    case 'warning':
+      return '#f59e0b'; // yellow
+    case 'critical':
+      return '#ef4444'; // red
+    case 'offline':
+      return '#6b7280'; // gray
+    default:
+      return '#6b7280';
+  }
+}
+
+function formatUptime(seconds: number): string {
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
 
 export default function AgentHealthPage() {
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [agentHealth, setAgentHealth] = useState<Record<string, AgentHealth>>({});
+  const [agentMetrics, setAgentMetrics] = useState<Record<string, AgentMetrics>>({});
+  const [agentLogs, setAgentLogs] = useState<Record<string, AgentLog[]>>({});
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(null);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [isRestarting, setIsRestarting] = useState<string | null>(null);
+  const [isStopping, setIsStopping] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const [agentsData, alertsData, systemMetricsData] = await Promise.all([
+          getAgents(),
+          getAlerts({ resolved: false }),
+          getSystemMetrics().catch(() => null),
+        ]);
+
+        setAgents(agentsData);
+        setAlerts(alertsData);
+        setSystemMetrics(systemMetricsData);
+
+        // Fetch health and metrics for each agent
+        const healthPromises = agentsData.map(async (agent) => {
+          try {
+            const [health, metrics, logs] = await Promise.all([
+              getAgentHealth(agent.id).catch(() => null),
+              getAgentMetrics(agent.id).catch(() => null),
+              getAgentLogs(agent.id, { limit: 10, level: 'error' }).catch(() => []),
+            ]);
+
+            if (health) {
+              setAgentHealth((prev) => ({ ...prev, [agent.id]: health }));
+            }
+            if (metrics) {
+              setAgentMetrics((prev) => ({ ...prev, [agent.id]: metrics }));
+            }
+            if (logs.length > 0) {
+              setAgentLogs((prev) => ({ ...prev, [agent.id]: logs }));
+            }
+          } catch (err) {
+            console.error(`Failed to fetch data for agent ${agent.id}:`, err);
+          }
+        });
+
+        await Promise.all(healthPromises);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error("Failed to load agent health data"));
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleRestart = async (agentId: string) => {
+    if (!confirm(`Are you sure you want to restart agent ${agentId}?`)) {
+      return;
+    }
+
+    setIsRestarting(agentId);
+    try {
+      await restartAgent(agentId);
+      alert("Agent restart initiated successfully");
+      // Refresh data after restart
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (err) {
+      alert(`Failed to restart agent: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setIsRestarting(null);
+    }
+  };
+
+  const handleStop = async (agentId: string) => {
+    if (!confirm(`Are you sure you want to stop agent ${agentId}? This will halt all operations.`)) {
+      return;
+    }
+
+    setIsStopping(agentId);
+    try {
+      await stopAgent(agentId);
+      alert("Agent stop initiated successfully");
+      // Refresh data after stop
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (err) {
+      alert(`Failed to stop agent: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setIsStopping(null);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className={styles.agentHealthPage}>
+        <div className={styles.agentHealthHeader}>
+          <h1 className={styles.agentHealthTitle}>Agent Health</h1>
+          <p className={styles.agentHealthDescription}>Loading agent health data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.agentHealthPage}>
+        <div className={styles.agentHealthHeader}>
+          <h1 className={styles.agentHealthTitle}>Agent Health</h1>
+        </div>
+        <ErrorDisplay error={error} />
+      </div>
+    );
+  }
+
+  const selectedAgent = selectedAgentId ? agents.find((a) => a.id === selectedAgentId) : null;
+  const selectedHealth = selectedAgentId ? agentHealth[selectedAgentId] : null;
+  const selectedMetrics = selectedAgentId ? agentMetrics[selectedAgentId] : null;
+  const selectedLogs = selectedAgentId ? agentLogs[selectedAgentId] || [] : [];
+
   return (
     <div className={styles.agentHealthPage}>
       <div className={styles.agentHealthHeader}>
@@ -19,189 +193,196 @@ export default function AgentHealthPage() {
         </p>
       </div>
 
-      <div className={styles.agentHealthContent}>
-        {/* Status Badge */}
-        <div className={styles.statusBadge}>
-          <div className={styles.statusBadgeDot}></div>
-          <span className={styles.statusBadgeText}>Stub Page - Implementation Required</span>
+      {/* System Metrics Summary */}
+      {systemMetrics && (
+        <div className={styles.systemMetrics}>
+          <div className={styles.metricCard}>
+            <div className={styles.metricLabel}>CPU Usage</div>
+            <div className={styles.metricValue}>{systemMetrics.cpu_usage_percent.toFixed(1)}%</div>
+          </div>
+          <div className={styles.metricCard}>
+            <div className={styles.metricLabel}>Memory Usage</div>
+            <div className={styles.metricValue}>{(systemMetrics.memory_usage_mb / 1024).toFixed(1)} GB</div>
+          </div>
+          <div className={styles.metricCard}>
+            <div className={styles.metricLabel}>Disk Usage</div>
+            <div className={styles.metricValue}>{systemMetrics.disk_usage_percent.toFixed(1)}%</div>
+          </div>
+          <div className={styles.metricCard}>
+            <div className={styles.metricLabel}>Network I/O</div>
+            <div className={styles.metricValue}>{systemMetrics.network_io_mbps.toFixed(2)} Mbps</div>
+          </div>
         </div>
+      )}
 
-        {/* UX Requirements */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>UX Requirements</h2>
-          <div className={styles.sectionContent}>
-            <div className={styles.subsection}>
-              <h3 className={styles.subsectionTitle}>Health Status Overview</h3>
-              <ul className={styles.subsectionList}>
-                <li>Agent status cards showing health indicators (Healthy, Warning, Critical, Offline)</li>
-                <li>Color-coded status indicators (green, yellow, red, gray)</li>
-                <li>Quick health summary metrics (uptime, error rate, response time)</li>
-                <li>Agent list with sortable columns (name, status, last seen, error count)</li>
-              </ul>
-            </div>
-            <div className={styles.subsection}>
-              <h3 className={styles.subsectionTitle}>System Metrics Dashboard</h3>
-              <ul className={styles.subsectionList}>
-                <li>CPU and memory usage charts per agent</li>
-                <li>Response time metrics (P50, P95, P99)</li>
-                <li>Error rate trends over time</li>
-                <li>Request throughput and latency graphs</li>
-                <li>Resource utilization heatmaps</li>
-              </ul>
-            </div>
-            <div className={styles.subsection}>
-              <h3 className={styles.subsectionTitle}>Alerting & Notifications</h3>
-              <ul className={styles.subsectionList}>
-                <li>Active alerts panel showing critical issues</li>
-                <li>Alert severity levels (Critical, Warning, Info)</li>
-                <li>Alert history and resolution tracking</li>
-                <li>Alert configuration interface</li>
-                <li>Notification preferences (email, Slack, etc.)</li>
-              </ul>
-            </div>
-            <div className={styles.subsection}>
-              <h3 className={styles.subsectionTitle}>Agent Details View</h3>
-              <ul className={styles.subsectionList}>
-                <li>Detailed agent information (version, configuration, capabilities)</li>
-                <li>Recent activity log</li>
-                <li>Error logs and stack traces</li>
-                <li>Performance metrics breakdown</li>
-                <li>Agent restart/stop controls</li>
-              </ul>
-            </div>
+      {/* Active Alerts */}
+      {alerts.length > 0 && (
+        <div className={styles.alertsSection}>
+          <h2 className={styles.sectionTitle}>Active Alerts</h2>
+          <div className={styles.alertsList}>
+            {alerts.map((alert) => (
+              <div
+                key={alert.id}
+                className={styles.alertItem}
+                style={{
+                  borderLeftColor:
+                    alert.severity === 'critical' ? '#ef4444' : alert.severity === 'warning' ? '#f59e0b' : '#3b82f6',
+                }}
+              >
+                <div className={styles.alertSeverity}>{alert.severity.toUpperCase()}</div>
+                <div className={styles.alertContent}>
+                  <div className={styles.alertTitle}>{alert.title}</div>
+                  <div className={styles.alertMessage}>{alert.message}</div>
+                  <div className={styles.alertSource}>Source: {alert.source}</div>
+                </div>
+              </div>
+            ))}
           </div>
-        </section>
+        </div>
+      )}
 
-        {/* Functionality Requirements */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Functionality Requirements</h2>
-          <div className={styles.sectionContent}>
-            <div className={styles.subsection}>
-              <h3 className={styles.subsectionTitle}>Health Monitoring</h3>
-              <ul className={styles.subsectionList}>
-                <li>Health check endpoints from `iterations/v3/system-observability` crate</li>
-                <li>Heartbeat monitoring to detect agent failures</li>
-                <li>Health status aggregation and calculation</li>
-                <li>Automatic health status updates via polling or WebSocket</li>
-              </ul>
-            </div>
-            <div className={styles.subsection}>
-              <h3 className={styles.subsectionTitle}>Metrics Collection</h3>
-              <ul className={styles.subsectionList}>
-                <li>Collect metrics from `iterations/v3/system-observability` crate</li>
-                <li>Store metrics in PostgreSQL `telemetry` table or time-series database</li>
-                <li>Aggregate metrics for dashboard display</li>
-                <li>Calculate percentiles and averages for performance metrics</li>
-              </ul>
-            </div>
-            <div className={styles.subsection}>
-              <h3 className={styles.subsectionTitle}>API Endpoints Required</h3>
-              <ul className={styles.subsectionList}>
-                <li>GET /api/agents/health - Overall agent health status</li>
-                <li>GET /api/agents/:id/health - Health status for specific agent</li>
-                <li>GET /api/agents/:id/metrics - Performance metrics for agent</li>
-                <li>GET /api/agents/:id/logs - Agent logs and error messages</li>
-                <li>GET /api/observability/system-metrics - System resource metrics</li>
-                <li>GET /api/observability/alerts - Active alerts and notifications</li>
-                <li>POST /api/agents/:id/restart - Restart agent endpoint</li>
-                <li>POST /api/agents/:id/stop - Stop agent endpoint</li>
-              </ul>
-            </div>
-            <div className={styles.subsection}>
-              <h3 className={styles.subsectionTitle}>Alerting System</h3>
-              <ul className={styles.subsectionList}>
-                <li>Alert rule configuration and management</li>
-                <li>Alert evaluation engine</li>
-                <li>Alert notification delivery (email, Slack, webhook)</li>
-                <li>Alert acknowledgment and resolution tracking</li>
-              </ul>
-            </div>
-          </div>
-        </section>
+      {/* Agent List */}
+      <div className={styles.agentsSection}>
+        <h2 className={styles.sectionTitle}>Agents ({agents.length})</h2>
+        <div className={styles.agentsGrid}>
+          {agents.map((agent) => {
+            const health = agentHealth[agent.id];
+            const metrics = agentMetrics[agent.id];
+            const status = health?.status || 'offline';
+            const statusColor = getStatusColor(status);
 
-        {/* TODOs Required for Completion */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>TODOs Required for Completion</h2>
-          <div className={styles.sectionContent}>
-            <div className={styles.section}>
-              <div className={styles.todoItem}>
-                <input type="checkbox" className={styles.todoCheckbox} disabled />
-                <div className={styles.todoContent}>
-                  <p className={styles.todoTitle}>Create health monitoring API endpoints</p>
-                  <p className={styles.todoDescription}>Implement GET /api/agents/health and related endpoints in `iterations/v3/data-infrastructure/src/api/handlers`</p>
+            return (
+              <div
+                key={agent.id}
+                className={styles.agentCard}
+                onClick={() => setSelectedAgentId(agent.id === selectedAgentId ? null : agent.id)}
+              >
+                <div className={styles.agentCardHeader}>
+                  <div className={styles.agentName}>{agent.name}</div>
+                  <div
+                    className={styles.statusIndicator}
+                    style={{ backgroundColor: statusColor }}
+                  />
+                </div>
+                <div className={styles.agentInfo}>
+                  <div className={styles.agentType}>{agent.worker_type}</div>
+                  {agent.specialty && <div className={styles.agentSpecialty}>{agent.specialty}</div>}
+                </div>
+                {health && (
+                  <div className={styles.agentMetrics}>
+                    <div className={styles.metricRow}>
+                      <span>Uptime:</span>
+                      <span>{formatUptime(health.uptime_seconds)}</span>
+                    </div>
+                    <div className={styles.metricRow}>
+                      <span>Health Score:</span>
+                      <span>{health.health_score.toFixed(0)}%</span>
+                    </div>
+                    <div className={styles.metricRow}>
+                      <span>Errors:</span>
+                      <span>{health.error_count}</span>
+                    </div>
+                    {metrics && (
+                      <>
+                        <div className={styles.metricRow}>
+                          <span>CPU:</span>
+                          <span>{metrics.cpu_usage_percent.toFixed(1)}%</span>
+                        </div>
+                        <div className={styles.metricRow}>
+                          <span>Memory:</span>
+                          <span>{(metrics.memory_usage_mb / 1024).toFixed(1)} GB</span>
+                        </div>
+                        <div className={styles.metricRow}>
+                          <span>Response Time (P95):</span>
+                          <span>{metrics.response_time_p95_ms.toFixed(0)}ms</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+                <div className={styles.agentActions}>
+                  <button
+                    className={styles.actionButton}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRestart(agent.id);
+                    }}
+                    disabled={isRestarting === agent.id || isStopping === agent.id}
+                  >
+                    {isRestarting === agent.id ? "Restarting..." : "Restart"}
+                  </button>
+                  <button
+                    className={styles.actionButton}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStop(agent.id);
+                    }}
+                    disabled={isRestarting === agent.id || isStopping === agent.id}
+                  >
+                    {isStopping === agent.id ? "Stopping..." : "Stop"}
+                  </button>
                 </div>
               </div>
-              <div className={styles.todoItem}>
-                <input type="checkbox" className={styles.todoCheckbox} disabled />
-                <div className={styles.todoContent}>
-                  <p className={styles.todoTitle}>Integrate with system observability crate</p>
-                  <p className={styles.todoDescription}>Connect to `iterations/v3/system-observability` crate to fetch health and metrics data</p>
-                </div>
-              </div>
-              <div className={styles.todoItem}>
-                <input type="checkbox" className={styles.todoCheckbox} disabled />
-                <div className={styles.todoContent}>
-                  <p className={styles.todoTitle}>Build agent health status cards</p>
-                  <p className={styles.todoDescription}>Create health status card components with color-coded indicators and key metrics</p>
-                </div>
-              </div>
-              <div className={styles.todoItem}>
-                <input type="checkbox" className={styles.todoCheckbox} disabled />
-                <div className={styles.todoContent}>
-                  <p className={styles.todoTitle}>Implement metrics charts</p>
-                  <p className={styles.todoDescription}>Create charts for CPU, memory, response time, error rates, and throughput</p>
-                </div>
-              </div>
-              <div className={styles.todoItem}>
-                <input type="checkbox" className={styles.todoCheckbox} disabled />
-                <div className={styles.todoContent}>
-                  <p className={styles.todoTitle}>Add agent details view</p>
-                  <p className={styles.todoDescription}>Create detailed agent view showing logs, metrics, and configuration</p>
-                </div>
-              </div>
-              <div className={styles.todoItem}>
-                <input type="checkbox" className={styles.todoCheckbox} disabled />
-                <div className={styles.todoContent}>
-                  <p className={styles.todoTitle}>Implement alerting system</p>
-                  <p className={styles.todoDescription}>Create alert configuration, evaluation, and notification system</p>
-                </div>
-              </div>
-              <div className={styles.todoItem}>
-                <input type="checkbox" className={styles.todoCheckbox} disabled />
-                <div className={styles.todoContent}>
-                  <p className={styles.todoTitle}>Add real-time updates</p>
-                  <p className={styles.todoDescription}>Implement WebSocket or SSE connection for live health status updates</p>
-                </div>
-              </div>
-              <div className={styles.todoItem}>
-                <input type="checkbox" className={styles.todoCheckbox} disabled />
-                <div className={styles.todoContent}>
-                  <p className={styles.todoTitle}>Implement agent control actions</p>
-                  <p className={styles.todoDescription}>Add restart and stop functionality for agents with confirmation dialogs</p>
-                </div>
-              </div>
-              <div className={styles.todoItem}>
-                <input type="checkbox" className={styles.todoCheckbox} disabled />
-                <div className={styles.todoContent}>
-                  <p className={styles.todoTitle}>Add log viewer component</p>
-                  <p className={styles.todoDescription}>Create log viewer with filtering, search, and export capabilities</p>
-                </div>
-              </div>
-              <div className={styles.todoItem}>
-                <input type="checkbox" className={styles.todoCheckbox} disabled />
-                <div className={styles.todoContent}>
-                  <p className={styles.todoTitle}>Update navigation sidebar link</p>
-                  <p className={styles.todoDescription}>Change Agent Health button to Link component pointing to /agent-health route</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+            );
+          })}
+        </div>
       </div>
+
+      {/* Agent Details */}
+      {selectedAgent && (
+        <div className={styles.agentDetails}>
+          <h2 className={styles.sectionTitle}>Agent Details: {selectedAgent.name}</h2>
+          
+          {selectedHealth && (
+            <div className={styles.detailsSection}>
+              <h3>Health Status</h3>
+              <div className={styles.detailsGrid}>
+                <div>Status: <strong>{selectedHealth.status}</strong></div>
+                <div>Uptime: {formatUptime(selectedHealth.uptime_seconds)}</div>
+                <div>Last Seen: {new Date(selectedHealth.last_seen).toLocaleString()}</div>
+                <div>Error Count: {selectedHealth.error_count}</div>
+                <div>Response Time: {selectedHealth.response_time_ms.toFixed(0)}ms</div>
+                <div>Health Score: {selectedHealth.health_score.toFixed(0)}%</div>
+              </div>
+            </div>
+          )}
+
+          {selectedMetrics && (
+            <div className={styles.detailsSection}>
+              <h3>Performance Metrics</h3>
+              <div className={styles.detailsGrid}>
+                <div>CPU Usage: {selectedMetrics.cpu_usage_percent.toFixed(1)}%</div>
+                <div>Memory Usage: {(selectedMetrics.memory_usage_mb / 1024).toFixed(1)} GB</div>
+                <div>Response Time (P50): {selectedMetrics.response_time_p50_ms.toFixed(0)}ms</div>
+                <div>Response Time (P95): {selectedMetrics.response_time_p95_ms.toFixed(0)}ms</div>
+                <div>Response Time (P99): {selectedMetrics.response_time_p99_ms.toFixed(0)}ms</div>
+                <div>Requests/sec: {selectedMetrics.requests_per_second.toFixed(2)}</div>
+                <div>Error Rate: {(selectedMetrics.error_rate * 100).toFixed(2)}%</div>
+                <div>Timestamp: {new Date(selectedMetrics.timestamp).toLocaleString()}</div>
+              </div>
+            </div>
+          )}
+
+          {selectedLogs.length > 0 && (
+            <div className={styles.detailsSection}>
+              <h3>Recent Error Logs</h3>
+              <div className={styles.logsList}>
+                {selectedLogs.map((log) => (
+                  <div key={log.id} className={styles.logEntry}>
+                    <div className={styles.logHeader}>
+                      <span className={styles.logLevel}>{log.level.toUpperCase()}</span>
+                      <span className={styles.logTime}>
+                        {new Date(log.timestamp).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className={styles.logMessage}>{log.message}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
-
-
-
-

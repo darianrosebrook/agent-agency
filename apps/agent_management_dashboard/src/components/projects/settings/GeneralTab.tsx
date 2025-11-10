@@ -1,37 +1,164 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import svgPaths from '../../../imports/svg-pj3tus7kw0';
 import { cn } from '../../primitives/utils';
+import { useProjectContext } from '../../ProjectContext';
+import {
+  getProjectHandler,
+  getProjectSettings,
+  updateProjectHandler,
+  updateProjectSettings,
+  getProjectMembers,
+  type ProjectSettings,
+  type ProjectApiResponse,
+} from '../../../lib/api/projects';
 import styles from './GeneralTab.module.scss';
 
 export function GeneralTabContent() {
+  const { currentProjectId } = useProjectContext();
+  const [project, setProject] = useState<ProjectApiResponse | null>(null);
+  const [settings, setSettings] = useState<ProjectSettings | null>(null);
+  const [members, setMembers] = useState<Array<{ id: string; name: string; email: string }>>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
   const [collaboration, setCollaboration] = useState(true);
   const [requireApproval, setRequireApproval] = useState(false);
   const [assignmentNotifs, setAssignmentNotifs] = useState(true);
   const [commentNotifs, setCommentNotifs] = useState(true);
   const [statusNotifs, setStatusNotifs] = useState(false);
-  // TODO: Replace hardcoded project data with data from v3 database with the following requirements:
-  // 1. Project data fetching: Load current project details from database
-  //    - Data source: GET /api/projects/:projectId endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
-  //    - Database table: PostgreSQL `projects` table
-  //    - Include project name, description, ID, created date, and settings
-  // 2. Project settings persistence: Save project settings updates to database
-  //    - Data source: PATCH /api/projects/:projectId endpoint to update project details
-  //    - Update project name, description, and notification preferences
-  //    - Persist collaboration settings and approval requirements
-  // 3. Project metadata display: Show project ID and creation date
-  //    - Display project ID from database (read-only)
-  //    - Format and display created_at timestamp from database
-  //    - Show last updated timestamp if available
-  // 4. Settings persistence: Save notification and collaboration preferences
-  //    - Data source: PATCH /api/projects/:projectId/settings endpoint
-  //    - Store notification preferences (assignment, comment, status)
-  //    - Store collaboration and approval settings
-  const [projectName, setProjectName] = useState('My Kanban Project');
-  const [description, setDescription] = useState(
-    'A project management tool with kanban boards and timeline tracking.'
-  );
+  const [projectName, setProjectName] = useState('');
+  const [description, setDescription] = useState('');
+  const [defaultAssigneeId, setDefaultAssigneeId] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      if (!currentProjectId) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const [projectData, settingsData, membersData] = await Promise.all([
+          getProjectHandler(currentProjectId).catch(() => null),
+          getProjectSettings(currentProjectId).catch(() => null),
+          getProjectMembers(currentProjectId).catch(() => []),
+        ]);
+
+        if (projectData) {
+          setProject(projectData);
+          setProjectName(projectData.name || '');
+          setDescription(projectData.description || '');
+        }
+
+        if (settingsData) {
+          setSettings(settingsData);
+          setDefaultAssigneeId(settingsData.default_assignee_id || null);
+          setCollaboration(settingsData.auto_assign_tasks ?? true);
+          if (settingsData.notification_preferences) {
+            const prefs = settingsData.notification_preferences as Record<string, boolean>;
+            setAssignmentNotifs(prefs.assignment ?? true);
+            setCommentNotifs(prefs.comment ?? true);
+            setStatusNotifs(prefs.status ?? false);
+          }
+        }
+
+        if (membersData.length > 0) {
+          setMembers(
+            membersData.map((m) => ({
+              id: m.user_id,
+              name: m.user_name,
+              email: m.user_email,
+            }))
+          );
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Failed to load project data'));
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [currentProjectId]);
+
+  const handleSave = async () => {
+    if (!currentProjectId) return;
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      // Update project details
+      await updateProjectHandler(currentProjectId, {
+        name: projectName,
+        description: description,
+      });
+
+      // Update project settings
+      await updateProjectSettings(currentProjectId, {
+        default_assignee_id: defaultAssigneeId,
+        auto_assign_tasks: collaboration,
+        notification_preferences: {
+          assignment: assignmentNotifs,
+          comment: commentNotifs,
+          status: statusNotifs,
+        },
+      });
+
+      // Refresh data
+      const [projectData, settingsData] = await Promise.all([
+        getProjectHandler(currentProjectId),
+        getProjectSettings(currentProjectId),
+      ]);
+
+      if (projectData) setProject(projectData);
+      if (settingsData) setSettings(settingsData);
+
+      alert('Settings saved successfully');
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to save settings'));
+      alert(`Failed to save settings: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className={styles.generalTab}>
+        <div className={styles.loadingState}>Loading project settings...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.generalTab}>
+        <div className={styles.errorState}>
+          Error loading project settings: {error.message}
+        </div>
+      </div>
+    );
+  }
+
+  const formatDate = (dateStr: string | undefined): string => {
+    if (!dateStr) return 'N/A';
+    try {
+      return new Date(dateStr).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
 
   return (
     <div className={styles.generalTab} data-name="ProjectSettings">
@@ -59,6 +186,7 @@ export function GeneralTabContent() {
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
                 className={styles.formInput}
+                disabled={!currentProjectId}
               />
             </div>
 
@@ -71,6 +199,7 @@ export function GeneralTabContent() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className={styles.formTextarea}
+                disabled={!currentProjectId}
               />
             </div>
 
@@ -81,9 +210,8 @@ export function GeneralTabContent() {
                   <p className={styles.formFieldLabel}>Project ID</p>
                 </div>
                 <div className={styles.readOnlyField}>
-                  {/* TODO: Replace hardcoded project ID with project.id from v3 database */}
                   <p className={styles.readOnlyFieldText}>
-                    proj_8k2m9n4p
+                    {project?.id || currentProjectId || 'N/A'}
                   </p>
                 </div>
               </div>
@@ -93,17 +221,22 @@ export function GeneralTabContent() {
                   <p className={styles.formFieldLabel}>Created</p>
                 </div>
                 <div className={styles.readOnlyField}>
-                  {/* TODO: Replace hardcoded created date with project.created_at from v3 database, formatted as readable date */}
                   <p className={styles.readOnlyFieldText}>
-                    November 1, 2024
+                    {formatDate(project?.created_at)}
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          <button className={styles.saveButton}>
-            <p className={styles.saveButtonText}>Save Changes</p>
+          <button
+            className={styles.saveButton}
+            onClick={handleSave}
+            disabled={isSaving || !currentProjectId}
+          >
+            <p className={styles.saveButtonText}>
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </p>
           </button>
         </div>
 

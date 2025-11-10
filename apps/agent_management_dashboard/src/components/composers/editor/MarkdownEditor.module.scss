@@ -1,0 +1,8 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.markdownEditor {
+  position: relative;
+  width: 800px;
+  min-height: 100px;
+}
+

@@ -1,0 +1,20 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.editorParagraph {
+  position: absolute;
+  left: 0.46px;
+  top: 72.13px;
+  width: 766px;
+}
+
+.editorParagraphText {
+  font-family: $font-family-sans;
+  font-weight: $font-weight-normal;
+  line-height: 1.625rem;
+  font-style: normal;
+  color: $color-gray-200;
+  font-size: 1rem;
+  white-space: pre-wrap;
+  letter-spacing: -0.3125px;
+}
+

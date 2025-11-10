@@ -1,0 +1,48 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.editorHeading {
+  position: absolute;
+  align-content: stretch;
+  display: flex;
+  height: 35.994px;
+  align-items: flex-start;
+  left: 0;
+  top: 0;
+  width: 800px;
+}
+
+.editorHeadingText {
+  flex-basis: 0;
+  font-family: $font-family-sans;
+  font-weight: $font-weight-normal;
+  flex-grow: 1;
+  line-height: 2.25rem;
+  font-style: normal;
+  color: $color-white;
+  font-size: 2rem;
+  white-space: pre;
+  letter-spacing: 0.0703px;
+}
+
+.editorHeading2 {
+  position: absolute;
+  height: 32.003px;
+  left: 0;
+  top: 319.66px;
+  width: 800px;
+}
+
+.editorHeading2Text {
+  position: absolute;
+  font-family: $font-family-sans;
+  font-weight: $font-weight-normal;
+  line-height: 2rem;
+  left: 0;
+  top: -0.18px;
+  font-style: normal;
+  font-size: 1.5rem;
+  white-space: pre;
+  color: $color-white;
+  letter-spacing: 0.0703px;
+}
+

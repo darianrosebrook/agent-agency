@@ -1,0 +1,34 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.textBold {
+  font-weight: $font-weight-bold;
+  color: $color-white;
+}
+
+.textItalic {
+  font-style: italic;
+  color: #b8b35c;
+}
+
+.textLink {
+  color: #6ea8fe;
+  
+  a {
+    color: inherit;
+    text-decoration: none;
+    
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.editorInlineCode {
+  background-color: $color-dark-bg-secondary;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: $font-family-mono;
+  font-size: 0.875rem;
+  color: $color-gray-200;
+}
+

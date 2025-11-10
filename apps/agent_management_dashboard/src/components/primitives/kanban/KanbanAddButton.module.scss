@@ -1,0 +1,44 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.addButton {
+  height: 41.804px;
+  position: relative;
+  border-radius: 10px;
+  flex-shrink: 0;
+  width: 639.41px;
+  transition-property: background-color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #1a1a1a;
+  }
+}
+
+.borderOverlay {
+  position: absolute;
+  border-width: 0.909px;
+  border-color: $color-neutral-800;
+  border-style: solid;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 10px;
+}
+
+.buttonContent {
+  background-clip: padding-box;
+  border-width: 0;
+  border-color: transparent;
+  border-style: solid;
+  box-sizing: border-box;
+  align-content: stretch;
+  display: flex;
+  height: 41.804px;
+  align-items: center;
+  justify-content: center;
+  padding: 0.909px;
+  position: relative;
+  width: 639.41px;
+}
+

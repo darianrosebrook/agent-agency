@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import Container66 from "../imports/Container-16-2951";
+import { useState, useMemo } from "react";
+import { KanbanBoard } from "./composers/kanban/KanbanBoard";
 import { NewTaskModal } from "./NewTaskModal";
 import { useProjectStore } from "../lib/stores";
 import styles from "./TasksTab.module.scss";
@@ -11,14 +11,54 @@ export function TasksTab() {
   const [selectedStatus, setSelectedStatus] = useState<
     "backlog" | "todo" | "in-progress" | "done"
   >("backlog");
-  const { currentProjectId, addTask } = useProjectStore();
+  const { currentProjectId, addTask, getTasks } = useProjectStore();
 
-  const handleOpenModal = (
-    status: "backlog" | "todo" | "in-progress" | "done"
-  ) => {
-    setSelectedStatus(status);
-    setIsNewTaskModalOpen(true);
-  };
+  const tasks = currentProjectId ? getTasks(currentProjectId) : [];
+
+  const columns = useMemo(() => {
+    const statuses: Array<"backlog" | "todo" | "in-progress" | "done"> = [
+      "backlog",
+      "todo",
+      "in-progress",
+      "done",
+    ];
+
+    return statuses.map((status) => {
+      const statusTasks = tasks.filter((task) => task.status === status);
+      
+      return {
+        status,
+        title: status === "backlog" ? "Backlog" : status === "todo" ? "To Do" : status === "in-progress" ? "In Progress" : "Done",
+        cardCount: statusTasks.length,
+        cards: statusTasks.map((task) => ({
+          title: task.title,
+          description: task.description,
+          priority: task.priority as "low" | "medium" | "high" | undefined,
+          statusTags: task.priority
+            ? [
+                {
+                  label: task.priority.charAt(0).toUpperCase() + task.priority.slice(1),
+                  bgColor: task.priority === "high" ? "#3a2f1f" : task.priority === "medium" ? "#1f2d3a" : undefined,
+                  textColor: task.priority === "high" ? "#ff9f43" : task.priority === "medium" ? "#54a0ff" : undefined,
+                },
+              ]
+            : [],
+          metadata: task.assignee
+            ? [
+                {
+                  icon: { path: "M7 7h.01M7 3h5a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z", size: 13.999 },
+                  text: task.assignee,
+                },
+              ]
+            : [],
+        })),
+        onAddTask: () => {
+          setSelectedStatus(status);
+          setIsNewTaskModalOpen(true);
+        },
+      };
+    });
+  }, [tasks]);
 
   const handleCreateTask = (data: {
     title: string;
@@ -34,24 +74,13 @@ export function TasksTab() {
   return (
     <div className={styles.tasksTab}>
       <div className={styles.tasksTabContent}>
-        <div
-          className={styles.tasksTabInner}
-          onClick={(e) => {
-            // Check if clicked element is an "add" button based on class or parent
-            const target = e.target as HTMLElement;
-            const button = target.closest("[data-add-task]");
-            if (button) {
-              const status = button.getAttribute("data-status") as
-                | "backlog"
-                | "todo"
-                | "in-progress"
-                | "done";
-              handleOpenModal(status || "backlog");
-            }
+        <KanbanBoard
+          columns={columns}
+          onAddTask={(status) => {
+            setSelectedStatus(status);
+            setIsNewTaskModalOpen(true);
           }}
-        >
-          <Container66 />
-        </div>
+        />
       </div>
 
       <NewTaskModal

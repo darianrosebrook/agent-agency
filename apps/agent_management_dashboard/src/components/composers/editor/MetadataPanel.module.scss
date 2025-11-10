@@ -1,0 +1,199 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.metadataPanel {
+  background-color: $color-dark-bg-secondary;
+  height: 1430.18px;
+  position: relative;
+  flex-shrink: 0;
+  width: 383.082px;
+}
+
+.metadataPanelInner {
+  background-clip: padding-box;
+  border: 0;
+  border-color: transparent;
+  border-style: solid;
+  box-sizing: border-box;
+  height: 1430.18px;
+  overflow: clip;
+  position: relative;
+  border-radius: inherit;
+  width: 383.082px;
+}
+
+.metadataPanelBorder {
+  position: absolute;
+  border-width: 0 0 0 0.909px;
+  border-color: $color-neutral-800;
+  border-style: solid;
+  inset: 0;
+  pointer-events: none;
+}
+
+.metadataPanelHeader {
+  position: absolute;
+  box-sizing: border-box;
+  align-content: stretch;
+  display: flex;
+  flex-direction: column;
+  height: 92.883px;
+  align-items: flex-start;
+  left: 0;
+  padding-bottom: 0.909px;
+  padding-top: 23.991px;
+  padding-left: 23.991px;
+  padding-right: 23.991px;
+  position: relative;
+  top: 0;
+  width: 100%;
+}
+
+.metadataPanelHeaderBorder {
+  position: absolute;
+  border-width: 0 0 0.909px;
+  border-color: $color-neutral-800;
+  border-style: solid;
+  inset: 0;
+  pointer-events: none;
+}
+
+.metadataPanelTitleContainer {
+  height: 27.997px;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.metadataPanelTitleWrapper {
+  width: 100%;
+  height: 100%;
+}
+
+.metadataPanelTitleRow {
+  align-content: stretch;
+  display: flex;
+  height: 27.997px;
+  align-items: flex-start;
+  justify-content: space-between;
+  position: relative;
+  width: 100%;
+}
+
+.metadataPanelTitle {
+  height: 27.997px;
+  position: relative;
+  flex-shrink: 0;
+  width: 203.054px;
+}
+
+.metadataPanelTitleText {
+  background-clip: padding-box;
+  border: 0;
+  border-color: transparent;
+  border-style: solid;
+  box-sizing: border-box;
+  height: 27.997px;
+  position: relative;
+  width: 203.054px;
+}
+
+.metadataPanelTitleParagraph {
+  position: absolute;
+  font-family: $font-family-sans;
+  font-weight: $font-weight-normal;
+  line-height: 1.75rem;
+  left: 0;
+  font-style: normal;
+  font-size: 1.25rem;
+  text-wrap: nowrap;
+  color: $color-white;
+  top: -0.18px;
+  letter-spacing: 0.0703px;
+}
+
+.metadataPanelCloseButton {
+  position: relative;
+  border-radius: 0.5rem;
+  flex-shrink: 0;
+  width: 23.991px;
+  height: 23.991px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  &:focus {
+    outline: 1px solid $color-neutral-500;
+    outline-offset: 2px;
+  }
+}
+
+.metadataPanelCloseButtonInner {
+  background-clip: padding-box;
+  border: 0;
+  border-color: transparent;
+  border-style: solid;
+  box-sizing: border-box;
+  height: 23.991px;
+  width: 23.991px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 2px;
+  padding-block: 0;
+  position: relative;
+}
+
+.metadataPanelFields {
+  position: absolute;
+  height: 986.52px;
+  left: 0;
+  top: 92.88px;
+  width: 383.082px;
+}
+
+.metadataFieldGroup {
+  position: relative;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.metadataFieldLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.metadataFieldIcon {
+  position: relative;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.metadataFieldLabelText {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.metadataFieldLabelParagraph {
+  font-family: $font-family-sans;
+  font-weight: $font-weight-normal;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: $color-gray-400;
+  white-space: pre;
+  letter-spacing: -0.1504px;
+}
+
+.metadataFieldValue {
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+  min-height: 20px;
+}
+

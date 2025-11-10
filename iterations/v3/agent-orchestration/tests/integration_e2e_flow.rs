@@ -42,7 +42,7 @@ use agent_orchestration::workers::execution_bridge::WorkerExecutionBridge;
 use agent_orchestration::council::{Council, CouncilConfig, create_default_council};
 
 #[cfg(feature = "research")]
-use agent_research::evidence_collector::EvidenceCollector;
+use agent_research::evidence::EvidenceCollector;
 
 #[cfg(feature = "memory")]
 use agent_memory::MemorySystem;
@@ -134,6 +134,18 @@ fn create_test_working_spec() -> WorkingSpec {
                 metrics: None,
             },
         ],
+        change_budget: agent_agency_contracts::planning_io::ChangeBudget {
+            max_files: Some(10),
+            max_loc: Some(500),
+            max_days: None,
+            max_complexity: None,
+            enforcement: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+        },
+        file_changes: vec![],
+        coverage_targets: None,
+        overview: "Test task for comprehensive E2E flow verification".to_string(),
+        created_at: chrono::Utc::now(),
+        updated_at: chrono::Utc::now(),
     }
 }
 
@@ -154,15 +166,29 @@ async fn test_complete_e2e_flow() {
     println!("\n[1/15] Initializing all components...");
     
     // Create council
-    let council_config = CouncilConfig::default();
-    let council = Arc::new(create_default_council(council_config));
+    let council_config = CouncilConfig {
+        session_timeout_seconds: 300,
+        min_judges_required: 3,
+        max_judges_per_session: 10,
+        judge_selection_strategy: crate::council::JudgeSelectionStrategy::AllAvailable,
+        consensus_strategy: crate::council::ConsensusStrategy::Majority,
+        risk_thresholds: crate::council::RiskThresholds::default(),
+        enable_parallel_reviews: true,
+        judge_timeout_seconds: 60,
+        enable_circuit_breakers: true,
+        enable_graceful_degradation: true,
+        enable_error_recovery: true,
+    };
+    let council = Arc::new(create_default_council().unwrap());
     println!("  ✓ Council initialized");
     
     // Create worktree manager
     let worktree_config = WorktreeManagerConfig {
-        base_path: PathBuf::from("/tmp/test-e2e-worktrees"),
+        worktree_base_path: PathBuf::from("/tmp/test-e2e-worktrees"),
+        main_repo_path: PathBuf::from("."),
+        base_branch: "main".to_string(),
         auto_cleanup: true,
-        max_worktrees: 10,
+        max_concurrent_worktrees: 10,
     };
     let worktree_manager = Arc::new(WorktreeManager::new(worktree_config));
     println!("  ✓ Worktree manager initialized");
@@ -233,7 +259,8 @@ async fn test_complete_e2e_flow() {
     // - Verify worker executes in worktree
     // - Verify ExecutionArtifacts are created
     let artifacts = create_test_artifacts();
-    assert!(artifacts.success);
+    // ExecutionArtifacts doesn't have a success field - check test results instead
+    assert_eq!(artifacts.tests.test_suite_results.total_tests, 0);
     println!("  ✓ Milestone execution structure verified");
     
     println!("\n[8/15] Verifying council presentation structure...");
@@ -319,13 +346,27 @@ async fn test_caws_adjudication_cycle_stages() {
     
     println!("\nTesting CAWS Adjudication Cycle Stages...");
     
-    let council_config = CouncilConfig::default();
-    let council = Arc::new(create_default_council(council_config));
+    let council_config = CouncilConfig {
+        session_timeout_seconds: 300,
+        min_judges_required: 3,
+        max_judges_per_session: 10,
+        judge_selection_strategy: crate::council::JudgeSelectionStrategy::AllAvailable,
+        consensus_strategy: crate::council::ConsensusStrategy::Majority,
+        risk_thresholds: crate::council::RiskThresholds::default(),
+        enable_parallel_reviews: true,
+        judge_timeout_seconds: 60,
+        enable_circuit_breakers: true,
+        enable_graceful_degradation: true,
+        enable_error_recovery: true,
+    };
+    let council = Arc::new(create_default_council().unwrap());
     
     let worktree_config = WorktreeManagerConfig {
-        base_path: PathBuf::from("/tmp/test-caws-worktrees"),
+        worktree_base_path: PathBuf::from("/tmp/test-caws-worktrees"),
+        main_repo_path: PathBuf::from("."),
+        base_branch: "main".to_string(),
         auto_cleanup: true,
-        max_worktrees: 10,
+        max_concurrent_worktrees: 10,
     };
     let worktree_manager = Arc::new(WorktreeManager::new(worktree_config));
     
@@ -354,13 +395,27 @@ async fn test_claim_extraction_always_on() {
     
     println!("\nTesting Claim Extraction Always-On...");
     
-    let council_config = CouncilConfig::default();
-    let council = Arc::new(create_default_council(council_config));
+    let council_config = CouncilConfig {
+        session_timeout_seconds: 300,
+        min_judges_required: 3,
+        max_judges_per_session: 10,
+        judge_selection_strategy: crate::council::JudgeSelectionStrategy::AllAvailable,
+        consensus_strategy: crate::council::ConsensusStrategy::Majority,
+        risk_thresholds: crate::council::RiskThresholds::default(),
+        enable_parallel_reviews: true,
+        judge_timeout_seconds: 60,
+        enable_circuit_breakers: true,
+        enable_graceful_degradation: true,
+        enable_error_recovery: true,
+    };
+    let council = Arc::new(create_default_council().unwrap());
     
     let worktree_config = WorktreeManagerConfig {
-        base_path: PathBuf::from("/tmp/test-claim-extraction"),
+        worktree_base_path: PathBuf::from("/tmp/test-claim-extraction"),
+        main_repo_path: PathBuf::from("."),
+        base_branch: "main".to_string(),
         auto_cleanup: true,
-        max_worktrees: 10,
+        max_concurrent_worktrees: 10,
     };
     let worktree_manager = Arc::new(WorktreeManager::new(worktree_config));
     
@@ -434,9 +489,11 @@ async fn test_worktree_isolation() {
     println!("\nTesting Worktree Isolation...");
     
     let worktree_config = WorktreeManagerConfig {
-        base_path: PathBuf::from("/tmp/test-worktree-isolation"),
+        worktree_base_path: PathBuf::from("/tmp/test-worktree-isolation"),
+        main_repo_path: PathBuf::from("."),
+        base_branch: "main".to_string(),
         auto_cleanup: true,
-        max_worktrees: 10,
+        max_concurrent_worktrees: 10,
     };
     let worktree_manager = Arc::new(WorktreeManager::new(worktree_config));
     

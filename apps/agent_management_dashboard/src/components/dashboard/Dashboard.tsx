@@ -1,7 +1,9 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { LayoutGrid } from "lucide-react";
 import { cn } from "../primitives/utils";
 import styles from "./Dashboard.module.scss";
+import { getCurrentUser } from "../../lib/api/users";
+import type { CurrentUser } from "../../lib/api/users";
 
 const TaskProgressChart = lazy(() =>
   import("../TaskProgressChart").then((mod) => ({
@@ -49,6 +51,27 @@ const ChartSkeleton = () => (
 );
 
 export function Dashboard() {
+  const [user, setUser] = useState<CurrentUser | null>(null);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
+
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        const userData = await getCurrentUser();
+        setUser(userData);
+      } catch (error) {
+        console.error("Failed to fetch user:", error);
+        // Continue with null user - component will show fallback
+      } finally {
+        setIsLoadingUser(false);
+      }
+    }
+
+    fetchUser();
+  }, []);
+
+  const userName = user?.name || "User";
+
   return (
     <div className={styles.dashboard}>
       {/* Header */}
@@ -57,18 +80,9 @@ export function Dashboard() {
           <LayoutGrid className={styles.headerIcon} size={16} />
           <span className={styles.headerLabel}>Dashboard</span>
         </div>
-        {/* TODO: Replace hardcoded user name with data from v3 API with the following requirements:
-        // 1. User data fetching: Load current user information from API
-        //    - Data source: GET /api/users/me endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
-        //    - Database table: PostgreSQL `users` table
-        //    - Include user name, email, and other profile information
-        // 2. Authentication: Ensure user is authenticated before fetching
-        //    - Handle 401/403 errors and redirect to login if needed
-        //    - Store authentication token securely
-        // 3. Loading state: Show loading indicator while fetching user data
-        //    - Display fallback text if user data is not yet loaded
-        //    - Handle error states gracefully */}
-        <h1 className={styles.headerTitle}>Welcome back John Doe!</h1>
+        <h1 className={styles.headerTitle}>
+          {isLoadingUser ? "Loading..." : `Welcome back ${userName}!`}
+        </h1>
       </div>
 
       {/* Bento Grid */}

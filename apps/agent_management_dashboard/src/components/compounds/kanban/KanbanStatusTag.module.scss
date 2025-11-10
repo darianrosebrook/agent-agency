@@ -1,0 +1,31 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.statusTag {
+  position: absolute;
+  box-sizing: border-box;
+  align-content: stretch;
+  display: flex;
+  gap: 5.994px;
+  height: 31.982px;
+  align-items: center;
+  left: 0;
+  padding-left: 11.996px;
+  padding-right: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-radius: 15252000px;
+  top: 0;
+  background-color: $color-neutral-800;
+}
+
+.iconWrapper {
+  display: flex;
+  align-items: center;
+}
+
+.label {
+  font-size: 14px;
+  color: #cacaca;
+  white-space: nowrap;
+}
+

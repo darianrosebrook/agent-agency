@@ -1,0 +1,11 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.header {
+  position: relative;
+  flex-shrink: 0;
+  height: 23.999px;
+  display: flex;
+  gap: 7.997px;
+  align-items: center;
+}
+

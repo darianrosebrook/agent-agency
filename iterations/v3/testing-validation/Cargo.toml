@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 # Dependencies for testing validation
 agent-orchestration = { path = "../agent-orchestration", optional = true }
+agent-constitutional-council = { path = "../agent-constitutional-council", optional = true }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 data-infrastructure = { path = "../data-infrastructure" }
 data-interfaces-adapters = { path = "../data-interfaces-adapters", optional = true }
@@ -48,9 +49,13 @@ schemars = { version = "0.8", features = ["derive"] }
 
 [features]
 default = []
-full = ["agent-research", "system-federated-ml", "agent-orchestration", "data-interfaces-adapters"]
+full = ["agent-research", "system-federated-ml", "agent-orchestration/evaluation", "agent-constitutional-council", "data-interfaces-adapters"]
 e2e = []
 
 [[bin]]
 name = "ensure_services"
 path = "src/bin/ensure_services.rs"
+
+[[bin]]
+name = "integrated_test"
+path = "src/bin/integrated_test.rs"

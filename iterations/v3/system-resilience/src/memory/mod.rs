@@ -27,4 +27,11 @@ pub static ORPHANED_OBJECTS: std::sync::Mutex<Vec<Box<dyn std::any::Any + Send +
 
 // All functionality has been moved to focused submodules
 // Re-export all public APIs for backward compatibility
+pub use manager::{MemoryManager, MemoryManagementConfig};
+pub use types::MemoryLimitConfig;
+pub use metrics::MemoryPressure;
+pub use allocation::{AllocationSiteTracker, AllocationSite, AllocationRecord};
+pub use types::TaskAllocationStats;
+pub use resources::{HandleType, HandleInfo, ResourceHandle};
+pub use types::ObjectRef;
 

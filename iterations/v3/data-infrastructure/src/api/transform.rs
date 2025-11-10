@@ -5,6 +5,7 @@
 
 use uuid::Uuid;
 use serde_json::Value;
+use chrono::Utc;
 
 use crate::api::api_types::WaiverResponse;
 use crate::models::Waiver;

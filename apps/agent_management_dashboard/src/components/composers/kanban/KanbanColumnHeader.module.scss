@@ -1,0 +1,12 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.header {
+  height: 23.999px;
+  position: relative;
+  flex-shrink: 0;
+  width: 639.418px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+

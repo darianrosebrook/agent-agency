@@ -9,6 +9,7 @@ use serde::{Serialize, Deserialize};
 use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
+use sqlx::Row;
 
 use agent_agency_contracts::{
     JudgeVerdict, VerdictLabel, JudgeType,

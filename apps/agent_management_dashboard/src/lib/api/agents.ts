@@ -6,7 +6,7 @@
  * @author @darianrosebrook
  */
 
-import { apiGet } from '../utils/api';
+import { apiGet, apiPost, apiPatch } from '../utils/api';
 
 /**
  * Agent statistics response
@@ -171,5 +171,104 @@ export async function getEfficiencyMetrics(agentId?: string): Promise<Efficiency
     ? `${API_BASE}/observability/efficiency?agent_id=${agentId}`
     : `${API_BASE}/observability/efficiency`;
   return apiGet<EfficiencyMetrics[]>(url);
+}
+
+/**
+ * Agent health status
+ */
+export interface AgentHealth {
+  agent_id: string;
+  status: 'healthy' | 'warning' | 'critical' | 'offline';
+  uptime_seconds: number;
+  last_seen: string;
+  error_count: number;
+  response_time_ms: number;
+  health_score: number;
+}
+
+/**
+ * Agent metrics
+ */
+export interface AgentMetrics {
+  agent_id: string;
+  cpu_usage_percent: number;
+  memory_usage_mb: number;
+  response_time_p50_ms: number;
+  response_time_p95_ms: number;
+  response_time_p99_ms: number;
+  requests_per_second: number;
+  error_rate: number;
+  timestamp: string;
+}
+
+/**
+ * Agent log entry
+ */
+export interface AgentLog {
+  id: string;
+  agent_id: string;
+  level: 'error' | 'warn' | 'info' | 'debug';
+  message: string;
+  timestamp: string;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Get agent health status
+ */
+export async function getAgentHealth(agentId: string): Promise<AgentHealth> {
+  return apiGet<AgentHealth>(`${API_BASE}/agents/${agentId}/health`);
+}
+
+/**
+ * Get agent metrics
+ */
+export async function getAgentMetrics(agentId: string): Promise<AgentMetrics> {
+  return apiGet<AgentMetrics>(`${API_BASE}/agents/${agentId}/metrics`);
+}
+
+/**
+ * Get agent logs
+ */
+export async function getAgentLogs(
+  agentId: string,
+  params?: {
+    level?: 'error' | 'warn' | 'info' | 'debug';
+    limit?: number;
+    offset?: number;
+  }
+): Promise<AgentLog[]> {
+  const queryParams = new URLSearchParams();
+  if (params?.level) queryParams.append('level', params.level);
+  if (params?.limit) queryParams.append('limit', params.limit.toString());
+  if (params?.offset) queryParams.append('offset', params.offset.toString());
+  
+  const queryString = queryParams.toString();
+  const url = `${API_BASE}/agents/${agentId}/logs${queryString ? `?${queryString}` : ''}`;
+  return apiGet<AgentLog[]>(url);
+}
+
+/**
+ * Restart agent
+ */
+export async function restartAgent(agentId: string): Promise<{ success: boolean; message: string }> {
+  return apiPost<{ success: boolean; message: string }>(`${API_BASE}/agents/${agentId}/restart`);
+}
+
+/**
+ * Stop agent
+ */
+export async function stopAgent(agentId: string): Promise<{ success: boolean; message: string }> {
+  return apiPost<{ success: boolean; message: string }>(`${API_BASE}/agents/${agentId}/stop`);
+}
+
+/**
+ * Update agent
+ */
+export async function updateAgent(
+  agentId: string,
+  updates: Partial<Pick<Agent, 'name' | 'is_active' | 'specialty' | 'capabilities'>>
+): Promise<Agent> {
+  return apiPatch<Agent>(`${API_BASE}/agents/${agentId}`, updates);
 }
 

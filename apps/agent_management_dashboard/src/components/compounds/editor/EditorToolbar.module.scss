@@ -1,0 +1,90 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.editorToolbarWrapper {
+  position: relative;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.editorToolbarBorder {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-bottom: 1px solid $color-neutral-800;
+}
+
+.toolbarContainerWrapper {
+  height: 35.994px;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.toolbarDivider {
+  position: absolute;
+  background-color: $color-neutral-800;
+  height: 0;
+  width: 0.994px;
+}
+
+.toolbarDropdown {
+  position: absolute;
+  align-content: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  box-sizing: border-box;
+  background-clip: padding-box;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.toolbarDropdownContent {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.toolbarDropdownText {
+  position: relative;
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: #888888;
+  white-space: pre;
+  letter-spacing: -0.1504px;
+}
+
+.toolbarAddButton {
+  position: absolute;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  &:focus {
+    outline: 1px solid $color-neutral-500;
+    outline-offset: 2px;
+  }
+}
+
+.toolbarAddButtonText {
+  position: absolute;
+  font-size: 14px;
+  line-height: 20px;
+  color: #888888;
+  white-space: pre;
+  letter-spacing: -0.1504px;
+  font-weight: 500;
+}
+

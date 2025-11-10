@@ -36,43 +36,59 @@ pub async fn run_test(
         };
     }
 
-    // Get service references for the test
-    let ollama = services.ollama().lock().await;
-    let postgres = services.postgres().lock().await;
-
     // Step 2: Setup test data in real database
-    if let Err(e) = postgres.setup_test_schema().await {
-        error!("Failed to setup test schema: {}", e);
-        return TestResult {
-            scenario: Scenario::Scenario1Refactor,
-            passed: false,
-            duration_ms: start_time.elapsed().as_millis() as u64,
-            error_message: Some(format!("Database setup failed: {}", e)),
-            metrics: TestMetrics::default(),
-        };
+    {
+        let postgres_arc = services.postgres();
+        let postgres = postgres_arc.lock().await;
+        if let Err(e) = postgres.setup_test_schema().await {
+            error!("Failed to setup test schema: {}", e);
+            return TestResult {
+                scenario: Scenario::Scenario1Refactor,
+                passed: false,
+                duration_ms: start_time.elapsed().as_millis() as u64,
+                error_message: Some(format!("Database setup failed: {}", e)),
+                metrics: TestMetrics::default(),
+            };
+        }
     }
 
     // Step 3: Execute autonomous task using real LLM
     let task_description = "Create a simple Rust function that validates email addresses using regex. Include comprehensive unit tests.";
 
-    match ollama.generate(&task_description).await {
+    let response = {
+        let ollama_arc = services.ollama();
+        let ollama = ollama_arc.lock().await;
+        ollama.generate(&task_description).await
+    };
+
+    match response {
         Ok(response) => {
             info!("LLM generated response: {}", response);
 
             // Step 4: Store result in real database
-            if let Err(e) = store_task_result(&postgres, task_description, &response).await {
-                error!("Failed to store task result: {}", e);
-                return TestResult {
-                    scenario: Scenario::Scenario1Refactor,
-                    passed: false,
-                    duration_ms: start_time.elapsed().as_millis() as u64,
-                    error_message: Some(format!("Database storage failed: {}", e)),
-                    metrics: TestMetrics::default(),
-                };
+            {
+                let postgres_arc = services.postgres();
+                let postgres = postgres_arc.lock().await;
+                if let Err(e) = store_task_result(&*postgres, task_description, &response).await {
+                    error!("Failed to store task result: {}", e);
+                    return TestResult {
+                        scenario: Scenario::Scenario1Refactor,
+                        passed: false,
+                        duration_ms: start_time.elapsed().as_millis() as u64,
+                        error_message: Some(format!("Database storage failed: {}", e)),
+                        metrics: TestMetrics::default(),
+                    };
+                }
             }
 
             // Step 5: Verify stored data
-            match verify_stored_data(&postgres, task_description).await {
+            let verification_result = {
+                let postgres_arc = services.postgres();
+                let postgres = postgres_arc.lock().await;
+                verify_stored_data(&*postgres, task_description).await
+            };
+            
+            match verification_result {
                 Ok(record_count) => {
                     info!("Successfully verified {} records in database", record_count);
 
@@ -89,6 +105,7 @@ pub async fn run_test(
                             council_evaluations: 0,
                             caws_compliance_checks: 1,
                             provenance_entries: 1,
+                            ..Default::default()
                         },
                     }
                 }
@@ -133,7 +150,9 @@ async fn store_task_result(
         "timestamp": chrono::Utc::now().to_rfc3339()
     }]);
 
-    postgres.execute(query, &[&task, &result, &citations]).await?;
+    // Convert JsonValue to String for database storage
+    let citations_str = citations.to_string();
+    postgres.execute(query, &[&task, &result, &citations_str]).await?;
     Ok(())
 }
 

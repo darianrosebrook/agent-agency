@@ -14,9 +14,13 @@ use futures::future::join_all;
 
 // ML/NLP imports for advanced assertion generation
 #[cfg(feature = "full")]
-use system_federated_ml::claim_extraction::{ClaimExtractor, ExtractionPattern, PatternType};
+use system_federated_ml::claim_extraction::ClaimExtractor;
 #[cfg(feature = "full")]
-use system_federated_ml::fact_verification::{FactVerifier, VerificationMethod, VerificationPriority};
+use system_federated_ml::claim_extraction::claim_extractor::{ExtractionPattern, PatternType};
+#[cfg(feature = "full")]
+use system_federated_ml::fact_verification::FactVerifier;
+#[cfg(feature = "full")]
+use system_federated_ml::fact_verification::fact_verifier::{VerificationMethod, VerificationPriority};
 #[cfg(feature = "full")]
 use agent_research::evidence::collector::EvidenceCollector;
 #[cfg(feature = "full")]
@@ -204,7 +208,7 @@ impl AssertionFramework {
     }
 
     /// Record an assertion result
-    fn record_assertion(&mut self, assertion_type: AssertionType, passed: bool, description: &str, error_message: Option<String>) {
+    pub fn record_assertion(&mut self, assertion_type: AssertionType, passed: bool, description: &str, error_message: Option<String>) {
         let type_str = assertion_type.as_str().to_string();
 
         let result = AssertionResult {
@@ -356,7 +360,11 @@ impl FactChecker {
             learning_rate: 0.1,
             discount_factor: 0.9,
             exploration_rate: 0.2,
+            min_exploration_rate: 0.01,
+            exploration_decay: 0.995,
+            max_iterations: 1000,
             max_episodes: 1000,
+            convergence_threshold: 0.001,
         };
         let reinforcement_learner = QLearning::new(rl_config);
 

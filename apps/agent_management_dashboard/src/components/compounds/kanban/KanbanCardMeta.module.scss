@@ -1,0 +1,11 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.meta {
+  height: 19.993px;
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  gap: 5.994px;
+  align-items: center;
+}
+

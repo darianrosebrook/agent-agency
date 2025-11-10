@@ -20,7 +20,8 @@ use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceMana
 #[cfg(feature = "full")]
 use crate::test_helpers::create_test_autonomous_executor;
 #[cfg(feature = "full")]
-use agent_orchestration::autonomous_executor::{AutonomousExecutor, ExecutionMode};
+// autonomous_executor doesn't exist - using contracts types instead
+use agent_agency_contracts::types::prelude::ExecutionMode;
 
 /// Run the human intervention E2E test
 pub async fn run_human_intervention_test(

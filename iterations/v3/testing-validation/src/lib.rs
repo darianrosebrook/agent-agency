@@ -27,6 +27,7 @@ pub mod scenarios;
 pub mod test_helpers;
 pub mod database_lifecycle;
 pub mod e2e_orchestration_test;
+pub mod quality_analyzers;
 
 use tracing::{info, error};
 
@@ -231,6 +232,18 @@ pub struct TestResult {
     pub duration_ms: u64,
     pub error_message: Option<String>,
     pub metrics: TestMetrics,
+}
+
+impl Default for TestResult {
+    fn default() -> Self {
+        Self {
+            scenario: Scenario::Scenario1Refactor,
+            passed: false,
+            duration_ms: 0,
+            error_message: None,
+            metrics: TestMetrics::default(),
+        }
+    }
 }
 
 /// Performance and validation metrics from test execution

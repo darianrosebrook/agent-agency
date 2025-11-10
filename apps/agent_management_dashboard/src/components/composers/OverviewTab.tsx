@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { PanelRightOpen, PanelRightClose } from "lucide-react";
-import OverviewEditorImport from "../../imports/Container";
+import { OverviewEditor } from "../editor";
 import svgPaths from "../../imports/svg-8d8l4g1ml9";
 import { useProjectStore } from "../../lib/stores";
 import styles from "./OverviewTab.module.scss";
@@ -30,7 +30,22 @@ export function OverviewTab() {
       {/* Editor Content */}
       <div className={styles.editorContent}>
         {showMetadata ? (
-          <OverviewEditorImport />
+          <OverviewEditor
+            metadata={{
+              title: "UI / Components (light)",
+              fields: [
+                {
+                  label: "Created At",
+                  value: "February 15, 2020 6:08 AM",
+                },
+                {
+                  label: "Created By",
+                  value: "Darian Rosebrook",
+                },
+              ],
+            }}
+            onMetadataClose={() => setShowMetadata(false)}
+          />
         ) : (
           <EditorOnly description={currentProject?.description} />
         )}

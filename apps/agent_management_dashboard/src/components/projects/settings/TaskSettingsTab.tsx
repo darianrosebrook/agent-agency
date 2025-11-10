@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { useProjectContext } from "../../ProjectContext";
 import { Input } from "../../primitives/input";
 import { Label } from "../../primitives/label";
 import { Switch } from "../../primitives/switch";
@@ -12,22 +14,124 @@ import {
 } from "../../primitives/select";
 import { Separator } from "../../primitives/separator";
 import { Slider } from "../../primitives/slider";
+import {
+  getProjectTaskSettings,
+  updateProjectTaskSettings,
+  type ProjectSettings,
+} from "../../../lib/api/projects";
 import styles from "./TaskSettingsTab.module.scss";
 
 export function TaskSettingsTabContent() {
-  // TODO: Replace hardcoded task settings with project task settings from v3 database with the following requirements:
-  // 1. Task settings fetching: Load project task workflow settings from database
-  //    - Data source: GET /api/projects/:projectId/settings/tasks endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
-  //    - Database table: PostgreSQL `project_settings` or `task_settings` table
-  //    - Include default status, auto-archive settings, dependency settings, etc.
-  // 2. Settings persistence: Save task workflow settings to database
-  //    - Data source: PATCH /api/projects/:projectId/settings/tasks endpoint
-  //    - Update default status, auto-archive days, dependency settings
-  //    - Persist priority level configuration and label settings
-  // 3. Settings validation: Validate settings before saving
-  //    - Ensure valid status values
-  //    - Validate numeric values (auto-archive days, priority levels)
-  //    - Handle validation errors gracefully
+  const { currentProjectId } = useProjectContext();
+  const [settings, setSettings] = useState<ProjectSettings | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  // Form state
+  const [defaultStatus, setDefaultStatus] = useState("todo");
+  const [autoArchive, setAutoArchive] = useState(true);
+  const [autoArchiveDays, setAutoArchiveDays] = useState(30);
+  const [enableDependencies, setEnableDependencies] = useState(false);
+  const [requireDescription, setRequireDescription] = useState(false);
+  const [priorityLevels, setPriorityLevels] = useState("4");
+  const [autoAssignPriority, setAutoAssignPriority] = useState(true);
+  const [maxTags, setMaxTags] = useState(5);
+  const [enableTimeTracking, setEnableTimeTracking] = useState(true);
+  const [timeAlertThreshold, setTimeAlertThreshold] = useState(50);
+  const [workHours, setWorkHours] = useState("8");
+  const [autoMoveStale, setAutoMoveStale] = useState(true);
+  const [smartDistribution, setSmartDistribution] = useState(true);
+  const [deadlineReminders, setDeadlineReminders] = useState(true);
+
+  useEffect(() => {
+    async function fetchSettings() {
+      if (!currentProjectId) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const settingsData = await getProjectTaskSettings(currentProjectId);
+        setSettings(settingsData);
+
+        // Populate form from settings
+        if (settingsData.default_status) setDefaultStatus(settingsData.default_status as string);
+        if (settingsData.auto_archive !== undefined) setAutoArchive(settingsData.auto_archive as boolean);
+        if (settingsData.auto_archive_days) setAutoArchiveDays(settingsData.auto_archive_days as number);
+        if (settingsData.enable_dependencies !== undefined) setEnableDependencies(settingsData.enable_dependencies as boolean);
+        if (settingsData.require_description !== undefined) setRequireDescription(settingsData.require_description as boolean);
+        if (settingsData.priority_levels) setPriorityLevels(String(settingsData.priority_levels));
+        if (settingsData.auto_assign_priority !== undefined) setAutoAssignPriority(settingsData.auto_assign_priority as boolean);
+        if (settingsData.max_tags) setMaxTags(settingsData.max_tags as number);
+        if (settingsData.enable_time_tracking !== undefined) setEnableTimeTracking(settingsData.enable_time_tracking as boolean);
+        if (settingsData.time_alert_threshold) setTimeAlertThreshold(settingsData.time_alert_threshold as number);
+        if (settingsData.work_hours) setWorkHours(String(settingsData.work_hours));
+        if (settingsData.auto_move_stale !== undefined) setAutoMoveStale(settingsData.auto_move_stale as boolean);
+        if (settingsData.smart_distribution !== undefined) setSmartDistribution(settingsData.smart_distribution as boolean);
+        if (settingsData.deadline_reminders !== undefined) setDeadlineReminders(settingsData.deadline_reminders as boolean);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error("Failed to load task settings"));
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchSettings();
+  }, [currentProjectId]);
+
+  const handleSave = async () => {
+    if (!currentProjectId) return;
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      await updateProjectTaskSettings(currentProjectId, {
+        default_status: defaultStatus,
+        auto_archive: autoArchive,
+        auto_archive_days: autoArchiveDays,
+        enable_dependencies: enableDependencies,
+        require_description: requireDescription,
+        priority_levels: parseInt(priorityLevels),
+        auto_assign_priority: autoAssignPriority,
+        max_tags: maxTags,
+        enable_time_tracking: enableTimeTracking,
+        time_alert_threshold: timeAlertThreshold,
+        work_hours: parseInt(workHours),
+        auto_move_stale: autoMoveStale,
+        smart_distribution: smartDistribution,
+        deadline_reminders: deadlineReminders,
+      });
+
+      alert("Task settings saved successfully");
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error("Failed to save task settings"));
+      alert(`Failed to save settings: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className={styles.taskSettingsTab}>
+        <div className={styles.loadingState}>Loading task settings...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.taskSettingsTab}>
+        <div className={styles.errorState}>Error: {error.message}</div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.taskSettingsTab}>
       {/* Task Workflow */}
@@ -39,7 +143,7 @@ export function TaskSettingsTabContent() {
             <Label htmlFor="default-status" className={styles.label}>
               Default Status for New Tasks
             </Label>
-            <Select defaultValue="todo">
+            <Select value={defaultStatus} onValueChange={setDefaultStatus}>
               <SelectTrigger className={styles.selectTrigger}>
                 <SelectValue />
               </SelectTrigger>
@@ -60,7 +164,7 @@ export function TaskSettingsTabContent() {
                 Archive tasks 30 days after completion
               </p>
             </div>
-            <Switch defaultChecked />
+            <Switch checked={autoArchive} onCheckedChange={setAutoArchive} />
           </div>
 
           <Separator className={styles.separator} />
@@ -72,7 +176,7 @@ export function TaskSettingsTabContent() {
                 Tasks can block other tasks from starting
               </p>
             </div>
-            <Switch />
+            <Switch checked={enableDependencies} onCheckedChange={setEnableDependencies} />
           </div>
 
           <Separator className={styles.separator} />
@@ -86,7 +190,7 @@ export function TaskSettingsTabContent() {
                 Force users to add descriptions to new tasks
               </p>
             </div>
-            <Switch />
+            <Switch checked={requireDescription} onCheckedChange={setRequireDescription} />
           </div>
         </div>
       </div>
@@ -100,7 +204,7 @@ export function TaskSettingsTabContent() {
             <Label htmlFor="priority-levels" className={styles.label}>
               Priority Levels
             </Label>
-            <Select defaultValue="4">
+            <Select value={priorityLevels} onValueChange={setPriorityLevels}>
               <SelectTrigger className={styles.selectTrigger}>
                 <SelectValue />
               </SelectTrigger>
@@ -123,7 +227,7 @@ export function TaskSettingsTabContent() {
                 AI suggests priority based on task content
               </p>
             </div>
-            <Switch defaultChecked />
+            <Switch checked={autoAssignPriority} onCheckedChange={setAutoAssignPriority} />
           </div>
 
           <Separator className={styles.separator} />
@@ -138,7 +242,8 @@ export function TaskSettingsTabContent() {
             <div className={styles.sliderContainer}>
               <Input
                 type="number"
-                defaultValue="5"
+                value={maxTags}
+                onChange={(e) => setMaxTags(parseInt(e.target.value) || 5)}
                 className={styles.numberInput}
               />
             </div>
@@ -158,7 +263,7 @@ export function TaskSettingsTabContent() {
                 Track time spent on tasks
               </p>
             </div>
-            <Switch defaultChecked />
+            <Switch checked={enableTimeTracking} onCheckedChange={setEnableTimeTracking} />
           </div>
 
           <Separator className={styles.separator} />
@@ -172,12 +277,13 @@ export function TaskSettingsTabContent() {
             </p>
             <div className={styles.sliderContainer}>
               <Slider
-                defaultValue={[50]}
+                value={[timeAlertThreshold]}
+                onValueChange={(vals) => setTimeAlertThreshold(vals[0])}
                 max={100}
                 step={10}
                 className={styles.slider}
               />
-              <span className={styles.sliderValue}>50%</span>
+              <span className={styles.sliderValue}>{timeAlertThreshold}%</span>
             </div>
           </div>
 
@@ -187,7 +293,7 @@ export function TaskSettingsTabContent() {
             <Label htmlFor="work-hours" className={styles.label}>
               Standard Work Hours
             </Label>
-            <Select defaultValue="8">
+            <Select value={workHours} onValueChange={setWorkHours}>
               <SelectTrigger className={styles.selectTrigger}>
                 <SelectValue />
               </SelectTrigger>
@@ -213,7 +319,7 @@ export function TaskSettingsTabContent() {
                 Move tasks stuck in &quot;In Progress&quot; for 7+ days
               </p>
             </div>
-            <Switch defaultChecked />
+            <Switch checked={autoMoveStale} onCheckedChange={setAutoMoveStale} />
           </div>
 
           <Separator className={styles.separator} />
@@ -225,7 +331,7 @@ export function TaskSettingsTabContent() {
                 AI distributes tasks based on team capacity
               </p>
             </div>
-            <Switch defaultChecked />
+            <Switch checked={smartDistribution} onCheckedChange={setSmartDistribution} />
           </div>
 
           <Separator className={styles.separator} />
@@ -237,9 +343,20 @@ export function TaskSettingsTabContent() {
                 Send reminders 24h before deadline
               </p>
             </div>
-            <Switch defaultChecked />
+            <Switch checked={deadlineReminders} onCheckedChange={setDeadlineReminders} />
           </div>
         </div>
+      </div>
+
+      {/* Save Button */}
+      <div className={styles.saveSection}>
+        <button
+          className={styles.saveButton}
+          onClick={handleSave}
+          disabled={isSaving || !currentProjectId}
+        >
+          {isSaving ? 'Saving...' : 'Save All Settings'}
+        </button>
       </div>
     </div>
   );

@@ -55,3 +55,10 @@ pub mod security_privacy;
 // API Integration tests
 pub mod api_integration;
 
+// Quality Evaluation tests
+pub mod quality_evaluation;
+
+// Integrated Playground + Quality Evaluation tests
+#[cfg(feature = "full")]
+pub mod integrated_playground_quality;
+

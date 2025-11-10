@@ -10,7 +10,7 @@ pub mod research_sources;
 pub mod schema_validator_spec;
 
 pub use refactor_target::*;
-// pub use research_sources::*; // Removed unused import - will be re-added in v4 if needed
+pub use research_sources::*;
 pub use schema_validator_spec::*;
 
 

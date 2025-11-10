@@ -1,0 +1,22 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.editorImage {
+  position: absolute;
+  height: 300px;
+  left: 0;
+  border-radius: 0.625rem;
+  top: 583.54px;
+  width: 800px;
+  overflow: hidden;
+}
+
+.editorImageImg {
+  position: absolute;
+  inset: 0;
+  max-width: none;
+  object-position: 50% 50%;
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+

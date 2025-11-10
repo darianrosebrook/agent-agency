@@ -9,8 +9,8 @@
 pub mod environment;
 pub mod assertions;
 
-pub use environment::{TestEnvironment, TestWorkspace};
-pub use assertions::AssertionFramework;
+pub use environment::{TestEnvironment, TestWorkspace, default_process_output};
+pub use assertions::{AssertionFramework, AssertionType, FactChecker, SourceFile, Citation, CawsComplianceResult};
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -19,8 +19,9 @@ use tracing::{info, warn};
 use crate::services::{OrchestratorService, OllamaService, PostgresService, ServiceManager};
 #[cfg(feature = "full")]
 use crate::test_helpers::create_test_autonomous_executor;
-#[cfg(feature = "full")]
-use agent_orchestration::autonomous_executor::AutonomousExecutor;
+// autonomous_executor module doesn't exist in agent-orchestration
+// #[cfg(feature = "full")]
+// use agent_orchestration::autonomous_executor::AutonomousExecutor;
 
 /// Manager for local services required by E2E tests
 pub struct LocalServiceManager {

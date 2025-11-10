@@ -9,8 +9,9 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAnimatedValue } from "../hooks/useAnimatedValue";
+import { getContributions, type ContributionStats } from "../lib/api/agents";
 import styles from "./CodeContributionChart.module.scss";
 
 interface DataPoint {
@@ -30,52 +31,106 @@ export function CodeContributionChart({
   subtitle = "2 Agents over the last 30 days",
   days = 30,
 }: CodeContributionChartProps) {
-  // TODO: Replace mock data generation with API call to v3 telemetry service with the following requirements:
-  // 1. Contribution data fetching: Load code contribution statistics over time
-  //    - Data source: GET /api/telemetry/contributions?days={days} endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
-  //    - Database tables: PostgreSQL `provenance` and `telemetry` tables
-  //    - Aggregate accepted lines of code vs total lines by day
-  // 2. Time range handling: Use days prop to configure API request
-  //    - Pass days parameter to API endpoint query string
-  //    - Handle date range calculations and timezone issues
-  // 3. Data transformation: Format API response for chart component
-  //    - Map API response to DataPoint array with day, baseline (total), and contribution (accepted)
-  //    - Calculate total contribution for display
-  // Generate mock data for the last N days
-  const generateData = (): DataPoint[] => {
-    const data: DataPoint[] = [];
-    const today = new Date();
+  const [data, setData] = useState<DataPoint[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-    for (let i = days - 1; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dayNum = days - i;
+  useEffect(() => {
+    async function fetchData() {
+      setIsLoading(true);
+      setError(null);
 
-      // Generate accepted lines of code (solid line) with wave pattern
-      const acceptedValue =
-        1200 + Math.sin(dayNum / 4) * 600 + Math.cos(dayNum / 6) * 300;
+      try {
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - days);
+        const startDateStr = startDate.toISOString().split("T")[0];
 
-      // Generate additional non-accepted lines (varies from 10% to 40% of accepted)
-      const nonAcceptedValue =
-        acceptedValue * (0.3 + Math.sin(dayNum / 7) * 0.05);
+        const contributions = await getContributions({
+          start_date: startDateStr,
+        });
 
-      // Total is accepted + not accepted
-      const totalValue = acceptedValue + nonAcceptedValue;
+        // Transform API response to chart data format
+        // Group by day and aggregate contributions
+        const dailyData: Record<string, { contribution: number; baseline: number }> = {};
+        const today = new Date();
 
-      data.push({
-        day: date.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        }),
-        baseline: Math.round(totalValue), // Total overall (accepted + not accepted)
-        contribution: Math.round(acceptedValue), // Accepted lines only
-      });
+        // Initialize all days with zero values
+        for (let i = days - 1; i >= 0; i--) {
+          const date = new Date(today);
+          date.setDate(date.getDate() - i);
+          const dayKey = date.toISOString().split("T")[0];
+          dailyData[dayKey] = { contribution: 0, baseline: 0 };
+        }
+
+        // Aggregate contributions by day
+        contributions.forEach((contrib: ContributionStats) => {
+          // For now, we'll use lines_added as contribution and estimate baseline
+          // The API might need to be enhanced to return daily breakdowns
+          const linesAdded = contrib.lines_added || 0;
+          const linesModified = contrib.lines_modified || 0;
+          const linesDeleted = contrib.lines_deleted || 0;
+          
+          // Estimate: contribution is lines_added, baseline includes modified/deleted
+          const contribution = linesAdded;
+          const baseline = linesAdded + linesModified + linesDeleted;
+
+          // Distribute across days (simplified - API should ideally return daily data)
+          const daysSinceStart = Math.floor(
+            (new Date().getTime() - new Date(startDateStr).getTime()) / (1000 * 60 * 60 * 24)
+          );
+          const avgPerDay = contribution / Math.max(daysSinceStart, 1);
+
+          Object.keys(dailyData).forEach((dayKey) => {
+            dailyData[dayKey].contribution += avgPerDay;
+            dailyData[dayKey].baseline += (baseline / Math.max(daysSinceStart, 1));
+          });
+        });
+
+        // Convert to DataPoint array
+        const chartData: DataPoint[] = Object.entries(dailyData)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([dayKey, values]) => {
+            const date = new Date(dayKey);
+            return {
+              day: date.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              }),
+              baseline: Math.round(values.baseline),
+              contribution: Math.round(values.contribution),
+            };
+          });
+
+        setData(chartData.length > 0 ? chartData : generateFallbackData());
+      } catch (err) {
+        console.error("Failed to fetch contribution data:", err);
+        setError(err instanceof Error ? err : new Error("Failed to load contribution data"));
+        setData(generateFallbackData());
+      } finally {
+        setIsLoading(false);
+      }
     }
 
-    return data;
-  };
+    function generateFallbackData(): DataPoint[] {
+      const fallback: DataPoint[] = [];
+      const today = new Date();
+      for (let i = days - 1; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        fallback.push({
+          day: date.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          }),
+          baseline: 0,
+          contribution: 0,
+        });
+      }
+      return fallback;
+    }
 
-  const [data] = useState(generateData());
+    fetchData();
+  }, [days]);
 
   // Calculate total contribution
   const totalContribution = data.reduce(

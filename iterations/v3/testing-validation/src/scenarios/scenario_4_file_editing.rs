@@ -13,13 +13,19 @@
 use std::time::Instant;
 use std::path::PathBuf;
 use tokio::process::Command;
-use tracing::error;
+use tracing::{error, info};
 use tempfile::TempDir;
+use tokio::fs;
 
 #[cfg(feature = "full")]
 use agent_orchestration::{
     AutonomousFileEditor,
+    autonomous_file_editor::{FileChange, ChangeType},
 };
+#[cfg(feature = "full")]
+use system_common_interfaces::file_operations::{AllowList, Budgets};
+#[cfg(feature = "full")]
+use data_infrastructure::file_operations_service::create_file_operations_service;
 
 use crate::{TestResult, TestMetrics};
 

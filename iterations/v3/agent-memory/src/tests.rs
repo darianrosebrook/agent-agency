@@ -71,6 +71,8 @@ mod tests {
             decay_config: DecayConfig::default(),
             context_config: ContextConfig::default(),
             temporal_config: TemporalConfig::default(),
+            #[cfg(feature = "embeddings")]
+            embedding_config: EmbeddingConfig::default(),
         }
     }
 

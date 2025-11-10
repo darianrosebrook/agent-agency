@@ -1,0 +1,36 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.editorQuote {
+  position: absolute;
+  background-color: $color-dark-bg-primary;
+  left: 0;
+  top: 387.64px;
+  width: 800px;
+  padding-left: 23.99px;
+  padding-right: 23.99px;
+  padding-top: 15.99px;
+  padding-bottom: 15.99px;
+  border-radius: 8px;
+}
+
+.editorQuoteBorder {
+  position: absolute;
+  border-width: 0 0 0 3.636px;
+  border-color: $color-neutral-700;
+  border-style: solid;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 8px;
+}
+
+.editorQuoteText {
+  font-family: $font-family-sans;
+  font-weight: $font-weight-normal;
+  font-style: italic;
+  line-height: 1.5rem;
+  color: $color-gray-200;
+  font-size: 1rem;
+  white-space: pre-wrap;
+  letter-spacing: -0.3125px;
+}
+

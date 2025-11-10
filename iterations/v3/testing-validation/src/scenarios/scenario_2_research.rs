@@ -11,7 +11,7 @@ use tracing::{info, error};
 use std::sync::Arc;
 
 use crate::harness::{TestEnvironment, LocalServiceManager, AssertionFramework};
-use crate::fixtures::research_sources::*;
+use crate::fixtures::research_sources::{create_source_files, get_research_sources};
 use crate::{TestResult, TestMetrics, Scenario};
 
 /// Run the research scenario test
@@ -61,16 +61,52 @@ pub async fn run_test(
     }).collect();
 
     // Initialize real KnowledgeSeeker for research
-    let db_client = services.postgres().await?;
-    let knowledge_seeker = agent_research::knowledge_seeker::KnowledgeSeeker::new(
-        agent_research::research_types::ResearchAgentConfig {
-            max_search_depth: 3,
-            max_results_per_query: 10,
-            enable_web_scraping: false, // Disable web scraping for local-only testing
-            enable_vector_search: true,
-            context_window_size: 4096,
-            synthesis_enabled: true,
-            metrics_enabled: true,
+    let db_client = services.postgres();
+    #[cfg(feature = "full")]
+    use agent_research::knowledge_seeker::KnowledgeSeeker;
+    #[cfg(feature = "full")]
+    use agent_research::research_types::{ResearchAgentConfig, VectorSearchConfig, WebScrapingConfig, ContextSynthesisConfig, PerformanceConfig, FuzzyMatchingConfig};
+    let knowledge_seeker = KnowledgeSeeker::new(
+        ResearchAgentConfig {
+            vector_search: VectorSearchConfig {
+                enabled: true,
+                qdrant_url: "http://localhost:6333".to_string(),
+                collection_name: "research".to_string(),
+                model: "all-MiniLM-L6-v2".to_string(),
+                dimension: 384,
+                similarity_threshold: 0.7,
+                max_results: 10,
+                batch_size: 10,
+            },
+            web_scraping: WebScrapingConfig {
+                enabled: false, // Disable web scraping for local-only testing
+                max_depth: 1,
+                max_pages: 10,
+                timeout_ms: 5000,
+                timeout_seconds: 5,
+                user_agent: "Agent-Agency/1.0".to_string(),
+                respect_robots_txt: true,
+                allowed_domains: vec![],
+                rate_limit_per_minute: 10,
+            },
+            context_synthesis: ContextSynthesisConfig {
+                enabled: true,
+                similarity_threshold: 0.7,
+                max_cross_references: 5,
+                max_context_size: 4096,
+                synthesis_timeout_ms: 10000,
+            },
+            performance: PerformanceConfig {
+                max_concurrent_requests: 5,
+                request_timeout_ms: 10000,
+            },
+            fuzzy_matching: FuzzyMatchingConfig {
+                enabled: true,
+                similarity_threshold: 0.6,
+                boost_per_match: 0.1,
+                coverage_boost: 0.2,
+                max_total_boost: 1.0,
+            },
         },
         Arc::new(db_client),
     ).await.map_err(|e| {
@@ -84,19 +120,20 @@ pub async fn run_test(
     })?;
 
     // Execute research task
-    let research_query = agent_research::research_types::ResearchQuery {
+    use agent_research::research_types::{ResearchQuery, QueryType, ResearchPriority, KnowledgeSource};
+    use chrono::Utc;
+    use std::collections::HashMap;
+    let research_query = ResearchQuery {
         id: uuid::Uuid::new_v4(),
         query: "Research and summarize homomorphic encryption applications".to_string(),
-        context: vec![
-            "Focus on practical applications in healthcare, finance, and cloud computing".to_string(),
-            "Include technical foundations and current challenges".to_string(),
-            "Cite sources and provide evidence for claims".to_string(),
-        ],
-        search_scope: agent_research::research_types::SearchScope::LocalFiles(
-            workspace.path().join("research_sources").to_string_lossy().to_string()
-        ),
-        max_results: 10,
-        synthesis_required: true,
+        query_type: QueryType::Knowledge,
+        priority: ResearchPriority::High,
+        context: Some("Focus on practical applications in healthcare, finance, and cloud computing. Include technical foundations and current challenges. Cite sources and provide evidence for claims.".to_string()),
+        max_results: Some(10),
+        sources: vec![KnowledgeSource::InternalKnowledgeBase("test_data".to_string())],
+        created_at: Utc::now(),
+        deadline: None,
+        metadata: HashMap::new(),
     };
 
     let research_result = knowledge_seeker.execute_research(research_query).await.map_err(|e| {
@@ -131,17 +168,20 @@ pub async fn run_test(
     );
 
     // Check hallucination detection
-    let fact_checker = match crate::harness::FactChecker::new(get_known_facts()).await {
+    // Extract known facts from research sources for fact checking
+    let known_facts: Vec<String> = sources.iter()
+        .flat_map(|s| s.content.lines())
+        .filter(|line| !line.trim().is_empty() && !line.starts_with('#'))
+        .map(|s| s.to_string())
+        .collect();
+    let fact_checker = match crate::harness::FactChecker::new(known_facts).await {
         Ok(checker) => checker,
         Err(e) => {
             error!("Failed to initialize fact checker: {}", e);
             return TestResult {
-                scenario: Scenario::Research,
+                scenario: Scenario::Scenario2Research,
                 passed: false,
-                metrics: TestMetrics {
-                    duration_ms: start_time.elapsed().as_millis() as f64,
-                    ..Default::default()
-                },
+                metrics: TestMetrics::default(),
                 error_message: Some(format!("Fact checker initialization failed: {}", e)),
                 ..Default::default()
             };
@@ -178,7 +218,10 @@ pub async fn run_test(
     env.record_metric("hallucination_checks", 1.0).await;
 
     let duration = start_time.elapsed().as_millis() as u64;
-    let metrics = env.get_metrics().await;
+    let _metrics = match env.get_metrics().await {
+        Ok(m) => m,
+        Err(_) => std::collections::HashMap::new(),
+    };
 
     let passed = assertions.overall_result();
 
@@ -191,6 +234,6 @@ pub async fn run_test(
         } else {
             None
         },
-        metrics: metrics.clone(),
+        metrics: TestMetrics::default(), // TODO: Convert HashMap to TestMetrics if needed
     }
 }

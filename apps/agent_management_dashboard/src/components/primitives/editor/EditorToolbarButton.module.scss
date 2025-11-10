@@ -1,0 +1,27 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.toolbarButton {
+  position: absolute;
+  align-content: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 23.991px;
+  height: 23.991px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  &:focus {
+    outline: 1px solid $color-neutral-500;
+    outline-offset: 2px;
+  }
+}
+
+.toolbarButtonActive {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+

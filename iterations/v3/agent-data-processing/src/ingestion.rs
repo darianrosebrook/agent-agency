@@ -81,7 +81,11 @@ where
     }
 }
 
-// Removed unused normalize_content_type function - will be re-added in v4 if needed
+/// Normalize content type from explicit type or detected type
+/// Returns the explicit type if provided, otherwise falls back to detected type, or Unknown
+fn normalize_content_type(explicit: Option<ContentType>, detected: Option<ContentType>) -> ContentType {
+    explicit.or(detected).unwrap_or(ContentType::Unknown)
+}
 
 /// Check if content is SVG by looking for opening SVG tag
 fn is_svg(content: &[u8]) -> bool {

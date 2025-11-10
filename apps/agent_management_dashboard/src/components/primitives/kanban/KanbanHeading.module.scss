@@ -1,0 +1,65 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.heading {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.headingInner {
+  background-clip: padding-box;
+  border-width: 0;
+  border-color: transparent;
+  border-style: solid;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.headingContent {
+  position: absolute;
+  font-weight: 400;
+  line-height: 24px;
+  left: 0;
+  font-style: normal;
+  font-size: 16px;
+  white-space: nowrap;
+  color: $color-white;
+  letter-spacing: -0.3125px;
+  white-space: pre;
+}
+
+.fontNormal {
+  font-weight: 400;
+}
+
+.leading24 {
+  line-height: 24px;
+}
+
+.left0 {
+  left: 0;
+}
+
+.notItalic {
+  font-style: normal;
+}
+
+.text16 {
+  font-size: 16px;
+}
+
+.textNowrap {
+  white-space: nowrap;
+}
+
+.textWhite {
+  color: $color-white;
+}
+
+.trackingNeg3125 {
+  letter-spacing: -0.3125px;
+}
+
+.whitespacePre {
+  white-space: pre;
+}
+

@@ -1173,7 +1173,7 @@ mod tests {
         );
 
         // Different consistency levels should be configurable
-        assert_eq!(strong_manager.consistency_level, ConsistencyLevel::Strong);
-        assert_eq!(eventual_manager.consistency_level, ConsistencyLevel::Eventual);
+        assert_eq!(strong_manager._consistency_level, ConsistencyLevel::Strong);
+        assert_eq!(eventual_manager._consistency_level, ConsistencyLevel::Eventual);
     }
 }

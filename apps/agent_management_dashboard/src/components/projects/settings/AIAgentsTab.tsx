@@ -1,9 +1,86 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { cn } from '../../primitives/utils';
+import { getAgents, updateAgent, type Agent } from '../../../lib/api/agents';
 import styles from './AIAgentsTab.module.scss';
 
 export function AIAgentsTabContent() {
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    async function fetchAgents() {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const agentsData = await getAgents();
+        setAgents(agentsData);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Failed to load agents'));
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchAgents();
+  }, []);
+
+  const handleToggle = async (agentId: string, currentEnabled: boolean) => {
+    setUpdatingIds((prev) => new Set(prev).add(agentId));
+
+    try {
+      // Optimistic update
+      setAgents((prev) =>
+        prev.map((agent) =>
+          agent.id === agentId ? { ...agent, is_active: !currentEnabled } : agent
+        )
+      );
+
+      // API update
+      await updateAgent(agentId, { is_active: !currentEnabled });
+    } catch (err) {
+      // Rollback on error
+      setAgents((prev) =>
+        prev.map((agent) =>
+          agent.id === agentId ? { ...agent, is_active: currentEnabled } : agent
+        )
+      );
+      alert(`Failed to update agent: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setUpdatingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(agentId);
+        return next;
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className={styles.aiAgentsTab}>
+        <div className={styles.container}>
+          <h2 className={styles.heading}>AI Agents</h2>
+          <p className={styles.description}>Loading agents...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.aiAgentsTab}>
+        <div className={styles.container}>
+          <h2 className={styles.heading}>AI Agents</h2>
+          <p className={styles.description}>Error: {error.message}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.aiAgentsTab}>
       <div className={styles.container}>
@@ -15,64 +92,42 @@ export function AIAgentsTabContent() {
           assistance.
         </p>
 
-        {/* TODO: Replace hardcoded agent list with data from v3 API with the following requirements:
-        // 1. Agent list fetching: Load configured AI agents from database
-        //    - Data source: GET /api/agents endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
-        //    - Database table: PostgreSQL `agents` table
-        //    - Include agent metadata: name, description, enabled status
-        // 2. Agent configuration: Handle agent enable/disable toggle
-        //    - Data source: PATCH /api/agents/:id endpoint to update enabled status
-        //    - Update local state optimistically with rollback on failure
-        // 3. Real-time updates: Refresh agent list when configuration changes
-        //    - Handle loading and error states
-        //    - Display user-friendly error messages */}
         <div className={styles.agentsList}>
-          {[
-            {
-              name: 'Task Suggester',
-              description:
-                'Automatically suggests task breakdowns and subtasks',
-              enabled: true,
-            },
-            {
-              name: 'Priority Optimizer',
-              description: 'Analyzes and recommends task prioritization',
-              enabled: true,
-            },
-            {
-              name: 'Deadline Predictor',
-              description:
-                'Estimates realistic completion dates based on history',
-              enabled: false,
-            },
-          ].map((agent, i) => (
-            <div
-              key={i}
-              className={styles.agentItem}
-            >
-              <div className={styles.agentInfo}>
-                <p className={styles.agentName}>
-                  {agent.name}
-                </p>
-                <p className={styles.agentDescription}>
-                  {agent.description}
-                </p>
-              </div>
+          {agents.length === 0 ? (
+            <p className={styles.emptyState}>No agents configured</p>
+          ) : (
+            agents.map((agent) => (
               <div
-                className={cn(
-                  styles.toggleSwitch,
-                  agent.enabled ? styles.toggleSwitchActive : styles.toggleSwitchInactive
-                )}
+                key={agent.id}
+                className={styles.agentItem}
               >
-                <div
+                <div className={styles.agentInfo}>
+                  <p className={styles.agentName}>
+                    {agent.name}
+                  </p>
+                  <p className={styles.agentDescription}>
+                    {agent.specialty || agent.worker_type || 'No description available'}
+                  </p>
+                </div>
+                <button
                   className={cn(
-                    styles.toggleThumb,
-                    agent.enabled ? styles.toggleThumbActive : styles.toggleThumbInactive
+                    styles.toggleSwitch,
+                    agent.is_active ? styles.toggleSwitchActive : styles.toggleSwitchInactive
                   )}
-                />
+                  onClick={() => handleToggle(agent.id, agent.is_active)}
+                  disabled={updatingIds.has(agent.id)}
+                  aria-label={`Toggle ${agent.name} ${agent.is_active ? 'off' : 'on'}`}
+                >
+                  <div
+                    className={cn(
+                      styles.toggleThumb,
+                      agent.is_active ? styles.toggleThumbActive : styles.toggleThumbInactive
+                    )}
+                  />
+                </button>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>

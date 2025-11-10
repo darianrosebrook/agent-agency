@@ -26,15 +26,23 @@ mod gc_optimization_tests {
             monitor_config: MemoryLimitConfig {
                 max_heap_mb: 1024,
                 max_stack_mb: 128,
-                warning_threshold_mb: 512,
-                critical_threshold_mb: 768,
+                warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+                critical_threshold_percent: 0.75, // 768 MB / 1024 MB
                 enable_gc_pressure: true,
-                gc_pressure_threshold_mb: 256,
+                gc_pressure_threshold_mb: 256.0,
                 monitoring_interval_ms: 1000,
             },
-            enable_object_pooling: true,
-            database_connection_pool_size: 10,
-            llm_client_pool_size: 5,
+            enable_gc: true,
+            enable_allocation_tracking: true,
+            limits: system_resilience::memory::MemoryLimitConfig {
+                max_heap_mb: 1024,
+                max_stack_mb: 128,
+                warning_threshold_percent: 0.5,
+                critical_threshold_percent: 0.75,
+                enable_gc_pressure: true,
+                gc_pressure_threshold_mb: 256.0,
+                monitoring_interval_ms: 1000,
+            },
             enable_leak_detection: false,
             leak_detection_threshold_mb: 100,
         };
@@ -61,15 +69,23 @@ mod gc_optimization_tests {
             monitor_config: MemoryLimitConfig {
                 max_heap_mb: 1024,
                 max_stack_mb: 128,
-                warning_threshold_mb: 512,
-                critical_threshold_mb: 768,
+                warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+                critical_threshold_percent: 0.75, // 768 MB / 1024 MB
                 enable_gc_pressure: true,
-                gc_pressure_threshold_mb: 256,
+                gc_pressure_threshold_mb: 256.0,
                 monitoring_interval_ms: 1000,
             },
-            enable_object_pooling: true,
-            database_connection_pool_size: 10,
-            llm_client_pool_size: 5,
+            enable_gc: true,
+            enable_allocation_tracking: true,
+            limits: system_resilience::memory::MemoryLimitConfig {
+                max_heap_mb: 1024,
+                max_stack_mb: 128,
+                warning_threshold_percent: 0.5,
+                critical_threshold_percent: 0.75,
+                enable_gc_pressure: true,
+                gc_pressure_threshold_mb: 256.0,
+                monitoring_interval_ms: 1000,
+            },
             enable_leak_detection: false,
             leak_detection_threshold_mb: 100,
         };
@@ -99,15 +115,23 @@ mod gc_optimization_tests {
             monitor_config: MemoryLimitConfig {
                 max_heap_mb: 1024,
                 max_stack_mb: 128,
-                warning_threshold_mb: 512,
-                critical_threshold_mb: 768,
+                warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+                critical_threshold_percent: 0.75, // 768 MB / 1024 MB
                 enable_gc_pressure: true,
-                gc_pressure_threshold_mb: 256,
+                gc_pressure_threshold_mb: 256.0,
                 monitoring_interval_ms: 1000,
             },
-            enable_object_pooling: true,
-            database_connection_pool_size: 10,
-            llm_client_pool_size: 5,
+            enable_gc: true,
+            enable_allocation_tracking: true,
+            limits: system_resilience::memory::MemoryLimitConfig {
+                max_heap_mb: 1024,
+                max_stack_mb: 128,
+                warning_threshold_percent: 0.5,
+                critical_threshold_percent: 0.75,
+                enable_gc_pressure: true,
+                gc_pressure_threshold_mb: 256.0,
+                monitoring_interval_ms: 1000,
+            },
             enable_leak_detection: false,
             leak_detection_threshold_mb: 100,
         };
@@ -135,15 +159,23 @@ mod gc_optimization_tests {
             monitor_config: MemoryLimitConfig {
                 max_heap_mb: 1024,
                 max_stack_mb: 128,
-                warning_threshold_mb: 512,
-                critical_threshold_mb: 768,
+                warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+                critical_threshold_percent: 0.75, // 768 MB / 1024 MB
                 enable_gc_pressure: true,
-                gc_pressure_threshold_mb: 256,
+                gc_pressure_threshold_mb: 256.0,
                 monitoring_interval_ms: 1000,
             },
-            enable_object_pooling: true,
-            database_connection_pool_size: 10,
-            llm_client_pool_size: 5,
+            enable_gc: true,
+            enable_allocation_tracking: true,
+            limits: system_resilience::memory::MemoryLimitConfig {
+                max_heap_mb: 1024,
+                max_stack_mb: 128,
+                warning_threshold_percent: 0.5,
+                critical_threshold_percent: 0.75,
+                enable_gc_pressure: true,
+                gc_pressure_threshold_mb: 256.0,
+                monitoring_interval_ms: 1000,
+            },
             enable_leak_detection: false,
             leak_detection_threshold_mb: 100,
         };
@@ -172,15 +204,23 @@ mod gc_optimization_tests {
             monitor_config: MemoryLimitConfig {
                 max_heap_mb: 1024,
                 max_stack_mb: 128,
-                warning_threshold_mb: 512,  // Set low threshold for testing
-                critical_threshold_mb: 768,
+                warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+                critical_threshold_percent: 0.75, // 768 MB / 1024 MB
                 enable_gc_pressure: true,
-                gc_pressure_threshold_mb: 256,
+                gc_pressure_threshold_mb: 256.0,
                 monitoring_interval_ms: 1000,
             },
-            enable_object_pooling: true,
-            database_connection_pool_size: 10,
-            llm_client_pool_size: 5,
+            enable_gc: true,
+            enable_allocation_tracking: true,
+            limits: system_resilience::memory::MemoryLimitConfig {
+                max_heap_mb: 1024,
+                max_stack_mb: 128,
+                warning_threshold_percent: 0.5,
+                critical_threshold_percent: 0.75,
+                enable_gc_pressure: true,
+                gc_pressure_threshold_mb: 256.0,
+                monitoring_interval_ms: 1000,
+            },
             enable_leak_detection: false,
             leak_detection_threshold_mb: 100,
         };
@@ -216,15 +256,23 @@ mod gc_optimization_tests {
             monitor_config: MemoryLimitConfig {
                 max_heap_mb: 1024,
                 max_stack_mb: 128,
-                warning_threshold_mb: 512,
-                critical_threshold_mb: 768,
+                warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+                critical_threshold_percent: 0.75, // 768 MB / 1024 MB
                 enable_gc_pressure: true,
-                gc_pressure_threshold_mb: 256,
+                gc_pressure_threshold_mb: 256.0,
                 monitoring_interval_ms: 1000,
             },
-            enable_object_pooling: true,
-            database_connection_pool_size: 10,
-            llm_client_pool_size: 5,
+            enable_gc: true,
+            enable_allocation_tracking: true,
+            limits: system_resilience::memory::MemoryLimitConfig {
+                max_heap_mb: 1024,
+                max_stack_mb: 128,
+                warning_threshold_percent: 0.5,
+                critical_threshold_percent: 0.75,
+                enable_gc_pressure: true,
+                gc_pressure_threshold_mb: 256.0,
+                monitoring_interval_ms: 1000,
+            },
             enable_leak_detection: false,
             leak_detection_threshold_mb: 100,
         };
@@ -240,7 +288,7 @@ mod gc_optimization_tests {
         println!("✅ Garbage collection cleanup executed");
 
         // Test memory leak analysis
-        let leak_analysis = manager.analyze_memory_leaks();
+        let leak_analysis = manager.analyze_memory_leaks().await;
         println!("✅ Memory leak analysis completed - {} potential issues found", leak_analysis.len());
 
         // Get final cleanup stats
@@ -262,15 +310,23 @@ mod gc_optimization_tests {
             monitor_config: MemoryLimitConfig {
                 max_heap_mb: 1024,
                 max_stack_mb: 128,
-                warning_threshold_mb: 512,
-                critical_threshold_mb: 768,
+                warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+                critical_threshold_percent: 0.75, // 768 MB / 1024 MB
                 enable_gc_pressure: true,
-                gc_pressure_threshold_mb: 256,
+                gc_pressure_threshold_mb: 256.0,
                 monitoring_interval_ms: 1000,
             },
-            enable_object_pooling: true,
-            database_connection_pool_size: 10,
-            llm_client_pool_size: 5,
+            enable_gc: true,
+            enable_allocation_tracking: true,
+            limits: system_resilience::memory::MemoryLimitConfig {
+                max_heap_mb: 1024,
+                max_stack_mb: 128,
+                warning_threshold_percent: 0.5,
+                critical_threshold_percent: 0.75,
+                enable_gc_pressure: true,
+                gc_pressure_threshold_mb: 256.0,
+                monitoring_interval_ms: 1000,
+            },
             enable_leak_detection: true,  // Enable leak detection
             leak_detection_threshold_mb: 10,  // Low threshold for testing
         };
@@ -278,7 +334,7 @@ mod gc_optimization_tests {
         let manager = MemoryManager::new(config);
 
         // Analyze memory leaks (may return empty if no leaks detected)
-        let leak_analysis = manager.analyze_memory_leaks();
+        let leak_analysis = manager.analyze_memory_leaks().await;
         println!("✅ Memory leak analysis completed - Found {} potential leaks", leak_analysis.len());
 
         // Test cleanup stats
@@ -299,15 +355,23 @@ mod gc_optimization_tests {
             monitor_config: MemoryLimitConfig {
                 max_heap_mb: 1024,
                 max_stack_mb: 128,
-                warning_threshold_mb: 512,
-                critical_threshold_mb: 768,
+                warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+                critical_threshold_percent: 0.75, // 768 MB / 1024 MB
                 enable_gc_pressure: true,
-                gc_pressure_threshold_mb: 256,
+                gc_pressure_threshold_mb: 256.0,
                 monitoring_interval_ms: 1000,
             },
-            enable_object_pooling: true,
-            database_connection_pool_size: 10,
-            llm_client_pool_size: 5,
+            enable_gc: true,
+            enable_allocation_tracking: true,
+            limits: system_resilience::memory::MemoryLimitConfig {
+                max_heap_mb: 1024,
+                max_stack_mb: 128,
+                warning_threshold_percent: 0.5,
+                critical_threshold_percent: 0.75,
+                enable_gc_pressure: true,
+                gc_pressure_threshold_mb: 256.0,
+                monitoring_interval_ms: 1000,
+            },
             enable_leak_detection: false,
             leak_detection_threshold_mb: 100,
         };
@@ -349,15 +413,23 @@ mod gc_optimization_tests {
             monitor_config: MemoryLimitConfig {
                 max_heap_mb: 1024,
                 max_stack_mb: 128,
-                warning_threshold_mb: 512,
-                critical_threshold_mb: 768,
+                warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+                critical_threshold_percent: 0.75, // 768 MB / 1024 MB
                 enable_gc_pressure: true,
-                gc_pressure_threshold_mb: 256,
+                gc_pressure_threshold_mb: 256.0,
                 monitoring_interval_ms: 1000,
             },
-            enable_object_pooling: true,
-            database_connection_pool_size: 10,
-            llm_client_pool_size: 5,
+            enable_gc: true,
+            enable_allocation_tracking: true,
+            limits: system_resilience::memory::MemoryLimitConfig {
+                max_heap_mb: 1024,
+                max_stack_mb: 128,
+                warning_threshold_percent: 0.5,
+                critical_threshold_percent: 0.75,
+                enable_gc_pressure: true,
+                gc_pressure_threshold_mb: 256.0,
+                monitoring_interval_ms: 1000,
+            },
             enable_leak_detection: false,
             leak_detection_threshold_mb: 100,
         };
@@ -402,15 +474,23 @@ mod gc_optimization_tests {
             monitor_config: MemoryLimitConfig {
                 max_heap_mb: 1024,
                 max_stack_mb: 128,
-                warning_threshold_mb: 512,
-                critical_threshold_mb: 768,
+                warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+                critical_threshold_percent: 0.75, // 768 MB / 1024 MB
                 enable_gc_pressure: true,
-                gc_pressure_threshold_mb: 256,
+                gc_pressure_threshold_mb: 256.0,
                 monitoring_interval_ms: 1000,
             },
-            enable_object_pooling: true,
-            database_connection_pool_size: 10,
-            llm_client_pool_size: 5,
+            enable_gc: true,
+            enable_allocation_tracking: true,
+            limits: system_resilience::memory::MemoryLimitConfig {
+                max_heap_mb: 1024,
+                max_stack_mb: 128,
+                warning_threshold_percent: 0.5,
+                critical_threshold_percent: 0.75,
+                enable_gc_pressure: true,
+                gc_pressure_threshold_mb: 256.0,
+                monitoring_interval_ms: 1000,
+            },
             enable_leak_detection: false,
             leak_detection_threshold_mb: 100,
         };

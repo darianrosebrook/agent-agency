@@ -15,7 +15,14 @@ use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceMana
 #[cfg(feature = "full")]
 use agent_orchestration::council::create_default_council;
 #[cfg(feature = "full")]
-use agent_orchestration::types::{TaskDescriptor, TaskScope, ChangeBudget, BlastRadius, AcceptanceCriterion, TaskPriority, ExecutionMode, TaskType};
+use agent_agency_contracts::types::prelude::{TaskDescriptor, ExecutionMode, BlastRadius, TaskPriority, AcceptanceCriterion};
+#[cfg(feature = "full")]
+use agent_agency_contracts::types::planning::{TaskScope, RiskTier};
+#[cfg(feature = "full")]
+use agent_agency_contracts::planning_io::ChangeBudget;
+#[cfg(feature = "full")]
+use agent_agency_contracts::task_request::ScopeRestrictions;
+// TaskType doesn't exist in contracts - using string or removing if not needed
 use std::sync::Arc;
 
 /// Run the multi-agent coordination E2E test
@@ -34,7 +41,7 @@ pub async fn run_multi_agent_test(
     // Test 1: Agent communication
     match test_agent_communication(env, services).await {
         Ok(result) => {
-            metrics.agent_communications += result.communications;
+            metrics.agent_communications += result.communications as usize;
             if !result.passed {
                 passed = false;
                 errors.push(format!("Agent communication failed: {}", result.error.unwrap_or_default()));
@@ -49,7 +56,7 @@ pub async fn run_multi_agent_test(
     // Test 2: Arbitration mechanism
     match test_arbitration_mechanism(env, services).await {
         Ok(result) => {
-            metrics.arbitration_events += result.arbitration_events;
+            metrics.arbitration_events += result.arbitration_events as usize;
             if !result.passed {
                 passed = false;
                 errors.push(format!("Arbitration mechanism failed: {}", result.error.unwrap_or_default()));
@@ -64,7 +71,7 @@ pub async fn run_multi_agent_test(
     // Test 3: Task decomposition
     match test_task_decomposition(env, services).await {
         Ok(result) => {
-            metrics.task_decompositions += result.task_decompositions;
+            metrics.task_decompositions += result.task_decompositions as usize;
             if !result.passed {
                 passed = false;
                 errors.push(format!("Task decomposition failed: {}", result.error.unwrap_or_default()));
@@ -79,8 +86,8 @@ pub async fn run_multi_agent_test(
     // Test 4: Conflict resolution
     match test_conflict_resolution(env, services).await {
         Ok(result) => {
-            metrics.conflict_resolutions += result.conflict_resolutions;
-            metrics.consensus_achieved += result.consensus_achieved;
+            metrics.conflict_resolutions += result.conflict_resolutions as usize;
+            metrics.consensus_achieved += result.consensus_achieved as usize;
             if !result.passed {
                 passed = false;
                 errors.push(format!("Conflict resolution failed: {}", result.error.unwrap_or_default()));
@@ -187,19 +194,23 @@ async fn test_arbitration_mechanism(
 
     // Create a test task descriptor
     let task_descriptor = TaskDescriptor {
-        task_id: format!("test-task-{}", Uuid::new_v4()),
+        task_id: Uuid::new_v4(),
         description: "Test task for arbitration".to_string(),
-        scope_in: TaskScope {
-            in_scope: vec!["src/test.rs".to_string()],
-            out_scope: vec![],
+        scope_in: ScopeRestrictions {
+            allowed_paths: vec!["src/test.rs".to_string()],
+            blocked_paths: vec![],
         },
-        scope_out: TaskScope {
-            in_scope: vec![],
-            out_scope: vec![],
-        },
+        scope_out: Some(ScopeRestrictions {
+            allowed_paths: vec![],
+            blocked_paths: vec![],
+        }),
         change_budget: ChangeBudget {
             max_files: 5,
             max_loc: 100,
+            max_migrations: 0,
+            allow_breaking_changes: false,
+            allow_new_dependencies: false,
+            enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
         },
         blast_radius: BlastRadius {
             modules: vec![],
@@ -208,14 +219,8 @@ async fn test_arbitration_mechanism(
         },
         priority: TaskPriority::Normal,
         execution_mode: ExecutionMode::Auto,
-        task_type: TaskType::Feature,
-        risk_tier: 2,
-        acceptance: vec![AcceptanceCriterion {
-            id: "AC1".to_string(),
-            given: "Given a test scenario".to_string(),
-            when: "When arbitration is performed".to_string(),
-            then: "Then consensus should be achieved".to_string(),
-        }],
+        risk_tier: Some(RiskTier::Tier2),
+        acceptance: Some("Given a test scenario, when arbitration is performed, then consensus should be achieved".to_string()),
     };
 
     // Start a council session to test arbitration
@@ -257,23 +262,27 @@ async fn test_task_decomposition(
 
     // Create a complex task that can be decomposed
     let complex_task = TaskDescriptor {
-        task_id: format!("decompose-task-{}", Uuid::new_v4()),
+        task_id: Uuid::new_v4(),
         description: "Complex task requiring decomposition: Implement user authentication with database, API, and frontend components".to_string(),
-        scope_in: TaskScope {
-            in_scope: vec![
+        scope_in: ScopeRestrictions {
+            allowed_paths: vec![
                 "src/auth/".to_string(),
                 "src/api/".to_string(),
                 "src/frontend/".to_string(),
             ],
-            out_scope: vec![],
+            blocked_paths: vec![],
         },
-        scope_out: TaskScope {
-            in_scope: vec![],
-            out_scope: vec![],
-        },
+        scope_out: Some(ScopeRestrictions {
+            allowed_paths: vec![],
+            blocked_paths: vec![],
+        }),
         change_budget: ChangeBudget {
             max_files: 25,
             max_loc: 1000,
+            max_migrations: 1,
+            allow_breaking_changes: false,
+            allow_new_dependencies: true,
+            enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
         },
         blast_radius: BlastRadius {
             modules: vec!["auth".to_string(), "api".to_string(), "frontend".to_string()],
@@ -282,26 +291,12 @@ async fn test_task_decomposition(
         },
         priority: TaskPriority::High,
         execution_mode: ExecutionMode::Auto,
-        task_type: TaskType::Feature,
-        risk_tier: 1,
-        acceptance: vec![
-            AcceptanceCriterion {
-                id: "AC1".to_string(),
-                given: "Given a user registration form".to_string(),
-                when: "When user submits credentials".to_string(),
-                then: "Then account should be created in database".to_string(),
-            },
-            AcceptanceCriterion {
-                id: "AC2".to_string(),
-                given: "Given a user login form".to_string(),
-                when: "When user provides valid credentials".to_string(),
-                then: "Then API should return authentication token".to_string(),
-            },
-        ],
+        risk_tier: Some(RiskTier::Tier1),
+        acceptance: Some("Given a user registration form, when user submits credentials, then account should be created in database. Given a user login form, when user provides valid credentials, then API should return authentication token".to_string()),
     };
 
-    // Check that task has multiple acceptance criteria indicating decomposition capability
-    let decomposition_count = complex_task.acceptance.len();
+    // Check that task has acceptance criteria indicating decomposition capability
+    let decomposition_count = complex_task.acceptance.as_ref().map(|s| s.len()).unwrap_or(0);
 
     info!("Task has {} acceptance criteria indicating {} potential decompositions", decomposition_count, decomposition_count);
 
@@ -329,19 +324,23 @@ async fn test_conflict_resolution(
 
     // Create two conflicting task descriptors that might conflict
     let task1 = TaskDescriptor {
-        task_id: format!("conflict-task-1-{}", Uuid::new_v4()),
+        task_id: Uuid::new_v4(), // conflict-task-1-{}", Uuid::new_v4()),
         description: "Task 1: Modify shared module".to_string(),
-        scope_in: TaskScope {
-            in_scope: vec!["src/shared/module.rs".to_string()],
-            out_scope: vec![],
+        scope_in: ScopeRestrictions {
+            allowed_paths: vec!["src/shared/module.rs".to_string()],
+            blocked_paths: vec![],
         },
-        scope_out: TaskScope {
-            in_scope: vec![],
-            out_scope: vec![],
-        },
+        scope_out: Some(ScopeRestrictions {
+            allowed_paths: vec![],
+            blocked_paths: vec![],
+        }),
         change_budget: ChangeBudget {
             max_files: 1,
             max_loc: 50,
+            max_migrations: 0,
+            allow_breaking_changes: false,
+            allow_new_dependencies: false,
+            enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
         },
         blast_radius: BlastRadius {
             modules: vec!["shared".to_string()],
@@ -350,25 +349,28 @@ async fn test_conflict_resolution(
         },
         priority: TaskPriority::Normal,
         execution_mode: ExecutionMode::Auto,
-        task_type: TaskType::Feature,
-        risk_tier: 2,
-        acceptance: vec![],
+        risk_tier: Some(RiskTier::Tier2),
+        acceptance: None,
     };
 
     let task2 = TaskDescriptor {
-        task_id: format!("conflict-task-2-{}", Uuid::new_v4()),
+        task_id: Uuid::new_v4(), // conflict-task-2-{}", Uuid::new_v4()),
         description: "Task 2: Also modify shared module".to_string(),
-        scope_in: TaskScope {
-            in_scope: vec!["src/shared/module.rs".to_string()],
-            out_scope: vec![],
+        scope_in: ScopeRestrictions {
+            allowed_paths: vec!["src/shared/module.rs".to_string()],
+            blocked_paths: vec![],
         },
-        scope_out: TaskScope {
-            in_scope: vec![],
-            out_scope: vec![],
-        },
+        scope_out: Some(ScopeRestrictions {
+            allowed_paths: vec![],
+            blocked_paths: vec![],
+        }),
         change_budget: ChangeBudget {
             max_files: 1,
             max_loc: 50,
+            max_migrations: 0,
+            allow_breaking_changes: false,
+            allow_new_dependencies: false,
+            enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
         },
         blast_radius: BlastRadius {
             modules: vec!["shared".to_string()],
@@ -377,14 +379,13 @@ async fn test_conflict_resolution(
         },
         priority: TaskPriority::Normal,
         execution_mode: ExecutionMode::Auto,
-        task_type: TaskType::Feature,
-        risk_tier: 2,
-        acceptance: vec![],
+        risk_tier: Some(RiskTier::Tier2),
+        acceptance: None,
     };
 
     // Check for scope conflicts
-    let conflict_detected = task1.scope_in.in_scope.iter().any(|file| {
-        task2.scope_in.in_scope.contains(file)
+    let conflict_detected = task1.scope_in.allowed_paths.iter().any(|file| {
+        task2.scope_in.allowed_paths.contains(file)
     });
 
     if conflict_detected {

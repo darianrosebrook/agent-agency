@@ -256,6 +256,7 @@ async fn test_end_to_end_autonomous_execution() {
     let result = executor.execute("End-to-end autonomous execution test task".to_string()).await;
     assert!(result.is_ok());
     let exec_result = result.unwrap();
+    // TaskExecutionResult has a success field
     assert!(exec_result.success);
     
     println!("Basic autonomous execution test passed");

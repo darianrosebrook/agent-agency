@@ -13,7 +13,15 @@ use std::sync::Arc;
 
 use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceManager}};
 use agent_research::learning_service::ReflexiveLearningService;
-use system_common_interfaces::{LearningContext, TaskPerformance, SystemMetrics, OptimizationGoal};
+use agent_research::self_prompting_agent::learning_bridge::{
+    LearningService as LearningServiceTrait,
+    LearningContext as BridgeLearningContext,
+    TaskPerformance as BridgeTaskPerformance,
+    SystemMetrics as BridgeSystemMetrics,
+    OptimizationGoal as BridgeOptimizationGoal,
+    RecommendationType,
+};
+use system_common_interfaces::learning::{SystemMetrics, OptimizationGoal, ResourceUsage};
 use uuid::Uuid;
 
 /// Run the reflexive learning E2E test
@@ -32,7 +40,7 @@ pub async fn run_reflexive_learning_test(
     // Test 1: Performance data collection
     match test_performance_data_collection(env, services).await {
         Ok(result) => {
-            metrics.performance_data_points += result.data_points;
+            metrics.performance_data_points += result.data_points as usize;
             if !result.passed {
                 passed = false;
                 errors.push(format!("Performance data collection failed: {}", result.error.unwrap_or_default()));
@@ -47,8 +55,8 @@ pub async fn run_reflexive_learning_test(
     // Test 2: Learning adaptation
     match test_learning_adaptation(env, services).await {
         Ok(result) => {
-            metrics.learning_iterations += result.iterations;
-            metrics.model_improvements += result.improvements;
+            metrics.learning_iterations += result.iterations as usize;
+            metrics.model_improvements += result.improvements as usize;
             if !result.passed {
                 passed = false;
                 errors.push(format!("Learning adaptation failed: {}", result.error.unwrap_or_default()));
@@ -63,7 +71,7 @@ pub async fn run_reflexive_learning_test(
     // Test 3: Curriculum progression
     match test_curriculum_progression(env, services).await {
         Ok(result) => {
-            metrics.curriculum_advancements += result.advancements;
+            metrics.curriculum_advancements += result.advancements as usize;
             if !result.passed {
                 passed = false;
                 errors.push(format!("Curriculum progression failed: {}", result.error.unwrap_or_default()));
@@ -78,7 +86,7 @@ pub async fn run_reflexive_learning_test(
     // Test 4: Adaptive resource allocation
     match test_adaptive_resource_allocation(env, services).await {
         Ok(result) => {
-            metrics.performance_data_points += result.data_points;
+            metrics.performance_data_points += result.data_points as usize;
             if !result.passed {
                 passed = false;
                 errors.push(format!("Adaptive resource allocation failed: {}", result.error.unwrap_or_default()));
@@ -142,10 +150,10 @@ async fn test_performance_data_collection(
     let learning_service = Arc::new(ReflexiveLearningService::new());
 
     // Create test context with performance metrics
-    let context = LearningContext {
+    let context = BridgeLearningContext {
         task_id: Uuid::new_v4().to_string(),
         state: "test_state".to_string(),
-        system_metrics: SystemMetrics {
+        system_metrics: BridgeSystemMetrics {
             cpu_usage: 0.75,
             memory_usage: 0.60,
             available_models: vec!["model1".to_string(), "model2".to_string()],
@@ -156,14 +164,14 @@ async fn test_performance_data_collection(
     };
 
     // Create test performance data
-    let performance = TaskPerformance {
+    let performance = BridgeTaskPerformance {
         success_rate: 0.85,
         avg_execution_time: std::time::Duration::from_secs(45),
         quality_score: 0.9,
     };
 
     // Collect performance data through learning service
-    let insights = learning_service.learn_from_execution(&context, &performance).await
+    let insights = LearningServiceTrait::learn_from_execution(&*learning_service, &context, &performance).await
         .map_err(|e| format!("Performance data collection failed: {}", e))?;
 
     let data_points = insights.patterns.len() as u64 + insights.improvements.len() as u64 + insights.recommendations.len() as u64;
@@ -194,10 +202,10 @@ async fn test_learning_adaptation(
     let mut improvements = 0;
 
     for i in 0..3 {
-        let context = LearningContext {
+        let context = BridgeLearningContext {
             task_id: format!("task-{}", i),
             state: format!("state_{}", i),
-            system_metrics: SystemMetrics {
+            system_metrics: BridgeSystemMetrics {
                 cpu_usage: 0.5 + (i as f64 * 0.1),
                 memory_usage: 0.4 + (i as f64 * 0.1),
                 available_models: vec!["model1".to_string()],
@@ -207,13 +215,13 @@ async fn test_learning_adaptation(
             available_actions: vec!["switch_model".to_string(), "optimize_algorithm".to_string()],
         };
 
-        let performance = TaskPerformance {
+        let performance = BridgeTaskPerformance {
             success_rate: 0.7 + (i as f64 * 0.05),
-            avg_execution_time: std::time::Duration::from_secs(40 - (i * 5)),
+            avg_execution_time: std::time::Duration::from_secs((40 - (i * 5)) as u64),
             quality_score: 0.8 + (i as f64 * 0.05),
         };
 
-        let insights = learning_service.learn_from_execution(&context, &performance).await
+        let insights = LearningServiceTrait::learn_from_execution(&*learning_service, &context, &performance).await
             .map_err(|e| format!("Learning adaptation failed: {}", e))?;
 
         iterations += 1;
@@ -246,10 +254,10 @@ async fn test_curriculum_progression(
     let mut advancements = 0;
 
     for (level, difficulty) in difficulty_levels.iter().enumerate() {
-        let context = LearningContext {
+        let context = BridgeLearningContext {
             task_id: format!("curriculum-task-{}", level),
             state: format!("curriculum_level_{}", level),
-            system_metrics: SystemMetrics {
+            system_metrics: BridgeSystemMetrics {
                 cpu_usage: *difficulty,
                 memory_usage: *difficulty,
                 available_models: vec!["model1".to_string()],
@@ -259,13 +267,13 @@ async fn test_curriculum_progression(
             available_actions: vec!["maintain_current".to_string()],
         };
 
-        let performance = TaskPerformance {
+        let performance = BridgeTaskPerformance {
             success_rate: 1.0 - difficulty,
             avg_execution_time: std::time::Duration::from_secs((*difficulty * 60.0) as u64),
             quality_score: 1.0 - (difficulty * 0.2),
         };
 
-        let insights = learning_service.learn_from_execution(&context, &performance).await
+        let insights = LearningServiceTrait::learn_from_execution(&*learning_service, &context, &performance).await
             .map_err(|e| format!("Curriculum progression failed: {}", e))?;
 
         // Check if system recommends progression
@@ -296,10 +304,10 @@ async fn test_adaptive_resource_allocation(
     let learning_service = Arc::new(ReflexiveLearningService::new());
 
     // Test with high resource usage scenario
-    let context = LearningContext {
+    let context = BridgeLearningContext {
         task_id: Uuid::new_v4().to_string(),
         state: "high_resource_state".to_string(),
-        system_metrics: SystemMetrics {
+        system_metrics: BridgeSystemMetrics {
             cpu_usage: 0.95,
             memory_usage: 0.90,
             available_models: vec!["model1".to_string(), "model2".to_string()],
@@ -309,18 +317,12 @@ async fn test_adaptive_resource_allocation(
         available_actions: vec!["increase_cpu".to_string(), "adjust_resources".to_string()],
     };
 
-    let performance = TaskPerformance {
-        success_rate: 0.5,
-        avg_execution_time: std::time::Duration::from_secs(120),
-        quality_score: 0.6,
-    };
-
-    let insights = learning_service.get_optimization_recommendations(&context, OptimizationGoal::MinimizeTime).await
+    let insights = LearningServiceTrait::get_optimization_recommendations(&*learning_service, &context, BridgeOptimizationGoal::MinimizeTime).await
         .map_err(|e| format!("Adaptive resource allocation failed: {}", e))?;
 
     let data_points = insights.len() as u64;
     let has_resource_recommendations = insights.iter().any(|r| {
-        matches!(r.recommendation_type, system_common_interfaces::RecommendationType::AdjustResources)
+        matches!(r.recommendation_type, RecommendationType::AdjustResources)
     });
 
     info!("Generated {} optimization recommendations", data_points);

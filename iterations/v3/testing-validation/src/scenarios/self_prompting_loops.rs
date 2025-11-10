@@ -13,8 +13,17 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 
 use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceManager}};
-use agent_research::self_prompting_agent::{SelfPromptingAgent, SelfPromptingAgentConfig, SelfPromptingLoop, SelfPromptingEvent};
-use agent_research::self_prompting_agent::{ModelRegistry, EvaluationOrchestrator, OllamaProvider};
+#[cfg(feature = "full")]
+use agent_research::self_prompting_agent::SelfPromptingAgent;
+#[cfg(feature = "full")]
+use agent_research::self_prompting_agent::self_prompting_agent::SelfPromptingAgentConfig;
+#[cfg(feature = "full")]
+use agent_research::self_prompting_agent::loop_controller::{SelfPromptingLoop, SelfPromptingEvent};
+#[cfg(feature = "full")]
+use agent_research::self_prompting_agent::models::{ModelRegistry, OllamaProvider};
+#[cfg(feature = "full")]
+use agent_research::self_prompting_agent::evaluation::EvaluationOrchestrator;
+#[cfg(feature = "full")]
 use agent_research::self_prompting_agent::prompting_types::{Task, TaskType};
 use uuid::Uuid;
 
@@ -34,8 +43,8 @@ pub async fn run_self_prompting_test(
     // Test 1: Satisficing logic
     match test_satisficing_logic(env, services).await {
         Ok(result) => {
-            metrics.satisficing_stops += result.satisficing_stops;
-            metrics.iterations += result.iterations;
+            metrics.satisficing_stops += result.satisficing_stops as usize;
+            metrics.iterations += result.iterations as usize;
             if !result.passed {
                 passed = false;
                 errors.push(format!("Satisficing logic failed: {}", result.error.unwrap_or_default()));
@@ -50,8 +59,8 @@ pub async fn run_self_prompting_test(
     // Test 2: Iteration limit
     match test_iteration_limit(env, services).await {
         Ok(result) => {
-            metrics.max_iteration_stops += result.max_iteration_stops;
-            metrics.iterations += result.iterations;
+            metrics.max_iteration_stops += result.max_iteration_stops as usize;
+            metrics.iterations += result.iterations as usize;
             if !result.passed {
                 passed = false;
                 errors.push(format!("Iteration limit failed: {}", result.error.unwrap_or_default()));
@@ -66,8 +75,8 @@ pub async fn run_self_prompting_test(
     // Test 3: Quality ceiling
     match test_quality_ceiling(env, services).await {
         Ok(result) => {
-            metrics.quality_ceiling_stops += result.quality_ceiling_stops;
-            metrics.iterations += result.iterations;
+            metrics.quality_ceiling_stops += result.quality_ceiling_stops as usize;
+            metrics.iterations += result.iterations as usize;
             metrics.evaluation_scores.extend(result.evaluation_scores);
             if !result.passed {
                 passed = false;
@@ -83,8 +92,8 @@ pub async fn run_self_prompting_test(
     // Test 4: Model hot-swap
     match test_model_hot_swap(env, services).await {
         Ok(result) => {
-            metrics.model_swaps += result.model_swaps;
-            metrics.model_calls += result.model_calls;
+            metrics.model_swaps += result.model_swaps as usize;
+            metrics.model_calls += result.model_calls as usize;
             if !result.passed {
                 passed = false;
                 errors.push(format!("Model hot-swap failed: {}", result.error.unwrap_or_default()));
@@ -100,7 +109,7 @@ pub async fn run_self_prompting_test(
     match test_evaluation_framework(env, services).await {
         Ok(result) => {
             metrics.evaluation_scores.extend(result.evaluation_scores);
-            metrics.iterations += result.iterations;
+            metrics.iterations += result.iterations as usize;
             if !result.passed {
                 passed = false;
                 errors.push(format!("Evaluation framework failed: {}", result.error.unwrap_or_default()));
@@ -303,7 +312,8 @@ async fn test_model_hot_swap(
     let mut model_registry = ModelRegistry::new();
 
     // Try to register multiple providers (simulating hot-swap capability)
-    let ollama_service = services.ollama().lock().await;
+    let ollama_service_arc = services.ollama();
+    let ollama_service = ollama_service_arc.lock().await;
     let ollama_base_url = ollama_service.base_url().to_string();
     drop(ollama_service);
 
@@ -355,18 +365,18 @@ async fn test_evaluation_framework(
     );
 
     // Create a minimal task result for testing
+    use agent_research::self_prompting_agent::prompting_types::{EvalReport, EvalStatus};
     let task_result = agent_research::self_prompting_agent::prompting_types::TaskResult {
         task_id: task.id,
-        final_report: agent_research::self_prompting_agent::prompting_types::EvalReport {
+        task_type: TaskType::CodeGeneration,
+        final_report: EvalReport {
             score: 0.85,
-            status: agent_research::self_prompting_agent::prompting_types::EvalStatus::Pass,
+            status: EvalStatus::Pass,
             thresholds_met: vec!["quality".to_string(), "completeness".to_string()],
             failed_criteria: vec![],
         },
-        iterations: 2,
-        generated_output: "Test output".to_string(),
-        intermediate_steps: vec![],
-        metadata: std::collections::HashMap::new(),
+        execution_time_ms: 1000,
+        artifacts: vec![],
     };
 
     // Test evaluation

@@ -1,0 +1,57 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.text {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.textInner {
+  background-clip: padding-box;
+  border-width: 0;
+  border-color: transparent;
+  border-style: solid;
+  box-sizing: border-box;
+  position: relative;
+  height: 19.993px;
+}
+
+.textContent {
+  position: absolute;
+  line-height: 20px;
+  left: 0;
+  font-style: normal;
+  letter-spacing: -0.1504px;
+}
+
+.text14 {
+  font-size: 14px;
+}
+
+.text16 {
+  font-size: 16px;
+}
+
+.fontNormal {
+  font-weight: 400;
+}
+
+.fontBold {
+  font-weight: 700;
+}
+
+.leading20 {
+  line-height: 20px;
+}
+
+.left0 {
+  left: 0;
+}
+
+.notItalic {
+  font-style: normal;
+}
+
+.trackingNeg1504 {
+  letter-spacing: -0.1504px;
+}
+

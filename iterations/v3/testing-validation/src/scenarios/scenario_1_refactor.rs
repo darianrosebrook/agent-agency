@@ -8,11 +8,13 @@
 
 use std::time::Instant;
 use tracing::{info, error};
+use std::sync::Arc;
 
 use crate::harness::{TestEnvironment, LocalServiceManager, AssertionFramework};
 use crate::fixtures::refactor_target::*;
 use crate::{TestResult, TestMetrics, Scenario};
-use std::sync::Arc;
+#[cfg(feature = "full")]
+use agent_research::self_prompting_agent::models::{ModelRegistry, OllamaProvider};
 
 /// Run the refactor scenario test
 pub async fn run_test(
@@ -64,31 +66,52 @@ pub async fn run_test(
     }
 
     // Initialize real SelfPromptingAgent from agent-research crate
-    let model_registry = services.ollama().await?;
+    // Create ModelRegistry from OllamaService
+    let ollama_service = services.ollama();
+    let ollama_lock = ollama_service.lock().await;
+    let base_url = "http://localhost:11434".to_string(); // Default Ollama URL
+    let default_model = "gemma3n:e2b".to_string();
+    drop(ollama_lock); // Release lock
+    
+    let mut model_registry = ModelRegistry::new();
+    let ollama_provider = Arc::new(OllamaProvider::new(
+        base_url,
+        default_model,
+    ));
+    model_registry.register_provider("ollama".to_string(), ollama_provider);
+    let model_registry = Arc::new(model_registry);
+
     let evaluator = Arc::new(agent_research::self_prompting_agent::evaluation::EvaluationOrchestrator::new());
 
-    let agent_config = agent_research::self_prompting_agent::SelfPromptingAgentConfig {
+    #[cfg(feature = "full")]
+    use agent_research::self_prompting_agent::self_prompting_agent::SelfPromptingAgentConfig;
+    #[cfg(feature = "full")]
+    use agent_research::self_prompting_agent::prompting_types::{AutonomousMode, SafetyMode};
+    let agent_config = SelfPromptingAgentConfig {
         max_iterations: 5,
         enable_sandbox: true,
         sandbox_path: Some(workspace.path().to_string_lossy().to_string()),
         enable_git_snapshots: true,
-        execution_mode: agent_research::self_prompting_agent::ExecutionMode::Auto,
-        safety_mode: agent_research::self_prompting_agent::SafetyMode::Sandbox,
+        execution_mode: AutonomousMode::Auto,
+        safety_mode: SafetyMode::Sandbox,
     };
 
-    let agent = agent_research::self_prompting_agent::SelfPromptingAgent::new(
+    let agent = match agent_research::self_prompting_agent::SelfPromptingAgent::new(
         agent_config,
         model_registry,
         evaluator,
-    ).await.map_err(|e| {
-        TestResult {
-            scenario: Scenario::Scenario1Refactor,
-            passed: false,
-            duration_ms: start_time.elapsed().as_millis() as u64,
-            error_message: Some(format!("Failed to initialize SelfPromptingAgent: {}", e)),
-            metrics: TestMetrics::default(),
+    ).await {
+        Ok(agent) => agent,
+        Err(e) => {
+            return TestResult {
+                scenario: Scenario::Scenario1Refactor,
+                passed: false,
+                duration_ms: start_time.elapsed().as_millis() as u64,
+                error_message: Some(format!("Failed to initialize SelfPromptingAgent: {}", e)),
+                metrics: TestMetrics::default(),
+            };
         }
-    })?;
+    };
 
     // Create task for refactoring
     let task = agent_research::self_prompting_agent::Task {
@@ -113,26 +136,29 @@ pub async fn run_test(
 
     // 1. Verify initial code compiles
     assertions.assert_code_compiles(
-        &workspace.execute_command("cargo", &["check"]).await.unwrap_or_default(),
+        &workspace.execute_command("cargo", &["check"]).await.unwrap_or_else(|_| crate::harness::default_process_output()),
         "Initial code should compile"
     );
 
     // 2. Run initial tests
     assertions.assert_tests_pass(
-        &workspace.execute_command("cargo", &["test"]).await.unwrap_or_default(),
+        &workspace.execute_command("cargo", &["test"]).await.unwrap_or_else(|_| crate::harness::default_process_output()),
         "Initial tests should pass"
     );
 
     // Execute the refactor task with real SelfPromptingAgent
-    let refactor_result = agent.execute_task(task).await.map_err(|e| {
-        TestResult {
-            scenario: Scenario::Scenario1Refactor,
-            passed: false,
-            duration_ms: start_time.elapsed().as_millis() as u64,
-            error_message: Some(format!("SelfPromptingAgent execution failed: {}", e)),
-            metrics: TestMetrics::default(),
+    let refactor_result = match agent.execute_task(task).await {
+        Ok(result) => result,
+        Err(e) => {
+            return TestResult {
+                scenario: Scenario::Scenario1Refactor,
+                passed: false,
+                duration_ms: start_time.elapsed().as_millis() as u64,
+                error_message: Some(format!("SelfPromptingAgent execution failed: {}", e)),
+                metrics: TestMetrics::default(),
+            };
         }
-    })?;
+    };
 
     // Record metrics
     env.record_metric("iterations", refactor_result.iterations as f64).await;
@@ -140,17 +166,28 @@ pub async fn run_test(
 
     // Validate refactor results
     assertions.assert_code_compiles(
-        &workspace.execute_command("cargo", &["check"]).await.unwrap_or_default(),
+        &workspace.execute_command("cargo", &["check"]).await.unwrap_or_else(|_| crate::harness::default_process_output()),
         "Refactored code should compile"
     );
 
     assertions.assert_tests_pass(
-        &workspace.execute_command("cargo", &["test"]).await.unwrap_or_default(),
+        &workspace.execute_command("cargo", &["test"]).await.unwrap_or_else(|_| crate::harness::default_process_output()),
         "Refactored tests should pass"
     );
 
     // Check that functions were actually refactored (look for new function definitions)
-    let lib_content = std::fs::read_to_string(workspace.path().join("src/lib.rs"))?;
+    let lib_content = match std::fs::read_to_string(workspace.path().join("src/lib.rs")) {
+        Ok(content) => content,
+        Err(e) => {
+            return TestResult {
+                scenario: Scenario::Scenario1Refactor,
+                passed: false,
+                duration_ms: start_time.elapsed().as_millis() as u64,
+                error_message: Some(format!("Failed to read lib.rs: {}", e)),
+                metrics: TestMetrics::default(),
+            };
+        }
+    };
     let function_count = lib_content.matches("pub fn ").count();
     let original_function_count = 3; // From the fixture
 
@@ -169,7 +206,10 @@ pub async fn run_test(
     assertions.assert_scope_compliance(&modified_files, &allowed_patterns, "Changes should stay within scope");
 
     let duration = start_time.elapsed().as_millis() as u64;
-    let metrics = env.get_metrics().await;
+    let metrics = match env.get_metrics().await {
+        Ok(m) => m,
+        Err(_) => std::collections::HashMap::new(),
+    };
 
     let passed = assertions.overall_result();
 
@@ -182,7 +222,7 @@ pub async fn run_test(
         } else {
             None
         },
-        metrics: metrics.clone(),
+        metrics: TestMetrics::default(), // TODO: Convert HashMap to TestMetrics if needed
     }
 }
 
