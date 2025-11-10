@@ -61,12 +61,56 @@ pub async fn run_test(
     }).collect();
 
     // Initialize real KnowledgeSeeker for research
-    let db_client = services.postgres();
+    let postgres_service = services.postgres();
+    let postgres_guard = postgres_service.lock().await;
+    
+    // Create DatabaseClient from PostgresService connection info
+    #[cfg(feature = "full")]
+    use data_infrastructure::{DatabaseClient, DatabaseConfig};
+    #[cfg(feature = "full")]
+    let database_url = format!(
+        "postgresql://{}:{}@{}:{}/{}",
+        postgres_guard.username,
+        postgres_guard.password,
+        postgres_guard.host,
+        postgres_guard.port,
+        postgres_guard.database
+    );
+    #[cfg(feature = "full")]
+    let db_config = DatabaseConfig {
+        database_url,
+        host: Some(postgres_guard.host.clone()),
+        port: Some(postgres_guard.port),
+        database: Some(postgres_guard.database.clone()),
+        username: Some(postgres_guard.username.clone()),
+        password: Some(postgres_guard.password.clone()),
+        max_connections: Some(10),
+        pool_max: Some(10),
+        connection_timeout: Some(30),
+        connection_timeout_seconds: Some(30),
+        query_timeout: Some(60),
+        ssl_mode: Some(false),
+    };
+    #[cfg(feature = "full")]
+    let db_client = match DatabaseClient::new(db_config).await {
+        Ok(client) => Arc::new(client),
+        Err(e) => {
+            return TestResult {
+                scenario: Scenario::Scenario2Research,
+                passed: false,
+                duration_ms: start_time.elapsed().as_millis() as u64,
+                error_message: Some(format!("Failed to create DatabaseClient: {}", e)),
+                metrics: TestMetrics::default(),
+            };
+        }
+    };
+    
     #[cfg(feature = "full")]
     use agent_research::KnowledgeSeeker;
     #[cfg(feature = "full")]
     use agent_research::research_types::{ResearchAgentConfig, VectorSearchConfig, WebScrapingConfig, ContextSynthesisConfig, PerformanceConfig, FuzzyMatchingConfig};
-    let knowledge_seeker = KnowledgeSeeker::new(
+    #[cfg(feature = "full")]
+    let knowledge_seeker = match KnowledgeSeeker::new(
         ResearchAgentConfig {
             vector_search: VectorSearchConfig {
                 enabled: true,
@@ -108,16 +152,19 @@ pub async fn run_test(
                 max_total_boost: 1.0,
             },
         },
-        Arc::new(db_client),
-    ).await.map_err(|e| {
-        TestResult {
-            scenario: Scenario::Scenario2Research,
-            passed: false,
-            duration_ms: start_time.elapsed().as_millis() as u64,
-            error_message: Some(format!("Failed to initialize KnowledgeSeeker: {}", e)),
-            metrics: TestMetrics::default(),
+        db_client,
+    ).await {
+        Ok(seeker) => seeker,
+        Err(e) => {
+            return TestResult {
+                scenario: Scenario::Scenario2Research,
+                passed: false,
+                duration_ms: start_time.elapsed().as_millis() as u64,
+                error_message: Some(format!("Failed to initialize KnowledgeSeeker: {}", e)),
+                metrics: TestMetrics::default(),
+            };
         }
-    })?;
+    };
 
     // Execute research task
     use agent_research::research_types::{ResearchQuery, QueryType, ResearchPriority, KnowledgeSource};
@@ -136,25 +183,64 @@ pub async fn run_test(
         metadata: HashMap::new(),
     };
 
-    let research_result = knowledge_seeker.execute_research(research_query).await.map_err(|e| {
-        TestResult {
-            scenario: Scenario::Scenario2Research,
-            passed: false,
-            duration_ms: start_time.elapsed().as_millis() as u64,
-            error_message: Some(format!("Research execution failed: {}", e)),
-            metrics: TestMetrics::default(),
+    #[cfg(feature = "full")]
+    let research_results = match knowledge_seeker.orchestrator().execute_query(research_query.clone()).await {
+        Ok(results) => results,
+        Err(e) => {
+            return TestResult {
+                scenario: Scenario::Scenario2Research,
+                passed: false,
+                duration_ms: start_time.elapsed().as_millis() as u64,
+                error_message: Some(format!("Research execution failed: {}", e)),
+                metrics: TestMetrics::default(),
+            };
         }
-    })?;
+    };
+    
+    #[cfg(not(feature = "full"))]
+    let research_results = Vec::new();
 
-    // Extract summary and citations from research result
-    let summary = research_result.synthesized_context;
-    let citations = research_result.citations.into_iter().map(|c| {
-        crate::harness::Citation {
-            source_name: c.source_name,
-            page_or_section: c.section,
-            quote: c.quote,
+    // Synthesize context from research results
+    #[cfg(feature = "full")]
+    let synthesized_context = if research_results.is_empty() {
+        "No research results available.".to_string()
+    } else {
+        // Use context synthesizer to create summary from results
+        match knowledge_seeker.context_synthesizer()
+            .synthesize(research_query.id, research_results.clone())
+            .await
+        {
+            Ok(context) => context.context_summary,
+            Err(e) => {
+                return TestResult {
+                    scenario: Scenario::Scenario2Research,
+                    passed: false,
+                    duration_ms: start_time.elapsed().as_millis() as u64,
+                    error_message: Some(format!("Context synthesis failed: {}", e)),
+                    metrics: TestMetrics::default(),
+                };
+            }
         }
-    }).collect::<Vec<_>>();
+    };
+    
+    #[cfg(not(feature = "full"))]
+    let synthesized_context = "Research not available (full feature disabled)".to_string();
+    
+    // Extract citations from research results
+    #[cfg(feature = "full")]
+    let citations: Vec<crate::harness::Citation> = research_results.iter()
+        .take(10) // Limit citations
+        .map(|r| crate::harness::Citation {
+            source_name: format!("{:?}", r.source),
+            page_or_section: r.url.clone(),
+            quote: Some(r.content.chars().take(200).collect::<String>()), // First 200 chars as quote
+        })
+        .collect();
+    
+    #[cfg(not(feature = "full"))]
+    let citations = Vec::new();
+    
+    let summary = synthesized_context;
 
     // Record metrics
     env.record_metric("sources_processed", sources.len() as f64).await;

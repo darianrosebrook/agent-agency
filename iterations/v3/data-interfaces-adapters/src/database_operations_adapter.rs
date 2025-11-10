@@ -248,15 +248,15 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         let mut updates = Vec::new();
         let mut bind_index = 1;
         
-        if let Some(ref title) = update.title {
+        if let Some(ref _title) = update.title {
             updates.push(format!("title = ${}", bind_index));
             bind_index += 1;
         }
-        if let Some(ref overview) = update.overview {
+        if let Some(ref _overview) = update.overview {
             updates.push(format!("overview = ${}", bind_index));
             bind_index += 1;
         }
-        if let Some(ref status) = update.status {
+        if let Some(ref _status) = update.status {
             updates.push(format!("state = ${}", bind_index));
             bind_index += 1;
         }
@@ -532,11 +532,11 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         let mut updates = Vec::new();
         let mut bind_index = 1;
         
-        if let Some(ref status) = session.status {
+        if let Some(ref _status) = session.status {
             updates.push(format!("status = ${}", bind_index));
             bind_index += 1;
         }
-        if let Some(ref metadata) = session.metadata {
+        if let Some(ref _metadata) = session.metadata {
             updates.push(format!("execution_state = ${}", bind_index));
             bind_index += 1;
         }

@@ -4,7 +4,7 @@
 //! resource limits, and error handling.
 
 use schemars::JsonSchema;
-use anyhow::{Result, Context};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Semaphore;
@@ -429,7 +429,7 @@ impl ToolExecutor {
 
     /// Start background cleanup task
     pub async fn start_cleanup_task(&mut self) -> Result<()> {
-        let stats = Arc::clone(&self.stats);
+        let _stats = Arc::clone(&self.stats);
 
         let handle = tokio::spawn(async move {
             let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(60));

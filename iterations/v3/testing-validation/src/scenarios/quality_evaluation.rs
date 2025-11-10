@@ -7,18 +7,15 @@
 //! - Bug fix task
 //! - Feature implementation task
 
-use std::time::Instant;
-use std::path::{Path, PathBuf};
-use tracing::{info, error, warn};
+use std::path::PathBuf;
+use tracing::{info, warn};
 use serde::{Deserialize, Serialize};
 
-use crate::harness::{TestEnvironment, LocalServiceManager};
 use crate::quality_analyzers::{
     ReasoningDepthScore, DecisionQualityScore, CouncilTransparencyScore,
-    VerdictReasoningQualityScore, CodeQualityScore, WritingQualityScore,
+    VerdictReasoningQualityScore,
     OverallQualityScore
 };
-use crate::{TestResult, TestMetrics, Scenario};
 #[cfg(feature = "full")]
 use agent_orchestration::chain_of_thought::DecisionPoint;
 #[cfg(feature = "full")]

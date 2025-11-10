@@ -526,7 +526,7 @@ impl OrchestrationService for UnifiedOrchestratorAdapter {
     async fn orchestrate_task(
         &self,
         spec: WorkingSpec,
-        context: TaskContext,
+        _context: TaskContext,
     ) -> Result<TaskExecutionResult, ServiceError> {
         // Execute plan using UnifiedOrchestrator
         let execution_result = self.orchestrator

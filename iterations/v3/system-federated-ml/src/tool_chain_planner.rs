@@ -359,7 +359,7 @@ impl ToolChainPlanner {
         new_node_idx: NodeIndex,
         new_node: &ToolNode,
         base_chain: &ToolChain,
-        context: &PlanningContext,
+        _context: &PlanningContext,
     ) -> Result<usize, anyhow::Error> {
         let mut connections = 0;
 
@@ -632,7 +632,7 @@ impl ToolChainPlanner {
     }
 
     /// Compute chain confidence based on node confidences and structure
-    fn compute_chain_confidence(&self, base_chain: &ToolChain, new_node: &ToolNode) -> f64 {
+    fn compute_chain_confidence(&self, base_chain: &ToolChain, _new_node: &ToolNode) -> f64 {
         // TODO: Implement comprehensive chain confidence calculation
         //       Currently uses basic geometric mean; should implement comprehensive calculation considering node dependencies, reliability, and chain structure.
         let node_count = base_chain.dag.node_count() + 1;

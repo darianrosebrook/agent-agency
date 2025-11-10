@@ -29,18 +29,24 @@ use agent_workers::{
 
 /// Parallel tool execution coordinator
 pub struct ParallelToolCoordinator {
+    #[allow(dead_code)]
     chain_executor: Arc<ChainExecutor>,
+    #[allow(dead_code)]
     parallel_coordinator: Arc<ParallelCoordinator>,
+    #[allow(dead_code)]
     worker_manager: Arc<WorkerManager>,
+    #[allow(dead_code)]
     communication_hub: Arc<CommunicationHub>,
+    #[allow(dead_code)]
     execution_cache: Arc<RwLock<HashMap<String, ExecutionResult>>>,
+    #[allow(dead_code)]
     concurrency_limit: usize,
 }
 
 impl ParallelToolCoordinator {
     pub fn new(
         tool_executor: Arc<ToolExecutor>,
-        tool_registry: Arc<ToolRegistry>,
+        _tool_registry: Arc<ToolRegistry>,
         config: ParallelCoordinatorConfig,
     ) -> Self {
         let chain_executor = Arc::new(ChainExecutor::new(
@@ -80,7 +86,7 @@ impl ParallelToolCoordinator {
 
         for node_idx in chain.dag.node_indices() {
             let node = &chain.dag[node_idx];
-            let task_id = format!("task_{}", node_idx.index());
+            let _task_id = format!("task_{}", node_idx.index());
 
             let tool_result = ToolResult {
                 tool_name: node.tool_id.clone(),
@@ -118,11 +124,12 @@ impl ParallelToolCoordinator {
     }
 
     /// Analyze chain for parallel execution opportunities
+    #[allow(dead_code)]
     async fn analyze_chain_for_parallelism(
         &self,
         chain: &ToolChain,
     ) -> Result<TaskAnalysis, ParallelExecutionError> {
-        let decomposition_engine = DecompositionEngine::new();
+        let _decomposition_engine = DecompositionEngine::new();
 
         // Convert chain to task analysis format
         let mut dependencies = Vec::new();
@@ -130,7 +137,7 @@ impl ParallelToolCoordinator {
         // Build dependency graph
         for edge_idx in chain.dag.edge_indices() {
             let (source, target) = chain.dag.edge_endpoints(edge_idx).unwrap();
-            let edge = chain.dag.edge_weight(edge_idx).unwrap();
+            let _edge = chain.dag.edge_weight(edge_idx).unwrap();
 
             dependencies.push(Dependency {
                 from: agent_workers::SubTaskId(uuid::Uuid::parse_str(&self.node_id_to_task_id(source)).unwrap_or_else(|_| uuid::Uuid::new_v4())),
@@ -192,7 +199,7 @@ impl ParallelToolCoordinator {
     async fn decompose_chain_into_tasks(
         &self,
         chain: &ToolChain,
-        analysis: &TaskAnalysis,
+        _analysis: &TaskAnalysis,
     ) -> Result<Vec<ParallelTask>, ParallelExecutionError> {
         let mut parallel_tasks = Vec::new();
 
@@ -300,10 +307,10 @@ impl ParallelToolCoordinator {
 
     /// Execute single task with worker (static version for async spawn)
     async fn execute_single_task_with_worker_static(
-        task_executor: &Arc<ChainExecutor>,
+        _task_executor: &Arc<ChainExecutor>,
         task: ParallelTask,
-        worker_manager: Arc<WorkerManager>,
-        communication_hub: Arc<CommunicationHub>,
+        _worker_manager: Arc<WorkerManager>,
+        _communication_hub: Arc<CommunicationHub>,
     ) -> Result<(String, ToolResult), ParallelExecutionError> {
         // TODO: Create actual WorkerHandle or refactor to remove agent_memory dependency
         //       Currently uses placeholder; should create WorkerHandle or refactor to remove agent_memory requirement.
@@ -340,7 +347,7 @@ impl ParallelToolCoordinator {
         let _worker = (); // Temporary: placeholder until WorkerHandle creation is implemented
 
         // Create worker task
-        let worker_task = WorkerTask {
+        let _worker_task = WorkerTask {
             task_id: task.task_id.clone(),
             tool_id: task.node.tool_id.clone(),
             // TODO: Extract actual parameters from task node
@@ -405,8 +412,8 @@ impl ParallelToolCoordinator {
     async fn execute_single_task_with_worker(
         &self,
         task: ParallelTask,
-        worker_manager: Arc<WorkerManager>,
-        communication_hub: Arc<CommunicationHub>,
+        _worker_manager: Arc<WorkerManager>,
+        _communication_hub: Arc<CommunicationHub>,
     ) -> Result<(String, ToolResult), ParallelExecutionError> {
         // TODO: Implement proper WorkerHandle creation for parallel execution
         //       Currently uses placeholder; should implement comprehensive WorkerHandle creation that either adds agent_memory dependency or refactors WorkerHandle to not require it for proper parallel execution integration.
@@ -446,7 +453,7 @@ impl ParallelToolCoordinator {
         let _worker = (); // Placeholder - actual WorkerHandle creation requires agent_memory
 
         // Create worker task
-        let worker_task = WorkerTask {
+        let _worker_task = WorkerTask {
             task_id: task.task_id.clone(),
             tool_id: task.node.tool_id.clone(),
             parameters: serde_json::Value::Null, // Would be populated with actual inputs

@@ -235,7 +235,7 @@ async fn copy_refactor_code(workspace: &crate::harness::TestWorkspace) -> Result
     fs::create_dir_all(workspace.path().join("src"))?;
 
     // Write the refactor target code
-    let lib_rs_content = include_str!("../../fixtures/refactor_target.rs");
+    let lib_rs_content = include_str!("../fixtures/refactor_target.rs");
     fs::write(workspace.path().join("src/lib.rs"), lib_rs_content)?;
 
     // Create Cargo.toml

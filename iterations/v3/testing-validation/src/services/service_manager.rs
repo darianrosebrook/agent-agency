@@ -267,7 +267,6 @@ impl ServiceManager {
     /// Check if CoreML models are present
     /// Returns (found, path_where_found)
     async fn check_models_present(&self) -> (bool, Option<String>) {
-        use std::path::Path;
 
         // Try multiple possible locations for models
         let possible_paths = self.get_possible_model_paths();

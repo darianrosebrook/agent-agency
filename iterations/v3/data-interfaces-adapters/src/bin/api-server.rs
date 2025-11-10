@@ -615,6 +615,15 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
         .route("/api/v1/slos/:slo_name/measurements", get(get_slo_measurements_handler))
         .route("/api/v1/slo-alerts", get(list_slo_alerts_handler));
 
+    // Testing endpoints
+    #[cfg(feature = "testing")]
+    {
+        router = router
+            .route("/api/v1/testing/integrated-test", post(run_integrated_test_handler))
+            .route("/api/v1/testing/integrated-test/all", post(run_all_integrated_tests_handler))
+            .route("/api/v1/testing/scenarios", get(list_test_scenarios_handler));
+    }
+
     // Authentication endpoints
     router = router
         .route("/api/v1/auth/login", post(login_handler))
@@ -3739,16 +3748,16 @@ async fn get_resource_usage_handler(
     let cpu_usage = system.global_cpu_info().cpu_usage() as f64;
     
     // Get memory usage
-    let total_memory = system.total_memory();
+    let _total_memory = system.total_memory();
     let used_memory = system.used_memory();
     let memory_usage_mb = used_memory / (1024 * 1024); // Convert to MB
     
     // Get disk usage
-    let mut total_disk = 0u64;
+    let mut _total_disk = 0u64;
     let mut used_disk = 0u64;
     let disks = Disks::new_with_refreshed_list();
     for disk in disks.list() {
-        total_disk += disk.total_space();
+        _total_disk += disk.total_space();
         used_disk += disk.total_space().saturating_sub(disk.available_space());
     }
     let disk_usage_mb = used_disk / (1024 * 1024); // Convert to MB
@@ -3958,7 +3967,7 @@ async fn list_provenance_handler(
 ) -> Result<Json<JsonValue>, StatusCode> {
     #[cfg(feature = "orchestration")]
     {
-        if let Some(db) = &state.db_client {
+        if let Some(_db) = &state.db_client {
             if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
                 match list_provenance_records(State(ApiState {
                     api: api.clone(),
@@ -3995,7 +4004,7 @@ async fn link_provenance_handler(
 ) -> Result<Json<JsonValue>, StatusCode> {
     #[cfg(feature = "orchestration")]
     {
-        if let Some(db) = &state.db_client {
+        if let Some(_db) = &state.db_client {
             if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
                 match link_provenance_to_commit(State(ApiState {
                     api: api.clone(),
@@ -4025,7 +4034,7 @@ async fn verify_provenance_handler(
 ) -> Result<Json<JsonValue>, StatusCode> {
     #[cfg(feature = "orchestration")]
     {
-        if let Some(db) = &state.db_client {
+        if let Some(_db) = &state.db_client {
             if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
                 match verify_provenance_trailer(State(ApiState {
                     api: api.clone(),
@@ -4055,7 +4064,7 @@ async fn get_provenance_by_commit_handler(
 ) -> Result<Json<JsonValue>, StatusCode> {
     #[cfg(feature = "orchestration")]
     {
-        if let Some(db) = &state.db_client {
+        if let Some(_db) = &state.db_client {
             if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
                 match get_provenance_by_commit(State(ApiState {
                     api: api.clone(),
@@ -4085,7 +4094,7 @@ async fn get_task_provenance_handler(
 ) -> Result<Json<JsonValue>, StatusCode> {
     #[cfg(feature = "orchestration")]
     {
-        if let Some(db) = &state.db_client {
+        if let Some(_db) = &state.db_client {
             if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
                 match get_task_provenance(State(ApiState {
                     api: api.clone(),
@@ -4115,7 +4124,7 @@ async fn list_waivers_handler(
 ) -> Result<Json<JsonValue>, StatusCode> {
     #[cfg(feature = "orchestration")]
     {
-        if let Some(db) = &state.db_client {
+        if let Some(_db) = &state.db_client {
             if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
                 match list_waivers(State(ApiState {
                     api: api.clone(),
@@ -4152,7 +4161,7 @@ async fn create_waiver_handler(
 ) -> Result<Json<JsonValue>, StatusCode> {
     #[cfg(feature = "orchestration")]
     {
-        if let Some(db) = &state.db_client {
+        if let Some(_db) = &state.db_client {
             if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
                 match create_waiver(State(ApiState {
                     api: api.clone(),
@@ -4183,7 +4192,7 @@ async fn approve_waiver_handler(
 ) -> Result<Json<JsonValue>, StatusCode> {
     #[cfg(feature = "orchestration")]
     {
-        if let Some(db) = &state.db_client {
+        if let Some(_db) = &state.db_client {
             if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
                 match approve_waiver(State(ApiState {
                     api: api.clone(),
@@ -4213,7 +4222,7 @@ async fn list_slos_handler(
 ) -> Result<Json<JsonValue>, StatusCode> {
     #[cfg(feature = "orchestration")]
     {
-        if let Some(db) = &state.db_client {
+        if let Some(_db) = &state.db_client {
             if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
                 match list_slos(State(ApiState {
                     api: api.clone(),
@@ -4243,7 +4252,7 @@ async fn get_slo_status_handler(
 ) -> Result<Json<JsonValue>, StatusCode> {
     #[cfg(feature = "orchestration")]
     {
-        if let Some(db) = &state.db_client {
+        if let Some(_db) = &state.db_client {
             if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
                 match get_slo_status(State(ApiState {
                     api: api.clone(),
@@ -4273,7 +4282,7 @@ async fn get_slo_measurements_handler(
 ) -> Result<Json<JsonValue>, StatusCode> {
     #[cfg(feature = "orchestration")]
     {
-        if let Some(db) = &state.db_client {
+        if let Some(_db) = &state.db_client {
             if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
                 match get_slo_measurements(State(ApiState {
                     api: api.clone(),
@@ -5557,9 +5566,10 @@ async fn create_api_key_handler(
     // Generate API key using secure random (before any await to ensure Send)
     let (api_key, key_prefix, key_hash) = {
         use rand::Rng;
+        use base64::{Engine as _, engine::general_purpose};
         let mut rng = rand::thread_rng();
         let key_bytes: Vec<u8> = (0..32).map(|_| rng.gen()).collect();
-        let api_key = base64::encode(&key_bytes);
+        let api_key = general_purpose::STANDARD.encode(&key_bytes);
         let key_prefix = api_key.chars().take(8).collect::<String>();
         let key_hash = hash_token(&api_key);
         (api_key, key_prefix, key_hash)
@@ -6432,6 +6442,150 @@ async fn update_violation_handler(
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
+}
+
+// Testing endpoints
+// Note: We spawn the integrated_test binary as a subprocess to avoid circular dependency
+#[cfg(feature = "testing")]
+async fn run_integrated_test_handler(
+    Json(payload): Json<JsonValue>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let scenario_id = payload.get("scenario_id")
+        .and_then(|v| v.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    
+    info!("Running integrated test via API: {}", scenario_id);
+    
+    // Spawn the integrated_test binary as a subprocess
+    // Note: This requires the binary to be built and available in PATH
+    // Get workspace root (assume we're in iterations/v3/data-interfaces-adapters)
+    let workspace_root = std::env::current_dir()
+        .ok()
+        .and_then(|d| d.parent().map(|p| p.to_path_buf()))
+        .and_then(|d| d.parent().map(|p| p.to_path_buf()))
+        .and_then(|d| d.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_else(|| std::path::PathBuf::from("../../.."));
+    
+    let testing_dir = workspace_root.join("iterations/v3/testing-validation");
+    let manifest_path = testing_dir.join("Cargo.toml");
+    
+    let output = Command::new("cargo")
+        .args(&["run", "--bin", "integrated_test", "--features", "full", "--manifest-path"])
+        .arg(&manifest_path)
+        .arg(scenario_id) // Pass scenario_id as argument
+        .current_dir(&testing_dir)
+        .output();
+    
+    match output {
+        Ok(result) => {
+            let stdout = String::from_utf8_lossy(&result.stdout);
+            let stderr = String::from_utf8_lossy(&result.stderr);
+            
+            // Try to parse the report file
+            let workspace_root = std::env::current_dir()
+                .ok()
+                .and_then(|d| d.parent().map(|p| p.to_path_buf()))
+                .and_then(|d| d.parent().map(|p| p.to_path_buf()))
+                .and_then(|d| d.parent().map(|p| p.to_path_buf()))
+                .unwrap_or_else(|| std::path::PathBuf::from("../../.."));
+            let report_path = workspace_root.join("iterations/v3/testing-validation/integrated_test_report.md");
+            let report_content = std::fs::read_to_string(&report_path)
+                .unwrap_or_else(|_| "Report not available".to_string());
+            
+            Ok(Json(serde_json::json!({
+                "scenario_id": scenario_id,
+                "status": if result.status.success() { "completed" } else { "failed" },
+                "exit_code": result.status.code(),
+                "stdout": stdout,
+                "stderr": stderr,
+                "report": report_content,
+                "timestamp": chrono::Utc::now().to_rfc3339(),
+            })))
+        }
+        Err(e) => {
+            error!("Failed to run integrated test: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+#[cfg(feature = "testing")]
+async fn run_all_integrated_tests_handler() -> Result<Json<JsonValue>, StatusCode> {
+    info!("Running all integrated tests via API");
+    
+    // Spawn the integrated_test binary as a subprocess
+    let workspace_root = std::env::current_dir()
+        .ok()
+        .and_then(|d| d.parent().map(|p| p.to_path_buf()))
+        .and_then(|d| d.parent().map(|p| p.to_path_buf()))
+        .and_then(|d| d.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_else(|| std::path::PathBuf::from("../../.."));
+    
+    let testing_dir = workspace_root.join("iterations/v3/testing-validation");
+    let manifest_path = testing_dir.join("Cargo.toml");
+    
+    let output = Command::new("cargo")
+        .args(&["run", "--bin", "integrated_test", "--features", "full", "--manifest-path"])
+        .arg(&manifest_path)
+        .current_dir(&testing_dir)
+        .output();
+    
+    match output {
+        Ok(result) => {
+            let stdout = String::from_utf8_lossy(&result.stdout);
+            let stderr = String::from_utf8_lossy(&result.stderr);
+            
+            // Try to parse the report file
+            let workspace_root = std::env::current_dir()
+                .ok()
+                .and_then(|d| d.parent().map(|p| p.to_path_buf()))
+                .and_then(|d| d.parent().map(|p| p.to_path_buf()))
+                .and_then(|d| d.parent().map(|p| p.to_path_buf()))
+                .unwrap_or_else(|| std::path::PathBuf::from("../../.."));
+            let report_path = workspace_root.join("iterations/v3/testing-validation/integrated_test_report.md");
+            let report_content = std::fs::read_to_string(&report_path)
+                .unwrap_or_else(|_| "Report not available".to_string());
+            
+            Ok(Json(serde_json::json!({
+                "status": if result.status.success() { "completed" } else { "failed" },
+                "exit_code": result.status.code(),
+                "stdout": stdout,
+                "stderr": stderr,
+                "report": report_content,
+                "timestamp": chrono::Utc::now().to_rfc3339(),
+            })))
+        }
+        Err(e) => {
+            error!("Failed to run integrated tests: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+#[cfg(feature = "testing")]
+async fn list_test_scenarios_handler() -> Result<Json<JsonValue>, StatusCode> {
+    Ok(Json(serde_json::json!({
+        "scenarios": [
+            {
+                "id": "integrated-rust",
+                "name": "Rust Code Fix",
+                "file_type": "rust",
+                "description": "Tests agent's ability to fix Rust compilation errors"
+            },
+            {
+                "id": "integrated-typescript",
+                "name": "TypeScript Code Fix",
+                "file_type": "typescript",
+                "description": "Tests agent's ability to fix TypeScript type errors"
+            },
+            {
+                "id": "integrated-python",
+                "name": "Python Code Fix",
+                "file_type": "python",
+                "description": "Tests agent's ability to fix Python syntax/logic errors"
+            }
+        ]
+    })))
 }
 
 async fn resolve_violation_handler(

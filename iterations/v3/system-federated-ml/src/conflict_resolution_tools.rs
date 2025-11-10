@@ -11,7 +11,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, debug, warn};
 
-use crate::tool_registry::Tool;
+// Tool trait imported but not directly used in this module
 
 /// Conflict resolution tool suite
 #[derive(Debug)]
@@ -254,7 +254,7 @@ impl ConflictResolutionTool {
     }
 
     /// Resolve generic conflicts using consensus
-    async fn resolve_generic_conflict(&self, participants: &[serde_json::Value], evidence: &[serde_json::Value]) -> Result<serde_json::Value> {
+    async fn resolve_generic_conflict(&self, participants: &[serde_json::Value], _evidence: &[serde_json::Value]) -> Result<serde_json::Value> {
         use tracing::debug;
         
         debug!("Resolving generic conflict with {} participants", participants.len());
@@ -453,7 +453,7 @@ impl DebateOrchestrator {
     }
 
     /// Determine participant's stance on the debate topic
-    fn determine_participant_stance(&self, participant: &str, session: &DebateSession) -> Result<DebateStance> {
+    fn determine_participant_stance(&self, participant: &str, _session: &DebateSession) -> Result<DebateStance> {
         // Rule-based stance determination based on participant type and evidence
         match participant {
             "constitutional_judge" => Ok(DebateStance::StrictCompliance),
@@ -485,7 +485,7 @@ impl DebateOrchestrator {
     }
 
     /// Generate counter-arguments for subsequent rounds
-    async fn generate_counter_arguments(&self, participant: &str, session: &DebateSession, round_num: usize) -> Result<Vec<String>> {
+    async fn generate_counter_arguments(&self, participant: &str, session: &DebateSession, _round_num: usize) -> Result<Vec<String>> {
         let mut counter_args = Vec::new();
 
         // Look at previous rounds and generate counters
@@ -502,7 +502,7 @@ impl DebateOrchestrator {
     }
 
     /// Evaluate arguments in a round and determine winner
-    async fn evaluate_round_arguments(&self, arguments: &[DebateArgument], session: &DebateSession) -> Result<String> {
+    async fn evaluate_round_arguments(&self, arguments: &[DebateArgument], _session: &DebateSession) -> Result<String> {
         // Simple evaluation based on confidence and evidence count
         let mut best_participant = &arguments[0].participant;
         let mut best_score = 0.0;

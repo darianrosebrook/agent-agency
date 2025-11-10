@@ -29,7 +29,7 @@ pub mod database_lifecycle;
 pub mod e2e_orchestration_test;
 pub mod quality_analyzers;
 
-use tracing::{info, error};
+use tracing::{error, info};
 
 use harness::{TestEnvironment, LocalServiceManager};
 #[cfg(feature = "full")]

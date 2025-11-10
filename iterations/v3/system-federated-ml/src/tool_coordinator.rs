@@ -11,7 +11,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, debug};
 
-use crate::tool_registry::{ToolRegistry, Tool};
+use crate::tool_registry::ToolRegistry;
 use crate::tool_execution::{ToolExecutor, ToolInvocation, ToolResult};
 
 /// Tool coordinator for orchestrating complex workflows
@@ -27,6 +27,7 @@ pub struct ToolCoordinator {
     /// Enable parallel execution
     enable_parallel: bool,
     /// Maximum concurrent chains
+    #[allow(dead_code)]
     max_concurrent_chains: usize,
 }
 
@@ -296,7 +297,7 @@ impl ToolCoordinator {
                 metadata: chain.metadata.clone(),
                 execution_trace: vec![], // Would be populated during execution
             },
-            Err(ref e) => ToolExecutionResult {
+            Err(ref _e) => ToolExecutionResult {
                 chain_id: chain_id.clone(),
                 success: false,
                 final_result: None,
@@ -361,8 +362,8 @@ impl ToolCoordinator {
                     let start_time = chrono::Utc::now();
 
                     // Get tool from registry
-                    let tool = match tool_registry.get_tool(&tool_name).await {
-                        Some(tool) => tool,
+                    let _tool = match tool_registry.get_tool(&tool_name).await {
+                        Some(_tool) => _tool,
                         None => return Ok((step_id.clone(), crate::tool_coordinator::StepResult {
                             step_id: step_id.to_string(),
                             result: None,
@@ -460,11 +461,12 @@ impl ToolCoordinator {
     }
 
     /// Execute a single step
+    #[allow(dead_code)]
     async fn execute_step(&self, chain_id: &str, step_id: &str, tool_name: &str, parameters: serde_json::Value) -> Result<StepResult> {
         let start_time = chrono::Utc::now();
 
         // Get tool from registry
-        let tool = self.tool_registry.get_tool(tool_name).await
+        let _tool = self.tool_registry.get_tool(tool_name).await
             .ok_or_else(|| anyhow::anyhow!("Tool '{}' not found", tool_name))?;
 
         // Execute tool

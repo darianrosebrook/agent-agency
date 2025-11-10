@@ -130,7 +130,7 @@ impl FactVerifier {
     }
 
     /// Verify by empirical testing
-    async fn verify_by_empirical_testing(&self, claim: &AtomicClaim, _context: &ProcessingContext) -> Result<(VerificationStatus, f64, Vec<String>, Vec<String>)> {
+    async fn verify_by_empirical_testing(&self, _claim: &AtomicClaim, _context: &ProcessingContext) -> Result<(VerificationStatus, f64, Vec<String>, Vec<String>)> {
         // TODO: Implement actual empirical testing verification
         //       Currently uses placeholder implementation; should run actual tests and collect empirical evidence for verification.
         let evidence = vec!["Empirical test passed".to_string()];
@@ -140,7 +140,7 @@ impl FactVerifier {
     }
 
     /// Verify by expert consensus
-    async fn verify_by_expert_consensus(&self, claim: &AtomicClaim, _context: &ProcessingContext) -> Result<(VerificationStatus, f64, Vec<String>, Vec<String>)> {
+    async fn verify_by_expert_consensus(&self, _claim: &AtomicClaim, _context: &ProcessingContext) -> Result<(VerificationStatus, f64, Vec<String>, Vec<String>)> {
         // TODO: Implement expert consensus verification
         //       Currently uses placeholder implementation; should consult experts and aggregate consensus for verification.
         let evidence = vec!["Expert consensus reached".to_string()];
@@ -150,7 +150,7 @@ impl FactVerifier {
     }
 
     /// Verify by logical consistency
-    async fn verify_by_logical_consistency(&self, claim: &AtomicClaim) -> Result<(VerificationStatus, f64, Vec<String>, Vec<String>)> {
+    async fn verify_by_logical_consistency(&self, _claim: &AtomicClaim) -> Result<(VerificationStatus, f64, Vec<String>, Vec<String>)> {
         // TODO: Implement comprehensive logical consistency verification
         //       Currently uses basic check; should implement comprehensive logical consistency analysis using formal logic and reasoning.
         let evidence = vec!["Logically consistent".to_string()];

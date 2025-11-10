@@ -29,6 +29,7 @@ pub trait Converter: Send + Sync {
 /// JSON Schema-based registry implementation
 #[derive(Clone)]
 pub struct JsonSchemaRegistry {
+    #[allow(dead_code)]
     schemas: Arc<RwLock<HashMap<String, Value>>>,
     converters: Arc<RwLock<HashMap<String, Box<dyn Converter>>>>,
 }
@@ -116,7 +117,7 @@ impl JsonSchemaRegistry {
 
 #[async_trait::async_trait]
 impl SchemaRegistry for JsonSchemaRegistry {
-    fn get(&self, key: &str) -> Option<Value> {
+    fn get(&self, _key: &str) -> Option<Value> {
         // TODO: Implement real schema retrieval from registry storage with versioning and caching
         //       Currently returns basic placeholder schema; should query registry storage and handle versioning.
         //
@@ -173,7 +174,7 @@ impl SchemaRegistry for JsonSchemaRegistry {
         }
     }
 
-    fn convert(&self, from: &str, to: &str, value: Value) -> Result<Value, SchemaError> {
+    fn convert(&self, _from: &str, _to: &str, value: Value) -> Result<Value, SchemaError> {
         // TODO: Implement real schema conversion
         // - [ ] Make conversion async for complex transformations
         // - [ ] Load source and target schemas from registry
@@ -185,7 +186,7 @@ impl SchemaRegistry for JsonSchemaRegistry {
         Ok(value)
     }
 
-    fn register_schema(&mut self, key: String, schema: Value) -> Result<(), SchemaError> {
+    fn register_schema(&mut self, key: String, _schema: Value) -> Result<(), SchemaError> {
         // TODO: Convert to async implementation with the following requirements:
         // 1. Async operation: Make schema registration async
         //    - Change function signature to async fn
@@ -203,7 +204,7 @@ impl SchemaRegistry for JsonSchemaRegistry {
         Ok(())
     }
 
-    fn register_converter(&mut self, key: String, converter: Box<dyn Converter>) -> Result<(), SchemaError> {
+    fn register_converter(&mut self, key: String, _converter: Box<dyn Converter>) -> Result<(), SchemaError> {
         // TODO: Convert to async implementation with the following requirements:
         // 1. Async operation: Make converter registration async
         //    - Change function signature to async fn
@@ -333,6 +334,7 @@ impl Converter for StringToUrlConverter {
 pub struct CachedSchemaRegistry {
     inner: JsonSchemaRegistry,
     schema_cache: Arc<RwLock<HashMap<String, Value>>>,
+    #[allow(dead_code)]
     converter_cache: Arc<RwLock<HashMap<String, Box<dyn Converter>>>>,
 }
 
@@ -510,8 +512,11 @@ pub struct SchemaEvolutionTracker {
 
 #[derive(Clone, Debug, JsonSchema)]
 pub struct SchemaVersion {
+    #[allow(dead_code)]
     version: String,
+    #[allow(dead_code)]
     schema: Value,
+    #[allow(dead_code)]
     created_at: chrono::DateTime<chrono::Utc>,
 }
 

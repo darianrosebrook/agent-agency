@@ -5,7 +5,7 @@
 //! and workflow logging capabilities.
 
 use schemars::JsonSchema;
-use anyhow::{Result, Context};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -584,7 +584,7 @@ impl ReasoningAlgorithm for PatternBasedReasoningAlgorithm {
 pub struct MachineLearningReasoningAlgorithm;
 
 impl ReasoningAlgorithm for MachineLearningReasoningAlgorithm {
-    fn reason(&self, input: &ReasoningInput) -> Result<ReasoningOutput> {
+    fn reason(&self, _input: &ReasoningInput) -> Result<ReasoningOutput> {
         // Simple ML reasoning (placeholder)
         let conclusion = "ML-based analysis completed";
         

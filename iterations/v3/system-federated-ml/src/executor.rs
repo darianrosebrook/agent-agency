@@ -16,7 +16,7 @@ use std::time::{Duration, Instant};
 
 use crate::tool_chain_planner::{ToolChain, ToolNode};
 use crate::tool_execution::{ToolExecutor, ToolInvocation};
-use crate::schema_registry::{SchemaRegistry, Converter};
+use crate::schema_registry::SchemaRegistry;
 
 /// Chain execution result
 #[derive(Clone, Debug, JsonSchema)]
@@ -34,6 +34,7 @@ pub struct ExecutionResult {
 pub struct ChainExecutor {
     tool_executor: Arc<ToolExecutor>,
     schema_registry: Arc<dyn SchemaRegistry>,
+    #[allow(dead_code)]
     concurrency_limit: usize,
     semaphore: Arc<Semaphore>,
     default_timeout_ms: u64,
@@ -241,7 +242,7 @@ impl ChainExecutor {
     /// Apply codec to transform data between ports
     async fn apply_codec(
         &self,
-        codec: &str,
+        _codec: &str,
         from_port: &str,
         to_port: &str,
         value: Value,
@@ -303,13 +304,14 @@ impl From<crate::schema_registry::SchemaError> for ChainExecutionError {
 /// Circuit breaker for tool reliability
 pub struct CircuitBreaker {
     state: CircuitState,
+    #[allow(dead_code)]
     failure_threshold: u32,
     recovery_timeout: Duration,
     last_failure: Option<Instant>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-enum CircuitState {
+pub enum CircuitState {
     Closed,
     Open { until: Instant },
     HalfOpen,
@@ -402,7 +404,7 @@ impl ResourceLimiter {
         current_cpu + required_cpu_percent <= self.cpu_limit_percent
     }
 
-    pub fn allocate_resources(&self, memory_mb: usize, cpu_percent: usize) -> ResourceGuard {
+    pub fn allocate_resources(&self, memory_mb: usize, cpu_percent: usize) -> ResourceGuard<'_> {
         self.current_memory_mb.fetch_add(memory_mb, std::sync::atomic::Ordering::Relaxed);
         self.current_cpu_percent.fetch_add(cpu_percent, std::sync::atomic::Ordering::Relaxed);
 

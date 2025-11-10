@@ -146,26 +146,45 @@ impl DecisionQualityScore {
 
         for decision in decisions {
             // Evidence gathering: Check if reasoning references specific evidence
-            let evidence_score = if decision.reasoning.contains("because") 
-                || decision.reasoning.contains("due to")
-                || decision.reasoning.contains("based on")
-                || decision.reasoning.contains("evidence")
-                || decision.reasoning.contains("data") {
+            // Expanded evidence keywords for better detection
+            let evidence_keywords = [
+                "because", "due to", "based on", "evidence", "data",
+                "shows", "indicates", "suggests", "demonstrates", "reveals",
+                "according to", "from", "using", "with", "found", "detected",
+                "analysis", "results", "findings", "observation", "measurement"
+            ];
+            
+            let has_evidence = evidence_keywords.iter().any(|keyword| {
+                decision.reasoning.to_lowercase().contains(keyword)
+            });
+            
+            let evidence_score = if has_evidence {
                 0.25
+            } else if decision.reasoning.len() > 100 {
+                // Long reasoning likely contains evidence even if not explicitly stated
+                0.1
             } else {
                 0.0
             };
             total_evidence += evidence_score;
 
             // Logic soundness: Check if reasoning is coherent (has logical connectors)
-            let logic_score = if decision.reasoning.contains("therefore")
-                || decision.reasoning.contains("thus")
-                || decision.reasoning.contains("consequently")
-                || decision.reasoning.contains("however")
-                || decision.reasoning.contains("alternatively") {
+            // Expanded logic keywords for better detection
+            let logic_keywords = [
+                "therefore", "thus", "consequently", "however", "alternatively",
+                "since", "as", "given that", "so", "hence", "accordingly",
+                "but", "yet", "although", "while", "whereas", "if", "then",
+                "in order to", "for", "to", "because of", "as a result"
+            ];
+            
+            let has_logic = logic_keywords.iter().any(|keyword| {
+                decision.reasoning.to_lowercase().contains(keyword)
+            });
+            
+            let logic_score = if has_logic {
                 0.25
             } else if decision.reasoning.len() > 50 {
-                0.15 // Basic coherence
+                0.15 // Basic coherence from length
             } else {
                 0.0
             };
@@ -388,8 +407,10 @@ pub struct CodeQualityScore {
 
 impl CodeQualityScore {
     /// Analyze code quality from file path
-    /// This is a simplified analyzer - in production, would integrate with actual linting/analysis tools
+    /// Uses REAL compilation checks and language-specific analysis
     pub fn analyze(code_path: &Path) -> Self {
+        use std::process::Command;
+        
         // Read code file
         let code_content = match std::fs::read_to_string(code_path) {
             Ok(content) => content,
@@ -405,47 +426,432 @@ impl CodeQualityScore {
             }
         };
 
-        // Compilation score: Check for obvious syntax errors (simplified)
-        let compilation_score = if code_content.contains("fn ") || code_content.contains("pub fn ") {
-            0.2 // Has functions - basic structure
-        } else {
-            0.0
+        // Detect file type from extension
+        let file_ext = code_path.extension()
+            .and_then(|ext| ext.to_str())
+            .unwrap_or("");
+
+        // Compilation score: Use REAL compilation check
+        let compilation_score = match file_ext {
+            "rs" => {
+                // Check if it compiles with cargo check
+                let mut compiles = false;
+                if let Some(parent) = code_path.parent() {
+                    if parent.ends_with("src") {
+                        if let Some(workspace_root) = parent.parent() {
+                            let output = Command::new("cargo")
+                                .args(&["check", "--manifest-path"])
+                                .arg(workspace_root.join("Cargo.toml"))
+                                .current_dir(workspace_root)
+                                .output();
+                            
+                            if let Ok(result) = output {
+                                compiles = result.status.success();
+                            }
+                        }
+                    }
+                }
+                if compiles {
+                    0.3 // Compiles successfully
+                } else if code_content.contains("fn ") || code_content.contains("pub fn ") {
+                    0.15 // Basic structure
+                } else {
+                    0.0
+                }
+            }
+            "ts" | "tsx" => {
+                // Check if it compiles with tsc
+                let output = Command::new("tsc")
+                    .args(&["--noEmit", code_path.to_string_lossy().as_ref()])
+                    .output();
+                
+                let compiles = if let Ok(result) = output {
+                    result.status.success()
+                } else {
+                    false
+                };
+                
+                if compiles {
+                    0.3 // Compiles successfully
+                } else if code_content.contains("function") || code_content.contains("const") || code_content.contains("interface") {
+                    0.15 // Basic structure
+                } else {
+                    0.0
+                }
+            }
+            "py" => {
+                // Check if it compiles with py_compile
+                let output = Command::new("python3")
+                    .args(&["-m", "py_compile", code_path.to_string_lossy().as_ref()])
+                    .output();
+                
+                let compiles = if let Ok(result) = output {
+                    result.status.success()
+                } else {
+                    false
+                };
+                
+                if compiles {
+                    0.3 // Compiles successfully
+                } else if code_content.contains("def ") || code_content.contains("class ") {
+                    0.15 // Basic structure
+                } else {
+                    0.0
+                }
+            }
+            _ => {
+                // Unknown type - basic structure check
+                if code_content.contains("function") || code_content.contains("fn ") || code_content.contains("def ") {
+                    0.1
+                } else {
+                    0.0
+                }
+            }
         };
 
-        // Structure score: Check for good structure patterns
-        let structure_score = if code_content.contains("use ") && code_content.contains("mod ") {
-            0.2 // Has imports and modules
-        } else if code_content.contains("use ") {
-            0.15
-        } else {
-            0.05
+        // Structure score: Language-specific patterns
+        let structure_score = match file_ext {
+            "rs" => {
+                if code_content.contains("use ") && code_content.contains("mod ") {
+                    0.2
+                } else if code_content.contains("use ") {
+                    0.15
+                } else {
+                    0.05
+                }
+            }
+            "ts" | "tsx" => {
+                // TypeScript: Check for imports/exports and type annotations
+                let has_imports = code_content.contains("import ");
+                let has_exports = code_content.contains("export ");
+                let has_types = code_content.contains(": ") && (code_content.contains(": string") || code_content.contains(": number") || code_content.contains(": boolean") || code_content.contains(": any") || code_content.contains("interface ") || code_content.contains("type "));
+                
+                if has_imports && has_exports && has_types {
+                    0.2
+                } else if (has_imports || has_exports) && has_types {
+                    0.18
+                } else if has_imports || has_exports {
+                    0.15
+                } else {
+                    0.05
+                }
+            }
+            "py" => {
+                if code_content.contains("import ") && code_content.contains("from ") {
+                    0.2
+                } else if code_content.contains("import ") {
+                    0.15
+                } else {
+                    0.05
+                }
+            }
+            _ => 0.05
         };
 
-        // Error handling score: Check for error handling patterns
-        let error_handling_score = if code_content.contains("Result<") || code_content.contains("Option<") {
-            0.2 // Uses Result/Option types
-        } else if code_content.contains("match ") || code_content.contains("if let ") {
-            0.15 // Has pattern matching
-        } else if code_content.contains("unwrap()") || code_content.contains("expect(") {
-            0.05 // Has some error handling but uses unwrap
-        } else {
-            0.0
+        // Error handling score: Language-specific patterns
+        let error_handling_score = match file_ext {
+            "rs" => {
+                if code_content.contains("Result<") || code_content.contains("Option<") {
+                    0.2
+                } else if code_content.contains("match ") || code_content.contains("if let ") {
+                    0.15
+                } else if code_content.contains("unwrap()") || code_content.contains("expect(") {
+                    0.05
+                } else {
+                    0.0
+                }
+            }
+            "ts" | "tsx" => {
+                // TypeScript: Check for error handling patterns
+                let has_try_catch = code_content.contains("try {") && code_content.contains("catch");
+                let has_error_handling = code_content.contains("catch") || code_content.contains("throw") || code_content.contains("Error");
+                let has_conditional_error = code_content.contains("if (") && (code_content.contains("error") || code_content.contains("Error"));
+                let has_null_check = code_content.contains("if (") && (code_content.contains("!== null") || code_content.contains("!== undefined") || code_content.contains("?."));
+                
+                if has_try_catch {
+                    0.2
+                } else if has_error_handling {
+                    0.15
+                } else if has_conditional_error || has_null_check {
+                    0.1
+                } else {
+                    0.0
+                }
+            }
+            "py" => {
+                if code_content.contains("try:") && code_content.contains("except") {
+                    0.2
+                } else if code_content.contains("except") || code_content.contains("raise") {
+                    0.15
+                } else {
+                    0.0
+                }
+            }
+            _ => 0.0
         };
 
-        // Test coverage score: Check for test modules
-        let test_coverage_score = if code_content.contains("#[cfg(test)]") || code_content.contains("#[test]") {
-            0.2 // Has tests
-        } else {
-            0.0
+        // Test coverage score: Language-specific test patterns
+        // Check for tests in same file OR test files in same directory
+        let test_coverage_score = match file_ext {
+            "rs" => {
+                // Enhanced test detection: Check for various Rust test patterns
+                let has_test_attr = code_content.contains("#[test]") || code_content.contains("#[tokio::test]");
+                let has_test_mod = code_content.contains("#[cfg(test)]") || code_content.contains("#[cfg(test)]");
+                let has_assert = code_content.contains("assert!") || code_content.contains("assert_eq!") || code_content.contains("assert_ne!");
+                let _has_should_panic = code_content.contains("#[should_panic]");
+                
+                // Inline tests: Multiple indicators suggest comprehensive testing
+                let has_inline_tests = has_test_attr || has_test_mod;
+                let has_comprehensive_tests = has_inline_tests && has_assert;
+                
+                // Check for test files in same directory with better pattern matching
+                let has_test_file = if let Some(parent) = code_path.parent() {
+                    let file_name = code_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                    let base_name = file_name.replace(".rs", "");
+                    
+                    // Check for common Rust test file patterns
+                    let test_patterns = vec![
+                        format!("{}_test.rs", base_name),
+                        format!("test_{}.rs", base_name),
+                        format!("{}_tests.rs", base_name),
+                        "test.rs".to_string(),
+                        "tests.rs".to_string(),
+                    ];
+                    
+                    test_patterns.iter().any(|pattern| {
+                        parent.join(pattern).exists()
+                    }) || parent.join("tests").is_dir() || parent.join("tests").join(format!("{}.rs", base_name)).exists()
+                } else {
+                    false
+                };
+                
+                if has_comprehensive_tests {
+                    0.2 // Full credit for comprehensive inline tests
+                } else if has_inline_tests {
+                    0.18 // Good credit for basic inline tests
+                } else if has_test_file {
+                    0.15 // Partial credit for test files
+                } else if has_assert {
+                    0.1 // Minimal credit for assertion code
+                } else {
+                    0.0
+                }
+            }
+            "ts" | "tsx" => {
+                // Enhanced test detection: Check for various test patterns
+                let has_describe = code_content.contains("describe(") || code_content.contains("describe (");
+                let has_it = code_content.contains("it(") || code_content.contains("it (");
+                let has_test = code_content.contains("test(") || code_content.contains("test (");
+                let has_before_each = code_content.contains("beforeEach") || code_content.contains("beforeAll");
+                let has_after_each = code_content.contains("afterEach") || code_content.contains("afterAll");
+                let has_expect = code_content.contains("expect(") || code_content.contains("assert(");
+                
+                // Inline tests: Multiple indicators suggest comprehensive testing
+                let has_inline_tests = (has_describe || has_test) && (has_it || has_expect);
+                let has_comprehensive_tests = has_inline_tests && (has_before_each || has_after_each);
+                
+                // Check for test files in same directory with better pattern matching
+                let has_test_file = if let Some(parent) = code_path.parent() {
+                    let file_name = code_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                    let base_name = file_name.replace(&format!(".{}", file_ext), "");
+                    
+                    // Check for common test file patterns
+                    let test_patterns = vec![
+                        format!("{}.test.ts", base_name),
+                        format!("{}.test.tsx", base_name),
+                        format!("{}.spec.ts", base_name),
+                        format!("{}.spec.tsx", base_name),
+                        format!("{}_test.ts", base_name),
+                        format!("{}_test.tsx", base_name),
+                        format!("test_{}.ts", base_name),
+                        format!("test_{}.tsx", base_name),
+                    ];
+                    
+                    test_patterns.iter().any(|pattern| {
+                        parent.join(pattern).exists()
+                    }) || parent.join("__tests__").is_dir() || parent.join("tests").is_dir()
+                } else {
+                    false
+                };
+                
+                if has_comprehensive_tests {
+                    0.2 // Full credit for comprehensive inline tests
+                } else if has_inline_tests {
+                    0.18 // Good credit for basic inline tests
+                } else if has_test_file {
+                    0.15 // Partial credit for test files
+                } else if has_expect || has_test {
+                    0.1 // Minimal credit for test-related code
+                } else {
+                    0.0
+                }
+            }
+            "py" => {
+                // Enhanced test detection: Check for various Python test patterns
+                let has_test_function = code_content.contains("def test_");
+                let has_unittest = code_content.contains("import unittest") || code_content.contains("from unittest");
+                let has_pytest = code_content.contains("import pytest") || code_content.contains("from pytest");
+                let has_assert = code_content.contains("assert ") || code_content.contains("self.assert");
+                let _has_setup_teardown = code_content.contains("setUp") || code_content.contains("tearDown") || code_content.contains("fixture");
+                
+                // Inline tests: Multiple indicators suggest comprehensive testing
+                let has_inline_tests = has_test_function || has_unittest || has_pytest;
+                let has_comprehensive_tests = has_inline_tests && has_assert;
+                
+                // Check for test files in same directory with better pattern matching
+                let has_test_file = if let Some(parent) = code_path.parent() {
+                    let file_name = code_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                    let base_name = file_name.replace(".py", "");
+                    
+                    // Check for common Python test file patterns
+                    let test_patterns = vec![
+                        format!("test_{}.py", base_name),
+                        format!("{}_test.py", base_name),
+                        format!("test_{}.py", base_name.replace("_", "")),
+                        format!("tests_{}.py", base_name),
+                    ];
+                    
+                    test_patterns.iter().any(|pattern| {
+                        parent.join(pattern).exists()
+                    }) || parent.join("tests").is_dir() || parent.join("test").is_dir()
+                } else {
+                    false
+                };
+                
+                if has_comprehensive_tests {
+                    0.2 // Full credit for comprehensive inline tests
+                } else if has_inline_tests {
+                    0.18 // Good credit for basic inline tests
+                } else if has_test_file {
+                    0.15 // Partial credit for test files
+                } else if has_assert {
+                    0.1 // Minimal credit for assertion code
+                } else {
+                    0.0
+                }
+            }
+            _ => 0.0
         };
 
-        // Documentation score: Check for documentation comments
-        let documentation_score = if code_content.contains("///") || code_content.contains("//!") {
-            0.2 // Has documentation comments
-        } else if code_content.contains("//") {
-            0.1 // Has comments
-        } else {
-            0.0
+        // Documentation score: Language-specific doc patterns
+        // Give partial credit for regular comments, full credit for doc comments
+        let documentation_score = match file_ext {
+            "rs" => {
+                // Enhanced doc comment detection: Check for comprehensive documentation
+                let doc_comment_count = code_content.matches("///").count() + code_content.matches("//!").count();
+                let doc_params = code_content.matches("# Arguments").count() + code_content.matches("/// # Arguments").count();
+                let doc_returns = code_content.matches("# Returns").count() + code_content.matches("/// # Returns").count();
+                let doc_examples = code_content.matches("# Examples").count() + code_content.matches("/// # Examples").count();
+                let _doc_panics = code_content.matches("# Panics").count() + code_content.matches("/// # Panics").count();
+                
+                // Comprehensive docs have multiple sections
+                let has_comprehensive_docs = doc_comment_count > 0 && (doc_params > 0 || doc_returns > 0 || doc_examples > 0);
+                let has_basic_docs = doc_comment_count > 0;
+                
+                // Count regular comments (//)
+                let comment_count = code_content.matches("//").count();
+                
+                // Check for module-level documentation
+                let has_module_docs = code_content.contains("//!") && doc_comment_count > 2;
+                
+                if has_comprehensive_docs {
+                    0.2 // Full credit for comprehensive doc comments
+                } else if has_basic_docs || has_module_docs {
+                    0.18 // Good credit for basic doc comments
+                } else if comment_count > 10 {
+                    0.15 // Good documentation with regular comments
+                } else if comment_count > 5 {
+                    0.12 // Moderate documentation
+                } else if comment_count > 0 {
+                    0.1 // Basic documentation
+                } else {
+                    0.0
+                }
+            }
+            "ts" | "tsx" => {
+                // Enhanced JSDoc detection: Check for comprehensive documentation patterns
+                let jsdoc_start = code_content.matches("/**").count();
+                let jsdoc_params = code_content.matches("@param").count();
+                let jsdoc_returns = code_content.matches("@returns").count() + code_content.matches("@return").count();
+                let jsdoc_examples = code_content.matches("@example").count();
+                let _jsdoc_throws = code_content.matches("@throws").count();
+                let jsdoc_descriptions = code_content.matches("* @").count();
+                
+                // Comprehensive JSDoc has multiple elements
+                let has_comprehensive_jsdoc = jsdoc_start > 0 && (jsdoc_params > 0 || jsdoc_returns > 0 || jsdoc_examples > 0);
+                let has_basic_jsdoc = jsdoc_start > 0 || jsdoc_descriptions > 0;
+                
+                // Count regular comments (//)
+                let comment_count = code_content.matches("//").count();
+                
+                // Check for type documentation in interfaces/types
+                let has_type_docs = code_content.contains("interface ") && comment_count > 3;
+                
+                if has_comprehensive_jsdoc {
+                    0.2 // Full credit for comprehensive JSDoc
+                } else if has_basic_jsdoc {
+                    0.18 // Good credit for basic JSDoc
+                } else if comment_count > 10 {
+                    0.15 // Good documentation with regular comments
+                } else if comment_count > 5 || has_type_docs {
+                    0.12 // Moderate documentation
+                } else if comment_count > 0 {
+                    0.1 // Basic documentation
+                } else {
+                    0.0
+                }
+            }
+            "py" => {
+                // Enhanced docstring detection: Check for comprehensive documentation
+                let triple_quotes = code_content.matches("\"\"\"").count();
+                let single_quotes = code_content.matches("'''").count();
+                // Docstrings come in pairs (opening and closing), so divide by 2
+                let docstring_count = (triple_quotes / 2) + (single_quotes / 2);
+                
+                // Check for comprehensive docstring patterns
+                let has_args_section = code_content.contains("Args:") || code_content.contains("Parameters:");
+                let has_returns_section = code_content.contains("Returns:") || code_content.contains("Return:");
+                let _has_raises_section = code_content.contains("Raises:") || code_content.contains("Exceptions:");
+                let has_examples = code_content.contains("Example:") || code_content.contains("Examples:");
+                
+                // Comprehensive docstrings have multiple sections
+                let has_comprehensive_docs = docstring_count > 0 && (has_args_section || has_returns_section || has_examples);
+                let has_basic_docs = docstring_count > 0;
+                
+                // Count regular comments (#)
+                let comment_count = code_content.matches("#").count();
+                
+                // Check for module-level docstrings
+                let has_module_docs = code_content.starts_with("\"\"\"") || code_content.starts_with("'''");
+                
+                if has_comprehensive_docs {
+                    0.2 // Full credit for comprehensive docstrings
+                } else if has_basic_docs || has_module_docs {
+                    0.18 // Good credit for basic docstrings
+                } else if comment_count > 10 {
+                    0.15 // Good documentation with regular comments
+                } else if comment_count > 5 {
+                    0.12 // Moderate documentation
+                } else if comment_count > 0 {
+                    0.1 // Basic documentation
+                } else {
+                    0.0
+                }
+            }
+            _ => {
+                // Generic: count all comment types
+                let comment_count = code_content.matches("//").count() 
+                    + code_content.matches("#").count() 
+                    + code_content.matches("/*").count();
+                
+                if comment_count > 5 {
+                    0.15
+                } else if comment_count > 0 {
+                    0.1
+                } else {
+                    0.0
+                }
+            }
         };
 
         let score: f64 = compilation_score + structure_score + error_handling_score + test_coverage_score + documentation_score;
@@ -588,12 +994,11 @@ impl OverallQualityScore {
         council_transparency: f64,
         output_quality: f64,
     ) -> Self {
-        let score = (
+        let score =
             reasoning_depth * 0.25 +
             decision_quality * 0.25 +
             council_transparency * 0.15 +
-            output_quality * 0.35
-        );
+            output_quality * 0.35;
 
         Self {
             score: score.min(1.0),

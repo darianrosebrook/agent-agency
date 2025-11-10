@@ -274,7 +274,7 @@ impl EvidenceFusionValidator {
     }
 
     /// Fuse multiple evidence items into a unified verification result
-    pub async fn fuse_evidence(&self, evidence_set: &[EvidenceItem], claim: &AtomicClaim) -> Result<FusionResult> {
+    pub async fn fuse_evidence(&self, evidence_set: &[EvidenceItem], _claim: &AtomicClaim) -> Result<FusionResult> {
         if evidence_set.is_empty() {
             return Ok(FusionResult {
                 fused_confidence: 0.0,
@@ -623,7 +623,7 @@ impl Tool for CrossModalCorrelationEngine {
         }
     }
 
-    async fn execute(&self, parameters: serde_json::Value, context: Option<&str>) -> Result<serde_json::Value> {
+    async fn execute(&self, parameters: serde_json::Value, _context: Option<&str>) -> Result<serde_json::Value> {
         // Parse evidence set from input
         let evidence_set: Vec<EvidenceItem> = serde_json::from_value(parameters)?;
         let result = self.correlate_evidence(&evidence_set).await?;
@@ -667,7 +667,7 @@ impl Tool for EvidenceFusionValidator {
         }
     }
 
-    async fn execute(&self, parameters: serde_json::Value, context: Option<&str>) -> Result<serde_json::Value> {
+    async fn execute(&self, parameters: serde_json::Value, _context: Option<&str>) -> Result<serde_json::Value> {
         let (evidence_set, claim): (Vec<EvidenceItem>, AtomicClaim) = serde_json::from_value(parameters)?;
         let result = self.fuse_evidence(&evidence_set, &claim).await?;
         Ok(serde_json::to_value(result)?)
@@ -710,7 +710,7 @@ impl Tool for SemanticIntegrator {
         }
     }
 
-    async fn execute(&self, parameters: serde_json::Value, context: Option<&str>) -> Result<serde_json::Value> {
+    async fn execute(&self, parameters: serde_json::Value, _context: Option<&str>) -> Result<serde_json::Value> {
         let evidence_set: Vec<EvidenceItem> = serde_json::from_value(parameters)?;
         let result = self.align_semantics(&evidence_set).await?;
         Ok(serde_json::to_value(result)?)

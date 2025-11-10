@@ -60,13 +60,10 @@ impl SourceValidator {
     }
 
     /// Assess credibility of a source
-    pub async fn assess_source(&self, source_id: &str, content: Option<&str>, context: &ProcessingContext) -> Result<SourceCredibility> {
+    pub async fn assess_source(&self, source_id: &str, _content: Option<&str>, context: &ProcessingContext) -> Result<SourceCredibility> {
         debug!("Assessing credibility of source: {}", source_id);
 
         let mut authority_score = 0.5;
-        let mut reliability_score = 0.5;
-        let mut bias_score = 0.5;
-        let mut recency_score = 1.0;
 
         // Authority assessment
         if let Some(domain) = self.extract_domain(source_id) {
@@ -74,11 +71,11 @@ impl SourceValidator {
         }
 
         // Reliability assessment based on known ratings
-        reliability_score = self.source_ratings.get(source_id).copied().unwrap_or(0.6);
+        let reliability_score = self.source_ratings.get(source_id).copied().unwrap_or(0.6);
 
         // TODO: Implement comprehensive bias assessment
         //       Currently uses basic assessment; should implement comprehensive bias detection using NLP and source analysis.
-        bias_score = if source_id.contains("news") {
+        let bias_score = if source_id.contains("news") {
             0.6 // News sources may have bias
         } else if source_id.contains("academic") {
             0.9 // Academic sources typically less biased
@@ -88,7 +85,7 @@ impl SourceValidator {
 
         // Recency assessment
         let age_hours = (Utc::now() - context.timestamp).num_hours();
-        recency_score = if age_hours < 24 {
+        let recency_score = if age_hours < 24 {
             1.0 // Very recent
         } else if age_hours < 168 { // 1 week
             0.8 // Recent

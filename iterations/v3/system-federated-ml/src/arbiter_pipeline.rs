@@ -5,14 +5,14 @@
 //! Now uses common-pipeline framework for standardized patterns.
 
 use schemars::JsonSchema;
-use anyhow::{Result, Context};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 use async_trait::async_trait;
-use system_configuration::{SequentialPipeline, SequentialPipelineConfig, PipelineStage as CommonPipelineStage, ExecutablePipeline, PipelineError, PipelineResult};
+use system_configuration::{SequentialPipeline, SequentialPipelineConfig, PipelineStage as CommonPipelineStage, ExecutablePipeline, PipelineResult};
 
 /// Configuration for arbiter decision pipeline optimization
 /// Now wraps SequentialPipelineConfig with domain-specific settings
@@ -59,6 +59,7 @@ pub struct ArbiterPipelineOptimizer {
     /// Performance metrics
     metrics: Arc<RwLock<PipelineMetrics>>,
     /// Active decision workers
+    #[allow(dead_code)]
     workers: Vec<tokio::task::JoinHandle<()>>,
     /// Monitoring task handle
     monitoring_handle: Option<tokio::task::JoinHandle<()>>,
@@ -492,18 +493,21 @@ impl ArbiterPipelineOptimizer {
     }
 
     /// Check decision cache
+    #[allow(dead_code)]
     async fn check_cache(&self, cache_key: &str) -> Option<DecisionResult> {
         let mut cache = self.decision_cache.write().await;
         cache.get(cache_key).cloned()
     }
 
     /// Cache decision result
+    #[allow(dead_code)]
     async fn cache_result(&self, cache_key: String, result: DecisionResult) {
         let mut cache = self.decision_cache.write().await;
         cache.put(cache_key, result);
     }
 
     /// Make standard decision (non-speculative)
+    #[allow(dead_code)]
     async fn make_standard_decision(&self, task_description: &str, context: &str) -> Result<DecisionResult> {
         // TODO: Implement ML-based or rule-based decision logic
         //       Currently uses basic decision logic; should use ML models or rule-based classification for accurate decisions.
@@ -552,6 +556,7 @@ impl ArbiterPipelineOptimizer {
     }
 
     /// Make speculative decision with quality validation
+    #[allow(dead_code)]
     async fn make_speculative_decision(&self, task_description: &str, context: &str) -> Result<DecisionResult> {
         // Fast-path decision for immediate response
         let fast_result = self.make_fast_decision(task_description)?;
