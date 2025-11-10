@@ -213,42 +213,61 @@ impl RealWorkingSpecProvider {
 
     /// Try to load an existing working spec from the database, or create a new one
     async fn load_or_create_working_spec(&self) -> Result<agent_agency_contracts::WorkingSpec> {
-        // TODO: Query database for existing working specs
-        //       Currently creates new spec; should query database for existing working specs before creating new ones.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Existing specs are queried from database
-        // - Specs are retrieved correctly
-        // - Database errors are handled gracefully
-        // - Query performance is acceptable
-        //
-        // DEPENDENCIES:
-        // - Database connection (Required)
-        // - Working spec table schema (Required)
-        // - Database query utilities (Required)
-        //
-        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (database integration feature)
-        // - Change Budget: ~80 LOC
-        // - Reviewer Requirements: Database expertise
-        self.create_working_spec_from_task().await // Temporary: create new until database query is implemented
+        use tracing::debug;
+        
+        // Generate expected working_spec_id from task descriptor
+        let expected_working_spec_id = format!("ws-{}", self.task_descriptor.task_id);
+        
+        // Query execution plans to find existing plan with matching working_spec_id
+        match self.db_ops.get_execution_plans().await {
+            Ok(plans) => {
+                // Find plan with matching working_spec_id
+                if let Some(existing_plan) = plans.iter().find(|plan| plan.working_spec_id == expected_working_spec_id) {
+                    debug!(
+                        "Found existing execution plan for working_spec_id: {}",
+                        expected_working_spec_id
+                    );
+                    
+                    // Reconstruct working spec from execution plan and task descriptor
+                    // The execution plan contains derived information (milestones, quality_gates, etc.)
+                    // but we reconstruct the working spec from the task descriptor to ensure consistency
+                    let mut working_spec = self.create_working_spec_from_task().await?;
+                    
+                    // Enhance working spec with data from execution plan if available
+                    // Try to extract quality gates from plan metadata
+                    if let Some(quality_gates_json) = existing_plan.metadata.get("quality_gates") {
+                        if let Ok(quality_gates) = serde_json::from_value::<agent_agency_contracts::planning_io::QualityGates>(quality_gates_json.clone()) {
+                            working_spec.quality_gates = Some(quality_gates);
+                        }
+                    }
+                    
+                    // Use the existing working_spec_id to maintain consistency
+                    working_spec.id = existing_plan.working_spec_id.clone();
+                    
+                    debug!(
+                        "Reconstructed working spec from existing execution plan: {}",
+                        working_spec.id
+                    );
+                    
+                    return Ok(working_spec);
+                }
+            }
+            Err(e) => {
+                // Log error but continue to create new spec (graceful degradation)
+                tracing::warn!(
+                    "Failed to query execution plans for working spec lookup: {}. Creating new spec.",
+                    e
+                );
+            }
+        }
+        
+        // No existing plan found, create new working spec
+        debug!(
+            "No existing execution plan found for working_spec_id: {}. Creating new working spec.",
+            expected_working_spec_id
+        );
+        
+        self.create_working_spec_from_task().await
     }
 
     /// Create a comprehensive working spec from the task descriptor
