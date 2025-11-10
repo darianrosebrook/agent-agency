@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type DragEvent, type ChangeEvent } from "react";
+import React, { useState, type DragEvent, type ChangeEvent } from "react";
 import {
   Dialog,
   DialogContent,

@@ -7,7 +7,7 @@ import { Badge } from "../ui/badge";
 import { ChatMessage, ChatMessageSkeleton } from "../compounds";
 import svgPaths from "../../imports/svg-quupl4zjo1";
 import { useChatStore } from "../../lib/stores";
-import type { Message, Task } from "../../lib/schemas/chat";
+import type { Message } from "../../lib/schemas/chat";
 import { simulateAIResponse } from "./ChatAIHelper";
 import { cn } from "../ui/utils";
 import styles from "./Chat.module.scss";

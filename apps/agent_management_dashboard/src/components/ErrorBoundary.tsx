@@ -129,7 +129,7 @@ export class ErrorBoundary extends Component<Props, State> {
  * Hook for error boundary (for functional components)
  */
 export function useErrorHandler() {
-  return (error: Error, errorInfo?: React.ErrorInfo) => {
+  return (error: Error) => {
     // This will be caught by the nearest ErrorBoundary
     throw error;
   };

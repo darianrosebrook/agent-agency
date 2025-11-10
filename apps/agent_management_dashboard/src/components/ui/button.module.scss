@@ -57,7 +57,7 @@
 
 .variant-destructive {
   background-color: var(--destructive);
-  color: white;
+  color: $color-white;
 
   &:hover:not(:disabled) {
     background-color: hsl(var(--destructive) / 0.9);

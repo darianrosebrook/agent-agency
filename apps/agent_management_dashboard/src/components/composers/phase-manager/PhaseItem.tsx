@@ -2,8 +2,7 @@
 
 import { Accordion } from '../../ui/accordion';
 import { TaskItem } from './TaskItem';
-import type { Phase, Task } from './types';
-import { cn } from '../../ui/utils';
+import type { Phase } from './types';
 import styles from './PhaseItem.module.scss';
 
 interface PhaseItemProps {
@@ -74,5 +73,7 @@ export function PhaseItem({
     </div>
   );
 }
+
+
 
 

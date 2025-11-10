@@ -4,6 +4,7 @@
   position: relative;
   width: 100%;
   height: 100%;
+  min-height: 0; // Allow flex children to shrink
   background-color: $color-gray-900; // bg-[#111111] -> gray-900
   border-radius: 0.75rem; // rounded-[12px]
   border: 1px solid $color-gray-300; // border-[#cacaca] -> gray-300

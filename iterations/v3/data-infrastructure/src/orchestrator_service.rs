@@ -92,6 +92,17 @@ pub struct TaskExecutionState {
     pub worker_actions: Vec<WorkerAction>,
 }
 
+/// Lightweight task summary for listing endpoints
+/// Avoids cloning large vectors (chain_of_thought, council_decisions, worker_actions)
+#[derive(Debug, Clone)]
+pub struct TaskSummary {
+    pub task_id: Uuid,
+    pub description: String,
+    pub status: TaskStatus,
+    pub started_at: chrono::DateTime<Utc>,
+    pub updated_at: chrono::DateTime<Utc>,
+}
+
 /// Task status
 #[derive(Debug, Clone, PartialEq)]
 pub enum TaskStatus {
@@ -525,6 +536,19 @@ impl OrchestratorService {
     pub async fn list_tasks(&self) -> Vec<TaskExecutionState> {
         let tasks = self.active_tasks.read().await;
         tasks.values().cloned().collect()
+    }
+
+    /// List task summaries (lightweight, for listing endpoints)
+    /// Returns only essential fields without cloning large vectors
+    pub async fn list_task_summaries(&self) -> Vec<TaskSummary> {
+        let tasks = self.active_tasks.read().await;
+        tasks.values().map(|task| TaskSummary {
+            task_id: task.task_id,
+            description: task.description.clone(),
+            status: task.status.clone(),
+            started_at: task.started_at,
+            updated_at: task.updated_at,
+        }).collect()
     }
 
     /// Get task progress summary (observational only)

@@ -440,3 +440,5 @@ VALUES ('013', 'add_chat_search_and_organization', NOW())
 ON CONFLICT (version) DO NOTHING;
 
 
+
+

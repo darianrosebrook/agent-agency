@@ -12,7 +12,6 @@ import { SubtaskItem } from './SubtaskItem';
 import { ContextMenu } from './ContextMenu';
 import { calculateTaskProgress } from './utils';
 import type { Task } from './types';
-import { cn } from '../../ui/utils';
 import styles from './TaskItem.module.scss';
 
 interface TaskItemProps {

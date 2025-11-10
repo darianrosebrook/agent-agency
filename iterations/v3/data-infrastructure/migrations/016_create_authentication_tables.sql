@@ -90,3 +90,5 @@ VALUES ('016', 'Create authentication tables', NOW())
 ON CONFLICT (version) DO NOTHING;
 
 
+
+

@@ -17,8 +17,6 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { useProjectStore } from "../lib/stores";
 import { ErrorDisplay } from "./ErrorDisplay";
-import { LoadingSpinner, PageLoading } from "./LoadingSpinner";
-import { ProjectCardSkeleton } from "./Skeleton";
 import {
   Table,
   TableBody,
@@ -45,7 +43,6 @@ export function Projects() {
     getCurrentProject,
     createProject,
     selectProject,
-    clearCurrentProject,
     isLoading,
     error,
   } = useProjectStore();
@@ -65,7 +62,12 @@ export function Projects() {
   if (isLoading && projects.length === 0) {
     return (
       <div className="p-8">
-        <PageLoading text="Loading projects..." />
+        <div className="flex items-center justify-center min-h-[500px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-gray-400">Loading projects...</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -107,10 +109,6 @@ export function Projects() {
     router.push(`/projects/${encodeURIComponent(projectId)}`);
   };
 
-  const handleBackToProjects = () => {
-    clearCurrentProject();
-    router.push("/projects");
-  };
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {

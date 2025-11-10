@@ -63,7 +63,7 @@
 .variant-destructive {
   border-color: transparent;
   background-color: var(--destructive);
-  color: white;
+  color: $color-white;
 
   &:has(a):hover,
   a:hover & {

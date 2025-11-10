@@ -17,8 +17,23 @@
 }
 
 .headerIcon {
-  width: $spacing-4; // w-4
-  height: $spacing-4; // h-4
+  width: $spacing-4 !important; // w-4 = 16px (override Lucide inline width="24")
+  height: $spacing-4 !important; // h-4 = 16px (override Lucide inline height="24")
+  flex-shrink: 0; // Prevent icon from shrinking
+  
+  // Override SVG inline attributes
+  &[width="24"] {
+    width: $spacing-4 !important;
+  }
+  &[height="24"] {
+    height: $spacing-4 !important;
+  }
+  
+  // Target SVG element directly
+  svg {
+    width: $spacing-4 !important;
+    height: $spacing-4 !important;
+  }
 }
 
 .headerLabel {
@@ -27,6 +42,8 @@
 
 .headerTitle {
   font-size: $font-size-3xl; // text-3xl
+  font-weight: $font-weight-normal; // text-3xl defaults to normal weight
+  line-height: 1.2; // text-3xl line-height (30px * 1.2 = 36px)
   color: $color-white; // text-white
 }
 
@@ -42,7 +59,33 @@
   // Specific column/row spans applied via className
 }
 
-// Grid column spans
+// Grid column spans - all grid items need height: 100% to fill their cells
+.colSpan5,
+.colSpan7,
+.colSpan8,
+.colSpan4,
+.colSpan12 {
+  height: 100%;
+  min-height: 0; // Allow flex children to shrink
+  
+  // Ensure Suspense wrapper fills the space
+  // Suspense doesn't render a DOM element, so this targets the rendered component
+  > * {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+  
+  // Ensure chart components fill the space (they use Tailwind size-full which doesn't work)
+  // This provides the equivalent of width: 100%; height: 100%
+  // Handles both direct chart components and BentoPanel-wrapped components
+  > * > * {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+}
+
 .colSpan5 {
   grid-column: span 5 / span 5; // col-span-5
 }

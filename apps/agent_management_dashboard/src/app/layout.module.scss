@@ -3,5 +3,6 @@
 .body {
   background-color: oklch(0.145 0 0); // bg-zinc-950
   color: oklch(0.75 0 0); // text-gray-100
+  font-family: var(--font-inter), "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 

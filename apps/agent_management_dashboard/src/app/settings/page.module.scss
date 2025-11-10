@@ -14,8 +14,9 @@
 }
 
 .settingsTitle {
-  font-size: $font-size-3xl;
-  font-weight: $font-weight-bold;
+  font-size: $font-size-3xl; // text-3xl = 30px
+  font-weight: $font-weight-normal; // text-3xl defaults to normal weight (not bold)
+  line-height: 1.2; // text-3xl line-height (30px * 1.2 = 36px)
   color: white;
   margin-bottom: $spacing-2;
 }
@@ -27,7 +28,7 @@
 .settingsContent {
   background-color: #1a1a1a;
   border: 1px solid oklch(0.269 0 0);
-  border-radius: $spacing-lg;
+  border-radius: 0.875rem; // rounded-lg = 14px (matches old Tailwind version)
   padding: $spacing-8;
   display: flex;
   flex-direction: column;
@@ -54,7 +55,7 @@
   padding-block: $spacing-2; // py-2
   background-color: rgba(234, 179, 8, 0.2); // bg-yellow-500/20
   border: 1px solid rgba(234, 179, 8, 0.5); // border border-yellow-500/50
-  border-radius: $spacing-lg; // rounded-lg
+  border-radius: 0.875rem; // rounded-lg = 14px (matches old Tailwind version)
 }
 
 .statusBadgeDot {
@@ -86,7 +87,7 @@
 .sectionContent {
   background-color: #0f0f0f; // bg-[#0f0f0f]
   border: 1px solid oklch(0.269 0 0); // border border-gray-800
-  border-radius: $spacing-lg; // rounded-lg
+  border-radius: 0.875rem; // rounded-lg = 14px (matches old Tailwind version)
   padding: $spacing-6; // p-6
   display: flex;
   flex-direction: column;

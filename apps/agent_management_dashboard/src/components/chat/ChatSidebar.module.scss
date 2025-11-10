@@ -24,6 +24,9 @@
 }
 
 .headerTitle {
+  font-size: $font-size-base; // text-base = 16px
+  font-weight: $font-weight-normal; // normal weight
+  line-height: $line-height-base; // line-height-base = 24px
   color: $color-white; // text-white
 }
 

@@ -201,7 +201,7 @@
 .selectSeparator {
   background-color: var(--border);
   pointer-events: none;
-  margin: $spacing-1 -$spacing-1;
+  margin: $spacing-1 (-$spacing-1);
   height: 1px;
 }
 

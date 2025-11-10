@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 const gsapLoader = async () => {
-  const gsap = await import("gsap");
-  return gsap.gsap;
+  const gsapModule = await import("gsap");
+  // GSAP exports as default, but also has named exports
+  return gsapModule.default || gsapModule;
 };
 import {
   Search,

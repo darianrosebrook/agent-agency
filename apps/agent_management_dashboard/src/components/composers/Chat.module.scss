@@ -15,26 +15,26 @@
 }
 
 .contextFileBadge {
-  background-color: rgb(31, 41, 55); // bg-gray-800
-  color: oklch(0.95 0 0); // text-gray-100
+  background-color: $color-gray-800; // bg-gray-800
+  color: $color-gray-100; // text-gray-100
   padding-right: $spacing-1;
   gap: $spacing-2;
 
   &:hover {
-    background-color: rgb(55, 65, 81); // hover:bg-gray-700
+    background-color: $color-gray-700; // hover:bg-gray-700
   }
 }
 
 .contextFileRemove {
   &:hover {
-    background-color: rgb(75, 85, 99); // hover:bg-gray-600
+    background-color: $color-gray-600; // hover:bg-gray-600
     border-radius: 9999px; // rounded-full
     padding: 0.125rem; // p-0.5
   }
 }
 
 .promptContainer {
-  background-color: #1a1a1a;
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
   position: relative;
   border-radius: 1rem; // rounded-[16px]
   width: 100%;
@@ -42,7 +42,7 @@
 
 .promptBorder {
   position: absolute;
-  border-color: #1a1a1a;
+  border-color: $color-dark-bg-primary; // border-[#1a1a1a]
   border-width: 0.909px;
   border-style: solid;
   inset: 0;
@@ -84,7 +84,7 @@
   line-height: 1.5rem; // leading-[24px]
   font-style: normal;
   width: 100%;
-  color: #555555; // text-[#555555]
+  color: $color-gray-400; // text-[#555555] -> gray-400
   font-size: 1rem; // text-[16px]
   letter-spacing: -0.3125px; // tracking-[-0.3125px]
   background-color: transparent;
@@ -92,12 +92,12 @@
   outline: none;
 
   &::placeholder {
-    color: #555555; // placeholder:text-[#555555]
+    color: $color-gray-400; // placeholder:text-[#555555] -> gray-400
   }
 }
 
 .promptActionsContainer {
-  background-color: #0f0f0f;
+  background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
   position: relative;
   border-radius: 0.75rem; // rounded-[12px]
   flex-shrink: 0;
@@ -106,7 +106,7 @@
 
 .promptActionsBorder {
   position: absolute;
-  border-color: #1a1a1a;
+  border-color: $color-dark-bg-primary; // border-[#1a1a1a]
   border-width: 0.909px;
   border-style: solid;
   inset: 0;
@@ -138,7 +138,7 @@
 }
 
 .promptButton {
-  background-color: #1a1a1a;
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
   border-radius: 0.5rem; // rounded-[8px]
   flex-shrink: 0;
   display: flex;
@@ -147,7 +147,7 @@
   transition: background-color $transition-normal;
 
   &:hover {
-    background-color: #252525; // hover:bg-[#252525]
+    background-color: $color-dark-bg-hover; // hover:bg-[#252525]
   }
 }
 
@@ -174,7 +174,7 @@
   font-weight: 400;
   line-height: 1.25rem; // leading-[20px]
   font-style: normal;
-  color: #99a1af; // text-[#99a1af]
+  color: $color-gray-400; // text-[#99a1af] -> gray-400
   font-size: 0.875rem; // text-[14px]
   white-space: nowrap;
   letter-spacing: -0.1504px; // tracking-[-0.1504px]
@@ -188,7 +188,7 @@
 }
 
 .promptSendButton {
-  background-color: #1a1a1a;
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
   border-radius: 0.5rem; // rounded-[8px]
   flex-shrink: 0;
   width: 2rem; // size-[32px]
@@ -199,7 +199,7 @@
   transition: background-color $transition-normal;
 
   &:hover {
-    background-color: #252525; // hover:bg-[#252525]
+    background-color: $color-dark-bg-hover; // hover:bg-[#252525]
   }
 
   &:disabled {
@@ -243,8 +243,8 @@
 .emptyStateIconBox {
   width: 8rem; // w-32
   height: 8rem; // h-32
-  background-color: #1a1a1a;
-  border: 2px solid rgb(31, 41, 55); // border-2 border-gray-800
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border: 2px solid $color-gray-800; // border-2 border-gray-800
   border-radius: 1.5rem; // rounded-3xl
   display: flex;
   align-items: center;
@@ -257,7 +257,7 @@
   right: -0.5rem; // -right-2
   width: 1rem; // w-4
   height: 1rem; // h-4
-  background-color: rgba(59, 130, 246, 0.2); // bg-blue-500/20
+  background-color: rgba($color-blue-500, 0.2); // bg-blue-500/20
   border-radius: 9999px; // rounded-full
 }
 
@@ -267,18 +267,18 @@
   left: -0.75rem; // -left-3
   width: 1.5rem; // w-6
   height: 1.5rem; // h-6
-  background-color: rgba(168, 85, 247, 0.2); // bg-purple-500/20
+  background-color: rgba(168, 85, 247, 0.2); // bg-purple-500/20 (purple not in tokens, keeping as-is)
   border-radius: 9999px; // rounded-full
 }
 
 .emptyStateTitle {
   font-size: $font-size-2xl; // text-2xl
-  color: white; // text-white
+  color: $color-white; // text-white
   margin-bottom: $spacing-3;
 }
 
 .emptyStateDescription {
-  color: rgb(156, 163, 175); // text-gray-400
+  color: $color-gray-400; // text-gray-400
   margin-bottom: $spacing-8;
 }
 
@@ -304,7 +304,7 @@
 }
 
 .inputArea {
-  background-color: #0f0f0f;
+  background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
   padding: $spacing-6;
 }
 

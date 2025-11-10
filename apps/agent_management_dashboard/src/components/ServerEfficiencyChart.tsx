@@ -65,7 +65,7 @@ export function ServerEfficiencyChart({
   );
 
   return (
-    <BentoPanel className="col-span-4 row-span-2">
+    <BentoPanel>
       <div className="h-full flex flex-col p-6">
         {/* Header */}
         <div className="flex items-start justify-between mb-8">

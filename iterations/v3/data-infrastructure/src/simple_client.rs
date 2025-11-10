@@ -767,6 +767,184 @@ impl DatabaseClient {
         self.inner.update_user(id, update).await
     }
 
+    // User settings operations
+    pub async fn get_user_settings(&self, user_id: Uuid, setting_type: Option<&str>) -> Result<Vec<crate::models::UserSetting>> {
+        self.inner.get_user_settings(user_id, setting_type).await
+    }
+
+    pub async fn get_user_setting(&self, user_id: Uuid, setting_key: &str) -> Result<Option<crate::models::UserSetting>> {
+        self.inner.get_user_setting(user_id, setting_key).await
+    }
+
+    pub async fn create_user_setting(&self, setting: crate::database_operations::CreateUserSetting) -> Result<crate::models::UserSetting> {
+        self.inner.create_user_setting(setting).await
+    }
+
+    pub async fn update_user_setting(&self, user_id: Uuid, setting_key: &str, update: crate::database_operations::UpdateUserSetting) -> Result<crate::models::UserSetting> {
+        self.inner.update_user_setting(user_id, setting_key, update).await
+    }
+
+    pub async fn delete_user_setting(&self, user_id: Uuid, setting_key: &str) -> Result<()> {
+        self.inner.delete_user_setting(user_id, setting_key).await
+    }
+
+    // App settings operations
+    pub async fn get_app_settings(&self, setting_type: Option<&str>, is_public: Option<bool>) -> Result<Vec<crate::models::AppSetting>> {
+        self.inner.get_app_settings(setting_type, is_public).await
+    }
+
+    pub async fn get_app_setting(&self, setting_key: &str) -> Result<Option<crate::models::AppSetting>> {
+        self.inner.get_app_setting(setting_key).await
+    }
+
+    pub async fn create_app_setting(&self, setting: crate::database_operations::CreateAppSetting) -> Result<crate::models::AppSetting> {
+        self.inner.create_app_setting(setting).await
+    }
+
+    pub async fn update_app_setting(&self, setting_key: &str, update: crate::database_operations::UpdateAppSetting) -> Result<crate::models::AppSetting> {
+        self.inner.update_app_setting(setting_key, update).await
+    }
+
+    pub async fn delete_app_setting(&self, setting_key: &str) -> Result<()> {
+        self.inner.delete_app_setting(setting_key).await
+    }
+
+    // Integration operations
+    pub async fn get_integrations(&self, provider: Option<&str>, is_active: Option<bool>) -> Result<Vec<crate::models::Integration>> {
+        self.inner.get_integrations(provider, is_active).await
+    }
+
+    pub async fn get_integration(&self, id: Uuid) -> Result<Option<crate::models::Integration>> {
+        self.inner.get_integration(id).await
+    }
+
+    pub async fn create_integration(&self, integration: crate::database_operations::CreateIntegration) -> Result<crate::models::Integration> {
+        self.inner.create_integration(integration).await
+    }
+
+    pub async fn update_integration(&self, id: Uuid, update: crate::database_operations::UpdateIntegration) -> Result<crate::models::Integration> {
+        self.inner.update_integration(id, update).await
+    }
+
+    pub async fn delete_integration(&self, id: Uuid) -> Result<()> {
+        self.inner.delete_integration(id).await
+    }
+
+    // API key operations
+    pub async fn get_user_api_keys(&self, user_id: Uuid, is_active: Option<bool>) -> Result<Vec<crate::models::ApiKey>> {
+        self.inner.get_user_api_keys(user_id, is_active).await
+    }
+
+    pub async fn get_api_key(&self, id: Uuid) -> Result<Option<crate::models::ApiKey>> {
+        self.inner.get_api_key(id).await
+    }
+
+    pub async fn get_api_key_by_hash(&self, key_hash: &str) -> Result<Option<crate::models::ApiKey>> {
+        self.inner.get_api_key_by_hash(key_hash).await
+    }
+
+    pub async fn create_api_key(&self, api_key: crate::database_operations::CreateApiKey) -> Result<crate::models::ApiKey> {
+        self.inner.create_api_key(api_key).await
+    }
+
+    pub async fn update_api_key(&self, id: Uuid, update: crate::database_operations::UpdateApiKey) -> Result<crate::models::ApiKey> {
+        self.inner.update_api_key(id, update).await
+    }
+
+    pub async fn revoke_api_key(&self, id: Uuid, reason: Option<String>) -> Result<()> {
+        self.inner.revoke_api_key(id, reason).await
+    }
+
+    pub async fn delete_api_key(&self, id: Uuid) -> Result<()> {
+        self.inner.delete_api_key(id).await
+    }
+
+    // CAWS Rules operations
+    pub async fn create_caws_rule(&self, rule: crate::database_operations::CreateCawsRule) -> Result<crate::models::CawsRule> {
+        self.inner.create_caws_rule(rule).await
+    }
+
+    pub async fn get_caws_rule(&self, id: &str) -> Result<Option<crate::models::CawsRule>> {
+        self.inner.get_caws_rule(id).await
+    }
+
+    pub async fn get_caws_rules(&self, rule_type: Option<&str>, is_active: Option<bool>) -> Result<Vec<crate::models::CawsRule>> {
+        self.inner.get_caws_rules(rule_type, is_active).await
+    }
+
+    pub async fn update_caws_rule(&self, id: &str, update: crate::database_operations::UpdateCawsRule) -> Result<crate::models::CawsRule> {
+        self.inner.update_caws_rule(id, update).await
+    }
+
+    pub async fn delete_caws_rule(&self, id: &str) -> Result<()> {
+        self.inner.delete_caws_rule(id).await
+    }
+
+    // CAWS Violations operations
+    pub async fn create_caws_violation(&self, violation: crate::database_operations::CreateCawsViolation) -> Result<crate::models::CawsViolation> {
+        self.inner.create_caws_violation(violation).await
+    }
+
+    pub async fn get_caws_violation(&self, id: Uuid) -> Result<Option<crate::models::CawsViolation>> {
+        self.inner.get_caws_violation(id).await
+    }
+
+    pub async fn get_caws_violations(&self, task_id: Option<Uuid>, rule_id: Option<&str>, status: Option<&str>) -> Result<Vec<crate::models::CawsViolation>> {
+        self.inner.get_caws_violations(task_id, rule_id, status).await
+    }
+
+    pub async fn update_caws_violation(&self, id: Uuid, update: crate::database_operations::UpdateCawsViolation) -> Result<crate::models::CawsViolation> {
+        self.inner.update_caws_violation(id, update).await
+    }
+
+    pub async fn resolve_caws_violation(&self, id: Uuid) -> Result<()> {
+        self.inner.resolve_caws_violation(id).await
+    }
+
+    // CAWS Specifications operations
+    pub async fn create_caws_specification(&self, spec: crate::database_operations::CreateCawsSpecification) -> Result<crate::models::CawsSpecification> {
+        self.inner.create_caws_specification(spec).await
+    }
+
+    pub async fn get_caws_specification(&self, id: Uuid) -> Result<Option<crate::models::CawsSpecification>> {
+        self.inner.get_caws_specification(id).await
+    }
+
+    pub async fn get_caws_specifications(&self, name: Option<&str>, is_active: Option<bool>) -> Result<Vec<crate::models::CawsSpecification>> {
+        self.inner.get_caws_specifications(name, is_active).await
+    }
+
+    pub async fn update_caws_specification(&self, id: Uuid, update: crate::database_operations::UpdateCawsSpecification) -> Result<crate::models::CawsSpecification> {
+        self.inner.update_caws_specification(id, update).await
+    }
+
+    pub async fn delete_caws_specification(&self, id: Uuid) -> Result<()> {
+        self.inner.delete_caws_specification(id).await
+    }
+
+    // Rule templates operations
+    pub async fn get_rule_templates(&self, rule_type: Option<&str>) -> Result<Vec<crate::database_operations::RuleTemplate>> {
+        self.inner.get_rule_templates(rule_type).await
+    }
+
+    pub async fn create_rule_template(&self, template: crate::database_operations::CreateRuleTemplate) -> Result<crate::database_operations::RuleTemplate> {
+        self.inner.create_rule_template(template).await
+    }
+
+    // Rule enforcement status operations
+    pub async fn get_rule_enforcement_status(&self, rule_id: Option<&str>, task_id: Option<Uuid>) -> Result<Vec<crate::database_operations::RuleEnforcementStatus>> {
+        self.inner.get_rule_enforcement_status(rule_id, task_id).await
+    }
+
+    pub async fn update_rule_enforcement_status(&self, rule_id: &str, task_id: Option<Uuid>, status: crate::database_operations::UpdateRuleEnforcementStatus) -> Result<crate::database_operations::RuleEnforcementStatus> {
+        self.inner.update_rule_enforcement_status(rule_id, task_id, status).await
+    }
+
+    // Rule history operations
+    pub async fn get_rule_history(&self, rule_id: &str, limit: Option<u32>) -> Result<Vec<crate::database_operations::RuleHistory>> {
+        self.inner.get_rule_history(rule_id, limit).await
+    }
+
     // Session operations
     pub async fn create_session(&self, session: crate::database_operations::CreateSession) -> Result<crate::models::Session> {
         self.inner.create_session(session).await
@@ -912,6 +1090,23 @@ impl DatabaseClient {
 
     pub async fn delete_judge(&self, id: Uuid) -> Result<()> {
         self.inner.delete_judge(id).await
+    }
+
+    // Two-factor authentication operations
+    pub async fn get_two_factor_auth(&self, user_id: Uuid, method: Option<&str>) -> Result<Option<crate::models::TwoFactorAuth>> {
+        self.inner.get_two_factor_auth(user_id, method).await
+    }
+
+    pub async fn create_two_factor_auth(&self, two_fa: crate::database_operations::CreateTwoFactorAuth) -> Result<crate::models::TwoFactorAuth> {
+        self.inner.create_two_factor_auth(two_fa).await
+    }
+
+    pub async fn update_two_factor_auth(&self, user_id: Uuid, method: &str, update: crate::database_operations::UpdateTwoFactorAuth) -> Result<crate::models::TwoFactorAuth> {
+        self.inner.update_two_factor_auth(user_id, method, update).await
+    }
+
+    pub async fn delete_two_factor_auth(&self, user_id: Uuid, method: &str) -> Result<()> {
+        self.inner.delete_two_factor_auth(user_id, method).await
     }
 
     /// Get judge evaluations by judge_id

@@ -55,7 +55,8 @@ use axum::{
     Router,
     Json,
     extract::{Path, State, Query},
-    http::StatusCode,
+    http::{StatusCode, HeaderMap},
+    response::IntoResponse,
 };
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
@@ -65,7 +66,7 @@ use tracing::{info, error, warn};
 use sha2::{Sha256, Digest};
 use chrono::{DateTime, Utc, Duration as ChronoDuration};
 use system_quality_security::{AuthService, AuthConfig, authentication::PasswordPolicy};
-use totp_rs::{Secret, TOTP, Algorithm};
+use totp_rs::{TOTP, Algorithm};
 use base32;
 
 // Database integration
@@ -451,7 +452,7 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
         .route("/api/v1/telemetry/model-contributions", get(get_model_contributions_handler))
         .route("/api/v1/telemetry/agent-activity", get(get_agent_activity_handler))
         .route("/api/v1/observability/efficiency", get(get_efficiency_handler))
-        .route("/api/v1/observability/system-metrics", get(get_system_metrics_handler))
+        .route("/api/v1/observability/system-metrics", get(get_resource_usage_handler))
         .route("/api/v1/observability/alerts", get(get_alerts_handler));
 
     // Chain of thought and observation endpoints
@@ -462,9 +463,17 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
 
     // Chat and context endpoints
     router = router
-        .route("/api/v1/chat", post(chat_handler))
-        .route("/api/v1/chat/stream", post(data_infrastructure::api::handlers::chat_handlers::stream_agent_response))
-        .route("/api/v1/chat/stream/cancel", post(data_infrastructure::api::handlers::chat_handlers::cancel_stream))
+        .route("/api/v1/chat", post(chat_handler));
+    
+    // Chat stream handlers require ApiState, so they're conditionally added
+    #[cfg(feature = "orchestration")]
+    {
+        router = router
+            .route("/api/v1/chat/stream", post(stream_agent_response_wrapper))
+            .route("/api/v1/chat/stream/cancel", post(cancel_stream_wrapper));
+    }
+    
+    router = router
         .route("/api/v1/chat/sessions", get(list_chat_sessions_handler))
         .route("/api/v1/chat/sessions/:session_id", get(get_chat_session_handler))
         .route("/api/v1/chat/sessions/:session_id/messages", get(get_chat_messages_handler));
@@ -508,7 +517,7 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
     router = router
         .route("/api/v1/system/health", get(get_system_health_handler))
         .route("/api/v1/system/resources", get(get_resource_usage_handler))
-        .route("/api/v1/system/metrics", get(get_system_metrics_handler));
+        .route("/api/v1/system/metrics", get(get_resource_usage_handler));
 
     // Analytics endpoints
     router = router
@@ -524,11 +533,13 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
 
     // Query performance monitoring endpoints
     #[cfg(feature = "orchestration")]
-    router = router
-        .route("/api/v1/query-performance/summary", get(query_performance_summary_handler))
-        .route("/api/v1/query-performance/metrics", get(query_performance_metrics_handler))
-        .route("/api/v1/query-performance/slow", get(query_performance_slow_handler))
-        .route("/api/v1/query-performance/top-slow", get(query_performance_top_slow_handler));
+    {
+        router = router
+            .route("/api/v1/query-performance/summary", get(query_performance_summary_handler))
+            .route("/api/v1/query-performance/metrics", get(query_performance_metrics_handler))
+            .route("/api/v1/query-performance/slow", get(query_performance_slow_handler))
+            .route("/api/v1/query-performance/top-slow", get(query_performance_top_slow_handler));
+    }
 
     // Provenance endpoints
     router = router
@@ -2446,6 +2457,70 @@ async fn get_worker_actions_handler(
     }
 }
 
+// Wrapper handlers for chat stream endpoints (convert AppState to ApiState)
+#[cfg(feature = "orchestration")]
+async fn stream_agent_response_wrapper(
+    State(state): State<AppState>,
+    Json(request): Json<data_infrastructure::api::handlers::chat_handlers::StreamAgentRequest>,
+) -> axum::response::Response {
+    let api = match state.api.as_ref() {
+        Some(api) => api,
+        None => return (StatusCode::SERVICE_UNAVAILABLE, "API service unavailable").into_response(),
+    };
+    let websocket_manager = match state.websocket_manager.as_ref() {
+        Some(ws) => ws,
+        None => return (StatusCode::SERVICE_UNAVAILABLE, "WebSocket manager unavailable").into_response(),
+    };
+    let query_performance_monitor = match state.query_performance_monitor.as_ref() {
+        Some(qpm) => qpm,
+        None => return (StatusCode::SERVICE_UNAVAILABLE, "Query performance monitor unavailable").into_response(),
+    };
+    
+    let api_state = ApiState {
+        api: api.clone(),
+        websocket_manager: websocket_manager.clone(),
+        query_performance_monitor: query_performance_monitor.clone(),
+    };
+    
+    match data_infrastructure::api::handlers::chat_handlers::stream_agent_response(
+        axum::extract::State(api_state),
+        axum::Json(request)
+    ).await {
+        Ok(sse) => sse.into_response(),
+        Err(e) => {
+            error!("Stream agent response error: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("{:?}", e)).into_response()
+        }
+    }
+}
+
+#[cfg(feature = "orchestration")]
+async fn cancel_stream_wrapper(
+    State(state): State<AppState>,
+    Json(request): Json<data_infrastructure::api::handlers::chat_handlers::CancelStreamRequest>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let api = state.api.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let websocket_manager = state.websocket_manager.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let query_performance_monitor = state.query_performance_monitor.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let api_state = ApiState {
+        api: api.clone(),
+        websocket_manager: websocket_manager.clone(),
+        query_performance_monitor: query_performance_monitor.clone(),
+    };
+    
+    match data_infrastructure::api::handlers::chat_handlers::cancel_stream(
+        axum::extract::State(api_state),
+        axum::Json(request)
+    ).await {
+        Ok(json) => Ok(json),
+        Err(e) => {
+            error!("Cancel stream error: {:?}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
 // Chat handlers (observational - query orchestrator context)
 async fn chat_handler(
     State(state): State<AppState>,
@@ -2518,8 +2593,9 @@ async fn list_chat_sessions_handler(
     {
         // Observe active tasks as "chat sessions" (each task can have context queries)
         if let Some(service) = &state.orchestrator_service {
-            let tasks = service.list_tasks().await;
-            let sessions: Vec<JsonValue> = tasks.into_iter().map(|task| {
+            // Use lightweight summaries to avoid cloning large vectors
+            let task_summaries = service.list_task_summaries().await;
+            let sessions: Vec<JsonValue> = task_summaries.into_iter().map(|task| {
                 serde_json::json!({
                     "session_id": task.task_id.to_string(),
                     "description": task.description,
@@ -3172,6 +3248,7 @@ async fn execute_query_handler(
                 // Supports all common PostgreSQL types: String, i32, i64, f64, bool, Uuid, DateTime, JSONB
                 // Handles NULL values correctly and extracts column names dynamically
                 let results: Vec<JsonValue> = rows.into_iter().map(|row| {
+                    use sqlx::Column;
                     let mut json_obj = serde_json::Map::new();
                     
                     // Get column names from row
@@ -3528,7 +3605,7 @@ async fn get_system_health_handler(
 async fn get_resource_usage_handler(
     State(_state): State<AppState>,
 ) -> Result<Json<JsonValue>, StatusCode> {
-    use sysinfo::{System, SystemExt, CpuExt, DiskExt, NetworksExt};
+    use sysinfo::{System, Disks, Networks};
     
     let mut system = System::new_all();
     system.refresh_all();
@@ -3544,7 +3621,8 @@ async fn get_resource_usage_handler(
     // Get disk usage
     let mut total_disk = 0u64;
     let mut used_disk = 0u64;
-    for disk in system.disks() {
+    let disks = Disks::new_with_refreshed_list();
+    for disk in disks.list() {
         total_disk += disk.total_space();
         used_disk += disk.total_space().saturating_sub(disk.available_space());
     }
@@ -3552,7 +3630,8 @@ async fn get_resource_usage_handler(
     
     // Get network usage
     let mut network_bytes = 0u64;
-    for (_interface_name, network) in system.networks() {
+    let networks = Networks::new_with_refreshed_list();
+    for (_interface_name, network) in networks.iter() {
         network_bytes += network.received() + network.transmitted();
     }
     let network_usage_mb = network_bytes / (1024 * 1024); // Convert to MB
@@ -3562,96 +3641,6 @@ async fn get_resource_usage_handler(
         "memory": memory_usage_mb,
         "disk": disk_usage_mb,
         "network": network_usage_mb,
-        "timestamp": chrono::Utc::now().to_rfc3339()
-    })))
-}
-
-async fn get_system_metrics_handler(
-    State(_state): State<AppState>,
-) -> Result<Json<JsonValue>, StatusCode> {
-    use sysinfo::{System, SystemExt, CpuExt, DiskExt, NetworksExt};
-    
-    let mut system = System::new_all();
-    system.refresh_all();
-    
-    // CPU metrics
-    let cpu_usage = system.global_cpu_info().cpu_usage() as f64;
-    let cpu_count = system.cpus().len();
-    let per_core_usage: Vec<f64> = system.cpus().iter().map(|cpu| cpu.cpu_usage() as f64).collect();
-    
-    // Memory metrics
-    let total_memory = system.total_memory();
-    let used_memory = system.used_memory();
-    let available_memory = system.available_memory();
-    let memory_usage_percent = if total_memory > 0 {
-        (used_memory as f64 / total_memory as f64) * 100.0
-    } else {
-        0.0
-    };
-    
-    // Disk metrics
-    let mut total_disk_space = 0u64;
-    let mut total_used_space = 0u64;
-    let mut total_available_space = 0u64;
-    let mut disk_count = 0usize;
-    
-    for disk in system.disks() {
-        total_disk_space += disk.total_space();
-        total_used_space += disk.total_space().saturating_sub(disk.available_space());
-        total_available_space += disk.available_space();
-        disk_count += 1;
-    }
-    
-    let disk_usage_percent = if total_disk_space > 0 {
-        (total_used_space as f64 / total_disk_space as f64) * 100.0
-    } else {
-        0.0
-    };
-    
-    // Network metrics
-    let mut total_received = 0u64;
-    let mut total_transmitted = 0u64;
-    let mut interface_count = 0usize;
-    
-    for (_interface_name, network) in system.networks() {
-        total_received += network.received();
-        total_transmitted += network.transmitted();
-        interface_count += 1;
-    }
-    
-    // Load average (if available)
-    let load_avg = System::load_average();
-    
-    Ok(Json(serde_json::json!({
-        "cpu": {
-            "usage_percent": cpu_usage,
-            "core_count": cpu_count,
-            "per_core_usage": per_core_usage
-        },
-        "memory": {
-            "total_bytes": total_memory,
-            "used_bytes": used_memory,
-            "available_bytes": available_memory,
-            "usage_percent": memory_usage_percent
-        },
-        "disk": {
-            "total_bytes": total_disk_space,
-            "used_bytes": total_used_space,
-            "available_bytes": total_available_space,
-            "usage_percent": disk_usage_percent,
-            "disk_count": disk_count
-        },
-        "network": {
-            "total_received_bytes": total_received,
-            "total_transmitted_bytes": total_transmitted,
-            "total_bytes": total_received + total_transmitted,
-            "interface_count": interface_count
-        },
-        "load_average": {
-            "one_minute": load_avg.one,
-            "five_minute": load_avg.five,
-            "fifteen_minute": load_avg.fifteen
-        },
         "timestamp": chrono::Utc::now().to_rfc3339()
     })))
 }
@@ -3845,10 +3834,11 @@ async fn list_provenance_handler(
     #[cfg(feature = "orchestration")]
     {
         if let Some(db) = &state.db_client {
-            if let (Some(api), Some(ws_manager)) = (&state.api, &state.websocket_manager) {
+            if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
                 match list_provenance_records(State(ApiState {
                     api: api.clone(),
                     websocket_manager: ws_manager.clone(),
+                    query_performance_monitor: query_monitor.clone(),
                 })).await {
                     Ok(response) => Ok(response),
                     Err(status) => {
@@ -3881,12 +3871,17 @@ async fn link_provenance_handler(
     #[cfg(feature = "orchestration")]
     {
         if let Some(db) = &state.db_client {
-            match link_provenance_to_commit(State(ApiState {
-                api: state.api.as_ref().unwrap().clone(),
-                websocket_manager: state.websocket_manager.as_ref().unwrap().clone(),
-            }), Json(payload)).await {
-                Ok(response) => Ok(response),
-                Err(status) => Err(status),
+            if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
+                match link_provenance_to_commit(State(ApiState {
+                    api: api.clone(),
+                    websocket_manager: ws_manager.clone(),
+                    query_performance_monitor: query_monitor.clone(),
+                }), Json(payload)).await {
+                    Ok(response) => Ok(response),
+                    Err(status) => Err(status),
+                }
+            } else {
+                Err(StatusCode::SERVICE_UNAVAILABLE)
             }
         } else {
             Err(StatusCode::SERVICE_UNAVAILABLE)
@@ -3906,12 +3901,17 @@ async fn verify_provenance_handler(
     #[cfg(feature = "orchestration")]
     {
         if let Some(db) = &state.db_client {
-            match verify_provenance_trailer(State(ApiState {
-                api: state.api.as_ref().unwrap().clone(),
-                websocket_manager: state.websocket_manager.as_ref().unwrap().clone(),
-            }), Path(commit_hash)).await {
-                Ok(response) => Ok(response),
-                Err(status) => Err(status),
+            if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
+                match verify_provenance_trailer(State(ApiState {
+                    api: api.clone(),
+                    websocket_manager: ws_manager.clone(),
+                    query_performance_monitor: query_monitor.clone(),
+                }), Path(commit_hash)).await {
+                    Ok(response) => Ok(response),
+                    Err(status) => Err(status),
+                }
+            } else {
+                Err(StatusCode::SERVICE_UNAVAILABLE)
             }
         } else {
             Err(StatusCode::SERVICE_UNAVAILABLE)
@@ -3931,12 +3931,17 @@ async fn get_provenance_by_commit_handler(
     #[cfg(feature = "orchestration")]
     {
         if let Some(db) = &state.db_client {
-            match get_provenance_by_commit(State(ApiState {
-                api: state.api.as_ref().unwrap().clone(),
-                websocket_manager: state.websocket_manager.as_ref().unwrap().clone(),
-            }), Path(commit_hash)).await {
-                Ok(response) => Ok(response),
-                Err(status) => Err(status),
+            if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
+                match get_provenance_by_commit(State(ApiState {
+                    api: api.clone(),
+                    websocket_manager: ws_manager.clone(),
+                    query_performance_monitor: query_monitor.clone(),
+                }), Path(commit_hash)).await {
+                    Ok(response) => Ok(response),
+                    Err(status) => Err(status),
+                }
+            } else {
+                Err(StatusCode::SERVICE_UNAVAILABLE)
             }
         } else {
             Err(StatusCode::SERVICE_UNAVAILABLE)
@@ -3956,12 +3961,17 @@ async fn get_task_provenance_handler(
     #[cfg(feature = "orchestration")]
     {
         if let Some(db) = &state.db_client {
-            match get_task_provenance(State(ApiState {
-                api: state.api.as_ref().unwrap().clone(),
-                websocket_manager: state.websocket_manager.as_ref().unwrap().clone(),
-            }), Path(task_id)).await {
-                Ok(response) => Ok(response),
-                Err(status) => Err(status),
+            if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
+                match get_task_provenance(State(ApiState {
+                    api: api.clone(),
+                    websocket_manager: ws_manager.clone(),
+                    query_performance_monitor: query_monitor.clone(),
+                }), Path(task_id)).await {
+                    Ok(response) => Ok(response),
+                    Err(status) => Err(status),
+                }
+            } else {
+                Err(StatusCode::SERVICE_UNAVAILABLE)
             }
         } else {
             Err(StatusCode::SERVICE_UNAVAILABLE)
@@ -3981,10 +3991,11 @@ async fn list_waivers_handler(
     #[cfg(feature = "orchestration")]
     {
         if let Some(db) = &state.db_client {
-            if let (Some(api), Some(ws_manager)) = (&state.api, &state.websocket_manager) {
+            if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
                 match list_waivers(State(ApiState {
                     api: api.clone(),
                     websocket_manager: ws_manager.clone(),
+                    query_performance_monitor: query_monitor.clone(),
                 })).await {
                     Ok(response) => Ok(response),
                     Err(status) => {
@@ -4017,12 +4028,17 @@ async fn create_waiver_handler(
     #[cfg(feature = "orchestration")]
     {
         if let Some(db) = &state.db_client {
-            match create_waiver(State(ApiState {
-                api: state.api.as_ref().unwrap().clone(),
-                websocket_manager: state.websocket_manager.as_ref().unwrap().clone(),
-            }), Json(payload)).await {
-                Ok(response) => Ok(response),
-                Err(status) => Err(status),
+            if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
+                match create_waiver(State(ApiState {
+                    api: api.clone(),
+                    websocket_manager: ws_manager.clone(),
+                    query_performance_monitor: query_monitor.clone(),
+                }), Json(payload)).await {
+                    Ok(response) => Ok(response),
+                    Err(status) => Err(status),
+                }
+            } else {
+                Err(StatusCode::SERVICE_UNAVAILABLE)
             }
         } else {
             Err(StatusCode::SERVICE_UNAVAILABLE)
@@ -4043,12 +4059,17 @@ async fn approve_waiver_handler(
     #[cfg(feature = "orchestration")]
     {
         if let Some(db) = &state.db_client {
-            match approve_waiver(State(ApiState {
-                api: state.api.as_ref().unwrap().clone(),
-                websocket_manager: state.websocket_manager.as_ref().unwrap().clone(),
-            }), Path(waiver_id), Json(payload)).await {
-                Ok(response) => Ok(response),
-                Err(status) => Err(status),
+            if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
+                match approve_waiver(State(ApiState {
+                    api: api.clone(),
+                    websocket_manager: ws_manager.clone(),
+                    query_performance_monitor: query_monitor.clone(),
+                }), Path(waiver_id), Json(payload)).await {
+                    Ok(response) => Ok(response),
+                    Err(status) => Err(status),
+                }
+            } else {
+                Err(StatusCode::SERVICE_UNAVAILABLE)
             }
         } else {
             Err(StatusCode::SERVICE_UNAVAILABLE)
@@ -4068,12 +4089,17 @@ async fn list_slos_handler(
     #[cfg(feature = "orchestration")]
     {
         if let Some(db) = &state.db_client {
-            match list_slos(State(ApiState {
-                api: state.api.as_ref().unwrap().clone(),
-                websocket_manager: state.websocket_manager.as_ref().unwrap().clone(),
-            })).await {
-                Ok(response) => Ok(response),
-                Err(status) => Err(status),
+            if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
+                match list_slos(State(ApiState {
+                    api: api.clone(),
+                    websocket_manager: ws_manager.clone(),
+                    query_performance_monitor: query_monitor.clone(),
+                })).await {
+                    Ok(response) => Ok(response),
+                    Err(status) => Err(status),
+                }
+            } else {
+                Err(StatusCode::SERVICE_UNAVAILABLE)
             }
         } else {
             Err(StatusCode::SERVICE_UNAVAILABLE)
@@ -4093,12 +4119,17 @@ async fn get_slo_status_handler(
     #[cfg(feature = "orchestration")]
     {
         if let Some(db) = &state.db_client {
-            match get_slo_status(State(ApiState {
-                api: state.api.as_ref().unwrap().clone(),
-                websocket_manager: state.websocket_manager.as_ref().unwrap().clone(),
-            }), Path(slo_name)).await {
-                Ok(response) => Ok(response),
-                Err(status) => Err(status),
+            if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
+                match get_slo_status(State(ApiState {
+                    api: api.clone(),
+                    websocket_manager: ws_manager.clone(),
+                    query_performance_monitor: query_monitor.clone(),
+                }), Path(slo_name)).await {
+                    Ok(response) => Ok(response),
+                    Err(status) => Err(status),
+                }
+            } else {
+                Err(StatusCode::SERVICE_UNAVAILABLE)
             }
         } else {
             Err(StatusCode::SERVICE_UNAVAILABLE)
@@ -4118,12 +4149,17 @@ async fn get_slo_measurements_handler(
     #[cfg(feature = "orchestration")]
     {
         if let Some(db) = &state.db_client {
-            match get_slo_measurements(State(ApiState {
-                api: state.api.as_ref().unwrap().clone(),
-                websocket_manager: state.websocket_manager.as_ref().unwrap().clone(),
-            }), Path(slo_name)).await {
-                Ok(response) => Ok(response),
-                Err(status) => Err(status),
+            if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
+                match get_slo_measurements(State(ApiState {
+                    api: api.clone(),
+                    websocket_manager: ws_manager.clone(),
+                    query_performance_monitor: query_monitor.clone(),
+                }), Path(slo_name)).await {
+                    Ok(response) => Ok(response),
+                    Err(status) => Err(status),
+                }
+            } else {
+                Err(StatusCode::SERVICE_UNAVAILABLE)
             }
         } else {
             Err(StatusCode::SERVICE_UNAVAILABLE)
@@ -4142,12 +4178,17 @@ async fn list_slo_alerts_handler(
     #[cfg(feature = "orchestration")]
     {
         if let Some(_db) = &state.db_client {
-            match list_slo_alerts(State(ApiState {
-                api: state.api.as_ref().unwrap().clone(),
-                websocket_manager: state.websocket_manager.as_ref().unwrap().clone(),
-            })).await {
-                Ok(response) => Ok(response),
-                Err(status) => Err(status),
+            if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
+                match list_slo_alerts(State(ApiState {
+                    api: api.clone(),
+                    websocket_manager: ws_manager.clone(),
+                    query_performance_monitor: query_monitor.clone(),
+                })).await {
+                    Ok(response) => Ok(response),
+                    Err(status) => Err(status),
+                }
+            } else {
+                Err(StatusCode::SERVICE_UNAVAILABLE)
             }
         } else {
             Err(StatusCode::SERVICE_UNAVAILABLE)
@@ -4417,10 +4458,10 @@ async fn login_handler(
                 // Verify TOTP code
                 let secret_base32 = two_fa_config.secret_encrypted.clone();
                 
-                let secret = Secret::Encoded(secret_base32)
-                    .to_bytes()
-                    .map_err(|e| {
-                        error!("Failed to decode TOTP secret: {}", e);
+                // Decode base32 secret to bytes
+                let secret_bytes = base32::decode(base32::Alphabet::RFC4648 { padding: false }, &secret_base32)
+                    .ok_or_else(|| {
+                        error!("Failed to decode TOTP secret from base32");
                         StatusCode::INTERNAL_SERVER_ERROR
                     })?;
                 
@@ -4428,15 +4469,17 @@ async fn login_handler(
                     Algorithm::SHA1,
                     6,
                     1,
-                    0,
-                    secret,
+                    30,
+                    secret_bytes,
+                    Some("Agent Agency V3".to_string()),
+                    user.email.clone(),
                 ).map_err(|e| {
-                    error!("Failed to create TOTP instance: {}", e);
+                    error!("Failed to create TOTP instance: {:?}", e);
                     StatusCode::INTERNAL_SERVER_ERROR
                 })?;
 
                 // Verify with tolerance window of ±1 step
-                code_valid = totp.check(totp_code, 1).is_ok();
+                code_valid = totp.check(totp_code, 1);
             }
             
             if !code_valid {
@@ -4720,7 +4763,7 @@ async fn refresh_token_handler(
     
     // Update session with new tokens
     let expires_at = Utc::now() + ChronoDuration::hours(24);
-    let refresh_expires_at = Some(Utc::now() + ChronoDuration::days(7));
+    let refresh_expires_at = Utc::now() + ChronoDuration::days(7);
     
     let update = data_infrastructure::database_operations::UpdateSession {
         token_hash: Some(new_token_hash),
@@ -4737,6 +4780,7 @@ async fn refresh_token_handler(
             Ok(Json(LoginResponse {
                 token: new_token,
                 refresh_token: Some(new_refresh_token),
+                expires_at: expires_at,
                 user: UserResponse {
                     id: user.id.to_string(),
                     email: user.email,
@@ -4965,7 +5009,7 @@ async fn confirm_password_reset_handler(
 // Helper function to extract user_id from Authorization header
 async fn get_user_id_from_auth(
     headers: &axum::http::HeaderMap,
-    db: &Arc<dyn data_infrastructure::database_operations::DatabaseOperations + Send + Sync>,
+    db: &Arc<data_infrastructure::DatabaseClient>,
 ) -> Result<Uuid, StatusCode> {
     let token = headers
         .get("Authorization")
@@ -5373,22 +5417,26 @@ async fn list_api_keys_handler(
     }
 }
 
+#[axum::debug_handler]
 async fn create_api_key_handler(
     State(state): State<AppState>,
-    headers: axum::http::HeaderMap,
+    headers: HeaderMap,
     Json(req): Json<CreateApiKeyRequest>,
 ) -> Result<Json<JsonValue>, StatusCode> {
+    // Generate API key using secure random (before any await to ensure Send)
+    let (api_key, key_prefix, key_hash) = {
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+        let key_bytes: Vec<u8> = (0..32).map(|_| rng.gen()).collect();
+        let api_key = base64::encode(&key_bytes);
+        let key_prefix = api_key.chars().take(8).collect::<String>();
+        let key_hash = hash_token(&api_key);
+        (api_key, key_prefix, key_hash)
+    };
+    
     let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
     let user_id = get_user_id_from_auth(&headers, db).await?;
     let created_by = user_id.to_string();
-
-    // Generate API key using secure random
-    use rand::Rng;
-    let mut rng = rand::thread_rng();
-    let key_bytes: Vec<u8> = (0..32).map(|_| rng.gen()).collect();
-    let api_key = base64::encode(&key_bytes);
-    let key_prefix = api_key.chars().take(8).collect::<String>();
-    let key_hash = hash_token(&api_key);
 
     let expires_at = req.expires_at
         .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
@@ -5398,7 +5446,7 @@ async fn create_api_key_handler(
         user_id,
         key_name: req.key_name,
         key_hash,
-        key_prefix,
+        key_prefix: key_prefix.clone(),
         scopes: req.scopes,
         rate_limit_per_minute: req.rate_limit_per_minute,
         rate_limit_per_hour: req.rate_limit_per_hour,
@@ -5601,7 +5649,9 @@ async fn change_password_handler(
         .ok_or(StatusCode::NOT_FOUND)?;
 
     // Verify current password
-    if !state.auth_service.verify_password(&req.current_password, &user.password_hash) {
+    let password_valid = state.auth_service.verify_password(&req.current_password, &user.password_hash)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if !password_valid {
         return Err(StatusCode::UNAUTHORIZED);
     }
 
@@ -5665,11 +5715,27 @@ async fn get_2fa_handler(
     }
 }
 
+#[axum::debug_handler]
 async fn setup_2fa_handler(
     State(state): State<AppState>,
-    headers: axum::http::HeaderMap,
+    headers: HeaderMap,
     Json(req): Json<Setup2FARequest>,
 ) -> Result<Json<JsonValue>, StatusCode> {
+    // Generate TOTP secret and recovery codes (before any await to ensure Send)
+    let (secret_bytes, secret_base32, backup_codes) = {
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+        let secret_bytes: Vec<u8> = (0..20).map(|_| rng.gen()).collect();
+        let secret_base32 = base32::encode(base32::Alphabet::RFC4648 { padding: false }, &secret_bytes);
+        let backup_codes: Vec<String> = (0..10)
+            .map(|_| {
+                let code: u32 = rng.gen_range(10000000..99999999);
+                format!("{:08}", code)
+            })
+            .collect();
+        (secret_bytes, secret_base32, backup_codes)
+    };
+    
     let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
     let user_id = get_user_id_from_auth(&headers, db).await?;
 
@@ -5677,32 +5743,18 @@ async fn setup_2fa_handler(
     let user = db.get_user(user_id).await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;
-
-    // Generate TOTP secret (20 bytes = 160 bits, standard for TOTP)
-    use rand::Rng;
-    let mut rng = rand::thread_rng();
-    let secret_bytes: Vec<u8> = (0..20).map(|_| rng.gen()).collect();
     
-    // Encode secret as base32 (standard for TOTP)
-    // base32 crate 0.4 uses RFC4648 alphabet without padding
-    let secret_base32 = base32::encode(base32::Alphabet::RFC4648 { padding: false }, &secret_bytes);
-    
-    // Create TOTP instance
-    let secret = Secret::Encoded(secret_base32.clone())
-        .to_bytes()
-        .map_err(|e| {
-            error!("Failed to decode TOTP secret: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
-    
+    // Create TOTP instance using the original secret bytes
     let totp = TOTP::new(
         Algorithm::SHA1,
         6, // 6-digit codes
         1, // 1 step = 30 seconds
-        0, // Skew = 0 (no tolerance window, handled in verification)
-        secret,
+        30, // Period = 30 seconds
+        secret_bytes.clone(),
+        Some("Agent Agency V3".to_string()),
+        user.email.clone(),
     ).map_err(|e| {
-        error!("Failed to create TOTP instance: {}", e);
+        error!("Failed to create TOTP instance: {:?}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
@@ -5719,16 +5771,9 @@ async fn setup_2fa_handler(
 
     // Hash the secret before storing (we'll decrypt it for verification)
     // For now, store base32 encoded (in production, encrypt this)
-    let secret_encrypted = secret_base32; // PLACEHOLDER: Should be encrypted with proper key management
-    
-    // Generate recovery codes (8-digit codes)
-    let backup_codes: Vec<String> = (0..10)
-        .map(|_| {
-            let code: u32 = rng.gen_range(10000000..99999999);
-            format!("{:08}", code)
-        })
-        .collect();
+    let secret_encrypted = secret_base32.clone(); // PLACEHOLDER: Should be encrypted with proper key management
 
+    let method = req.method.clone();
     let create = data_infrastructure::database_operations::CreateTwoFactorAuth {
         user_id,
         method: req.method,
@@ -5741,7 +5786,7 @@ async fn setup_2fa_handler(
         Ok(_) => {
             Ok(Json(serde_json::json!({
                 "status": "setup",
-                "method": req.method,
+                "method": method,
                 "secret": secret_base32, // Return secret for manual entry
                 "qr_url": qr_url,
                 "backup_codes": backup_codes,
@@ -5762,6 +5807,11 @@ async fn verify_2fa_handler(
 ) -> Result<Json<JsonValue>, StatusCode> {
     let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
     let user_id = get_user_id_from_auth(&headers, db).await?;
+
+    // Get user info for issuer/account name
+    let user = db.get_user(user_id).await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
 
     // Get 2FA config
     let two_fa = db.get_two_factor_auth(user_id, Some(&req.method)).await
@@ -5789,10 +5839,10 @@ async fn verify_2fa_handler(
         // Decode the stored secret (in production, decrypt first)
         let secret_base32 = two_fa.secret_encrypted.clone();
         
-        let secret = Secret::Encoded(secret_base32)
-            .to_bytes()
-            .map_err(|e| {
-                error!("Failed to decode TOTP secret: {}", e);
+        // Decode base32 secret to bytes
+        let secret_bytes = base32::decode(base32::Alphabet::RFC4648 { padding: false }, &secret_base32)
+            .ok_or_else(|| {
+                error!("Failed to decode TOTP secret from base32");
                 StatusCode::INTERNAL_SERVER_ERROR
             })?;
         
@@ -5800,16 +5850,18 @@ async fn verify_2fa_handler(
             Algorithm::SHA1,
             6,
             1,
-            0,
-            secret,
+            30,
+            secret_bytes,
+            Some("Agent Agency V3".to_string()),
+            user.email.clone(),
         ).map_err(|e| {
-            error!("Failed to create TOTP instance: {}", e);
+            error!("Failed to create TOTP instance: {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
         // Verify the code with a tolerance window of ±1 step (30 seconds)
         // This handles clock skew and user delay
-        code_valid = totp.check(&req.code, 1).is_ok();
+        code_valid = totp.check(&req.code, 1);
     }
 
     if !code_valid {

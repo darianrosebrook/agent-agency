@@ -2,7 +2,6 @@
 
 import { X, Upload, Link as LinkIcon, Wrench } from 'lucide-react';
 import type { ContextChip as ContextChipType } from './types';
-import { cn } from '../../ui/utils';
 import styles from './ContextChip.module.scss';
 
 interface ContextChipProps {
@@ -37,5 +36,7 @@ export function ContextChip({ chip, onRemove }: ContextChipProps) {
     </div>
   );
 }
+
+
 
 

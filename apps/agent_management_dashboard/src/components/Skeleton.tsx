@@ -6,6 +6,8 @@
  * @author @darianrosebrook
  */
 
+import React from "react";
+
 "use client";
 
 import { cn } from "@/lib/utils";

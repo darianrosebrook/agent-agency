@@ -1,4 +1,4 @@
-@use '../../../styles/tokens' as *;
+@use '../../styles/tokens' as *;
 
 .apiKeysTab {
   display: flex;
@@ -16,7 +16,7 @@
   padding: $spacing-4;
   background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
   border: 1px solid $color-zinc-400;
-  border-radius: $spacing-md;
+  border-radius: calc(var(--radius) - 2px); // rounded-md
   margin-bottom: $spacing-4;
   
   code {
@@ -24,7 +24,7 @@
     padding: $spacing-2;
     margin: $spacing-2 0;
     background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
-    border-radius: $spacing-sm;
+    border-radius: calc(var(--radius) - 4px); // rounded-sm
     font-family: monospace;
     word-break: break-all;
   }
@@ -34,7 +34,7 @@
   margin-top: $spacing-4;
   padding: $spacing-4;
   background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
-  border-radius: $spacing-md;
+  border-radius: calc(var(--radius) - 2px); // rounded-md
   display: flex;
   flex-direction: column;
   gap: $spacing-4;
@@ -59,7 +59,7 @@
   align-items: center;
   padding: $spacing-4;
   background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
-  border-radius: $spacing-md;
+  border-radius: calc(var(--radius) - 2px); // rounded-md
   
   h4 {
     margin: 0 0 $spacing-2 0;

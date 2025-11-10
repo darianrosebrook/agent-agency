@@ -1,7 +1,7 @@
 @use '../../styles/tokens' as *;
 
 .projectView {
-  background-color: #0d0d0d; // bg-[#0d0d0d]
+  background-color: $color-dark-bg-secondary; // bg-[#0d0d0d]
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -14,7 +14,7 @@
   position: relative;
   flex-shrink: 0;
   width: 100%;
-  border-bottom: 1px solid rgb(38, 38, 38); // border-b border-neutral-800
+  border-bottom: 1px solid $color-neutral-800; // border-b border-neutral-800
 }
 
 .headerContent {
@@ -57,14 +57,14 @@
   font-weight: 400;
   line-height: 1.25rem; // leading-[20px]
   font-style: normal;
-  color: #888888; // text-[#888888]
+  color: $color-gray-500; // text-[#888888] -> gray-500
   font-size: 0.875rem; // text-[14px]
   letter-spacing: -0.1504px; // tracking-[-0.1504px]
   cursor: pointer;
   transition: color $transition-normal;
 
   &:hover {
-    color: rgb(209, 213, 219); // hover:text-gray-300
+    color: $color-gray-300; // hover:text-gray-300
   }
 }
 
@@ -73,7 +73,7 @@
   font-weight: 400;
   line-height: 1.25rem; // leading-[20px]
   font-style: normal;
-  color: #888888; // text-[#888888]
+  color: $color-gray-500; // text-[#888888] -> gray-500
   font-size: 0.875rem; // text-[14px]
   letter-spacing: -0.1504px; // tracking-[-0.1504px]
 }
@@ -94,7 +94,7 @@
   font-style: normal;
   font-size: 1.5rem; // text-[24px]
   white-space: nowrap;
-  color: white; // text-white
+  color: $color-white; // text-white
   top: -0.01125rem; // top-[-0.18px]
   letter-spacing: 0.0703px; // tracking-[0.0703px]
   white-space: pre;
@@ -147,20 +147,20 @@
 }
 
 .tabLabelActive {
-  color: white; // text-white
+  color: $color-white; // text-white
 }
 
 .tabLabelInactive {
-  color: #888888; // text-[#888888]
+  color: $color-gray-500; // text-[#888888] -> gray-500
 
   &:hover {
-    color: rgb(209, 213, 219); // hover:text-gray-300
+    color: $color-gray-300; // hover:text-gray-300
   }
 }
 
 .tabIndicator {
   position: absolute;
-  background-color: white; // bg-white
+  background-color: $color-white; // bg-white
   height: 0.12475rem; // h-[1.996px]
   left: 0;
   top: 2.125rem; // top-[34px]
@@ -194,7 +194,7 @@
 }
 
 .searchBox {
-  background-color: #1a1a1a;
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
   height: 2.249625rem; // h-[35.994px]
   border-radius: 0.5rem; // rounded-[8px]
   width: 15.999625rem; // w-[255.994px]
@@ -221,7 +221,7 @@
   font-style: normal;
   position: relative;
   flex-shrink: 0;
-  color: #888888; // text-[#888888]
+  color: $color-gray-500; // text-[#888888] -> gray-500
   font-size: 0.875rem; // text-[14px]
   white-space: nowrap;
   letter-spacing: -0.1504px; // tracking-[-0.1504px]
@@ -231,7 +231,7 @@
 .searchBorder {
   position: absolute;
   border-width: 0.909px;
-  border-color: rgb(38, 38, 38); // border-neutral-800
+  border-color: $color-neutral-800; // border-neutral-800
   border-style: solid;
   inset: 0;
   pointer-events: none;
@@ -261,7 +261,7 @@
   line-height: 1rem; // leading-[16px]
   left: 0;
   font-style: normal;
-  color: #888888; // text-[#888888]
+  color: $color-gray-500; // text-[#888888] -> gray-500
   font-size: 0.75rem; // text-[12px]
   white-space: nowrap;
   top: 0.02875rem; // top-[0.46px]
@@ -269,7 +269,7 @@
 }
 
 .controlButton {
-  background-color: #1a1a1a;
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
   height: 2.249625rem; // h-[35.994px]
   border-radius: 0.5rem; // rounded-[8px]
   padding-inline: $spacing-4; // px-4
@@ -278,14 +278,14 @@
   transition: background-color $transition-normal;
 
   &:hover {
-    background-color: #252525; // hover:bg-[#252525]
+    background-color: $color-dark-bg-hover; // hover:bg-[#252525]
   }
 }
 
 .controlButtonBorder {
   position: absolute;
   border-width: 0.909px;
-  border-color: rgb(38, 38, 38); // border-neutral-800
+  border-color: $color-neutral-800; // border-neutral-800
   border-style: solid;
   inset: 0;
   pointer-events: none;
@@ -306,7 +306,7 @@
   line-height: 1.25rem; // leading-[20px]
   font-style: normal;
   font-size: 0.875rem; // text-[14px]
-  color: white; // text-white
+  color: $color-white; // text-white
   letter-spacing: -0.1504px; // tracking-[-0.1504px]
 }
 
@@ -317,7 +317,7 @@
 }
 
 .gridViewButton {
-  background-color: #1a1a1a;
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
   box-sizing: border-box;
   display: flex;
   height: 2.249625rem; // h-[35.994px]
@@ -331,7 +331,7 @@
   transition: background-color $transition-normal;
 
   &:hover {
-    background-color: #252525; // hover:bg-[#252525]
+    background-color: $color-dark-bg-hover; // hover:bg-[#252525]
   }
 }
 

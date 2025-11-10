@@ -12,13 +12,15 @@
   display: flex;
   align-items: center;
   gap: $spacing-2;
-  color: rgb(161, 161, 170); // text-zinc-300
+  color: $color-zinc-400; // text-zinc-300 -> zinc-400
   margin-bottom: $spacing-4;
 }
 
 .headerTitle {
   font-size: $font-size-3xl; // text-3xl
-  color: white; // text-white
+  font-weight: $font-weight-normal; // text-3xl defaults to normal weight
+  line-height: 1.2; // text-3xl line-height (30px * 1.2 = 36px)
+  color: $color-white; // text-white
 }
 
 .bentoGrid {

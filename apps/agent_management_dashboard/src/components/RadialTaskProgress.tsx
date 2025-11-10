@@ -245,7 +245,7 @@ export function RadialTaskProgress({
   }, []);
 
   return (
-    <div className="bg-[#111] relative rounded-[12px] size-full border border-[#cacaca]">
+    <div className="bg-neutral-950 relative rounded-[12px] size-full border border-[#cacaca]">
       <div className="size-full">
         <div className="box-border flex flex-col p-6 relative size-full">
           {/* Main content area */}

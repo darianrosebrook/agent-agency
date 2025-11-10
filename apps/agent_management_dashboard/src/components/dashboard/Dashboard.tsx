@@ -54,7 +54,7 @@ export function Dashboard() {
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerTop}>
-          <LayoutGrid className={styles.headerIcon} />
+          <LayoutGrid className={styles.headerIcon} size={16} />
           <span className={styles.headerLabel}>Dashboard</span>
         </div>
         {/* TODO: Replace hardcoded user name with data from v3 API with the following requirements:

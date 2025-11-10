@@ -188,7 +188,7 @@
 
 .dropdownMenuSeparator {
   background-color: var(--border);
-  margin: $spacing-1 -$spacing-1;
+  margin: $spacing-1 (-$spacing-1);
   height: 1px;
 }
 

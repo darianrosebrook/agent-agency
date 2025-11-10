@@ -32,7 +32,7 @@ export function TaskProgressChart({
   );
 
   return (
-    <div className="bg-[#111] relative rounded-[12px] size-full border border-[#cacaca]">
+    <div className="bg-neutral-950 relative rounded-[12px] size-full">
       <div className="size-full">
         <div className="box-border content-stretch flex flex-col gap-[16px] items-start overflow-clip p-[12px] relative size-full">
           {/* Header */}

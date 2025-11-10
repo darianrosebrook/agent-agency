@@ -297,7 +297,9 @@
 }
 
 .emptyStateTitle {
-  font-size: $font-size-2xl; // text-2xl
+  font-size: $font-size-2xl; // text-2xl = 24px
+  font-weight: $font-weight-normal; // normal weight
+  line-height: 1.33; // text-2xl line-height (24px * 1.33 = 32px)
   color: $color-white; // text-white
   margin-bottom: $spacing-3;
 }
