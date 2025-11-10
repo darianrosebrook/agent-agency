@@ -1,9 +1,9 @@
 /**
  * Error Boundary Component
- * 
+ *
  * Catches React component errors and displays a fallback UI.
  * Prevents the entire app from crashing when a component fails.
- * 
+ *
  * @author @darianrosebrook
  */
 
@@ -11,8 +11,10 @@
 
 import React, { Component, type ReactNode } from "react";
 import { AlertCircle, RefreshCw, Home } from "lucide-react";
-import { Button } from "./ui/button";
+import { Button } from "./primitives/button";
 import { ErrorDisplay } from "./ErrorDisplay";
+import { cn } from "./primitives/utils";
+import styles from "./ErrorBoundary.module.scss";
 
 interface Props {
   children: ReactNode;
@@ -38,7 +40,7 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // Log error to error tracking service
     console.error("ErrorBoundary caught an error:", error, errorInfo);
-    
+
     // Call optional error handler
     this.props.onError?.(error, errorInfo);
   }
@@ -60,23 +62,23 @@ export class ErrorBoundary extends Component<Props, State> {
 
       // Default error UI
       return (
-        <div className="min-h-screen flex items-center justify-center bg-[#0d0d0d] p-8">
-          <div className="text-center max-w-2xl">
-            <div className="mb-8">
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-red-500/20 rounded-full mb-6">
-                <AlertCircle className="w-10 h-10 text-red-500" />
+        <div className={styles.errorBoundary}>
+          <div className={styles.errorContent}>
+            <div className={styles.errorIconContainer}>
+              <div className={styles.errorIconWrapper}>
+                <AlertCircle className={styles.errorIcon} />
               </div>
-              <h1 className="text-3xl font-bold text-white mb-4">
+              <h1 className={styles.errorTitle}>
                 Something went wrong
               </h1>
-              <p className="text-gray-400 text-lg mb-6">
+              <p className={styles.errorDescription}>
                 An error occurred in this component. You can try refreshing or
                 returning to the dashboard.
               </p>
             </div>
 
             {this.state.error && (
-              <div className="mb-8">
+              <div style={{ marginBottom: '2rem' }}>
                 <ErrorDisplay
                   error={this.state.error}
                   onRetry={this.handleReset}
@@ -85,32 +87,32 @@ export class ErrorBoundary extends Component<Props, State> {
               </div>
             )}
 
-            <div className="flex items-center justify-center gap-4">
+            <div className={styles.errorActions}>
               <Button
                 onClick={this.handleReset}
                 variant="default"
-                className="flex items-center gap-2"
+                className={styles.errorActionButton}
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className={styles.buttonIcon} />
                 Try Again
               </Button>
               <Button
                 onClick={this.handleGoHome}
                 variant="outline"
-                className="flex items-center gap-2"
+                className={styles.errorActionButton}
               >
-                <Home className="w-4 h-4" />
+                <Home className={styles.buttonIcon} />
                 Go to Dashboard
               </Button>
             </div>
 
             {/* Error Details (only in development) */}
             {process.env.NODE_ENV === "development" && this.state.error && (
-              <div className="mt-8 text-left bg-[#1a1a1a] border border-red-500/50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-red-500 mb-4">
+              <div className={styles.errorDetails}>
+                <h3 className={styles.errorDetailsTitle}>
                   Error Details
                 </h3>
-                <pre className="text-xs text-gray-300 overflow-auto">
+                <pre className={styles.errorDetailsPre}>
                   {this.state.error.message}
                   {this.state.error.stack && `\n\n${this.state.error.stack}`}
                 </pre>
@@ -134,4 +136,3 @@ export function useErrorHandler() {
     throw error;
   };
 }
-

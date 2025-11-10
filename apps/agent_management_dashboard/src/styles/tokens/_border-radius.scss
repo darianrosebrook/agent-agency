@@ -1,0 +1,19 @@
+// Border Radius Design Tokens
+// Standardized border radius values matching Tailwind CSS
+
+// Base radius from CSS variable
+$border-radius-base: var(--radius); // 0.625rem = 10px
+
+// Standard border radius sizes
+$border-radius-sm: calc(var(--radius) - 4px); // rounded-sm = 6px
+$border-radius-md: calc(var(--radius) - 2px); // rounded-md = 8px
+$border-radius-lg: 0.875rem; // rounded-lg = 14px (matches old Tailwind version)
+$border-radius-xl: calc(var(--radius) + 4px); // rounded-xl = 14px (same as lg in this system)
+$border-radius-2xl: 1.5rem; // rounded-2xl = 24px
+$border-radius-3xl: 1.5rem; // rounded-3xl = 24px
+$border-radius-full: 9999px; // rounded-full
+
+// Note: In the old Tailwind version, rounded-lg uses 14px directly
+// rounded-xl uses calc(var(--radius) + 4px) which also equals 14px
+// For consistency, we use 0.875rem (14px) for rounded-lg
+

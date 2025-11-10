@@ -28,8 +28,8 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../ui/tooltip";
-import { cn } from "../ui/utils";
+} from "../primitives/tooltip";
+import { cn } from "../primitives/utils";
 import styles from "./NavigationSidebar.module.scss";
 
 export function Sidebar() {
@@ -58,9 +58,9 @@ export function Sidebar() {
 
     sidebar.style.willChange = "width";
 
-    let tween: gsap.core.Tween | null = null;
+    let tween: any = null;
 
-    gsapLoader().then((gsap) => {
+    gsapLoader().then((gsap: any) => {
       tween = gsap.to(sidebar, {
         width: targetWidth,
         duration: 0.3,
@@ -91,9 +91,9 @@ export function Sidebar() {
 
     if (textElements.length === 0) return;
 
-    let tween: gsap.core.Tween | null = null;
+    let tween: any = null;
 
-    gsapLoader().then((gsap) => {
+    gsapLoader().then((gsap: any) => {
       if (isCollapsed) {
         tween = gsap.to(textElements, {
           opacity: 0,
@@ -155,18 +155,18 @@ export function Sidebar() {
           {!isCollapsed && (
             <div className={styles.logoContainer}>
               <div className={styles.logoIcon}>
-                <Moon className="w-4 h-4 text-gray-400" />
+                <Moon className={styles.iconGray} />
               </div>
               <h4 className={styles.logoText}>Agent Agency</h4>
             </div>
           )}
           {isCollapsed && (
             <div className={cn(styles.logoIcon, styles.logoIconCollapsed)}>
-              <Moon className="w-4 h-4 text-gray-400" />
+              <Moon className={styles.iconGray} />
             </div>
           )}
           <button onClick={toggleCollapse} className={styles.collapseButton}>
-            <LayoutGrid className="w-4 h-4" />
+            <LayoutGrid className={styles.icon} />
           </button>
         </div>
 
@@ -224,7 +224,7 @@ export function Sidebar() {
                       : styles.quickLinkExpanded
                   )}
                 >
-                  <MessageSquare className="w-4 h-4" />
+                  <MessageSquare className={styles.icon} />
                   {!isCollapsed && (
                     <span className={styles.navLinkText}>Chat</span>
                   )}
@@ -247,7 +247,7 @@ export function Sidebar() {
                       : styles.quickLinkExpanded
                   )}
                 >
-                  <FileSignature className="w-4 h-4" />
+                  <FileSignature className={styles.icon} />
                   {!isCollapsed && (
                     <span className={styles.navLinkText}>Projects</span>
                   )}
@@ -286,7 +286,7 @@ export function Sidebar() {
                       : styles.navLinkInactive
                   )}
                 >
-                  <LayoutGrid className="w-4 h-4" />
+                  <LayoutGrid className={styles.icon} />
                   {!isCollapsed && (
                     <span className={styles.navLinkText}>Dashboard</span>
                   )}
@@ -312,7 +312,7 @@ export function Sidebar() {
                       : styles.navLinkInactive
                   )}
                 >
-                  <TrendingUp className="w-4 h-4" />
+                  <TrendingUp className={styles.icon} />
                   {!isCollapsed && (
                     <span className={styles.navLinkText}>Agent Stats</span>
                   )}
@@ -338,7 +338,7 @@ export function Sidebar() {
                       : styles.navLinkInactive
                   )}
                 >
-                  <FileCode className="w-4 h-4" />
+                  <FileCode className={styles.icon} />
                   {!isCollapsed && (
                     <span className={styles.navLinkText}>
                       Rules & Governance
@@ -366,7 +366,7 @@ export function Sidebar() {
                       : styles.navLinkInactive
                   )}
                 >
-                  <HeartPulse className="w-4 h-4" />
+                  <HeartPulse className={styles.icon} />
                   {!isCollapsed && (
                     <span className={styles.navLinkText}>Agent Health</span>
                   )}
@@ -392,7 +392,7 @@ export function Sidebar() {
                       : styles.navLinkInactive
                   )}
                 >
-                  <Workflow className="w-4 h-4" />
+                  <Workflow className={styles.icon} />
                   {!isCollapsed && (
                     <span className={styles.navLinkText}>Phase Planner</span>
                   )}
@@ -418,7 +418,7 @@ export function Sidebar() {
                       : styles.navLinkInactive
                   )}
                 >
-                  <Settings className="w-4 h-4" />
+                  <Settings className={styles.icon} />
                   {!isCollapsed && (
                     <span className={styles.navLinkText}>Settings</span>
                   )}
@@ -490,7 +490,7 @@ export function Sidebar() {
                 <ChevronDown className={styles.folderChevron} />
               </button>
               <button className={styles.newProjectButton}>
-                <FolderPlus className="w-4 h-4" />
+                <FolderPlus className={styles.icon} />
                 <span className={styles.newProjectText}>New Project</span>
               </button>
             </div>

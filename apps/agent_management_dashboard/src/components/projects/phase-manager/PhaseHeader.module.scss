@@ -21,3 +21,24 @@
   gap: $spacing-2; // gap-2
 }
 
+.addToProjectButton {
+  background-color: $color-blue-600; // bg-blue-600
+  color: $color-white; // text-white
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: $color-blue-700; // hover:bg-blue-700
+  }
+}
+
+.startNewProjectButton {
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border-color: $color-zinc-700; // border-zinc-700
+  color: $color-zinc-300; // text-zinc-300
+  transition: background-color $transition-normal, color $transition-normal;
+
+  &:hover {
+    background-color: $color-zinc-800; // hover:bg-zinc-800
+  }
+}
+

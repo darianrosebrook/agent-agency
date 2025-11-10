@@ -10,7 +10,8 @@ import React from "react";
 
 "use client";
 
-import { cn } from "@/lib/utils";
+import { cn } from "./primitives/utils";
+import styles from "./Skeleton.module.scss";
 
 /**
  * Base skeleton component
@@ -21,10 +22,7 @@ export function Skeleton({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn(
-        "animate-pulse rounded-md bg-gray-800/50",
-        className
-      )}
+      className={cn(styles.skeleton, className)}
       {...props}
     />
   );
@@ -35,11 +33,11 @@ export function Skeleton({
  */
 export function ChatMessageSkeleton() {
   return (
-    <div className="flex gap-4 p-4">
-      <Skeleton className="w-8 h-8 rounded-full" />
-      <div className="flex-1 space-y-2">
-        <Skeleton className="h-4 w-3/4" />
-        <Skeleton className="h-4 w-1/2" />
+    <div className={styles.skeletonChatMessage}>
+      <Skeleton className={styles.skeletonChatAvatar} />
+      <div className={styles.skeletonChatContent}>
+        <Skeleton className={cn(styles.skeletonChatLine, styles.skeletonChatLineWide)} />
+        <Skeleton className={cn(styles.skeletonChatLine, styles.skeletonChatLineNarrow)} />
       </div>
     </div>
   );
@@ -50,13 +48,13 @@ export function ChatMessageSkeleton() {
  */
 export function ProjectCardSkeleton() {
   return (
-    <div className="p-4 border border-gray-800 rounded-lg">
-      <Skeleton className="h-6 w-1/3 mb-2" />
-      <Skeleton className="h-4 w-full mb-1" />
-      <Skeleton className="h-4 w-2/3" />
-      <div className="flex gap-2 mt-4">
-        <Skeleton className="h-6 w-16" />
-        <Skeleton className="h-6 w-16" />
+    <div className={styles.skeletonProjectCard}>
+      <Skeleton className={styles.skeletonProjectTitle} />
+      <Skeleton className={styles.skeletonProjectLine} />
+      <Skeleton className={cn(styles.skeletonProjectLine, styles.skeletonProjectLineNarrow)} />
+      <div className={styles.skeletonProjectTags}>
+        <Skeleton className={styles.skeletonTag} />
+        <Skeleton className={styles.skeletonTag} />
       </div>
     </div>
   );
@@ -69,8 +67,8 @@ export function TableRowSkeleton({ columns = 4 }: { columns?: number }) {
   return (
     <tr>
       {Array.from({ length: columns }).map((_, i) => (
-        <td key={i} className="px-4 py-3">
-          <Skeleton className="h-4 w-full" />
+        <td key={i} className={styles.skeletonTableRow}>
+          <Skeleton className={styles.skeletonTableCell} />
         </td>
       ))}
     </tr>
@@ -82,11 +80,11 @@ export function TableRowSkeleton({ columns = 4 }: { columns?: number }) {
  */
 export function ListItemSkeleton() {
   return (
-    <div className="flex items-center gap-3 p-3">
-      <Skeleton className="w-10 h-10 rounded-full" />
-      <div className="flex-1 space-y-2">
-        <Skeleton className="h-4 w-1/4" />
-        <Skeleton className="h-3 w-1/2" />
+    <div className={styles.skeletonListItem}>
+      <Skeleton className={styles.skeletonListItemAvatar} />
+      <div className={styles.skeletonListItemContent}>
+        <Skeleton className={styles.skeletonListItemTitle} />
+        <Skeleton className={styles.skeletonListItemSubtitle} />
       </div>
     </div>
   );

@@ -1,0 +1,209 @@
+@use "../styles/design-tokens.scss" as *;
+
+.chatMessage {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-4; // space-y-4
+}
+
+.phasePlanContainer {
+  margin-left: $spacing-12; // ml-12
+}
+
+.taskTimelineContainer {
+  margin-left: $spacing-12; // ml-12
+}
+
+.messageContainer {
+  display: flex;
+  gap: $spacing-4; // gap-4
+}
+
+.messageContainerUser {
+  flex-direction: row-reverse; // flex-row-reverse
+}
+
+.messageContainerAssistant {
+  flex-direction: row; // flex-row
+}
+
+.avatar {
+  flex-shrink: 0;
+  width: 2rem; // w-8
+  height: 2rem; // h-8
+  border-radius: 9999px; // rounded-full
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatarUser {
+  background-color: $color-blue-600; // bg-blue-600
+}
+
+.avatarAssistant {
+  background-color: $color-gray-800; // bg-gray-800
+}
+
+.avatarIcon {
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+}
+
+.avatarIconUser {
+  color: $color-white; // text-white
+}
+
+.avatarIconAssistant {
+  color: $color-gray-300; // text-gray-300
+}
+
+.messageContent {
+  flex: 1;
+}
+
+.messageContentUser {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end; // items-end
+}
+
+.contextFilesContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-2; // gap-2
+  margin-bottom: $spacing-2; // mb-2
+}
+
+.messageBubble {
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
+  padding: $spacing-4; // p-4
+}
+
+.messageBubbleUser {
+  background-color: $color-slate-600; // bg-slate-600
+  color: $color-white; // text-white
+  max-width: 42rem; // max-w-2xl
+}
+
+.messageBubbleAssistant {
+  background-color: $color-slate-900; // bg-slate-900
+  border: 1px solid $color-gray-800; // border border-gray-800
+  color: $color-gray-200; // text-gray-200
+  width: 100%; // w-full
+}
+
+.messageText {
+  white-space: pre-wrap; // whitespace-pre-wrap
+}
+
+.messageProse {
+  // prose prose-invert max-w-none
+}
+
+.textBeforeCode {
+  white-space: pre-wrap; // whitespace-pre-wrap
+  margin-bottom: $spacing-4; // mb-4
+}
+
+.codeBlockContainer {
+  margin-bottom: $spacing-4; // mb-4
+}
+
+.codeBlock {
+  background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
+  border: 1px solid $color-gray-800; // border border-gray-800
+  overflow: hidden;
+}
+
+.codeBlockHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: $spacing-4; // px-4
+  padding-block: $spacing-2; // py-2
+  border-bottom: 1px solid $color-gray-800; // border-b border-gray-800
+}
+
+.codeBlockLanguage {
+  font-size: $font-size-xs; // text-xs
+  color: $color-gray-400; // text-gray-400
+  text-transform: uppercase; // uppercase
+}
+
+.codeBlockCopyButton {
+  font-size: $font-size-xs; // text-xs
+  color: $color-gray-400; // text-gray-400
+  transition: color $transition-normal;
+
+  &:hover {
+    color: $color-gray-200; // hover:text-gray-200
+  }
+}
+
+.codeBlockPre {
+  padding: $spacing-4; // p-4
+  overflow-x: auto; // overflow-x-auto
+}
+
+.codeBlockCode {
+  font-size: $font-size-sm; // text-sm
+  color: $color-gray-200; // text-gray-200
+  font-family: $font-family-mono; // font-mono
+}
+
+.timestamp {
+  font-size: $font-size-xs; // text-xs
+  color: $color-gray-500; // text-gray-500
+  margin-top: $spacing-1; // mt-1
+}
+
+.timestampUser {
+  text-align: right; // text-right
+}
+
+.timestampAssistant {
+  text-align: left; // text-left
+}
+
+.actionButtons {
+  display: flex;
+  align-items: center;
+  gap: $spacing-1; // gap-1
+  margin-top: $spacing-2; // mt-2
+}
+
+.actionButton {
+  height: 2rem; // h-8
+  width: 2rem; // w-8
+  padding: 0; // p-0
+  color: $color-gray-400; // text-gray-400
+  transition: color $transition-normal, background-color $transition-normal;
+
+  &:hover {
+    color: $color-gray-200; // hover:text-gray-200
+    background-color: $color-gray-800; // hover:bg-gray-800
+  }
+}
+
+.actionButtonIcon {
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+}
+
+.dropdownContent {
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border-color: $color-gray-800; // border-gray-800
+}
+
+.dropdownMenuItem {
+  color: $color-gray-300; // text-gray-300
+  cursor: pointer; // cursor-pointer
+
+  &:focus {
+    background-color: $color-gray-800; // focus:bg-gray-800
+    color: $color-gray-100; // focus:text-gray-100
+  }
+}
+

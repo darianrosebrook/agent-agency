@@ -5,7 +5,7 @@
   gap: $spacing-3;
   border: 1px solid rgba($color-red-600, 0.2); // border-red-600/20
   background-color: rgba($color-red-600, 0.1); // bg-red-600/10
-  border-radius: calc(var(--radius) + 4px); // rounded-lg
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
   padding: $spacing-4;
 }
 

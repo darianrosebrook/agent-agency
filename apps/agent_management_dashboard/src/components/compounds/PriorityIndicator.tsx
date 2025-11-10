@@ -1,7 +1,7 @@
 "use client";
 
-import styles from './PriorityIndicator.module.scss';
-import { cn } from '../ui/utils';
+import styles from "./PriorityIndicator.module.scss";
+import { cn } from "../primitives/utils";
 
 export interface PriorityConfig {
   label: string;
@@ -14,22 +14,47 @@ export interface PriorityIndicatorProps {
   config: PriorityConfig;
   onClick?: () => void;
   className?: string;
+  as?: "button" | "div" | "span";
 }
 
 export function PriorityIndicator({
-  priority: _priority, // eslint-disable-line @typescript-eslint/no-unused-vars, no-unused-vars
+  priority,
   config,
   onClick,
   className = "",
+  as,
 }: PriorityIndicatorProps) {
+  // Map priority to SCSS class name
+  const priorityClassMap: Record<string, string> = {
+    low: styles.priorityLow,
+    medium: styles.priorityMedium,
+    high: styles.priorityHigh,
+  };
+
+  const priorityClass = priorityClassMap[priority] || "";
+
   const content = (
     <>
-      <span className={config.color}>{config.icon}</span>
+      <span className={priorityClass}>{config.icon}</span>
       <span>{config.label}</span>
     </>
   );
 
-  if (onClick) {
+  // If explicitly set to render as span/div (e.g., inside another button)
+  if (as === "span") {
+    return (
+      <span className={cn(styles.priorityIndicator, className)}>{content}</span>
+    );
+  }
+
+  if (as === "div") {
+    return (
+      <div className={cn(styles.priorityIndicator, className)}>{content}</div>
+    );
+  }
+
+  // If onClick is provided and as is not explicitly set, render as button
+  if (onClick && !as) {
     return (
       <button
         onClick={onClick}
@@ -41,6 +66,7 @@ export function PriorityIndicator({
     );
   }
 
+  // Default: render as div
   return (
     <div className={cn(styles.priorityIndicator, className)}>{content}</div>
   );

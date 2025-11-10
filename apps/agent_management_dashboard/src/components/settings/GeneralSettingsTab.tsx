@@ -1,19 +1,29 @@
-'use client';
+"use client";
 
 /**
  * General Settings Tab
  * User profile and preferences
- * 
+ *
  * @author @darianrosebrook
  */
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { getUserSettings, updateUserSetting, createUserSetting } from '@/lib/api/settings';
-import styles from './GeneralSettingsTab.module.scss';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/primitives/button";
+import { Input } from "@/components/primitives/input";
+import { Label } from "@/components/primitives/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/primitives/card";
+import {
+  getUserSettings,
+  updateUserSetting,
+  createUserSetting,
+} from "@/lib/api/settings";
+import styles from "./GeneralSettingsTab.module.scss";
 
 export function GeneralSettingsTab() {
   const [loading, setLoading] = useState(true);
@@ -29,33 +39,37 @@ export function GeneralSettingsTab() {
       setLoading(true);
       const userSettings = await getUserSettings();
       const settingsMap: Record<string, any> = {};
-      userSettings.forEach(setting => {
+      userSettings.forEach((setting) => {
         settingsMap[setting.setting_key] = setting.setting_value;
       });
       setSettings(settingsMap);
     } catch (error: any) {
-      console.error('Failed to load settings:', error);
+      console.error("Failed to load settings:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const saveSetting = async (key: string, value: any, type: string = 'string') => {
+  const saveSetting = async (
+    key: string,
+    value: any,
+    type: string = "string"
+  ) => {
     try {
       setSaving(true);
       const currentValue = settings[key];
-      
+
       if (currentValue === undefined) {
         await createUserSetting(key, value, type);
       } else {
         await updateUserSetting(key, value, type);
       }
-      
-      setSettings(prev => ({ ...prev, [key]: value }));
-      alert('Settings saved successfully');
+
+      setSettings((prev) => ({ ...prev, [key]: value }));
+      alert("Settings saved successfully");
     } catch (error: any) {
-      console.error('Failed to save settings:', error);
-      alert('Failed to save settings');
+      console.error("Failed to save settings:", error);
+      alert("Failed to save settings");
     } finally {
       setSaving(false);
     }
@@ -70,15 +84,19 @@ export function GeneralSettingsTab() {
       <Card>
         <CardHeader>
           <CardTitle>User Preferences</CardTitle>
-          <CardDescription>Manage your personal preferences and settings</CardDescription>
+          <CardDescription>
+            Manage your personal preferences and settings
+          </CardDescription>
         </CardHeader>
         <CardContent className={styles.form}>
           <div className={styles.formGroup}>
             <Label htmlFor="language">Language</Label>
             <select
               id="language"
-              value={settings.language || 'en'}
-              onChange={(e) => saveSetting('language', e.target.value, 'string')}
+              value={settings.language || "en"}
+              onChange={(e) =>
+                saveSetting("language", e.target.value, "string")
+              }
               className={styles.select}
             >
               <option value="en">English</option>
@@ -92,8 +110,10 @@ export function GeneralSettingsTab() {
             <Label htmlFor="timezone">Timezone</Label>
             <select
               id="timezone"
-              value={settings.timezone || 'UTC'}
-              onChange={(e) => saveSetting('timezone', e.target.value, 'string')}
+              value={settings.timezone || "UTC"}
+              onChange={(e) =>
+                saveSetting("timezone", e.target.value, "string")
+              }
               className={styles.select}
             >
               <option value="UTC">UTC</option>
@@ -108,8 +128,8 @@ export function GeneralSettingsTab() {
             <Label htmlFor="theme">Theme</Label>
             <select
               id="theme"
-              value={settings.theme || 'dark'}
-              onChange={(e) => saveSetting('theme', e.target.value, 'string')}
+              value={settings.theme || "dark"}
+              onChange={(e) => saveSetting("theme", e.target.value, "string")}
               className={styles.select}
             >
               <option value="light">Light</option>
@@ -122,8 +142,10 @@ export function GeneralSettingsTab() {
             <Label htmlFor="dateFormat">Date Format</Label>
             <select
               id="dateFormat"
-              value={settings.date_format || 'YYYY-MM-DD'}
-              onChange={(e) => saveSetting('date_format', e.target.value, 'string')}
+              value={settings.date_format || "YYYY-MM-DD"}
+              onChange={(e) =>
+                saveSetting("date_format", e.target.value, "string")
+              }
               className={styles.select}
             >
               <option value="YYYY-MM-DD">YYYY-MM-DD</option>
@@ -136,4 +158,3 @@ export function GeneralSettingsTab() {
     </div>
   );
 }
-

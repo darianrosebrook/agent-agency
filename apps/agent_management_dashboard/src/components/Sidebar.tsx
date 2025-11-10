@@ -22,7 +22,9 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "./ui/tooltip";
+} from "./primitives/tooltip";
+import { cn } from "./primitives/utils";
+import styles from "./Sidebar.module.scss";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -34,68 +36,79 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`${
-        isCollapsed ? "w-16" : "w-80"
-      } bg-[#1a1a1a] border-r border-gray-800 flex flex-col h-screen transition-all duration-300`}
+      className={cn(
+        styles.sidebar,
+        isCollapsed ? styles.sidebarCollapsed : styles.sidebarExpanded
+      )}
     >
       {/* Header */}
       <div
-        className={`${isCollapsed ? "p-3" : "p-6"} border-b border-gray-800`}
+        className={cn(
+          styles.header,
+          isCollapsed ? styles.headerCollapsed : styles.headerExpanded
+        )}
       >
         <div
-          className={`flex items-center ${
-            isCollapsed ? "justify-center mb-3" : "justify-between mb-6"
-          }`}
+          className={cn(
+            styles.headerTop,
+            isCollapsed ? styles.headerTopCollapsed : styles.headerTopExpanded
+          )}
         >
           {!isCollapsed && (
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-gray-700 rounded flex items-center justify-center">
-                <Moon className="w-4 h-4 text-gray-400" />
+            <div className={styles.logoContainer}>
+              <div className={styles.logoIcon}>
+                <Moon className={styles.iconGray} />
               </div>
-              <h4 className="inline text-white">Agent Agency</h4>
+              <h4 className={styles.logoText}>Agent Agency</h4>
             </div>
           )}
           {isCollapsed && (
-            <div className="w-6 h-6 bg-gray-700 rounded flex items-center justify-center mb-0">
-              <Moon className="w-4 h-4 text-gray-400" />
+            <div className={cn(styles.logoIcon, styles.logoIconCollapsed)}>
+              <Moon className={styles.iconGray} />
             </div>
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="text-gray-400 hover:text-gray-200"
+            className={styles.collapseButton}
           >
-            <LayoutGrid className="w-4 h-4" />
+            <LayoutGrid className={styles.icon} />
           </button>
         </div>
 
         {/* Search */}
         {!isCollapsed && (
-          <div className="relative">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <div className={styles.searchContainer}>
+            <Search className={styles.searchIcon} />
             <input
               type="text"
               placeholder="Search"
-              className="w-full bg-[#0f0f0f] border border-gray-800 rounded-lg pl-10 pr-8 py-2 text-gray-200 placeholder:text-gray-500"
+              className={styles.searchInput}
             />
-            <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">
-              /
-            </kbd>
+            <kbd className={styles.searchKbd}>/</kbd>
           </div>
         )}
 
         {/* Quick Links */}
         <TooltipProvider>
-          <div className={`${isCollapsed ? "mt-0" : "mt-4"} space-y-1`}>
+          <div
+            className={cn(
+              styles.quickLinks,
+              isCollapsed && styles.quickLinksCollapsed
+            )}
+          >
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
                   href="/chat"
-                  className={`w-full flex items-center ${
-                    isCollapsed ? "justify-center" : "gap-3"
-                  } px-3 py-2 text-gray-300 hover:bg-gray-800/50 rounded-lg`}
+                  className={cn(
+                    styles.quickLink,
+                    isCollapsed ? styles.quickLinkCollapsed : styles.quickLinkExpanded
+                  )}
                 >
-                  <MessageSquare className="w-4 h-4" />
-                  {!isCollapsed && <span className="text-sm">Chat</span>}
+                  <MessageSquare className={styles.icon} />
+                  {!isCollapsed && (
+                    <span className={styles.quickLinkText}>Chat</span>
+                  )}
                 </Link>
               </TooltipTrigger>
               {isCollapsed && (
@@ -108,12 +121,15 @@ export function Sidebar() {
               <TooltipTrigger asChild>
                 <Link
                   href="/projects"
-                  className={`w-full flex items-center ${
-                    isCollapsed ? "justify-center" : "gap-3"
-                  } px-3 py-2 text-gray-300 hover:bg-gray-800/50 rounded-lg`}
+                  className={cn(
+                    styles.quickLink,
+                    isCollapsed ? styles.quickLinkCollapsed : styles.quickLinkExpanded
+                  )}
                 >
-                  <FileSignature className="w-4 h-4" />
-                  {!isCollapsed && <span className="text-sm">Projects</span>}
+                  <FileSignature className={styles.icon} />
+                  {!isCollapsed && (
+                    <span className={styles.quickLinkText}>Projects</span>
+                  )}
                 </Link>
               </TooltipTrigger>
               {isCollapsed && (
@@ -127,23 +143,28 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className={`flex-1 ${isCollapsed ? "p-2" : "p-4"} overflow-y-auto`}>
+      <nav
+        className={cn(
+          styles.nav,
+          isCollapsed ? styles.navCollapsed : styles.navExpanded
+        )}
+      >
         <TooltipProvider>
-          <div className="space-y-1">
+          <div className={styles.navLinks}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
                   href="/"
-                  className={`w-full flex items-center ${
-                    isCollapsed ? "justify-center" : "gap-3"
-                  } px-3 py-2 rounded-lg ${
-                    isActive("/")
-                      ? "text-white bg-gray-800/50"
-                      : "text-gray-300 hover:bg-gray-800/50"
-                  }`}
+                  className={cn(
+                    styles.navLink,
+                    isCollapsed ? styles.navLinkCollapsed : styles.navLinkExpanded,
+                    isActive("/") ? styles.navLinkActive : styles.navLinkInactive
+                  )}
                 >
-                  <LayoutGrid className="w-4 h-4" />
-                  {!isCollapsed && <span className="text-sm">Dashboard</span>}
+                  <LayoutGrid className={styles.icon} />
+                  {!isCollapsed && (
+                    <span className={styles.navLinkText}>Dashboard</span>
+                  )}
                 </Link>
               </TooltipTrigger>
               {isCollapsed && (
@@ -155,12 +176,16 @@ export function Sidebar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  className={`w-full flex items-center ${
-                    isCollapsed ? "justify-center" : "gap-3"
-                  } px-3 py-2 text-gray-300 hover:bg-gray-800/50 rounded-lg`}
+                  className={cn(
+                    styles.navLink,
+                    styles.navLinkInactive,
+                    isCollapsed ? styles.navLinkCollapsed : styles.navLinkExpanded
+                  )}
                 >
-                  <TrendingUp className="w-4 h-4" />
-                  {!isCollapsed && <span className="text-sm">Agent Stats</span>}
+                  <TrendingUp className={styles.icon} />
+                  {!isCollapsed && (
+                    <span className={styles.navLinkText}>Agent Stats</span>
+                  )}
                 </button>
               </TooltipTrigger>
               {isCollapsed && (
@@ -172,13 +197,15 @@ export function Sidebar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  className={`w-full flex items-center ${
-                    isCollapsed ? "justify-center" : "gap-3"
-                  } px-3 py-2 text-gray-300 hover:bg-gray-800/50 rounded-lg`}
+                  className={cn(
+                    styles.navLink,
+                    styles.navLinkInactive,
+                    isCollapsed ? styles.navLinkCollapsed : styles.navLinkExpanded
+                  )}
                 >
-                  <FileCode className="w-4 h-4" />
+                  <FileCode className={styles.icon} />
                   {!isCollapsed && (
-                    <span className="text-sm">Rules & Governance</span>
+                    <span className={styles.navLinkText}>Rules & Governance</span>
                   )}
                 </button>
               </TooltipTrigger>
@@ -191,13 +218,15 @@ export function Sidebar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  className={`w-full flex items-center ${
-                    isCollapsed ? "justify-center" : "gap-3"
-                  } px-3 py-2 text-gray-300 hover:bg-gray-800/50 rounded-lg`}
+                  className={cn(
+                    styles.navLink,
+                    styles.navLinkInactive,
+                    isCollapsed ? styles.navLinkCollapsed : styles.navLinkExpanded
+                  )}
                 >
-                  <HeartPulse className="w-4 h-4" />
+                  <HeartPulse className={styles.icon} />
                   {!isCollapsed && (
-                    <span className="text-sm">Agent Health</span>
+                    <span className={styles.navLinkText}>Agent Health</span>
                   )}
                 </button>
               </TooltipTrigger>
@@ -211,17 +240,17 @@ export function Sidebar() {
               <TooltipTrigger asChild>
                 <Link
                   href="/phase-planner"
-                  className={`w-full flex items-center ${
-                    isCollapsed ? "justify-center" : "gap-3"
-                  } px-3 py-2 rounded-lg ${
+                  className={cn(
+                    styles.navLink,
+                    isCollapsed ? styles.navLinkCollapsed : styles.navLinkExpanded,
                     isActive("/phase-planner")
-                      ? "text-white bg-gray-800/50"
-                      : "text-gray-300 hover:bg-gray-800/50"
-                  }`}
+                      ? styles.navLinkActive
+                      : styles.navLinkInactive
+                  )}
                 >
-                  <Workflow className="w-4 h-4" />
+                  <Workflow className={styles.icon} />
                   {!isCollapsed && (
-                    <span className="text-sm">Phase Planner</span>
+                    <span className={styles.navLinkText}>Phase Planner</span>
                   )}
                 </Link>
               </TooltipTrigger>
@@ -234,12 +263,16 @@ export function Sidebar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  className={`w-full flex items-center ${
-                    isCollapsed ? "justify-center" : "gap-3"
-                  } px-3 py-2 text-gray-300 hover:bg-gray-800/50 rounded-lg`}
+                  className={cn(
+                    styles.navLink,
+                    styles.navLinkInactive,
+                    isCollapsed ? styles.navLinkCollapsed : styles.navLinkExpanded
+                  )}
                 >
-                  <Settings className="w-4 h-4" />
-                  {!isCollapsed && <span className="text-sm">Settings</span>}
+                  <Settings className={styles.icon} />
+                  {!isCollapsed && (
+                    <span className={styles.navLinkText}>Settings</span>
+                  )}
                 </button>
               </TooltipTrigger>
               {isCollapsed && (
@@ -249,28 +282,43 @@ export function Sidebar() {
               )}
             </Tooltip>
           </div>
-          <hr />
+          <hr className={styles.divider} />
           {/* Folders */}
           {!isCollapsed && (
-            <div className="mt-6 space-y-1">
-              <button className="w-full flex items-center gap-3 px-3 py-2 text-gray-300 hover:bg-gray-800/50 rounded-lg group">
-                <div className="w-2 h-2 bg-blue-500 rounded-sm"></div>
-                <span className="text-sm flex-1 text-left">Recent Project</span>
-                <ChevronDown className="w-4 h-4 opacity-0 group-hover:opacity-100" />
+            <div className={styles.folders}>
+              <button className={cn(styles.folderButton)}>
+                <div
+                  className={cn(
+                    styles.folderStatusDot,
+                    styles.folderStatusDotBlue
+                  )}
+                ></div>
+                <span className={styles.folderName}>Recent Project</span>
+                <ChevronDown className={styles.folderChevron} />
               </button>
-              <button className="w-full flex items-center gap-3 px-3 py-2 text-gray-300 hover:bg-gray-800/50 rounded-lg group">
-                <div className="w-2 h-2 bg-gray-500 rounded-sm"></div>
-                <span className="text-sm flex-1 text-left">Recent Project</span>
-                <ChevronDown className="w-4 h-4 opacity-0 group-hover:opacity-100" />
+              <button className={cn(styles.folderButton)}>
+                <div
+                  className={cn(
+                    styles.folderStatusDot,
+                    styles.folderStatusDotGray
+                  )}
+                ></div>
+                <span className={styles.folderName}>Recent Project</span>
+                <ChevronDown className={styles.folderChevron} />
               </button>
-              <button className="w-full flex items-center gap-3 px-3 py-2 text-gray-300 hover:bg-gray-800/50 rounded-lg group">
-                <div className="w-2 h-2 bg-yellow-500 rounded-sm"></div>
-                <span className="text-sm flex-1 text-left">Recent Project</span>
-                <ChevronDown className="w-4 h-4 opacity-0 group-hover:opacity-100" />
+              <button className={cn(styles.folderButton)}>
+                <div
+                  className={cn(
+                    styles.folderStatusDot,
+                    styles.folderStatusDotYellow
+                  )}
+                ></div>
+                <span className={styles.folderName}>Recent Project</span>
+                <ChevronDown className={styles.folderChevron} />
               </button>
-              <button className="w-full flex items-center gap-3 px-3 py-2 text-gray-300 hover:bg-gray-800/50 rounded-lg">
-                <FolderPlus className="w-4 h-4" />
-                <span className="text-sm">New Project</span>
+              <button className={styles.newProjectButton}>
+                <FolderPlus className={styles.icon} />
+                <span className={styles.newProjectText}>New Project</span>
               </button>
             </div>
           )}

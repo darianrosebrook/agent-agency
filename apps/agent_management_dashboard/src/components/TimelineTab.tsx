@@ -3,14 +3,15 @@
 import { useState } from "react";
 import { GanttChart } from "./GanttChart";
 import { ZoomIn, ZoomOut, Calendar } from "lucide-react";
-import { Button } from "./ui/button";
+import { Button } from "./primitives/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "./ui/select";
+} from "./primitives/select";
+import styles from "./TimelineTab.module.scss";
 
 export type ZoomLevel = "day" | "week" | "month" | "quarter";
 
@@ -199,21 +200,21 @@ export function TimelineTab() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#0d0d0d]">
+    <div className={styles.timelineTab}>
       {/* Controls */}
-      <div className="border-b border-[#262626] px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Calendar className="w-5 h-5 text-[#888888]" />
-            <h2 className="text-white text-xl">Project Timeline</h2>
+      <div className={styles.controls}>
+        <div className={styles.controlsInner}>
+          <div className={styles.controlsLeft}>
+            <Calendar className={styles.iconMedium} />
+            <h2 className={styles.title}>Project Timeline</h2>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className={styles.controlsRight}>
             <Select value={selectedWorker} onValueChange={setSelectedWorker}>
-              <SelectTrigger className="w-48 bg-[#1a1a1a] border-[#262626] text-white">
+              <SelectTrigger className={styles.selectTrigger}>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-[#1a1a1a] border-[#262626] text-white">
+              <SelectContent className={styles.selectContent}>
                 <SelectItem value="all">All Workers</SelectItem>
                 {workers.map((worker) => (
                   <SelectItem key={worker} value={worker}>
@@ -223,17 +224,17 @@ export function TimelineTab() {
               </SelectContent>
             </Select>
 
-            <div className="flex items-center gap-1 bg-[#1a1a1a] rounded-lg border border-[#262626] p-1">
+            <div className={styles.zoomControls}>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleZoomOut}
                 disabled={zoomLevel === "quarter"}
-                className="h-7 px-2 text-[#888888] hover:text-white hover:bg-[#262626] disabled:opacity-30"
+                className={styles.zoomButton}
               >
-                <ZoomOut className="w-4 h-4" />
+                <ZoomOut className={styles.zoomIcon} />
               </Button>
-              <span className="px-3 text-sm text-white capitalize">
+              <span className={styles.zoomLabel}>
                 {zoomLevel}
               </span>
               <Button
@@ -241,9 +242,9 @@ export function TimelineTab() {
                 size="sm"
                 onClick={handleZoomIn}
                 disabled={zoomLevel === "day"}
-                className="h-7 px-2 text-[#888888] hover:text-white hover:bg-[#262626] disabled:opacity-30"
+                className={styles.zoomButton}
               >
-                <ZoomIn className="w-4 h-4" />
+                <ZoomIn className={styles.zoomIcon} />
               </Button>
             </div>
           </div>
@@ -251,7 +252,7 @@ export function TimelineTab() {
       </div>
 
       {/* Gantt Chart */}
-      <div className="flex-1 overflow-auto">
+      <div className={styles.ganttContainer}>
         <GanttChart tasks={filteredTasks} zoomLevel={zoomLevel} />
       </div>
     </div>

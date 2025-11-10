@@ -1,6 +1,6 @@
 import { Suspense, lazy } from "react";
 import { LayoutGrid } from "lucide-react";
-import { cn } from "../ui/utils";
+import { cn } from "../primitives/utils";
 import styles from "./Dashboard.module.scss";
 
 const TaskProgressChart = lazy(() =>

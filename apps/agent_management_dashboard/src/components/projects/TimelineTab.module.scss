@@ -54,7 +54,7 @@
   align-items: center;
   gap: $spacing-1;
   background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
-  border-radius: calc(var(--radius) + 4px); // rounded-lg
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
   border: 1px solid $color-neutral-800; // border border-[#262626] -> neutral-800
   padding: $spacing-1;
 }

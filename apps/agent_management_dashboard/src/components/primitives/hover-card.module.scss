@@ -1,0 +1,39 @@
+@use "../../styles/design-tokens.scss" as *;
+
+.hoverCardContent {
+  z-index: 50;
+  width: 16rem; // w-64
+  transform-origin: var(--radix-hover-card-content-transform-origin);
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid var(--border);
+  padding: $spacing-4;
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  outline: none;
+
+  &[data-state='open'] {
+    animation: fade-in $duration-normal $ease-out, zoom-in-95 $duration-normal $ease-out;
+  }
+
+  &[data-state='closed'] {
+    animation: fade-out $duration-normal $ease-out, zoom-out-95 $duration-normal $ease-out;
+  }
+
+  &[data-side='bottom'] {
+    animation: slide-in-from-top-2 $duration-normal $ease-out;
+  }
+
+  &[data-side='left'] {
+    animation: slide-in-from-right-2 $duration-normal $ease-out;
+  }
+
+  &[data-side='right'] {
+    animation: slide-in-from-left-2 $duration-normal $ease-out;
+  }
+
+  &[data-side='top'] {
+    animation: slide-in-from-bottom-2 $duration-normal $ease-out;
+  }
+}
+

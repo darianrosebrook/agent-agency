@@ -1,0 +1,63 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.workHistoryTab {
+  min-height: 37.5rem; // min-h-[600px]
+  padding: 1.99975rem; // p-[31.996px]
+}
+
+.workHistoryCard {
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border-radius: 0.625rem; // rounded-[10px]
+  padding: 1.55675rem; // p-[24.908px]
+  border-width: 0.909px;
+  border-color: $color-neutral-800; // border-neutral-800
+  border-style: solid;
+}
+
+.cardTitle {
+  font-family: 'Inter:Regular', sans-serif;
+  font-size: $font-size-xl; // text-[20px]
+  line-height: 1.75rem; // leading-[28px]
+  color: $color-white; // text-white
+  letter-spacing: -0.4492px; // tracking-[-0.4492px]
+  margin-bottom: 0.99975rem; // mb-[15.994px]
+}
+
+.cardDescription {
+  font-family: 'Inter:Regular', sans-serif;
+  font-size: $font-size-sm; // text-[14px]
+  line-height: 1.25rem; // leading-[20px]
+  color: $color-gray-500; // text-[#888888]
+  letter-spacing: -0.1504px; // tracking-[-0.1504px]
+}
+
+.metricsGrid {
+  margin-top: 1.99975rem; // mt-[31.996px]
+  display: grid; // grid
+  grid-template-columns: repeat(3, 1fr); // grid-cols-3
+  gap: 0.99975rem; // gap-[15.994px]
+}
+
+.metricCard {
+  background-color: $color-dark-bg-secondary; // bg-[#0d0d0d]
+  border-radius: 0.5rem; // rounded-[8px]
+  padding: $spacing-4; // p-[16px]
+  border-width: 0.909px;
+  border-color: $color-neutral-800; // border-neutral-800
+  border-style: solid;
+}
+
+.metricLabel {
+  font-family: 'Inter:Medium', sans-serif;
+  font-size: $font-size-sm; // text-[14px]
+  color: $color-gray-300; // text-[#d1d5dc]
+  letter-spacing: -0.1504px; // tracking-[-0.1504px]
+  margin-bottom: 0.5rem; // mb-[8px]
+}
+
+.metricValue {
+  font-family: 'Inter:Regular', sans-serif;
+  font-size: $font-size-2xl; // text-[24px]
+  color: $color-white; // text-white
+}
+

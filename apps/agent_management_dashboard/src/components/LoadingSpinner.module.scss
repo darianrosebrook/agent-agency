@@ -1,0 +1,59 @@
+@use "../styles/design-tokens.scss" as *;
+
+.loadingSpinner {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2; // gap-2
+}
+
+.spinnerIcon {
+  animation: spin 1s linear infinite;
+  color: $color-gray-400; // text-gray-400
+}
+
+.spinnerIconSmall {
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+}
+
+.spinnerIconMedium {
+  width: 1.5rem; // w-6
+  height: 1.5rem; // h-6
+}
+
+.spinnerIconLarge {
+  width: 2rem; // w-8
+  height: 2rem; // h-8
+}
+
+.spinnerText {
+  font-size: $font-size-sm; // text-sm
+  color: $color-gray-400; // text-gray-400
+}
+
+.pageLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.pageLoadingContent {
+  text-align: center;
+}
+
+.pageLoadingText {
+  margin-top: $spacing-4; // mt-4
+  color: $color-gray-400; // text-gray-400
+  font-size: $font-size-sm; // text-sm
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+

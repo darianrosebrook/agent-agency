@@ -1,0 +1,238 @@
+@use "../styles/design-tokens.scss" as *;
+
+.overviewTab {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+.toggleButton {
+  position: absolute;
+  top: $spacing-4;
+  right: $spacing-4;
+  z-index: 10;
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  color: $color-gray-300; // text-gray-300
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
+  padding: $spacing-2;
+  border: 1px solid $color-gray-800; // border border-gray-800
+  transition: background-color $transition-normal, color $transition-normal;
+
+  &:hover {
+    background-color: $color-dark-bg-hover; // hover:bg-[#252525]
+    color: $color-white; // hover:text-white
+  }
+}
+
+.toggleButtonIcon {
+  width: 1.25rem; // w-5
+  height: 1.25rem; // h-5
+}
+
+.editorContent {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.editorOnly {
+  background-color: $color-dark-bg-secondary; // bg-[#0d0d0d]
+  height: 100%;
+  width: 100%;
+}
+
+.editorOnlyInner {
+  background-clip: padding-box;
+  border: 0;
+  border-color: transparent;
+  border-style: solid;
+  box-sizing: border-box;
+  height: 100%;
+  overflow: clip;
+  position: relative;
+  border-radius: inherit;
+  width: 100%;
+}
+
+.editorToolbar {
+  position: absolute;
+  background-color: $color-dark-bg-secondary; // bg-[#0d0d0d]
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 3.306125rem; // h-[52.898px]
+  align-items: flex-start;
+  left: 0;
+  padding-bottom: 0.0568125rem; // pb-[0.909px]
+  padding-top: 0.4998125rem; // pt-[7.997px]
+  padding-inline: 0.999625rem; // px-[15.994px]
+  top: 0;
+  width: 100%;
+  z-index: 10;
+}
+
+.editorToolbarBorder {
+  position: absolute;
+  border-width: 0 0 0.909px;
+  border-color: $color-neutral-800; // border-neutral-800
+  border-style: solid;
+  inset: 0;
+  pointer-events: none;
+}
+
+.editorContentArea {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  left: 0;
+  overflow: clip;
+  padding-bottom: 0;
+  padding-top: 3.9985625rem; // pt-[63.977px]
+  top: 3.30625rem; // top-[52.9px]
+  width: 100%;
+  height: calc(100% - 3.30625rem);
+}
+
+.editorContentInner {
+  width: 100%;
+  max-width: 50rem; // max-w-[800px]
+  margin-inline: auto;
+  padding-inline: $spacing-8;
+}
+
+.toolbarContainer {
+  height: 2.249625rem; // h-[35.994px]
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.toolbarButton {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem; // rounded-[8px]
+  width: 1.9993125rem; // size-[31.989px]
+  height: 1.9993125rem; // size-[31.989px]
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: $color-dark-bg-primary; // hover:bg-[#1a1a1a]
+  }
+}
+
+.toolbarButtonBold {
+  left: 0;
+  top: 0.125rem; // top-[2px]
+}
+
+.toolbarButtonItalic {
+  left: 2.24875rem; // left-[35.98px]
+  top: 0.125rem; // top-[2px]
+}
+
+.toolbarButtonIcon {
+  position: relative;
+  flex-shrink: 0;
+  width: 0.999625rem; // size-[15.994px]
+  height: 0.999625rem; // size-[15.994px]
+}
+
+.toolbarDivider {
+  position: absolute;
+  background-color: $color-neutral-800; // bg-neutral-800
+  height: 0;
+  left: 4.746875rem; // left-[75.95px]
+  top: 1.125rem; // top-[18px]
+  width: 0.062125rem; // w-[0.994px]
+}
+
+.toolbarDropdown {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  height: 2.249625rem; // h-[35.994px]
+  align-items: center;
+  justify-content: space-between;
+  left: 5.308125rem; // left-[84.93px]
+  padding-inline: 0.7493125rem; // px-[11.989px]
+  padding-block: 0;
+  border-radius: 0.5rem; // rounded-[8px]
+  top: 0;
+  width: 5.999625rem; // w-[95.994px]
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: $color-dark-bg-primary; // hover:bg-[#1a1a1a]
+  }
+}
+
+.toolbarDropdownText {
+  font-family: 'Inter', sans-serif;
+  font-weight: $font-weight-normal; // font-normal
+  line-height: 1.25rem; // leading-[20px]
+  font-style: normal;
+  color: $color-white; // text-white
+  font-size: $font-size-sm; // text-[14px]
+  letter-spacing: -0.1504px; // tracking-[-0.1504px]
+}
+
+.toolbarDropdownIcon {
+  position: relative;
+  flex-shrink: 0;
+  width: 0.999625rem; // size-[15.994px]
+  height: 0.999625rem; // size-[15.994px]
+}
+
+.toolbarLabel {
+  position: absolute;
+  left: 11.875rem; // left-[190px]
+  top: 0.125rem; // top-[2px]
+  font-size: 0.75rem; // text-[12px]
+  color: $color-gray-600; // text-gray-600
+}
+
+.editorPlaceholder {
+  padding-block: $spacing-8; // py-8
+}
+
+.editorPlaceholderSection {
+  margin-bottom: $spacing-6; // mb-6
+}
+
+.editorPlaceholderText {
+  font-size: 1rem; // text-[16px]
+  line-height: 1.625rem; // leading-[26px]
+  color: #e6e6e6; // text-[#e6e6e6]
+  letter-spacing: -0.3125px; // tracking-[-0.3125px]
+  white-space: pre-wrap;
+}
+
+.editorPlaceholderHeading {
+  margin-bottom: $spacing-8; // mb-8
+}
+
+.editorPlaceholderHeading1 {
+  font-size: 1.875rem; // text-[30px]
+  line-height: 2.25rem; // leading-[36px]
+  color: $color-white; // text-white
+  letter-spacing: 0.3955px; // tracking-[0.3955px]
+}
+
+.editorPlaceholderHeading2 {
+  font-size: 1.5rem; // text-[24px]
+  line-height: 2rem; // leading-[32px]
+  color: $color-white; // text-white
+  letter-spacing: 0.0703px; // tracking-[0.0703px]
+  margin-bottom: $spacing-4; // mb-4
+}
+
+.editorPlaceholderHint {
+  color: $color-gray-600; // text-gray-600
+  font-size: $font-size-sm; // text-[14px]
+  margin-top: 3rem; // mt-12
+}
+

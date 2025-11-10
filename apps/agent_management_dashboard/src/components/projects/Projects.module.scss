@@ -152,7 +152,7 @@
 
 .recentProjectsEmpty {
   text-align: center;
-  padding-block: 3rem; // py-12
+  padding-block: $spacing-12; // py-12
   color: $color-gray-500; // text-gray-500
 }
 
@@ -173,7 +173,7 @@
 .projectCard {
   background-color: $color-dark-bg-primary;
   border: 1px solid $color-gray-800; // border border-gray-800
-  border-radius: 0.875rem; // rounded-lg = 14px (matches old Tailwind version)
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
   padding: $spacing-6;
   text-align: left;
   transition: background-color $transition-normal, border-color $transition-normal;
@@ -195,7 +195,7 @@
   height: 3rem; // h-12
   background-color: $color-dark-bg-secondary;
   border: 1px solid $color-gray-800; // border border-gray-800
-  border-radius: 0.875rem; // rounded-lg = 14px (matches old Tailwind version)
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
   display: flex;
   align-items: center;
   justify-content: center;
@@ -247,7 +247,7 @@
 .projectsTable {
   background-color: $color-dark-bg-primary;
   border: 1px solid $color-gray-800; // border border-gray-800
-  border-radius: 0.875rem; // rounded-lg = 14px (matches old Tailwind version)
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
   overflow: hidden;
 }
 
@@ -323,7 +323,7 @@
 
 .tableEmptyCell {
   text-align: center;
-  padding-block: 3rem; // py-12
+  padding-block: $spacing-12; // py-12
   color: $color-gray-500; // text-gray-500
 }
 
@@ -435,7 +435,7 @@
   padding-left: 2.5rem; // pl-10
   background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
   border-color: $color-gray-800; // border-gray-800
-  border-radius: 0.875rem; // rounded-lg = 14px (matches old Tailwind version)
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
   color: $color-gray-100; // text-gray-100
 
   &::placeholder {

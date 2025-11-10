@@ -9,7 +9,8 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "./primitives/utils";
+import styles from "./LoadingSpinner.module.scss";
 
 interface LoadingSpinnerProps {
   size?: "sm" | "md" | "lg";
@@ -18,9 +19,9 @@ interface LoadingSpinnerProps {
 }
 
 const sizeClasses = {
-  sm: "w-4 h-4",
-  md: "w-6 h-6",
-  lg: "w-8 h-8",
+  sm: styles.spinnerIconSmall,
+  md: styles.spinnerIconMedium,
+  lg: styles.spinnerIconLarge,
 };
 
 export function LoadingSpinner({
@@ -29,15 +30,10 @@ export function LoadingSpinner({
   text,
 }: LoadingSpinnerProps) {
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <Loader2
-        className={cn(
-          "animate-spin text-gray-400",
-          sizeClasses[size]
-        )}
-      />
+    <div className={cn(styles.loadingSpinner, className)}>
+      <Loader2 className={cn(styles.spinnerIcon, sizeClasses[size])} />
       {text && (
-        <span className="text-sm text-gray-400">{text}</span>
+        <span className={styles.spinnerText}>{text}</span>
       )}
     </div>
   );
@@ -48,11 +44,11 @@ export function LoadingSpinner({
  */
 export function PageLoading({ text = "Loading..." }: { text?: string }) {
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center">
+    <div className={styles.pageLoading}>
+      <div className={styles.pageLoadingContent}>
         <LoadingSpinner size="lg" />
         {text && (
-          <p className="mt-4 text-gray-400 text-sm">{text}</p>
+          <p className={styles.pageLoadingText}>{text}</p>
         )}
       </div>
     </div>

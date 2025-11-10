@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { cn } from "../ui/utils";
+import { cn } from "../primitives/utils";
 import styles from "./ImageWithFallback.module.scss";
 
 const ERROR_IMG_SRC =
@@ -19,10 +19,7 @@ export function ImageWithFallback(
   const { src, alt, style, className, ...rest } = props;
 
   return didError ? (
-    <div
-      className={cn(styles.imageWithFallback, className)}
-      style={style}
-    >
+    <div className={cn(styles.imageWithFallback, className)} style={style}>
       <div className={styles.fallbackContainer}>
         <img
           src={ERROR_IMG_SRC}

@@ -1,0 +1,100 @@
+@use "../styles/design-tokens.scss" as *;
+
+.timelineTab {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: $color-dark-bg-tertiary; // bg-[#0d0d0d]
+}
+
+.controls {
+  border-bottom: 1px solid $color-neutral-800; // border-b border-[#262626]
+  padding-inline: $spacing-6; // px-6
+  padding-block: $spacing-4; // py-4
+}
+
+.controlsInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.controlsLeft {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3; // gap-3
+}
+
+.iconMedium {
+  width: 1.25rem; // w-5
+  height: 1.25rem; // h-5
+  color: $color-gray-500; // text-[#888888]
+}
+
+.title {
+  color: $color-white; // text-white
+  font-size: $font-size-xl; // text-xl
+}
+
+.controlsRight {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3; // gap-3
+}
+
+.selectTrigger {
+  width: 12rem; // w-48
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border-color: $color-neutral-800; // border-[#262626]
+  color: $color-white; // text-white
+}
+
+.selectContent {
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border-color: $color-neutral-800; // border-[#262626]
+  color: $color-white; // text-white
+}
+
+.zoomControls {
+  display: flex;
+  align-items: center;
+  gap: $spacing-1; // gap-1
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
+  border: 1px solid $color-neutral-800; // border border-[#262626]
+  padding: $spacing-1; // p-1
+}
+
+.zoomButton {
+  height: 1.75rem; // h-7
+  padding-inline: $spacing-2; // px-2
+  color: $color-gray-500; // text-[#888888]
+  transition: color $transition-normal, background-color $transition-normal;
+
+  &:hover {
+    color: $color-white; // hover:text-white
+    background-color: $color-neutral-800; // hover:bg-[#262626]
+  }
+
+  &:disabled {
+    opacity: 0.3; // disabled:opacity-30
+  }
+}
+
+.zoomIcon {
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+}
+
+.zoomLabel {
+  padding-inline: $spacing-3; // px-3
+  font-size: $font-size-sm; // text-sm
+  color: $color-white; // text-white
+  text-transform: capitalize; // capitalize
+}
+
+.ganttContainer {
+  flex: 1;
+  overflow: auto;
+}
+

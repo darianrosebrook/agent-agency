@@ -1,13 +1,16 @@
 'use client';
 
+import { cn } from "../../primitives/utils";
+import styles from "./AIAgentsTab.module.scss";
+
 export function AIAgentsTabContent() {
   return (
-    <div className="min-h-[600px] p-[31.996px]">
-      <div className="bg-[#1a1a1a] rounded-[10px] p-[24.908px] border-[0.909px] border-neutral-800">
-        <h2 className="font-['Inter:Regular',sans-serif] text-[20px] leading-[28px] text-white tracking-[-0.4492px] mb-[15.994px]">
+    <div className={styles.aiAgentsTab}>
+      <div className={styles.aiAgentsCard}>
+        <h2 className={styles.cardTitle}>
           AI Agents
         </h2>
-        <p className="font-['Inter:Regular',sans-serif] text-[14px] leading-[20px] text-[#888888] tracking-[-0.1504px] mb-[31.996px]">
+        <p className={styles.cardDescription}>
           Configure AI agents to automate tasks and provide intelligent
           assistance.
         </p>
@@ -23,7 +26,7 @@ export function AIAgentsTabContent() {
         // 3. Real-time updates: Refresh agent list when configuration changes
         //    - Handle loading and error states
         //    - Display user-friendly error messages */}
-        <div className="space-y-[15.994px]">
+        <div className={styles.agentsList}>
           {[
             {
               name: 'Task Suggester',
@@ -45,29 +48,27 @@ export function AIAgentsTabContent() {
           ].map((agent, i) => (
             <div
               key={i}
-              className="bg-[#0d0d0d] rounded-[8px] p-[16px] border-[0.909px] border-neutral-800 flex items-center justify-between"
+              className={styles.agentCard}
             >
-              <div>
-                <p className="font-['Inter:Medium',sans-serif] text-[14px] text-white tracking-[-0.1504px] mb-[4px]">
+              <div className={styles.agentInfo}>
+                <p className={styles.agentName}>
                   {agent.name}
                 </p>
-                <p className="font-['Inter:Regular',sans-serif] text-[14px] text-[#888888] tracking-[-0.1504px]">
+                <p className={styles.agentDescription}>
                   {agent.description}
                 </p>
               </div>
               <div
-                className={`h-[18.395px] w-[31.996px] rounded-[1.5252e+07px] ${
-                  agent.enabled ? 'bg-[#030213]' : 'bg-[#cbced4]'
-                }`}
+                className={cn(
+                  styles.toggleSwitch,
+                  agent.enabled ? styles.toggleSwitchEnabled : styles.toggleSwitchDisabled
+                )}
               >
                 <div
-                  className={`bg-white relative rounded-[1.5252e+07px] shrink-0 size-[15.994px] transition-transform ${
-                    agent.enabled
-                      ? 'translate-x-[14.903px]'
-                      : 'translate-x-[0.909px]'
-                  } mt-[0.909px] ${
-                    agent.enabled ? 'ml-[0.909px]' : 'ml-[0.909px]'
-                  }`}
+                  className={cn(
+                    styles.toggleThumb,
+                    agent.enabled ? styles.toggleThumbEnabled : styles.toggleThumbDisabled
+                  )}
                 />
               </div>
             </div>

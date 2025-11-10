@@ -13,7 +13,7 @@
   justify-content: center;
   padding-block: $spacing-12; // py-12
   padding-inline: $spacing-6; // px-6
-  border-radius: $spacing-lg; // rounded-lg
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
   border: 2px dashed; // border-2 border-dashed
   transition: border-color $transition-normal, background-color $transition-normal;
 }
@@ -78,7 +78,7 @@
   color: $color-white; // text-white
   padding-inline: $spacing-6; // px-6
   padding-block: $spacing-2; // py-2
-  border-radius: $spacing-lg; // rounded-lg
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
   font-size: $font-size-sm; // text-sm
 
   &:hover {
@@ -157,4 +157,26 @@
   }
 }
 
+.spinnerContainer {
+  position: absolute;
+  inset: 0;
+  animation: spin-slow 3s linear infinite;
+}
+
+.spinnerDot {
+  position: absolute;
+  width: 0.5rem; // w-2
+  height: 0.5rem; // h-2
+  background-color: $color-white; // bg-white
+  border-radius: 9999px; // rounded-full
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
 

@@ -9,14 +9,14 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "../ui/breadcrumb";
+} from "../primitives/breadcrumb";
 import { OverviewTab } from "./OverviewTab";
 import { WorkspaceTab } from "./WorkspaceTab";
 import { TasksTab } from "./TasksTab";
 import { TimelineTab } from "./TimelineTab";
 import { ManageTab } from "./SettingsTab";
 import svgPaths from "../../imports/svg-ustevohwso";
-import { cn } from "../ui/utils";
+import { cn } from "../primitives/utils";
 import styles from "./ProjectView.module.scss";
 
 interface ProjectViewProps {
@@ -60,7 +60,7 @@ export function ProjectView({
                     </BreadcrumbLink>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator>
-                    <ChevronRight className="w-3 h-3 text-[#888888]" />
+                    <ChevronRight className={styles.breadcrumbSeparatorIcon} />
                   </BreadcrumbSeparator>
                   <BreadcrumbItem>
                     <BreadcrumbPage className={styles.breadcrumbPage}>
@@ -73,9 +73,7 @@ export function ProjectView({
 
             {/* Heading */}
             <div className={styles.headingContainer}>
-              <p className={styles.heading}>
-                {projectName}
-              </p>
+              <p className={styles.heading}>{projectName}</p>
             </div>
           </div>
 
@@ -115,19 +113,14 @@ export function ProjectView({
                 <div className={styles.searchContainer}>
                   <div className={styles.searchBox}>
                     <div className={styles.searchInput}>
-                      <p className={styles.searchPlaceholder}>
-                        Search
-                      </p>
+                      <p className={styles.searchPlaceholder}>Search</p>
                     </div>
-                    <div
-                      aria-hidden="true"
-                      className={styles.searchBorder}
-                    />
+                    <div aria-hidden="true" className={styles.searchBorder} />
                   </div>
                   {/* Search Icon */}
                   <div className={styles.searchIcon}>
                     <svg
-                      className="block size-full"
+                      className={styles.svgFullSize}
                       fill="none"
                       preserveAspectRatio="none"
                       viewBox="0 0 16 16"
@@ -150,9 +143,7 @@ export function ProjectView({
                   </div>
                   {/* Keyboard Shortcut */}
                   <div className={styles.keyboardShortcut}>
-                    <p className={styles.keyboardShortcutText}>
-                      ⌘F
-                    </p>
+                    <p className={styles.keyboardShortcutText}>⌘F</p>
                   </div>
                 </div>
 
@@ -163,12 +154,10 @@ export function ProjectView({
                     className={styles.controlButtonBorder}
                   />
                   <div className={styles.controlButtonContent}>
-                    <p className={styles.controlButtonText}>
-                      Status: All
-                    </p>
+                    <p className={styles.controlButtonText}>Status: All</p>
                     <div className={styles.controlButtonIcon}>
                       <svg
-                        className="block size-full"
+                        className={styles.svgFullSize}
                         fill="none"
                         preserveAspectRatio="none"
                         viewBox="0 0 16 16"
@@ -194,7 +183,7 @@ export function ProjectView({
                   <div className={styles.controlButtonContent}>
                     <div className={styles.controlButtonIcon}>
                       <svg
-                        className="block size-full"
+                        className={styles.svgFullSize}
                         fill="none"
                         preserveAspectRatio="none"
                         viewBox="0 0 16 16"
@@ -229,9 +218,7 @@ export function ProjectView({
                         />
                       </svg>
                     </div>
-                    <p className={styles.controlButtonText}>
-                      Sort
-                    </p>
+                    <p className={styles.controlButtonText}>Sort</p>
                   </div>
                 </button>
 
@@ -243,7 +230,7 @@ export function ProjectView({
                   />
                   <div className={styles.gridViewIcon}>
                     <svg
-                      className="block size-full"
+                      className={styles.svgFullSize}
                       fill="none"
                       preserveAspectRatio="none"
                       viewBox="0 0 16 16"

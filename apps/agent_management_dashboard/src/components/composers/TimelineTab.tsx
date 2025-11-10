@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { GanttChart } from "./GanttChart";
 import { ZoomIn, ZoomOut, Calendar } from "lucide-react";
-import { Button } from "../ui/button";
+import { Button } from "../primitives/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
+} from "../primitives/select";
 import styles from "./TimelineTab.module.scss";
 
 export type ZoomLevel = "day" | "week" | "month" | "quarter";
@@ -216,7 +216,7 @@ export function TimelineTab() {
       <div className={styles.controls}>
         <div className={styles.controlsContent}>
           <div className={styles.controlsLeft}>
-            <Calendar className="w-5 h-5 text-[#888888]" />
+            <Calendar className={styles.iconMedium} />
             <h2 className={styles.controlsTitle}>Project Timeline</h2>
           </div>
 
@@ -243,11 +243,9 @@ export function TimelineTab() {
                 disabled={zoomLevel === "quarter"}
                 className={styles.zoomButton}
               >
-                <ZoomOut className="w-4 h-4" />
+                <ZoomOut className={styles.icon} />
               </Button>
-              <span className={styles.zoomLevel}>
-                {zoomLevel}
-              </span>
+              <span className={styles.zoomLevel}>{zoomLevel}</span>
               <Button
                 variant="ghost"
                 size="sm"
@@ -255,7 +253,7 @@ export function TimelineTab() {
                 disabled={zoomLevel === "day"}
                 className={styles.zoomButton}
               >
-                <ZoomIn className="w-4 h-4" />
+                <ZoomIn className={styles.icon} />
               </Button>
             </div>
           </div>

@@ -82,7 +82,7 @@ export function CodeContributionChart({
     (sum, point) => sum + point.contribution,
     0
   );
-  
+
   // Animate total contribution
   const animatedTotalContribution = useAnimatedValue(totalContribution);
   const formattedTotal =

@@ -8,7 +8,7 @@ import { TaskCompletionGauge } from "../TaskCompletionGauge";
 import { ServerEfficiencyChart } from "../ServerEfficiencyChart";
 import { BentoPanel } from "../compounds/BentoPanel";
 import { LayoutGrid } from "lucide-react";
-import { cn } from "../ui/utils";
+import { cn } from "../primitives/utils";
 import styles from "./Dashboard.module.scss";
 
 export function Dashboard() {

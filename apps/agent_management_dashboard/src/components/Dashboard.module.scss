@@ -1,0 +1,78 @@
+@use "../styles/design-tokens.scss" as *;
+
+.dashboard {
+  padding: $spacing-8; // p-8
+}
+
+.header {
+  margin-bottom: $spacing-8; // mb-8
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2; // gap-2
+  color: $color-zinc-300; // text-zinc-300
+  margin-bottom: $spacing-4; // mb-4
+}
+
+.headerIcon {
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+}
+
+.headerLabel {
+  font-size: $font-size-sm; // text-sm
+}
+
+.headerTitle {
+  font-size: $font-size-3xl; // text-3xl
+  color: $color-white; // text-white
+}
+
+.bentoGrid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr)); // grid-cols-12
+  gap: $spacing-4; // gap-4
+  grid-auto-rows: 8.75rem; // auto-rows-[140px]
+}
+
+.gridItem {
+  // Base grid item styles
+}
+
+.gridItem5Col2Row {
+  grid-column: span 5; // col-span-5
+  grid-row: span 2; // row-span-2
+}
+
+.gridItem7Col2Row {
+  grid-column: span 7; // col-span-7
+  grid-row: span 2; // row-span-2
+}
+
+.gridItem8Col6Row {
+  grid-column: span 8; // col-span-8
+  grid-row: span 6; // row-span-6
+}
+
+.gridItem4Col6Row {
+  grid-column: span 4; // col-span-4
+  grid-row: span 6; // row-span-6
+}
+
+.gridItem4Col2Row {
+  grid-column: span 4; // col-span-4
+  grid-row: span 2; // row-span-2
+}
+
+.gridItem8Col2Row {
+  grid-column: span 8; // col-span-8
+  grid-row: span 2; // row-span-2
+}
+
+.gridItem12Col3Row {
+  grid-column: span 12; // col-span-12
+  grid-row: span 3; // row-span-3
+}
+

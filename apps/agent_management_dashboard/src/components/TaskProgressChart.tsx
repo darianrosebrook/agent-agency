@@ -42,10 +42,7 @@ export function TaskProgressChart({
               {/* Category badges */}
               <div className={styles.categories}>
                 {categories.map((category) => (
-                  <div
-                    key={category}
-                    className={styles.categoryBadge}
-                  >
+                  <div key={category} className={styles.categoryBadge}>
                     <div className={styles.categoryBadgeInner}>
                       <div className={styles.categoryText}>
                         <p className={styles.categoryTextParagraph}>
@@ -53,10 +50,7 @@ export function TaskProgressChart({
                         </p>
                       </div>
                     </div>
-                    <div
-                      aria-hidden="true"
-                      className={styles.categoryBorder}
-                    />
+                    <div aria-hidden="true" className={styles.categoryBorder} />
                   </div>
                 ))}
               </div>
@@ -96,10 +90,7 @@ export function TaskProgressChart({
                     </p>
                   </div>
                 </div>
-                <div
-                  aria-hidden="true"
-                  className={styles.taskBadgeBorder}
-                />
+                <div aria-hidden="true" className={styles.taskBadgeBorder} />
               </div>
               {/* Time reference */}
               <div className={styles.timeReference}>
@@ -123,10 +114,7 @@ export function TaskProgressChart({
           </div>
         </div>
       </div>
-      <div
-        aria-hidden="true"
-        className={styles.borderOverlay}
-      />
+      <div aria-hidden="true" className={styles.borderOverlay} />
     </div>
   );
 }

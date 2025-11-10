@@ -13,8 +13,8 @@ import {
   ChevronsUpDown,
 } from "lucide-react";
 import { NewProjectModal } from "./NewProjectModal";
-import { Input } from "./ui/input";
-import { Button } from "./ui/button";
+import { Input } from "./primitives/input";
+import { Button } from "./primitives/button";
 import { useProjectStore } from "../lib/stores";
 import { ErrorDisplay } from "./ErrorDisplay";
 import {
@@ -24,14 +24,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "./ui/table";
+} from "./primitives/table";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "./ui/select";
+} from "./primitives/select";
 
 type SortField = "name" | "createdAt" | "lastAccessed";
 type SortOrder = "asc" | "desc";
@@ -101,14 +101,13 @@ export function Projects() {
   };
 
   const handleProjectClick = (projectId: string) => {
-    if (!projectId || typeof projectId !== 'string') {
-      console.error('Invalid projectId:', projectId);
+    if (!projectId || typeof projectId !== "string") {
+      console.error("Invalid projectId:", projectId);
       return;
     }
     selectProject(projectId);
     router.push(`/projects/${encodeURIComponent(projectId)}`);
   };
-
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -149,8 +148,14 @@ export function Projects() {
     const bFieldValue = b[sortField];
 
     if (sortField === "createdAt" || sortField === "lastAccessed") {
-      const aDate = aFieldValue instanceof Date ? aFieldValue : new Date(aFieldValue as string);
-      const bDate = bFieldValue instanceof Date ? bFieldValue : new Date(bFieldValue as string);
+      const aDate =
+        aFieldValue instanceof Date
+          ? aFieldValue
+          : new Date(aFieldValue as string);
+      const bDate =
+        bFieldValue instanceof Date
+          ? bFieldValue
+          : new Date(bFieldValue as string);
       aValue = aDate.getTime();
       bValue = bDate.getTime();
     } else if (sortField === "name") {

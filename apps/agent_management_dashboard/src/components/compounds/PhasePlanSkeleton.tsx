@@ -1,4 +1,4 @@
-import { Skeleton } from "../ui/skeleton";
+import { Skeleton } from "../primitives/skeleton";
 import styles from "./PhasePlanSkeleton.module.scss";
 
 export function PhasePlanSkeleton() {
@@ -9,8 +9,12 @@ export function PhasePlanSkeleton() {
         <Skeleton className={styles.headerTitle} />
         <Skeleton className={styles.headerDescription} />
         <div className={styles.headerActions}>
-          <Skeleton className={`${styles.headerAction} ${styles.headerActionFirst}`} />
-          <Skeleton className={`${styles.headerAction} ${styles.headerActionSecond}`} />
+          <Skeleton
+            className={`${styles.headerAction} ${styles.headerActionFirst}`}
+          />
+          <Skeleton
+            className={`${styles.headerAction} ${styles.headerActionSecond}`}
+          />
         </div>
       </div>
 
@@ -20,8 +24,12 @@ export function PhasePlanSkeleton() {
           {/* Phase header */}
           <div className={styles.phaseHeader}>
             <div className={styles.phaseHeaderTop}>
-              <Skeleton className={`${styles.phaseTitle} ${styles.phaseTitleFirst}`} />
-              <Skeleton className={`${styles.phaseTitle} ${styles.phaseTitleSecond}`} />
+              <Skeleton
+                className={`${styles.phaseTitle} ${styles.phaseTitleFirst}`}
+              />
+              <Skeleton
+                className={`${styles.phaseTitle} ${styles.phaseTitleSecond}`}
+              />
             </div>
             <Skeleton className={styles.phaseDescription} />
           </div>

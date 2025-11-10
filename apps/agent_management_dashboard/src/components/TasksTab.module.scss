@@ -1,0 +1,22 @@
+@use "../styles/design-tokens.scss" as *;
+
+.tasksTab {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background-color: $color-dark-bg-secondary; // bg-[#0d0d0d]
+  min-height: 0;
+}
+
+.tasksTabContent {
+  height: 100%;
+  overflow: auto;
+  min-height: 0;
+}
+
+.tasksTabInner {
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+}
+

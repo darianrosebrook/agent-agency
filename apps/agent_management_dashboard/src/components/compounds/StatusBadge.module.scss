@@ -14,3 +14,39 @@
   }
 }
 
+// Status-specific color variants
+.statusPlanning {
+  background-color: $color-zinc-100; // bg-gray-100
+  color: $color-zinc-700; // text-gray-700
+}
+
+.statusInProgress {
+  background-color: $color-orange-100; // bg-orange-100
+  color: $color-orange-700; // text-orange-700
+}
+
+.statusOnHold {
+  background-color: $color-blue-100; // bg-blue-100
+  color: $color-blue-700; // text-blue-700
+}
+
+.statusCompleted {
+  background-color: $color-green-100; // bg-green-100
+  color: $color-green-700; // text-green-700
+}
+
+.statusBacklog {
+  background-color: $color-zinc-100; // bg-gray-100
+  color: $color-zinc-700; // text-gray-700
+}
+
+.statusTodo {
+  background-color: $color-blue-100; // bg-blue-100
+  color: $color-blue-700; // text-blue-700
+}
+
+.statusDone {
+  background-color: $color-green-100; // bg-green-100
+  color: $color-green-700; // text-green-700
+}
+

@@ -7,38 +7,39 @@ import { ModelContributionStream } from "./ModelContributionStream";
 import { TaskCompletionGauge } from "./TaskCompletionGauge";
 import { ServerEfficiencyChart } from "./ServerEfficiencyChart";
 import { LayoutGrid } from "lucide-react";
+import styles from "./Dashboard.module.scss";
 
 export function Dashboard() {
   return (
-    <div className="p-8">
+    <div className={styles.dashboard}>
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 text-zinc-300 mb-4">
-          <LayoutGrid className="w-4 h-4" />
-          <span className="text-sm">Dashboard</span>
+      <div className={styles.header}>
+        <div className={styles.headerTop}>
+          <LayoutGrid className={styles.headerIcon} />
+          <span className={styles.headerLabel}>Dashboard</span>
         </div>
-        <h1 className="text-3xl text-white">Welcome back John Doe!</h1>
+        <h1 className={styles.headerTitle}>Welcome back John Doe!</h1>
       </div>
 
       {/* Bento Grid */}
-      <div className="grid grid-cols-12 gap-4 auto-rows-[140px]">
+      <div className={styles.bentoGrid}>
         {/* Task Progress Chart - spans 2 rows and 5 columns */}
-        <div className="col-span-5 row-span-2">
+        <div className={styles.gridItem5Col2Row}>
           <TaskProgressChart completedTasks={19} totalTasks={40} />
         </div>
 
         {/* Radial Task Progress - spans 2 rows and 7 columns */}
-        <div className="col-span-7 row-span-2">
+        <div className={styles.gridItem7Col2Row}>
           <RadialTaskProgress />
         </div>
 
         {/* Hexagon Heatmap - spans 6 rows and 8 columns */}
-        <div className="col-span-8 row-span-6">
+        <div className={styles.gridItem8Col6Row}>
           <HexagonHeatmap radius={8} hexSize={28} />
         </div>
 
         {/* Multi-Ring Progress - spans 6 rows and 4 columns */}
-        <div className="col-span-4 row-span-6">
+        <div className={styles.gridItem4Col6Row}>
           <MultiRingProgress
             tasks={[
               { name: "Progress 1", progress: 85, color: "#e0e7ff" },
@@ -50,7 +51,7 @@ export function Dashboard() {
         </div>
 
         {/* Code Contribution Chart - spans 3 rows and 12 columns */}
-        <div className="col-span-12 row-span-3">
+        <div className={styles.gridItem12Col3Row}>
           <CodeContributionChart
             title="Overall Contribution"
             subtitle="2 Agents over the last 30 days"
@@ -59,14 +60,14 @@ export function Dashboard() {
         </div>
 
         {/* Small panels row */}
-        <div className="col-span-4 row-span-2">
+        <div className={styles.gridItem4Col2Row}>
           <ModelContributionStream
             title="Model Contributions"
             subtitle="Lines of code by AI model"
           />
         </div>
 
-        <div className="col-span-4 row-span-2">
+        <div className={styles.gridItem4Col2Row}>
           <TaskCompletionGauge
             title="Task Balance"
             subtitle="Completion vs Creation Rate"

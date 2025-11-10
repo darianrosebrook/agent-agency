@@ -1,31 +1,43 @@
-'use client';
+"use client";
 
 /**
  * Security Settings Tab
  * Password change and 2FA management
- * 
+ *
  * @author @darianrosebrook
  */
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { get2FA, setup2FA, verify2FA, disable2FA, changePassword } from '@/lib/api/settings';
-import styles from './SecuritySettingsTab.module.scss';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/primitives/button";
+import { Input } from "@/components/primitives/input";
+import { Label } from "@/components/primitives/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/primitives/card";
+import {
+  get2FA,
+  setup2FA,
+  verify2FA,
+  disable2FA,
+  changePassword,
+} from "@/lib/api/settings";
+import styles from "./SecuritySettingsTab.module.scss";
 
 export function SecuritySettingsTab() {
   const [twoFA, setTwoFA] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [setupMode, setSetupMode] = useState(false);
-  const [qrUrl, setQrUrl] = useState('');
+  const [qrUrl, setQrUrl] = useState("");
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
-  const [verificationCode, setVerificationCode] = useState('');
-  
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [verificationCode, setVerificationCode] = useState("");
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   useEffect(() => {
     load2FA();
@@ -37,7 +49,7 @@ export function SecuritySettingsTab() {
       const result = await get2FA();
       setTwoFA(result);
     } catch (error) {
-      console.error('Failed to load 2FA:', error);
+      console.error("Failed to load 2FA:", error);
     } finally {
       setLoading(false);
     }
@@ -45,61 +57,64 @@ export function SecuritySettingsTab() {
 
   const handleSetup2FA = async () => {
     try {
-      const result = await setup2FA('totp');
+      const result = await setup2FA("totp");
       setQrUrl(result.qr_url);
       setBackupCodes(result.backup_codes);
       setSetupMode(true);
     } catch (error) {
-      console.error('Failed to setup 2FA:', error);
-      alert('Failed to setup 2FA');
+      console.error("Failed to setup 2FA:", error);
+      alert("Failed to setup 2FA");
     }
   };
 
   const handleVerify2FA = async () => {
     try {
-      await verify2FA('totp', verificationCode);
-      alert('2FA enabled successfully! Save your backup codes: ' + backupCodes.join(', '));
+      await verify2FA("totp", verificationCode);
+      alert(
+        "2FA enabled successfully! Save your backup codes: " +
+          backupCodes.join(", ")
+      );
       setSetupMode(false);
       await load2FA();
     } catch (error) {
-      console.error('Failed to verify 2FA:', error);
-      alert('Invalid verification code');
+      console.error("Failed to verify 2FA:", error);
+      alert("Invalid verification code");
     }
   };
 
   const handleDisable2FA = async () => {
-    if (!confirm('Are you sure you want to disable 2FA?')) return;
-    
+    if (!confirm("Are you sure you want to disable 2FA?")) return;
+
     try {
       await disable2FA();
-      alert('2FA disabled successfully');
+      alert("2FA disabled successfully");
       await load2FA();
     } catch (error) {
-      console.error('Failed to disable 2FA:', error);
-      alert('Failed to disable 2FA');
+      console.error("Failed to disable 2FA:", error);
+      alert("Failed to disable 2FA");
     }
   };
 
   const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
-      alert('Passwords do not match');
+      alert("Passwords do not match");
       return;
     }
 
     if (newPassword.length < 8) {
-      alert('Password must be at least 8 characters');
+      alert("Password must be at least 8 characters");
       return;
     }
 
     try {
       await changePassword(currentPassword, newPassword);
-      alert('Password changed successfully');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      alert("Password changed successfully");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
     } catch (error) {
-      console.error('Failed to change password:', error);
-      alert('Failed to change password');
+      console.error("Failed to change password:", error);
+      alert("Failed to change password");
     }
   };
 
@@ -112,7 +127,9 @@ export function SecuritySettingsTab() {
       <Card>
         <CardHeader>
           <CardTitle>Two-Factor Authentication</CardTitle>
-          <CardDescription>Add an extra layer of security to your account</CardDescription>
+          <CardDescription>
+            Add an extra layer of security to your account
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {twoFA?.is_enabled ? (
@@ -127,11 +144,18 @@ export function SecuritySettingsTab() {
               <p>Scan this QR code with your authenticator app:</p>
               {qrUrl && (
                 <div className={styles.qrCode}>
-                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrUrl)}`} alt="QR Code" />
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+                      qrUrl
+                    )}`}
+                    alt="QR Code"
+                  />
                 </div>
               )}
               <div className={styles.formGroup}>
-                <Label htmlFor="verificationCode">Enter verification code</Label>
+                <Label htmlFor="verificationCode">
+                  Enter verification code
+                </Label>
                 <Input
                   id="verificationCode"
                   type="text"
@@ -197,4 +221,3 @@ export function SecuritySettingsTab() {
     </div>
   );
 }
-

@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import { Circle, CircleDashed } from 'lucide-react';
+import { Circle, CircleDashed } from "lucide-react";
 import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '../../ui/accordion';
-import { Button } from '../../ui/button';
-import { ContextChip } from './ContextChip';
-import { SubtaskItem } from './SubtaskItem';
-import { ContextMenu } from './ContextMenu';
-import { calculateTaskProgress } from './utils';
-import type { Task } from './types';
-import styles from './TaskItem.module.scss';
+} from "../../primitives/accordion";
+import { Button } from "../../primitives/button";
+import { ContextChip } from "./ContextChip";
+import { SubtaskItem } from "./SubtaskItem";
+import { ContextMenu } from "./ContextMenu";
+import { calculateTaskProgress } from "./utils";
+import type { Task } from "./types";
+import styles from "./TaskItem.module.scss";
 
 interface TaskItemProps {
   task: Task;
@@ -23,7 +23,7 @@ interface TaskItemProps {
   onToggleSubtask: (subtaskId: string) => void;
   onDeleteSubtask: (subtaskId: string) => void;
   onAddContextChip: (
-    type: 'file' | 'reference' | 'tool',
+    type: "file" | "reference" | "tool",
     label: string
   ) => void;
   onRemoveContextChip: (chipId: string) => void;
@@ -43,10 +43,7 @@ export function TaskItem({
   const progress = calculateTaskProgress(task);
 
   return (
-    <AccordionItem
-      value={task.id}
-      className={styles.taskItem}
-    >
+    <AccordionItem value={task.id} className={styles.taskItem}>
       <AccordionTrigger className={styles.taskTrigger}>
         <div className={styles.taskTriggerContent}>
           {task.subtasks.length > 0 ? (
@@ -114,15 +111,12 @@ export function TaskItem({
           </Button>
 
           <ContextMenu
-            onAddFile={() => onAddContextChip('file', 'Uploaded file')}
-            onAddReference={(type) =>
-              onAddContextChip('reference', type)
-            }
-            onAddTool={(tool) => onAddContextChip('tool', tool)}
+            onAddFile={() => onAddContextChip("file", "Uploaded file")}
+            onAddReference={(type) => onAddContextChip("reference", type)}
+            onAddTool={(tool) => onAddContextChip("tool", tool)}
           />
         </div>
       </AccordionContent>
     </AccordionItem>
   );
 }
-

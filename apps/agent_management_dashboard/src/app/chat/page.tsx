@@ -8,8 +8,8 @@ const Chat = dynamic(
   () => import("@/components/chat/Chat").then((mod) => ({ default: mod.Chat })),
   {
     loading: () => (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-sm text-gray-400">Loading chat...</div>
+      <div className={styles.loadingContainer}>
+        <div className={styles.loadingText}>Loading chat...</div>
       </div>
     ),
   }
@@ -22,8 +22,8 @@ const ChatSidebar = dynamic(
     })),
   {
     loading: () => (
-      <div className="w-64 bg-gray-900 border-r border-gray-800">
-        <div className="p-4 text-sm text-gray-400">Loading sidebar...</div>
+      <div className={styles.sidebarLoadingContainer}>
+        <div className={styles.sidebarLoadingText}>Loading sidebar...</div>
       </div>
     ),
   }
@@ -34,8 +34,8 @@ export default function ChatPage() {
     <div className={styles.chatPage}>
       <Suspense
         fallback={
-          <div className="w-64 bg-gray-900 border-r border-gray-800">
-            <div className="p-4 text-sm text-gray-400">Loading sidebar...</div>
+          <div className={styles.sidebarLoadingContainer}>
+            <div className={styles.sidebarLoadingText}>Loading sidebar...</div>
           </div>
         }
       >
@@ -44,8 +44,8 @@ export default function ChatPage() {
       <div className={styles.chatContent}>
         <Suspense
           fallback={
-            <div className="flex items-center justify-center h-full">
-              <div className="text-sm text-gray-400">Loading chat...</div>
+            <div className={styles.loadingContainer}>
+              <div className={styles.loadingText}>Loading chat...</div>
             </div>
           }
         >

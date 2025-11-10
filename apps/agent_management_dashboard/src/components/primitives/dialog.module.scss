@@ -1,0 +1,119 @@
+@use "../../styles/design-tokens.scss" as *;
+
+.dialogOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background-color: rgba(0, 0, 0, 0.5);
+
+  &[data-state='open'] {
+    animation: fade-in $duration-normal $ease-out;
+  }
+
+  &[data-state='closed'] {
+    animation: fade-out $duration-normal $ease-out;
+  }
+}
+
+.dialogContent {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 50;
+  display: grid;
+  width: 100%;
+  max-width: calc(100% - 2rem);
+  transform: translate(-50%, -50%);
+  gap: $spacing-4;
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
+  border: 1px solid var(--border);
+  padding: $spacing-6;
+  background-color: var(--background);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transition-duration: $duration-normal;
+
+  &[data-state='open'] {
+    animation: fade-in $duration-normal $ease-out, zoom-in-95 $duration-normal $ease-out;
+  }
+
+  &[data-state='closed'] {
+    animation: fade-out $duration-normal $ease-out, zoom-out-95 $duration-normal $ease-out;
+  }
+
+  @media (min-width: $breakpoint-sm) {
+    max-width: 32rem; // sm:max-w-lg
+  }
+}
+
+.dialogClose {
+  position: absolute;
+  top: $spacing-4;
+  right: $spacing-4;
+  border-radius: 2px; // rounded-xs
+  opacity: 0.7;
+  transition: opacity $transition-normal;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ring);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ring), 0 0 0 4px hsl(var(--ring) / 0.5);
+  }
+
+  &[data-state='open'] {
+    background-color: var(--accent);
+    color: var(--muted-foreground);
+  }
+
+  &:disabled {
+    pointer-events: none;
+  }
+
+  svg {
+    pointer-events: none;
+    flex-shrink: 0;
+    width: 1rem; // size-4
+    height: 1rem;
+  }
+}
+
+.dialogHeader {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2;
+  text-align: center;
+
+  @media (min-width: $breakpoint-sm) {
+    text-align: left;
+  }
+}
+
+.dialogFooter {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: $spacing-2;
+
+  @media (min-width: $breakpoint-sm) {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}
+
+.dialogTitle {
+  font-size: $font-size-lg;
+  line-height: 1;
+  font-weight: $font-weight-semibold;
+}
+
+.dialogDescription {
+  color: var(--muted-foreground);
+  font-size: $font-size-sm;
+}
+

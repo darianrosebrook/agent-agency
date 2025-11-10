@@ -4,7 +4,7 @@ import { useState } from "react";
 import svgPaths from "../../imports/svg-jzcqnicw4t";
 import { ChatSidebar } from "./ChatSidebar";
 import WorkspacePanel from "../../imports/WorkspacePanel";
-import { cn } from "../ui/utils";
+import { cn } from "../primitives/utils";
 import styles from "./WorkspaceTab.module.scss";
 
 export function WorkspaceTab() {
@@ -92,9 +92,7 @@ export function WorkspaceTab() {
                         </defs>
                       </svg>
                     </div>
-                    <p className={styles.sidebarHeaderTitle}>
-                      Workspace
-                    </p>
+                    <p className={styles.sidebarHeaderTitle}>Workspace</p>
                     <button
                       onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                       className={styles.sidebarCollapseButton}
@@ -122,10 +120,7 @@ export function WorkspaceTab() {
 
               {/* Tab List */}
               <div className={styles.tabList}>
-                <div
-                  aria-hidden="true"
-                  className={styles.tabListBorder}
-                />
+                <div aria-hidden="true" className={styles.tabListBorder} />
                 <div className={styles.tabListContent}>
                   <button
                     onClick={() => setActiveTab("context")}
@@ -175,7 +170,7 @@ export function WorkspaceTab() {
                 {activeTab === "context" ? (
                   <ContextFileTree onSelect={setSelectedItem} />
                 ) : (
-                  <div className="h-full">
+                  <div className={styles.fullHeight}>
                     <ChatSidebar onSelect={setSelectedItem} />
                   </div>
                 )}
@@ -291,9 +286,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
               </defs>
             </svg>
           </div>
-          <p className={styles.folderName}>
-            src
-          </p>
+          <p className={styles.folderName}>src</p>
         </button>
         {expandedFolders.has("src") && (
           <div className={styles.folderChildren}>
@@ -340,9 +333,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
                   </defs>
                 </svg>
               </div>
-              <p className={styles.fileName}>
-                components
-              </p>
+              <p className={styles.fileName}>components</p>
             </button>
             <button
               onClick={() => onSelect("src/utils")}
@@ -387,9 +378,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
                   </defs>
                 </svg>
               </div>
-              <p className={styles.fileName}>
-                utils
-              </p>
+              <p className={styles.fileName}>utils</p>
             </button>
           </div>
         )}
@@ -444,9 +433,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
               </defs>
             </svg>
           </div>
-          <p className={styles.folderName}>
-            public
-          </p>
+          <p className={styles.folderName}>public</p>
         </button>
         {expandedFolders.has("public") && (
           <div className={styles.folderChildren}>
@@ -505,9 +492,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
                   </defs>
                 </svg>
               </div>
-              <p className={styles.fileName}>
-                index.html
-              </p>
+              <p className={styles.fileName}>index.html</p>
             </button>
             <button
               onClick={() => onSelect("public/styles.css")}
@@ -564,9 +549,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
                   </defs>
                 </svg>
               </div>
-              <p className={styles.fileName}>
-                styles.css
-              </p>
+              <p className={styles.fileName}>styles.css</p>
             </button>
           </div>
         )}
@@ -621,9 +604,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
             </defs>
           </svg>
         </div>
-        <p className={styles.fileName}>
-          package.json
-        </p>
+        <p className={styles.fileName}>package.json</p>
       </button>
 
       {/* README.md */}
@@ -682,9 +663,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
             </defs>
           </svg>
         </div>
-        <p className={styles.fileName}>
-          README.md
-        </p>
+        <p className={styles.fileName}>README.md</p>
       </button>
     </div>
   );

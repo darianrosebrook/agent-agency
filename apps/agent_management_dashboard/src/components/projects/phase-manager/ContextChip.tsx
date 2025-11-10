@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { X, Upload, Link as LinkIcon, Wrench } from 'lucide-react';
-import type { ContextChip as ContextChipType } from './types';
-import { cn } from '../../ui/utils';
-import styles from './ContextChip.module.scss';
+import { X, Upload, Link as LinkIcon, Wrench } from "lucide-react";
+import type { ContextChip as ContextChipType } from "./types";
+import { cn } from "../../primitives/utils";
+import styles from "./ContextChip.module.scss";
 
 interface ContextChipProps {
   chip: ContextChipType;
@@ -12,11 +12,11 @@ interface ContextChipProps {
 
 function getChipIcon(type: string) {
   switch (type) {
-    case 'file':
+    case "file":
       return <Upload className={styles.contextChipIcon} />;
-    case 'reference':
+    case "reference":
       return <LinkIcon className={styles.contextChipIcon} />;
-    case 'tool':
+    case "tool":
       return <Wrench className={styles.contextChipIcon} />;
     default:
       return null;
@@ -28,13 +28,9 @@ export function ContextChip({ chip, onRemove }: ContextChipProps) {
     <div className={styles.contextChip}>
       {getChipIcon(chip.type)}
       <span>{chip.label}</span>
-      <button
-        onClick={onRemove}
-        className={styles.contextChipRemove}
-      >
+      <button onClick={onRemove} className={styles.contextChipRemove}>
         <X className={styles.contextChipRemoveIcon} />
       </button>
     </div>
   );
 }
-

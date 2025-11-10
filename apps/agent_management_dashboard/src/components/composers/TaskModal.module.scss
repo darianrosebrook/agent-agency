@@ -13,7 +13,7 @@
 
 .modalContent {
   background-color: $color-zinc-800; // bg-zinc-800
-  border-radius: $spacing-lg; // rounded-lg
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
   width: 100%; // w-full
   max-width: 42rem; // max-w-2xl
   color: $color-white; // text-white
@@ -101,7 +101,7 @@
   left: 0;
   margin-top: $spacing-2; // mt-2
   background-color: $color-white; // bg-white
-  border-radius: $spacing-lg; // rounded-lg
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); // shadow-xl
   padding-block: $spacing-2; // py-2
   z-index: 10;

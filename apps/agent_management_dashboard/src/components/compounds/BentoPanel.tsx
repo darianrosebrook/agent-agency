@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { cn } from "../ui/utils";
+import { cn } from "../primitives/utils";
 import styles from "./BentoPanel.module.scss";
 
 interface BentoPanelProps {
@@ -7,13 +7,6 @@ interface BentoPanelProps {
   className?: string;
 }
 
-export function BentoPanel({
-  children,
-  className = "",
-}: BentoPanelProps) {
-  return (
-    <div className={cn(styles.bentoPanel, className)}>
-      {children}
-    </div>
-  );
+export function BentoPanel({ children, className = "" }: BentoPanelProps) {
+  return <div className={cn(styles.bentoPanel, className)}>{children}</div>;
 }

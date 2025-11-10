@@ -213,7 +213,7 @@
   align-items: center;
   overflow: clip;
   padding-left: 2.25rem; // pl-[36px]
-  padding-right: 3rem; // pr-[48px]
+  padding-right: $spacing-12; // pr-[48px]
   padding-block: 0.25rem; // py-[4px]
   position: relative;
   border-radius: inherit;

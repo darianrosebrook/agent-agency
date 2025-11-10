@@ -13,6 +13,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import type { Task } from "../lib/schemas/chat";
+import { cn } from "./primitives/utils";
+import styles from "./TaskTimeline.module.scss";
 
 interface TaskTimelineProps {
   tasks: Task[];
@@ -69,44 +71,42 @@ export function TaskTimeline({ tasks }: TaskTimelineProps) {
   };
 
   const getTaskIcon = (task: Task) => {
-    const iconClass = "w-4 h-4";
-
     // Determine icon based on task name/type
     if (
       task.name.toLowerCase().includes("search") ||
       task.name.toLowerCase().includes("analyzing")
     ) {
-      return <Search className={iconClass} />;
+      return <Search className={styles.icon} />;
     } else if (
       task.name.toLowerCase().includes("think") ||
       task.name.toLowerCase().includes("reasoning")
     ) {
-      return <Lightbulb className={iconClass} />;
+      return <Lightbulb className={styles.icon} />;
     } else if (
       task.name.toLowerCase().includes("generating") ||
       task.name.toLowerCase().includes("creating")
     ) {
-      return <Code className={iconClass} />;
+      return <Code className={styles.icon} />;
     } else if (
       task.name.toLowerCase().includes("format") ||
       task.name.toLowerCase().includes("output")
     ) {
-      return <FileText className={iconClass} />;
+      return <FileText className={styles.icon} />;
     } else {
-      return <Circle className={iconClass} />;
+      return <Circle className={styles.icon} />;
     }
   };
 
   const getStatusIcon = (status: Task["status"]) => {
     switch (status) {
       case "completed":
-        return <CheckCircle2 className="w-4 h-4 text-green-700" />;
+        return <CheckCircle2 className={cn(styles.statusIcon, styles.statusIconCompleted)} />;
       case "in-progress":
-        return <Loader2 className="w-4 h-4 text-slate-600 animate-spin" />;
+        return <Loader2 className={cn(styles.statusIcon, styles.statusIconInProgress)} />;
       case "failed":
-        return <Circle className="w-4 h-4 text-red-500" />;
+        return <Circle className={cn(styles.statusIcon, styles.statusIconFailed)} />;
       default:
-        return <Circle className="w-4 h-4 text-gray-600" />;
+        return <Circle className={cn(styles.statusIcon, styles.statusIconDefault)} />;
     }
   };
 
@@ -121,7 +121,7 @@ export function TaskTimeline({ tasks }: TaskTimelineProps) {
   if (tasks.length === 0) return null;
 
   return (
-    <div className="space-y-0">
+    <div className={styles.taskTimeline}>
       {tasks.map((task, index) => {
         const isExpanded = expandedTasks.has(task.id);
         const canExpand =
@@ -129,67 +129,67 @@ export function TaskTimeline({ tasks }: TaskTimelineProps) {
         const isLast = index === tasks.length - 1;
 
         return (
-          <div key={task.id} className="relative">
+          <div key={task.id} className={styles.taskTimelineItem}>
             {/* Vertical connecting line */}
             {!isLast && (
-              <div className="absolute left-[19px] top-[28px] w-[1px] h-[calc(100%+8px)] bg-gray-800" />
+              <div className={styles.connectingLine} />
             )}
 
             {/* Task row */}
             <div
-              className={`flex items-start gap-3 py-2 ${
-                canExpand
-                  ? "cursor-pointer hover:bg-zinc-800/30 rounded-lg -mx-2 px-2"
-                  : ""
-              }`}
+              className={cn(
+                styles.taskRow,
+                canExpand && styles.taskRowExpandable
+              )}
               onClick={() => canExpand && toggleTask(task.id)}
             >
               {/* Icon container */}
-              <div className="relative shrink-0 w-8 h-8 rounded-full border border-gray-800 flex items-center justify-center bg-[rgb(15,15,15)]">
+              <div className={styles.iconContainer}>
                 <div
-                  className={`${
+                  className={cn(
                     task.status === "completed"
-                      ? "text-gray-300"
+                      ? styles.iconContainerCompleted
                       : task.status === "in-progress"
-                      ? "text-slate-600"
-                      : "text-gray-600"
-                  }`}
+                      ? styles.iconContainerInProgress
+                      : styles.iconContainerDefault
+                  )}
                 >
                   {getTaskIcon(task)}
                 </div>
 
                 {/* Status indicator badge */}
-                <div className="absolute -bottom-2 -right-2 bg-[#0f0f0f] rounded-full p-0.5">
+                <div className={styles.statusBadge}>
                   {getStatusIcon(task.status)}
                 </div>
               </div>
 
               {/* Task content */}
-              <div className="flex-1 min-w-0 pt-2">
-                <div className="flex items-center gap-2">
+              <div className={styles.taskContent}>
+                <div className={styles.taskContentRow}>
                   <span
-                    className={`text-sm ${
+                    className={cn(
+                      styles.taskName,
                       task.status === "completed"
-                        ? "text-gray-300"
+                        ? styles.taskNameCompleted
                         : task.status === "in-progress"
-                        ? "text-slate-600"
-                        : "text-gray-500"
-                    }`}
+                        ? styles.taskNameInProgress
+                        : styles.taskNameDefault
+                    )}
                   >
                     {task.name}
                   </span>
                   {task.status === "in-progress" && (
-                    <span className="text-xs text-gray-600">•</span>
+                    <span className={styles.taskSeparator}>•</span>
                   )}
-                  <span className="text-xs text-gray-600">
+                  <span className={styles.taskTime}>
                     {getRelativeTime(task.timestamp)}
                   </span>
                   {canExpand && (
-                    <div className="shrink-0">
+                    <div className={styles.expandIconContainer}>
                       {isExpanded ? (
-                        <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+                        <ChevronDown className={styles.expandIcon} />
                       ) : (
-                        <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
+                        <ChevronRight className={styles.expandIcon} />
                       )}
                     </div>
                   )}
@@ -197,8 +197,8 @@ export function TaskTimeline({ tasks }: TaskTimelineProps) {
 
                 {/* Expandable thought process */}
                 {canExpand && isExpanded && task.result && (
-                  <div className="mt-2 p-3 rounded-lg">
-                    <p className="text-xs text-gray-400 leading-relaxed whitespace-pre-wrap">
+                  <div className={styles.expandedContent}>
+                    <p className={styles.expandedContentText}>
                       {task.result}
                     </p>
                   </div>

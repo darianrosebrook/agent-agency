@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { Accordion } from '../../ui/accordion';
-import { TaskItem } from './TaskItem';
-import type { Phase, Task } from './types';
-import { cn } from '../../ui/utils';
-import styles from './PhaseItem.module.scss';
+import { Accordion } from "../../primitives/accordion";
+import { TaskItem } from "./TaskItem";
+import type { Phase, Task } from "./types";
+import { cn } from "../../primitives/utils";
+import styles from "./PhaseItem.module.scss";
 
 interface PhaseItemProps {
   phase: Phase;
@@ -15,7 +15,7 @@ interface PhaseItemProps {
   onDeleteSubtask: (taskId: string, subtaskId: string) => void;
   onAddContextChip: (
     taskId: string,
-    type: 'file' | 'reference' | 'tool',
+    type: "file" | "reference" | "tool",
     label: string
   ) => void;
   onRemoveContextChip: (taskId: string, chipId: string) => void;
@@ -36,9 +36,7 @@ export function PhaseItem({
       <div className={styles.phaseHeader}>
         <div className={styles.phaseHeaderTop}>
           <h3 className={styles.phaseTitle}>{phase.title}</h3>
-          <span className={styles.phaseBadge}>
-            Phase {phase.number}
-          </span>
+          <span className={styles.phaseBadge}>Phase {phase.number}</span>
         </div>
         <p className={styles.phaseDescription}>{phase.description}</p>
       </div>
@@ -49,19 +47,13 @@ export function PhaseItem({
             key={task.id}
             task={task}
             phaseId={phase.id}
-            onUpdateTitle={(newTitle) =>
-              onUpdateTaskTitle(task.id, newTitle)
-            }
+            onUpdateTitle={(newTitle) => onUpdateTaskTitle(task.id, newTitle)}
             onUpdateDescription={(newDescription) =>
               onUpdateTaskDescription(task.id, newDescription)
             }
             onAddSubtask={() => onAddSubtask(task.id)}
-            onToggleSubtask={(subtaskId) =>
-              onToggleSubtask(task.id, subtaskId)
-            }
-            onDeleteSubtask={(subtaskId) =>
-              onDeleteSubtask(task.id, subtaskId)
-            }
+            onToggleSubtask={(subtaskId) => onToggleSubtask(task.id, subtaskId)}
+            onDeleteSubtask={(subtaskId) => onDeleteSubtask(task.id, subtaskId)}
             onAddContextChip={(type, label) =>
               onAddContextChip(task.id, type, label)
             }
@@ -74,4 +66,3 @@ export function PhaseItem({
     </div>
   );
 }
-

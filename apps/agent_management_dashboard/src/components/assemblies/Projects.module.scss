@@ -109,6 +109,17 @@
   max-width: 28rem; // max-w-md
 }
 
+.searchInput {
+  padding-left: 2.5rem; // pl-10
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border-color: $color-gray-800; // border-gray-800
+  color: $color-gray-100; // text-gray-100
+
+  &::placeholder {
+    color: $color-gray-600; // placeholder:text-gray-600
+  }
+}
+
 .searchIcon {
   position: absolute;
   left: $spacing-3;
@@ -152,7 +163,7 @@
 
 .recentProjectsEmpty {
   text-align: center;
-  padding-block: 3rem; // py-12
+  padding-block: $spacing-12; // py-12
   color: $color-gray-500; // text-gray-500
 }
 
@@ -173,7 +184,7 @@
 .projectCard {
   background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
   border: 1px solid $color-gray-800; // border border-gray-800
-  border-radius: calc(var(--radius) + 4px); // rounded-lg
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
   padding: $spacing-6;
   text-align: left;
   transition: background-color $transition-normal, border-color $transition-normal;
@@ -195,7 +206,7 @@
   height: 3rem; // h-12
   background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
   border: 1px solid $color-gray-800; // border border-gray-800
-  border-radius: calc(var(--radius) + 4px); // rounded-lg
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
   display: flex;
   align-items: center;
   justify-content: center;
@@ -247,7 +258,7 @@
 .projectsTable {
   background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
   border: 1px solid $color-gray-800; // border border-gray-800
-  border-radius: calc(var(--radius) + 4px); // rounded-lg
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
   overflow: hidden;
 }
 
@@ -323,7 +334,7 @@
 
 .tableEmptyCell {
   text-align: center;
-  padding-block: 3rem; // py-12
+  padding-block: $spacing-12; // py-12
   color: $color-gray-500; // text-gray-500
 }
 
@@ -385,3 +396,24 @@
   color: $color-gray-400; // text-gray-400
 }
 
+.icon {
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+}
+
+.iconLarge {
+  width: 4rem; // w-16
+  height: 4rem; // h-16
+  color: $color-gray-700; // text-gray-700
+  transition: color $transition-normal;
+}
+
+.emptyStateIconButton:hover .iconLarge {
+  color: $color-blue-500; // group-hover:text-blue-500
+}
+
+.iconWithMargin {
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+  margin-right: $spacing-2; // mr-2
+}

@@ -23,8 +23,8 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../ui/tooltip";
-import { cn } from "../ui/utils";
+} from "../primitives/tooltip";
+import { cn } from "../primitives/utils";
 import styles from "./NavigationSidebar.module.scss";
 
 export function Sidebar() {

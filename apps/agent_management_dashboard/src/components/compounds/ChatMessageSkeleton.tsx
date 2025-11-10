@@ -1,5 +1,5 @@
 import { Bot } from "lucide-react";
-import { Skeleton } from "../ui/skeleton";
+import { Skeleton } from "../primitives/skeleton";
 import { TaskTimeline } from "../TaskTimeline";
 import type { Task } from "../../lib/schemas/chat";
 import styles from "./ChatMessageSkeleton.module.scss";
@@ -34,12 +34,24 @@ export function ChatMessageSkeleton({ tasks = [] }: ChatMessageSkeletonProps) {
               {/* Content Lines Skeleton */}
               <div className={styles.contentLines}>
                 <Skeleton className={styles.contentLine} />
-                <Skeleton className={`${styles.contentLine} ${styles.contentLine90}`} />
-                <Skeleton className={`${styles.contentLine} ${styles.contentLine95}`} />
-                <Skeleton className={`${styles.contentLine} ${styles.contentLine85}`} />
-                <Skeleton className={`${styles.contentLine} ${styles.contentLine92}`} />
-                <Skeleton className={`${styles.contentLine} ${styles.contentLine88}`} />
-                <Skeleton className={`${styles.contentLine} ${styles.contentLine75}`} />
+                <Skeleton
+                  className={`${styles.contentLine} ${styles.contentLine90}`}
+                />
+                <Skeleton
+                  className={`${styles.contentLine} ${styles.contentLine95}`}
+                />
+                <Skeleton
+                  className={`${styles.contentLine} ${styles.contentLine85}`}
+                />
+                <Skeleton
+                  className={`${styles.contentLine} ${styles.contentLine92}`}
+                />
+                <Skeleton
+                  className={`${styles.contentLine} ${styles.contentLine88}`}
+                />
+                <Skeleton
+                  className={`${styles.contentLine} ${styles.contentLine75}`}
+                />
               </div>
 
               {/* Pulsing Indicator */}

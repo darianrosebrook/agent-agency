@@ -7,30 +7,22 @@ import {
   AIAgentsTabContent,
   TaskSettingsTabContent,
 } from "./settings";
-import { cn } from "../ui/utils";
+import { cn } from "../primitives/utils";
 import styles from "./SettingsTab.module.scss";
 
 type ManageTabType = "general" | "workHistory" | "aiAgents" | "taskSettings";
 
 function Heading() {
   return (
-    <div
-      className={styles.headingContainer}
-      data-name="Heading 1"
-    >
-      <p className={styles.headingText}>
-        Project Settings
-      </p>
+    <div className={styles.headingContainer} data-name="Heading 1">
+      <p className={styles.headingText}>Project Settings</p>
     </div>
   );
 }
 
 function Paragraph() {
   return (
-    <div
-      className={styles.paragraphContainer}
-      data-name="Paragraph"
-    >
+    <div className={styles.paragraphContainer} data-name="Paragraph">
       <p className={styles.paragraphText}>
         Manage your project configuration and team
       </p>
@@ -40,10 +32,7 @@ function Paragraph() {
 
 function Container() {
   return (
-    <div
-      className={styles.container}
-      data-name="Container"
-    >
+    <div className={styles.container} data-name="Container">
       <Heading />
       <Paragraph />
     </div>
@@ -57,31 +46,26 @@ interface TabListProps {
 
 function TabList({ activeTab, onTabChange }: TabListProps) {
   return (
-    <div
-      className={styles.tabList}
-      data-name="Tab List"
-    >
-      <div
-        aria-hidden="true"
-        className={styles.tabListBorder}
-      />
+    <div className={styles.tabList} data-name="Tab List">
+      <div aria-hidden="true" className={styles.tabListBorder} />
       <div className={styles.tabListContent}>
         <button
           onClick={() => onTabChange("general")}
           className={cn(
             styles.tabButton,
             styles.tabButtonGeneral,
-            activeTab === "general" ? styles.tabButtonActive : styles.tabButtonInactive
+            activeTab === "general"
+              ? styles.tabButtonActive
+              : styles.tabButtonInactive
           )}
         >
-          <div
-            aria-hidden="true"
-            className={styles.tabButtonBorder}
-          />
+          <div aria-hidden="true" className={styles.tabButtonBorder} />
           <p
             className={cn(
               styles.tabButtonText,
-              activeTab === "general" ? styles.tabButtonTextActive : styles.tabButtonTextInactive
+              activeTab === "general"
+                ? styles.tabButtonTextActive
+                : styles.tabButtonTextInactive
             )}
           >
             General
@@ -93,17 +77,18 @@ function TabList({ activeTab, onTabChange }: TabListProps) {
           className={cn(
             styles.tabButton,
             styles.tabButtonWorkHistory,
-            activeTab === "workHistory" ? styles.tabButtonActive : styles.tabButtonInactive
+            activeTab === "workHistory"
+              ? styles.tabButtonActive
+              : styles.tabButtonInactive
           )}
         >
-          <div
-            aria-hidden="true"
-            className={styles.tabButtonBorder}
-          />
+          <div aria-hidden="true" className={styles.tabButtonBorder} />
           <p
             className={cn(
               styles.tabButtonText,
-              activeTab === "workHistory" ? styles.tabButtonTextActive : styles.tabButtonTextInactive
+              activeTab === "workHistory"
+                ? styles.tabButtonTextActive
+                : styles.tabButtonTextInactive
             )}
           >
             Work History
@@ -115,17 +100,18 @@ function TabList({ activeTab, onTabChange }: TabListProps) {
           className={cn(
             styles.tabButton,
             styles.tabButtonAIAgents,
-            activeTab === "aiAgents" ? styles.tabButtonActive : styles.tabButtonInactive
+            activeTab === "aiAgents"
+              ? styles.tabButtonActive
+              : styles.tabButtonInactive
           )}
         >
-          <div
-            aria-hidden="true"
-            className={styles.tabButtonBorder}
-          />
+          <div aria-hidden="true" className={styles.tabButtonBorder} />
           <p
             className={cn(
               styles.tabButtonText,
-              activeTab === "aiAgents" ? styles.tabButtonTextActive : styles.tabButtonTextInactive
+              activeTab === "aiAgents"
+                ? styles.tabButtonTextActive
+                : styles.tabButtonTextInactive
             )}
           >
             AI Agents
@@ -137,17 +123,18 @@ function TabList({ activeTab, onTabChange }: TabListProps) {
           className={cn(
             styles.tabButton,
             styles.tabButtonTaskSettings,
-            activeTab === "taskSettings" ? styles.tabButtonActive : styles.tabButtonInactive
+            activeTab === "taskSettings"
+              ? styles.tabButtonActive
+              : styles.tabButtonInactive
           )}
         >
-          <div
-            aria-hidden="true"
-            className={styles.tabButtonBorder}
-          />
+          <div aria-hidden="true" className={styles.tabButtonBorder} />
           <p
             className={cn(
               styles.tabButtonText,
-              activeTab === "taskSettings" ? styles.tabButtonTextActive : styles.tabButtonTextInactive
+              activeTab === "taskSettings"
+                ? styles.tabButtonTextActive
+                : styles.tabButtonTextInactive
             )}
           >
             Task Settings

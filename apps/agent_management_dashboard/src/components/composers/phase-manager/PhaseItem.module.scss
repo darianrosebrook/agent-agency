@@ -3,7 +3,7 @@
 .phaseItem {
   margin-bottom: $spacing-6; // mb-6
   background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
-  border-radius: $spacing-xl; // rounded-xl
+  border-radius: 0.75rem; // rounded-xl = 12px (Tailwind default)
   border: 1px solid $color-zinc-800; // border border-zinc-800
   overflow: hidden;
 }

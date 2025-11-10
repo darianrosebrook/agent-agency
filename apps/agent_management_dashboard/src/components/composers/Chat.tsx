@@ -3,13 +3,13 @@
 import React, { useState } from "react";
 import { MessageSquare, X } from "lucide-react";
 import { FileDropzoneModal } from "./FileDropzone";
-import { Badge } from "../ui/badge";
+import { Badge } from "../primitives/badge";
 import { ChatMessage, ChatMessageSkeleton } from "../compounds";
 import svgPaths from "../../imports/svg-quupl4zjo1";
 import { useChatStore } from "../../lib/stores";
 import type { Message } from "../../lib/schemas/chat";
 import { simulateAIResponse } from "../ChatAIHelper";
-import { cn } from "../ui/utils";
+import { cn } from "../primitives/utils";
 import styles from "./Chat.module.scss";
 
 // Types imported from schemas
@@ -104,7 +104,7 @@ export function Chat() {
                 onClick={() => removeFile(index)}
                 className={styles.contextFileRemove}
               >
-                <X className="h-3 w-3" />
+                <X className={styles.iconSmall} />
               </button>
             </Badge>
           ))}
@@ -112,10 +112,7 @@ export function Chat() {
       )}
 
       <div className={styles.promptContainer}>
-        <div
-          aria-hidden="true"
-          className={styles.promptBorder}
-        />
+        <div aria-hidden="true" className={styles.promptBorder} />
         <div className={styles.promptInner}>
           <div className={styles.promptContent}>
             {/* Text Area */}
@@ -132,10 +129,7 @@ export function Chat() {
 
             {/* Container */}
             <div className={styles.promptActionsContainer}>
-              <div
-                aria-hidden="true"
-                className={styles.promptActionsBorder}
-              />
+              <div aria-hidden="true" className={styles.promptActionsBorder} />
               <div className={styles.promptActionsRow}>
                 <div className={styles.promptActionsContent}>
                   {/* Left side buttons */}
@@ -143,7 +137,10 @@ export function Chat() {
                     {/* Plus Button */}
                     <button
                       onClick={() => setIsModalOpen(true)}
-                      className={cn(styles.promptButton, styles.promptButtonSquare)}
+                      className={cn(
+                        styles.promptButton,
+                        styles.promptButtonSquare
+                      )}
                     >
                       <div className={styles.promptButtonIcon}>
                         <svg
@@ -171,7 +168,12 @@ export function Chat() {
                     </button>
 
                     {/* DeepSearch Button */}
-                    <button className={cn(styles.promptButton, styles.promptButtonRect)}>
+                    <button
+                      className={cn(
+                        styles.promptButton,
+                        styles.promptButtonRect
+                      )}
+                    >
                       <div className={styles.promptButtonIcon}>
                         <svg
                           className="block size-full"
@@ -219,7 +221,12 @@ export function Chat() {
                     </button>
 
                     {/* Think Button */}
-                    <button className={cn(styles.promptButton, styles.promptButtonRect)}>
+                    <button
+                      className={cn(
+                        styles.promptButton,
+                        styles.promptButtonRect
+                      )}
+                    >
                       <div className={styles.promptButtonIcon}>
                         <svg
                           className="block size-full"
@@ -261,9 +268,7 @@ export function Chat() {
                           </defs>
                         </svg>
                       </div>
-                      <span className={styles.promptButtonText}>
-                        Think
-                      </span>
+                      <span className={styles.promptButtonText}>Think</span>
                     </button>
                   </div>
 
@@ -318,7 +323,7 @@ export function Chat() {
           <div className={styles.emptyStateIcon}>
             <div className={styles.emptyStateIconWrapper}>
               <div className={styles.emptyStateIconBox}>
-                <MessageSquare className="w-16 h-16 text-gray-700" />
+                <MessageSquare className={styles.emptyStateIconLarge} />
               </div>
               {/* Decorative dots */}
               <div className={styles.emptyStateDot1}></div>

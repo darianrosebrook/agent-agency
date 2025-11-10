@@ -1,0 +1,222 @@
+@use "../../styles/design-tokens.scss" as *;
+
+.sheetOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background-color: rgba(0, 0, 0, 0.5);
+
+  &[data-state='open'] {
+    animation: fade-in $duration-normal $ease-out;
+  }
+
+  &[data-state='closed'] {
+    animation: fade-out $duration-normal $ease-out;
+  }
+}
+
+.sheetContent {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-4;
+  background-color: var(--background);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transition: ease-in-out;
+
+  &[data-side='right'] {
+    inset: 0 auto 0 0;
+    height: 100%;
+    width: 75%;
+    border-left: 1px solid var(--border);
+
+    &[data-state='open'] {
+      animation: slide-in-from-right $duration-slower $ease-out;
+    }
+
+    &[data-state='closed'] {
+      animation: slide-out-to-right $duration-normal $ease-out;
+    }
+
+    @media (min-width: $breakpoint-sm) {
+      max-width: 24rem; // sm:max-w-sm
+    }
+  }
+
+  &[data-side='left'] {
+    inset: 0 0 0 auto;
+    height: 100%;
+    width: 75%;
+    border-right: 1px solid var(--border);
+
+    &[data-state='open'] {
+      animation: slide-in-from-left $duration-slower $ease-out;
+    }
+
+    &[data-state='closed'] {
+      animation: slide-out-to-left $duration-normal $ease-out;
+    }
+
+    @media (min-width: $breakpoint-sm) {
+      max-width: 24rem; // sm:max-w-sm
+    }
+  }
+
+  &[data-side='top'] {
+    inset: 0 0 auto 0;
+    height: auto;
+    border-bottom: 1px solid var(--border);
+
+    &[data-state='open'] {
+      animation: slide-in-from-top $duration-slower $ease-out;
+    }
+
+    &[data-state='closed'] {
+      animation: slide-out-to-top $duration-normal $ease-out;
+    }
+  }
+
+  &[data-side='bottom'] {
+    inset: auto 0 0 0;
+    height: auto;
+    border-top: 1px solid var(--border);
+
+    &[data-state='open'] {
+      animation: slide-in-from-bottom $duration-slower $ease-out;
+    }
+
+    &[data-state='closed'] {
+      animation: slide-out-to-bottom $duration-normal $ease-out;
+    }
+  }
+}
+
+.sheetClose {
+  position: absolute;
+  top: $spacing-4;
+  right: $spacing-4;
+  border-radius: 2px; // rounded-xs
+  opacity: 0.7;
+  transition: opacity $transition-normal;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ring);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ring), 0 0 0 4px hsl(var(--ring) / 0.5);
+  }
+
+  &[data-state='open'] {
+    background-color: var(--secondary);
+  }
+
+  &:disabled {
+    pointer-events: none;
+  }
+}
+
+.sheetHeader {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-1_5;
+  padding: $spacing-4;
+}
+
+.sheetFooter {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2;
+  padding: $spacing-4;
+}
+
+.sheetTitle {
+  color: var(--foreground);
+  font-weight: $font-weight-semibold;
+}
+
+.sheetDescription {
+  color: var(--muted-foreground);
+  font-size: $font-size-sm;
+}
+
+@keyframes slide-in-from-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-out-to-right {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes slide-in-from-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-out-to-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes slide-in-from-top {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-out-to-top {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-100%);
+  }
+}
+
+@keyframes slide-in-from-bottom {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-out-to-bottom {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+

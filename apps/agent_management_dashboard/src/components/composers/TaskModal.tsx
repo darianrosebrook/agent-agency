@@ -19,7 +19,7 @@ import {
   type TaskStatus,
   type Priority,
 } from "../compounds";
-import { cn } from "../ui/utils";
+import { cn } from "../primitives/utils";
 import styles from "./TaskModal.module.scss";
 
 interface NewTaskModalProps {
@@ -184,7 +184,10 @@ export function NewTaskModal({
                             setStatus(key);
                             setShowStatusMenu(false);
                           }}
-                          className={cn(styles.menuItem, taskStatusConfig[key].color)}
+                          className={cn(
+                            styles.menuItem,
+                            taskStatusConfig[key].color
+                          )}
                         >
                           <StatusBadge
                             status={key}
@@ -281,7 +284,9 @@ export function NewTaskModal({
                       <span>{project}</span>
                     </>
                   ) : (
-                    <span className={styles.projectPlaceholder}>Add project</span>
+                    <span className={styles.projectPlaceholder}>
+                      Add project
+                    </span>
                   )}
                 </button>
                 {showProjectMenu && (
@@ -364,18 +369,25 @@ export function NewTaskModal({
 
             <div className={styles.subtasksList}>
               {subtasks.map((task) => (
-                <div
-                  key={task.id}
-                  className={styles.subtaskItem}
-                >
+                <div key={task.id} className={styles.subtaskItem}>
                   <button
                     onClick={() => toggleSubtask(task.id)}
                     className={styles.subtaskCheckbox}
                   >
                     {task.completed ? (
-                      <CheckCircle2 className={cn(styles.subtaskCheckboxIcon, styles.subtaskCheckboxIconCompleted)} />
+                      <CheckCircle2
+                        className={cn(
+                          styles.subtaskCheckboxIcon,
+                          styles.subtaskCheckboxIconCompleted
+                        )}
+                      />
                     ) : (
-                      <Circle className={cn(styles.subtaskCheckboxIcon, styles.subtaskCheckboxIconIncomplete)} />
+                      <Circle
+                        className={cn(
+                          styles.subtaskCheckboxIcon,
+                          styles.subtaskCheckboxIconIncomplete
+                        )}
+                      />
                     )}
                   </button>
                   <span
@@ -399,7 +411,12 @@ export function NewTaskModal({
 
               {isAddingSubtask && (
                 <div className={styles.subtaskInputContainer}>
-                  <Circle className={cn(styles.subtaskCheckboxIcon, styles.subtaskCheckboxIconIncomplete)} />
+                  <Circle
+                    className={cn(
+                      styles.subtaskCheckboxIcon,
+                      styles.subtaskCheckboxIconIncomplete
+                    )}
+                  />
                   <input
                     type="text"
                     placeholder="Subtask title"

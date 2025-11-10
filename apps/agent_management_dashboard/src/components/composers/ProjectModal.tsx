@@ -12,7 +12,7 @@ import {
   type ProjectStatus,
   type Priority,
 } from "../compounds";
-import { cn } from "../ui/utils";
+import { cn } from "../primitives/utils";
 import styles from "./ProjectModal.module.scss";
 
 interface NewProjectModalProps {
@@ -107,16 +107,10 @@ export function NewProjectModal({
         }
       }}
     >
-      <div
-        className={styles.modalContent}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className={styles.modalHeader}>
-          <button
-            onClick={handleSave}
-            className={styles.closeButton}
-          >
+          <button onClick={handleSave} className={styles.closeButton}>
             <X className={styles.closeButtonIcon} />
           </button>
           <div className={styles.modalHeaderTitle}>
@@ -208,7 +202,10 @@ export function NewProjectModal({
                             setStatus(key);
                             setShowStatusMenu(false);
                           }}
-                          className={cn(styles.menuItem, projectStatusConfig[key].color)}
+                          className={cn(
+                            styles.menuItem,
+                            projectStatusConfig[key].color
+                          )}
                         >
                           <StatusBadge
                             status={key}

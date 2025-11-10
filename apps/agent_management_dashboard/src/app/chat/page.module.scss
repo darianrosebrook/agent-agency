@@ -2,10 +2,36 @@
 
 .chatPage {
   display: flex;
-  height: 100%; // h-full
+  height: 100%;
 }
 
 .chatContent {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.loadingContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.loadingText {
+  font-size: $font-size-sm; // text-sm
+  color: $color-zinc-400; // text-gray-400
+}
+
+.sidebarLoadingContainer {
+  width: 16rem; // w-64
+  background-color: $color-zinc-900; // bg-gray-900
+  border-right: 1px solid $color-zinc-800; // border-r border-gray-800
+  padding: $spacing-4; // p-4
+}
+
+.sidebarLoadingText {
+  font-size: $font-size-sm; // text-sm
+  color: $color-zinc-400; // text-gray-400
 }
 

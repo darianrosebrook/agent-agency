@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, Plus, MessageSquare } from "lucide-react";
 import { useChatStore } from "../../lib/stores";
 import { ChatListSkeleton } from "../compounds";
-import { cn } from "../ui/utils";
+import { cn } from "../primitives/utils";
 import styles from "./ChatSidebar.module.scss";
 
 interface ChatGroup {
@@ -76,10 +76,7 @@ export function ChatSidebar({ onSelect }: ChatSidebarProps = {}) {
       <div className={styles.header}>
         <div className={styles.headerTop}>
           <h2 className={styles.headerTitle}>Chats</h2>
-          <button
-            onClick={handleNewChat}
-            className={styles.newChatButton}
-          >
+          <button onClick={handleNewChat} className={styles.newChatButton}>
             <Plus className={styles.newChatButtonIcon} />
           </button>
         </div>
@@ -107,9 +104,7 @@ export function ChatSidebar({ onSelect }: ChatSidebarProps = {}) {
                   ) : (
                     <ChevronRight className={styles.groupHeaderIcon} />
                   )}
-                  <span className={styles.groupHeaderText}>
-                    {group.name}
-                  </span>
+                  <span className={styles.groupHeaderText}>{group.name}</span>
                   <span className={styles.groupCount}>{chats.length}</span>
                 </button>
 

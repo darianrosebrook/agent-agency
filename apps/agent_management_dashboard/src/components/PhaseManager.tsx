@@ -17,7 +17,7 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "./ui/accordion";
+} from "./primitives/accordion";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,8 +26,10 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
-import { Button } from "./ui/button";
+} from "./primitives/dropdown-menu";
+import { Button } from "./primitives/button";
+import { cn } from "./primitives/utils";
+import styles from "./PhaseManager.module.scss";
 
 interface Subtask {
   id: string;
@@ -321,37 +323,37 @@ export function PhaseManager({
   const getChipIcon = (type: string) => {
     switch (type) {
       case "file":
-        return <Upload className="w-3 h-3" />;
+        return <Upload className={styles.iconSmall} />;
       case "reference":
-        return <LinkIcon className="w-3 h-3" />;
+        return <LinkIcon className={styles.iconSmall} />;
       case "tool":
-        return <Wrench className="w-3 h-3" />;
+        return <Wrench className={styles.iconSmall} />;
       default:
         return null;
     }
   };
 
   return (
-    <div className="w-full">
+    <div className={styles.phaseManager}>
       {/* Header */}
-      <div className="mb-6">
-        <h2 className="text-2xl text-white mb-2">Project Plan</h2>
-        <p className="text-zinc-400 mb-4">
+      <div className={styles.header}>
+        <h2 className={styles.headerTitle}>Project Plan</h2>
+        <p className={styles.headerDescription}>
           Here&apos;s a comprehensive plan for building your multi-modal RAG
           search UI tool
         </p>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-2">
+        <div className={styles.actionButtons}>
           <Button
             onClick={onSaveToProject}
-            className="bg-blue-600 text-white hover:bg-blue-700"
+            className={styles.addToProjectButton}
           >
             Add to Project
           </Button>
           <Button
             variant="outline"
-            className="bg-[#1a1a1a] border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+            className={styles.startNewProjectButton}
           >
             Start New Project
           </Button>
@@ -360,23 +362,20 @@ export function PhaseManager({
 
       {/* Phases */}
       {phases.map((phase) => (
-        <div
-          key={phase.id}
-          className="mb-6 bg-[#1a1a1a] rounded-xl border border-zinc-800 overflow-hidden"
-        >
+        <div key={phase.id} className={styles.phaseCard}>
           {/* Phase Header */}
-          <div className="px-6 py-5 border-b border-zinc-800">
-            <div className="flex items-center gap-3 mb-2">
-              <h3 className="text-xl text-white">{phase.title}</h3>
-              <span className="px-3 py-1 bg-zinc-800 text-zinc-300 text-sm rounded-full">
+          <div className={styles.phaseHeader}>
+            <div className={styles.phaseHeaderTop}>
+              <h3 className={styles.phaseTitle}>{phase.title}</h3>
+              <span className={styles.phaseBadge}>
                 Phase {phase.number}
               </span>
             </div>
-            <p className="text-zinc-400 text-sm">{phase.description}</p>
+            <p className={styles.phaseDescription}>{phase.description}</p>
           </div>
 
           {/* Tasks Accordion */}
-          <Accordion type="multiple" className="w-full">
+          <Accordion type="multiple" className={styles.accordion}>
             {phase.tasks.map((task) => {
               const progress = calculateTaskProgress(task);
 
@@ -384,19 +383,19 @@ export function PhaseManager({
                 <AccordionItem
                   key={task.id}
                   value={task.id}
-                  className="border-b border-zinc-800 last:border-0"
+                  className={styles.accordionItem}
                 >
-                  <AccordionTrigger className="px-6 py-4 hover:bg-[#1f1f1f] hover:no-underline">
-                    <div className="flex items-center gap-3 flex-1 text-left">
+                  <AccordionTrigger className={styles.accordionTrigger}>
+                    <div className={styles.taskHeader}>
                       {task.subtasks.length > 0 ? (
-                        <div className="flex items-center gap-2">
-                          <Circle className="w-5 h-5 text-zinc-500" />
-                          <span className="text-sm text-zinc-400">
+                        <div className={styles.taskProgress}>
+                          <Circle className={styles.taskProgressIcon} />
+                          <span className={styles.taskProgressText}>
                             {progress}%
                           </span>
                         </div>
                       ) : (
-                        <CircleDashed className="w-5 h-5 text-zinc-500" />
+                        <CircleDashed className={styles.taskProgressIcon} />
                       )}
                       {/* Task Title (editable) */}
                       <input
@@ -406,14 +405,14 @@ export function PhaseManager({
                           updateTaskTitle(phase.id, task.id, e.target.value)
                         }
                         onClick={(e) => e.stopPropagation()}
-                        className="w-full bg-transparent border-none outline-none text-zinc-100 focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 -ml-2"
+                        className={styles.taskTitleInput}
                       />
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="px-6 pb-6 bg-[#0f0f0f]">
+                  <AccordionContent className={styles.accordionContent}>
                     {/* Task Description (editable) */}
                     {task.description && (
-                      <div className="mb-4 ml-8">
+                      <div className={styles.taskDescriptionContainer}>
                         <textarea
                           value={task.description}
                           onChange={(e) =>
@@ -424,28 +423,25 @@ export function PhaseManager({
                             )
                           }
                           placeholder="Add a description..."
-                          className="w-full bg-transparent border-none outline-none text-zinc-400 text-sm resize-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 mt-2 min-h-[60px]"
+                          className={styles.taskDescription}
                         />
                       </div>
                     )}
 
                     {/* Context Chips */}
                     {task.contextChips.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-4 ml-8">
+                      <div className={styles.contextChips}>
                         {task.contextChips.map((chip) => (
-                          <div
-                            key={chip.id}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 text-blue-400 rounded-full text-sm group border border-blue-500/20"
-                          >
+                          <div key={chip.id} className={styles.contextChip}>
                             {getChipIcon(chip.type)}
                             <span>{chip.label}</span>
                             <button
                               onClick={() =>
                                 removeContextChip(phase.id, task.id, chip.id)
                               }
-                              className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-blue-300"
+                              className={styles.contextChipRemoveButton}
                             >
-                              <X className="w-3 h-3" />
+                              <X className={styles.iconSmall} />
                             </button>
                           </div>
                         ))}
@@ -454,30 +450,28 @@ export function PhaseManager({
 
                     {/* Subtasks */}
                     {task.subtasks.length > 0 && (
-                      <div className="space-y-2 mb-4 ml-8">
+                      <div className={styles.subtasks}>
                         {task.subtasks.map((subtask) => (
-                          <div
-                            key={subtask.id}
-                            className="flex items-center gap-3 group py-1"
-                          >
+                          <div key={subtask.id} className={styles.subtask}>
                             <button
                               onClick={() =>
                                 toggleSubtask(phase.id, task.id, subtask.id)
                               }
-                              className="flex-shrink-0"
+                              className={styles.subtaskToggle}
                             >
                               {subtask.completed ? (
-                                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                <CheckCircle2 className={styles.iconGreen} />
                               ) : (
-                                <Circle className="w-4 h-4 text-zinc-500" />
+                                <Circle className={styles.iconZinc} />
                               )}
                             </button>
                             <span
-                              className={`flex-1 text-sm ${
+                              className={cn(
+                                styles.subtaskText,
                                 subtask.completed
-                                  ? "text-zinc-500 line-through"
-                                  : "text-zinc-300"
-                              }`}
+                                  ? styles.subtaskTextCompleted
+                                  : styles.subtaskTextIncomplete
+                              )}
                             >
                               {subtask.text}
                             </span>
@@ -485,9 +479,9 @@ export function PhaseManager({
                               onClick={() =>
                                 deleteSubtask(phase.id, task.id, subtask.id)
                               }
-                              className="opacity-0 group-hover:opacity-100 transition-opacity text-zinc-500 hover:text-red-500"
+                              className={styles.subtaskDelete}
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className={styles.icon} />
                             </button>
                           </div>
                         ))}
@@ -495,12 +489,12 @@ export function PhaseManager({
                     )}
 
                     {/* Action Buttons */}
-                    <div className="flex items-center gap-2 ml-8">
+                    <div className={styles.actionButtonsContainer}>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => addSubtask(phase.id, task.id)}
-                        className="text-zinc-300 border-zinc-700 hover:bg-zinc-800 hover:text-zinc-100 bg-zinc-950"
+                        className={styles.addSubtaskButton}
                       >
                         Add subtask
                       </Button>
@@ -510,15 +504,15 @@ export function PhaseManager({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="bg-zinc-950 text-zinc-300 border-zinc-700 hover:bg-zinc-800 hover:text-zinc-100"
+                            className={styles.addContextButton}
                           >
                             Add context
-                            <ChevronDown className="w-4 h-4 ml-2" />
+                            <ChevronDown className={styles.iconWithMargin} />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-56 bg-[#1a1a1a] border-zinc-700">
+                        <DropdownMenuContent className={styles.dropdownContent}>
                           <DropdownMenuItem
-                            className="cursor-pointer hover:bg-zinc-800 text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                            className={styles.dropdownMenuItem}
                             onClick={() =>
                               addContextChip(
                                 phase.id,
@@ -528,23 +522,23 @@ export function PhaseManager({
                               )
                             }
                           >
-                            <Upload className="w-4 h-4 mr-2" />
+                            <Upload className={styles.iconWithMargin} />
                             Upload a file
                           </DropdownMenuItem>
 
                           <DropdownMenuSub>
-                            <DropdownMenuSubTrigger className="cursor-pointer hover:bg-zinc-800 text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100">
-                              <LinkIcon className="w-4 h-4 mr-2" />
+                            <DropdownMenuSubTrigger className={styles.dropdownMenuItem}>
+                              <LinkIcon className={styles.iconWithMargin} />
                               Reference a task
                             </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent className="bg-[#1a1a1a] border-zinc-700">
+                            <DropdownMenuSubContent className={styles.dropdownSubContent}>
                               <DropdownMenuSub>
-                                <DropdownMenuSubTrigger className="cursor-pointer hover:bg-zinc-800 text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100">
+                                <DropdownMenuSubTrigger className={styles.dropdownMenuItem}>
                                   Previous projects
                                 </DropdownMenuSubTrigger>
-                                <DropdownMenuSubContent className="bg-[#1a1a1a] border-zinc-700">
+                                <DropdownMenuSubContent className={styles.dropdownSubContent}>
                                   <DropdownMenuItem
-                                    className="cursor-pointer hover:bg-zinc-800 text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                                    className={styles.dropdownMenuItem}
                                     onClick={() =>
                                       addContextChip(
                                         phase.id,
@@ -557,7 +551,7 @@ export function PhaseManager({
                                     Chats
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
-                                    className="cursor-pointer hover:bg-zinc-800 text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                                    className={styles.dropdownMenuItem}
                                     onClick={() =>
                                       addContextChip(
                                         phase.id,
@@ -570,7 +564,7 @@ export function PhaseManager({
                                     Artifacts
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
-                                    className="cursor-pointer hover:bg-zinc-800 text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                                    className={styles.dropdownMenuItem}
                                     onClick={() =>
                                       addContextChip(
                                         phase.id,
@@ -588,13 +582,13 @@ export function PhaseManager({
                           </DropdownMenuSub>
 
                           <DropdownMenuSub>
-                            <DropdownMenuSubTrigger className="cursor-pointer hover:bg-zinc-800 text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100">
-                              <Wrench className="w-4 h-4 mr-2" />
+                            <DropdownMenuSubTrigger className={styles.dropdownMenuItem}>
+                              <Wrench className={styles.iconWithMargin} />
                               Tool selection
                             </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent className="bg-[#1a1a1a] border-zinc-700">
+                            <DropdownMenuSubContent className={styles.dropdownSubContent}>
                               <DropdownMenuItem
-                                className="cursor-pointer hover:bg-zinc-800 text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                                className={styles.dropdownMenuItem}
                                 onClick={() =>
                                   addContextChip(
                                     phase.id,
@@ -607,7 +601,7 @@ export function PhaseManager({
                                 Research
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                className="cursor-pointer hover:bg-zinc-800 text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                                className={styles.dropdownMenuItem}
                                 onClick={() =>
                                   addContextChip(
                                     phase.id,
@@ -620,7 +614,7 @@ export function PhaseManager({
                                 Plan mode
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                className="cursor-pointer hover:bg-zinc-800 text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                                className={styles.dropdownMenuItem}
                                 onClick={() =>
                                   addContextChip(
                                     phase.id,
@@ -633,7 +627,7 @@ export function PhaseManager({
                                 Scaffold
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                className="cursor-pointer hover:bg-zinc-800 text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                                className={styles.dropdownMenuItem}
                                 onClick={() =>
                                   addContextChip(
                                     phase.id,

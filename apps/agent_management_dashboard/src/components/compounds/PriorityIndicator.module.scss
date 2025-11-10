@@ -17,3 +17,16 @@
   }
 }
 
+// Priority-specific color variants
+.priorityLow {
+  color: $color-zinc-400; // text-gray-400
+}
+
+.priorityMedium {
+  color: $color-green-500; // text-green-500
+}
+
+.priorityHigh {
+  color: $color-red-500; // text-red-500
+}
+

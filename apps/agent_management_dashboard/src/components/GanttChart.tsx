@@ -2,13 +2,13 @@
 
 import { useMemo, useState } from "react";
 import type { TimelineTask, ZoomLevel } from "./composers/TimelineTab";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "./primitives/avatar";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "./ui/tooltip";
+} from "./primitives/tooltip";
 
 interface GanttChartProps {
   tasks: TimelineTask[];
@@ -147,7 +147,7 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
         // Handle last group
         if (index === tasks.length - 1 && currentGroup.length > 0) {
           groups.push({
-                id: currentGroup.map((t: TimelineTask) => t.id).join("-"),
+            id: currentGroup.map((t: TimelineTask) => t.id).join("-"),
             tasks: [...currentGroup],
             startDate: currentGroup[0].startDate,
             endDate: currentGroup[currentGroup.length - 1].endDate,
@@ -285,8 +285,9 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
                       </p>
                       <p className="text-[#888888] text-xs">
                         {
-                          workerTasks.filter((t: TimelineTask) => t.status === "completed")
-                            .length
+                          workerTasks.filter(
+                            (t: TimelineTask) => t.status === "completed"
+                          ).length
                         }
                         /{workerTasks.length} completed
                       </p>
@@ -339,14 +340,16 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
                                     {task.title}
                                   </p>
                                   <div className="flex gap-1">
-                                    {task.tags?.slice(0, 2).map((tag: string, i: number) => (
-                                      <span
-                                        key={i}
-                                        className="text-[10px] text-[#888888] bg-[#262626] px-1.5 py-0.5 rounded"
-                                      >
-                                        {tag}
-                                      </span>
-                                    ))}
+                                    {task.tags
+                                      ?.slice(0, 2)
+                                      .map((tag: string, i: number) => (
+                                        <span
+                                          key={i}
+                                          className="text-[10px] text-[#888888] bg-[#262626] px-1.5 py-0.5 rounded"
+                                        >
+                                          {tag}
+                                        </span>
+                                      ))}
                                   </div>
                                 </div>
                               </TooltipTrigger>
@@ -369,14 +372,16 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
                                   </div>
                                   {task.tags && task.tags.length > 0 && (
                                     <div className="flex gap-1.5 flex-wrap">
-                                      {task.tags.map((tag: string, i: number) => (
-                                        <span
-                                          key={i}
-                                          className="text-xs bg-[#262626] px-2 py-0.5 rounded"
-                                        >
-                                          {tag}
-                                        </span>
-                                      ))}
+                                      {task.tags.map(
+                                        (tag: string, i: number) => (
+                                          <span
+                                            key={i}
+                                            className="text-xs bg-[#262626] px-2 py-0.5 rounded"
+                                          >
+                                            {tag}
+                                          </span>
+                                        )
+                                      )}
                                     </div>
                                   )}
                                 </div>
@@ -399,7 +404,8 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
                                   <div
                                     className={`absolute top-2 h-10 rounded-lg border-l-4 ${getStatusColor(
                                       group.tasks.every(
-                                        (t: TimelineTask) => t.status === "completed"
+                                        (t: TimelineTask) =>
+                                          t.status === "completed"
                                       )
                                         ? "completed"
                                         : "in-progress"
@@ -414,9 +420,10 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
                                       </p>
                                       <span className="text-[10px] text-[#888888] ml-2">
                                         {
-                                      group.tasks.filter(
-                                        (t: TimelineTask) => t.status === "completed"
-                                      ).length
+                                          group.tasks.filter(
+                                            (t: TimelineTask) =>
+                                              t.status === "completed"
+                                          ).length
                                         }
                                         /{group.tasks.length}
                                       </span>

@@ -26,7 +26,7 @@ const nextConfig: NextConfig = {
         : false,
   },
   sassOptions: {
-    includePaths: [path.join(__dirname, 'src/styles')],
+    includePaths: [path.join(__dirname, "src/styles")],
   },
   webpack: (config, { isServer }) => {
     if (!isServer) {
@@ -89,6 +89,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-
-
-

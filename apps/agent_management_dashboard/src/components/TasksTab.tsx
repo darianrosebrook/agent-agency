@@ -4,6 +4,7 @@ import { useState } from "react";
 import Container66 from "../imports/Container-16-2951";
 import { NewTaskModal } from "./NewTaskModal";
 import { useProjectStore } from "../lib/stores";
+import styles from "./TasksTab.module.scss";
 
 export function TasksTab() {
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
@@ -31,10 +32,10 @@ export function TasksTab() {
   };
 
   return (
-    <div className="h-full w-full overflow-hidden bg-[#0d0d0d] min-h-0">
-      <div className="h-full overflow-auto min-h-0">
+    <div className={styles.tasksTab}>
+      <div className={styles.tasksTabContent}>
         <div
-          className="h-full w-full min-h-0"
+          className={styles.tasksTabInner}
           onClick={(e) => {
             // Check if clicked element is an "add" button based on class or parent
             const target = e.target as HTMLElement;

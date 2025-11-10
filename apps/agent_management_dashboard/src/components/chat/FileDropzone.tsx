@@ -6,9 +6,11 @@ import {
   DialogContent,
   DialogTitle,
   DialogDescription,
-} from "../ui/dialog";
+} from "../primitives/dialog";
 import { Upload, FileText } from "lucide-react";
-import { Button } from "../ui/button";
+import { Button } from "../primitives/button";
+import { cn } from "../primitives/utils";
+import styles from "../composers/FileDropzone.module.scss";
 
 interface FileDropzoneModalProps {
   open: boolean;
@@ -64,7 +66,7 @@ export function FileDropzoneModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#1a1a1a] border-gray-800 max-w-md">
+      <DialogContent className={styles.dialogContent}>
         <DialogTitle className="sr-only">
           {isUploading ? "Importing files" : "Upload files"}
         </DialogTitle>
@@ -75,46 +77,46 @@ export function FileDropzoneModal({
         </DialogDescription>
         {!isUploading ? (
           <div
-            className={`flex flex-col items-center justify-center py-12 px-6 rounded-lg border-2 border-dashed transition-colors ${
-              isDragging
-                ? "border-blue-500 bg-blue-500/5"
-                : "border-gray-700 bg-[#0f0f0f]"
-            }`}
+            className={cn(
+              styles.dropzone,
+              isDragging ? styles.dropzoneDragging : styles.dropzoneIdle
+            )}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-6 relative">
-              <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center">
-                <FileText className="w-8 h-8 text-gray-300" />
+            <div className={styles.iconContainer}>
+              <div className={styles.iconInner}>
+                <FileText className={styles.iconSvg} />
               </div>
             </div>
 
-            <h3 className="text-white mb-2">Release file</h3>
-            <p className="text-gray-400 text-sm text-center mb-6">
+            <h3 className={styles.title}>Release file</h3>
+            <p className={styles.description}>
               Release your files here to upload
             </p>
 
-            <label className="cursor-pointer">
+            <label className={styles.browseButtonLabel}>
               <input
                 type="file"
                 multiple
                 onChange={handleFileSelect}
                 className="hidden"
-                {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)}
+                {...({
+                  webkitdirectory: "",
+                  directory: "",
+                } as React.InputHTMLAttributes<HTMLInputElement>)}
               />
-              <div className="bg-gray-800 hover:bg-gray-700 text-white px-6 py-2 rounded-lg text-sm">
-                Browse Files
-              </div>
+              <div className={styles.browseButton}>Browse Files</div>
             </label>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-12 px-6">
-            <div className="relative w-24 h-24 mb-6">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center">
-                  <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center">
-                    <Upload className="w-8 h-8 text-white" />
+          <div className={styles.uploadingContainer}>
+            <div className={styles.uploadingIconContainer}>
+              <div className={styles.uploadingIconWrapper}>
+                <div className={styles.uploadingIcon}>
+                  <div className={styles.uploadingIconInner}>
+                    <Upload className={styles.iconSvgWhite} />
                   </div>
                 </div>
               </div>
@@ -123,7 +125,7 @@ export function FileDropzoneModal({
                 {[...Array(8)].map((_, i) => (
                   <div
                     key={i}
-                    className="absolute w-2 h-2 bg-white rounded-full"
+                    className={styles.spinnerDot}
                     style={{
                       top: "50%",
                       left: "50%",
@@ -136,8 +138,8 @@ export function FileDropzoneModal({
               </div>
             </div>
 
-            <h3 className="text-white mb-2">Importing data</h3>
-            <p className="text-gray-400 text-sm text-center mb-6">
+            <h3 className={styles.uploadingTitle}>Importing data</h3>
+            <p className={styles.uploadingDescription}>
               Please wait a few seconds while we&apos;re
               <br />
               importing your data to the project
@@ -148,7 +150,7 @@ export function FileDropzoneModal({
                 setIsUploading(false);
                 onOpenChange(false);
               }}
-              className="w-full bg-white hover:bg-gray-100 text-black"
+              className={styles.cancelButton}
             >
               Cancel
             </Button>

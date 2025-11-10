@@ -7,7 +7,7 @@
 }
 
 .taskTimelineContainer {
-  margin-left: 3rem; // ml-12
+  margin-left: $spacing-12; // ml-12
 }
 
 .messageWrapper {
@@ -34,7 +34,7 @@
 .loadingCard {
   background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
   border: 1px solid $color-gray-800; // border-gray-800
-  border-radius: calc(var(--radius) + 4px); // rounded-lg
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
   padding: $spacing-4;
   width: 100%;
 }

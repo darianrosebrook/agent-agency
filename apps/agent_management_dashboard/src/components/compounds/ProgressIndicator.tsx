@@ -1,15 +1,15 @@
 /**
  * Progress Indicator Component
- * 
+ *
  * Displays progress for long-running operations with percentage and optional message.
- * 
+ *
  * @author @darianrosebrook
  */
 
 "use client";
 
 import React from "react";
-import { cn } from "../ui/utils";
+import { cn } from "../primitives/utils";
 import { Loader2 } from "lucide-react";
 import styles from "./ProgressIndicator.module.scss";
 
@@ -39,7 +39,7 @@ export function ProgressIndicator({
               style={{ width: `${displayProgress}%` }}
             />
           </div>
-          
+
           {/* Percentage and Message */}
           <div className={styles.progressInfo}>
             {showPercentage && (
@@ -47,21 +47,16 @@ export function ProgressIndicator({
                 {Math.round(displayProgress)}%
               </div>
             )}
-            {message && (
-              <div className={styles.progressMessage}>{message}</div>
-            )}
+            {message && <div className={styles.progressMessage}>{message}</div>}
           </div>
         </>
       ) : (
         <>
           {/* Indeterminate Progress */}
           <Loader2 className={styles.loaderIcon} />
-          {message && (
-            <div className={styles.loaderMessage}>{message}</div>
-          )}
+          {message && <div className={styles.loaderMessage}>{message}</div>}
         </>
       )}
     </div>
   );
 }
-

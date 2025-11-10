@@ -76,7 +76,7 @@
 }
 
 .messageBubble {
-  border-radius: calc(var(--radius) + 4px); // rounded-lg
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
   padding: $spacing-4;
 
   &.userBubble {
@@ -141,7 +141,7 @@
 
 .codeBlockContainer {
   background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
-  border-radius: calc(var(--radius) + 4px);
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
   border: 1px solid $color-gray-800; // border-gray-800
   overflow: hidden;
 }

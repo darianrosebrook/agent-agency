@@ -1,14 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-
+import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar";
+import { cn } from "../primitives/utils";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../ui/tooltip";
+} from "../primitives/tooltip";
+import styles from "./GanttChart.module.scss";
 
 export type ZoomLevel = "day" | "week" | "month" | "quarter";
 
@@ -230,16 +231,16 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
     };
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusClass = (status: string) => {
     switch (status) {
       case "completed":
-        return "bg-[#1f3a2d] border-[#5cd18c]";
+        return styles.taskStatusCompleted;
       case "in-progress":
-        return "bg-[#1f2d3a] border-[#54a0ff]";
+        return styles.taskStatusInProgress;
       case "pending":
-        return "bg-[#2a2a2a] border-[#888888]";
+        return styles.taskStatusPending;
       default:
-        return "bg-[#262626] border-[#404040]";
+        return styles.taskStatusDefault;
     }
   };
 
@@ -247,21 +248,21 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
 
   return (
     <TooltipProvider>
-      <div className="min-w-max">
+      <div className={styles.ganttChart}>
         {/* Timeline Header */}
-        <div className="sticky top-0 z-20 bg-[#0d0d0d] border-b border-[#262626]">
-          <div className="flex">
-            <div className="w-64 border-r border-[#262626] px-4 py-3">
-              <span className="text-[#888888] text-sm">Team Member</span>
+        <div className={styles.timelineHeader}>
+          <div className={styles.timelineHeaderContent}>
+            <div className={styles.memberColumn}>
+              <span className={styles.memberColumnHeader}>Team Member</span>
             </div>
-            <div className="flex-1 flex">
+            <div className={styles.timeColumnsContainer}>
               {timeColumns.map((date, index) => (
                 <div
                   key={index}
                   style={{ width: getColumnWidth() }}
-                  className="border-r border-[#262626] px-2 py-3 text-center"
+                  className={styles.timeColumn}
                 >
-                  <span className="text-[#888888] text-xs">
+                  <span className={styles.timeColumnHeader}>
                     {formatColumnHeader(date)}
                   </span>
                 </div>
@@ -271,19 +272,16 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
         </div>
 
         {/* Timeline Rows */}
-        <div className="relative">
+        <div className={styles.timelineRows}>
           {Array.from(tasksByWorker.entries()).map(
             ([workerId, workerTasks]) => {
               const worker = workerTasks[0];
 
               return (
-                <div
-                  key={workerId}
-                  className="flex border-b border-[#262626] hover:bg-[#1a1a1a]/30"
-                >
+                <div key={workerId} className={styles.timelineRow}>
                   {/* Worker Info */}
-                  <div className="w-64 border-r border-[#262626] px-4 py-6 flex items-center gap-3">
-                    <Avatar className="w-8 h-8">
+                  <div className={styles.workerInfo}>
+                    <Avatar className={styles.workerAvatar}>
                       <AvatarImage
                         src={`https://i.pravatar.cc/150?u=${workerId}`}
                       />
@@ -294,11 +292,9 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
                           .join("")}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white text-sm truncate">
-                        {worker.worker}
-                      </p>
-                      <p className="text-[#888888] text-xs">
+                    <div className={styles.workerInfoContent}>
+                      <p className={styles.workerName}>{worker.worker}</p>
+                      <p className={styles.workerStats}>
                         {
                           workerTasks.filter((t) => t.status === "completed")
                             .length
@@ -310,18 +306,18 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
 
                   {/* Task Timeline */}
                   <div
-                    className="flex-1 relative"
+                    className={styles.taskTimeline}
                     style={{
                       height: showDetailedView ? 80 : 60,
                     }}
                   >
                     {/* Background Grid */}
-                    <div className="absolute inset-0 flex">
+                    <div className={styles.backgroundGrid}>
                       {timeColumns.map((_, index) => (
                         <div
                           key={index}
                           style={{ width: getColumnWidth() }}
-                          className="border-r border-[#1a1a1a]"
+                          className={styles.gridColumn}
                         />
                       ))}
                     </div>
@@ -339,41 +335,41 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
                             <Tooltip key={task.id}>
                               <TooltipTrigger asChild>
                                 <div
-                                  className={`absolute top-2 h-12 rounded-lg border-l-4 ${getStatusColor(
-                                    task.status
-                                  )} px-3 py-1.5 cursor-pointer transition-all hover:shadow-lg hover:z-10 ${
-                                    hoveredTask === task.id
-                                      ? "ring-2 ring-white/20"
-                                      : ""
-                                  }`}
+                                  className={cn(
+                                    styles.taskBar,
+                                    styles.taskBarDetailed,
+                                    getStatusClass(task.status),
+                                    hoveredTask === task.id && styles.taskBarHovered
+                                  )}
                                   style={position}
                                   onMouseEnter={() => setHoveredTask(task.id)}
                                   onMouseLeave={() => setHoveredTask(null)}
                                 >
-                                  <p className="text-white text-xs truncate mb-0.5">
+                                  <p className={styles.taskTitle}>
                                     {task.title}
                                   </p>
-                                  <div className="flex gap-1">
-                                    {task.tags?.slice(0, 2).map((tag, i) => (
-                                      <span
-                                        key={i}
-                                        className="text-[10px] text-[#888888] bg-[#262626] px-1.5 py-0.5 rounded"
-                                      >
-                                        {tag}
-                                      </span>
-                                    ))}
-                                  </div>
+                                  {task.tags && task.tags.length > 0 && (
+                                    <div className={styles.taskTags}>
+                                      {task.tags.slice(0, 2).map((tag, i) => (
+                                        <span key={i} className={styles.taskTag}>
+                                          {tag}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               </TooltipTrigger>
-                              <TooltipContent className="bg-[#1a1a1a] border-[#262626] text-white max-w-xs">
-                                <div className="space-y-2">
-                                  <p className="font-semibold">{task.title}</p>
+                              <TooltipContent className={styles.tooltipContent}>
+                                <div className={styles.tooltipInner}>
+                                  <p className={styles.tooltipTitle}>
+                                    {task.title}
+                                  </p>
                                   {task.description && (
-                                    <p className="text-sm text-[#888888]">
+                                    <p className={styles.tooltipDescription}>
                                       {task.description}
                                     </p>
                                   )}
-                                  <div className="flex gap-2 text-xs text-[#888888]">
+                                  <div className={styles.tooltipDates}>
                                     <span>
                                       {task.startDate.toLocaleDateString()}
                                     </span>
@@ -383,12 +379,9 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
                                     </span>
                                   </div>
                                   {task.tags && task.tags.length > 0 && (
-                                    <div className="flex gap-1.5 flex-wrap">
+                                    <div className={styles.tooltipTags}>
                                       {task.tags.map((tag, i) => (
-                                        <span
-                                          key={i}
-                                          className="text-xs bg-[#262626] px-2 py-0.5 rounded"
-                                        >
+                                        <span key={i} className={styles.tooltipTag}>
                                           {tag}
                                         </span>
                                       ))}
@@ -408,62 +401,66 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
                             );
                             const hasMultipleTasks = group.tasks.length > 1;
 
-                            return (
-                              <Tooltip key={group.id}>
-                                <TooltipTrigger asChild>
-                                  <div
-                                    className={`absolute top-2 h-10 rounded-lg border-l-4 ${getStatusColor(
+                          return (
+                            <Tooltip key={group.id}>
+                              <TooltipTrigger asChild>
+                                <div
+                                  className={cn(
+                                    styles.taskBar,
+                                    styles.taskBarGrouped,
+                                    getStatusClass(
                                       group.tasks.every(
                                         (t) => t.status === "completed"
                                       )
                                         ? "completed"
                                         : "in-progress"
-                                    )} px-3 py-2 cursor-pointer transition-all hover:shadow-lg hover:z-10`}
-                                    style={position}
-                                  >
-                                    <div className="flex items-center justify-between">
-                                      <p className="text-white text-xs">
-                                        {hasMultipleTasks
-                                          ? `${group.tasks.length} tasks`
-                                          : group.tasks[0].title}
-                                      </p>
-                                      <span className="text-[10px] text-[#888888] ml-2">
-                                        {
-                                          group.tasks.filter(
-                                            (t) => t.status === "completed"
-                                          ).length
-                                        }
-                                        /{group.tasks.length}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent className="bg-[#1a1a1a] border-[#262626] text-white max-w-md">
-                                  <div className="space-y-2">
-                                    <p className="font-semibold text-sm">
-                                      Task Group ({group.tasks.length} tasks)
+                                    )
+                                  )}
+                                  style={position}
+                                >
+                                  <div className={styles.groupedTaskContent}>
+                                    <p className={styles.groupedTaskTitle}>
+                                      {hasMultipleTasks
+                                        ? `${group.tasks.length} tasks`
+                                        : group.tasks[0].title}
                                     </p>
-                                    <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                                      {group.tasks.map((task: TimelineTask) => (
-                                        <div
-                                          key={task.id}
-                                          className="text-xs border-l-2 border-[#404040] pl-2"
-                                        >
-                                          <p className="text-white">
-                                            {task.title}
-                                          </p>
-                                          <p className="text-[#888888] text-[10px]">
-                                            {task.startDate.toLocaleDateString()}{" "}
-                                            -{" "}
-                                            {task.endDate.toLocaleDateString()}
-                                          </p>
-                                        </div>
-                                      ))}
-                                    </div>
+                                    <span className={styles.groupedTaskCount}>
+                                      {
+                                        group.tasks.filter(
+                                          (t) => t.status === "completed"
+                                        ).length
+                                      }
+                                      /{group.tasks.length}
+                                    </span>
                                   </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            );
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent className={cn(styles.tooltipContent, styles.tooltipContentWide)}>
+                                <div className={styles.groupedTooltipInner}>
+                                  <p className={styles.groupedTooltipTitle}>
+                                    Task Group ({group.tasks.length} tasks)
+                                  </p>
+                                  <div className={styles.groupedTasksList}>
+                                    {group.tasks.map((task: TimelineTask) => (
+                                      <div
+                                        key={task.id}
+                                        className={styles.groupedTaskItem}
+                                      >
+                                        <p className={styles.groupedTaskItemTitle}>
+                                          {task.title}
+                                        </p>
+                                        <p className={styles.groupedTaskItemDate}>
+                                          {task.startDate.toLocaleDateString()}{" "}
+                                          -{" "}
+                                          {task.endDate.toLocaleDateString()}
+                                        </p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          );
                           }
                         )}
                   </div>

@@ -1,0 +1,182 @@
+@use "../styles/design-tokens.scss" as *;
+
+.dialogContent {
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border-color: $color-gray-800; // border-gray-800
+  max-width: 28rem; // max-w-md
+}
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-block: $spacing-12; // py-12
+  padding-inline: $spacing-6; // px-6
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
+  border: 2px dashed; // border-2 border-dashed
+  transition: border-color $transition-normal, background-color $transition-normal;
+}
+
+.dropzoneDragging {
+  border-color: $color-blue-500; // border-blue-500
+  background-color: rgba($color-blue-500, 0.05); // bg-blue-500/5
+}
+
+.dropzoneIdle {
+  border-color: $color-gray-700; // border-gray-700
+  background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
+}
+
+.iconContainer {
+  width: 5rem; // w-20
+  height: 5rem; // h-20
+  background-color: $color-gray-800; // bg-gray-800
+  border-radius: 9999px; // rounded-full
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: $spacing-6; // mb-6
+  position: relative;
+}
+
+.iconInner {
+  width: 4rem; // w-16
+  height: 4rem; // h-16
+  background-color: $color-gray-700; // bg-gray-700
+  border-radius: 9999px; // rounded-full
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconSvg {
+  width: $spacing-8; // w-8
+  height: $spacing-8; // h-8
+  color: $color-gray-300; // text-gray-300
+}
+
+.iconSvgWhite {
+  color: $color-white; // text-white
+}
+
+.title {
+  color: $color-white; // text-white
+  margin-bottom: $spacing-2; // mb-2
+}
+
+.description {
+  color: $color-gray-400; // text-gray-400
+  font-size: $font-size-sm; // text-sm
+  text-align: center;
+  margin-bottom: $spacing-6; // mb-6
+}
+
+.browseButton {
+  background-color: $color-gray-800; // bg-gray-800
+  transition: background-color $transition-normal;
+  color: $color-white; // text-white
+  padding-inline: $spacing-6; // px-6
+  padding-block: $spacing-2; // py-2
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
+  font-size: $font-size-sm; // text-sm
+
+  &:hover {
+    background-color: $color-gray-700; // hover:bg-gray-700
+  }
+}
+
+.browseButtonLabel {
+  cursor: pointer;
+}
+
+.uploadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-block: $spacing-12; // py-12
+  padding-inline: $spacing-6; // px-6
+}
+
+.uploadingIconContainer {
+  position: relative;
+  width: 6rem; // w-24
+  height: 6rem; // h-24
+  margin-bottom: $spacing-6; // mb-6
+}
+
+.uploadingIconWrapper {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.uploadingIcon {
+  width: 5rem; // w-20
+  height: 5rem; // h-20
+  background-color: $color-gray-800; // bg-gray-800
+  border-radius: 9999px; // rounded-full
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.uploadingIconInner {
+  width: 4rem; // w-16
+  height: 4rem; // h-16
+  background-color: $color-gray-700; // bg-gray-700
+  border-radius: 9999px; // rounded-full
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.uploadingTitle {
+  color: $color-white; // text-white
+  margin-bottom: $spacing-2; // mb-2
+}
+
+.uploadingDescription {
+  color: $color-gray-400; // text-gray-400
+  font-size: $font-size-sm; // text-sm
+  text-align: center;
+  margin-bottom: $spacing-6; // mb-6
+}
+
+.cancelButton {
+  width: 100%; // w-full
+  background-color: $color-white; // bg-white
+  transition: background-color $transition-normal;
+  color: $color-black; // text-black
+
+  &:hover {
+    background-color: $color-gray-100; // hover:bg-gray-100
+  }
+}
+
+.spinnerContainer {
+  position: absolute;
+  inset: 0;
+  animation: spin-slow 3s linear infinite;
+}
+
+.spinnerDot {
+  position: absolute;
+  width: 0.5rem; // w-2
+  height: 0.5rem; // h-2
+  background-color: $color-white; // bg-white
+  border-radius: 9999px; // rounded-full
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+

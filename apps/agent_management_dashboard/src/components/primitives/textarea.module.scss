@@ -1,0 +1,49 @@
+@use "../../styles/design-tokens.scss" as *;
+
+.textarea {
+  display: flex;
+  min-height: 4rem; // min-h-16
+  width: 100%;
+  resize: none;
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid var(--input);
+  padding: $spacing-2 $spacing-3;
+  font-size: $font-size-base;
+  background-color: var(--input-background);
+  color: var(--foreground);
+  transition: color $transition-normal, box-shadow $transition-normal;
+  outline: none;
+  field-sizing: content;
+
+  @media (min-width: $breakpoint-md) {
+    font-size: $font-size-sm;
+  }
+
+  &::placeholder {
+    color: var(--muted-foreground);
+  }
+
+  &:focus-visible {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px hsl(var(--ring) / 0.5);
+  }
+
+  &[aria-invalid='true'] {
+    box-shadow: 0 0 0 3px hsl(var(--destructive) / 0.2);
+    border-color: var(--destructive);
+
+    .dark & {
+      box-shadow: 0 0 0 3px hsl(var(--destructive) / 0.4);
+    }
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .dark & {
+    background-color: hsl(var(--input) / 0.3);
+  }
+}
+

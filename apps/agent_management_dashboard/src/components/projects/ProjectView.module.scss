@@ -57,14 +57,14 @@
   font-weight: 400;
   line-height: 1.25rem; // leading-[20px]
   font-style: normal;
-  color: $color-gray-500; // text-[#888888] -> gray-500
+  color: $color-zinc-500; // text-[#888888] -> gray-500
   font-size: 0.875rem; // text-[14px]
   letter-spacing: -0.1504px; // tracking-[-0.1504px]
   cursor: pointer;
   transition: color $transition-normal;
 
   &:hover {
-    color: $color-gray-300; // hover:text-gray-300
+    color: $color-zinc-300; // hover:text-gray-300
   }
 }
 
@@ -73,9 +73,21 @@
   font-weight: 400;
   line-height: 1.25rem; // leading-[20px]
   font-style: normal;
-  color: $color-gray-500; // text-[#888888] -> gray-500
+  color: $color-zinc-500; // text-[#888888] -> gray-500
   font-size: 0.875rem; // text-[14px]
   letter-spacing: -0.1504px; // tracking-[-0.1504px]
+}
+
+.breadcrumbSeparatorIcon {
+  width: 0.75rem; // w-3
+  height: 0.75rem; // h-3
+  color: $color-zinc-500; // text-[#888888] -> gray-500
+}
+
+.svgFullSize {
+  display: block; // block
+  width: 100%; // size-full
+  height: 100%; // size-full
 }
 
 .headingContainer {
@@ -151,10 +163,10 @@
 }
 
 .tabLabelInactive {
-  color: $color-gray-500; // text-[#888888] -> gray-500
+  color: $color-zinc-500; // text-[#888888] -> gray-500
 
   &:hover {
-    color: $color-gray-300; // hover:text-gray-300
+    color: $color-zinc-300; // hover:text-gray-300
   }
 }
 
@@ -207,7 +219,7 @@
   align-items: center;
   overflow: clip;
   padding-left: 2.25rem; // pl-[36px]
-  padding-right: 3rem; // pr-[48px]
+  padding-right: $spacing-12; // pr-[48px]
   padding-block: 0.25rem; // py-[4px]
   position: relative;
   border-radius: inherit;
@@ -221,7 +233,7 @@
   font-style: normal;
   position: relative;
   flex-shrink: 0;
-  color: $color-gray-500; // text-[#888888] -> gray-500
+  color: $color-zinc-500; // text-[#888888] -> gray-500
   font-size: 0.875rem; // text-[14px]
   white-space: nowrap;
   letter-spacing: -0.1504px; // tracking-[-0.1504px]
@@ -261,7 +273,7 @@
   line-height: 1rem; // leading-[16px]
   left: 0;
   font-style: normal;
-  color: $color-gray-500; // text-[#888888] -> gray-500
+  color: $color-zinc-500; // text-[#888888] -> gray-500
   font-size: 0.75rem; // text-[12px]
   white-space: nowrap;
   top: 0.02875rem; // top-[0.46px]

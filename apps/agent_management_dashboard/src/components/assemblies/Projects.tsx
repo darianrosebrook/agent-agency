@@ -13,8 +13,8 @@ import {
 } from "lucide-react";
 import { NewProjectModal } from "../composers/ProjectModal";
 import { ProjectView } from "./ProjectView";
-import { Input } from "../ui/input";
-import { Button } from "../ui/button";
+import { Input } from "../primitives/input";
+import { Button } from "../primitives/button";
 import { useProjectStore } from "../../lib/stores";
 import { ProjectListSkeleton } from "../compounds";
 import {
@@ -24,15 +24,15 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../ui/table";
+} from "../primitives/table";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
-import { cn } from "../ui/utils";
+} from "../primitives/select";
+import { cn } from "../primitives/utils";
 import styles from "./Projects.module.scss";
 
 type SortField = "name" | "createdAt" | "lastAccessed";
@@ -88,12 +88,12 @@ export function Projects() {
 
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) {
-      return <ChevronsUpDown className="w-4 h-4" />;
+      return <ChevronsUpDown className={styles.icon} />;
     }
     return sortOrder === "asc" ? (
-      <ChevronUp className="w-4 h-4" />
+      <ChevronUp className={styles.icon} />
     ) : (
-      <ChevronDown className="w-4 h-4" />
+      <ChevronDown className={styles.icon} />
     );
   };
 
@@ -115,8 +115,14 @@ export function Projects() {
     const bFieldValue = b[sortField];
 
     if (sortField === "createdAt" || sortField === "lastAccessed") {
-      const aDate = aFieldValue instanceof Date ? aFieldValue : new Date(aFieldValue as string);
-      const bDate = bFieldValue instanceof Date ? bFieldValue : new Date(bFieldValue as string);
+      const aDate =
+        aFieldValue instanceof Date
+          ? aFieldValue
+          : new Date(aFieldValue as string);
+      const bDate =
+        bFieldValue instanceof Date
+          ? bFieldValue
+          : new Date(bFieldValue as string);
       aValue = aDate.getTime();
       bValue = bDate.getTime();
     } else if (sortField === "name") {
@@ -168,7 +174,7 @@ export function Projects() {
         {/* Header */}
         <div className={styles.header}>
           <div className={styles.headerTop}>
-            <FolderPlus className="w-4 h-4" />
+            <FolderPlus className={styles.icon} />
             <span className="text-sm">Projects</span>
           </div>
           <h1 className={styles.headerTitle}>Projects</h1>
@@ -184,7 +190,7 @@ export function Projects() {
                 className={styles.emptyStateIconButton}
               >
                 <div className={styles.emptyStateIconBox}>
-                  <FolderPlus className="w-16 h-16 text-gray-700 group-hover:text-blue-500 transition-colors" />
+                  <FolderPlus className={styles.iconLarge} />
                 </div>
               </button>
             </div>
@@ -201,7 +207,7 @@ export function Projects() {
               onClick={() => setIsNewProjectModalOpen(true)}
               className={styles.newProjectButton}
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className={styles.iconWithMargin} />
               Create Project
             </Button>
           </div>
@@ -234,7 +240,7 @@ export function Projects() {
         <div className={styles.headerWithButton}>
           <div className={styles.headerLeft}>
             <div className={styles.headerTop}>
-              <FolderPlus className="w-4 h-4" />
+              <FolderPlus className={styles.icon} />
               <span className="text-sm">Projects</span>
             </div>
             <h1 className={styles.headerTitle}>Projects</h1>
@@ -256,14 +262,11 @@ export function Projects() {
               placeholder="Search projects..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-[#1a1a1a] border-gray-800 text-gray-100 placeholder:text-gray-600"
+              className={styles.searchInput}
             />
           </div>
-          <Button
-            variant="outline"
-            className={styles.filterButton}
-          >
-            <Filter className="w-4 h-4 mr-2" />
+          <Button variant="outline" className={styles.filterButton}>
+            <Filter className={styles.iconWithMargin} />
             Filter
           </Button>
         </div>
@@ -290,9 +293,7 @@ export function Projects() {
         {isLoading ? (
           <ProjectListSkeleton count={6} />
         ) : recentProjects.length === 0 ? (
-          <div className={styles.recentProjectsEmpty}>
-            No projects found
-          </div>
+          <div className={styles.recentProjectsEmpty}>No projects found</div>
         ) : (
           <div className={styles.recentProjectsGrid}>
             {recentProjects.map((project) => (
@@ -330,7 +331,9 @@ export function Projects() {
         <div className={styles.projectsTable}>
           <Table>
             <TableHeader>
-              <TableRow className={cn(styles.tableHeaderRow, "border-gray-800")}>
+              <TableRow
+                className={styles.tableHeaderRow}
+              >
                 <TableHead
                   className={styles.tableHeaderCell}
                   onClick={() => handleSort("name")}
@@ -340,7 +343,9 @@ export function Projects() {
                     {getSortIcon("name")}
                   </div>
                 </TableHead>
-                <TableHead className={styles.tableHeaderCell}>Summary</TableHead>
+                <TableHead className={styles.tableHeaderCell}>
+                  Summary
+                </TableHead>
                 <TableHead
                   className={styles.tableHeaderCell}
                   onClick={() => handleSort("createdAt")}
@@ -363,7 +368,9 @@ export function Projects() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow className={cn(styles.tableRowLoading, "border-gray-800")}>
+                <TableRow
+                  className={styles.tableRowLoading}
+                >
                   <TableCell colSpan={4} className="py-8">
                     <div className="flex items-center justify-center">
                       <ProjectListSkeleton count={pageSize} />
@@ -371,11 +378,10 @@ export function Projects() {
                   </TableCell>
                 </TableRow>
               ) : paginatedProjects.length === 0 ? (
-                <TableRow className={cn(styles.tableRowLoading, "border-gray-800")}>
-                  <TableCell
-                    colSpan={4}
-                    className={styles.tableEmptyCell}
-                  >
+                <TableRow
+                  className={styles.tableRowLoading}
+                >
+                  <TableCell colSpan={4} className={styles.tableEmptyCell}>
                     No projects found
                   </TableCell>
                 </TableRow>
@@ -383,7 +389,7 @@ export function Projects() {
                 paginatedProjects.map((project) => (
                   <TableRow
                     key={project.id}
-                    className={cn(styles.tableRow, "border-gray-800")}
+                    className={styles.tableRow}
                     onClick={() => handleProjectClick(project.id)}
                   >
                     <TableCell className={styles.tableCell}>

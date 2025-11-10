@@ -251,6 +251,17 @@
   justify-content: center;
 }
 
+.iconSmall {
+  width: 0.75rem; // h-3 w-3
+  height: 0.75rem;
+}
+
+.emptyStateIconLarge {
+  width: 4rem; // w-16
+  height: 4rem; // h-16
+  color: $color-gray-700; // text-gray-700
+}
+
 .emptyStateDot1 {
   position: absolute;
   top: -0.5rem; // -top-2

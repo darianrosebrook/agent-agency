@@ -86,11 +86,22 @@
   transform: translateY(-50%); // -translate-y-1/2
 }
 
+.icon {
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+}
+
+.iconGray {
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+  color: $color-gray-400; // text-gray-400
+}
+
 .searchInput {
   width: 100%; // w-full
   background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
   border: 1px solid $color-gray-800; // border border-gray-800
-  border-radius: calc(var(--radius) + 4px); // rounded-lg
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
   padding-left: 2.5rem; // pl-10
   padding-right: 2rem; // pr-8
   padding-block: $spacing-2; // py-2
@@ -130,7 +141,7 @@
   align-items: center;
   padding: $spacing-2 $spacing-3; // px-3 py-2
   color: $color-gray-300; // text-gray-300
-  border-radius: calc(var(--radius) + 4px); // rounded-lg
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
 
   &:hover {
     background-color: rgba($color-gray-800, 0.5); // hover:bg-gray-800/50
@@ -170,7 +181,7 @@
   display: flex;
   align-items: center;
   padding: $spacing-2 $spacing-3; // px-3 py-2
-  border-radius: calc(var(--radius) + 4px); // rounded-lg
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
 }
 
 .navLinkCollapsed {
@@ -217,7 +228,7 @@
   gap: $spacing-3; // gap-3
   padding: $spacing-2 $spacing-3; // px-3 py-2
   color: $color-gray-300; // text-gray-300
-  border-radius: calc(var(--radius) + 4px); // rounded-lg
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
 
   &:hover {
     background-color: rgba($color-gray-800, 0.5); // hover:bg-gray-800/50
@@ -269,7 +280,7 @@
   gap: $spacing-3; // gap-3
   padding: $spacing-2 $spacing-3; // px-3 py-2
   color: $color-gray-300; // text-gray-300
-  border-radius: calc(var(--radius) + 4px); // rounded-lg
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
 
   &:hover {
     background-color: rgba($color-gray-800, 0.5); // hover:bg-gray-800/50

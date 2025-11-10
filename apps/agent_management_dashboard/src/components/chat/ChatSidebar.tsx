@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, Plus, MessageSquare } from "lucide-react";
 import { useChatStore } from "../../lib/stores";
 import { ChatListSkeleton } from "../compounds";
-import { cn } from "../ui/utils";
+import { cn } from "../primitives/utils";
 import styles from "./ChatSidebar.module.scss";
 
 interface ChatGroup {
@@ -76,11 +76,8 @@ export function ChatSidebar({ onSelect }: ChatSidebarProps = {}) {
       <div className={styles.header}>
         <div className={styles.headerTop}>
           <h2 className={styles.headerTitle}>Chats</h2>
-          <button
-            onClick={handleNewChat}
-            className={styles.newChatButton}
-          >
-            <Plus className="w-4 h-4" />
+          <button onClick={handleNewChat} className={styles.newChatButton}>
+            <Plus className={styles.icon} />
           </button>
         </div>
       </div>
@@ -103,13 +100,11 @@ export function ChatSidebar({ onSelect }: ChatSidebarProps = {}) {
                   className={styles.groupHeader}
                 >
                   {group.isExpanded ? (
-                    <ChevronDown className="w-4 h-4 shrink-0" />
+                    <ChevronDown className={styles.icon} />
                   ) : (
-                    <ChevronRight className="w-4 h-4 shrink-0" />
+                    <ChevronRight className={styles.icon} />
                   )}
-                  <span className={styles.groupHeaderText}>
-                    {group.name}
-                  </span>
+                  <span className={styles.groupHeaderText}>{group.name}</span>
                   <span className={styles.groupCount}>{chats.length}</span>
                 </button>
 
@@ -127,7 +122,7 @@ export function ChatSidebar({ onSelect }: ChatSidebarProps = {}) {
                             : styles.chatItemInactive
                         )}
                       >
-                        <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+                        <MessageSquare className={styles.iconSmall} />
                         <span className={styles.chatItemText}>
                           {chat.title}
                         </span>

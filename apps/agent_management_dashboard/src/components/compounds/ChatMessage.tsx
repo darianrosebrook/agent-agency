@@ -1,6 +1,6 @@
 import React from "react";
 import { User, Bot, File, Copy, RotateCw, MoreVertical } from "lucide-react";
-import { Badge } from "../ui/badge";
+import { Badge } from "../primitives/badge";
 import { TaskTimeline } from "../TaskTimeline";
 import { PhaseManager } from "../composers/PhaseManager";
 import { PhasePlanSkeleton } from "./PhasePlanSkeleton";
@@ -11,9 +11,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import { Button } from "../ui/button";
-import { cn } from "../ui/utils";
+} from "../primitives/dropdown-menu";
+import { Button } from "../primitives/button";
+import { cn } from "../primitives/utils";
 import styles from "./ChatMessage.module.scss";
 
 interface ChatMessageProps {
@@ -67,10 +67,7 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
 
           {/* Error Content */}
           <div
-            className={cn(
-              styles.messageContent,
-              isUser && styles.userContent
-            )}
+            className={cn(styles.messageContent, isUser && styles.userContent)}
           >
             <ChatMessageError
               error={message.error}
@@ -100,7 +97,10 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
       if (match.index > lastIndex) {
         const textBefore = content.slice(lastIndex, match.index);
         parts.push(
-          <p key={`text-${lastIndex}`} className={cn(styles.messageText, styles.codeBlock)}>
+          <p
+            key={`text-${lastIndex}`}
+            className={cn(styles.messageText, styles.codeBlock)}
+          >
             {textBefore}
           </p>
         );
@@ -113,12 +113,8 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
         <div key={`code-${match.index}`} className={styles.codeBlock}>
           <div className={styles.codeBlockContainer}>
             <div className={styles.codeBlockHeader}>
-              <span className={styles.codeBlockLanguage}>
-                {language}
-              </span>
-              <button className={styles.codeBlockCopyButton}>
-                Copy code
-              </button>
+              <span className={styles.codeBlockLanguage}>{language}</span>
+              <button className={styles.codeBlockCopyButton}>Copy code</button>
             </div>
             <pre className={styles.codeBlockContent}>
               <code className={styles.codeBlockCode}>{code}</code>
@@ -179,10 +175,7 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
 
         {/* Message Content */}
         <div
-          className={cn(
-            styles.messageContent,
-            isUser && styles.userContent
-          )}
+          className={cn(styles.messageContent, isUser && styles.userContent)}
         >
           {/* Context Files */}
           {message.contextFiles && message.contextFiles.length > 0 && (

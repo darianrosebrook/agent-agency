@@ -6,10 +6,10 @@ import {
   DialogContent,
   DialogTitle,
   DialogDescription,
-} from "../ui/dialog";
+} from "../primitives/dialog";
 import { Upload, FileText } from "lucide-react";
-import { Button } from "../ui/button";
-import { cn } from "../ui/utils";
+import { Button } from "../primitives/button";
+import { cn } from "../primitives/utils";
 import styles from "./FileDropzone.module.scss";
 
 interface FileDropzoneModalProps {
@@ -102,11 +102,12 @@ export function FileDropzoneModal({
                 multiple
                 onChange={handleFileSelect}
                 className="hidden"
-                {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)}
+                {...({
+                  webkitdirectory: "",
+                  directory: "",
+                } as React.InputHTMLAttributes<HTMLInputElement>)}
               />
-              <div className={styles.browseButton}>
-                Browse Files
-              </div>
+              <div className={styles.browseButton}>Browse Files</div>
             </label>
           </div>
         ) : (
@@ -120,11 +121,11 @@ export function FileDropzoneModal({
                 </div>
               </div>
               {/* Animated dots */}
-              <div className="absolute inset-0 animate-spin-slow">
+              <div className={styles.spinnerContainer}>
                 {[...Array(8)].map((_, i) => (
                   <div
                     key={i}
-                    className="absolute w-2 h-2 bg-white rounded-full"
+                    className={styles.spinnerDot}
                     style={{
                       top: "50%",
                       left: "50%",

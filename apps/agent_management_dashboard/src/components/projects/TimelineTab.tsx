@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { GanttChart } from "./GanttChart";
 import { ZoomIn, ZoomOut, Calendar } from "lucide-react";
-import { Button } from "../ui/button";
+import { Button } from "../primitives/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
+} from "../primitives/select";
 import styles from "./TimelineTab.module.scss";
 
 export type ZoomLevel = "day" | "week" | "month" | "quarter";
@@ -245,9 +245,7 @@ export function TimelineTab() {
               >
                 <ZoomOut className="w-4 h-4" />
               </Button>
-              <span className={styles.zoomLevel}>
-                {zoomLevel}
-              </span>
+              <span className={styles.zoomLevel}>{zoomLevel}</span>
               <Button
                 variant="ghost"
                 size="sm"

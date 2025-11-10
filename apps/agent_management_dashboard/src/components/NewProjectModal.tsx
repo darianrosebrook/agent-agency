@@ -12,6 +12,8 @@ import {
   type ProjectStatus,
   type Priority,
 } from "./compounds";
+import { cn } from "./primitives/utils";
+import styles from "./NewProjectModal.module.scss";
 
 interface NewProjectModalProps {
   open: boolean;
@@ -98,7 +100,7 @@ export function NewProjectModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50"
+      className={styles.modalOverlay}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           handleSave();
@@ -106,32 +108,32 @@ export function NewProjectModal({
       }}
     >
       <div
-        className="bg-zinc-800 rounded-lg w-full max-w-2xl text-white shadow-2xl"
+        className={styles.modal}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-zinc-700">
+        <div className={styles.modalHeader}>
           <button
             onClick={handleSave}
-            className="text-gray-400 hover:text-white transition-colors"
+            className={styles.closeButton}
           >
-            <X className="w-5 h-5" />
+            <X className={styles.closeButtonIcon} />
           </button>
-          <div className="flex items-center gap-2 text-sm text-gray-400">
+          <div className={styles.modalHeaderTitle}>
             <span>New Project</span>
-            <div className="flex gap-1">
-              <button className="p-1 hover:bg-zinc-700 rounded">
-                <ChevronUp className="w-4 h-4" />
+            <div className={styles.modalHeaderActions}>
+              <button className={styles.modalHeaderButton}>
+                <ChevronUp className={styles.modalHeaderButtonIcon} />
               </button>
-              <button className="p-1 hover:bg-zinc-700 rounded">
-                <ChevronDown className="w-4 h-4" />
+              <button className={styles.modalHeaderButton}>
+                <ChevronDown className={styles.modalHeaderButtonIcon} />
               </button>
             </div>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className={styles.modalContent}>
           {/* Title */}
           <div>
             {isEditingTitle ? (
@@ -152,12 +154,12 @@ export function NewProjectModal({
                     setIsEditingDescription(true);
                   }
                 }}
-                className="w-full bg-transparent border-none outline-none text-white text-2xl font-semibold placeholder:text-gray-600 mb-2"
+                className={styles.titleInput}
                 autoFocus
               />
             ) : (
               <h2
-                className="text-2xl font-semibold mb-2 cursor-text"
+                className={styles.titleDisplay}
                 onClick={() => setIsEditingTitle(true)}
               >
                 {projectName || "New Project"}
@@ -172,13 +174,13 @@ export function NewProjectModal({
                   setIsEditingDescription(false);
                   handleSave();
                 }}
-                className="w-full bg-transparent border-none outline-none text-sm text-gray-400 placeholder:text-gray-600 resize-none leading-relaxed"
+                className={styles.descriptionTextarea}
                 rows={3}
                 autoFocus
               />
             ) : (
               <p
-                className="text-sm text-gray-400 leading-relaxed cursor-text"
+                className={styles.descriptionDisplay}
                 onClick={() => setIsEditingDescription(true)}
               >
                 {description || "Add a description for this project..."}
@@ -187,17 +189,17 @@ export function NewProjectModal({
           </div>
 
           {/* Metadata Grid */}
-          <div className="space-y-3 text-sm">
+          <div className={styles.metadataGrid}>
             {/* Status */}
             <MetadataRow label="Status">
-              <div className="relative">
+              <div className={styles.metadataDropdown}>
                 <StatusBadge
                   status={status}
                   config={projectStatusConfig[status]}
                   onClick={() => setShowStatusMenu(!showStatusMenu)}
                 />
                 {showStatusMenu && (
-                  <div className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-xl py-2 z-10 min-w-[180px]">
+                  <div className={styles.dropdownMenu}>
                     {(Object.keys(projectStatusConfig) as ProjectStatus[]).map(
                       (key) => (
                         <button
@@ -206,7 +208,7 @@ export function NewProjectModal({
                             setStatus(key);
                             setShowStatusMenu(false);
                           }}
-                          className={`w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-100 transition-colors ${projectStatusConfig[key].color}`}
+                          className={styles.dropdownMenuItem}
                         >
                           <StatusBadge
                             status={key}
@@ -222,10 +224,10 @@ export function NewProjectModal({
 
             {/* Assignees */}
             <MetadataRow label="Assignees">
-              <div className="flex items-center gap-2">
+              <div className={styles.assigneesContainer}>
                 {assignees ? (
                   <>
-                    <div className="w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center text-xs font-medium">
+                    <div className={styles.assigneeAvatar}>
                       {assignees[0].toUpperCase()}
                     </div>
                     <span>{assignees}</span>
@@ -236,7 +238,7 @@ export function NewProjectModal({
                     placeholder="Add assignees"
                     value={assignees}
                     onChange={(e) => setAssignees(e.target.value)}
-                    className="bg-transparent border-none outline-none text-white placeholder:text-gray-600"
+                    className={styles.assigneeInput}
                   />
                 )}
               </div>
@@ -253,21 +255,21 @@ export function NewProjectModal({
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
                   onBlur={handleSave}
-                  className="bg-transparent border-none outline-none text-white placeholder:text-gray-600"
+                  className={styles.dateInput}
                 />
               )}
             </MetadataRow>
 
             {/* Priority */}
             <MetadataRow label="Priority">
-              <div className="relative">
+              <div className={styles.metadataDropdown}>
                 <PriorityIndicator
                   priority={priority}
                   config={priorityConfig[priority]}
                   onClick={() => setShowPriorityMenu(!showPriorityMenu)}
                 />
                 {showPriorityMenu && (
-                  <div className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-xl py-2 z-10 min-w-[140px]">
+                  <div className={styles.dropdownMenu} style={{ minWidth: '8.75rem' }}>
                     {(Object.keys(priorityConfig) as Priority[]).map((key) => (
                       <button
                         key={key}
@@ -275,7 +277,7 @@ export function NewProjectModal({
                           setPriority(key);
                           setShowPriorityMenu(false);
                         }}
-                        className="w-full flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                        className={cn(styles.dropdownMenuItem, styles.dropdownMenuItemPriority)}
                       >
                         <PriorityIndicator
                           priority={key}
@@ -290,7 +292,7 @@ export function NewProjectModal({
 
             {/* Tags */}
             <MetadataRow label="Tags">
-              <div className="flex gap-2 flex-wrap">
+              <div className={styles.tagsContainer}>
                 {tags.map((tag) => (
                   <TagChip key={tag} tag={tag} onRemove={handleRemoveTag} />
                 ))}
@@ -311,7 +313,7 @@ export function NewProjectModal({
                         handleAddTag();
                       }
                     }}
-                    className="bg-transparent border-none outline-none text-white placeholder:text-gray-600 text-xs min-w-[80px]"
+                    className={styles.tagInput}
                   />
                 )}
               </div>
@@ -320,17 +322,17 @@ export function NewProjectModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-zinc-700">
+        <div className={styles.modalFooter}>
           <button
             onClick={() => onOpenChange(false)}
-            className="px-4 py-2 text-gray-400 hover:text-white transition-colors rounded hover:bg-zinc-700"
+            className={cn(styles.cancelButton, styles.cancelButtonRounded)}
           >
             Cancel
           </button>
           <button
             onClick={handleCreate}
             disabled={!projectName.trim()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+            className={styles.createButton}
           >
             Confirm
           </button>

@@ -115,3 +115,15 @@
   margin-left: $spacing-8; // ml-8
 }
 
+.addSubtaskButton {
+  color: $color-zinc-300; // text-zinc-300
+  border-color: $color-zinc-700; // border-zinc-700
+  background-color: $color-zinc-950; // bg-zinc-950
+  transition: background-color $transition-normal, color $transition-normal;
+
+  &:hover {
+    background-color: $color-zinc-800; // hover:bg-zinc-800
+    color: $color-zinc-100; // hover:text-zinc-100
+  }
+}
+

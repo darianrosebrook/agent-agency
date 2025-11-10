@@ -15,13 +15,13 @@
 }
 
 .contextFileBadge {
-  background-color: $color-gray-800; // bg-gray-800
-  color: $color-gray-100; // text-gray-100
+  background-color: $color-zinc-800; // bg-gray-800
+  color: $color-zinc-100; // text-gray-100
   padding-right: $spacing-1;
   gap: $spacing-2;
 
   &:hover {
-    background-color: $color-gray-700; // hover:bg-gray-700
+    background-color: $color-zinc-700; // hover:bg-gray-700
   }
 }
 
@@ -35,7 +35,7 @@
   justify-content: center;
 
   &:hover {
-    background-color: $color-gray-600; // hover:bg-gray-600
+    background-color: $color-zinc-600; // hover:bg-gray-600
     border-radius: 9999px; // rounded-full
     padding: 0.125rem; // p-0.5
   }
@@ -44,6 +44,23 @@
 .contextFileIcon {
   width: 0.75rem; // h-3
   height: 0.75rem; // w-3
+}
+
+.contextFileRemoveIcon {
+  width: 0.75rem; // w-3
+  height: 0.75rem; // h-3
+}
+
+.promptButtonSvg {
+  display: block; // block
+  width: 100%; // size-full
+  height: 100%; // size-full
+}
+
+.emptyStateIconMessageSquare {
+  width: 4rem; // w-16
+  height: 4rem; // h-16
+  color: $color-zinc-700; // text-gray-700
 }
 
 .promptContainer {
@@ -97,7 +114,7 @@
   line-height: 1.5rem; // leading-[24px]
   font-style: normal;
   width: 100%;
-  color: $color-gray-400; // text-[#555555] -> gray-400
+  color: $color-zinc-400; // text-[#555555] -> gray-400
   font-size: 1rem; // text-[16px]
   letter-spacing: -0.3125px; // tracking-[-0.3125px]
   background-color: transparent;
@@ -105,7 +122,7 @@
   outline: none;
 
   &::placeholder {
-    color: $color-gray-400; // placeholder:text-[#555555] -> gray-400
+    color: $color-zinc-400; // placeholder:text-[#555555] -> gray-400
   }
 }
 
@@ -193,7 +210,7 @@
   font-weight: 400;
   line-height: 1.25rem; // leading-[20px]
   font-style: normal;
-  color: $color-gray-400; // text-[#99a1af] -> gray-400
+  color: $color-zinc-400; // text-[#99a1af] -> gray-400
   font-size: 0.875rem; // text-[14px]
   white-space: nowrap;
   letter-spacing: -0.1504px; // tracking-[-0.1504px]
@@ -263,7 +280,7 @@
   width: 8rem; // w-32
   height: 8rem; // h-32
   background-color: $color-dark-bg-primary;
-  border: 2px solid $color-gray-800; // border-2 border-gray-800
+  border: 2px solid $color-zinc-800; // border-2 border-gray-800
   border-radius: 1.5rem; // rounded-3xl
   display: flex;
   align-items: center;
@@ -273,7 +290,7 @@
 .emptyStateIconSvg {
   width: 4rem; // w-16
   height: 4rem; // h-16
-  color: $color-gray-700; // text-gray-700
+  color: $color-zinc-700; // text-gray-700
 }
 
 .emptyStateDot1 {
@@ -305,7 +322,7 @@
 }
 
 .emptyStateDescription {
-  color: $color-gray-400; // text-gray-400
+  color: $color-zinc-400; // text-gray-400
   margin-bottom: $spacing-8;
 }
 

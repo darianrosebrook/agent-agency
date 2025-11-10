@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { ChevronDown, Upload, Link as LinkIcon, Wrench } from 'lucide-react';
-import { Button } from '../../ui/button';
+import { ChevronDown, Upload, Link as LinkIcon, Wrench } from "lucide-react";
+import { Button } from "../../primitives/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,14 +10,14 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from '../../ui/dropdown-menu';
-import { cn } from '../../ui/utils';
-import styles from './ContextMenu.module.scss';
+} from "../../primitives/dropdown-menu";
+import { cn } from "../../primitives/utils";
+import styles from "./ContextMenu.module.scss";
 
 interface ContextMenuProps {
   onAddFile: () => void;
-  onAddReference: (type: 'Chats' | 'Artifacts' | 'Tasks') => void;
-  onAddTool: (tool: 'Research' | 'Plan mode' | 'Scaffold' | 'Audit') => void;
+  onAddReference: (type: "Chats" | "Artifacts" | "Tasks") => void;
+  onAddTool: (tool: "Research" | "Plan mode" | "Scaffold" | "Audit") => void;
 }
 
 export function ContextMenu({
@@ -59,19 +59,19 @@ export function ContextMenu({
               <DropdownMenuSubContent className={styles.dropdownMenuSubContent}>
                 <DropdownMenuItem
                   className={styles.dropdownMenuItem}
-                  onClick={() => onAddReference('Chats')}
+                  onClick={() => onAddReference("Chats")}
                 >
                   Chats
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className={styles.dropdownMenuItem}
-                  onClick={() => onAddReference('Artifacts')}
+                  onClick={() => onAddReference("Artifacts")}
                 >
                   Artifacts
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className={styles.dropdownMenuItem}
-                  onClick={() => onAddReference('Tasks')}
+                  onClick={() => onAddReference("Tasks")}
                 >
                   Tasks
                 </DropdownMenuItem>
@@ -88,25 +88,25 @@ export function ContextMenu({
           <DropdownMenuSubContent className={styles.dropdownMenuSubContent}>
             <DropdownMenuItem
               className={styles.dropdownMenuItem}
-              onClick={() => onAddTool('Research')}
+              onClick={() => onAddTool("Research")}
             >
               Research
             </DropdownMenuItem>
             <DropdownMenuItem
               className={styles.dropdownMenuItem}
-              onClick={() => onAddTool('Plan mode')}
+              onClick={() => onAddTool("Plan mode")}
             >
               Plan mode
             </DropdownMenuItem>
             <DropdownMenuItem
               className={styles.dropdownMenuItem}
-              onClick={() => onAddTool('Scaffold')}
+              onClick={() => onAddTool("Scaffold")}
             >
               Scaffold
             </DropdownMenuItem>
             <DropdownMenuItem
               className={styles.dropdownMenuItem}
-              onClick={() => onAddTool('Audit')}
+              onClick={() => onAddTool("Audit")}
             >
               Audit
             </DropdownMenuItem>
@@ -116,4 +116,3 @@ export function ContextMenu({
     </DropdownMenu>
   );
 }
-

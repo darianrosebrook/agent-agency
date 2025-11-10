@@ -1,0 +1,65 @@
+@use "../../styles/design-tokens.scss" as *;
+
+.card {
+  background-color: var(--card);
+  color: var(--card-foreground);
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-6;
+  border-radius: calc(var(--radius) + 4px); // rounded-xl
+  border: 1px solid var(--border);
+}
+
+.cardHeader {
+  container-type: inline-size;
+  container-name: card-header;
+  display: grid;
+  grid-auto-rows: min-content;
+  grid-template-rows: auto auto;
+  align-items: start;
+  gap: $spacing-1_5;
+  padding: $spacing-6 $spacing-6 0;
+
+  &:has([data-slot='card-action']) {
+    grid-template-columns: 1fr auto;
+  }
+
+  &.borderBottom {
+    padding-bottom: $spacing-6;
+  }
+}
+
+.cardTitle {
+  line-height: 1;
+}
+
+.cardDescription {
+  color: var(--muted-foreground);
+}
+
+.cardAction {
+  grid-column-start: 2;
+  grid-row: span 2;
+  grid-row-start: 1;
+  align-self: start;
+  justify-self: end;
+}
+
+.cardContent {
+  padding: 0 $spacing-6;
+
+  &:last-child {
+    padding-bottom: $spacing-6;
+  }
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  padding: 0 $spacing-6 $spacing-6;
+
+  &.borderTop {
+    padding-top: $spacing-6;
+  }
+}
+

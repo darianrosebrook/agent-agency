@@ -7,6 +7,10 @@
   background-color: $color-dark-bg-secondary; // bg-[#0d0d0d]
 }
 
+.fullHeight {
+  height: 100%; // h-full
+}
+
 .workspaceTabContent {
   height: 100%;
   overflow: auto;

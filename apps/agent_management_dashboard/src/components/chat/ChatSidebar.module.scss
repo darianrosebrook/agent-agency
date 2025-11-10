@@ -37,7 +37,7 @@
   align-items: center;
   justify-content: center;
   color: $color-gray-300; // text-gray-300
-  border-radius: calc(var(--radius) + 4px); // rounded-lg
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
   transition: color $transition-normal, background-color $transition-normal; // transition-colors
 
   &:hover {
@@ -73,7 +73,7 @@
   gap: $spacing-2;
   padding: $spacing-2 $spacing-3;
   color: $color-gray-300; // text-gray-300
-  border-radius: calc(var(--radius) + 4px); // rounded-lg
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
   transition: background-color $transition-normal;
 
   &:hover {
@@ -109,7 +109,7 @@
   align-items: center;
   gap: $spacing-2;
   padding: $spacing-2 $spacing-3;
-  border-radius: calc(var(--radius) + 4px); // rounded-lg
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
   font-size: $font-size-sm;
   transition: color $transition-normal, background-color $transition-normal; // transition-colors
 }
@@ -135,3 +135,14 @@
   white-space: nowrap;
 }
 
+.icon {
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+  flex-shrink: 0;
+}
+
+.iconSmall {
+  width: 0.875rem; // w-3.5
+  height: 0.875rem; // h-3.5
+  flex-shrink: 0;
+}

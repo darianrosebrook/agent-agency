@@ -1,0 +1,91 @@
+@use "../styles/design-tokens.scss" as *;
+
+.errorDisplay {
+  display: flex;
+  gap: $spacing-3; // gap-3
+  border: 1px solid rgba($color-red-600, 0.2); // border border-red-600/20
+  background-color: rgba($color-red-600, 0.1); // bg-red-600/10
+  border-radius: 0.5rem; // rounded-lg = 8px (Tailwind default)
+  padding: $spacing-4; // p-4
+}
+
+.errorIcon {
+  flex-shrink: 0;
+  margin-top: 0.125rem; // mt-0.5
+}
+
+.errorIconSvg {
+  width: 1.25rem; // w-5
+  height: 1.25rem; // h-5
+  color: $color-red-500; // text-red-500
+}
+
+.errorContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.errorMessage {
+  font-size: $font-size-sm; // text-sm
+  color: $color-red-400; // text-red-400
+  font-weight: $font-weight-medium; // font-medium
+  margin-bottom: $spacing-1; // mb-1
+}
+
+.errorDetails {
+  font-size: $font-size-xs; // text-xs
+  color: rgba($color-red-500, 0.7); // text-red-500/70
+  margin-top: $spacing-2; // mt-2
+  font-family: monospace; // font-mono
+}
+
+.errorActions {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-2; // gap-2
+}
+
+.retryButton {
+  color: $color-red-400; // text-red-400
+
+  &:hover {
+    color: $color-red-300; // hover:text-red-300
+    background-color: rgba($color-red-500, 0.2); // hover:bg-red-500/20
+  }
+}
+
+.dismissButton {
+  color: $color-gray-400; // text-gray-400
+
+  &:hover {
+    color: $color-gray-300; // hover:text-gray-300
+  }
+}
+
+.buttonIcon {
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+}
+
+.buttonIconWithMargin {
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+  margin-right: $spacing-1; // mr-1
+}
+
+.inlineError {
+  display: flex;
+  gap: $spacing-2; // gap-2
+  align-items: flex-start;
+  font-size: $font-size-sm; // text-sm
+  color: $color-red-400; // text-red-400
+  margin-top: $spacing-1; // mt-1
+}
+
+.inlineErrorIcon {
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+  margin-top: 0.125rem; // mt-0.5
+  flex-shrink: 0;
+}
+

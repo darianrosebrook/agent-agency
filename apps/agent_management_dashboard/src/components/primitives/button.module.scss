@@ -1,0 +1,169 @@
+@use "../../styles/design-tokens.scss" as *;
+
+// Base button styles
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-2;
+  white-space: nowrap;
+  border-radius: calc(var(--radius) - 2px);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  transition: all $transition-normal;
+  pointer-events: auto;
+  outline: none;
+  flex-shrink: 0;
+
+  &:disabled {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  // SVG icon styles
+  svg {
+    pointer-events: none;
+    flex-shrink: 0;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  // Focus visible styles
+  &:focus-visible {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px hsl(var(--ring) / 0.5);
+  }
+
+  // Invalid state
+  &[aria-invalid='true'] {
+    box-shadow: 0 0 0 3px hsl(var(--destructive) / 0.2);
+    border-color: var(--destructive);
+
+    .dark & {
+      box-shadow: 0 0 0 3px hsl(var(--destructive) / 0.4);
+    }
+  }
+}
+
+// Variants
+.variant-default {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+
+  &:hover:not(:disabled) {
+    background-color: hsl(var(--primary) / 0.9);
+  }
+}
+
+.variant-destructive {
+  background-color: var(--destructive);
+  color: $color-white;
+
+  &:hover:not(:disabled) {
+    background-color: hsl(var(--destructive) / 0.9);
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 3px hsl(var(--destructive) / 0.2);
+  }
+
+  .dark & {
+    background-color: hsl(var(--destructive) / 0.6);
+
+    &:focus-visible {
+      box-shadow: 0 0 0 3px hsl(var(--destructive) / 0.4);
+    }
+  }
+}
+
+.variant-outline {
+  border: 1px solid var(--border);
+  background-color: var(--background);
+  color: var(--foreground);
+
+  &:hover:not(:disabled) {
+    background-color: var(--accent);
+    color: var(--accent-foreground);
+  }
+
+  .dark & {
+    background-color: hsl(var(--input) / 0.3);
+    border-color: var(--input);
+
+    &:hover:not(:disabled) {
+      background-color: hsl(var(--input) / 0.5);
+    }
+  }
+}
+
+.variant-secondary {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+
+  &:hover:not(:disabled) {
+    background-color: hsl(var(--secondary) / 0.8);
+  }
+}
+
+.variant-ghost {
+  &:hover:not(:disabled) {
+    background-color: var(--accent);
+    color: var(--accent-foreground);
+  }
+
+  .dark &:hover:not(:disabled) {
+    background-color: hsl(var(--accent) / 0.5);
+  }
+}
+
+.variant-link {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+
+  &:hover:not(:disabled) {
+    text-decoration: underline;
+  }
+}
+
+// Sizes
+.size-default {
+  height: 2.25rem; // h-9
+  padding: $spacing-2 $spacing-4;
+
+  &:has(> svg) {
+    padding-left: $spacing-3;
+    padding-right: $spacing-3;
+  }
+}
+
+.size-sm {
+  height: 2rem; // h-8
+  border-radius: calc(var(--radius) - 2px);
+  gap: $spacing-1_5;
+  padding: $spacing-2 $spacing-3;
+
+  &:has(> svg) {
+    padding-left: $spacing-2_5;
+    padding-right: $spacing-2_5;
+  }
+}
+
+.size-lg {
+  height: 2.5rem; // h-10
+  border-radius: calc(var(--radius) - 2px);
+  padding: $spacing-2 $spacing-6;
+
+  &:has(> svg) {
+    padding-left: $spacing-4;
+    padding-right: $spacing-4;
+  }
+}
+
+.size-icon {
+  width: 2.25rem; // size-9
+  height: 2.25rem;
+  border-radius: calc(var(--radius) - 2px);
+  padding: 0;
+}
+

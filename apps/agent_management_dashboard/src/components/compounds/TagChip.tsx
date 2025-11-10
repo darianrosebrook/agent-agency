@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { X } from 'lucide-react';
-import styles from './TagChip.module.scss';
-import { cn } from '../ui/utils';
+import { X } from "lucide-react";
+import styles from "./TagChip.module.scss";
+import { cn } from "../primitives/utils";
 
 interface TagChipProps {
   tag: string;
@@ -10,7 +10,7 @@ interface TagChipProps {
   className?: string;
 }
 
-export function TagChip({ tag, onRemove, className = '' }: TagChipProps) {
+export function TagChip({ tag, onRemove, className = "" }: TagChipProps) {
   return (
     <span
       className={cn(styles.tagChip, onRemove && styles.removable, className)}
@@ -21,7 +21,3 @@ export function TagChip({ tag, onRemove, className = '' }: TagChipProps) {
     </span>
   );
 }
-
-
-
-

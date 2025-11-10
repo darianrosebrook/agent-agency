@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { CheckCircle2, Circle, Trash2 } from 'lucide-react';
-import type { Subtask } from './types';
-import { cn } from '../../ui/utils';
-import styles from './SubtaskItem.module.scss';
+import { CheckCircle2, Circle, Trash2 } from "lucide-react";
+import type { Subtask } from "./types";
+import { cn } from "../../primitives/utils";
+import styles from "./SubtaskItem.module.scss";
 
 interface SubtaskItemProps {
   subtask: Subtask;
@@ -16,9 +16,13 @@ export function SubtaskItem({ subtask, onToggle, onDelete }: SubtaskItemProps) {
     <div className={styles.subtaskItem}>
       <button onClick={onToggle} className={styles.subtaskToggle}>
         {subtask.completed ? (
-          <CheckCircle2 className={cn(styles.subtaskIcon, styles.subtaskIconCompleted)} />
+          <CheckCircle2
+            className={cn(styles.subtaskIcon, styles.subtaskIconCompleted)}
+          />
         ) : (
-          <Circle className={cn(styles.subtaskIcon, styles.subtaskIconIncomplete)} />
+          <Circle
+            className={cn(styles.subtaskIcon, styles.subtaskIconIncomplete)}
+          />
         )}
       </button>
       <span
@@ -31,16 +35,9 @@ export function SubtaskItem({ subtask, onToggle, onDelete }: SubtaskItemProps) {
       >
         {subtask.text}
       </span>
-      <button
-        onClick={onDelete}
-        className={styles.subtaskDelete}
-      >
+      <button onClick={onDelete} className={styles.subtaskDelete}>
         <Trash2 className={styles.subtaskDeleteIcon} />
       </button>
     </div>
   );
 }
-
-
-
-

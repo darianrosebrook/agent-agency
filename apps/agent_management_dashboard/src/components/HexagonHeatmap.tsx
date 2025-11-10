@@ -4,7 +4,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "./ui/tooltip";
+} from "./primitives/tooltip";
 import styles from "./HexagonHeatmap.module.scss";
 
 type Axial = { q: number; r: number };
@@ -56,8 +56,7 @@ function hexRing(center: Axial, k: number): Axial[] {
 // Generate a spiral of hexagons from center to radius R
 function hexSpiral(center: Axial, R: number): Axial[] {
   const cells: Axial[] = [];
-  for (let k = 0; k <= R; k++)
-    cells.push(...hexRing(center, k));
+  for (let k = 0; k <= R; k++) cells.push(...hexRing(center, k));
   return cells;
 }
 
@@ -108,35 +107,29 @@ export function HexagonHeatmap({
   const hexagons = useMemo(() => {
     const center: Axial = { q: 0, r: 0 };
     const cells = hexSpiral(center, radius);
-    const agents = [
-      "Agent Alpha",
-      "Agent Beta",
-      "Agent Gamma",
-      "Agent Delta",
-    ];
+    const agents = ["Agent Alpha", "Agent Beta", "Agent Gamma", "Agent Delta"];
 
     const data: HexagonData[] = cells.map((hex, idx) => {
       const { x, y } = axialToPixel(hex, hexSize);
 
       // Calculate distance from center (0,0) using axial coordinates
-      const distance = (Math.abs(hex.q) + Math.abs(hex.r) + Math.abs(hex.q + hex.r)) / 2;
-      
+      const distance =
+        (Math.abs(hex.q) + Math.abs(hex.r) + Math.abs(hex.q + hex.r)) / 2;
+
       // Create a bias where center hexagons have higher completion
       // Distance ranges from 0 (center) to radius (outer edge)
-      const distanceBias = 1 - (distance / radius);
-      
+      const distanceBias = 1 - distance / radius;
+
       // Generate completion percentage with noise patterns
-      const noise =
-        (Math.sin(hex.q * 2.5) * Math.cos(hex.r * 2.5) + 1) / 2;
-      const noise2 =
-        (Math.sin(hex.q * 0.8 + hex.r * 1.2) + 1) / 2;
-      const baseNoise = (noise * 0.6 + noise2 * 0.4);
-      
+      const noise = (Math.sin(hex.q * 2.5) * Math.cos(hex.r * 2.5) + 1) / 2;
+      const noise2 = (Math.sin(hex.q * 0.8 + hex.r * 1.2) + 1) / 2;
+      const baseNoise = noise * 0.6 + noise2 * 0.4;
+
       // Apply distance bias: center gets 60-100%, edges get 0-60%
       const biasedCompletion = (distanceBias * 0.5 + baseNoise * 0.5) * 100;
       const completion = Math.max(
         0,
-        Math.min(100, Math.round(biasedCompletion)),
+        Math.min(100, Math.round(biasedCompletion))
       );
 
       return {
@@ -147,8 +140,7 @@ export function HexagonHeatmap({
         y,
         completion,
         taskName: `Task ${idx + 1}`,
-        agent:
-          agents[Math.floor(Math.random() * agents.length)],
+        agent: agents[Math.floor(Math.random() * agents.length)],
       };
     });
 
@@ -176,12 +168,9 @@ export function HexagonHeatmap({
 
   // Calculate statistics
   const totalTasks = hexagons.length;
-  const completedTasks = hexagons.filter(
-    (h) => h.completion === 100,
-  ).length;
+  const completedTasks = hexagons.filter((h) => h.completion === 100).length;
   const averageCompletion = Math.round(
-    hexagons.reduce((sum, h) => sum + h.completion, 0) /
-      totalTasks,
+    hexagons.reduce((sum, h) => sum + h.completion, 0) / totalTasks
   );
 
   // Calculate SVG dimensions
@@ -193,10 +182,7 @@ export function HexagonHeatmap({
 
   // Drawing size with slight gutter effect
   const gutter = 1.5;
-  const drawScale = Math.max(
-    0,
-    1 - gutter / (hexSize * Math.sqrt(3)),
-  );
+  const drawScale = Math.max(0, 1 - gutter / (hexSize * Math.sqrt(3)));
   const drawSize = hexSize * drawScale;
 
   return (
@@ -205,9 +191,7 @@ export function HexagonHeatmap({
         <div className={styles.content}>
           {/* Header */}
           <div className={styles.header}>
-            <h3 className={styles.title}>
-              Task Completion Heatmap
-            </h3>
+            <h3 className={styles.title}>Task Completion Heatmap</h3>
             <p className={styles.subtitle}>
               {totalTasks} tasks tracked across AI agents
             </p>
@@ -221,9 +205,7 @@ export function HexagonHeatmap({
                 className={styles.svg}
                 style={{ maxHeight: "100%", maxWidth: "100%" }}
               >
-                <g
-                  transform={`translate(${centerX}, ${centerY})`}
-                >
+                <g transform={`translate(${centerX}, ${centerY})`}>
                   {hexagons.map((hex) => (
                     <Tooltip key={hex.id} delayDuration={0}>
                       <TooltipTrigger asChild>
@@ -251,8 +233,7 @@ export function HexagonHeatmap({
                             {hex.taskName}
                           </div>
                           <div className={styles.tooltipSubtext}>
-                            {hex.agent} • {hex.completion}%
-                            complete
+                            {hex.agent} • {hex.completion}% complete
                           </div>
                         </div>
                       </TooltipContent>
@@ -267,48 +248,46 @@ export function HexagonHeatmap({
           <div className={styles.statsAndLegend}>
             <div className={styles.stats}>
               <div className={styles.statItem}>
-                <div className={styles.statLabel}>
-                  Completed
-                </div>
+                <div className={styles.statLabel}>Completed</div>
                 <div className={styles.statValue}>
                   {completedTasks} / {totalTasks}
                 </div>
               </div>
               <div className={styles.statItem}>
-                <div className={styles.statLabel}>
-                  Avg Completion
-                </div>
-                <div className={styles.statValue}>
-                  {averageCompletion}%
-                </div>
+                <div className={styles.statLabel}>Avg Completion</div>
+                <div className={styles.statValue}>{averageCompletion}%</div>
               </div>
             </div>
 
             {/* Legend */}
             <div className={styles.legend}>
               <div className={styles.legendItem}>
-                <div className={styles.legendSwatch} style={{ backgroundColor: "#27272a" }} />
-                <span className={styles.legendLabel}>
-                  0%
-                </span>
+                <div
+                  className={styles.legendSwatch}
+                  style={{ backgroundColor: "#27272a" }}
+                />
+                <span className={styles.legendLabel}>0%</span>
               </div>
               <div className={styles.legendItem}>
-                <div className={styles.legendSwatch} style={{ backgroundColor: "#312e81" }} />
-                <span className={styles.legendLabel}>
-                  1-40%
-                </span>
+                <div
+                  className={styles.legendSwatch}
+                  style={{ backgroundColor: "#312e81" }}
+                />
+                <span className={styles.legendLabel}>1-40%</span>
               </div>
               <div className={styles.legendItem}>
-                <div className={styles.legendSwatch} style={{ backgroundColor: "#6366f1" }} />
-                <span className={styles.legendLabel}>
-                  41-80%
-                </span>
+                <div
+                  className={styles.legendSwatch}
+                  style={{ backgroundColor: "#6366f1" }}
+                />
+                <span className={styles.legendLabel}>41-80%</span>
               </div>
               <div className={styles.legendItem}>
-                <div className={styles.legendSwatch} style={{ backgroundColor: "#e0e7ff" }} />
-                <span className={styles.legendLabel}>
-                  81-100%
-                </span>
+                <div
+                  className={styles.legendSwatch}
+                  style={{ backgroundColor: "#e0e7ff" }}
+                />
+                <span className={styles.legendLabel}>81-100%</span>
               </div>
             </div>
           </div>

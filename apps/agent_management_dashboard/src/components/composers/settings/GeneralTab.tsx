@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import svgPaths from '../../../imports/svg-pj3tus7kw0';
-import { cn } from '../../ui/utils';
-import styles from './GeneralTab.module.scss';
+import { useState } from "react";
+import svgPaths from "../../../imports/svg-pj3tus7kw0";
+import { cn } from "../../primitives/utils";
+import styles from "./GeneralTab.module.scss";
 
 export function GeneralTabContent() {
   const [collaboration, setCollaboration] = useState(true);
@@ -28,39 +28,26 @@ export function GeneralTabContent() {
   //    - Data source: PATCH /api/projects/:projectId/settings endpoint
   //    - Store notification preferences (assignment, comment, status)
   //    - Store collaboration and approval settings
-  const [projectName, setProjectName] = useState('My Kanban Project');
+  const [projectName, setProjectName] = useState("My Kanban Project");
   const [description, setDescription] = useState(
-    'A project management tool with kanban boards and timeline tracking.'
+    "A project management tool with kanban boards and timeline tracking."
   );
 
   return (
-    <div
-      className={styles.generalTab}
-      data-name="ProjectSettings"
-    >
+    <div className={styles.generalTab} data-name="ProjectSettings">
       <div className={styles.generalTabInner}>
         {/* Project Details Section */}
-        <div
-          className={styles.projectDetailsSection}
-          data-name="Container"
-        >
-          <div
-            aria-hidden="true"
-            className={styles.projectDetailsBorder}
-          />
+        <div className={styles.projectDetailsSection} data-name="Container">
+          <div aria-hidden="true" className={styles.projectDetailsBorder} />
           <div className={styles.sectionHeading}>
-            <p className={styles.sectionHeadingText}>
-              Project Details
-            </p>
+            <p className={styles.sectionHeadingText}>Project Details</p>
           </div>
 
           <div className={styles.projectDetailsContent}>
             {/* Project Name */}
             <div className={styles.formField}>
               <div className={styles.formFieldLabel}>
-                <p className={styles.formFieldLabelText}>
-                  Project Name
-                </p>
+                <p className={styles.formFieldLabelText}>Project Name</p>
               </div>
               <input
                 type="text"
@@ -73,9 +60,7 @@ export function GeneralTabContent() {
             {/* Description */}
             <div className={styles.formField}>
               <div className={styles.formFieldLabel}>
-                <p className={styles.formFieldLabelText}>
-                  Description
-                </p>
+                <p className={styles.formFieldLabelText}>Description</p>
               </div>
               <textarea
                 value={description}
@@ -88,51 +73,36 @@ export function GeneralTabContent() {
             <div className={styles.projectIdCreatedContainer}>
               <div className={styles.projectIdField}>
                 <div className={styles.formFieldLabel}>
-                  <p className={styles.formFieldLabelText}>
-                    Project ID
-                  </p>
+                  <p className={styles.formFieldLabelText}>Project ID</p>
                 </div>
                 <div className={styles.readOnlyField}>
                   {/* TODO: Replace hardcoded project ID with project.id from v3 database */}
-                  <p className={styles.readOnlyFieldText}>
-                    proj_8k2m9n4p
-                  </p>
+                  <p className={styles.readOnlyFieldText}>proj_8k2m9n4p</p>
                 </div>
               </div>
 
               <div className={styles.createdField}>
                 <div className={styles.formFieldLabel}>
-                  <p className={styles.formFieldLabelText}>
-                    Created
-                  </p>
+                  <p className={styles.formFieldLabelText}>Created</p>
                 </div>
                 <div className={styles.readOnlyField}>
                   {/* TODO: Replace hardcoded created date with project.created_at from v3 database, formatted as readable date */}
-                  <p className={styles.readOnlyFieldText}>
-                    November 1, 2024
-                  </p>
+                  <p className={styles.readOnlyFieldText}>November 1, 2024</p>
                 </div>
               </div>
             </div>
           </div>
 
           <button className={styles.saveChangesButton}>
-            <p className={styles.saveChangesButtonText}>
-              Save Changes
-            </p>
+            <p className={styles.saveChangesButtonText}>Save Changes</p>
           </button>
         </div>
 
         {/* Team Settings Section */}
         <div className={styles.teamSettingsSection}>
-          <div
-            aria-hidden="true"
-            className={styles.teamSettingsBorder}
-          />
+          <div aria-hidden="true" className={styles.teamSettingsBorder} />
           <div className={styles.sectionHeading}>
-            <p className={styles.sectionHeadingText}>
-              Team Settings
-            </p>
+            <p className={styles.sectionHeadingText}>Team Settings</p>
           </div>
 
           <div className={styles.teamSettingsContent}>
@@ -151,13 +121,9 @@ export function GeneralTabContent() {
             //    - Show "Auto-assign" option when no specific user is selected
             */}
             <div className={styles.formField}>
-              <p className={styles.formFieldLabelText}>
-                Default Assignee
-              </p>
+              <p className={styles.formFieldLabelText}>Default Assignee</p>
               <button className={styles.defaultAssigneeButton}>
-                <p className={styles.defaultAssigneeButtonText}>
-                  Auto-assign
-                </p>
+                <p className={styles.defaultAssigneeButtonText}>Auto-assign</p>
                 <div className={styles.defaultAssigneeButtonIcon}>
                   <svg
                     className={styles.defaultAssigneeButtonIconSvg}
@@ -192,13 +158,17 @@ export function GeneralTabContent() {
                 onClick={() => setCollaboration(!collaboration)}
                 className={cn(
                   styles.toggleSwitch,
-                  collaboration ? styles.toggleSwitchActive : styles.toggleSwitchInactive
+                  collaboration
+                    ? styles.toggleSwitchActive
+                    : styles.toggleSwitchInactive
                 )}
               >
                 <div
                   className={cn(
                     styles.toggleSwitchThumb,
-                    collaboration ? styles.toggleSwitchThumbActive : styles.toggleSwitchThumbInactive
+                    collaboration
+                      ? styles.toggleSwitchThumbActive
+                      : styles.toggleSwitchThumbInactive
                   )}
                 />
               </button>
@@ -218,13 +188,17 @@ export function GeneralTabContent() {
                 onClick={() => setRequireApproval(!requireApproval)}
                 className={cn(
                   styles.toggleSwitch,
-                  requireApproval ? styles.toggleSwitchActive : styles.toggleSwitchInactive
+                  requireApproval
+                    ? styles.toggleSwitchActive
+                    : styles.toggleSwitchInactive
                 )}
               >
                 <div
                   className={cn(
                     styles.toggleSwitchThumb,
-                    requireApproval ? styles.toggleSwitchThumbActive : styles.toggleSwitchThumbInactive
+                    requireApproval
+                      ? styles.toggleSwitchThumbActive
+                      : styles.toggleSwitchThumbInactive
                   )}
                 />
               </button>
@@ -234,23 +208,21 @@ export function GeneralTabContent() {
 
         {/* Notifications Section */}
         <div className={styles.notificationsSection}>
-          <div
-            aria-hidden="true"
-            className={styles.notificationsBorder}
-          />
+          <div aria-hidden="true" className={styles.notificationsBorder} />
           <div className={styles.sectionHeading}>
-            <p className={styles.sectionHeadingText}>
-              Notifications
-            </p>
+            <p className={styles.sectionHeadingText}>Notifications</p>
           </div>
 
           <div className={styles.notificationsContent}>
             {/* Task Assignments */}
-            <div className={cn(styles.notificationRow, styles.notificationRowFirst)}>
+            <div
+              className={cn(
+                styles.notificationRow,
+                styles.notificationRowFirst
+              )}
+            >
               <div className={styles.toggleRowLabel}>
-                <p className={styles.toggleRowLabelText}>
-                  Task assignments
-                </p>
+                <p className={styles.toggleRowLabelText}>Task assignments</p>
                 <p className={styles.toggleRowDescription}>
                   Get notified when assigned to a task
                 </p>
@@ -259,26 +231,38 @@ export function GeneralTabContent() {
                 onClick={() => setAssignmentNotifs(!assignmentNotifs)}
                 className={cn(
                   styles.toggleSwitch,
-                  assignmentNotifs ? styles.toggleSwitchActive : styles.toggleSwitchInactive
+                  assignmentNotifs
+                    ? styles.toggleSwitchActive
+                    : styles.toggleSwitchInactive
                 )}
               >
                 <div
                   className={cn(
                     styles.toggleSwitchThumb,
-                    assignmentNotifs ? styles.toggleSwitchThumbActive : styles.toggleSwitchThumbInactive
+                    assignmentNotifs
+                      ? styles.toggleSwitchThumbActive
+                      : styles.toggleSwitchThumbInactive
                   )}
                 />
               </button>
             </div>
 
-            <div className={cn(styles.notificationDivider, styles.notificationDividerFirst)} />
+            <div
+              className={cn(
+                styles.notificationDivider,
+                styles.notificationDividerFirst
+              )}
+            />
 
             {/* Task Comments */}
-            <div className={cn(styles.notificationRow, styles.notificationRowSecond)}>
+            <div
+              className={cn(
+                styles.notificationRow,
+                styles.notificationRowSecond
+              )}
+            >
               <div className={styles.toggleRowLabel}>
-                <p className={styles.toggleRowLabelText}>
-                  Task comments
-                </p>
+                <p className={styles.toggleRowLabelText}>Task comments</p>
                 <p className={styles.toggleRowDescription}>
                   Get notified of new comments on your tasks
                 </p>
@@ -287,26 +271,38 @@ export function GeneralTabContent() {
                 onClick={() => setCommentNotifs(!commentNotifs)}
                 className={cn(
                   styles.toggleSwitch,
-                  commentNotifs ? styles.toggleSwitchActive : styles.toggleSwitchInactive
+                  commentNotifs
+                    ? styles.toggleSwitchActive
+                    : styles.toggleSwitchInactive
                 )}
               >
                 <div
                   className={cn(
                     styles.toggleSwitchThumb,
-                    commentNotifs ? styles.toggleSwitchThumbActive : styles.toggleSwitchThumbInactive
+                    commentNotifs
+                      ? styles.toggleSwitchThumbActive
+                      : styles.toggleSwitchThumbInactive
                   )}
                 />
               </button>
             </div>
 
-            <div className={cn(styles.notificationDivider, styles.notificationDividerSecond)} />
+            <div
+              className={cn(
+                styles.notificationDivider,
+                styles.notificationDividerSecond
+              )}
+            />
 
             {/* Status Changes */}
-            <div className={cn(styles.notificationRow, styles.notificationRowThird)}>
+            <div
+              className={cn(
+                styles.notificationRow,
+                styles.notificationRowThird
+              )}
+            >
               <div className={styles.toggleRowLabel}>
-                <p className={styles.toggleRowLabelText}>
-                  Status changes
-                </p>
+                <p className={styles.toggleRowLabelText}>Status changes</p>
                 <p className={styles.toggleRowDescription}>
                   Get notified when task status changes
                 </p>
@@ -315,13 +311,17 @@ export function GeneralTabContent() {
                 onClick={() => setStatusNotifs(!statusNotifs)}
                 className={cn(
                   styles.toggleSwitch,
-                  statusNotifs ? styles.toggleSwitchActive : styles.toggleSwitchInactive
+                  statusNotifs
+                    ? styles.toggleSwitchActive
+                    : styles.toggleSwitchInactive
                 )}
               >
                 <div
                   className={cn(
                     styles.toggleSwitchThumb,
-                    statusNotifs ? styles.toggleSwitchThumbActive : styles.toggleSwitchThumbInactive
+                    statusNotifs
+                      ? styles.toggleSwitchThumbActive
+                      : styles.toggleSwitchThumbInactive
                   )}
                 />
               </button>
@@ -331,10 +331,7 @@ export function GeneralTabContent() {
 
         {/* Danger Zone Section */}
         <div className={styles.dangerZoneSection}>
-          <div
-            aria-hidden="true"
-            className={styles.dangerZoneBorder}
-          />
+          <div aria-hidden="true" className={styles.dangerZoneBorder} />
           <div className={styles.sectionHeading}>
             <div className={styles.dangerZoneIcon}>
               <svg
@@ -366,9 +363,7 @@ export function GeneralTabContent() {
                 />
               </svg>
             </div>
-            <p className={styles.dangerZoneTitle}>
-              Danger Zone
-            </p>
+            <p className={styles.dangerZoneTitle}>Danger Zone</p>
           </div>
 
           <div className={styles.dangerZoneContent}>
@@ -383,14 +378,14 @@ export function GeneralTabContent() {
                 </p>
               </div>
               <button className={styles.archiveButton}>
-                <p className={styles.archiveButtonText}>
-                  Archive
-                </p>
+                <p className={styles.archiveButtonText}>Archive</p>
               </button>
             </div>
 
             {/* Delete Project */}
-            <div className={cn(styles.dangerZoneItem, styles.dangerZoneItemDelete)}>
+            <div
+              className={cn(styles.dangerZoneItem, styles.dangerZoneItemDelete)}
+            >
               <div className={styles.dangerZoneItemContent}>
                 <p className={styles.dangerZoneItemTitle}>
                   Delete this project
@@ -444,9 +439,7 @@ export function GeneralTabContent() {
                     />
                   </svg>
                 </div>
-                <p className={styles.deleteButtonText}>
-                  Delete
-                </p>
+                <p className={styles.deleteButtonText}>Delete</p>
               </button>
             </div>
           </div>
@@ -455,4 +448,3 @@ export function GeneralTabContent() {
     </div>
   );
 }
-

@@ -3,7 +3,7 @@
 import React, { useState, useRef } from "react";
 import { MessageSquare, X } from "lucide-react";
 import { FileDropzoneModal } from "./FileDropzoneModal";
-import { Badge } from "./ui/badge";
+import { Badge } from "./primitives/badge";
 import { ChatMessage, ChatMessageSkeleton } from "./compounds";
 import svgPaths from "../imports/svg-quupl4zjo1";
 import { useChatStore } from "../lib/stores";
