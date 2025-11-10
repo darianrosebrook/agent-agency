@@ -1,28 +1,29 @@
 import * as React from "react";
 import svgPaths from "./svg-cbx0l4dc6g";
+import styles from "./Frame24889.module.scss";
 
 function Frame1() {
   return (
-    <div className="absolute bg-[#111111] content-stretch flex flex-col gap-[9.176px] items-start left-[597.85px] top-[99.11px]">
-      <p className="font-['Helvetica_Neue:Regular',sans-serif] leading-[18.353px] not-italic relative shrink-0 text-[#9e9ea0] text-[11.012px] text-nowrap whitespace-pre">3K</p>
+    <div className={`${styles.absolute} ${styles.bg111111} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap9176px} ${styles.itemsStart} ${styles.left59785px} ${styles.top9911px}`}>
+      <p className={`${styles.fontHelveticaNeue} ${styles.leading18353px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text9e9ea0} ${styles.text11012px} ${styles.textNowrap} ${styles.whitespacePre}`}>3K</p>
     </div>
   );
 }
 
 function Frame2() {
   return (
-    <div className="absolute bg-[#111111] content-stretch flex flex-col gap-[9.176px] items-start left-[597.85px] top-[269.3px]">
-      <p className="font-['Helvetica_Neue:Regular',sans-serif] leading-[18.353px] not-italic relative shrink-0 text-[#9e9ea0] text-[11.012px] text-nowrap whitespace-pre">2K</p>
+    <div className={`${styles.absolute} ${styles.bg111111} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap9176px} ${styles.itemsStart} ${styles.left59785px} ${styles.top2693px}`}>
+      <p className={`${styles.fontHelveticaNeue} ${styles.leading18353px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text9e9ea0} ${styles.text11012px} ${styles.textNowrap} ${styles.whitespacePre}`}>2K</p>
     </div>
   );
 }
 
 function Frame() {
   return (
-    <div className="absolute bg-[#111111] box-border content-stretch flex gap-[9.176px] items-start left-[1023.56px] px-[22.023px] py-[14.682px] rounded-[7.341px] top-[102.56px]">
-      <div aria-hidden="true" className="absolute border-[#39393b] border-[0.918px] border-solid inset-0 pointer-events-none rounded-[7.341px]" />
-      <div className="font-['Helvetica_Neue:Regular',sans-serif] leading-[18.353px] not-italic relative shrink-0 text-[12.847px] text-nowrap text-white whitespace-pre">
-        <p className="mb-0">Total Performance</p>
+    <div className={`${styles.absolute} ${styles.bg111111} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap9176px} ${styles.itemsStart} ${styles.left102356px} ${styles.px22023px} ${styles.py14682px} ${styles.rounded7341px} ${styles.top10256px}`}>
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border39393b} ${styles.border0918px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded7341px}`} />
+      <div className={`${styles.fontHelveticaNeue} ${styles.leading18353px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text12847px} ${styles.textNowrap} ${styles.textWhite} ${styles.whitespacePre}`}>
+        <p className={styles.mb0}>Total Performance</p>
         <p>1.3K lines of code</p>
       </div>
     </div>
@@ -31,8 +32,8 @@ function Frame() {
 
 function Group() {
   return (
-    <div className="absolute inset-[26%_38.88%_26.43%_15.99%]" data-name="Group">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 21 22">
+    <div className={`${styles.absolute} ${styles.inset26_3888_2643_1599}`} data-name="Group">
+      <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 21 22">
         <g id="Group">
           <path d={svgPaths.p21a83a00} fill="var(--fill-0, #111111)" id="Vector" />
         </g>
@@ -43,7 +44,7 @@ function Group() {
 
 function CursorClick() {
   return (
-    <div className="absolute left-[1000.62px] size-[45.882px] top-[287.15px]" data-name="Cursor/Click">
+    <div className={`${styles.absolute} ${styles.left100062px} ${styles.size45882px} ${styles.top28715px}`} data-name="Cursor/Click">
       <Group />
     </div>
   );
@@ -51,39 +52,39 @@ function CursorClick() {
 
 function Frame3() {
   return (
-    <div className="absolute h-[353.994px] left-[33.32px] top-[33.32px] w-[1207.16px]">
-      <div className="absolute h-0 left-[3.2px] top-[277.72px] w-[1203.96px]">
-        <div className="absolute bottom-0 left-0 right-0 top-[-0.92px]">
-          <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 1204 1">
+    <div className={`${styles.absolute} ${styles.h353994px} ${styles.left3332px} ${styles.top3332px} ${styles.w120716px}`}>
+      <div className={`${styles.absolute} ${styles.h0} ${styles.left32px} ${styles.top27772px} ${styles.w120396px}`}>
+        <div className={`${styles.absolute} ${styles.bottom0} ${styles.left0} ${styles.right0} ${styles.topNeg092px}`}>
+          <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 1204 1">
             <line id="Line 292" stroke="var(--stroke-0, #39393B)" strokeWidth="0.917641" x2="1203.96" y1="0.45882" y2="0.45882" />
           </svg>
         </div>
       </div>
-      <div className="absolute h-0 left-[3.2px] top-[110.11px] w-[1203.96px]">
-        <div className="absolute bottom-0 left-0 right-0 top-[-0.92px]">
-          <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 1204 1">
+      <div className={`${styles.absolute} ${styles.h0} ${styles.left32px} ${styles.top11011px} ${styles.w120396px}`}>
+        <div className={`${styles.absolute} ${styles.bottom0} ${styles.left0} ${styles.right0} ${styles.topNeg092px}`}>
+          <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 1204 1">
             <line id="Line 295" stroke="var(--stroke-0, #39393B)" strokeWidth="0.917641" x2="1203.96" y1="0.45882" y2="0.45882" />
           </svg>
         </div>
       </div>
       <Frame1 />
       <Frame2 />
-      <div className="absolute font-['Helvetica_Neue:Medium',sans-serif] leading-[22.023px] left-0 not-italic text-[#9e9ea0] text-[0px] text-[16.518px] text-nowrap top-[29.36px] whitespace-pre">
-        <p className="mb-0 text-white">Overall Contribution</p>
+      <div className={`${styles.absolute} ${styles.fontHelveticaNeue} ${styles.leading22023px} ${styles.left0} ${styles.notItalic} ${styles.text9e9ea0} ${styles.text0px} ${styles.text16518px} ${styles.textNowrap} ${styles.top2936px} ${styles.whitespacePre}`}>
+        <p className={`${styles.mb0} ${styles.textWhite}`}>Overall Contribution</p>
         <p>2 Agents over the last 2 days</p>
       </div>
-      <div className="absolute h-0 left-[2.3px] top-0 w-[1204.86px]">
-        <div className="absolute bottom-0 left-0 right-0 top-[-0.92px]">
-          <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 1205 1">
+      <div className={`${styles.absolute} ${styles.h0} ${styles.left23px} ${styles.top0} ${styles.w120486px}`}>
+        <div className={`${styles.absolute} ${styles.bottom0} ${styles.left0} ${styles.right0} ${styles.topNeg092px}`}>
+          <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 1205 1">
             <line id="Line 300" stroke="var(--stroke-0, white)" strokeWidth="0.917641" x2="1204.86" y1="0.45882" y2="0.45882" />
           </svg>
         </div>
       </div>
-      <div className="absolute flex h-[242.257px] items-center justify-center left-[3.2px] top-[102.56px] w-[1200.75px]">
-        <div className="flex-none scale-y-[-100%]">
-          <div className="h-[242.257px] relative w-[1200.75px]">
-            <div className="absolute inset-[-2.54%_-0.42%_9%_-0.51%]">
-              <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 1212 227" xmlnsXlink="http://www.w3.org/1999/xlink">
+      <div className={`${styles.absolute} ${styles.flex} ${styles.h242257px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.left32px} ${styles.top10256px} ${styles.w120075px}`}>
+        <div className={`${styles.flexNone} ${styles.scaleYNeg100}`}>
+          <div className={`${styles.h242257px} ${styles.relative} ${styles.w120075px}`}>
+            <div className={`${styles.absolute} ${styles.insetNeg254_Neg042_9_Neg051}`}>
+              <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 1212 227" xmlnsXlink="http://www.w3.org/1999/xlink">
                 <path d={svgPaths.p67ef140} id="Rectangle 1078" stroke="url(#pattern0_20_486)" strokeLinecap="square" strokeWidth="9.17641" />
                 <defs>
                   <pattern height="0.157253" id="pattern0_20_486" patternContentUnits="objectBoundingBox" width="0.0137196">
@@ -98,22 +99,22 @@ function Frame3() {
       </div>
       <Frame />
       <CursorClick />
-      <div className="absolute flex h-[172.943px] items-center justify-center left-[2.68px] top-[192.74px] w-[1177.48px]">
-        <div className="flex-none rotate-[180deg]">
-          <div className="h-[172.943px] relative w-[1177.48px]">
-            <div className="absolute inset-[-3.95%_-0.63%_-3.18%_-0.58%]">
-              <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 1192 186">
+      <div className={`${styles.absolute} ${styles.flex} ${styles.h172943px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.left268px} ${styles.top19274px} ${styles.w117748px}`}>
+        <div className={`${styles.flexNone} ${styles.rotate180deg}`}>
+          <div className={`${styles.h172943px} ${styles.relative} ${styles.w117748px}`}>
+            <div className={`${styles.absolute} ${styles.insetNeg395_Neg063_Neg318_Neg058}`}>
+              <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 1192 186">
                 <path d={svgPaths.p3478b3c0} id="Rectangle 1077" stroke="var(--stroke-0, #83F13B)" strokeLinecap="square" strokeWidth="11.0117" />
               </svg>
             </div>
           </div>
         </div>
       </div>
-      <div className="absolute flex h-[calc(1px*((var(--transform-inner-width)*1)+(var(--transform-inner-height)*0)))] items-center justify-center left-[1014.68px] top-[135.74px] w-[calc(1px*((var(--transform-inner-height)*1)+(var(--transform-inner-width)*0)))]" style={{ "--transform-inner-width": "167.984375", "--transform-inner-height": "0" } as React.CSSProperties}>
-        <div className="flex-none rotate-[90deg]">
-          <div className="h-0 relative w-[168px]">
-            <div className="absolute bottom-0 left-0 right-0 top-[-1.38px]">
-              <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 168 2">
+      <div className={`${styles.absolute} ${styles.flex} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.left101468px} ${styles.top13574px}`} style={{ "--transform-inner-width": "167.984375", "--transform-inner-height": "0", height: "calc(1px*((var(--transform-inner-width)*1)+(var(--transform-inner-height)*0)))", width: "calc(1px*((var(--transform-inner-height)*1)+(var(--transform-inner-width)*0)))" } as React.CSSProperties}>
+        <div className={`${styles.flexNone} ${styles.rotate90deg}`}>
+          <div className={`${styles.h0} ${styles.relative} ${styles.w168px}`}>
+            <div className={`${styles.absolute} ${styles.bottom0} ${styles.left0} ${styles.right0} ${styles.topNeg138px}`}>
+              <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 168 2">
                 <line id="Line 298" stroke="var(--stroke-0, white)" strokeLinecap="round" strokeWidth="1.37646" x1="0.688231" x2="167.312" y1="0.688231" y2="0.688231" />
               </svg>
             </div>
@@ -126,8 +127,8 @@ function Frame3() {
 
 export default function Frame4() {
   return (
-    <div className="relative size-full">
-      <div className="absolute bg-[#111111] h-[462.297px] left-0 rounded-[12.497px] top-0 w-[1273.8px]" />
+    <div className={`${styles.relative} ${styles.sizeFull}`}>
+      <div className={`${styles.absolute} ${styles.bg111111} ${styles.h462297px} ${styles.left0} ${styles.rounded12497px} ${styles.top0} ${styles.w12738px}`} />
       <Frame3 />
     </div>
   );

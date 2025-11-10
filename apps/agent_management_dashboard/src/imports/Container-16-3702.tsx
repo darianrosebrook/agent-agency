@@ -1,24 +1,25 @@
 import svgPaths from "./svg-pj3tus7kw0";
+import styles from "./Container-16-3702.module.scss";
 
 function Heading() {
   return (
-    <div className="content-stretch flex h-[35.994px] items-start relative shrink-0 w-full" data-name="Heading 1">
-      <p className="basis-0 font-['Inter:Regular',sans-serif] font-normal grow leading-[36px] min-h-px min-w-px not-italic relative shrink-0 text-[30px] text-white tracking-[0.3955px]">Project Settings</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h35994px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Heading 1">
+      <p className={`${styles.basis0} ${styles.fontNormal} ${styles.grow} ${styles.leading36px} ${styles.minHPx} ${styles.minWPx} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text30px} ${styles.textWhite} ${styles.tracking03955px}`}>Project Settings</p>
     </div>
   );
 }
 
 function Paragraph() {
   return (
-    <div className="h-[23.999px] relative shrink-0 w-full" data-name="Paragraph">
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[#888888] text-[16px] text-nowrap top-[-0.73px] tracking-[-0.3125px] whitespace-pre">Manage your project configuration and team</p>
+    <div className={`${styles.h23999px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Paragraph">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading24px} ${styles.left0} ${styles.notItalic} ${styles.text888888} ${styles.text16px} ${styles.textNowrap} ${styles.topNeg073px} ${styles.trackingNeg3125px} ${styles.whitespacePre}`}>Manage your project configuration and team</p>
     </div>
   );
 }
 
 function Container() {
   return (
-    <div className="content-stretch flex flex-col gap-[7.997px] h-[67.99px] items-start relative shrink-0 w-full" data-name="Container">
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap7997px} ${styles.h6799px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Container">
       <Heading />
       <Paragraph />
     </div>
@@ -27,45 +28,45 @@ function Container() {
 
 function PrimitiveButton() {
   return (
-    <div className="absolute bg-[#2d2d2d] box-border content-stretch flex gap-[6px] h-[25.178px] items-center justify-center left-[4.91px] px-[8.909px] py-[4.909px] rounded-[14px] top-[5.41px] w-[69.098px]" data-name="Primitive.button">
-      <div aria-hidden="true" className="absolute border-[0.909px] border-[rgba(0,0,0,0)] border-solid inset-0 pointer-events-none rounded-[14px]" />
-      <p className="font-['Inter:Medium',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[14px] text-nowrap text-white tracking-[-0.1504px] whitespace-pre">General</p>
+    <div className={`${styles.absolute} ${styles.bg2d2d2d} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap6px} ${styles.h25178px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.left491px} ${styles.px8909px} ${styles.py4909px} ${styles.rounded14px} ${styles.top541px} ${styles.w69098px}`} data-name="Primitive.button">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderRgba000} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded14px}`} />
+      <p className={`${styles.fontMedium} ${styles.leading20px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text14px} ${styles.textNowrap} ${styles.textWhite} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>General</p>
     </div>
   );
 }
 
 function PrimitiveButton1() {
   return (
-    <div className="absolute box-border content-stretch flex gap-[6px] h-[25.178px] items-center justify-center left-[74.01px] px-[8.909px] py-[4.909px] rounded-[14px] top-[5.41px] w-[103.587px]" data-name="Primitive.button">
-      <div aria-hidden="true" className="absolute border-[0.909px] border-[rgba(0,0,0,0)] border-solid inset-0 pointer-events-none rounded-[14px]" />
-      <p className="font-['Inter:Medium',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#cccccc] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">Work History</p>
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap6px} ${styles.h25178px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.left7401px} ${styles.px8909px} ${styles.py4909px} ${styles.rounded14px} ${styles.top541px} ${styles.w103587px}`} data-name="Primitive.button">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderRgba000} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded14px}`} />
+      <p className={`${styles.fontMedium} ${styles.leading20px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.textCccccc} ${styles.text14px} ${styles.textNowrap} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Work History</p>
     </div>
   );
 }
 
 function PrimitiveButton2() {
   return (
-    <div className="absolute box-border content-stretch flex gap-[6px] h-[25.178px] items-center justify-center left-[177.59px] px-[8.909px] py-[4.909px] rounded-[14px] top-[5.41px] w-[81.222px]" data-name="Primitive.button">
-      <div aria-hidden="true" className="absolute border-[0.909px] border-[rgba(0,0,0,0)] border-solid inset-0 pointer-events-none rounded-[14px]" />
-      <p className="font-['Inter:Medium',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#cccccc] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">AI Agents</p>
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap6px} ${styles.h25178px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.left17759px} ${styles.px8909px} ${styles.py4909px} ${styles.rounded14px} ${styles.top541px} ${styles.w81222px}`} data-name="Primitive.button">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderRgba000} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded14px}`} />
+      <p className={`${styles.fontMedium} ${styles.leading20px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.textCccccc} ${styles.text14px} ${styles.textNowrap} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>AI Agents</p>
     </div>
   );
 }
 
 function PrimitiveButton3() {
   return (
-    <div className="absolute box-border content-stretch flex gap-[6px] h-[25.178px] items-center justify-center left-[258.81px] px-[8.909px] py-[4.909px] rounded-[14px] top-[5.41px] w-[106.74px]" data-name="Primitive.button">
-      <div aria-hidden="true" className="absolute border-[0.909px] border-[rgba(0,0,0,0)] border-solid inset-0 pointer-events-none rounded-[14px]" />
-      <p className="font-['Inter:Medium',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#cccccc] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">Task Settings</p>
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap6px} ${styles.h25178px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.left25881px} ${styles.px8909px} ${styles.py4909px} ${styles.rounded14px} ${styles.top541px} ${styles.w10674px}`} data-name="Primitive.button">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderRgba000} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded14px}`} />
+      <p className={`${styles.fontMedium} ${styles.leading20px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.textCccccc} ${styles.text14px} ${styles.textNowrap} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Task Settings</p>
     </div>
   );
 }
 
 function TabList() {
   return (
-    <div className="bg-[#1a1a1a] h-[35.994px] relative rounded-[14px] shrink-0 w-[370.462px]" data-name="Tab List">
-      <div aria-hidden="true" className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[14px]" />
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[35.994px] relative w-[370.462px]">
+    <div className={`${styles.bg1a1a1a} ${styles.h35994px} ${styles.relative} ${styles.rounded14px} ${styles.shrink0} ${styles.w370462px}`} data-name="Tab List">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded14px}`} />
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h35994px} ${styles.relative} ${styles.w370462px}`}>
         <PrimitiveButton />
         <PrimitiveButton1 />
         <PrimitiveButton2 />
@@ -77,36 +78,36 @@ function TabList() {
 
 function Heading1() {
   return (
-    <div className="absolute h-[27.997px] left-[24.91px] top-[24.91px] w-[1166.19px]" data-name="Heading 2">
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[28px] left-0 not-italic text-[20px] text-nowrap text-white top-[-0.18px] tracking-[-0.4492px] whitespace-pre">Project Details</p>
+    <div className={`${styles.absolute} ${styles.h27997px} ${styles.left2491px} ${styles.top2491px} ${styles.w116619px}`} data-name="Heading 2">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading28px} ${styles.left0} ${styles.notItalic} ${styles.text20px} ${styles.textNowrap} ${styles.textWhite} ${styles.topNeg018px} ${styles.trackingNeg4492px} ${styles.whitespacePre}`}>Project Details</p>
     </div>
   );
 }
 
 function PrimitiveLabel() {
   return (
-    <div className="content-stretch flex gap-[8px] h-[13.999px] items-center relative shrink-0 w-full" data-name="Primitive.label">
-      <p className="font-['Inter:Medium',sans-serif] font-medium leading-[14px] not-italic relative shrink-0 text-[#d1d5dc] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">Project Name</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.gap8px} ${styles.h13999px} ${styles.itemsCenter} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Primitive.label">
+      <p className={`${styles.fontMedium} ${styles.leading14px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.textD1d5dc} ${styles.text14px} ${styles.textNowrap} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Project Name</p>
     </div>
   );
 }
 
 function Input() {
   return (
-    <div className="bg-[#0d0d0d] h-[35.994px] relative rounded-[8px] shrink-0 w-full" data-name="Input">
-      <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-        <div className="box-border content-stretch flex h-[35.994px] items-center px-[12px] py-[4px] relative w-full">
-          <p className="font-['Inter:Regular',sans-serif] font-normal leading-[20px] not-italic relative shrink-0 text-[14px] text-nowrap text-white tracking-[-0.1504px] whitespace-pre">My Kanban Project</p>
+    <div className={`${styles.bg0d0d0d} ${styles.h35994px} ${styles.relative} ${styles.rounded8px} ${styles.shrink0} ${styles.wFull}`} data-name="Input">
+      <div className={`${styles.flex} ${styles.flexRow} ${styles.itemsCenter} ${styles.overflowClip} ${styles.roundedInherit} ${styles.sizeFull}`}>
+        <div className={`${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h35994px} ${styles.itemsCenter} ${styles.px12px} ${styles.py4px} ${styles.relative} ${styles.wFull}`}>
+          <p className={`${styles.fontNormal} ${styles.leading20px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text14px} ${styles.textNowrap} ${styles.textWhite} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>My Kanban Project</p>
         </div>
       </div>
-      <div aria-hidden="true" className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[8px]" />
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded8px}`} />
     </div>
   );
 }
 
 function Container1() {
   return (
-    <div className="content-stretch flex flex-col gap-[5.994px] h-[55.987px] items-start relative shrink-0 w-full" data-name="Container">
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap5994px} ${styles.h55987px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Container">
       <PrimitiveLabel />
       <Input />
     </div>
@@ -115,28 +116,28 @@ function Container1() {
 
 function PrimitiveLabel1() {
   return (
-    <div className="content-stretch flex gap-[8px] h-[13.999px] items-center relative shrink-0 w-full" data-name="Primitive.label">
-      <p className="font-['Inter:Medium',sans-serif] font-medium leading-[14px] not-italic relative shrink-0 text-[#d1d5dc] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">Description</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.gap8px} ${styles.h13999px} ${styles.itemsCenter} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Primitive.label">
+      <p className={`${styles.fontMedium} ${styles.leading14px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.textD1d5dc} ${styles.text14px} ${styles.textNowrap} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Description</p>
     </div>
   );
 }
 
 function Textarea() {
   return (
-    <div className="bg-[#0d0d0d] h-[63.999px] relative rounded-[8px] shrink-0 w-full" data-name="Textarea">
-      <div className="overflow-clip rounded-[inherit] size-full">
-        <div className="box-border content-stretch flex h-[63.999px] items-start px-[12.909px] py-[8.909px] relative w-full">
-          <p className="font-['Inter:Regular',sans-serif] font-normal leading-[20px] not-italic relative shrink-0 text-[14px] text-nowrap text-white tracking-[-0.1504px] whitespace-pre">A project management tool with kanban boards and timeline tracking.</p>
+    <div className={`${styles.bg0d0d0d} ${styles.h63999px} ${styles.relative} ${styles.rounded8px} ${styles.shrink0} ${styles.wFull}`} data-name="Textarea">
+      <div className={`${styles.overflowClip} ${styles.roundedInherit} ${styles.sizeFull}`}>
+        <div className={`${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h63999px} ${styles.itemsStart} ${styles.px12909px} ${styles.py8909px} ${styles.relative} ${styles.wFull}`}>
+          <p className={`${styles.fontNormal} ${styles.leading20px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text14px} ${styles.textNowrap} ${styles.textWhite} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>A project management tool with kanban boards and timeline tracking.</p>
         </div>
       </div>
-      <div aria-hidden="true" className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[8px]" />
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded8px}`} />
     </div>
   );
 }
 
 function Container2() {
   return (
-    <div className="content-stretch flex flex-col gap-[5.994px] h-[83.992px] items-start relative shrink-0 w-full" data-name="Container">
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap5994px} ${styles.h83992px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Container">
       <PrimitiveLabel1 />
       <Textarea />
     </div>
@@ -145,28 +146,28 @@ function Container2() {
 
 function PrimitiveLabel2() {
   return (
-    <div className="content-stretch flex gap-[8px] h-[13.999px] items-center relative shrink-0 w-full" data-name="Primitive.label">
-      <p className="font-['Inter:Medium',sans-serif] font-medium leading-[14px] not-italic relative shrink-0 text-[#d1d5dc] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">Project ID</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.gap8px} ${styles.h13999px} ${styles.itemsCenter} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Primitive.label">
+      <p className={`${styles.fontMedium} ${styles.leading14px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.textD1d5dc} ${styles.text14px} ${styles.textNowrap} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Project ID</p>
     </div>
   );
 }
 
 function Input1() {
   return (
-    <div className="bg-[#0d0d0d] h-[35.994px] opacity-50 relative rounded-[8px] shrink-0 w-full" data-name="Input">
-      <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-        <div className="box-border content-stretch flex h-[35.994px] items-center px-[12px] py-[4px] relative w-full">
-          <p className="font-['Inter:Regular',sans-serif] font-normal leading-[20px] not-italic relative shrink-0 text-[#888888] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">proj_8k2m9n4p</p>
+    <div className={`${styles.bg0d0d0d} ${styles.h35994px} ${styles.opacity50} ${styles.relative} ${styles.rounded8px} ${styles.shrink0} ${styles.wFull}`} data-name="Input">
+      <div className={`${styles.flex} ${styles.flexRow} ${styles.itemsCenter} ${styles.overflowClip} ${styles.roundedInherit} ${styles.sizeFull}`}>
+        <div className={`${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h35994px} ${styles.itemsCenter} ${styles.px12px} ${styles.py4px} ${styles.relative} ${styles.wFull}`}>
+          <p className={`${styles.fontNormal} ${styles.leading20px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text14px} ${styles.textNowrap} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>proj_8k2m9n4p</p>
         </div>
       </div>
-      <div aria-hidden="true" className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[8px]" />
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded8px}`} />
     </div>
   );
 }
 
 function Container3() {
   return (
-    <div className="absolute content-stretch flex flex-col gap-[5.994px] h-[55.987px] items-start left-0 top-0 w-[575.099px]" data-name="Container">
+    <div className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap5994px} ${styles.h55987px} ${styles.itemsStart} ${styles.left0} ${styles.top0} ${styles.w575099px}`} data-name="Container">
       <PrimitiveLabel2 />
       <Input1 />
     </div>
@@ -175,28 +176,28 @@ function Container3() {
 
 function PrimitiveLabel3() {
   return (
-    <div className="content-stretch flex gap-[8px] h-[13.999px] items-center relative shrink-0 w-full" data-name="Primitive.label">
-      <p className="font-['Inter:Medium',sans-serif] font-medium leading-[14px] not-italic relative shrink-0 text-[#d1d5dc] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">Created</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.gap8px} ${styles.h13999px} ${styles.itemsCenter} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Primitive.label">
+      <p className={`${styles.fontMedium} ${styles.leading14px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.textD1d5dc} ${styles.text14px} ${styles.textNowrap} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Created</p>
     </div>
   );
 }
 
 function Input2() {
   return (
-    <div className="bg-[#0d0d0d] h-[35.994px] opacity-50 relative rounded-[8px] shrink-0 w-full" data-name="Input">
-      <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
-        <div className="box-border content-stretch flex h-[35.994px] items-center px-[12px] py-[4px] relative w-full">
-          <p className="font-['Inter:Regular',sans-serif] font-normal leading-[20px] not-italic relative shrink-0 text-[#888888] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">November 1, 2024</p>
+    <div className={`${styles.bg0d0d0d} ${styles.h35994px} ${styles.opacity50} ${styles.relative} ${styles.rounded8px} ${styles.shrink0} ${styles.wFull}`} data-name="Input">
+      <div className={`${styles.flex} ${styles.flexRow} ${styles.itemsCenter} ${styles.overflowClip} ${styles.roundedInherit} ${styles.sizeFull}`}>
+        <div className={`${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h35994px} ${styles.itemsCenter} ${styles.px12px} ${styles.py4px} ${styles.relative} ${styles.wFull}`}>
+          <p className={`${styles.fontNormal} ${styles.leading20px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text14px} ${styles.textNowrap} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>November 1, 2024</p>
         </div>
       </div>
-      <div aria-hidden="true" className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[8px]" />
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded8px}`} />
     </div>
   );
 }
 
 function Container4() {
   return (
-    <div className="absolute content-stretch flex flex-col gap-[5.994px] h-[55.987px] items-start left-[591.09px] top-0 w-[575.099px]" data-name="Container">
+    <div className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap5994px} ${styles.h55987px} ${styles.itemsStart} ${styles.left59109px} ${styles.top0} ${styles.w575099px}`} data-name="Container">
       <PrimitiveLabel3 />
       <Input2 />
     </div>
@@ -205,7 +206,7 @@ function Container4() {
 
 function Container5() {
   return (
-    <div className="h-[55.987px] relative shrink-0 w-full" data-name="Container">
+    <div className={`${styles.h55987px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Container">
       <Container3 />
       <Container4 />
     </div>
@@ -214,7 +215,7 @@ function Container5() {
 
 function Container6() {
   return (
-    <div className="absolute content-stretch flex flex-col gap-[15.994px] h-[227.955px] items-start left-[24.91px] top-[68.9px] w-[1166.19px]" data-name="Container">
+    <div className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap15994px} ${styles.h227955px} ${styles.itemsStart} ${styles.left2491px} ${styles.top689px} ${styles.w116619px}`} data-name="Container">
       <Container1 />
       <Container2 />
       <Container5 />
@@ -224,16 +225,16 @@ function Container6() {
 
 function Button() {
   return (
-    <div className="absolute bg-[#2d7ff9] box-border content-stretch flex gap-[8px] h-[35.994px] items-center justify-center left-[1065.52px] px-[16px] py-[8px] rounded-[8px] top-[320.85px] w-[125.582px]" data-name="Button">
-      <p className="font-['Inter:Medium',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[14px] text-nowrap text-white tracking-[-0.1504px] whitespace-pre">Save Changes</p>
+    <div className={`${styles.absolute} ${styles.bg2d7ff9} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap8px} ${styles.h35994px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.left106552px} ${styles.px16px} ${styles.py8px} ${styles.rounded8px} ${styles.top32085px} ${styles.w125582px}`} data-name="Button">
+      <p className={`${styles.fontMedium} ${styles.leading20px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text14px} ${styles.textNowrap} ${styles.textWhite} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Save Changes</p>
     </div>
   );
 }
 
 function Container7() {
   return (
-    <div className="absolute bg-[#1a1a1a] h-[381.754px] left-0 rounded-[10px] top-0 w-[1216.01px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[10px]" />
+    <div className={`${styles.absolute} ${styles.bg1a1a1a} ${styles.h381754px} ${styles.left0} ${styles.rounded10px} ${styles.top0} ${styles.w121601px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded10px}`} />
       <Heading1 />
       <Container6 />
       <Button />
@@ -243,25 +244,25 @@ function Container7() {
 
 function Heading2() {
   return (
-    <div className="h-[27.997px] relative shrink-0 w-full" data-name="Heading 2">
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[28px] left-0 not-italic text-[20px] text-nowrap text-white top-[-0.18px] tracking-[-0.4492px] whitespace-pre">Team Settings</p>
+    <div className={`${styles.h27997px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Heading 2">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading28px} ${styles.left0} ${styles.notItalic} ${styles.text20px} ${styles.textNowrap} ${styles.textWhite} ${styles.topNeg018px} ${styles.trackingNeg4492px} ${styles.whitespacePre}`}>Team Settings</p>
     </div>
   );
 }
 
 function PrimitiveLabel4() {
   return (
-    <div className="content-stretch flex gap-[8px] h-[13.999px] items-center relative shrink-0 w-full" data-name="Primitive.label">
-      <p className="font-['Inter:Medium',sans-serif] font-medium leading-[14px] not-italic relative shrink-0 text-[#d1d5dc] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">Default Assignee</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.gap8px} ${styles.h13999px} ${styles.itemsCenter} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Primitive.label">
+      <p className={`${styles.fontMedium} ${styles.leading14px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.textD1d5dc} ${styles.text14px} ${styles.textNowrap} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Default Assignee</p>
     </div>
   );
 }
 
 function PrimitiveSpan() {
   return (
-    <div className="h-[19.993px] relative shrink-0 w-[77.869px]" data-name="Primitive.span">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex gap-[8px] h-[19.993px] items-center overflow-clip relative rounded-[inherit] w-[77.869px]">
-        <p className="font-['Inter:Regular',sans-serif] font-normal leading-[20px] not-italic relative shrink-0 text-[14px] text-nowrap text-white tracking-[-0.1504px] whitespace-pre">Auto-assign</p>
+    <div className={`${styles.h19993px} ${styles.relative} ${styles.shrink0} ${styles.w77869px}`} data-name="Primitive.span">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap8px} ${styles.h19993px} ${styles.itemsCenter} ${styles.overflowClip} ${styles.relative} ${styles.roundedInherit} ${styles.w77869px}`}>
+        <p className={`${styles.fontNormal} ${styles.leading20px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text14px} ${styles.textNowrap} ${styles.textWhite} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Auto-assign</p>
       </div>
     </div>
   );
@@ -269,8 +270,8 @@ function PrimitiveSpan() {
 
 function Icon() {
   return (
-    <div className="relative shrink-0 size-[15.994px]" data-name="Icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+    <div className={`${styles.relative} ${styles.shrink0} ${styles.size15994px}`} data-name="Icon">
+      <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
         <g id="Icon" opacity="0.5">
           <path d={svgPaths.p10a02b40} id="Vector" stroke="var(--stroke-0, #717182)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
         </g>
@@ -281,10 +282,10 @@ function Icon() {
 
 function PrimitiveButton4() {
   return (
-    <div className="bg-[#0d0d0d] h-[35.994px] relative rounded-[8px] shrink-0 w-full" data-name="Primitive.button">
-      <div aria-hidden="true" className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[8px]" />
-      <div className="flex flex-row items-center size-full">
-        <div className="box-border content-stretch flex h-[35.994px] items-center justify-between px-[12.905px] py-[0.909px] relative w-full">
+    <div className={`${styles.bg0d0d0d} ${styles.h35994px} ${styles.relative} ${styles.rounded8px} ${styles.shrink0} ${styles.wFull}`} data-name="Primitive.button">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded8px}`} />
+      <div className={`${styles.flex} ${styles.flexRow} ${styles.itemsCenter} ${styles.sizeFull}`}>
+        <div className={`${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h35994px} ${styles.itemsCenter} ${styles.justifyBetween} ${styles.px12905px} ${styles.py0909px} ${styles.relative} ${styles.wFull}`}>
           <PrimitiveSpan />
           <Icon />
         </div>
@@ -295,7 +296,7 @@ function PrimitiveButton4() {
 
 function Container8() {
   return (
-    <div className="content-stretch flex flex-col gap-[5.994px] h-[55.987px] items-start relative shrink-0 w-full" data-name="Container">
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap5994px} ${styles.h55987px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Container">
       <PrimitiveLabel4 />
       <PrimitiveButton4 />
     </div>
@@ -304,24 +305,24 @@ function Container8() {
 
 function PrimitiveLabel5() {
   return (
-    <div className="content-stretch flex gap-[8px] h-[13.999px] items-center relative shrink-0 w-full" data-name="Primitive.label">
-      <p className="font-['Inter:Medium',sans-serif] font-medium leading-[14px] not-italic relative shrink-0 text-[#d1d5dc] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">Allow team collaboration</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.gap8px} ${styles.h13999px} ${styles.itemsCenter} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Primitive.label">
+      <p className={`${styles.fontMedium} ${styles.leading14px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.textD1d5dc} ${styles.text14px} ${styles.textNowrap} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Allow team collaboration</p>
     </div>
   );
 }
 
 function Paragraph1() {
   return (
-    <div className="h-[19.993px] relative shrink-0 w-full" data-name="Paragraph">
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#888888] text-[14px] text-nowrap top-[0.36px] tracking-[-0.1504px] whitespace-pre">Team members can edit tasks and boards</p>
+    <div className={`${styles.h19993px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Paragraph">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20px} ${styles.left0} ${styles.notItalic} ${styles.text888888} ${styles.text14px} ${styles.textNowrap} ${styles.top036px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Team members can edit tasks and boards</p>
     </div>
   );
 }
 
 function Container9() {
   return (
-    <div className="h-[35.987px] relative shrink-0 w-[268.615px]" data-name="Container">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex flex-col gap-[1.996px] h-[35.987px] items-start relative w-[268.615px]">
+    <div className={`${styles.h35987px} ${styles.relative} ${styles.shrink0} ${styles.w268615px}`} data-name="Container">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap1996px} ${styles.h35987px} ${styles.itemsStart} ${styles.relative} ${styles.w268615px}`}>
         <PrimitiveLabel5 />
         <Paragraph1 />
       </div>
@@ -331,17 +332,17 @@ function Container9() {
 
 function PrimitiveSpan1() {
   return (
-    <div className="bg-white relative rounded-[1.5252e+07px] shrink-0 size-[15.994px]" data-name="Primitive.span">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border size-[15.994px]" />
+    <div className={`${styles.bgWhite} ${styles.relative} ${styles.rounded15252e07px} ${styles.shrink0} ${styles.size15994px}`} data-name="Primitive.span">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.size15994px}`} />
     </div>
   );
 }
 
 function PrimitiveButton5() {
   return (
-    <div className="bg-[#030213] h-[18.395px] relative rounded-[1.5252e+07px] shrink-0 w-[31.996px]" data-name="Primitive.button">
-      <div aria-hidden="true" className="absolute border-[0.909px] border-[rgba(0,0,0,0)] border-solid inset-0 pointer-events-none rounded-[1.5252e+07px]" />
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex h-[18.395px] items-center pl-[14.903px] pr-[0.909px] py-[0.909px] relative w-[31.996px]">
+    <div className={`${styles.bg030213} ${styles.h18395px} ${styles.relative} ${styles.rounded15252e07px} ${styles.shrink0} ${styles.w31996px}`} data-name="Primitive.button">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderRgba000} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded15252e07px}`} />
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h18395px} ${styles.itemsCenter} ${styles.pl14903px} ${styles.pr0909px} ${styles.py0909px} ${styles.relative} ${styles.w31996px}`}>
         <PrimitiveSpan1 />
       </div>
     </div>
@@ -350,7 +351,7 @@ function PrimitiveButton5() {
 
 function Container10() {
   return (
-    <div className="content-stretch flex h-[59.979px] items-center justify-between relative shrink-0 w-full" data-name="Container">
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h59979px} ${styles.itemsCenter} ${styles.justifyBetween} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Container">
       <Container9 />
       <PrimitiveButton5 />
     </div>
@@ -359,24 +360,24 @@ function Container10() {
 
 function PrimitiveLabel6() {
   return (
-    <div className="content-stretch flex gap-[8px] h-[13.999px] items-center relative shrink-0 w-full" data-name="Primitive.label">
-      <p className="font-['Inter:Medium',sans-serif] font-medium leading-[14px] not-italic relative shrink-0 text-[#d1d5dc] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">Require approval for done tasks</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.gap8px} ${styles.h13999px} ${styles.itemsCenter} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Primitive.label">
+      <p className={`${styles.fontMedium} ${styles.leading14px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.textD1d5dc} ${styles.text14px} ${styles.textNowrap} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Require approval for done tasks</p>
     </div>
   );
 }
 
 function Paragraph2() {
   return (
-    <div className="h-[19.993px] relative shrink-0 w-full" data-name="Paragraph">
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#888888] text-[14px] text-nowrap top-[0.36px] tracking-[-0.1504px] whitespace-pre">Tasks must be reviewed before marking as done</p>
+    <div className={`${styles.h19993px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Paragraph">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20px} ${styles.left0} ${styles.notItalic} ${styles.text888888} ${styles.text14px} ${styles.textNowrap} ${styles.top036px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Tasks must be reviewed before marking as done</p>
     </div>
   );
 }
 
 function Container11() {
   return (
-    <div className="h-[35.987px] relative shrink-0 w-[310.277px]" data-name="Container">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex flex-col gap-[1.996px] h-[35.987px] items-start relative w-[310.277px]">
+    <div className={`${styles.h35987px} ${styles.relative} ${styles.shrink0} ${styles.w310277px}`} data-name="Container">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap1996px} ${styles.h35987px} ${styles.itemsStart} ${styles.relative} ${styles.w310277px}`}>
         <PrimitiveLabel6 />
         <Paragraph2 />
       </div>
@@ -386,17 +387,17 @@ function Container11() {
 
 function PrimitiveSpan2() {
   return (
-    <div className="bg-white relative rounded-[1.5252e+07px] shrink-0 size-[15.994px]" data-name="Primitive.span">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border size-[15.994px]" />
+    <div className={`${styles.bgWhite} ${styles.relative} ${styles.rounded15252e07px} ${styles.shrink0} ${styles.size15994px}`} data-name="Primitive.span">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.size15994px}`} />
     </div>
   );
 }
 
 function PrimitiveButton6() {
   return (
-    <div className="bg-[#cbced4] h-[18.395px] relative rounded-[1.5252e+07px] shrink-0 w-[31.996px]" data-name="Primitive.button">
-      <div aria-hidden="true" className="absolute border-[0.909px] border-[rgba(0,0,0,0)] border-solid inset-0 pointer-events-none rounded-[1.5252e+07px]" />
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex h-[18.395px] items-center p-[0.909px] relative w-[31.996px]">
+    <div className={`${styles.bgCbced4} ${styles.h18395px} ${styles.relative} ${styles.rounded15252e07px} ${styles.shrink0} ${styles.w31996px}`} data-name="Primitive.button">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderRgba000} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded15252e07px}`} />
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h18395px} ${styles.itemsCenter} ${styles.p0909px} ${styles.relative} ${styles.w31996px}`}>
         <PrimitiveSpan2 />
       </div>
     </div>
@@ -405,7 +406,7 @@ function PrimitiveButton6() {
 
 function Container12() {
   return (
-    <div className="content-stretch flex h-[59.979px] items-center justify-between relative shrink-0 w-full" data-name="Container">
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h59979px} ${styles.itemsCenter} ${styles.justifyBetween} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Container">
       <Container11 />
       <PrimitiveButton6 />
     </div>
@@ -414,7 +415,7 @@ function Container12() {
 
 function Container13() {
   return (
-    <div className="content-stretch flex flex-col gap-[15.994px] h-[207.933px] items-start relative shrink-0 w-full" data-name="Container">
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap15994px} ${styles.h207933px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Container">
       <Container8 />
       <Container10 />
       <Container12 />
@@ -424,8 +425,8 @@ function Container13() {
 
 function Container14() {
   return (
-    <div className="absolute bg-[#1a1a1a] box-border content-stretch flex flex-col gap-[15.994px] h-[301.74px] items-start left-0 pb-[0.909px] pt-[24.908px] px-[24.908px] rounded-[10px] top-[405.75px] w-[1216.01px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[10px]" />
+    <div className={`${styles.absolute} ${styles.bg1a1a1a} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap15994px} ${styles.h30174px} ${styles.itemsStart} ${styles.left0} ${styles.pb0909px} ${styles.pt24908px} ${styles.px24908px} ${styles.rounded10px} ${styles.top40575px} ${styles.w121601px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded10px}`} />
       <Heading2 />
       <Container13 />
     </div>
@@ -434,32 +435,32 @@ function Container14() {
 
 function Heading3() {
   return (
-    <div className="h-[27.997px] relative shrink-0 w-full" data-name="Heading 2">
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[28px] left-0 not-italic text-[20px] text-nowrap text-white top-[-0.18px] tracking-[-0.4492px] whitespace-pre">Notifications</p>
+    <div className={`${styles.h27997px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Heading 2">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading28px} ${styles.left0} ${styles.notItalic} ${styles.text20px} ${styles.textNowrap} ${styles.textWhite} ${styles.topNeg018px} ${styles.trackingNeg4492px} ${styles.whitespacePre}`}>Notifications</p>
     </div>
   );
 }
 
 function PrimitiveLabel7() {
   return (
-    <div className="content-stretch flex gap-[8px] h-[13.999px] items-center relative shrink-0 w-full" data-name="Primitive.label">
-      <p className="font-['Inter:Medium',sans-serif] font-medium leading-[14px] not-italic relative shrink-0 text-[#d1d5dc] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">Task assignments</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.gap8px} ${styles.h13999px} ${styles.itemsCenter} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Primitive.label">
+      <p className={`${styles.fontMedium} ${styles.leading14px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.textD1d5dc} ${styles.text14px} ${styles.textNowrap} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Task assignments</p>
     </div>
   );
 }
 
 function Paragraph3() {
   return (
-    <div className="h-[19.993px] relative shrink-0 w-full" data-name="Paragraph">
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#888888] text-[14px] text-nowrap top-[0.36px] tracking-[-0.1504px] whitespace-pre">Get notified when assigned to a task</p>
+    <div className={`${styles.h19993px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Paragraph">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20px} ${styles.left0} ${styles.notItalic} ${styles.text888888} ${styles.text14px} ${styles.textNowrap} ${styles.top036px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Get notified when assigned to a task</p>
     </div>
   );
 }
 
 function Container15() {
   return (
-    <div className="h-[35.987px] relative shrink-0 w-[234.822px]" data-name="Container">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex flex-col gap-[1.996px] h-[35.987px] items-start relative w-[234.822px]">
+    <div className={`${styles.h35987px} ${styles.relative} ${styles.shrink0} ${styles.w234822px}`} data-name="Container">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap1996px} ${styles.h35987px} ${styles.itemsStart} ${styles.relative} ${styles.w234822px}`}>
         <PrimitiveLabel7 />
         <Paragraph3 />
       </div>
@@ -469,17 +470,17 @@ function Container15() {
 
 function PrimitiveSpan3() {
   return (
-    <div className="bg-white relative rounded-[1.5252e+07px] shrink-0 size-[15.994px]" data-name="Primitive.span">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border size-[15.994px]" />
+    <div className={`${styles.bgWhite} ${styles.relative} ${styles.rounded15252e07px} ${styles.shrink0} ${styles.size15994px}`} data-name="Primitive.span">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.size15994px}`} />
     </div>
   );
 }
 
 function PrimitiveButton7() {
   return (
-    <div className="bg-[#030213] h-[18.395px] relative rounded-[1.5252e+07px] shrink-0 w-[31.996px]" data-name="Primitive.button">
-      <div aria-hidden="true" className="absolute border-[0.909px] border-[rgba(0,0,0,0)] border-solid inset-0 pointer-events-none rounded-[1.5252e+07px]" />
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex h-[18.395px] items-center pl-[14.903px] pr-[0.909px] py-[0.909px] relative w-[31.996px]">
+    <div className={`${styles.bg030213} ${styles.h18395px} ${styles.relative} ${styles.rounded15252e07px} ${styles.shrink0} ${styles.w31996px}`} data-name="Primitive.button">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderRgba000} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded15252e07px}`} />
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h18395px} ${styles.itemsCenter} ${styles.pl14903px} ${styles.pr0909px} ${styles.py0909px} ${styles.relative} ${styles.w31996px}`}>
         <PrimitiveSpan3 />
       </div>
     </div>
@@ -488,7 +489,7 @@ function PrimitiveButton7() {
 
 function Container16() {
   return (
-    <div className="absolute content-stretch flex h-[59.979px] items-center justify-between left-0 top-0 w-[1166.19px]" data-name="Container">
+    <div className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.h59979px} ${styles.itemsCenter} ${styles.justifyBetween} ${styles.left0} ${styles.top0} ${styles.w116619px}`} data-name="Container">
       <Container15 />
       <PrimitiveButton7 />
     </div>
@@ -496,29 +497,29 @@ function Container16() {
 }
 
 function PrimitiveDiv() {
-  return <div className="absolute bg-neutral-800 h-[0.994px] left-0 top-[71.97px] w-[1166.19px]" data-name="Primitive.div" />;
+  return <div className={`${styles.absolute} ${styles.bgNeutral800} ${styles.h0994px} ${styles.left0} ${styles.top7197px} ${styles.w116619px}`} data-name="Primitive.div" />;
 }
 
 function PrimitiveLabel8() {
   return (
-    <div className="content-stretch flex gap-[8px] h-[13.999px] items-center relative shrink-0 w-full" data-name="Primitive.label">
-      <p className="font-['Inter:Medium',sans-serif] font-medium leading-[14px] not-italic relative shrink-0 text-[#d1d5dc] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">Task comments</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.gap8px} ${styles.h13999px} ${styles.itemsCenter} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Primitive.label">
+      <p className={`${styles.fontMedium} ${styles.leading14px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.textD1d5dc} ${styles.text14px} ${styles.textNowrap} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Task comments</p>
     </div>
   );
 }
 
 function Paragraph4() {
   return (
-    <div className="h-[19.993px] relative shrink-0 w-full" data-name="Paragraph">
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#888888] text-[14px] text-nowrap top-[0.36px] tracking-[-0.1504px] whitespace-pre">Get notified of new comments on your tasks</p>
+    <div className={`${styles.h19993px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Paragraph">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20px} ${styles.left0} ${styles.notItalic} ${styles.text888888} ${styles.text14px} ${styles.textNowrap} ${styles.top036px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Get notified of new comments on your tasks</p>
     </div>
   );
 }
 
 function Container17() {
   return (
-    <div className="h-[35.987px] relative shrink-0 w-[284.489px]" data-name="Container">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex flex-col gap-[1.996px] h-[35.987px] items-start relative w-[284.489px]">
+    <div className={`${styles.h35987px} ${styles.relative} ${styles.shrink0} ${styles.w284489px}`} data-name="Container">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap1996px} ${styles.h35987px} ${styles.itemsStart} ${styles.relative} ${styles.w284489px}`}>
         <PrimitiveLabel8 />
         <Paragraph4 />
       </div>
@@ -528,17 +529,17 @@ function Container17() {
 
 function PrimitiveSpan4() {
   return (
-    <div className="bg-white relative rounded-[1.5252e+07px] shrink-0 size-[15.994px]" data-name="Primitive.span">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border size-[15.994px]" />
+    <div className={`${styles.bgWhite} ${styles.relative} ${styles.rounded15252e07px} ${styles.shrink0} ${styles.size15994px}`} data-name="Primitive.span">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.size15994px}`} />
     </div>
   );
 }
 
 function PrimitiveButton8() {
   return (
-    <div className="bg-[#030213] h-[18.395px] relative rounded-[1.5252e+07px] shrink-0 w-[31.996px]" data-name="Primitive.button">
-      <div aria-hidden="true" className="absolute border-[0.909px] border-[rgba(0,0,0,0)] border-solid inset-0 pointer-events-none rounded-[1.5252e+07px]" />
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex h-[18.395px] items-center pl-[14.903px] pr-[0.909px] py-[0.909px] relative w-[31.996px]">
+    <div className={`${styles.bg030213} ${styles.h18395px} ${styles.relative} ${styles.rounded15252e07px} ${styles.shrink0} ${styles.w31996px}`} data-name="Primitive.button">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderRgba000} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded15252e07px}`} />
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h18395px} ${styles.itemsCenter} ${styles.pl14903px} ${styles.pr0909px} ${styles.py0909px} ${styles.relative} ${styles.w31996px}`}>
         <PrimitiveSpan4 />
       </div>
     </div>
@@ -547,7 +548,7 @@ function PrimitiveButton8() {
 
 function Container18() {
   return (
-    <div className="absolute content-stretch flex h-[59.979px] items-center justify-between left-0 top-[84.96px] w-[1166.19px]" data-name="Container">
+    <div className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.h59979px} ${styles.itemsCenter} ${styles.justifyBetween} ${styles.left0} ${styles.top8496px} ${styles.w116619px}`} data-name="Container">
       <Container17 />
       <PrimitiveButton8 />
     </div>
@@ -555,29 +556,29 @@ function Container18() {
 }
 
 function PrimitiveDiv1() {
-  return <div className="absolute bg-neutral-800 h-[0.994px] left-0 top-[156.94px] w-[1166.19px]" data-name="Primitive.div" />;
+  return <div className={`${styles.absolute} ${styles.bgNeutral800} ${styles.h0994px} ${styles.left0} ${styles.top15694px} ${styles.w116619px}`} data-name="Primitive.div" />;
 }
 
 function PrimitiveLabel9() {
   return (
-    <div className="content-stretch flex gap-[8px] h-[13.999px] items-center relative shrink-0 w-full" data-name="Primitive.label">
-      <p className="font-['Inter:Medium',sans-serif] font-medium leading-[14px] not-italic relative shrink-0 text-[#d1d5dc] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">Status changes</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.gap8px} ${styles.h13999px} ${styles.itemsCenter} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Primitive.label">
+      <p className={`${styles.fontMedium} ${styles.leading14px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.textD1d5dc} ${styles.text14px} ${styles.textNowrap} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Status changes</p>
     </div>
   );
 }
 
 function Paragraph5() {
   return (
-    <div className="h-[19.993px] relative shrink-0 w-full" data-name="Paragraph">
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#888888] text-[14px] text-nowrap top-[0.36px] tracking-[-0.1504px] whitespace-pre">Get notified when task status changes</p>
+    <div className={`${styles.h19993px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Paragraph">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20px} ${styles.left0} ${styles.notItalic} ${styles.text888888} ${styles.text14px} ${styles.textNowrap} ${styles.top036px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Get notified when task status changes</p>
     </div>
   );
 }
 
 function Container19() {
   return (
-    <div className="h-[35.987px] relative shrink-0 w-[247.23px]" data-name="Container">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex flex-col gap-[1.996px] h-[35.987px] items-start relative w-[247.23px]">
+    <div className={`${styles.h35987px} ${styles.relative} ${styles.shrink0} ${styles.w24723px}`} data-name="Container">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap1996px} ${styles.h35987px} ${styles.itemsStart} ${styles.relative} ${styles.w24723px}`}>
         <PrimitiveLabel9 />
         <Paragraph5 />
       </div>
@@ -587,17 +588,17 @@ function Container19() {
 
 function PrimitiveSpan5() {
   return (
-    <div className="bg-white relative rounded-[1.5252e+07px] shrink-0 size-[15.994px]" data-name="Primitive.span">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border size-[15.994px]" />
+    <div className={`${styles.bgWhite} ${styles.relative} ${styles.rounded15252e07px} ${styles.shrink0} ${styles.size15994px}`} data-name="Primitive.span">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.size15994px}`} />
     </div>
   );
 }
 
 function PrimitiveButton9() {
   return (
-    <div className="bg-[#cbced4] h-[18.395px] relative rounded-[1.5252e+07px] shrink-0 w-[31.996px]" data-name="Primitive.button">
-      <div aria-hidden="true" className="absolute border-[0.909px] border-[rgba(0,0,0,0)] border-solid inset-0 pointer-events-none rounded-[1.5252e+07px]" />
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex h-[18.395px] items-center p-[0.909px] relative w-[31.996px]">
+    <div className={`${styles.bgCbced4} ${styles.h18395px} ${styles.relative} ${styles.rounded15252e07px} ${styles.shrink0} ${styles.w31996px}`} data-name="Primitive.button">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderRgba000} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded15252e07px}`} />
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h18395px} ${styles.itemsCenter} ${styles.p0909px} ${styles.relative} ${styles.w31996px}`}>
         <PrimitiveSpan5 />
       </div>
     </div>
@@ -606,7 +607,7 @@ function PrimitiveButton9() {
 
 function Container20() {
   return (
-    <div className="absolute content-stretch flex h-[59.979px] items-center justify-between left-0 top-[169.93px] w-[1166.19px]" data-name="Container">
+    <div className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.h59979px} ${styles.itemsCenter} ${styles.justifyBetween} ${styles.left0} ${styles.top16993px} ${styles.w116619px}`} data-name="Container">
       <Container19 />
       <PrimitiveButton9 />
     </div>
@@ -615,7 +616,7 @@ function Container20() {
 
 function Container21() {
   return (
-    <div className="h-[229.908px] relative shrink-0 w-full" data-name="Container">
+    <div className={`${styles.h229908px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Container">
       <Container16 />
       <PrimitiveDiv />
       <Container18 />
@@ -627,8 +628,8 @@ function Container21() {
 
 function Container22() {
   return (
-    <div className="absolute bg-[#1a1a1a] box-border content-stretch flex flex-col gap-[15.994px] h-[323.714px] items-start left-0 pb-[0.909px] pt-[24.908px] px-[24.908px] rounded-[10px] top-[731.49px] w-[1216.01px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[10px]" />
+    <div className={`${styles.absolute} ${styles.bg1a1a1a} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap15994px} ${styles.h323714px} ${styles.itemsStart} ${styles.left0} ${styles.pb0909px} ${styles.pt24908px} ${styles.px24908px} ${styles.rounded10px} ${styles.top73149px} ${styles.w121601px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded10px}`} />
       <Heading3 />
       <Container21 />
     </div>
@@ -637,8 +638,8 @@ function Container22() {
 
 function Icon1() {
   return (
-    <div className="absolute left-0 size-[20px] top-[4px]" data-name="Icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 20 20">
+    <div className={`${styles.absolute} ${styles.left0} ${styles.size20px} ${styles.top4px}`} data-name="Icon">
+      <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 20 20">
         <g clipPath="url(#clip0_16_3713)" id="Icon">
           <path d={svgPaths.p14d24500} id="Vector" stroke="var(--stroke-0, #FF6B6B)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.66667" />
           <path d="M10 6.66667V10" id="Vector_2" stroke="var(--stroke-0, #FF6B6B)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.66667" />
@@ -656,33 +657,33 @@ function Icon1() {
 
 function Heading4() {
   return (
-    <div className="h-[27.997px] relative shrink-0 w-full" data-name="Heading 2">
+    <div className={`${styles.h27997px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Heading 2">
       <Icon1 />
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[28px] left-[28px] not-italic text-[#ff6b6b] text-[20px] text-nowrap top-[-0.18px] tracking-[-0.4492px] whitespace-pre">Danger Zone</p>
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading28px} ${styles.left28px} ${styles.notItalic} ${styles.textFf6b6b} ${styles.text20px} ${styles.textNowrap} ${styles.topNeg018px} ${styles.trackingNeg4492px} ${styles.whitespacePre}`}>Danger Zone</p>
     </div>
   );
 }
 
 function Paragraph6() {
   return (
-    <div className="h-[23.999px] relative shrink-0 w-full" data-name="Paragraph">
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[16px] text-nowrap text-white top-[-0.73px] tracking-[-0.3125px] whitespace-pre">Archive this project</p>
+    <div className={`${styles.h23999px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Paragraph">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading24px} ${styles.left0} ${styles.notItalic} ${styles.text16px} ${styles.textNowrap} ${styles.textWhite} ${styles.topNeg073px} ${styles.trackingNeg3125px} ${styles.whitespacePre}`}>Archive this project</p>
     </div>
   );
 }
 
 function Paragraph7() {
   return (
-    <div className="h-[19.993px] relative shrink-0 w-full" data-name="Paragraph">
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#888888] text-[14px] text-nowrap top-[0.36px] tracking-[-0.1504px] whitespace-pre">Make the project read-only and hide it from your dashboard</p>
+    <div className={`${styles.h19993px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Paragraph">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20px} ${styles.left0} ${styles.notItalic} ${styles.text888888} ${styles.text14px} ${styles.textNowrap} ${styles.top036px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Make the project read-only and hide it from your dashboard</p>
     </div>
   );
 }
 
 function Container23() {
   return (
-    <div className="h-[47.99px] relative shrink-0 w-[384.631px]" data-name="Container">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex flex-col gap-[3.999px] h-[47.99px] items-start relative w-[384.631px]">
+    <div className={`${styles.h4799px} ${styles.relative} ${styles.shrink0} ${styles.w384631px}`} data-name="Container">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap3999px} ${styles.h4799px} ${styles.itemsStart} ${styles.relative} ${styles.w384631px}`}>
         <Paragraph6 />
         <Paragraph7 />
       </div>
@@ -692,10 +693,10 @@ function Container23() {
 
 function Button1() {
   return (
-    <div className="bg-white h-[35.994px] relative rounded-[8px] shrink-0 w-[83.537px]" data-name="Button">
-      <div aria-hidden="true" className="absolute border-[#5c1515] border-[0.909px] border-solid inset-0 pointer-events-none rounded-[8px]" />
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex gap-[8px] h-[35.994px] items-center justify-center px-[16.909px] py-[8.909px] relative w-[83.537px]">
-        <p className="font-['Inter:Medium',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#ff6b6b] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">Archive</p>
+    <div className={`${styles.bgWhite} ${styles.h35994px} ${styles.relative} ${styles.rounded8px} ${styles.shrink0} ${styles.w83537px}`} data-name="Button">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border5c1515} ${styles.border0909px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded8px}`} />
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap8px} ${styles.h35994px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.px16909px} ${styles.py8909px} ${styles.relative} ${styles.w83537px}`}>
+        <p className={`${styles.fontMedium} ${styles.leading20px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.textFf6b6b} ${styles.text14px} ${styles.textNowrap} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Archive</p>
       </div>
     </div>
   );
@@ -703,10 +704,10 @@ function Button1() {
 
 function Container24() {
   return (
-    <div className="h-[81.797px] relative rounded-[10px] shrink-0 w-full" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[10px]" />
-      <div className="flex flex-row items-center size-full">
-        <div className="box-border content-stretch flex h-[81.797px] items-center justify-between px-[16.903px] py-[0.909px] relative w-full">
+    <div className={`${styles.h81797px} ${styles.relative} ${styles.rounded10px} ${styles.shrink0} ${styles.wFull}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded10px}`} />
+      <div className={`${styles.flex} ${styles.flexRow} ${styles.itemsCenter} ${styles.sizeFull}`}>
+        <div className={`${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h81797px} ${styles.itemsCenter} ${styles.justifyBetween} ${styles.px16903px} ${styles.py0909px} ${styles.relative} ${styles.wFull}`}>
           <Container23 />
           <Button1 />
         </div>
@@ -717,24 +718,24 @@ function Container24() {
 
 function Paragraph8() {
   return (
-    <div className="h-[23.999px] relative shrink-0 w-full" data-name="Paragraph">
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[16px] text-nowrap text-white top-[-0.73px] tracking-[-0.3125px] whitespace-pre">Delete this project</p>
+    <div className={`${styles.h23999px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Paragraph">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading24px} ${styles.left0} ${styles.notItalic} ${styles.text16px} ${styles.textNowrap} ${styles.textWhite} ${styles.topNeg073px} ${styles.trackingNeg3125px} ${styles.whitespacePre}`}>Delete this project</p>
     </div>
   );
 }
 
 function Paragraph9() {
   return (
-    <div className="h-[19.993px] relative shrink-0 w-full" data-name="Paragraph">
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#888888] text-[14px] text-nowrap top-[0.36px] tracking-[-0.1504px] whitespace-pre">Permanently delete this project and all of its data</p>
+    <div className={`${styles.h19993px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Paragraph">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20px} ${styles.left0} ${styles.notItalic} ${styles.text888888} ${styles.text14px} ${styles.textNowrap} ${styles.top036px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Permanently delete this project and all of its data</p>
     </div>
   );
 }
 
 function Container25() {
   return (
-    <div className="h-[47.99px] relative shrink-0 w-[315.646px]" data-name="Container">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex flex-col gap-[3.999px] h-[47.99px] items-start relative w-[315.646px]">
+    <div className={`${styles.h4799px} ${styles.relative} ${styles.shrink0} ${styles.w315646px}`} data-name="Container">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap3999px} ${styles.h4799px} ${styles.itemsStart} ${styles.relative} ${styles.w315646px}`}>
         <Paragraph8 />
         <Paragraph9 />
       </div>
@@ -744,8 +745,8 @@ function Container25() {
 
 function Icon2() {
   return (
-    <div className="absolute left-[12.9px] size-[15.994px] top-[10px]" data-name="Icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+    <div className={`${styles.absolute} ${styles.left129px} ${styles.size15994px} ${styles.top10px}`} data-name="Icon">
+      <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
         <g clipPath="url(#clip0_16_3706)" id="Icon">
           <path d="M6.6643 7.33073V11.3293" id="Vector" stroke="var(--stroke-0, #FF6B6B)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
           <path d="M9.33002 7.33073V11.3293" id="Vector_2" stroke="var(--stroke-0, #FF6B6B)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
@@ -765,11 +766,11 @@ function Icon2() {
 
 function Button2() {
   return (
-    <div className="bg-white h-[35.994px] relative rounded-[8px] shrink-0 w-[100.547px]" data-name="Button">
-      <div aria-hidden="true" className="absolute border-[#5c1515] border-[0.909px] border-solid inset-0 pointer-events-none rounded-[8px]" />
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[35.994px] relative w-[100.547px]">
+    <div className={`${styles.bgWhite} ${styles.h35994px} ${styles.relative} ${styles.rounded8px} ${styles.shrink0} ${styles.w100547px}`} data-name="Button">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border5c1515} ${styles.border0909px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded8px}`} />
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h35994px} ${styles.relative} ${styles.w100547px}`}>
         <Icon2 />
-        <p className="absolute font-['Inter:Medium',sans-serif] font-medium leading-[20px] left-[44.89px] not-italic text-[#ff6b6b] text-[14px] text-nowrap top-[8.37px] tracking-[-0.1504px] whitespace-pre">Delete</p>
+        <p className={`${styles.absolute} ${styles.fontMedium} ${styles.leading20px} ${styles.left4489px} ${styles.notItalic} ${styles.textFf6b6b} ${styles.text14px} ${styles.textNowrap} ${styles.top837px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Delete</p>
       </div>
     </div>
   );
@@ -777,10 +778,10 @@ function Button2() {
 
 function Container26() {
   return (
-    <div className="h-[81.797px] relative rounded-[10px] shrink-0 w-full" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#5c1515] border-[0.909px] border-solid inset-0 pointer-events-none rounded-[10px]" />
-      <div className="flex flex-row items-center size-full">
-        <div className="box-border content-stretch flex h-[81.797px] items-center justify-between px-[16.903px] py-[0.909px] relative w-full">
+    <div className={`${styles.h81797px} ${styles.relative} ${styles.rounded10px} ${styles.shrink0} ${styles.wFull}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border5c1515} ${styles.border0909px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded10px}`} />
+      <div className={`${styles.flex} ${styles.flexRow} ${styles.itemsCenter} ${styles.sizeFull}`}>
+        <div className={`${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h81797px} ${styles.itemsCenter} ${styles.justifyBetween} ${styles.px16903px} ${styles.py0909px} ${styles.relative} ${styles.wFull}`}>
           <Container25 />
           <Button2 />
         </div>
@@ -791,7 +792,7 @@ function Container26() {
 
 function Container27() {
   return (
-    <div className="content-stretch flex flex-col gap-[15.994px] h-[179.588px] items-start relative shrink-0 w-full" data-name="Container">
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap15994px} ${styles.h179588px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Container">
       <Container24 />
       <Container26 />
     </div>
@@ -800,8 +801,8 @@ function Container27() {
 
 function Container28() {
   return (
-    <div className="absolute bg-[#1a1a1a] box-border content-stretch flex flex-col gap-[15.994px] h-[273.395px] items-start left-0 pb-[0.909px] pt-[24.908px] px-[24.908px] rounded-[10px] top-[1079.2px] w-[1216.01px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#5c1515] border-[0.909px] border-solid inset-0 pointer-events-none rounded-[10px]" />
+    <div className={`${styles.absolute} ${styles.bg1a1a1a} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap15994px} ${styles.h273395px} ${styles.itemsStart} ${styles.left0} ${styles.pb0909px} ${styles.pt24908px} ${styles.px24908px} ${styles.rounded10px} ${styles.top10792px} ${styles.w121601px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border5c1515} ${styles.border0909px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded10px}`} />
       <Heading4 />
       <Container27 />
     </div>
@@ -810,8 +811,8 @@ function Container28() {
 
 function ProjectSettings() {
   return (
-    <div className="h-[1352.6px] relative shrink-0 w-[1216.01px]" data-name="ProjectSettings">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[1352.6px] relative w-[1216.01px]">
+    <div className={`${styles.h13526px} ${styles.relative} ${styles.shrink0} ${styles.w121601px}`} data-name="ProjectSettings">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h13526px} ${styles.relative} ${styles.w121601px}`}>
         <Container7 />
         <Container14 />
         <Container22 />
@@ -823,7 +824,7 @@ function ProjectSettings() {
 
 function PrimitiveDiv2() {
   return (
-    <div className="content-stretch flex flex-col gap-[31.996px] h-[1444.59px] items-start relative shrink-0 w-full" data-name="Primitive.div">
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap31996px} ${styles.h144459px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Primitive.div">
       <TabList />
       <ProjectSettings />
     </div>
@@ -832,9 +833,9 @@ function PrimitiveDiv2() {
 
 function Container29() {
   return (
-    <div className="h-[1608.57px] relative shrink-0 w-full" data-name="Container">
-      <div className="size-full">
-        <div className="box-border content-stretch flex flex-col gap-[31.996px] h-[1608.57px] items-start pb-0 pt-[31.996px] px-[31.996px] relative w-full">
+    <div className={`${styles.h160857px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Container">
+      <div className={styles.sizeFull}>
+        <div className={`${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap31996px} ${styles.h160857px} ${styles.itemsStart} ${styles.pb0} ${styles.pt31996px} ${styles.px31996px} ${styles.relative} ${styles.wFull}`}>
           <Container />
           <PrimitiveDiv2 />
         </div>
@@ -845,9 +846,9 @@ function Container29() {
 
 function ManageProjectView() {
   return (
-    <div className="h-[1608.57px] relative shrink-0 w-full" data-name="ManageProjectView">
-      <div className="overflow-clip rounded-[inherit] size-full">
-        <div className="box-border content-stretch flex flex-col h-[1608.57px] items-start px-[680px] py-0 relative w-full">
+    <div className={`${styles.h160857px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="ManageProjectView">
+      <div className={`${styles.overflowClip} ${styles.roundedInherit} ${styles.sizeFull}`}>
+        <div className={`${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h160857px} ${styles.itemsStart} ${styles.px680px} ${styles.py0} ${styles.relative} ${styles.wFull}`}>
           <Container29 />
         </div>
       </div>
@@ -857,7 +858,7 @@ function ManageProjectView() {
 
 export default function Container30() {
   return (
-    <div className="content-stretch flex flex-col items-start relative size-full" data-name="Container">
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.itemsStart} ${styles.relative} ${styles.sizeFull}`} data-name="Container">
       <ManageProjectView />
     </div>
   );

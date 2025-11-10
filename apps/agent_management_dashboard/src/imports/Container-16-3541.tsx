@@ -1,13 +1,14 @@
 import svgPaths from "./svg-uot37gpw3q";
+import styles from "./Container-16-3541.module.scss";
 
 function Icon() {
   return (
     <div
-      className="relative shrink-0 size-[20px]"
+      className={`${styles.relative} ${styles.shrink0} ${styles.size20px}`}
       data-name="Icon"
     >
       <svg
-        className="block size-full"
+        className={`${styles.block} ${styles.sizeFull}`}
         fill="none"
         preserveAspectRatio="none"
         viewBox="0 0 20 20"
@@ -54,11 +55,11 @@ function Icon() {
 function Heading() {
   return (
     <div
-      className="h-[27.997px] relative shrink-0 w-[140.156px]"
+      className={`${styles.h27997px} ${styles.relative} ${styles.shrink0} ${styles.w140156px}`}
       data-name="Heading 2"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[27.997px] relative w-[140.156px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[28px] left-0 not-italic text-[20px] text-nowrap text-white top-[-0.18px] tracking-[-0.4492px] whitespace-pre">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h27997px} ${styles.relative} ${styles.w140156px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading28px} ${styles.left0} ${styles.notItalic} ${styles.text20px} ${styles.textNowrap} ${styles.textWhite} ${styles.topNeg018px} ${styles.trackingNeg4492px} ${styles.whitespacePre}`}>
           Project Timeline
         </p>
       </div>
@@ -69,10 +70,10 @@ function Heading() {
 function Container() {
   return (
     <div
-      className="h-[27.997px] relative shrink-0 w-[172.152px]"
+      className={`${styles.h27997px} ${styles.relative} ${styles.shrink0} ${styles.w172152px}`}
       data-name="Container"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex gap-[11.996px] h-[27.997px] items-center relative w-[172.152px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap11996px} ${styles.h27997px} ${styles.itemsCenter} ${styles.relative} ${styles.w172152px}`}>
         <Icon />
         <Heading />
       </div>
@@ -83,11 +84,11 @@ function Container() {
 function PrimitiveSpan() {
   return (
     <div
-      className="h-[19.993px] relative shrink-0 w-[73.054px]"
+      className={`${styles.h19993px} ${styles.relative} ${styles.shrink0} ${styles.w73054px}`}
       data-name="Primitive.span"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex gap-[8px] h-[19.993px] items-center overflow-clip relative rounded-[inherit] w-[73.054px]">
-        <p className="font-['Inter:Regular',sans-serif] font-normal leading-[20px] not-italic relative shrink-0 text-[14px] text-nowrap text-white tracking-[-0.1504px] whitespace-pre">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap8px} ${styles.h19993px} ${styles.itemsCenter} ${styles.overflowClip} ${styles.relative} ${styles.roundedInherit} ${styles.w73054px}`}>
+        <p className={`${styles.fontNormal} ${styles.leading20px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text14px} ${styles.textNowrap} ${styles.textWhite} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>
           All Workers
         </p>
       </div>
@@ -98,11 +99,11 @@ function PrimitiveSpan() {
 function Icon1() {
   return (
     <div
-      className="relative shrink-0 size-[15.994px]"
+      className={`${styles.relative} ${styles.shrink0} ${styles.size15994px}`}
       data-name="Icon"
     >
       <svg
-        className="block size-full"
+        className={`${styles.block} ${styles.sizeFull}`}
         fill="none"
         preserveAspectRatio="none"
         viewBox="0 0 16 16"
@@ -125,14 +126,14 @@ function Icon1() {
 function PrimitiveButton() {
   return (
     <div
-      className="bg-[#1a1a1a] h-[35.994px] relative rounded-[8px] shrink-0 w-[191.996px]"
+      className={`${styles.bg1a1a1a} ${styles.h35994px} ${styles.relative} ${styles.rounded8px} ${styles.shrink0} ${styles.w191996px}`}
       data-name="Primitive.button"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[8px]"
+        className={`${styles.absolute} ${styles.border0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded8px}`}
       />
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex h-[35.994px] items-center justify-between px-[12.905px] py-[0.909px] relative w-[191.996px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h35994px} ${styles.itemsCenter} ${styles.justifyBetween} ${styles.px12905px} ${styles.py0909px} ${styles.relative} ${styles.w191996px}`}>
         <PrimitiveSpan />
         <Icon1 />
       </div>
@@ -143,11 +144,11 @@ function PrimitiveButton() {
 function Icon2() {
   return (
     <div
-      className="relative shrink-0 size-[15.994px]"
+      className={`${styles.relative} ${styles.shrink0} ${styles.size15994px}`}
       data-name="Icon"
     >
       <svg
-        className="block size-full"
+        className={`${styles.block} ${styles.sizeFull}`}
         fill="none"
         preserveAspectRatio="none"
         viewBox="0 0 16 16"
@@ -186,10 +187,10 @@ function Icon2() {
 function Button() {
   return (
     <div
-      className="h-[27.997px] opacity-30 relative rounded-[8px] shrink-0 w-[35.994px]"
+      className={`${styles.h27997px} ${styles.opacity30} ${styles.relative} ${styles.rounded8px} ${styles.shrink0} ${styles.w35994px}`}
       data-name="Button"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex h-[27.997px] items-center justify-center relative w-[35.994px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h27997px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.relative} ${styles.w35994px}`}>
         <Icon2 />
       </div>
     </div>
@@ -199,11 +200,11 @@ function Button() {
 function Text() {
   return (
     <div
-      className="h-[19.993px] relative shrink-0 w-[73.416px]"
+      className={`${styles.h19993px} ${styles.relative} ${styles.shrink0} ${styles.w73416px}`}
       data-name="Text"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[19.993px] relative w-[73.416px]">
-        <p className="absolute capitalize font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-[12px] not-italic text-[14px] text-nowrap text-white top-[0.36px] tracking-[-0.1504px] whitespace-pre">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h19993px} ${styles.relative} ${styles.w73416px}`}>
+        <p className={`${styles.absolute} ${styles.capitalize} ${styles.fontNormal} ${styles.leading20px} ${styles.left12px} ${styles.notItalic} ${styles.text14px} ${styles.textNowrap} ${styles.textWhite} ${styles.top036px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>
           quarter
         </p>
       </div>
@@ -214,11 +215,11 @@ function Text() {
 function Icon3() {
   return (
     <div
-      className="relative shrink-0 size-[15.994px]"
+      className={`${styles.relative} ${styles.shrink0} ${styles.size15994px}`}
       data-name="Icon"
     >
       <svg
-        className="block size-full"
+        className={`${styles.block} ${styles.sizeFull}`}
         fill="none"
         preserveAspectRatio="none"
         viewBox="0 0 16 16"
@@ -265,10 +266,10 @@ function Icon3() {
 function Button1() {
   return (
     <div
-      className="h-[27.997px] relative rounded-[8px] shrink-0 w-[35.994px]"
+      className={`${styles.h27997px} ${styles.relative} ${styles.rounded8px} ${styles.shrink0} ${styles.w35994px}`}
       data-name="Button"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex h-[27.997px] items-center justify-center relative w-[35.994px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h27997px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.relative} ${styles.w35994px}`}>
         <Icon3 />
       </div>
     </div>
@@ -278,14 +279,14 @@ function Button1() {
 function Container1() {
   return (
     <div
-      className="bg-[#1a1a1a] h-[37.813px] relative rounded-[10px] shrink-0 w-[163.217px]"
+      className={`${styles.bg1a1a1a} ${styles.h37813px} ${styles.relative} ${styles.rounded10px} ${styles.shrink0} ${styles.w163217px}`}
       data-name="Container"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[10px]"
+        className={`${styles.absolute} ${styles.border0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded10px}`}
       />
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex gap-[3.999px] h-[37.813px] items-center pl-[4.908px] pr-[0.909px] py-[0.909px] relative w-[163.217px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap3999px} ${styles.h37813px} ${styles.itemsCenter} ${styles.pl4908px} ${styles.pr0909px} ${styles.py0909px} ${styles.relative} ${styles.w163217px}`}>
         <Button />
         <Text />
         <Button1 />
@@ -298,10 +299,10 @@ function Container1() {
 function Container2() {
   return (
     <div
-      className="h-[37.813px] relative shrink-0 w-[367.209px]"
+      className={`${styles.h37813px} ${styles.relative} ${styles.shrink0} ${styles.w367209px}`}
       data-name="Container"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex gap-[11.996px] h-[37.813px] items-center relative w-[367.209px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap11996px} ${styles.h37813px} ${styles.itemsCenter} ${styles.relative} ${styles.w367209px}`}>
         <PrimitiveButton />
         <Container1 />
       </div>
@@ -312,10 +313,10 @@ function Container2() {
 function Text1() {
   return (
     <div
-      className="content-stretch flex h-[16.364px] items-start relative shrink-0 w-full"
+      className={`${styles.contentStretch} ${styles.flex} ${styles.h16364px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`}
       data-name="Text"
     >
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[20px] not-italic relative shrink-0 text-[#888888] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">
+      <p className={`${styles.fontNormal} ${styles.leading20px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text14px} ${styles.textNowrap} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>
         Team Member
       </p>
     </div>
@@ -325,14 +326,14 @@ function Text1() {
 function Container5() {
   return (
     <div
-      className="h-[47.99px] relative shrink-0 w-[255.994px]"
+      className={`${styles.h4799px} ${styles.relative} ${styles.shrink0} ${styles.w255994px}`}
       data-name="Container"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none"
+        className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`}
       />
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex flex-col h-[47.99px] items-start pb-0 pl-[15.994px] pr-[147.955px] pt-[16.087px] relative w-[255.994px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.pb0} ${styles.pl15994px} ${styles.pr147955px} ${styles.pt16087px} ${styles.relative} ${styles.w255994px}`}>
         <Text1 />
       </div>
     </div>
@@ -342,10 +343,10 @@ function Container5() {
 function Text2() {
   return (
     <div
-      className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full"
+      className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`}
       data-name="Text"
     >
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>
         Q4 2024
       </p>
     </div>
@@ -355,14 +356,14 @@ function Text2() {
 function Container6() {
   return (
     <div
-      className="h-[47.99px] relative shrink-0 w-[150px]"
+      className={`${styles.h4799px} ${styles.relative} ${styles.shrink0} ${styles.w150px}`}
       data-name="Container"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none"
+        className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`}
       />
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex flex-col h-[47.99px] items-start pb-0 pl-[51.101px] pr-[52.01px] pt-[17.905px] relative w-[150px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.pb0} ${styles.pl51101px} ${styles.pr5201px} ${styles.pt17905px} ${styles.relative} ${styles.w150px}`}>
         <Text2 />
       </div>
     </div>
@@ -372,12 +373,12 @@ function Container6() {
 function GanttChart() {
   return (
     <div
-      className="bg-[#0d0d0d] box-border content-stretch flex h-[47.99px] items-start pb-[0.909px] pt-0 px-0 relative shrink-0 w-full"
+      className={`${styles.bg0d0d0d} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h4799px} ${styles.itemsStart} ${styles.pb0909px} ${styles.pt0} ${styles.px0} ${styles.relative} ${styles.shrink0} ${styles.wFull}`}
       data-name="GanttChart"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[0px_0px_0.909px] border-black border-solid inset-0 pointer-events-none"
+        className={`${styles.absolute} ${styles.border0px0px0909px} ${styles.borderBlack} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`}
       />
       <Container5 />
       <Container6 />
@@ -388,10 +389,10 @@ function GanttChart() {
 function Paragraph() {
   return (
     <div
-      className="absolute h-[19.993px] left-0 overflow-clip top-0 w-[179.105px]"
+      className={`${styles.absolute} ${styles.h19993px} ${styles.left0} ${styles.overflowClip} ${styles.top0} ${styles.w179105px}`}
       data-name="Paragraph"
     >
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[14px] text-nowrap text-white top-[0.36px] tracking-[-0.1504px] whitespace-pre">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20px} ${styles.left0} ${styles.notItalic} ${styles.text14px} ${styles.textNowrap} ${styles.textWhite} ${styles.top036px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>
         Sarah Chen
       </p>
     </div>
@@ -401,10 +402,10 @@ function Paragraph() {
 function Paragraph1() {
   return (
     <div
-      className="absolute h-[16.001px] left-0 top-[19.99px] w-[179.105px]"
+      className={`${styles.absolute} ${styles.h16001px} ${styles.left0} ${styles.top1999px} ${styles.w179105px}`}
       data-name="Paragraph"
     >
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[16px] left-0 not-italic text-[#888888] text-[12px] top-[0.46px] w-[75px]">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading16px} ${styles.left0} ${styles.notItalic} ${styles.text888888} ${styles.text12px} ${styles.top046px} ${styles.w75px}`}>
         2/3 completed
       </p>
     </div>
@@ -414,7 +415,7 @@ function Paragraph1() {
 function Container7() {
   return (
     <div
-      className="absolute h-[35.994px] left-[59.99px] top-[24px] w-[179.105px]"
+      className={`${styles.absolute} ${styles.h35994px} ${styles.left5999px} ${styles.top24px} ${styles.w179105px}`}
       data-name="Container"
     >
       <Paragraph />
@@ -426,10 +427,10 @@ function Container7() {
 function PrimitiveImg() {
   return (
     <div
-      className="basis-0 grow h-[31.996px] min-h-px min-w-px relative shrink-0"
+      className={`${styles.basis0} ${styles.grow} ${styles.h31996px} ${styles.minHPx} ${styles.minWPx} ${styles.relative} ${styles.shrink0}`}
       data-name="Primitive.img"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[31.996px] w-full" />
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h31996px} ${styles.wFull}`} />
     </div>
   );
 }
@@ -437,7 +438,7 @@ function PrimitiveImg() {
 function PrimitiveSpan1() {
   return (
     <div
-      className="absolute content-stretch flex items-start left-[15.99px] overflow-clip rounded-[1.5252e+07px] size-[31.996px] top-[25.99px]"
+      className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.itemsStart} ${styles.left1599px} ${styles.overflowClip} ${styles.rounded15252e07px} ${styles.size31996px} ${styles.top2599px}`}
       data-name="Primitive.span"
     >
       <PrimitiveImg />
@@ -448,12 +449,12 @@ function PrimitiveSpan1() {
 function Container8() {
   return (
     <div
-      className="absolute h-[83.992px] left-0 top-0 w-[255.994px]"
+      className={`${styles.absolute} ${styles.h83992px} ${styles.left0} ${styles.top0} ${styles.w255994px}`}
       data-name="Container"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none"
+        className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`}
       />
       <Container7 />
       <PrimitiveSpan1 />
@@ -464,12 +465,12 @@ function Container8() {
 function Container9() {
   return (
     <div
-      className="absolute h-[60px] left-0 top-0 w-[150px]"
+      className={`${styles.absolute} ${styles.h60px} ${styles.left0} ${styles.top0} ${styles.w150px}`}
       data-name="Container"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none"
+        className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`}
       />
     </div>
   );
@@ -478,11 +479,11 @@ function Container9() {
 function Paragraph2() {
   return (
     <div
-      className="h-[16.001px] relative shrink-0 w-[36.733px]"
+      className={`${styles.h16001px} ${styles.relative} ${styles.shrink0} ${styles.w36733px}`}
       data-name="Paragraph"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[16.001px] relative w-[36.733px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[16px] left-0 not-italic text-[12px] text-nowrap text-white top-[0.46px] whitespace-pre">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h16001px} ${styles.relative} ${styles.w36733px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading16px} ${styles.left0} ${styles.notItalic} ${styles.text12px} ${styles.textNowrap} ${styles.textWhite} ${styles.top046px} ${styles.whitespacePre}`}>
           3 tasks
         </p>
       </div>
@@ -493,11 +494,11 @@ function Paragraph2() {
 function Text3() {
   return (
     <div
-      className="h-[15px] relative shrink-0 w-[15.483px]"
+      className={`${styles.h15px} ${styles.relative} ${styles.shrink0} ${styles.w15483px}`}
       data-name="Text"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[15px] relative w-[15.483px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[15px] left-0 not-italic text-[#888888] text-[10px] top-[0.36px] tracking-[0.1172px] w-[16px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h15px} ${styles.relative} ${styles.w15483px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading15px} ${styles.left0} ${styles.notItalic} ${styles.text888888} ${styles.text10px} ${styles.top036px} ${styles.tracking01172px} ${styles.w16px}`}>
           2/3
         </p>
       </div>
@@ -508,11 +509,11 @@ function Text3() {
 function GanttChart1() {
   return (
     <div
-      className="h-[16.001px] relative shrink-0 w-full"
+      className={`${styles.h16001px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`}
       data-name="GanttChart"
     >
-      <div className="flex flex-row items-center size-full">
-        <div className="content-stretch flex h-[16.001px] items-center justify-between relative w-full">
+      <div className={`${styles.flex} ${styles.flexRow} ${styles.itemsCenter} ${styles.sizeFull}`}>
+        <div className={`${styles.contentStretch} ${styles.flex} ${styles.h16001px} ${styles.itemsCenter} ${styles.justifyBetween} ${styles.relative} ${styles.wFull}`}>
           <Paragraph2 />
           <Text3 />
         </div>
@@ -524,12 +525,12 @@ function GanttChart1() {
 function SlotClone() {
   return (
     <div
-      className="absolute bg-[#1f2d3a] box-border content-stretch flex flex-col h-[40px] items-start left-[191.49px] pb-0 pl-[15.632px] pr-[11.996px] pt-[7.997px] rounded-[10px] top-[8px] w-[1823.16px]"
+      className={`${styles.absolute} ${styles.bg1f2d3a} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h40px} ${styles.itemsStart} ${styles.left19149px} ${styles.pb0} ${styles.pl15632px} ${styles.pr11996px} ${styles.pt7997px} ${styles.rounded10px} ${styles.top8px} ${styles.w182316px}`}
       data-name="SlotClone"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[#54a0ff] border-[0px_0px_0px_3.636px] border-solid inset-0 pointer-events-none rounded-[10px]"
+        className={`${styles.absolute} ${styles.border54a0ff} ${styles.border0px0px0px3636px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded10px}`}
       />
       <GanttChart1 />
     </div>
@@ -539,7 +540,7 @@ function SlotClone() {
 function Container10() {
   return (
     <div
-      className="absolute h-[60px] left-[255.99px] top-0 w-[2397.64px]"
+      className={`${styles.absolute} ${styles.h60px} ${styles.left25599px} ${styles.top0} ${styles.w239764px}`}
       data-name="Container"
     >
       <Container9 />
@@ -551,12 +552,12 @@ function Container10() {
 function Container11() {
   return (
     <div
-      className="h-[84.901px] relative shrink-0 w-full"
+      className={`${styles.h84901px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`}
       data-name="Container"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[0px_0px_0.909px] border-neutral-800 border-solid inset-0 pointer-events-none"
+        className={`${styles.absolute} ${styles.border0px0px0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`}
       />
       <Container8 />
       <Container10 />
@@ -567,10 +568,10 @@ function Container11() {
 function Paragraph3() {
   return (
     <div
-      className="h-[19.993px] overflow-clip relative shrink-0 w-full"
+      className={`${styles.h19993px} ${styles.overflowClip} ${styles.relative} ${styles.shrink0} ${styles.wFull}`}
       data-name="Paragraph"
     >
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[14px] text-nowrap text-white top-[0.36px] tracking-[-0.1504px] whitespace-pre">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20px} ${styles.left0} ${styles.notItalic} ${styles.text14px} ${styles.textNowrap} ${styles.textWhite} ${styles.top036px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>
         Alex Kumar
       </p>
     </div>
@@ -580,10 +581,10 @@ function Paragraph3() {
 function Paragraph4() {
   return (
     <div
-      className="h-[16.001px] relative shrink-0 w-full"
+      className={`${styles.h16001px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`}
       data-name="Paragraph"
     >
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[16px] left-0 not-italic text-[#888888] text-[12px] top-[0.46px] w-[75px]">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading16px} ${styles.left0} ${styles.notItalic} ${styles.text888888} ${styles.text12px} ${styles.top046px} ${styles.w75px}`}>
         2/3 completed
       </p>
     </div>
@@ -593,7 +594,7 @@ function Paragraph4() {
 function Container12() {
   return (
     <div
-      className="absolute content-stretch flex flex-col gap-[2.289e_-5px] h-[35.994px] items-start left-[59.99px] top-[24px] w-[179.105px]"
+      className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap2289eNeg5px} ${styles.h35994px} ${styles.itemsStart} ${styles.left5999px} ${styles.top24px} ${styles.w179105px}`}
       data-name="Container"
     >
       <Paragraph3 />
@@ -605,10 +606,10 @@ function Container12() {
 function PrimitiveImg1() {
   return (
     <div
-      className="basis-0 grow h-[31.996px] min-h-px min-w-px relative shrink-0"
+      className={`${styles.basis0} ${styles.grow} ${styles.h31996px} ${styles.minHPx} ${styles.minWPx} ${styles.relative} ${styles.shrink0}`}
       data-name="Primitive.img"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[31.996px] w-full" />
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h31996px} ${styles.wFull}`} />
     </div>
   );
 }
@@ -616,7 +617,7 @@ function PrimitiveImg1() {
 function PrimitiveSpan2() {
   return (
     <div
-      className="absolute content-stretch flex items-start left-[15.99px] overflow-clip rounded-[1.5252e+07px] size-[31.996px] top-[25.99px]"
+      className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.itemsStart} ${styles.left1599px} ${styles.overflowClip} ${styles.rounded15252e07px} ${styles.size31996px} ${styles.top2599px}`}
       data-name="Primitive.span"
     >
       <PrimitiveImg1 />
@@ -627,12 +628,12 @@ function PrimitiveSpan2() {
 function Container13() {
   return (
     <div
-      className="absolute h-[83.992px] left-0 top-0 w-[255.994px]"
+      className={`${styles.absolute} ${styles.h83992px} ${styles.left0} ${styles.top0} ${styles.w255994px}`}
       data-name="Container"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none"
+        className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`}
       />
       <Container12 />
       <PrimitiveSpan2 />
@@ -643,12 +644,12 @@ function Container13() {
 function Container14() {
   return (
     <div
-      className="absolute h-[60px] left-0 top-0 w-[150px]"
+      className={`${styles.absolute} ${styles.h60px} ${styles.left0} ${styles.top0} ${styles.w150px}`}
       data-name="Container"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none"
+        className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`}
       />
     </div>
   );
@@ -657,11 +658,11 @@ function Container14() {
 function Paragraph5() {
   return (
     <div
-      className="h-[16.001px] relative shrink-0 w-[36.733px]"
+      className={`${styles.h16001px} ${styles.relative} ${styles.shrink0} ${styles.w36733px}`}
       data-name="Paragraph"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[16.001px] relative w-[36.733px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[16px] left-0 not-italic text-[12px] text-nowrap text-white top-[0.46px] whitespace-pre">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h16001px} ${styles.relative} ${styles.w36733px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading16px} ${styles.left0} ${styles.notItalic} ${styles.text12px} ${styles.textNowrap} ${styles.textWhite} ${styles.top046px} ${styles.whitespacePre}`}>
           3 tasks
         </p>
       </div>
@@ -672,11 +673,11 @@ function Paragraph5() {
 function Text4() {
   return (
     <div
-      className="h-[15px] relative shrink-0 w-[15.483px]"
+      className={`${styles.h15px} ${styles.relative} ${styles.shrink0} ${styles.w15483px}`}
       data-name="Text"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[15px] relative w-[15.483px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[15px] left-0 not-italic text-[#888888] text-[10px] top-[0.36px] tracking-[0.1172px] w-[16px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h15px} ${styles.relative} ${styles.w15483px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading15px} ${styles.left0} ${styles.notItalic} ${styles.text888888} ${styles.text10px} ${styles.top036px} ${styles.tracking01172px} ${styles.w16px}`}>
           2/3
         </p>
       </div>
@@ -687,11 +688,11 @@ function Text4() {
 function GanttChart2() {
   return (
     <div
-      className="h-[16.001px] relative shrink-0 w-full"
+      className={`${styles.h16001px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`}
       data-name="GanttChart"
     >
-      <div className="flex flex-row items-center size-full">
-        <div className="content-stretch flex h-[16.001px] items-center justify-between relative w-full">
+      <div className={`${styles.flex} ${styles.flexRow} ${styles.itemsCenter} ${styles.sizeFull}`}>
+        <div className={`${styles.contentStretch} ${styles.flex} ${styles.h16001px} ${styles.itemsCenter} ${styles.justifyBetween} ${styles.relative} ${styles.wFull}`}>
           <Paragraph5 />
           <Text4 />
         </div>
@@ -703,12 +704,12 @@ function GanttChart2() {
 function SlotClone1() {
   return (
     <div
-      className="absolute bg-[#1f2d3a] box-border content-stretch flex flex-col h-[40px] items-start left-[287.24px] pb-0 pl-[15.632px] pr-[11.996px] pt-[7.997px] rounded-[10px] top-[8px] w-[1535.92px]"
+      className={`${styles.absolute} ${styles.bg1f2d3a} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h40px} ${styles.itemsStart} ${styles.left28724px} ${styles.pb0} ${styles.pl15632px} ${styles.pr11996px} ${styles.pt7997px} ${styles.rounded10px} ${styles.top8px} ${styles.w153592px}`}
       data-name="SlotClone"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[#54a0ff] border-[0px_0px_0px_3.636px] border-solid inset-0 pointer-events-none rounded-[10px]"
+        className={`${styles.absolute} ${styles.border54a0ff} ${styles.border0px0px0px3636px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded10px}`}
       />
       <GanttChart2 />
     </div>
@@ -718,7 +719,7 @@ function SlotClone1() {
 function Container15() {
   return (
     <div
-      className="absolute h-[60px] left-[255.99px] top-0 w-[2397.64px]"
+      className={`${styles.absolute} ${styles.h60px} ${styles.left25599px} ${styles.top0} ${styles.w239764px}`}
       data-name="Container"
     >
       <Container14 />
@@ -730,12 +731,12 @@ function Container15() {
 function Container16() {
   return (
     <div
-      className="h-[84.901px] relative shrink-0 w-full"
+      className={`${styles.h84901px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`}
       data-name="Container"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[0px_0px_0.909px] border-neutral-800 border-solid inset-0 pointer-events-none"
+        className={`${styles.absolute} ${styles.border0px0px0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`}
       />
       <Container13 />
       <Container15 />
@@ -746,10 +747,10 @@ function Container16() {
 function Paragraph6() {
   return (
     <div
-      className="absolute h-[19.993px] left-0 overflow-clip top-0 w-[179.105px]"
+      className={`${styles.absolute} ${styles.h19993px} ${styles.left0} ${styles.overflowClip} ${styles.top0} ${styles.w179105px}`}
       data-name="Paragraph"
     >
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[14px] text-nowrap text-white top-[0.36px] tracking-[-0.1504px] whitespace-pre">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20px} ${styles.left0} ${styles.notItalic} ${styles.text14px} ${styles.textNowrap} ${styles.textWhite} ${styles.top036px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>
         Jordan Lee
       </p>
     </div>
@@ -759,10 +760,10 @@ function Paragraph6() {
 function Paragraph7() {
   return (
     <div
-      className="absolute h-[16.001px] left-0 top-[19.99px] w-[179.105px]"
+      className={`${styles.absolute} ${styles.h16001px} ${styles.left0} ${styles.top1999px} ${styles.w179105px}`}
       data-name="Paragraph"
     >
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[16px] left-0 not-italic text-[#888888] text-[12px] top-[0.46px] w-[75px]">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading16px} ${styles.left0} ${styles.notItalic} ${styles.text888888} ${styles.text12px} ${styles.top046px} ${styles.w75px}`}>
         2/4 completed
       </p>
     </div>
@@ -772,7 +773,7 @@ function Paragraph7() {
 function Container17() {
   return (
     <div
-      className="absolute h-[35.994px] left-[59.99px] top-[24px] w-[179.105px]"
+      className={`${styles.absolute} ${styles.h35994px} ${styles.left5999px} ${styles.top24px} ${styles.w179105px}`}
       data-name="Container"
     >
       <Paragraph6 />
@@ -784,10 +785,10 @@ function Container17() {
 function PrimitiveImg2() {
   return (
     <div
-      className="basis-0 grow h-[31.996px] min-h-px min-w-px relative shrink-0"
+      className={`${styles.basis0} ${styles.grow} ${styles.h31996px} ${styles.minHPx} ${styles.minWPx} ${styles.relative} ${styles.shrink0}`}
       data-name="Primitive.img"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[31.996px] w-full" />
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h31996px} ${styles.wFull}`} />
     </div>
   );
 }
@@ -795,7 +796,7 @@ function PrimitiveImg2() {
 function PrimitiveSpan3() {
   return (
     <div
-      className="absolute content-stretch flex items-start left-[15.99px] overflow-clip rounded-[1.5252e+07px] size-[31.996px] top-[25.99px]"
+      className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.itemsStart} ${styles.left1599px} ${styles.overflowClip} ${styles.rounded15252e07px} ${styles.size31996px} ${styles.top2599px}`}
       data-name="Primitive.span"
     >
       <PrimitiveImg2 />
@@ -806,12 +807,12 @@ function PrimitiveSpan3() {
 function Container18() {
   return (
     <div
-      className="absolute h-[83.992px] left-0 top-0 w-[255.994px]"
+      className={`${styles.absolute} ${styles.h83992px} ${styles.left0} ${styles.top0} ${styles.w255994px}`}
       data-name="Container"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none"
+        className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`}
       />
       <Container17 />
       <PrimitiveSpan3 />
@@ -822,12 +823,12 @@ function Container18() {
 function Container19() {
   return (
     <div
-      className="absolute h-[60px] left-0 top-0 w-[150px]"
+      className={`${styles.absolute} ${styles.h60px} ${styles.left0} ${styles.top0} ${styles.w150px}`}
       data-name="Container"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none"
+        className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`}
       />
     </div>
   );
@@ -836,11 +837,11 @@ function Container19() {
 function Paragraph8() {
   return (
     <div
-      className="h-[16.001px] relative shrink-0 w-[36.896px]"
+      className={`${styles.h16001px} ${styles.relative} ${styles.shrink0} ${styles.w36896px}`}
       data-name="Paragraph"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[16.001px] relative w-[36.896px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[16px] left-0 not-italic text-[12px] text-nowrap text-white top-[0.46px] whitespace-pre">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h16001px} ${styles.relative} ${styles.w36896px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading16px} ${styles.left0} ${styles.notItalic} ${styles.text12px} ${styles.textNowrap} ${styles.textWhite} ${styles.top046px} ${styles.whitespacePre}`}>
           4 tasks
         </p>
       </div>
@@ -851,11 +852,11 @@ function Paragraph8() {
 function Text5() {
   return (
     <div
-      className="h-[15px] relative shrink-0 w-[15.49px]"
+      className={`${styles.h15px} ${styles.relative} ${styles.shrink0} ${styles.w1549px}`}
       data-name="Text"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[15px] relative w-[15.49px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[15px] left-0 not-italic text-[#888888] text-[10px] top-[0.36px] tracking-[0.1172px] w-[16px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h15px} ${styles.relative} ${styles.w1549px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading15px} ${styles.left0} ${styles.notItalic} ${styles.text888888} ${styles.text10px} ${styles.top036px} ${styles.tracking01172px} ${styles.w16px}`}>
           2/4
         </p>
       </div>
@@ -866,11 +867,11 @@ function Text5() {
 function GanttChart3() {
   return (
     <div
-      className="h-[16.001px] relative shrink-0 w-full"
+      className={`${styles.h16001px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`}
       data-name="GanttChart"
     >
-      <div className="flex flex-row items-center size-full">
-        <div className="content-stretch flex h-[16.001px] items-center justify-between relative w-full">
+      <div className={`${styles.flex} ${styles.flexRow} ${styles.itemsCenter} ${styles.sizeFull}`}>
+        <div className={`${styles.contentStretch} ${styles.flex} ${styles.h16001px} ${styles.itemsCenter} ${styles.justifyBetween} ${styles.relative} ${styles.wFull}`}>
           <Paragraph8 />
           <Text5 />
         </div>
@@ -882,12 +883,12 @@ function GanttChart3() {
 function SlotClone2() {
   return (
     <div
-      className="absolute bg-[#1f2d3a] box-border content-stretch flex flex-col h-[40px] items-start left-[191.49px] pb-0 pl-[15.632px] pr-[11.996px] pt-[7.997px] rounded-[10px] top-[8px] w-[2014.65px]"
+      className={`${styles.absolute} ${styles.bg1f2d3a} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h40px} ${styles.itemsStart} ${styles.left19149px} ${styles.pb0} ${styles.pl15632px} ${styles.pr11996px} ${styles.pt7997px} ${styles.rounded10px} ${styles.top8px} ${styles.w201465px}`}
       data-name="SlotClone"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[#54a0ff] border-[0px_0px_0px_3.636px] border-solid inset-0 pointer-events-none rounded-[10px]"
+        className={`${styles.absolute} ${styles.border54a0ff} ${styles.border0px0px0px3636px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded10px}`}
       />
       <GanttChart3 />
     </div>
@@ -897,7 +898,7 @@ function SlotClone2() {
 function Container20() {
   return (
     <div
-      className="absolute h-[60px] left-[255.99px] top-0 w-[2397.64px]"
+      className={`${styles.absolute} ${styles.h60px} ${styles.left25599px} ${styles.top0} ${styles.w239764px}`}
       data-name="Container"
     >
       <Container19 />
@@ -909,12 +910,12 @@ function Container20() {
 function Container21() {
   return (
     <div
-      className="h-[84.901px] relative shrink-0 w-full"
+      className={`${styles.h84901px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`}
       data-name="Container"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[0px_0px_0.909px] border-neutral-800 border-solid inset-0 pointer-events-none"
+        className={`${styles.absolute} ${styles.border0px0px0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`}
       />
       <Container18 />
       <Container20 />
@@ -925,10 +926,10 @@ function Container21() {
 function Paragraph9() {
   return (
     <div
-      className="absolute h-[19.993px] left-0 overflow-clip top-0 w-[179.105px]"
+      className={`${styles.absolute} ${styles.h19993px} ${styles.left0} ${styles.overflowClip} ${styles.top0} ${styles.w179105px}`}
       data-name="Paragraph"
     >
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[14px] text-nowrap text-white top-[0.36px] tracking-[-0.1504px] whitespace-pre">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20px} ${styles.left0} ${styles.notItalic} ${styles.text14px} ${styles.textNowrap} ${styles.textWhite} ${styles.top036px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>
         Maria Garcia
       </p>
     </div>
@@ -938,10 +939,10 @@ function Paragraph9() {
 function Paragraph10() {
   return (
     <div
-      className="absolute h-[16.001px] left-0 top-[19.99px] w-[179.105px]"
+      className={`${styles.absolute} ${styles.h16001px} ${styles.left0} ${styles.top1999px} ${styles.w179105px}`}
       data-name="Paragraph"
     >
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[16px] left-0 not-italic text-[#888888] text-[12px] top-[0.46px] w-[74px]">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading16px} ${styles.left0} ${styles.notItalic} ${styles.text888888} ${styles.text12px} ${styles.top046px} ${styles.w74px}`}>
         1/3 completed
       </p>
     </div>
@@ -951,7 +952,7 @@ function Paragraph10() {
 function Container22() {
   return (
     <div
-      className="absolute h-[35.994px] left-[59.99px] top-[24px] w-[179.105px]"
+      className={`${styles.absolute} ${styles.h35994px} ${styles.left5999px} ${styles.top24px} ${styles.w179105px}`}
       data-name="Container"
     >
       <Paragraph9 />
@@ -963,10 +964,10 @@ function Container22() {
 function PrimitiveImg3() {
   return (
     <div
-      className="basis-0 grow h-[31.996px] min-h-px min-w-px relative shrink-0"
+      className={`${styles.basis0} ${styles.grow} ${styles.h31996px} ${styles.minHPx} ${styles.minWPx} ${styles.relative} ${styles.shrink0}`}
       data-name="Primitive.img"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[31.996px] w-full" />
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h31996px} ${styles.wFull}`} />
     </div>
   );
 }
@@ -974,7 +975,7 @@ function PrimitiveImg3() {
 function PrimitiveSpan4() {
   return (
     <div
-      className="absolute content-stretch flex items-start left-[15.99px] overflow-clip rounded-[1.5252e+07px] size-[31.996px] top-[25.99px]"
+      className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.itemsStart} ${styles.left1599px} ${styles.overflowClip} ${styles.rounded15252e07px} ${styles.size31996px} ${styles.top2599px}`}
       data-name="Primitive.span"
     >
       <PrimitiveImg3 />
@@ -985,12 +986,12 @@ function PrimitiveSpan4() {
 function Container23() {
   return (
     <div
-      className="absolute h-[83.992px] left-0 top-0 w-[255.994px]"
+      className={`${styles.absolute} ${styles.h83992px} ${styles.left0} ${styles.top0} ${styles.w255994px}`}
       data-name="Container"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none"
+        className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`}
       />
       <Container22 />
       <PrimitiveSpan4 />
@@ -1001,12 +1002,12 @@ function Container23() {
 function Container24() {
   return (
     <div
-      className="absolute h-[60px] left-0 top-0 w-[150px]"
+      className={`${styles.absolute} ${styles.h60px} ${styles.left0} ${styles.top0} ${styles.w150px}`}
       data-name="Container"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none"
+        className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`}
       />
     </div>
   );
@@ -1015,11 +1016,11 @@ function Container24() {
 function Paragraph11() {
   return (
     <div
-      className="h-[16.001px] relative shrink-0 w-[36.733px]"
+      className={`${styles.h16001px} ${styles.relative} ${styles.shrink0} ${styles.w36733px}`}
       data-name="Paragraph"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[16.001px] relative w-[36.733px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[16px] left-0 not-italic text-[12px] text-nowrap text-white top-[0.46px] whitespace-pre">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h16001px} ${styles.relative} ${styles.w36733px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading16px} ${styles.left0} ${styles.notItalic} ${styles.text12px} ${styles.textNowrap} ${styles.textWhite} ${styles.top046px} ${styles.whitespacePre}`}>
           3 tasks
         </p>
       </div>
@@ -1030,11 +1031,11 @@ function Paragraph11() {
 function Text6() {
   return (
     <div
-      className="h-[15px] relative shrink-0 w-[14.126px]"
+      className={`${styles.h15px} ${styles.relative} ${styles.shrink0} ${styles.w14126px}`}
       data-name="Text"
     >
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[15px] relative w-[14.126px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[15px] left-0 not-italic text-[#888888] text-[10px] top-[0.36px] tracking-[0.1172px] w-[15px]">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h15px} ${styles.relative} ${styles.w14126px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading15px} ${styles.left0} ${styles.notItalic} ${styles.text888888} ${styles.text10px} ${styles.top036px} ${styles.tracking01172px} ${styles.w15px}`}>
           1/3
         </p>
       </div>
@@ -1045,11 +1046,11 @@ function Text6() {
 function GanttChart4() {
   return (
     <div
-      className="h-[16.001px] relative shrink-0 w-full"
+      className={`${styles.h16001px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`}
       data-name="GanttChart"
     >
-      <div className="flex flex-row items-center size-full">
-        <div className="content-stretch flex h-[16.001px] items-center justify-between relative w-full">
+      <div className={`${styles.flex} ${styles.flexRow} ${styles.itemsCenter} ${styles.sizeFull}`}>
+        <div className={`${styles.contentStretch} ${styles.flex} ${styles.h16001px} ${styles.itemsCenter} ${styles.justifyBetween} ${styles.relative} ${styles.wFull}`}>
           <Paragraph11 />
           <Text6 />
         </div>
@@ -1061,12 +1062,12 @@ function GanttChart4() {
 function SlotClone3() {
   return (
     <div
-      className="absolute bg-[#1f2d3a] box-border content-stretch flex flex-col h-[40px] items-start left-[382.98px] pb-0 pl-[15.632px] pr-[11.996px] pt-[7.997px] rounded-[10px] top-[8px] w-[1727.41px]"
+      className={`${styles.absolute} ${styles.bg1f2d3a} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h40px} ${styles.itemsStart} ${styles.left38298px} ${styles.pb0} ${styles.pl15632px} ${styles.pr11996px} ${styles.pt7997px} ${styles.rounded10px} ${styles.top8px} ${styles.w172741px}`}
       data-name="SlotClone"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[#54a0ff] border-[0px_0px_0px_3.636px] border-solid inset-0 pointer-events-none rounded-[10px]"
+        className={`${styles.absolute} ${styles.border54a0ff} ${styles.border0px0px0px3636px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded10px}`}
       />
       <GanttChart4 />
     </div>
@@ -1076,7 +1077,7 @@ function SlotClone3() {
 function Container25() {
   return (
     <div
-      className="absolute h-[60px] left-[255.99px] top-0 w-[2397.64px]"
+      className={`${styles.absolute} ${styles.h60px} ${styles.left25599px} ${styles.top0} ${styles.w239764px}`}
       data-name="Container"
     >
       <Container24 />
@@ -1088,12 +1089,12 @@ function Container25() {
 function Container26() {
   return (
     <div
-      className="h-[84.901px] relative shrink-0 w-full"
+      className={`${styles.h84901px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`}
       data-name="Container"
     >
       <div
         aria-hidden="true"
-        className="absolute border-[0px_0px_0.909px] border-neutral-800 border-solid inset-0 pointer-events-none"
+        className={`${styles.absolute} ${styles.border0px0px0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`}
       />
       <Container23 />
       <Container25 />
@@ -1104,7 +1105,7 @@ function Container26() {
 function GanttChart5() {
   return (
     <div
-      className="content-stretch flex flex-col gap-[7.629e_-6px] h-[339.602px] items-start relative shrink-0 w-full"
+      className={`${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap7629eNeg6px} ${styles.h339602px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`}
       data-name="GanttChart"
     >
       <Container11 />
@@ -1118,7 +1119,7 @@ function GanttChart5() {
 function Container27() {
   return (
     <div
-      className="absolute content-stretch flex flex-col gap-[0.909px] h-[388.501px] items-start left-0 overflow-clip top-[70.71px] w-[2653.64px]"
+      className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap0909px} ${styles.h388501px} ${styles.itemsStart} ${styles.left0} ${styles.overflowClip} ${styles.top7071px} ${styles.w265364px}`}
       data-name="Container"
     >
       <GanttChart />
@@ -1130,7 +1131,7 @@ function Container27() {
 function TimelineView() {
   return (
     <div
-      className="bg-[#0d0d0d] h-[459.212px] relative shrink-0 w-[2653.64px]"
+      className={`${styles.bg0d0d0d} ${styles.h459212px} ${styles.relative} ${styles.shrink0} ${styles.w265364px}`}
       data-name="TimelineView"
     >
       <Container />
@@ -1142,7 +1143,7 @@ function TimelineView() {
 export default function Container28() {
   return (
     <div
-      className="content-stretch flex flex-col items-start relative size-full"
+      className={`${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.itemsStart} ${styles.relative} ${styles.sizeFull}`}
       data-name="Container"
     >
       <TimelineView />

@@ -1,9 +1,10 @@
 import svgPaths from "./svg-kdcfwy0zdi";
+import styles from "./Container-16-3405.module.scss";
 
 function Icon() {
   return (
-    <div className="relative shrink-0 size-[20px]" data-name="Icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 20 20">
+    <div className={`${styles.relative} ${styles.shrink0} ${styles.size20px}`} data-name="Icon">
+      <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 20 20">
         <g id="Icon">
           <path d="M6.66667 1.66667V5" id="Vector" stroke="var(--stroke-0, #888888)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.66667" />
           <path d="M13.3333 1.66667V5" id="Vector_2" stroke="var(--stroke-0, #888888)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.66667" />
@@ -17,9 +18,9 @@ function Icon() {
 
 function Heading() {
   return (
-    <div className="h-[27.997px] relative shrink-0 w-[140.156px]" data-name="Heading 2">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[27.997px] relative w-[140.156px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[28px] left-0 not-italic text-[20px] text-nowrap text-white top-[-0.18px] tracking-[-0.4492px] whitespace-pre">Project Timeline</p>
+    <div className={`${styles.h27997px} ${styles.relative} ${styles.shrink0} ${styles.w140156px}`} data-name="Heading 2">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h27997px} ${styles.relative} ${styles.w140156px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading28px} ${styles.left0} ${styles.notItalic} ${styles.text20px} ${styles.textNowrap} ${styles.textWhite} ${styles.topNeg018px} ${styles.trackingNeg4492px} ${styles.whitespacePre}`}>Project Timeline</p>
       </div>
     </div>
   );
@@ -27,8 +28,8 @@ function Heading() {
 
 function Container() {
   return (
-    <div className="h-[27.997px] relative shrink-0 w-[172.152px]" data-name="Container">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex gap-[11.996px] h-[27.997px] items-center relative w-[172.152px]">
+    <div className={`${styles.h27997px} ${styles.relative} ${styles.shrink0} ${styles.w172152px}`} data-name="Container">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap11996px} ${styles.h27997px} ${styles.itemsCenter} ${styles.relative} ${styles.w172152px}`}>
         <Icon />
         <Heading />
       </div>
@@ -38,9 +39,9 @@ function Container() {
 
 function PrimitiveSpan() {
   return (
-    <div className="h-[19.993px] relative shrink-0 w-[73.054px]" data-name="Primitive.span">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex gap-[8px] h-[19.993px] items-center overflow-clip relative rounded-[inherit] w-[73.054px]">
-        <p className="font-['Inter:Regular',sans-serif] font-normal leading-[20px] not-italic relative shrink-0 text-[14px] text-nowrap text-white tracking-[-0.1504px] whitespace-pre">All Workers</p>
+    <div className={`${styles.h19993px} ${styles.relative} ${styles.shrink0} ${styles.w73054px}`} data-name="Primitive.span">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap8px} ${styles.h19993px} ${styles.itemsCenter} ${styles.overflowClip} ${styles.relative} ${styles.roundedInherit} ${styles.w73054px}`}>
+        <p className={`${styles.fontNormal} ${styles.leading20px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text14px} ${styles.textNowrap} ${styles.textWhite} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>All Workers</p>
       </div>
     </div>
   );
@@ -48,8 +49,8 @@ function PrimitiveSpan() {
 
 function Icon1() {
   return (
-    <div className="relative shrink-0 size-[15.994px]" data-name="Icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+    <div className={`${styles.relative} ${styles.shrink0} ${styles.size15994px}`} data-name="Icon">
+      <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
         <g id="Icon" opacity="0.5">
           <path d={svgPaths.p10a02b40} id="Vector" stroke="var(--stroke-0, #717182)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
         </g>
@@ -60,9 +61,9 @@ function Icon1() {
 
 function PrimitiveButton() {
   return (
-    <div className="bg-[#1a1a1a] h-[35.994px] relative rounded-[8px] shrink-0 w-[191.996px]" data-name="Primitive.button">
-      <div aria-hidden="true" className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[8px]" />
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex h-[35.994px] items-center justify-between px-[12.905px] py-[0.909px] relative w-[191.996px]">
+    <div className={`${styles.bg1a1a1a} ${styles.h35994px} ${styles.relative} ${styles.rounded8px} ${styles.shrink0} ${styles.w191996px}`} data-name="Primitive.button">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded8px}`} />
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h35994px} ${styles.itemsCenter} ${styles.justifyBetween} ${styles.px12905px} ${styles.py0909px} ${styles.relative} ${styles.w191996px}`}>
         <PrimitiveSpan />
         <Icon1 />
       </div>
@@ -86,8 +87,8 @@ function Icon2() {
 
 function Button() {
   return (
-    <div className="h-[27.997px] relative rounded-[8px] shrink-0 w-[35.994px]" data-name="Button">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex h-[27.997px] items-center justify-center relative w-[35.994px]">
+    <div className={`${styles.h27997px} ${styles.relative} ${styles.rounded8px} ${styles.shrink0} ${styles.w35994px}`} data-name="Button">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h27997px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.relative} ${styles.w35994px}`}>
         <Icon2 />
       </div>
     </div>
@@ -96,9 +97,9 @@ function Button() {
 
 function Text() {
   return (
-    <div className="h-[19.993px] relative shrink-0 w-[48.771px]" data-name="Text">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[19.993px] relative w-[48.771px]">
-        <p className="absolute capitalize font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-[12px] not-italic text-[14px] text-nowrap text-white top-[0.36px] tracking-[-0.1504px] whitespace-pre">day</p>
+    <div className={`${styles.h19993px} ${styles.relative} ${styles.shrink0} ${styles.w48771px}`} data-name="Text">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h19993px} ${styles.relative} ${styles.w48771px}`}>
+        <p className={`${styles.absolute} ${styles.capitalize} ${styles.fontNormal} ${styles.leading20px} ${styles.left12px} ${styles.notItalic} ${styles.text14px} ${styles.textNowrap} ${styles.textWhite} ${styles.top036px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>day</p>
       </div>
     </div>
   );
@@ -106,8 +107,8 @@ function Text() {
 
 function Icon3() {
   return (
-    <div className="relative shrink-0 size-[15.994px]" data-name="Icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+    <div className={`${styles.relative} ${styles.shrink0} ${styles.size15994px}`} data-name="Icon">
+      <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
         <g id="Icon">
           <path d={svgPaths.p2139fb00} id="Vector" stroke="var(--stroke-0, #888888)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
           <path d={svgPaths.p2fdcea00} id="Vector_2" stroke="var(--stroke-0, #888888)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
@@ -121,8 +122,8 @@ function Icon3() {
 
 function Button1() {
   return (
-    <div className="h-[27.997px] opacity-30 relative rounded-[8px] shrink-0 w-[35.994px]" data-name="Button">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex h-[27.997px] items-center justify-center relative w-[35.994px]">
+    <div className={`${styles.h27997px} ${styles.opacity30} ${styles.relative} ${styles.rounded8px} ${styles.shrink0} ${styles.w35994px}`} data-name="Button">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h27997px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.relative} ${styles.w35994px}`}>
         <Icon3 />
       </div>
     </div>
@@ -131,9 +132,9 @@ function Button1() {
 
 function Container1() {
   return (
-    <div className="bg-[#1a1a1a] h-[37.813px] relative rounded-[10px] shrink-0 w-[138.572px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[10px]" />
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex gap-[3.999px] h-[37.813px] items-center pl-[4.908px] pr-[0.909px] py-[0.909px] relative w-[138.572px]">
+    <div className={`${styles.bg1a1a1a} ${styles.h37813px} ${styles.relative} ${styles.rounded10px} ${styles.shrink0} ${styles.w138572px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded10px}`} />
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap3999px} ${styles.h37813px} ${styles.itemsCenter} ${styles.pl4908px} ${styles.pr0909px} ${styles.py0909px} ${styles.relative} ${styles.w138572px}`}>
         <Button />
         <Text />
         <Button1 />
@@ -144,8 +145,8 @@ function Container1() {
 
 function Container2() {
   return (
-    <div className="h-[37.813px] relative shrink-0 w-[342.564px]" data-name="Container">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex gap-[11.996px] h-[37.813px] items-center relative w-[342.564px]">
+    <div className={`${styles.h37813px} ${styles.relative} ${styles.shrink0} ${styles.w342564px}`} data-name="Container">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap11996px} ${styles.h37813px} ${styles.itemsCenter} ${styles.relative} ${styles.w342564px}`}>
         <PrimitiveButton />
         <Container1 />
       </div>
@@ -155,9 +156,9 @@ function Container2() {
 
 function Container3() {
   return (
-    <div className="h-[37.813px] relative shrink-0 w-full" data-name="Container">
-      <div className="flex flex-row items-center size-full">
-        <div className="content-stretch flex h-[37.813px] items-center justify-between relative w-full">
+    <div className={`${styles.h37813px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Container">
+      <div className={`${styles.flex} ${styles.flexRow} ${styles.itemsCenter} ${styles.sizeFull}`}>
+        <div className={`${styles.contentStretch} ${styles.flex} ${styles.h37813px} ${styles.itemsCenter} ${styles.justifyBetween} ${styles.relative} ${styles.wFull}`}>
           <Container />
           <Container2 />
         </div>
@@ -168,8 +169,8 @@ function Container3() {
 
 function Container4() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[70.71px] items-start left-0 pb-[0.909px] pl-[23.999px] pr-[23.998px] pt-[15.994px] top-0 w-[2653.64px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0px_0.909px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h7071px} ${styles.itemsStart} ${styles.left0} ${styles.pb0909px} ${styles.pl23999px} ${styles.pr23998px} ${styles.pt15994px} ${styles.top0} ${styles.w265364px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0px0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Container3 />
     </div>
   );
@@ -177,17 +178,17 @@ function Container4() {
 
 function Text1() {
   return (
-    <div className="content-stretch flex h-[16.364px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[20px] not-italic relative shrink-0 text-[#888888] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">Team Member</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h16364px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading20px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text14px} ${styles.textNowrap} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Team Member</p>
     </div>
   );
 }
 
 function Container5() {
   return (
-    <div className="h-[47.99px] relative shrink-0 w-[255.994px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex flex-col h-[47.99px] items-start pb-0 pl-[15.994px] pr-[147.955px] pt-[16.087px] relative w-[255.994px]">
+    <div className={`${styles.h4799px} ${styles.relative} ${styles.shrink0} ${styles.w255994px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.pb0} ${styles.pl15994px} ${styles.pr147955px} ${styles.pt16087px} ${styles.relative} ${styles.w255994px}`}>
         <Text1 />
       </div>
     </div>
@@ -196,16 +197,16 @@ function Container5() {
 
 function Text2() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Oct 30</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Oct 30</p>
     </div>
   );
 }
 
 function Container6() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-0 pb-0 pl-[21.584px] pr-[22.5px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left0} ${styles.pb0} ${styles.pl21584px} ${styles.pr225px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text2 />
     </div>
   );
@@ -213,16 +214,16 @@ function Container6() {
 
 function Text3() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Oct 31</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Oct 31</p>
     </div>
   );
 }
 
 function Container7() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[80px] pb-0 pl-[22.571px] pr-[23.48px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left80px} ${styles.pb0} ${styles.pl22571px} ${styles.pr2348px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text3 />
     </div>
   );
@@ -230,16 +231,16 @@ function Container7() {
 
 function Text4() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 1</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 1</p>
     </div>
   );
 }
 
 function Container8() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[160px] pb-0 pl-[25.213px] pr-[26.122px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left160px} ${styles.pb0} ${styles.pl25213px} ${styles.pr26122px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text4 />
     </div>
   );
@@ -247,16 +248,16 @@ function Container8() {
 
 function Text5() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 2</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 2</p>
     </div>
   );
 }
 
 function Container9() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[240px] pb-0 pl-[24.46px] pr-[25.369px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left240px} ${styles.pb0} ${styles.pl2446px} ${styles.pr25369px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text5 />
     </div>
   );
@@ -264,16 +265,16 @@ function Container9() {
 
 function Text6() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 3</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 3</p>
     </div>
   );
 }
 
 function Container10() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[320px] pb-0 pl-[24.304px] pr-[25.22px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left320px} ${styles.pb0} ${styles.pl24304px} ${styles.pr2522px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text6 />
     </div>
   );
@@ -281,16 +282,16 @@ function Container10() {
 
 function Text7() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 4</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 4</p>
     </div>
   );
 }
 
 function Container11() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[400px] pb-0 pl-[24.226px] pr-[25.135px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left400px} ${styles.pb0} ${styles.pl24226px} ${styles.pr25135px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text7 />
     </div>
   );
@@ -298,16 +299,16 @@ function Container11() {
 
 function Text8() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 5</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 5</p>
     </div>
   );
 }
 
 function Container12() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[480px] pb-0 pl-[24.347px] pr-[25.263px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left480px} ${styles.pb0} ${styles.pl24347px} ${styles.pr25263px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text8 />
     </div>
   );
@@ -315,16 +316,16 @@ function Container12() {
 
 function Text9() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 6</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 6</p>
     </div>
   );
 }
 
 function Container13() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[560px] pb-0 pl-[24.169px] pr-[25.085px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left560px} ${styles.pb0} ${styles.pl24169px} ${styles.pr25085px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text9 />
     </div>
   );
@@ -332,16 +333,16 @@ function Container13() {
 
 function Text10() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 7</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 7</p>
     </div>
   );
 }
 
 function Container14() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[640px] pb-0 pl-[24.588px] pr-[25.504px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left640px} ${styles.pb0} ${styles.pl24588px} ${styles.pr25504px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text10 />
     </div>
   );
@@ -349,16 +350,16 @@ function Container14() {
 
 function Text11() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 8</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 8</p>
     </div>
   );
 }
 
 function Container15() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[720px] pb-0 pl-[24.254px] pr-[25.163px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left720px} ${styles.pb0} ${styles.pl24254px} ${styles.pr25163px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text11 />
     </div>
   );
@@ -366,16 +367,16 @@ function Container15() {
 
 function Text12() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 9</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 9</p>
     </div>
   );
 }
 
 function Container16() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[800px] pb-0 pl-[24.169px] pr-[25.085px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left800px} ${styles.pb0} ${styles.pl24169px} ${styles.pr25085px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text12 />
     </div>
   );
@@ -383,16 +384,16 @@ function Container16() {
 
 function Text13() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 10</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 10</p>
     </div>
   );
 }
 
 function Container17() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[880px] pb-0 pl-[21.548px] pr-[22.457px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left880px} ${styles.pb0} ${styles.pl21548px} ${styles.pr22457px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text13 />
     </div>
   );
@@ -400,16 +401,16 @@ function Container17() {
 
 function Text14() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 11</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 11</p>
     </div>
   );
 }
 
 function Container18() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[960px] pb-0 pl-[22.528px] pr-[23.437px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left960px} ${styles.pb0} ${styles.pl22528px} ${styles.pr23437px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text14 />
     </div>
   );
@@ -417,16 +418,16 @@ function Container18() {
 
 function Text15() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 12</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 12</p>
     </div>
   );
 }
 
 function Container19() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[1040px] pb-0 pl-[21.776px] pr-[22.685px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left1040px} ${styles.pb0} ${styles.pl21776px} ${styles.pr22685px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text15 />
     </div>
   );
@@ -434,16 +435,16 @@ function Container19() {
 
 function Text16() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 13</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 13</p>
     </div>
   );
 }
 
 function Container20() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[1120px] pb-0 pl-[21.619px] pr-[22.536px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left1120px} ${styles.pb0} ${styles.pl21619px} ${styles.pr22536px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text16 />
     </div>
   );
@@ -451,16 +452,16 @@ function Container20() {
 
 function Text17() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 14</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 14</p>
     </div>
   );
 }
 
 function Container21() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[1200px] pb-0 pl-[21.541px] pr-[22.45px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left1200px} ${styles.pb0} ${styles.pl21541px} ${styles.pr2245px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text17 />
     </div>
   );
@@ -468,16 +469,16 @@ function Container21() {
 
 function Text18() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 15</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 15</p>
     </div>
   );
 }
 
 function Container22() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[1280px] pb-0 pl-[21.662px] pr-[22.578px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left1280px} ${styles.pb0} ${styles.pl21662px} ${styles.pr22578px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text18 />
     </div>
   );
@@ -485,16 +486,16 @@ function Container22() {
 
 function Text19() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 16</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 16</p>
     </div>
   );
 }
 
 function Container23() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[1360px] pb-0 pl-[21.484px] pr-[22.401px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left1360px} ${styles.pb0} ${styles.pl21484px} ${styles.pr22401px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text19 />
     </div>
   );
@@ -502,16 +503,16 @@ function Container23() {
 
 function Text20() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 17</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 17</p>
     </div>
   );
 }
 
 function Container24() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[1440px] pb-0 pl-[21.903px] pr-[22.82px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left1440px} ${styles.pb0} ${styles.pl21903px} ${styles.pr2282px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text20 />
     </div>
   );
@@ -519,16 +520,16 @@ function Container24() {
 
 function Text21() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 18</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 18</p>
     </div>
   );
 }
 
 function Container25() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[1520px] pb-0 pl-[21.57px] pr-[22.479px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left1520px} ${styles.pb0} ${styles.pl2157px} ${styles.pr22479px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text21 />
     </div>
   );
@@ -536,16 +537,16 @@ function Container25() {
 
 function Text22() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 19</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 19</p>
     </div>
   );
 }
 
 function Container26() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[1600px] pb-0 pl-[21.484px] pr-[22.401px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left1600px} ${styles.pb0} ${styles.pl21484px} ${styles.pr22401px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text22 />
     </div>
   );
@@ -553,16 +554,16 @@ function Container26() {
 
 function Text23() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 20</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 20</p>
     </div>
   );
 }
 
 function Container27() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[1680px] pb-0 pl-[20.795px] pr-[21.705px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left1680px} ${styles.pb0} ${styles.pl20795px} ${styles.pr21705px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text23 />
     </div>
   );
@@ -570,16 +571,16 @@ function Container27() {
 
 function Text24() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 21</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 21</p>
     </div>
   );
 }
 
 function Container28() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[1760px] pb-0 pl-[21.776px] pr-[22.685px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left1760px} ${styles.pb0} ${styles.pl21776px} ${styles.pr22685px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text24 />
     </div>
   );
@@ -587,16 +588,16 @@ function Container28() {
 
 function Text25() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 22</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 22</p>
     </div>
   );
 }
 
 function Container29() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[1840px] pb-0 pl-[21.023px] pr-[21.932px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left1840px} ${styles.pb0} ${styles.pl21023px} ${styles.pr21932px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text25 />
     </div>
   );
@@ -604,16 +605,16 @@ function Container29() {
 
 function Text26() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 23</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 23</p>
     </div>
   );
 }
 
 function Container30() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[1920px] pb-0 pl-[20.866px] pr-[21.783px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left1920px} ${styles.pb0} ${styles.pl20866px} ${styles.pr21783px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text26 />
     </div>
   );
@@ -621,16 +622,16 @@ function Container30() {
 
 function Text27() {
   return (
-    <div className="content-stretch flex h-[14.546px] items-start relative shrink-0 w-full" data-name="Text">
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#888888] text-[12px] text-center text-nowrap whitespace-pre">Nov 24</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h14546px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Text">
+      <p className={`${styles.fontNormal} ${styles.leading16px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text12px} ${styles.textCenter} ${styles.textNowrap} ${styles.whitespacePre}`}>Nov 24</p>
     </div>
   );
 }
 
 function Container31() {
   return (
-    <div className="absolute box-border content-stretch flex flex-col h-[47.99px] items-start left-[2000px] pb-0 pl-[20.923px] pr-[21.832px] pt-[17.905px] top-0 w-[80px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h4799px} ${styles.itemsStart} ${styles.left2000px} ${styles.pb0} ${styles.pl20923px} ${styles.pr21832px} ${styles.pt17905px} ${styles.top0} ${styles.w80px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Text27 />
     </div>
   );
@@ -638,8 +639,8 @@ function Container31() {
 
 function Container32() {
   return (
-    <div className="basis-0 grow h-[47.99px] min-h-px min-w-px relative shrink-0" data-name="Container">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[47.99px] relative w-full">
+    <div className={`${styles.basis0} ${styles.grow} ${styles.h4799px} ${styles.minHPx} ${styles.minWPx} ${styles.relative} ${styles.shrink0}`} data-name="Container">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h4799px} ${styles.relative} ${styles.wFull}`}>
         <Container6 />
         <Container7 />
         <Container8 />
@@ -673,10 +674,10 @@ function Container32() {
 
 function GanttChart() {
   return (
-    <div className="bg-[#0d0d0d] h-[47.99px] relative shrink-0 w-full" data-name="GanttChart">
-      <div aria-hidden="true" className="absolute border-[0px_0px_0.909px] border-black border-solid inset-0 pointer-events-none" />
-      <div className="size-full">
-        <div className="box-border content-stretch flex h-[47.99px] items-start pb-[0.909px] pt-0 px-0 relative w-full">
+    <div className={`${styles.bg0d0d0d} ${styles.h4799px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="GanttChart">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0px0909px} ${styles.borderBlack} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
+      <div className={styles.sizeFull}>
+        <div className={`${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h4799px} ${styles.itemsStart} ${styles.pb0909px} ${styles.pt0} ${styles.px0} ${styles.relative} ${styles.wFull}`}>
           <Container5 />
           <Container32 />
         </div>
@@ -687,23 +688,23 @@ function GanttChart() {
 
 function Paragraph() {
   return (
-    <div className="absolute h-[19.993px] left-0 overflow-clip top-0 w-[179.105px]" data-name="Paragraph">
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[14px] text-nowrap text-white top-[0.36px] tracking-[-0.1504px] whitespace-pre">Sarah Chen</p>
+    <div className={`${styles.absolute} ${styles.h19993px} ${styles.left0} ${styles.overflowClip} ${styles.top0} ${styles.w179105px}`} data-name="Paragraph">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20px} ${styles.left0} ${styles.notItalic} ${styles.text14px} ${styles.textNowrap} ${styles.textWhite} ${styles.top036px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Sarah Chen</p>
     </div>
   );
 }
 
 function Paragraph1() {
   return (
-    <div className="absolute h-[16.001px] left-0 top-[19.99px] w-[179.105px]" data-name="Paragraph">
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[16px] left-0 not-italic text-[#888888] text-[12px] top-[0.46px] w-[75px]">2/3 completed</p>
+    <div className={`${styles.absolute} ${styles.h16001px} ${styles.left0} ${styles.top1999px} ${styles.w179105px}`} data-name="Paragraph">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading16px} ${styles.left0} ${styles.notItalic} ${styles.text888888} ${styles.text12px} ${styles.top046px} ${styles.w75px}`}>2/3 completed</p>
     </div>
   );
 }
 
 function Container33() {
   return (
-    <div className="absolute h-[35.994px] left-[59.99px] top-[24px] w-[179.105px]" data-name="Container">
+    <div className={`${styles.absolute} ${styles.h35994px} ${styles.left5999px} ${styles.top24px} ${styles.w179105px}`} data-name="Container">
       <Paragraph />
       <Paragraph1 />
     </div>
@@ -712,15 +713,15 @@ function Container33() {
 
 function PrimitiveImg() {
   return (
-    <div className="basis-0 grow h-[31.996px] min-h-px min-w-px relative shrink-0" data-name="Primitive.img">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[31.996px] w-full" />
+    <div className={`${styles.basis0} ${styles.grow} ${styles.h31996px} ${styles.minHPx} ${styles.minWPx} ${styles.relative} ${styles.shrink0}`} data-name="Primitive.img">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h31996px} ${styles.wFull}`} />
     </div>
   );
 }
 
 function PrimitiveSpan1() {
   return (
-    <div className="absolute content-stretch flex items-start left-[15.99px] overflow-clip rounded-[1.5252e+07px] size-[31.996px] top-[25.99px]" data-name="Primitive.span">
+    <div className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.itemsStart} ${styles.left1599px} ${styles.overflowClip} ${styles.rounded15252e07px} ${styles.size31996px} ${styles.top2599px}`} data-name="Primitive.span">
       <PrimitiveImg />
     </div>
   );
@@ -728,8 +729,8 @@ function PrimitiveSpan1() {
 
 function Container34() {
   return (
-    <div className="absolute h-[83.992px] left-0 top-0 w-[255.994px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.h83992px} ${styles.left0} ${styles.top0} ${styles.w255994px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Container33 />
       <PrimitiveSpan1 />
     </div>
@@ -738,215 +739,215 @@ function Container34() {
 
 function Container35() {
   return (
-    <div className="absolute left-0 size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left0} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container36() {
   return (
-    <div className="absolute left-[80px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left80px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container37() {
   return (
-    <div className="absolute left-[160px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left160px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container38() {
   return (
-    <div className="absolute left-[240px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left240px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container39() {
   return (
-    <div className="absolute left-[320px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left320px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container40() {
   return (
-    <div className="absolute left-[400px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left400px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container41() {
   return (
-    <div className="absolute left-[480px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left480px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container42() {
   return (
-    <div className="absolute left-[560px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left560px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container43() {
   return (
-    <div className="absolute left-[640px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left640px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container44() {
   return (
-    <div className="absolute left-[720px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left720px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container45() {
   return (
-    <div className="absolute left-[800px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left800px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container46() {
   return (
-    <div className="absolute left-[880px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left880px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container47() {
   return (
-    <div className="absolute left-[960px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left960px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container48() {
   return (
-    <div className="absolute left-[1040px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1040px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container49() {
   return (
-    <div className="absolute left-[1120px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1120px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container50() {
   return (
-    <div className="absolute left-[1200px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1200px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container51() {
   return (
-    <div className="absolute left-[1280px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1280px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container52() {
   return (
-    <div className="absolute left-[1360px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1360px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container53() {
   return (
-    <div className="absolute left-[1440px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1440px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container54() {
   return (
-    <div className="absolute left-[1520px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1520px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container55() {
   return (
-    <div className="absolute left-[1600px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1600px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container56() {
   return (
-    <div className="absolute left-[1680px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1680px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container57() {
   return (
-    <div className="absolute left-[1760px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1760px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container58() {
   return (
-    <div className="absolute left-[1840px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1840px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container59() {
   return (
-    <div className="absolute left-[1920px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1920px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container60() {
   return (
-    <div className="absolute left-[2000px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left2000px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container61() {
   return (
-    <div className="absolute h-[80px] left-0 top-0 w-[2397.64px]" data-name="Container">
+    <div className={`${styles.absolute} ${styles.h80px} ${styles.left0} ${styles.top0} ${styles.w239764px}`} data-name="Container">
       <Container35 />
       <Container36 />
       <Container37 />
@@ -979,17 +980,17 @@ function Container61() {
 
 function GanttChart1() {
   return (
-    <div className="h-[16.001px] overflow-clip relative shrink-0 w-full" data-name="GanttChart">
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[16px] left-0 not-italic text-[12px] text-nowrap text-white top-[0.46px] whitespace-pre">Design system foundation</p>
+    <div className={`${styles.h16001px} ${styles.overflowClip} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="GanttChart">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading16px} ${styles.left0} ${styles.notItalic} ${styles.text12px} ${styles.textNowrap} ${styles.textWhite} ${styles.top046px} ${styles.whitespacePre}`}>Design system foundation</p>
     </div>
   );
 }
 
 function Text28() {
   return (
-    <div className="bg-neutral-800 h-[18.991px] relative rounded-[4px] shrink-0 w-[44.545px]" data-name="Text">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[18.991px] relative w-[44.545px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[15px] left-[5.99px] not-italic text-[#888888] text-[10px] text-nowrap top-[2.36px] tracking-[0.1172px] whitespace-pre">Design</p>
+    <div className={`${styles.bgNeutral800} ${styles.h18991px} ${styles.relative} ${styles.rounded4px} ${styles.shrink0} ${styles.w44545px}`} data-name="Text">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h18991px} ${styles.relative} ${styles.w44545px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading15px} ${styles.left599px} ${styles.notItalic} ${styles.text888888} ${styles.text10px} ${styles.textNowrap} ${styles.top236px} ${styles.tracking01172px} ${styles.whitespacePre}`}>Design</p>
       </div>
     </div>
   );
@@ -997,9 +998,9 @@ function Text28() {
 
 function Text29() {
   return (
-    <div className="bg-neutral-800 h-[18.991px] relative rounded-[4px] shrink-0 w-[70.348px]" data-name="Text">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[18.991px] relative w-[70.348px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[15px] left-[5.99px] not-italic text-[#888888] text-[10px] text-nowrap top-[2.36px] tracking-[0.1172px] whitespace-pre">High Priority</p>
+    <div className={`${styles.bgNeutral800} ${styles.h18991px} ${styles.relative} ${styles.rounded4px} ${styles.shrink0} ${styles.w70348px}`} data-name="Text">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h18991px} ${styles.relative} ${styles.w70348px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading15px} ${styles.left599px} ${styles.notItalic} ${styles.text888888} ${styles.text10px} ${styles.textNowrap} ${styles.top236px} ${styles.tracking01172px} ${styles.whitespacePre}`}>High Priority</p>
       </div>
     </div>
   );
@@ -1007,7 +1008,7 @@ function Text29() {
 
 function GanttChart2() {
   return (
-    <div className="content-stretch flex gap-[3.999px] h-[18.991px] items-start relative shrink-0 w-full" data-name="GanttChart">
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.gap3999px} ${styles.h18991px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="GanttChart">
       <Text28 />
       <Text29 />
     </div>
@@ -1016,8 +1017,8 @@ function GanttChart2() {
 
 function SlotClone() {
   return (
-    <div className="absolute bg-[#1f3a2d] box-border content-stretch flex flex-col gap-[1.996px] h-[47.997px] items-start left-[191.49px] pb-0 pl-[15.632px] pr-[11.996px] pt-[5.994px] rounded-[10px] top-[8px] w-[386.967px]" data-name="SlotClone">
-      <div aria-hidden="true" className="absolute border-[#5cd18c] border-[0px_0px_0px_3.636px] border-solid inset-0 pointer-events-none rounded-[10px]" />
+    <div className={`${styles.absolute} ${styles.bg1f3a2d} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap1996px} ${styles.h47997px} ${styles.itemsStart} ${styles.left19149px} ${styles.pb0} ${styles.pl15632px} ${styles.pr11996px} ${styles.pt5994px} ${styles.rounded10px} ${styles.top8px} ${styles.w386967px}`} data-name="SlotClone">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border5cd18c} ${styles.border0px0px0px3636px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded10px}`} />
       <GanttChart1 />
       <GanttChart2 />
     </div>
@@ -1026,17 +1027,17 @@ function SlotClone() {
 
 function GanttChart3() {
   return (
-    <div className="h-[16.001px] overflow-clip relative shrink-0 w-full" data-name="GanttChart">
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[16px] left-0 not-italic text-[12px] text-nowrap text-white top-[0.46px] whitespace-pre">Component library setup</p>
+    <div className={`${styles.h16001px} ${styles.overflowClip} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="GanttChart">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading16px} ${styles.left0} ${styles.notItalic} ${styles.text12px} ${styles.textNowrap} ${styles.textWhite} ${styles.top046px} ${styles.whitespacePre}`}>Component library setup</p>
     </div>
   );
 }
 
 function Text30() {
   return (
-    <div className="bg-neutral-800 h-[18.991px] relative rounded-[4px] shrink-0 w-[44.545px]" data-name="Text">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[18.991px] relative w-[44.545px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[15px] left-[5.99px] not-italic text-[#888888] text-[10px] text-nowrap top-[2.36px] tracking-[0.1172px] whitespace-pre">Design</p>
+    <div className={`${styles.bgNeutral800} ${styles.h18991px} ${styles.relative} ${styles.rounded4px} ${styles.shrink0} ${styles.w44545px}`} data-name="Text">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h18991px} ${styles.relative} ${styles.w44545px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading15px} ${styles.left599px} ${styles.notItalic} ${styles.text888888} ${styles.text10px} ${styles.textNowrap} ${styles.top236px} ${styles.tracking01172px} ${styles.whitespacePre}`}>Design</p>
       </div>
     </div>
   );
@@ -1044,9 +1045,9 @@ function Text30() {
 
 function Text31() {
   return (
-    <div className="bg-neutral-800 h-[18.991px] relative rounded-[4px] shrink-0 w-[22.074px]" data-name="Text">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[18.991px] relative w-[22.074px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[15px] left-[5.99px] not-italic text-[#888888] text-[10px] text-nowrap top-[2.36px] tracking-[0.1172px] whitespace-pre">UI</p>
+    <div className={`${styles.bgNeutral800} ${styles.h18991px} ${styles.relative} ${styles.rounded4px} ${styles.shrink0} ${styles.w22074px}`} data-name="Text">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h18991px} ${styles.relative} ${styles.w22074px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading15px} ${styles.left599px} ${styles.notItalic} ${styles.text888888} ${styles.text10px} ${styles.textNowrap} ${styles.top236px} ${styles.tracking01172px} ${styles.whitespacePre}`}>UI</p>
       </div>
     </div>
   );
@@ -1054,7 +1055,7 @@ function Text31() {
 
 function GanttChart4() {
   return (
-    <div className="content-stretch flex gap-[3.999px] h-[18.991px] items-start relative shrink-0 w-full" data-name="GanttChart">
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.gap3999px} ${styles.h18991px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="GanttChart">
       <Text30 />
       <Text31 />
     </div>
@@ -1063,8 +1064,8 @@ function GanttChart4() {
 
 function SlotClone1() {
   return (
-    <div className="absolute bg-[#1f3a2d] box-border content-stretch flex flex-col gap-[1.996px] h-[47.997px] items-start left-[674.21px] pb-0 pl-[15.632px] pr-[11.996px] pt-[5.994px] rounded-[10px] top-[8px] w-[574.474px]" data-name="SlotClone">
-      <div aria-hidden="true" className="absolute border-[#5cd18c] border-[0px_0px_0px_3.636px] border-solid inset-0 pointer-events-none rounded-[10px]" />
+    <div className={`${styles.absolute} ${styles.bg1f3a2d} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap1996px} ${styles.h47997px} ${styles.itemsStart} ${styles.left67421px} ${styles.pb0} ${styles.pl15632px} ${styles.pr11996px} ${styles.pt5994px} ${styles.rounded10px} ${styles.top8px} ${styles.w574474px}`} data-name="SlotClone">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border5cd18c} ${styles.border0px0px0px3636px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded10px}`} />
       <GanttChart3 />
       <GanttChart4 />
     </div>
@@ -1073,17 +1074,17 @@ function SlotClone1() {
 
 function GanttChart5() {
   return (
-    <div className="h-[16.001px] overflow-clip relative shrink-0 w-full" data-name="GanttChart">
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[16px] left-0 not-italic text-[12px] text-nowrap text-white top-[0.46px] whitespace-pre">Dashboard wireframes</p>
+    <div className={`${styles.h16001px} ${styles.overflowClip} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="GanttChart">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading16px} ${styles.left0} ${styles.notItalic} ${styles.text12px} ${styles.textNowrap} ${styles.textWhite} ${styles.top046px} ${styles.whitespacePre}`}>Dashboard wireframes</p>
     </div>
   );
 }
 
 function Text32() {
   return (
-    <div className="bg-neutral-800 h-[18.991px] relative rounded-[4px] shrink-0 w-[44.545px]" data-name="Text">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[18.991px] relative w-[44.545px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[15px] left-[5.99px] not-italic text-[#888888] text-[10px] text-nowrap top-[2.36px] tracking-[0.1172px] whitespace-pre">Design</p>
+    <div className={`${styles.bgNeutral800} ${styles.h18991px} ${styles.relative} ${styles.rounded4px} ${styles.shrink0} ${styles.w44545px}`} data-name="Text">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h18991px} ${styles.relative} ${styles.w44545px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading15px} ${styles.left599px} ${styles.notItalic} ${styles.text888888} ${styles.text10px} ${styles.textNowrap} ${styles.top236px} ${styles.tracking01172px} ${styles.whitespacePre}`}>Design</p>
       </div>
     </div>
   );
@@ -1091,9 +1092,9 @@ function Text32() {
 
 function Text33() {
   return (
-    <div className="bg-neutral-800 h-[18.991px] relative rounded-[4px] shrink-0 w-[65.859px]" data-name="Text">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[18.991px] relative w-[65.859px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[15px] left-[5.99px] not-italic text-[#888888] text-[10px] text-nowrap top-[2.36px] tracking-[0.1172px] whitespace-pre">Wireframes</p>
+    <div className={`${styles.bgNeutral800} ${styles.h18991px} ${styles.relative} ${styles.rounded4px} ${styles.shrink0} ${styles.w65859px}`} data-name="Text">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h18991px} ${styles.relative} ${styles.w65859px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading15px} ${styles.left599px} ${styles.notItalic} ${styles.text888888} ${styles.text10px} ${styles.textNowrap} ${styles.top236px} ${styles.tracking01172px} ${styles.whitespacePre}`}>Wireframes</p>
       </div>
     </div>
   );
@@ -1101,7 +1102,7 @@ function Text33() {
 
 function GanttChart6() {
   return (
-    <div className="content-stretch flex gap-[3.998px] h-[18.991px] items-start relative shrink-0 w-full" data-name="GanttChart">
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.gap3998px} ${styles.h18991px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="GanttChart">
       <Text32 />
       <Text33 />
     </div>
@@ -1110,8 +1111,8 @@ function GanttChart6() {
 
 function SlotClone2() {
   return (
-    <div className="absolute bg-[#1f2d3a] box-border content-stretch flex flex-col gap-[1.996px] h-[47.997px] items-start left-[1344.43px] pb-0 pl-[15.632px] pr-[11.996px] pt-[5.994px] rounded-[10px] top-[8px] w-[670.22px]" data-name="SlotClone">
-      <div aria-hidden="true" className="absolute border-[#54a0ff] border-[0px_0px_0px_3.636px] border-solid inset-0 pointer-events-none rounded-[10px]" />
+    <div className={`${styles.absolute} ${styles.bg1f2d3a} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap1996px} ${styles.h47997px} ${styles.itemsStart} ${styles.left134443px} ${styles.pb0} ${styles.pl15632px} ${styles.pr11996px} ${styles.pt5994px} ${styles.rounded10px} ${styles.top8px} ${styles.w67022px}`} data-name="SlotClone">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border54a0ff} ${styles.border0px0px0px3636px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded10px}`} />
       <GanttChart5 />
       <GanttChart6 />
     </div>
@@ -1120,7 +1121,7 @@ function SlotClone2() {
 
 function Container62() {
   return (
-    <div className="absolute h-[80px] left-[255.99px] top-0 w-[2397.64px]" data-name="Container">
+    <div className={`${styles.absolute} ${styles.h80px} ${styles.left25599px} ${styles.top0} ${styles.w239764px}`} data-name="Container">
       <Container61 />
       <SlotClone />
       <SlotClone1 />
@@ -1131,8 +1132,8 @@ function Container62() {
 
 function Container63() {
   return (
-    <div className="h-[84.901px] relative shrink-0 w-full" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0px_0.909px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.h84901px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0px0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Container34 />
       <Container62 />
     </div>
@@ -1141,23 +1142,23 @@ function Container63() {
 
 function Paragraph2() {
   return (
-    <div className="h-[19.993px] overflow-clip relative shrink-0 w-full" data-name="Paragraph">
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[14px] text-nowrap text-white top-[0.36px] tracking-[-0.1504px] whitespace-pre">Alex Kumar</p>
+    <div className={`${styles.h19993px} ${styles.overflowClip} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Paragraph">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20px} ${styles.left0} ${styles.notItalic} ${styles.text14px} ${styles.textNowrap} ${styles.textWhite} ${styles.top036px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Alex Kumar</p>
     </div>
   );
 }
 
 function Paragraph3() {
   return (
-    <div className="h-[16.001px] relative shrink-0 w-full" data-name="Paragraph">
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[16px] left-0 not-italic text-[#888888] text-[12px] top-[0.46px] w-[75px]">2/3 completed</p>
+    <div className={`${styles.h16001px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Paragraph">
+      <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading16px} ${styles.left0} ${styles.notItalic} ${styles.text888888} ${styles.text12px} ${styles.top046px} ${styles.w75px}`}>2/3 completed</p>
     </div>
   );
 }
 
 function Container64() {
   return (
-    <div className="absolute content-stretch flex flex-col gap-[2.289e_-5px] h-[35.994px] items-start left-[59.99px] top-[24px] w-[179.105px]" data-name="Container">
+    <div className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap2289eNeg5px} ${styles.h35994px} ${styles.itemsStart} ${styles.left5999px} ${styles.top24px} ${styles.w179105px}`} data-name="Container">
       <Paragraph2 />
       <Paragraph3 />
     </div>
@@ -1166,15 +1167,15 @@ function Container64() {
 
 function PrimitiveImg1() {
   return (
-    <div className="basis-0 grow h-[31.996px] min-h-px min-w-px relative shrink-0" data-name="Primitive.img">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[31.996px] w-full" />
+    <div className={`${styles.basis0} ${styles.grow} ${styles.h31996px} ${styles.minHPx} ${styles.minWPx} ${styles.relative} ${styles.shrink0}`} data-name="Primitive.img">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h31996px} ${styles.wFull}`} />
     </div>
   );
 }
 
 function PrimitiveSpan2() {
   return (
-    <div className="absolute content-stretch flex items-start left-[15.99px] overflow-clip rounded-[1.5252e+07px] size-[31.996px] top-[25.99px]" data-name="Primitive.span">
+    <div className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.itemsStart} ${styles.left1599px} ${styles.overflowClip} ${styles.rounded15252e07px} ${styles.size31996px} ${styles.top2599px}`} data-name="Primitive.span">
       <PrimitiveImg1 />
     </div>
   );
@@ -1182,8 +1183,8 @@ function PrimitiveSpan2() {
 
 function Container65() {
   return (
-    <div className="absolute h-[83.992px] left-0 top-0 w-[255.994px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[0px_0.909px_0px_0px] border-neutral-800 border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.h83992px} ${styles.left0} ${styles.top0} ${styles.w255994px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0px0909px0px0px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
       <Container64 />
       <PrimitiveSpan2 />
     </div>
@@ -1192,208 +1193,208 @@ function Container65() {
 
 function Container66() {
   return (
-    <div className="absolute left-0 size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left0} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container67() {
   return (
-    <div className="absolute left-[80px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left80px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container68() {
   return (
-    <div className="absolute left-[160px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left160px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container69() {
   return (
-    <div className="absolute left-[240px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left240px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container70() {
   return (
-    <div className="absolute left-[320px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left320px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container71() {
   return (
-    <div className="absolute left-[400px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left400px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container72() {
   return (
-    <div className="absolute left-[480px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left480px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container73() {
   return (
-    <div className="absolute left-[560px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left560px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container74() {
   return (
-    <div className="absolute left-[640px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left640px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container75() {
   return (
-    <div className="absolute left-[720px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left720px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container76() {
   return (
-    <div className="absolute left-[800px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left800px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container77() {
   return (
-    <div className="absolute left-[880px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left880px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container78() {
   return (
-    <div className="absolute left-[960px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left960px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container79() {
   return (
-    <div className="absolute left-[1040px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1040px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container80() {
   return (
-    <div className="absolute left-[1120px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1120px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container81() {
   return (
-    <div className="absolute left-[1200px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1200px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container82() {
   return (
-    <div className="absolute left-[1280px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1280px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container83() {
   return (
-    <div className="absolute left-[1360px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1360px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container84() {
   return (
-    <div className="absolute left-[1440px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1440px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container85() {
   return (
-    <div className="absolute left-[1520px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1520px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container86() {
   return (
-    <div className="absolute left-[1600px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1600px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container87() {
   return (
-    <div className="absolute left-[1680px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1680px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container88() {
   return (
-    <div className="absolute left-[1760px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1760px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container89() {
   return (
-    <div className="absolute left-[1840px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1840px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container90() {
   return (
-    <div className="absolute left-[1920px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left1920px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }
 
 function Container91() {
   return (
-    <div className="absolute left-[2000px] size-[80px] top-0" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1a1a1a] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none" />
+    <div className={`${styles.absolute} ${styles.left2000px} ${styles.size80px} ${styles.top0}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1a1a1a} ${styles.border0px0909px0px0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
     </div>
   );
 }

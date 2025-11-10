@@ -1,17 +1,18 @@
 import svgPaths from "./svg-jzcqnicw4t";
+import styles from "./Container-16-2394.module.scss";
 
 function Heading() {
   return (
-    <div className="content-stretch flex h-[35.994px] items-start relative shrink-0 w-full" data-name="Heading 2">
-      <p className="basis-0 font-['Inter:Regular',sans-serif] font-normal grow leading-[36px] min-h-px min-w-px not-italic relative shrink-0 text-[30px] text-white tracking-[0.3955px]">Project title</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.h35994px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Heading 2">
+      <p className={`${styles.basis0} ${styles.fontNormal} ${styles.grow} ${styles.leading36px} ${styles.minHPx} ${styles.minWPx} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text30px} ${styles.textWhite} ${styles.tracking03955px}`}>Project title</p>
     </div>
   );
 }
 
 function Icon() {
   return (
-    <div className="relative shrink-0 size-[15.994px]" data-name="Icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+    <div className={`${styles.relative} ${styles.shrink0} ${styles.size15994px}`} data-name="Icon">
+      <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
         <g id="Icon">
           <path d={svgPaths.pc477740} id="Vector" stroke="var(--stroke-0, #888888)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
         </g>
@@ -22,8 +23,8 @@ function Icon() {
 
 function Button() {
   return (
-    <div className="absolute bg-[#1a1a1a] box-border content-stretch flex items-center justify-center left-[255.01px] p-[0.909px] rounded-[3.0504e+07px] size-[31.989px] top-[-1.99px]" data-name="Button">
-      <div aria-hidden="true" className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[3.0504e+07px]" />
+    <div className={`${styles.absolute} ${styles.bg1a1a1a} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.left25501px} ${styles.p0909px} ${styles.rounded30504e07px} ${styles.size31989px} ${styles.topNeg199px}`} data-name="Button">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded30504e07px}`} />
       <Icon />
     </div>
   );
@@ -31,8 +32,8 @@ function Button() {
 
 function Icon1() {
   return (
-    <div className="absolute left-[0.01px] size-[15.994px] top-[6.01px]" data-name="Icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+    <div className={`${styles.absolute} ${styles.left001px} ${styles.size15994px} ${styles.top601px}`} data-name="Icon">
+      <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
         <g clipPath="url(#clip0_16_2398)" id="Icon">
           <path d={svgPaths.p14b1d380} id="Vector" stroke="var(--stroke-0, #FECA57)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
         </g>
@@ -48,8 +49,8 @@ function Icon1() {
 
 function Heading1() {
   return (
-    <div className="h-[26.989px] relative shrink-0 w-full" data-name="Heading 3">
-      <p className="absolute font-['Inter:Medium',sans-serif] font-medium leading-[27px] left-[28.01px] not-italic text-[18px] text-nowrap text-white top-[0.73px] tracking-[-0.4395px] whitespace-pre">Workspace</p>
+    <div className={`${styles.h26989px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Heading 3">
+      <p className={`${styles.absolute} ${styles.fontMedium} ${styles.leading27px} ${styles.left2801px} ${styles.notItalic} ${styles.text18px} ${styles.textNowrap} ${styles.textWhite} ${styles.top073px} ${styles.trackingNeg4395px} ${styles.whitespacePre}`}>Workspace</p>
       <Button />
       <Icon1 />
     </div>
@@ -58,9 +59,9 @@ function Heading1() {
 
 function Container() {
   return (
-    <div className="h-[59.886px] relative shrink-0 w-[319.091px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1e2939] border-[0px_0px_0.909px] border-solid inset-0 pointer-events-none" />
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex flex-col h-[59.886px] items-start pb-[0.909px] pt-[15.994px] px-[15.994px] relative w-[319.091px]">
+    <div className={`${styles.h59886px} ${styles.relative} ${styles.shrink0} ${styles.w319091px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1e2939} ${styles.border0_0_0909px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.h59886px} ${styles.itemsStart} ${styles.pb0909px} ${styles.pt15994px} ${styles.px15994px} ${styles.relative} ${styles.w319091px}`}>
         <Heading1 />
       </div>
     </div>
@@ -69,27 +70,27 @@ function Container() {
 
 function PrimitiveButton() {
   return (
-    <div className="absolute bg-[#1a1a1a] box-border content-stretch flex gap-[6px] h-[32.088px] items-center justify-center left-[3px] px-[8.909px] py-[4.909px] rounded-[14px] top-[3.49px] w-[156.548px]" data-name="Primitive.button">
-      <div aria-hidden="true" className="absolute border-[0.909px] border-[rgba(0,0,0,0)] border-solid inset-0 pointer-events-none rounded-[14px]" />
-      <p className="font-['Inter:Medium',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[14px] text-nowrap text-white tracking-[-0.1504px] whitespace-pre">Context</p>
+    <div className={`${styles.absolute} ${styles.bg1a1a1a} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap6px} ${styles.h32088px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.left3px} ${styles.px8909px} ${styles.py4909px} ${styles.rounded14px} ${styles.top349px} ${styles.w156548px}`} data-name="Primitive.button">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderRgba000} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded14px}`} />
+      <p className={`${styles.fontMedium} ${styles.leading20px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text14px} ${styles.textNowrap} ${styles.textWhite} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Context</p>
     </div>
   );
 }
 
 function PrimitiveButton1() {
   return (
-    <div className="absolute box-border content-stretch flex gap-[6px] h-[32.088px] items-center justify-center left-[159.54px] px-[8.909px] py-[4.909px] rounded-[14px] top-[3.49px] w-[156.548px]" data-name="Primitive.button">
-      <div aria-hidden="true" className="absolute border-[0.909px] border-[rgba(0,0,0,0)] border-solid inset-0 pointer-events-none rounded-[14px]" />
-      <p className="font-['Inter:Medium',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#888888] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">Chats</p>
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap6px} ${styles.h32088px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.left15954px} ${styles.px8909px} ${styles.py4909px} ${styles.rounded14px} ${styles.top349px} ${styles.w156548px}`} data-name="Primitive.button">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0909px} ${styles.borderRgba000} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded14px}`} />
+      <p className={`${styles.fontMedium} ${styles.leading20px} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text888888} ${styles.text14px} ${styles.textNowrap} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>Chats</p>
     </div>
   );
 }
 
 function TabList() {
   return (
-    <div className="bg-[#0d0d0d] h-[40px] relative shrink-0 w-[319.091px]" data-name="Tab List">
-      <div aria-hidden="true" className="absolute border-[0px_0px_0.909px] border-neutral-800 border-solid inset-0 pointer-events-none" />
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[40px] relative w-[319.091px]">
+    <div className={`${styles.bg0d0d0d} ${styles.h40px} ${styles.relative} ${styles.shrink0} ${styles.w319091px}`} data-name="Tab List">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border0_0_0909px} ${styles.borderNeutral800} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone}`} />
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h40px} ${styles.relative} ${styles.w319091px}`}>
         <PrimitiveButton />
         <PrimitiveButton1 />
       </div>
@@ -99,8 +100,8 @@ function TabList() {
 
 function Icon2() {
   return (
-    <div className="relative shrink-0 size-[15.994px]" data-name="Icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+    <div className={`${styles.relative} ${styles.shrink0} ${styles.size15994px}`} data-name="Icon">
+      <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
         <g id="Icon">
           <path d={svgPaths.p10a02b40} id="Vector" stroke="var(--stroke-0, #D1D5DC)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
         </g>
@@ -111,8 +112,8 @@ function Icon2() {
 
 function Icon3() {
   return (
-    <div className="relative shrink-0 size-[15.994px]" data-name="Icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+    <div className={`${styles.relative} ${styles.shrink0} ${styles.size15994px}`} data-name="Icon">
+      <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
         <g clipPath="url(#clip0_15_2243)" id="Icon">
           <path d={svgPaths.p14b1d380} id="Vector" stroke="var(--stroke-0, #FECA57)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
         </g>
@@ -128,9 +129,9 @@ function Icon3() {
 
 function Text() {
   return (
-    <div className="h-[20px] relative shrink-0 w-[19.844px]" data-name="Text">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[20px] overflow-clip relative rounded-[inherit] w-[19.844px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#d1d5dc] text-[14px] text-nowrap top-[0.82px] tracking-[-0.1504px] whitespace-pre">src</p>
+    <div className={`${styles.h20px} ${styles.relative} ${styles.shrink0} ${styles.w19844px}`} data-name="Text">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h20px} ${styles.overflowClip} ${styles.relative} ${styles.roundedInherit} ${styles.w19844px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20px} ${styles.left0} ${styles.notItalic} ${styles.textD1d5dc} ${styles.text14px} ${styles.textNowrap} ${styles.top082px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>src</p>
       </div>
     </div>
   );
@@ -138,7 +139,7 @@ function Text() {
 
 function Button1() {
   return (
-    <div className="absolute box-border content-stretch flex gap-[7.997px] h-[31.989px] items-center left-0 pl-[7.997px] pr-0 py-0 rounded-[4px] top-0 w-[303.097px]" data-name="Button">
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap7997px} ${styles.h31989px} ${styles.itemsCenter} ${styles.left0} ${styles.pl7997px} ${styles.pr0} ${styles.py0} ${styles.rounded4px} ${styles.top0} ${styles.w303097px}`} data-name="Button">
       <Icon2 />
       <Icon3 />
       <Text />
@@ -148,8 +149,8 @@ function Button1() {
 
 function Icon4() {
   return (
-    <div className="relative shrink-0 size-[15.994px]" data-name="Icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+    <div className={`${styles.relative} ${styles.shrink0} ${styles.size15994px}`} data-name="Icon">
+      <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
         <g id="Icon">
           <path d={svgPaths.p24b5a500} id="Vector" stroke="var(--stroke-0, #D1D5DC)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
         </g>
@@ -160,8 +161,8 @@ function Icon4() {
 
 function Icon5() {
   return (
-    <div className="relative shrink-0 size-[15.994px]" data-name="Icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+    <div className={`${styles.relative} ${styles.shrink0} ${styles.size15994px}`} data-name="Icon">
+      <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
         <g clipPath="url(#clip0_15_2228)" id="Icon">
           <path d={svgPaths.p8e3b480} id="Vector" stroke="var(--stroke-0, #FECA57)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
         </g>
@@ -177,9 +178,9 @@ function Icon5() {
 
 function Text1() {
   return (
-    <div className="h-[20px] relative shrink-0 w-[80.213px]" data-name="Text">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[20px] overflow-clip relative rounded-[inherit] w-[80.213px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#d1d5dc] text-[14px] text-nowrap top-[0.82px] tracking-[-0.1504px] whitespace-pre">components</p>
+    <div className={`${styles.h20px} ${styles.relative} ${styles.shrink0} ${styles.w80213px}`} data-name="Text">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h20px} ${styles.overflowClip} ${styles.relative} ${styles.roundedInherit} ${styles.w80213px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20px} ${styles.left0} ${styles.notItalic} ${styles.textD1d5dc} ${styles.text14px} ${styles.textNowrap} ${styles.top082px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>components</p>
       </div>
     </div>
   );
@@ -187,9 +188,9 @@ function Text1() {
 
 function Button2() {
   return (
-    <div className="h-[31.989px] relative rounded-[4px] shrink-0 w-full" data-name="Button">
-      <div className="flex flex-row items-center size-full">
-        <div className="box-border content-stretch flex gap-[7.997px] h-[31.989px] items-center pl-[20px] pr-0 py-0 relative w-full">
+    <div className={`${styles.h31989px} ${styles.relative} ${styles.rounded4px} ${styles.shrink0} ${styles.wFull}`} data-name="Button">
+      <div className={`${styles.flex} ${styles.flexRow} ${styles.itemsCenter} ${styles.sizeFull}`}>
+        <div className={`${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap7997px} ${styles.h31989px} ${styles.itemsCenter} ${styles.pl20px} ${styles.pr0} ${styles.py0} ${styles.relative} ${styles.wFull}`}>
           <Icon4 />
           <Icon5 />
           <Text1 />
@@ -201,8 +202,8 @@ function Button2() {
 
 function Icon6() {
   return (
-    <div className="relative shrink-0 size-[15.994px]" data-name="Icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+    <div className={`${styles.relative} ${styles.shrink0} ${styles.size15994px}`} data-name="Icon">
+      <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
         <g id="Icon">
           <path d={svgPaths.p24b5a500} id="Vector" stroke="var(--stroke-0, #D1D5DC)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
         </g>
@@ -213,8 +214,8 @@ function Icon6() {
 
 function Icon7() {
   return (
-    <div className="relative shrink-0 size-[15.994px]" data-name="Icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+    <div className={`${styles.relative} ${styles.shrink0} ${styles.size15994px}`} data-name="Icon">
+      <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
         <g clipPath="url(#clip0_15_2228)" id="Icon">
           <path d={svgPaths.p8e3b480} id="Vector" stroke="var(--stroke-0, #FECA57)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
         </g>
@@ -230,9 +231,9 @@ function Icon7() {
 
 function Text2() {
   return (
-    <div className="h-[20px] relative shrink-0 w-[26.832px]" data-name="Text">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[20px] overflow-clip relative rounded-[inherit] w-[26.832px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#d1d5dc] text-[14px] text-nowrap top-[0.82px] tracking-[-0.1504px] whitespace-pre">utils</p>
+    <div className={`${styles.h20px} ${styles.relative} ${styles.shrink0} ${styles.w26832px}`} data-name="Text">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h20px} ${styles.overflowClip} ${styles.relative} ${styles.roundedInherit} ${styles.w26832px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20px} ${styles.left0} ${styles.notItalic} ${styles.textD1d5dc} ${styles.text14px} ${styles.textNowrap} ${styles.top082px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>utils</p>
       </div>
     </div>
   );
@@ -240,9 +241,9 @@ function Text2() {
 
 function Button3() {
   return (
-    <div className="h-[31.989px] relative rounded-[4px] shrink-0 w-full" data-name="Button">
-      <div className="flex flex-row items-center size-full">
-        <div className="box-border content-stretch flex gap-[7.997px] h-[31.989px] items-center pl-[20px] pr-0 py-0 relative w-full">
+    <div className={`${styles.h31989px} ${styles.relative} ${styles.rounded4px} ${styles.shrink0} ${styles.wFull}`} data-name="Button">
+      <div className={`${styles.flex} ${styles.flexRow} ${styles.itemsCenter} ${styles.sizeFull}`}>
+        <div className={`${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap7997px} ${styles.h31989px} ${styles.itemsCenter} ${styles.pl20px} ${styles.pr0} ${styles.py0} ${styles.relative} ${styles.wFull}`}>
           <Icon6 />
           <Icon7 />
           <Text2 />
@@ -254,7 +255,7 @@ function Button3() {
 
 function Container1() {
   return (
-    <div className="absolute content-stretch flex flex-col gap-[1.144e_-5px] h-[63.977px] items-start left-0 top-[31.99px] w-[303.097px]" data-name="Container">
+    <div className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap1144eNeg5px} ${styles.h63977px} ${styles.itemsStart} ${styles.left0} ${styles.top3199px} ${styles.w303097px}`} data-name="Container">
       <Button2 />
       <Button3 />
     </div>
@@ -263,7 +264,7 @@ function Container1() {
 
 function FileTreeItem() {
   return (
-    <div className="absolute h-[95.966px] left-[8px] top-[8px] w-[303.097px]" data-name="FileTreeItem">
+    <div className={`${styles.absolute} ${styles.h95966px} ${styles.left8px} ${styles.top8px} ${styles.w303097px}`} data-name="FileTreeItem">
       <Button1 />
       <Container1 />
     </div>
@@ -272,8 +273,8 @@ function FileTreeItem() {
 
 function Icon8() {
   return (
-    <div className="relative shrink-0 size-[15.994px]" data-name="Icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+    <div className={`${styles.relative} ${styles.shrink0} ${styles.size15994px}`} data-name="Icon">
+      <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
         <g id="Icon">
           <path d={svgPaths.p10a02b40} id="Vector" stroke="var(--stroke-0, #D1D5DC)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
         </g>
@@ -284,8 +285,8 @@ function Icon8() {
 
 function Icon9() {
   return (
-    <div className="relative shrink-0 size-[15.994px]" data-name="Icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+    <div className={`${styles.relative} ${styles.shrink0} ${styles.size15994px}`} data-name="Icon">
+      <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
         <g clipPath="url(#clip0_15_2243)" id="Icon">
           <path d={svgPaths.p14b1d380} id="Vector" stroke="var(--stroke-0, #FECA57)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
         </g>
@@ -301,9 +302,9 @@ function Icon9() {
 
 function Text3() {
   return (
-    <div className="h-[20px] relative shrink-0 w-[39.247px]" data-name="Text">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[20px] overflow-clip relative rounded-[inherit] w-[39.247px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#d1d5dc] text-[14px] text-nowrap top-[0.82px] tracking-[-0.1504px] whitespace-pre">public</p>
+    <div className={`${styles.h20px} ${styles.relative} ${styles.shrink0} ${styles.w39247px}`} data-name="Text">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h20px} ${styles.overflowClip} ${styles.relative} ${styles.roundedInherit} ${styles.w39247px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20px} ${styles.left0} ${styles.notItalic} ${styles.textD1d5dc} ${styles.text14px} ${styles.textNowrap} ${styles.top082px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>public</p>
       </div>
     </div>
   );
@@ -311,9 +312,9 @@ function Text3() {
 
 function Button4() {
   return (
-    <div className="h-[31.989px] relative rounded-[4px] shrink-0 w-full" data-name="Button">
-      <div className="flex flex-row items-center size-full">
-        <div className="box-border content-stretch flex gap-[7.997px] h-[31.989px] items-center pl-[7.997px] pr-0 py-0 relative w-full">
+    <div className={`${styles.h31989px} ${styles.relative} ${styles.rounded4px} ${styles.shrink0} ${styles.wFull}`} data-name="Button">
+      <div className={`${styles.flex} ${styles.flexRow} ${styles.itemsCenter} ${styles.sizeFull}`}>
+        <div className={`${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap7997px} ${styles.h31989px} ${styles.itemsCenter} ${styles.pl7997px} ${styles.pr0} ${styles.py0} ${styles.relative} ${styles.wFull}`}>
           <Icon8 />
           <Icon9 />
           <Text3 />
@@ -325,8 +326,8 @@ function Button4() {
 
 function Icon10() {
   return (
-    <div className="relative shrink-0 size-[15.994px]" data-name="Icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+    <div className={`${styles.relative} ${styles.shrink0} ${styles.size15994px}`} data-name="Icon">
+      <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
         <g clipPath="url(#clip0_15_2221)" id="Icon">
           <path d={svgPaths.p1aaaa600} id="Vector" stroke="var(--stroke-0, #888888)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
           <path d={svgPaths.p1bffbec0} id="Vector_2" stroke="var(--stroke-0, #888888)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
@@ -346,9 +347,9 @@ function Icon10() {
 
 function Text4() {
   return (
-    <div className="h-[20px] relative shrink-0 w-[67.003px]" data-name="Text">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[20px] overflow-clip relative rounded-[inherit] w-[67.003px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#d1d5dc] text-[14px] text-nowrap top-[0.82px] tracking-[-0.1504px] whitespace-pre">index.html</p>
+    <div className={`${styles.h20px} ${styles.relative} ${styles.shrink0} ${styles.w67003px}`} data-name="Text">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h20px} ${styles.overflowClip} ${styles.relative} ${styles.roundedInherit} ${styles.w67003px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20px} ${styles.left0} ${styles.notItalic} ${styles.textD1d5dc} ${styles.text14px} ${styles.textNowrap} ${styles.top082px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>index.html</p>
       </div>
     </div>
   );
@@ -356,9 +357,9 @@ function Text4() {
 
 function Button5() {
   return (
-    <div className="h-[31.989px] relative rounded-[4px] shrink-0 w-full" data-name="Button">
-      <div className="flex flex-row items-center size-full">
-        <div className="box-border content-stretch flex gap-[7.997px] h-[31.989px] items-center pl-[35.994px] pr-0 py-0 relative w-full">
+    <div className={`${styles.h31989px} ${styles.relative} ${styles.rounded4px} ${styles.shrink0} ${styles.wFull}`} data-name="Button">
+      <div className={`${styles.flex} ${styles.flexRow} ${styles.itemsCenter} ${styles.sizeFull}`}>
+        <div className={`${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap7997px} ${styles.h31989px} ${styles.itemsCenter} ${styles.pl35994px} ${styles.pr0} ${styles.py0} ${styles.relative} ${styles.wFull}`}>
           <Icon10 />
           <Text4 />
         </div>
@@ -369,8 +370,8 @@ function Button5() {
 
 function Icon11() {
   return (
-    <div className="relative shrink-0 size-[15.994px]" data-name="Icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+    <div className={`${styles.relative} ${styles.shrink0} ${styles.size15994px}`} data-name="Icon">
+      <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
         <g clipPath="url(#clip0_15_2221)" id="Icon">
           <path d={svgPaths.p1aaaa600} id="Vector" stroke="var(--stroke-0, #888888)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
           <path d={svgPaths.p1bffbec0} id="Vector_2" stroke="var(--stroke-0, #888888)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
@@ -390,9 +391,9 @@ function Icon11() {
 
 function Text5() {
   return (
-    <div className="h-[20px] relative shrink-0 w-[63.551px]" data-name="Text">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[20px] overflow-clip relative rounded-[inherit] w-[63.551px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#d1d5dc] text-[14px] text-nowrap top-[0.82px] tracking-[-0.1504px] whitespace-pre">styles.css</p>
+    <div className={`${styles.h20px} ${styles.relative} ${styles.shrink0} ${styles.w63551px}`} data-name="Text">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h20px} ${styles.overflowClip} ${styles.relative} ${styles.roundedInherit} ${styles.w63551px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20px} ${styles.left0} ${styles.notItalic} ${styles.textD1d5dc} ${styles.text14px} ${styles.textNowrap} ${styles.top082px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>styles.css</p>
       </div>
     </div>
   );
@@ -400,9 +401,9 @@ function Text5() {
 
 function Button6() {
   return (
-    <div className="h-[31.989px] relative rounded-[4px] shrink-0 w-full" data-name="Button">
-      <div className="flex flex-row items-center size-full">
-        <div className="box-border content-stretch flex gap-[7.997px] h-[31.989px] items-center pl-[35.994px] pr-0 py-0 relative w-full">
+    <div className={`${styles.h31989px} ${styles.relative} ${styles.rounded4px} ${styles.shrink0} ${styles.wFull}`} data-name="Button">
+      <div className={`${styles.flex} ${styles.flexRow} ${styles.itemsCenter} ${styles.sizeFull}`}>
+        <div className={`${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap7997px} ${styles.h31989px} ${styles.itemsCenter} ${styles.pl35994px} ${styles.pr0} ${styles.py0} ${styles.relative} ${styles.wFull}`}>
           <Icon11 />
           <Text5 />
         </div>
@@ -413,7 +414,7 @@ function Button6() {
 
 function Container2() {
   return (
-    <div className="content-stretch flex flex-col gap-[1.144e_-5px] h-[63.977px] items-start relative shrink-0 w-full" data-name="Container">
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap1144eNeg5px} ${styles.h63977px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="Container">
       <Button5 />
       <Button6 />
     </div>
@@ -422,7 +423,7 @@ function Container2() {
 
 function FileTreeItem1() {
   return (
-    <div className="absolute content-stretch flex flex-col gap-[1.144e_-5px] h-[95.966px] items-start left-[8px] top-[103.96px] w-[303.097px]" data-name="FileTreeItem">
+    <div className={`${styles.absolute} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap1144eNeg5px} ${styles.h95966px} ${styles.itemsStart} ${styles.left8px} ${styles.top10396px} ${styles.w303097px}`} data-name="FileTreeItem">
       <Button4 />
       <Container2 />
     </div>
@@ -431,8 +432,8 @@ function FileTreeItem1() {
 
 function Icon12() {
   return (
-    <div className="relative shrink-0 size-[15.994px]" data-name="Icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+    <div className={`${styles.relative} ${styles.shrink0} ${styles.size15994px}`} data-name="Icon">
+      <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
         <g clipPath="url(#clip0_15_2231)" id="Icon">
           <path d={svgPaths.p1aaaa600} id="Vector" stroke="var(--stroke-0, #FECA57)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
           <path d={svgPaths.p1bffbec0} id="Vector_2" stroke="var(--stroke-0, #FECA57)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
@@ -451,9 +452,9 @@ function Icon12() {
 
 function Text6() {
   return (
-    <div className="h-[20px] relative shrink-0 w-[85.327px]" data-name="Text">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[20px] overflow-clip relative rounded-[inherit] w-[85.327px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#d1d5dc] text-[14px] text-nowrap top-[0.82px] tracking-[-0.1504px] whitespace-pre">package.json</p>
+    <div className={`${styles.h20px} ${styles.relative} ${styles.shrink0} ${styles.w85327px}`} data-name="Text">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h20px} ${styles.overflowClip} ${styles.relative} ${styles.roundedInherit} ${styles.w85327px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20px} ${styles.left0} ${styles.notItalic} ${styles.textD1d5dc} ${styles.text14px} ${styles.textNowrap} ${styles.top082px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>package.json</p>
       </div>
     </div>
   );
@@ -461,7 +462,7 @@ function Text6() {
 
 function FileTreeItem2() {
   return (
-    <div className="absolute box-border content-stretch flex gap-[7.997px] h-[31.989px] items-center left-[8px] pl-[23.991px] pr-0 py-0 rounded-[4px] top-[199.93px] w-[303.097px]" data-name="FileTreeItem">
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap7997px} ${styles.h31989px} ${styles.itemsCenter} ${styles.left8px} ${styles.pl23991px} ${styles.pr0} ${styles.py0} ${styles.rounded4px} ${styles.top19993px} ${styles.w303097px}`} data-name="FileTreeItem">
       <Icon12 />
       <Text6 />
     </div>
@@ -470,8 +471,8 @@ function FileTreeItem2() {
 
 function Icon13() {
   return (
-    <div className="relative shrink-0 size-[15.994px]" data-name="Icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+    <div className={`${styles.relative} ${styles.shrink0} ${styles.size15994px}`} data-name="Icon">
+      <svg className={`${styles.block} ${styles.sizeFull}`} fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
         <g clipPath="url(#clip0_15_2221)" id="Icon">
           <path d={svgPaths.p1aaaa600} id="Vector" stroke="var(--stroke-0, #888888)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
           <path d={svgPaths.p1bffbec0} id="Vector_2" stroke="var(--stroke-0, #888888)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.33286" />
@@ -491,9 +492,9 @@ function Icon13() {
 
 function Text7() {
   return (
-    <div className="h-[20px] relative shrink-0 w-[81.264px]" data-name="Text">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[20px] overflow-clip relative rounded-[inherit] w-[81.264px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#d1d5dc] text-[14px] text-nowrap top-[0.82px] tracking-[-0.1504px] whitespace-pre">README.md</p>
+    <div className={`${styles.h20px} ${styles.relative} ${styles.shrink0} ${styles.w81264px}`} data-name="Text">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h20px} ${styles.overflowClip} ${styles.relative} ${styles.roundedInherit} ${styles.w81264px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading20px} ${styles.left0} ${styles.notItalic} ${styles.textD1d5dc} ${styles.text14px} ${styles.textNowrap} ${styles.top082px} ${styles.trackingNeg1504px} ${styles.whitespacePre}`}>README.md</p>
       </div>
     </div>
   );
@@ -501,7 +502,7 @@ function Text7() {
 
 function FileTreeItem3() {
   return (
-    <div className="absolute box-border content-stretch flex gap-[7.997px] h-[31.989px] items-center left-[8px] pl-[23.991px] pr-0 py-0 rounded-[4px] top-[231.92px] w-[303.097px]" data-name="FileTreeItem">
+    <div className={`${styles.absolute} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.gap7997px} ${styles.h31989px} ${styles.itemsCenter} ${styles.left8px} ${styles.pl23991px} ${styles.pr0} ${styles.py0} ${styles.rounded4px} ${styles.top23192px} ${styles.w303097px}`} data-name="FileTreeItem">
       <Icon13 />
       <Text7 />
     </div>
@@ -510,7 +511,7 @@ function FileTreeItem3() {
 
 function WorkspaceSidebar() {
   return (
-    <div className="h-[271.903px] relative shrink-0 w-full" data-name="WorkspaceSidebar">
+    <div className={`${styles.h271903px} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="WorkspaceSidebar">
       <FileTreeItem />
       <FileTreeItem1 />
       <FileTreeItem2 />
@@ -521,8 +522,8 @@ function WorkspaceSidebar() {
 
 function Container3() {
   return (
-    <div className="relative shrink-0 w-[319.091px]" data-name="Container">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex flex-col items-start overflow-clip relative rounded-[inherit] w-[319.091px]">
+    <div className={`${styles.relative} ${styles.shrink0} ${styles.w319091px}`} data-name="Container">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.itemsStart} ${styles.overflowClip} ${styles.relative} ${styles.roundedInherit} ${styles.w319091px}`}>
         <WorkspaceSidebar />
       </div>
     </div>
@@ -531,8 +532,8 @@ function Container3() {
 
 function PrimitiveDiv() {
   return (
-    <div className="relative shrink-0 w-[319.091px]" data-name="Primitive.div">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex flex-col gap-[7.997px] items-start relative w-[319.091px]">
+    <div className={`${styles.relative} ${styles.shrink0} ${styles.w319091px}`} data-name="Primitive.div">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap7997px} ${styles.itemsStart} ${styles.relative} ${styles.w319091px}`}>
         <TabList />
         <Container3 />
       </div>
@@ -542,8 +543,8 @@ function PrimitiveDiv() {
 
 function WorkspaceSidebar1() {
   return (
-    <div className="bg-[#1a1a1a] box-border content-stretch flex flex-col gap-[7.629e_-6px] h-[1948px] items-start pl-0 pr-[0.909px] py-0 relative rounded-[16px] shrink-0 w-[319px]" data-name="WorkspaceSidebar">
-      <div aria-hidden="true" className="absolute border-[#1e2939] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none rounded-[16px]" />
+    <div className={`${styles.bg1a1a1a} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap7629eNeg6px} ${styles.h1948px} ${styles.itemsStart} ${styles.pl0} ${styles.pr0909px} ${styles.py0} ${styles.relative} ${styles.rounded16px} ${styles.shrink0} ${styles.w319px}`} data-name="WorkspaceSidebar">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1e2939} ${styles.border1e2939_0_909px_0px_0px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded16px}`} />
       <Container />
       <PrimitiveDiv />
     </div>
@@ -552,9 +553,9 @@ function WorkspaceSidebar1() {
 
 function Paragraph() {
   return (
-    <div className="h-[23.991px] relative shrink-0 w-[50.938px]" data-name="Paragraph">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[23.991px] relative w-[50.938px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[#4a5565] text-[16px] text-nowrap top-[-1.18px] tracking-[-0.3125px] whitespace-pre">Panel 1</p>
+    <div className={`${styles.h23991px} ${styles.relative} ${styles.shrink0} ${styles.w50938px}`} data-name="Paragraph">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h23991px} ${styles.relative} ${styles.w50938px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading24px} ${styles.left0} ${styles.notItalic} ${styles.text4a5565} ${styles.text16px} ${styles.textNowrap} ${styles.topNeg118px} ${styles.trackingNeg3125px} ${styles.whitespacePre}`}>Panel 1</p>
       </div>
     </div>
   );
@@ -562,8 +563,8 @@ function Paragraph() {
 
 function Container4() {
   return (
-    <div className="absolute bg-[#1a1a1a] box-border content-stretch flex h-[375.994px] items-center justify-center left-0 pl-[0.909px] pr-[0.923px] py-[0.909px] rounded-[16px] top-0 w-[1117.8px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1e2939] border-[0.909px] border-solid inset-0 pointer-events-none rounded-[16px]" />
+    <div className={`${styles.absolute} ${styles.bg1a1a1a} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h375994px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.left0} ${styles.pl0909px} ${styles.pr0923px} ${styles.py0909px} ${styles.rounded16px} ${styles.top0} ${styles.w11178px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1e2939} ${styles.border0909px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded16px}`} />
       <Paragraph />
     </div>
   );
@@ -571,9 +572,9 @@ function Container4() {
 
 function Paragraph1() {
   return (
-    <div className="h-[23.991px] relative shrink-0 w-[53.182px]" data-name="Paragraph">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[23.991px] relative w-[53.182px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[#4a5565] text-[16px] text-nowrap top-[-1.18px] tracking-[-0.3125px] whitespace-pre">Panel 2</p>
+    <div className={`${styles.h23991px} ${styles.relative} ${styles.shrink0} ${styles.w53182px}`} data-name="Paragraph">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h23991px} ${styles.relative} ${styles.w53182px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading24px} ${styles.left0} ${styles.notItalic} ${styles.text4a5565} ${styles.text16px} ${styles.textNowrap} ${styles.topNeg118px} ${styles.trackingNeg3125px} ${styles.whitespacePre}`}>Panel 2</p>
       </div>
     </div>
   );
@@ -581,8 +582,8 @@ function Paragraph1() {
 
 function Container5() {
   return (
-    <div className="absolute bg-[#1a1a1a] box-border content-stretch flex h-[375.994px] items-center justify-center left-[1133.79px] p-[0.909px] rounded-[16px] top-0 w-[1571.31px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1e2939] border-[0.909px] border-solid inset-0 pointer-events-none rounded-[16px]" />
+    <div className={`${styles.absolute} ${styles.bg1a1a1a} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h375994px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.left113379px} ${styles.p0909px} ${styles.rounded16px} ${styles.top0} ${styles.w157131px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1e2939} ${styles.border0909px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded16px}`} />
       <Paragraph1 />
     </div>
   );
@@ -590,9 +591,9 @@ function Container5() {
 
 function Paragraph2() {
   return (
-    <div className="h-[23.991px] relative shrink-0 w-[53.551px]" data-name="Paragraph">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[23.991px] relative w-[53.551px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[#4a5565] text-[16px] text-nowrap top-[-1.18px] tracking-[-0.3125px] whitespace-pre">Panel 3</p>
+    <div className={`${styles.h23991px} ${styles.relative} ${styles.shrink0} ${styles.w53551px}`} data-name="Paragraph">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h23991px} ${styles.relative} ${styles.w53551px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading24px} ${styles.left0} ${styles.notItalic} ${styles.text4a5565} ${styles.text16px} ${styles.textNowrap} ${styles.topNeg118px} ${styles.trackingNeg3125px} ${styles.whitespacePre}`}>Panel 3</p>
       </div>
     </div>
   );
@@ -600,8 +601,8 @@ function Paragraph2() {
 
 function Container6() {
   return (
-    <div className="absolute bg-[#1a1a1a] box-border content-stretch flex h-[571.989px] items-center justify-center left-0 p-[0.909px] rounded-[16px] top-[391.99px] w-[1798.07px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1e2939] border-[0.909px] border-solid inset-0 pointer-events-none rounded-[16px]" />
+    <div className={`${styles.absolute} ${styles.bg1a1a1a} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h571989px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.left0} ${styles.p0909px} ${styles.rounded16px} ${styles.top39199px} ${styles.w179807px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1e2939} ${styles.border0909px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded16px}`} />
       <Paragraph2 />
     </div>
   );
@@ -609,9 +610,9 @@ function Container6() {
 
 function Paragraph3() {
   return (
-    <div className="h-[23.991px] relative shrink-0 w-[53.821px]" data-name="Paragraph">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[23.991px] relative w-[53.821px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[#4a5565] text-[16px] text-nowrap top-[-1.18px] tracking-[-0.3125px] whitespace-pre">Panel 4</p>
+    <div className={`${styles.h23991px} ${styles.relative} ${styles.shrink0} ${styles.w53821px}`} data-name="Paragraph">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h23991px} ${styles.relative} ${styles.w53821px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading24px} ${styles.left0} ${styles.notItalic} ${styles.text4a5565} ${styles.text16px} ${styles.textNowrap} ${styles.topNeg118px} ${styles.trackingNeg3125px} ${styles.whitespacePre}`}>Panel 4</p>
       </div>
     </div>
   );
@@ -619,8 +620,8 @@ function Paragraph3() {
 
 function Container7() {
   return (
-    <div className="absolute bg-[#1a1a1a] box-border content-stretch flex h-[571.989px] items-center justify-center left-[1814.06px] p-[0.909px] rounded-[16px] top-[391.99px] w-[891.037px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1e2939] border-[0.909px] border-solid inset-0 pointer-events-none rounded-[16px]" />
+    <div className={`${styles.absolute} ${styles.bg1a1a1a} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h571989px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.left181406px} ${styles.p0909px} ${styles.rounded16px} ${styles.top39199px} ${styles.w891037px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1e2939} ${styles.border0909px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded16px}`} />
       <Paragraph3 />
     </div>
   );
@@ -628,9 +629,9 @@ function Container7() {
 
 function Paragraph4() {
   return (
-    <div className="h-[23.991px] relative shrink-0 w-[53.409px]" data-name="Paragraph">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[23.991px] relative w-[53.409px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[#4a5565] text-[16px] text-nowrap top-[-1.18px] tracking-[-0.3125px] whitespace-pre">Panel 5</p>
+    <div className={`${styles.h23991px} ${styles.relative} ${styles.shrink0} ${styles.w53409px}`} data-name="Paragraph">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h23991px} ${styles.relative} ${styles.w53409px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading24px} ${styles.left0} ${styles.notItalic} ${styles.text4a5565} ${styles.text16px} ${styles.textNowrap} ${styles.topNeg118px} ${styles.trackingNeg3125px} ${styles.whitespacePre}`}>Panel 5</p>
       </div>
     </div>
   );
@@ -638,8 +639,8 @@ function Paragraph4() {
 
 function Container8() {
   return (
-    <div className="absolute bg-[#1a1a1a] box-border content-stretch flex h-[571.989px] items-center justify-center left-0 pl-[0.909px] pr-[0.923px] py-[0.909px] rounded-[16px] top-[979.97px] w-[2705.1px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1e2939] border-[0.909px] border-solid inset-0 pointer-events-none rounded-[16px]" />
+    <div className={`${styles.absolute} ${styles.bg1a1a1a} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h571989px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.left0} ${styles.pl0909px} ${styles.pr0923px} ${styles.py0909px} ${styles.rounded16px} ${styles.top97997px} ${styles.w27051px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1e2939} ${styles.border0909px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded16px}`} />
       <Paragraph4 />
     </div>
   );
@@ -647,9 +648,9 @@ function Container8() {
 
 function Paragraph5() {
   return (
-    <div className="h-[23.991px] relative shrink-0 w-[53.707px]" data-name="Paragraph">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[23.991px] relative w-[53.707px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[#4a5565] text-[16px] text-nowrap top-[-1.18px] tracking-[-0.3125px] whitespace-pre">Panel 6</p>
+    <div className={`${styles.h23991px} ${styles.relative} ${styles.shrink0} ${styles.w53707px}`} data-name="Paragraph">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h23991px} ${styles.relative} ${styles.w53707px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading24px} ${styles.left0} ${styles.notItalic} ${styles.text4a5565} ${styles.text16px} ${styles.textNowrap} ${styles.topNeg118px} ${styles.trackingNeg3125px} ${styles.whitespacePre}`}>Panel 6</p>
       </div>
     </div>
   );
@@ -657,8 +658,8 @@ function Paragraph5() {
 
 function Container9() {
   return (
-    <div className="absolute bg-[#1a1a1a] box-border content-stretch flex h-[375.994px] items-center justify-center left-0 p-[0.909px] rounded-[16px] top-[1567.95px] w-[891.037px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1e2939] border-[0.909px] border-solid inset-0 pointer-events-none rounded-[16px]" />
+    <div className={`${styles.absolute} ${styles.bg1a1a1a} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h375994px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.left0} ${styles.p0909px} ${styles.rounded16px} ${styles.top156795px} ${styles.w891037px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1e2939} ${styles.border0909px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded16px}`} />
       <Paragraph5 />
     </div>
   );
@@ -666,9 +667,9 @@ function Container9() {
 
 function Paragraph6() {
   return (
-    <div className="h-[23.991px] relative shrink-0 w-[52.628px]" data-name="Paragraph">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[23.991px] relative w-[52.628px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[#4a5565] text-[16px] text-nowrap top-[-1.18px] tracking-[-0.3125px] whitespace-pre">Panel 7</p>
+    <div className={`${styles.h23991px} ${styles.relative} ${styles.shrink0} ${styles.w52628px}`} data-name="Paragraph">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h23991px} ${styles.relative} ${styles.w52628px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading24px} ${styles.left0} ${styles.notItalic} ${styles.text4a5565} ${styles.text16px} ${styles.textNowrap} ${styles.topNeg118px} ${styles.trackingNeg3125px} ${styles.whitespacePre}`}>Panel 7</p>
       </div>
     </div>
   );
@@ -676,8 +677,8 @@ function Paragraph6() {
 
 function Container10() {
   return (
-    <div className="absolute bg-[#1a1a1a] box-border content-stretch flex h-[375.994px] items-center justify-center left-[907.03px] p-[0.909px] rounded-[16px] top-[1567.95px] w-[891.037px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1e2939] border-[0.909px] border-solid inset-0 pointer-events-none rounded-[16px]" />
+    <div className={`${styles.absolute} ${styles.bg1a1a1a} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h375994px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.left90703px} ${styles.p0909px} ${styles.rounded16px} ${styles.top156795px} ${styles.w891037px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1e2939} ${styles.border0909px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded16px}`} />
       <Paragraph6 />
     </div>
   );
@@ -685,9 +686,9 @@ function Container10() {
 
 function Paragraph7() {
   return (
-    <div className="h-[23.991px] relative shrink-0 w-[53.736px]" data-name="Paragraph">
-      <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[23.991px] relative w-[53.736px]">
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[#4a5565] text-[16px] text-nowrap top-[-1.18px] tracking-[-0.3125px] whitespace-pre">Panel 8</p>
+    <div className={`${styles.h23991px} ${styles.relative} ${styles.shrink0} ${styles.w53736px}`} data-name="Paragraph">
+      <div className={`${styles.bgClipPadding} ${styles.border0} ${styles.borderTransparent} ${styles.borderSolid} ${styles.boxBorder} ${styles.h23991px} ${styles.relative} ${styles.w53736px}`}>
+        <p className={`${styles.absolute} ${styles.fontNormal} ${styles.leading24px} ${styles.left0} ${styles.notItalic} ${styles.text4a5565} ${styles.text16px} ${styles.textNowrap} ${styles.topNeg118px} ${styles.trackingNeg3125px} ${styles.whitespacePre}`}>Panel 8</p>
       </div>
     </div>
   );
@@ -695,8 +696,8 @@ function Paragraph7() {
 
 function Container11() {
   return (
-    <div className="absolute bg-[#1a1a1a] box-border content-stretch flex h-[375.994px] items-center justify-center left-[1814.06px] p-[0.909px] rounded-[16px] top-[1567.95px] w-[891.037px]" data-name="Container">
-      <div aria-hidden="true" className="absolute border-[#1e2939] border-[0.909px] border-solid inset-0 pointer-events-none rounded-[16px]" />
+    <div className={`${styles.absolute} ${styles.bg1a1a1a} ${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.h375994px} ${styles.itemsCenter} ${styles.justifyCenter} ${styles.left181406px} ${styles.p0909px} ${styles.rounded16px} ${styles.top156795px} ${styles.w891037px}`} data-name="Container">
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border1e2939} ${styles.border0909px} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded16px}`} />
       <Paragraph7 />
     </div>
   );
@@ -704,7 +705,7 @@ function Container11() {
 
 function BentoGrid() {
   return (
-    <div className="h-[1943.95px] relative shrink-0 w-[2705.11px]" data-name="BentoGrid">
+    <div className={`${styles.h194395px} ${styles.relative} ${styles.shrink0} ${styles.w270511px}`} data-name="BentoGrid">
       <Container4 />
       <Container5 />
       <Container6 />
@@ -719,7 +720,7 @@ function BentoGrid() {
 
 function Frame() {
   return (
-    <div className="content-stretch flex gap-[16px] items-start relative shrink-0 w-full">
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.gap16px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`}>
       <WorkspaceSidebar1 />
       <BentoGrid />
     </div>
@@ -728,9 +729,9 @@ function Frame() {
 
 function Container12() {
   return (
-    <div className="basis-0 grow h-[2067.91px] min-h-px min-w-px relative shrink-0" data-name="Container">
-      <div className="overflow-clip rounded-[inherit] size-full">
-        <div className="box-border content-stretch flex flex-col gap-[23.991px] h-[2067.91px] items-start pb-0 pt-[31.989px] px-[31.989px] relative w-full">
+    <div className={`${styles.basis0} ${styles.grow} ${styles.h206791px} ${styles.minHPx} ${styles.minWPx} ${styles.relative} ${styles.shrink0}`} data-name="Container">
+      <div className={`${styles.overflowClip} ${styles.roundedInherit} ${styles.sizeFull}`}>
+        <div className={`${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap23991px} ${styles.h206791px} ${styles.itemsStart} ${styles.pb0} ${styles.pt31989px} ${styles.px31989px} ${styles.relative} ${styles.wFull}`}>
           <Heading />
           <Frame />
         </div>
@@ -741,7 +742,7 @@ function Container12() {
 
 function WorkspaceView() {
   return (
-    <div className="content-stretch flex items-start justify-between overflow-clip relative shrink-0 w-full" data-name="WorkspaceView">
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.itemsStart} ${styles.justifyBetween} ${styles.overflowClip} ${styles.relative} ${styles.shrink0} ${styles.wFull}`} data-name="WorkspaceView">
       <Container12 />
     </div>
   );
@@ -749,7 +750,7 @@ function WorkspaceView() {
 
 export default function Container13() {
   return (
-    <div className="content-stretch flex flex-col items-start relative size-full" data-name="Container">
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.itemsStart} ${styles.relative} ${styles.sizeFull}`} data-name="Container">
       <WorkspaceView />
     </div>
   );

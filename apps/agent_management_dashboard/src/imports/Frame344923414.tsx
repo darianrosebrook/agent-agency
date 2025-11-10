@@ -1,6 +1,8 @@
+import styles from "./Frame344923414.module.scss";
+
 function Frame1() {
   return (
-    <div className="content-stretch flex gap-[8px] items-start relative shrink-0">
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.gap8px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0}`}>
       <ComponentStatusBadge />
       <ComponentStatusBadge />
     </div>
@@ -9,7 +11,7 @@ function Frame1() {
 
 function Frame2() {
   return (
-    <div className="content-stretch flex items-start justify-between relative shrink-0 w-full">
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.itemsStart} ${styles.justifyBetween} ${styles.relative} ${styles.shrink0} ${styles.wFull}`}>
       <Frame1 />
       <ComponentStatusBadge />
     </div>
@@ -18,10 +20,10 @@ function Frame2() {
 
 function Frame3() {
   return (
-    <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap8px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0} ${styles.wFull}`}>
       <Frame2 />
-      <div className="flex flex-col font-['Inter:Medium',sans-serif] font-medium justify-center leading-[0] not-italic relative shrink-0 text-[24px] text-center text-neutral-50 text-nowrap tracking-[-0.24px]">
-        <p className="leading-[normal] whitespace-pre">Task completion</p>
+      <div className={`${styles.flex} ${styles.flexCol} ${styles.fontMedium} ${styles.justifyCenter} ${styles.leadingNone} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text24px} ${styles.textCenter} ${styles.textNeutral50} ${styles.textNowrap} ${styles.trackingNeg24px}`}>
+        <p className={`${styles.leadingNormal} ${styles.whitespacePre}`}>Task completion</p>
       </div>
     </div>
   );
@@ -29,27 +31,27 @@ function Frame3() {
 
 function ComponentStatusBadge() {
   return (
-    <div className="relative rounded-[2px] shrink-0" data-name=".component status badge">
-      <div className="box-border content-stretch flex items-center overflow-clip px-[4px] py-[2px] relative rounded-[inherit]">
-        <div className="w-2 h-2 bg-[#cacaca] rounded" />
-        <div className="flex flex-col font-['Inter:Bold',sans-serif] font-bold justify-center leading-[0] not-italic relative shrink-0 text-[#cacaca] text-[8px] text-nowrap text-right tracking-[0.12px]">
-          <p className="leading-none whitespace-pre">12 tasks</p>
+    <div className={`${styles.relative} ${styles.rounded2px} ${styles.shrink0}`} data-name=".component status badge">
+      <div className={`${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.itemsCenter} ${styles.overflowClip} ${styles.px4px} ${styles.py2px} ${styles.relative} ${styles.roundedInherit}`}>
+        <div className={`${styles.w2} ${styles.h2} ${styles.bgCacaca} ${styles.rounded}`} />
+        <div className={`${styles.flex} ${styles.flexCol} ${styles.fontBold} ${styles.justifyCenter} ${styles.leadingNone} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.textCacaca} ${styles.text8px} ${styles.textNowrap} ${styles.textRight} ${styles.tracking012px}`}>
+          <p className={`${styles.leadingNone} ${styles.whitespacePre}`}>12 tasks</p>
         </div>
       </div>
-      <div aria-hidden="true" className="absolute border border-[#cacaca] border-solid inset-0 pointer-events-none rounded-[2px]" />
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border} ${styles.borderCacaca} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded2px}`} />
     </div>
   );
 }
 
 function Frame5() {
   return (
-    <div className="content-stretch flex gap-[8px] items-center relative shrink-0">
-      <div className="flex flex-col font-['Inter:Light',sans-serif] font-light justify-end leading-[0] not-italic relative shrink-0 text-[48px] text-center text-neutral-50 text-nowrap tracking-[-2.4px]">
-        <p className="leading-[48px] whitespace-pre">71%</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.gap8px} ${styles.itemsCenter} ${styles.relative} ${styles.shrink0}`}>
+      <div className={`${styles.flex} ${styles.flexCol} ${styles.fontLight} ${styles.justifyEnd} ${styles.leadingNone} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.text48px} ${styles.textCenter} ${styles.textNeutral50} ${styles.textNowrap} ${styles.trackingNeg24px}`}>
+        <p className={`${styles.leading48px} ${styles.whitespacePre}`}>71%</p>
       </div>
       <ComponentStatusBadge />
-      <div className="flex flex-col font-['Inter:Medium',sans-serif] font-medium justify-center leading-[0] not-italic relative shrink-0 text-[#cacaca] text-[10px] text-center text-nowrap tracking-[-0.1px]">
-        <p className="leading-[12px] whitespace-pre">since last week</p>
+      <div className={`${styles.flex} ${styles.flexCol} ${styles.fontMedium} ${styles.justifyCenter} ${styles.leadingNone} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.textCacaca} ${styles.text10px} ${styles.textCenter} ${styles.textNowrap} ${styles.trackingNeg01px}`}>
+        <p className={`${styles.leading12px} ${styles.whitespacePre}`}>since last week</p>
       </div>
     </div>
   );
@@ -57,9 +59,9 @@ function Frame5() {
 
 function Frame4() {
   return (
-    <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0">
-      <div className="flex flex-col font-['Inter:Medium',sans-serif] font-medium justify-center leading-[0] not-italic relative shrink-0 text-[#cacaca] text-[10px] text-center text-nowrap tracking-[-0.1px]">
-        <p className="leading-[12px] whitespace-pre">You have 12 tasks out of 30 completed</p>
+    <div className={`${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap8px} ${styles.itemsStart} ${styles.relative} ${styles.shrink0}`}>
+      <div className={`${styles.flex} ${styles.flexCol} ${styles.fontMedium} ${styles.justifyCenter} ${styles.leadingNone} ${styles.notItalic} ${styles.relative} ${styles.shrink0} ${styles.textCacaca} ${styles.text10px} ${styles.textCenter} ${styles.textNowrap} ${styles.trackingNeg01px}`}>
+        <p className={`${styles.leading12px} ${styles.whitespacePre}`}>You have 12 tasks out of 30 completed</p>
       </div>
       <Frame5 />
     </div>
@@ -67,64 +69,65 @@ function Frame4() {
 }
 
 function Frame() {
+  const barClass = `${styles.basis0} ${styles.grow} ${styles.h108px} ${styles.minHPx} ${styles.minWPx} ${styles.shrink0}`;
   return (
-    <div className="basis-0 content-stretch flex gap-[2px] grow items-center max-h-[64px] min-h-px min-w-px overflow-clip relative rounded-[4px] shrink-0 w-full">
-      <div className="basis-0 bg-neutral-50 grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-neutral-50 grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-neutral-50 grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-neutral-50 grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-neutral-50 grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-neutral-50 grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-neutral-50 grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-neutral-50 grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-neutral-50 grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-neutral-50 grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-neutral-50 grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-neutral-50 grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-neutral-50 grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-neutral-50 grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-neutral-50 grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-neutral-50 grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-neutral-50 grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-neutral-50 grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-neutral-50 grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-[#454545] grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-[#454545] grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-[#454545] grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-[#454545] grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-[#454545] grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-[#454545] grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-[#454545] grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-[#454545] grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-[#454545] grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-[#454545] grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-[#454545] grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-[#454545] grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-[#454545] grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-[#454545] grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-[#454545] grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-[#454545] grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-[#454545] grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-[#454545] grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-[#454545] grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-[#454545] grow h-[108px] min-h-px min-w-px shrink-0" />
-      <div className="basis-0 bg-[#454545] grow h-[108px] min-h-px min-w-px shrink-0" />
+    <div className={`${styles.basis0} ${styles.contentStretch} ${styles.flex} ${styles.gap2px} ${styles.grow} ${styles.itemsCenter} ${styles.maxH64px} ${styles.minHPx} ${styles.minWPx} ${styles.overflowClip} ${styles.relative} ${styles.rounded4px} ${styles.shrink0} ${styles.wFull}`}>
+      <div className={`${barClass} ${styles.bgNeutral50}`} />
+      <div className={`${barClass} ${styles.bgNeutral50}`} />
+      <div className={`${barClass} ${styles.bgNeutral50}`} />
+      <div className={`${barClass} ${styles.bgNeutral50}`} />
+      <div className={`${barClass} ${styles.bgNeutral50}`} />
+      <div className={`${barClass} ${styles.bgNeutral50}`} />
+      <div className={`${barClass} ${styles.bgNeutral50}`} />
+      <div className={`${barClass} ${styles.bgNeutral50}`} />
+      <div className={`${barClass} ${styles.bgNeutral50}`} />
+      <div className={`${barClass} ${styles.bgNeutral50}`} />
+      <div className={`${barClass} ${styles.bgNeutral50}`} />
+      <div className={`${barClass} ${styles.bgNeutral50}`} />
+      <div className={`${barClass} ${styles.bgNeutral50}`} />
+      <div className={`${barClass} ${styles.bgNeutral50}`} />
+      <div className={`${barClass} ${styles.bgNeutral50}`} />
+      <div className={`${barClass} ${styles.bgNeutral50}`} />
+      <div className={`${barClass} ${styles.bgNeutral50}`} />
+      <div className={`${barClass} ${styles.bgNeutral50}`} />
+      <div className={`${barClass} ${styles.bgNeutral50}`} />
+      <div className={`${barClass} ${styles.bg454545}`} />
+      <div className={`${barClass} ${styles.bg454545}`} />
+      <div className={`${barClass} ${styles.bg454545}`} />
+      <div className={`${barClass} ${styles.bg454545}`} />
+      <div className={`${barClass} ${styles.bg454545}`} />
+      <div className={`${barClass} ${styles.bg454545}`} />
+      <div className={`${barClass} ${styles.bg454545}`} />
+      <div className={`${barClass} ${styles.bg454545}`} />
+      <div className={`${barClass} ${styles.bg454545}`} />
+      <div className={`${barClass} ${styles.bg454545}`} />
+      <div className={`${barClass} ${styles.bg454545}`} />
+      <div className={`${barClass} ${styles.bg454545}`} />
+      <div className={`${barClass} ${styles.bg454545}`} />
+      <div className={`${barClass} ${styles.bg454545}`} />
+      <div className={`${barClass} ${styles.bg454545}`} />
+      <div className={`${barClass} ${styles.bg454545}`} />
+      <div className={`${barClass} ${styles.bg454545}`} />
+      <div className={`${barClass} ${styles.bg454545}`} />
+      <div className={`${barClass} ${styles.bg454545}`} />
+      <div className={`${barClass} ${styles.bg454545}`} />
+      <div className={`${barClass} ${styles.bg454545}`} />
     </div>
   );
 }
 
 export default function Frame6() {
   return (
-    <div className="bg-neutral-950 relative rounded-[12px] size-full">
-      <div className="size-full">
-        <div className="box-border content-stretch flex flex-col gap-[16px] items-start overflow-clip p-[12px] relative size-full">
+    <div className={`${styles.bgNeutral950} ${styles.relative} ${styles.rounded12px} ${styles.sizeFull}`}>
+      <div className={styles.sizeFull}>
+        <div className={`${styles.boxBorder} ${styles.contentStretch} ${styles.flex} ${styles.flexCol} ${styles.gap16px} ${styles.itemsStart} ${styles.overflowClip} ${styles.p12px} ${styles.relative} ${styles.sizeFull}`}>
           <Frame3 />
-          <div className="bg-[#cacaca] h-px shrink-0 w-full" />
+          <div className={`${styles.bgCacaca} ${styles.hPx} ${styles.shrink0} ${styles.wFull}`} />
           <Frame4 />
           <Frame />
         </div>
       </div>
-      <div aria-hidden="true" className="absolute border border-[#cacaca] border-solid inset-0 pointer-events-none rounded-[12px]" />
+      <div aria-hidden="true" className={`${styles.absolute} ${styles.border} ${styles.borderCacaca} ${styles.borderSolid} ${styles.inset0} ${styles.pointerEventsNone} ${styles.rounded12px}`} />
     </div>
   );
 }
