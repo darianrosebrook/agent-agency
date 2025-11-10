@@ -11,9 +11,12 @@ use tokio::sync::{Mutex, RwLock};
 use tracing::{debug, info};
 use uuid::Uuid;
 use lru::LruCache;
+use chrono::Utc;
 
 use super::vector_metrics::VectorSearchMetrics;
 use super::vector_search_cache::CacheManager;
+use super::qdrant::QdrantClient;
+use super::search::SearchOperations;
 
 /// Default cache sizes for in-memory LRU caches
 const DEFAULT_SEARCH_CACHE_SIZE: usize = 1000;
@@ -149,5 +152,66 @@ impl VectorSearchEngine {
     /// Get the metrics
     pub fn metrics(&self) -> Arc<RwLock<VectorSearchMetrics>> {
         Arc::clone(&self.metrics)
+    }
+
+    /// Create a SearchOperations instance for this engine
+    fn search_operations(&self) -> SearchOperations {
+        let qdrant_client = Arc::new(QdrantClient::new(
+            Arc::clone(&self.client),
+            self.collection_name.clone(),
+        ));
+        SearchOperations::new(
+            qdrant_client,
+            Arc::clone(&self.cache_manager),
+            Arc::clone(&self.metrics),
+            self.similarity_threshold,
+            self.max_results,
+        )
+    }
+
+    /// Generate embedding for text
+    pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>> {
+        self.search_operations().generate_embedding(text).await
+    }
+
+    /// Perform vector search
+    pub async fn search(
+        &self,
+        query_embedding: &[f32],
+        limit: Option<usize>,
+        score_threshold: Option<f32>,
+    ) -> Result<Vec<KnowledgeEntry>> {
+        let limit = limit.map(|l| l as u32).unwrap_or(self.max_results);
+        let threshold = score_threshold.unwrap_or(self.similarity_threshold);
+        let qdrant_client = Arc::new(QdrantClient::new(
+            Arc::clone(&self.client),
+            self.collection_name.clone(),
+        ));
+        let search_results = qdrant_client.search_similar(query_embedding, limit, threshold).await?;
+        
+        // Convert SearchResult to KnowledgeEntry
+        let knowledge_entries: Vec<KnowledgeEntry> = search_results.iter()
+            .filter_map(|sr| {
+                // Reconstruct KnowledgeEntry from SearchResult
+                Some(KnowledgeEntry {
+                    id: sr.id,
+                    content: sr.content.clone(),
+                    title: sr.title.clone(),
+                    source: KnowledgeSource::InternalKnowledgeBase(sr.source.clone()),
+                    content_type: ContentType::Text,
+                    tags: vec![],
+                    metadata: sr.metadata.clone(),
+                    created_at: chrono::Utc::now(),
+                    updated_at: chrono::Utc::now(),
+                    access_count: 0,
+                    last_accessed: None,
+                    language: None,
+                    embedding: None,
+                    source_url: sr.url.clone(),
+                })
+            })
+            .collect();
+        
+        Ok(knowledge_entries)
     }
 }

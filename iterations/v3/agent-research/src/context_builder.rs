@@ -16,7 +16,7 @@ use uuid::Uuid;
 
 /// Context builder for synthesizing research results
 
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug)]
 pub struct ContextBuilder {
     config: ContextSynthesisConfig,
     cache: Arc<RwLock<std::collections::HashMap<String, SynthesizedContext>>>,
@@ -307,10 +307,37 @@ impl ContextBuilder {
             .min(1.0)
     }
 
+    /// Build context from combined content text
+    pub async fn build_context(&self, content: &str, max_length: usize) -> Result<ContextBuildResult> {
+        let start_time = std::time::Instant::now();
+        
+        // Truncate content if needed
+        let context = if content.len() > max_length {
+            let truncated = content.chars().take(max_length).collect::<String>();
+            format!("{}...", truncated)
+        } else {
+            content.to_string()
+        };
+        
+        let processing_time_ms = start_time.elapsed().as_millis() as u64;
+        
+        Ok(ContextBuildResult {
+            context,
+            processing_time_ms,
+        })
+    }
+
     /// Clear synthesis cache
     pub async fn clear_cache(&self) {
         let mut cache = self.cache.write().await;
         cache.clear();
         info!("Context synthesis cache cleared");
     }
+}
+
+/// Result of building context from text content
+#[derive(Debug, Clone)]
+pub struct ContextBuildResult {
+    pub context: String,
+    pub processing_time_ms: u64,
 }

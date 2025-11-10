@@ -31,7 +31,7 @@
 // - [ ] Add unit tests with mock multimodal content
 // - [ ] Add integration tests with real multimodal RAG system
 // STATUS: Placeholder implementation maintained for future integration with
-        the multimodal RAG system (ingestors, enrichers, indexers).
+// the multimodal RAG system.
 
 use schemars::JsonSchema;
 use anyhow::{anyhow, Result};

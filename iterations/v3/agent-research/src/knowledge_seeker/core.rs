@@ -8,9 +8,11 @@ use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use dashmap::DashMap;
+use tracing::{info, warn};
 
 use crate::research_types::*;
 use crate::ContentProcessor;
+use anyhow::Result;
 use crate::ContextBuilder;
 use crate::VectorSearchEngine;
 use crate::WebScraper;
@@ -25,11 +27,11 @@ use super::processing::ContentProcessorManager;
 use super::database::DatabaseManager;
 use super::knowledge_metrics::MetricsCollector;
 use super::sessions::SessionManager;
-use super::events::{EventEmitter, ResearchEvent};
+use super::events::EventEmitter;
 
 /// Main knowledge seeker for research coordination
 
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug)]
 pub struct KnowledgeSeeker {
     config: ResearchAgentConfig,
 
@@ -110,7 +112,7 @@ impl KnowledgeSeeker {
 
     /// Get current status
     pub async fn get_status(&self) -> ResearchAgentStatus {
-        *self.status.read().await
+        self.status.read().await.clone()
     }
 
     /// Get capabilities
@@ -120,17 +122,19 @@ impl KnowledgeSeeker {
                 QueryType::Knowledge,
                 QueryType::Code,
                 QueryType::Documentation,
-                QueryType::Research,
+                QueryType::Technical,
             ],
-            max_results: self.config.vector_search.max_results,
-            supports_web_scraping: self.config.web_scraping.enabled,
-            supports_context_synthesis: true,
-            supported_content_types: vec![
-                ContentType::Text,
-                ContentType::Html,
-                ContentType::Markdown,
-                ContentType::Code,
+            supported_sources: vec![
+                KnowledgeSource::InternalKnowledgeBase("vector_search".to_string()),
+                KnowledgeSource::WebPage("web_scraping".to_string()),
             ],
+            max_concurrent_queries: self.config.performance.max_concurrent_requests as u32,
+            max_context_size: self.config.context_synthesis.max_context_size,
+            vector_search_enabled: self.config.vector_search.enabled,
+            web_scraping_enabled: self.config.web_scraping.enabled,
+            content_processing_enabled: true,
+            context_synthesis_enabled: self.config.context_synthesis.enabled,
+            real_time_updates: false,
         }
     }
 
@@ -180,8 +184,8 @@ impl KnowledgeSeeker {
                 }
             }
             ConfigurationUpdate::ContextSynthesis(config) => {
-                if config.max_context_length == 0 {
-                    return Err(anyhow::anyhow!("Max context length must be greater than 0"));
+                if config.max_context_size == 0 {
+                    return Err(anyhow::anyhow!("Max context size must be greater than 0"));
                 }
             }
         }

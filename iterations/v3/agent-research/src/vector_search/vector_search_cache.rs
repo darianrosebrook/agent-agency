@@ -4,7 +4,7 @@
 
 use schemars::JsonSchema;
 use crate::research_types::*;
-use anyhow::Result;
+use anyhow::{Result, Context};
 use lru::LruCache;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -14,7 +14,7 @@ use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 use tracing::debug;
 
-use super::metrics::VectorSearchMetrics;
+use super::vector_metrics::VectorSearchMetrics;
 
 const PERSISTENT_CACHE_ENV_KEY: &str = "AA_VECTOR_CACHE_DIR";
 const PERSISTENT_CACHE_LIMIT_ENV_KEY: &str = "AA_VECTOR_CACHE_LIMIT";

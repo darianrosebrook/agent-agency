@@ -5,12 +5,13 @@ use tokio::sync::RwLock;
 use chrono::{DateTime, Utc};
 
 use crate::research_types::ResearchMetrics;
+use anyhow::Result;
 
 /// Metrics collector for research operations
 
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug)]
 pub struct MetricsCollector {
     metrics: Arc<RwLock<ResearchMetrics>>,
 }

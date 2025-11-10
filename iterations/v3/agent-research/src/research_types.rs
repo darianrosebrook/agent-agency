@@ -37,9 +37,10 @@ pub struct SearchContext {
 
 /// Configuration update for research agent
 #[derive(Debug, Clone, Serialize, Deserialize) ]
-pub struct ConfigurationUpdate {
-    pub field: String,
-    pub value: serde_json::Value,
+pub enum ConfigurationUpdate {
+    VectorSearch(VectorSearchConfig),
+    WebScraping(WebScrapingConfig),
+    ContextSynthesis(ContextSynthesisConfig),
 }
 
 /// Knowledge query for research
@@ -279,6 +280,25 @@ pub struct ResearchMetrics {
     pub last_updated: DateTime<Utc>,
 }
 
+impl Default for ResearchMetrics {
+    fn default() -> Self {
+        Self {
+            total_queries: 0,
+            successful_queries: 0,
+            failed_queries: 0,
+            average_response_time_ms: 0.0,
+            average_relevance_score: 0.0,
+            average_confidence_score: 0.0,
+            cache_hit_rate: 0.0,
+            vector_search_accuracy: 0.0,
+            web_scraping_success_rate: 0.0,
+            context_synthesis_quality: 0.0,
+            fuzzy_match_adjustments: 0,
+            last_updated: Utc::now(),
+        }
+    }
+}
+
 /// Research agent status
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize) ]
 pub enum ResearchAgentStatus {
@@ -347,6 +367,52 @@ pub struct ResearchAgentConfig {
     pub context_synthesis: ContextSynthesisConfig,
     pub performance: PerformanceConfig,
     pub fuzzy_matching: FuzzyMatchingConfig,
+}
+
+impl Default for ResearchAgentConfig {
+    fn default() -> Self {
+        Self {
+            vector_search: VectorSearchConfig {
+                enabled: true,
+                qdrant_url: "http://localhost:6333".to_string(),
+                collection_name: "research".to_string(),
+                model: "all-MiniLM-L6-v2".to_string(),
+                dimension: 384,
+                similarity_threshold: 0.7,
+                max_results: 10,
+                batch_size: 10,
+            },
+            web_scraping: WebScrapingConfig {
+                enabled: false,
+                max_depth: 1,
+                max_pages: 10,
+                timeout_ms: 5000,
+                timeout_seconds: 5,
+                user_agent: "Agent-Agency/1.0".to_string(),
+                respect_robots_txt: true,
+                allowed_domains: vec![],
+                rate_limit_per_minute: 10,
+            },
+            context_synthesis: ContextSynthesisConfig {
+                enabled: true,
+                similarity_threshold: 0.7,
+                max_cross_references: 5,
+                max_context_size: 4096,
+                synthesis_timeout_ms: 10000,
+            },
+            performance: PerformanceConfig {
+                max_concurrent_requests: 5,
+                request_timeout_ms: 10000,
+            },
+            fuzzy_matching: FuzzyMatchingConfig {
+                enabled: true,
+                similarity_threshold: 0.6,
+                boost_per_match: 0.1,
+                coverage_boost: 0.2,
+                max_total_boost: 1.0,
+            },
+        }
+    }
 }
 
 /// Vector search configuration

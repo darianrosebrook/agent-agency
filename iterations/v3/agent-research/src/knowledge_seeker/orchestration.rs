@@ -8,6 +8,7 @@ use uuid::Uuid;
 use tracing::{info, error, warn};
 
 use crate::research_types::*;
+use anyhow::{Result, Context};
 
 use super::core::KnowledgeSeeker;
 use super::search::SearchCoordinator;
@@ -15,11 +16,12 @@ use super::scraping::ScrapingCoordinator;
 use super::synthesis::ContextSynthesizer;
 use super::processing::ContentProcessorManager;
 use super::knowledge_metrics::MetricsCollector;
-use super::events::{EventEmitter, ResearchEvent};
+use super::events::EventEmitter;
+use super::ResearchEvent;
 
 /// Query orchestrator for coordinating research execution
 
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug)]
 pub struct QueryOrchestrator {
     config: ResearchAgentConfig,
     search_coordinator: Arc<SearchCoordinator>,
@@ -119,7 +121,7 @@ impl QueryOrchestrator {
         let processed_results = self.process_and_rank_results(all_results, &query).await?;
 
         // Limit results if specified
-        let max_results = query.max_results.unwrap_or(self.config.vector_search.max_results as usize);
+        let max_results = query.max_results.unwrap_or(self.config.vector_search.max_results) as usize;
         let final_results = processed_results.into_iter().take(max_results).collect();
 
         Ok(final_results)
@@ -143,7 +145,7 @@ impl QueryOrchestrator {
     /// Determine if web scraping should be performed for this query
     fn should_scrape_web(&self, query: &ResearchQuery) -> bool {
         // Scrape for research queries or when we have few local results
-        matches!(query.query_type, QueryType::Research) ||
+        matches!(query.query_type, QueryType::Knowledge | QueryType::Technical) ||
         query.query.contains("web") ||
         query.query.contains("online") ||
         query.query.contains("current")
@@ -221,7 +223,7 @@ impl QueryOrchestrator {
 
     /// Calculate confidence score for a result
     fn calculate_confidence_score(&self, result: &ResearchResult, query: &ResearchQuery) -> Result<f32> {
-        let mut confidence = 0.5; // Base confidence
+        let mut confidence: f32 = 0.5; // Base confidence
 
         // Higher confidence for structured content
         if result.content.contains("```") || result.content.contains("# ") {
@@ -241,14 +243,17 @@ impl QueryOrchestrator {
         }
 
         // Adjust based on result source credibility
-        confidence += match result.source.as_str() {
-            "web_scraped" => 0.1,
-            "vector_search" => 0.2,
-            "keyword_search" => 0.15,
-            _ => 0.0,
+        confidence += match &result.source {
+            KnowledgeSource::WebPage(_) => 0.1,
+            KnowledgeSource::InternalKnowledgeBase(_) => 0.2,
+            KnowledgeSource::Documentation(_) => 0.15,
+            KnowledgeSource::CodeRepository(_) => 0.15,
+            KnowledgeSource::ApiDocumentation(_) => 0.15,
+            KnowledgeSource::CommunityPost(_) => 0.1,
+            KnowledgeSource::AcademicPaper(_) => 0.2,
         };
 
-        Ok(confidence.min(1.0).max(0.0))
+        Ok(confidence.min(1.0_f32).max(0.0_f32))
     }
 
     /// Update configuration

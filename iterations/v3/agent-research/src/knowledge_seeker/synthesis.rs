@@ -7,12 +7,13 @@ use tracing::info;
 
 use crate::research_types::*;
 use crate::ContextBuilder;
+use anyhow::Result;
 
 use super::events::EventEmitter;
 
 /// Context synthesizer for combining and summarizing research results
 
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug)]
 pub struct ContextSynthesizer {
     context_builder: Arc<ContextBuilder>,
     config: ResearchAgentConfig,
@@ -42,13 +43,15 @@ impl ContextSynthesizer {
 
         if results.is_empty() {
             return Ok(SynthesizedContext {
+                id: Uuid::new_v4(),
                 query_id,
-                synthesized_text: "No research results available for context synthesis.".to_string(),
-                key_insights: vec![],
+                context_summary: "No research results available for context synthesis.".to_string(),
+                key_findings: vec![],
+                supporting_evidence: vec![],
                 confidence_score: 0.0,
-                sources_used: vec![],
-                synthesis_method: "empty_results".to_string(),
-                processing_time_ms: 0,
+                synthesized_at: chrono::Utc::now(),
+                sources: vec![],
+                cross_references: vec![],
             });
         }
 
@@ -57,7 +60,7 @@ impl ContextSynthesizer {
 
         // Generate synthesis using context builder
         let synthesis_result = self.context_builder
-            .build_context(&combined_content, self.config.context_synthesis.max_context_length)
+            .build_context(&combined_content, self.config.context_synthesis.max_context_size)
             .await?;
 
         // Extract key insights
@@ -67,13 +70,15 @@ impl ContextSynthesizer {
         let confidence_score = self.calculate_synthesis_confidence(&results);
 
         let context = SynthesizedContext {
+            id: Uuid::new_v4(),
             query_id,
-            synthesized_text: synthesis_result.context,
-            key_insights,
+            context_summary: synthesis_result.context,
+            key_findings: key_insights,
+            supporting_evidence: results.clone(),
             confidence_score,
-            sources_used: results.iter().map(|r| r.source.clone()).collect(),
-            synthesis_method: "hybrid_context_building".to_string(),
-            processing_time_ms: synthesis_result.processing_time_ms,
+            synthesized_at: chrono::Utc::now(),
+            sources: results.iter().map(|r| r.source.clone()).collect(),
+            cross_references: vec![],
         };
 
         info!("Context synthesis completed for query {}", query_id);

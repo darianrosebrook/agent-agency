@@ -7,12 +7,13 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 use crate::research_types::{ResearchSession, ResearchQuery};
+use anyhow::Result;
 
 /// Session manager for research sessions
 
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug)]
 pub struct SessionManager {
     sessions: Arc<RwLock<HashMap<Uuid, ResearchSession>>>,
 }
@@ -29,12 +30,13 @@ impl SessionManager {
     pub async fn create_session(&self, name: String, description: Option<String>) -> ResearchSession {
         let session = ResearchSession {
             id: Uuid::new_v4(),
-            name,
-            description,
+            session_name: name,
+            context: description,
             created_at: Utc::now(),
-            updated_at: Utc::now(),
+            last_activity: Utc::now(),
             queries: vec![],
             is_active: true,
+            metadata: HashMap::new(),
         };
 
         self.sessions.write().await.insert(session.id, session.clone());
@@ -50,8 +52,8 @@ impl SessionManager {
     pub async fn add_query_to_session(&self, session_id: Uuid, query: ResearchQuery) -> Result<()> {
         let mut sessions = self.sessions.write().await;
         if let Some(session) = sessions.get_mut(&session_id) {
-            session.queries.push(query);
-            session.updated_at = Utc::now();
+            session.queries.push(query.id);
+            session.last_activity = Utc::now();
             Ok(())
         } else {
             Err(anyhow::anyhow!("Session not found"))
@@ -63,7 +65,7 @@ impl SessionManager {
         let mut sessions = self.sessions.write().await;
         if let Some(session) = sessions.get_mut(&session_id) {
             session.is_active = false;
-            session.updated_at = Utc::now();
+            session.last_activity = Utc::now();
             Ok(())
         } else {
             Err(anyhow::anyhow!("Session not found"))

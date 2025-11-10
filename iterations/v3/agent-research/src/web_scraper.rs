@@ -10,9 +10,7 @@ use tracing::info;
 
 /// Web scraper for content extraction
 
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug)]
 pub struct WebScraper {
     config: WebScrapingConfig,
     client: reqwest::Client,

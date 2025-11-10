@@ -10,9 +10,7 @@ use tracing::info;
 
 /// Content processor for cleaning and extracting text
 
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug)]
 pub struct ContentProcessor {
     config: ContentProcessingConfig,
     cache: Arc<RwLock<std::collections::HashMap<String, ContentProcessingResult>>>,

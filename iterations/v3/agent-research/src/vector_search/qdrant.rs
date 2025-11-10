@@ -6,7 +6,7 @@ use crate::research_types::*;
 use anyhow::{Context, Result};
 use qdrant_client::qdrant::{
     vectors_config::Config, CreateCollection, Distance, PointStruct, ScrollPoints, SearchPoints,
-    VectorParams, VectorsConfig, WithPayloadSelector,
+    VectorParams, VectorsConfig, WithPayloadSelector, UpsertPoints, DeletePoints,
 };
 use qdrant_client::Qdrant;
 use serde_json::json;
@@ -44,11 +44,11 @@ impl QdrantClient {
             info!("Creating collection '{}'", self.collection_name);
 
             self.client
-                .create_collection(&CreateCollection {
+                .create_collection(CreateCollection {
                     collection_name: self.collection_name.clone(),
                     vectors_config: Some(VectorsConfig {
                         config: Some(Config::Params(VectorParams {
-                            size: vector_size,
+                            size: vector_size as u64,
                             distance: Distance::Cosine.into(),
                             ..Default::default()
                         })),
@@ -70,10 +70,10 @@ impl QdrantClient {
         score_threshold: f32,
     ) -> Result<Vec<SearchResult>> {
         let search_result = self.client
-            .search_points(&SearchPoints {
+            .search_points(SearchPoints {
                 collection_name: self.collection_name.clone(),
                 vector: query_embedding.to_vec(),
-                limit,
+                limit: limit as u64,
                 score_threshold: Some(score_threshold),
                 with_payload: Some(WithPayloadSelector {
                     selector_options: Some(
@@ -103,7 +103,11 @@ impl QdrantClient {
         };
 
         self.client
-            .upsert_points(&self.collection_name, vec![point], None)
+            .upsert_points(UpsertPoints {
+                collection_name: self.collection_name.clone(),
+                points: vec![point],
+                ..Default::default()
+            })
             .await
             .context("Failed to add knowledge entry to Qdrant")?;
 
@@ -120,12 +124,28 @@ impl QdrantClient {
 
     /// Delete knowledge entry from vector database
     pub async fn delete_knowledge_entry(&self, entry_id: &Uuid) -> Result<()> {
+        use qdrant_client::qdrant::{PointsSelector, PointsIdsList, PointId};
+        
         self.client
-            .delete_points(
-                &self.collection_name,
-                &entry_id.to_string(),
-                None,
-            )
+            .delete_points(DeletePoints {
+                collection_name: self.collection_name.clone(),
+                points: Some(PointsSelector {
+                    points_selector_one_of: Some(
+                        qdrant_client::qdrant::points_selector::PointsSelectorOneOf::Points(
+                            PointsIdsList {
+                                ids: vec![PointId {
+                                    point_id_options: Some(
+                                        qdrant_client::qdrant::point_id::PointIdOptions::Uuid(
+                                            entry_id.to_string()
+                                        )
+                                    )
+                                }]
+                            }
+                        )
+                    )
+                }),
+                ..Default::default()
+            })
             .await
             .context("Failed to delete knowledge entry from Qdrant")?;
 
@@ -141,7 +161,7 @@ impl QdrantClient {
 
         loop {
             let scroll_result = self.client
-                .scroll(&ScrollPoints {
+                .scroll(ScrollPoints {
                     collection_name: self.collection_name.clone(),
                     limit: Some(batch_size),
                     offset,
@@ -155,19 +175,19 @@ impl QdrantClient {
                 .await
                 .context("Failed to scroll Qdrant collection")?;
 
-            let points = scroll_result.result.unwrap_or_default().points;
+            let points = scroll_result.result;
             if points.is_empty() {
                 break;
             }
 
-            for point in points {
+            for point in points.clone() {
                 if let Ok(entry) = self.qdrant_point_to_knowledge_entry(point) {
                     all_entries.push(entry);
                 }
             }
 
             // Set offset for next batch
-            if let Some(last_point) = scroll_result.result.unwrap_or_default().points.last() {
+            if let Some(last_point) = points.last() {
                 offset = Some(last_point.id.clone().unwrap_or_default());
             } else {
                 break;
@@ -190,8 +210,9 @@ impl QdrantClient {
         payload.insert("metadata".to_string(), json!(entry.metadata).into());
         payload.insert("created_at".to_string(), json!(entry.created_at).into());
         payload.insert("updated_at".to_string(), json!(entry.updated_at).into());
-        payload.insert("quality_score".to_string(), json!(entry.quality_score).into());
-        payload.insert("embedding_model".to_string(), json!(entry.embedding_model).into());
+        // Quality score and embedding_model not available in KnowledgeEntry, use defaults
+        payload.insert("quality_score".to_string(), json!(0.8).into());
+        payload.insert("embedding_model".to_string(), json!("unknown").into());
 
         payload
     }
@@ -215,9 +236,8 @@ impl QdrantClient {
             .unwrap_or_else(|| "text".to_string());
 
         let content_type = match content_type_str.as_str() {
-            "video" => ContentType::Video,
-            "audio" => ContentType::Audio,
-            "image" => ContentType::Image,
+            "audio" => ContentType::Text, // Audio not available, use Text
+            "image" => ContentType::Text, // Image not available, use Text
             "code" => ContentType::Code,
             _ => ContentType::Text,
         };
@@ -238,29 +258,23 @@ impl QdrantClient {
             .and_then(|v| serde_json::from_str(&serde_json::to_string(v).unwrap_or_default()).ok())
             .unwrap_or_default();
 
-        let quality_score = payload.get("quality_score")
-            .and_then(|v| v.kind.as_ref())
-            .and_then(|kind| match kind {
-                qdrant_client::qdrant::value::Kind::DoubleValue(f) => Some(*f as f32),
-                _ => None,
-            })
-            .unwrap_or(0.0);
-
-        let embedding_model = self.extract_string_value(payload.get("embedding_model"))
-            .unwrap_or_default();
+        // quality_score and embedding_model not available in KnowledgeEntry, skip them
 
         Ok(KnowledgeEntry {
             id,
             content,
             title,
-            source,
+            source: KnowledgeSource::InternalKnowledgeBase(source),
             content_type,
             tags,
             metadata,
             created_at: chrono::Utc::now(), // Would need to extract from payload
             updated_at: chrono::Utc::now(),
-            quality_score,
-            embedding_model,
+            access_count: 0,
+            last_accessed: None,
+            language: None,
+            embedding: None,
+            source_url: None,
         })
     }
 
@@ -275,15 +289,41 @@ impl QdrantClient {
     }
 
     /// Convert Qdrant point to SearchResult
-    fn qdrant_point_to_search_result(&self, point: qdrant_client::qdrant::RetrievedPoint) -> Result<SearchResult> {
-        let entry = self.qdrant_point_to_knowledge_entry(point.clone())?;
+    fn qdrant_point_to_search_result(&self, point: qdrant_client::qdrant::ScoredPoint) -> Result<SearchResult> {
+        // Extract the point from ScoredPoint
+        let retrieved_point = qdrant_client::qdrant::RetrievedPoint {
+            id: point.id.clone(),
+            payload: point.payload.clone(),
+            vectors: point.vectors.clone(),
+            shard_key: point.shard_key.clone(),
+            order_value: point.order_value.clone(),
+        };
+        let entry = self.qdrant_point_to_knowledge_entry(retrieved_point)?;
+        
+        let score = point.score as f64;
 
-        let score = point.score;
+        // Convert KnowledgeSource enum to string
+        let source_str = match &entry.source {
+            KnowledgeSource::WebPage(s) => s.clone(),
+            KnowledgeSource::Documentation(s) => s.clone(),
+            KnowledgeSource::CodeRepository(s) => s.clone(),
+            KnowledgeSource::ApiDocumentation(s) => s.clone(),
+            KnowledgeSource::CommunityPost(s) => s.clone(),
+            KnowledgeSource::AcademicPaper(s) => s.clone(),
+            KnowledgeSource::InternalKnowledgeBase(s) => s.clone(),
+        };
 
         Ok(SearchResult {
-            entry,
-            score,
-            highlights: Vec::new(), // Could be enhanced with highlight extraction
+            id: entry.id,
+            title: entry.title.clone(),
+            content: entry.content.clone(),
+            url: entry.metadata.get("url")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            source: source_str,
+            relevance_score: score,
+            credibility_score: 0.8, // Default credibility score
+            metadata: entry.metadata,
         })
     }
 

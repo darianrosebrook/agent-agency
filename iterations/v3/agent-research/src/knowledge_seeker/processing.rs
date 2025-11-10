@@ -1,14 +1,15 @@
 //! Content processing and management
 
 use std::sync::Arc;
-use crate::research_types::{ConfigurationUpdate, ContentProcessingConfig};
+use crate::research_types::{ConfigurationUpdate, ContentProcessingConfig, ResearchAgentConfig};
 use crate::content_processor::ContentProcessor;
+use anyhow::Result;
 
 /// Content processor manager
 
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug)]
 pub struct ContentProcessorManager {
     processor: Arc<ContentProcessor>,
     config: ResearchAgentConfig,

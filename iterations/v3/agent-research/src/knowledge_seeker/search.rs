@@ -8,13 +8,14 @@ use tracing::{info, warn};
 
 use crate::research_types::*;
 use crate::VectorSearchEngine;
+use anyhow::{Result, Context};
 
 use super::index::InvertedIndex;
 use super::events::EventEmitter;
 
 /// Search coordinator for managing different search strategies
 
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug)]
 pub struct SearchCoordinator {
     vector_search: Arc<VectorSearchEngine>,
     keyword_index: Arc<InvertedIndex>,
@@ -63,11 +64,12 @@ impl SearchCoordinator {
             .context("Failed to generate query embedding")?;
 
         // Perform vector search
+        let limit = query.max_results.map(|x| (x * 2) as usize).unwrap_or(20);
         let vector_results = self
             .vector_search
             .search(
                 &query_embedding,
-                Some(query.max_results.map(|x| x * 2).unwrap_or(20)),
+                Some(limit),
                 None,
             )
             .await
@@ -83,7 +85,7 @@ impl SearchCoordinator {
                 content: entry.content.clone(),
                 summary: None,
                 relevance_score: 0.8, // V2-style relevance from vector similarity
-                confidence_score: self.calculate_v2_confidence_score(&entry, query),
+                confidence_score: self.calculate_v2_confidence_score_from_entry(&entry, query),
                 extracted_at: chrono::Utc::now(),
                 url: entry.source_url.clone(),
                 metadata: entry.metadata.clone(),
@@ -125,8 +127,8 @@ impl SearchCoordinator {
         Ok(Vec::new())
     }
 
-    /// Calculate V2 confidence score for vector search results
-    fn calculate_v2_confidence_score(&self, entry: &crate::research_types::SearchResult, query: &ResearchQuery) -> f32 {
+    /// Calculate V2 confidence score for vector search results (from KnowledgeEntry)
+    fn calculate_v2_confidence_score_from_entry(&self, entry: &KnowledgeEntry, query: &ResearchQuery) -> f32 {
         let mut confidence = 0.7; // Base confidence for vector search
 
         // Higher confidence for exact matches in title
@@ -141,9 +143,9 @@ impl SearchCoordinator {
 
         // Higher confidence for recent content
         // Note: VectorSearchResult might not have timestamp info, assuming current
-        confidence += 0.1;
+        let confidence: f32 = confidence + 0.1;
 
-        confidence.min(1.0).max(0.0)
+        confidence.min(1.0_f32).max(0.0_f32)
     }
 
     /// Update configuration

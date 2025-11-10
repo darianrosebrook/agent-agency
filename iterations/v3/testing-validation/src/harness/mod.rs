@@ -10,7 +10,9 @@ pub mod environment;
 pub mod assertions;
 
 pub use environment::{TestEnvironment, TestWorkspace, default_process_output};
-pub use assertions::{AssertionFramework, AssertionType, FactChecker, SourceFile, Citation, CawsComplianceResult};
+pub use assertions::{AssertionFramework, AssertionType, SourceFile, Citation, CawsComplianceResult};
+#[cfg(feature = "full")]
+pub use assertions::FactChecker;
 
 use std::sync::Arc;
 use tokio::sync::Mutex;

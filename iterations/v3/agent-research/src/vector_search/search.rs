@@ -17,7 +17,6 @@ use super::text_processing::TextProcessor;
 use data_infrastructure::embedding::embedding_service::EmbeddingServiceFactory;
 use data_infrastructure::embedding::embedding_types::EmbeddingConfig;
 use data_infrastructure::embedding::EmbeddingService;
-use std::sync::Arc;
 use tokio::sync::OnceCell;
 
 /// Search operations for vector search engine
@@ -77,14 +76,8 @@ impl SearchOperations {
 
         debug!("Performing semantic search for query: {}", query);
 
-        // Check cache first
-        let cache_key = self.text_processor.create_cache_key(query);
-        if let Some(cached_results) = self.cache_manager.get_search_cache(&cache_key).await {
-            debug!("Cache hit for query: {}", query);
-            let mut metrics = self.metrics.write().await;
-            metrics.record_cache_hit();
-            return Ok(cached_results);
-        }
+        // Skip cache for now - type mismatch between KnowledgeEntry and SearchResult
+        // TODO: Convert cache to use SearchResult or add proper conversion
 
         // Generate embedding for query
         let query_embedding = self.generate_query_embedding(query).await?;
@@ -95,9 +88,8 @@ impl SearchOperations {
             .search_similar(&query_embedding, self.max_results, self.similarity_threshold)
             .await?;
 
-        // Cache results
-        let search_results = results.clone();
-        self.cache_manager.put_search_cache(cache_key, search_results).await;
+        // Skip caching for now - type mismatch
+        // TODO: Fix cache to store SearchResult
 
         // Record metrics
         let duration_ms = start_time.elapsed().as_millis() as f64;
@@ -196,7 +188,7 @@ impl SearchOperations {
     }
 
     /// Generate embedding for text (with caching)
-    async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>> {
+    pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>> {
         let content_hash = self.text_processor.create_cache_key(text);
 
         // Check cache first

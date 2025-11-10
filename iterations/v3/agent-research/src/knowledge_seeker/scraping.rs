@@ -7,21 +7,21 @@ use uuid::Uuid;
 use tracing::{info, warn, error};
 
 use crate::research_types::*;
-use crate::{ConfigurationUpdate, WebScraper};
+use crate::research_types::ConfigurationUpdate;
+use crate::WebScraper;
+use anyhow::Result;
 
 use super::processing::ContentProcessorManager;
-use super::events::{EventEmitter, ResearchEvent};
+use super::events::EventEmitter;
+use super::ResearchEvent;
 
 /// Web scraping coordinator
 
 #[derive(Debug)]
 pub struct ScrapingCoordinator {
-    #[serde(skip)]
     web_scraper: Arc<WebScraper>,
-    #[serde(skip)]
     content_processor: Arc<ContentProcessorManager>,
     config: ResearchAgentConfig,
-    #[serde(skip)]
     event_emitter: Arc<EventEmitter>,
 }
 
@@ -66,14 +66,15 @@ impl ScrapingCoordinator {
         // Scrape URLs concurrently with limit
         let mut handles = Vec::new();
 
-        for url in urls_to_scrape.into_iter().take(max_scrapes) {
+        for url in urls_to_scrape.iter().take(max_scrapes as usize) {
             let scraper = Arc::clone(&self.web_scraper);
             let processor = Arc::clone(&self.content_processor);
             let event_emitter = Arc::clone(&self.event_emitter);
             let query_id = query.id;
+            let url_owned = url.clone();
 
             let handle = tokio::spawn(async move {
-                Self::scrape_single_url(scraper, processor, event_emitter, url, query_id).await
+                Self::scrape_single_url(scraper, processor, event_emitter, &url_owned, query_id).await
             });
 
             handles.push(handle);
@@ -192,15 +193,15 @@ impl ScrapingCoordinator {
         web_scraper: Arc<WebScraper>,
         content_processor: Arc<ContentProcessorManager>,
         event_emitter: Arc<EventEmitter>,
-        url: String,
+        url: &str,
         query_id: Uuid,
     ) -> Result<Option<ResearchResult>> {
-        event_emitter.emit(ResearchEvent::ScrapingStarted(url.clone())).await;
+        event_emitter.emit(ResearchEvent::ScrapingStarted(url.to_string())).await;
 
         match web_scraper.scrape_url(&url).await {
             Ok(scraping_result) => {
                 event_emitter.emit(ResearchEvent::ScrapingCompleted(
-                    url.clone(),
+                    url.to_string(),
                     scraping_result.content.len()
                 )).await;
 
@@ -221,14 +222,14 @@ impl ScrapingCoordinator {
 
                         let result = ResearchResult {
                             query_id,
-                            source: "web_scraped".to_string(),
+                            source: KnowledgeSource::WebPage("web_scraped".to_string()),
                             title: scraping_result.title,
                             content: processed.processed_content,
                             summary: processed.summary,
                             relevance_score: 0.6, // Moderate relevance for scraped content
                             confidence_score: 0.7, // Good confidence for structured scraping
                             extracted_at: chrono::Utc::now(),
-                            url: Some(url),
+                            url: Some(url.to_string()),
                             metadata: scraping_result.metadata,
                         };
 
@@ -241,7 +242,7 @@ impl ScrapingCoordinator {
                 }
             }
             Err(e) => {
-                event_emitter.emit(ResearchEvent::ScrapingFailed(url, e.to_string())).await;
+                event_emitter.emit(ResearchEvent::ScrapingFailed(url.to_string(), e.to_string())).await;
                 warn!("Failed to scrape URL {}: {}", url, e);
                 Ok(None)
             }

@@ -5,9 +5,7 @@ use super::core::ResearchEvent;
 
 /// Event emitter for research events
 
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug)]
 pub struct EventEmitter {
     sender: mpsc::UnboundedSender<ResearchEvent>,
 }

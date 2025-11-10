@@ -2,12 +2,13 @@
 
 use std::sync::Arc;
 use data_infrastructure::DatabaseClient;
+use anyhow::Result;
 
 /// Database manager for research operations
 
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug)]
 pub struct DatabaseManager {
     client: Arc<DatabaseClient>,
 }
