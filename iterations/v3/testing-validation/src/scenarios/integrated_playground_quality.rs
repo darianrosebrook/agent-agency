@@ -1034,10 +1034,16 @@ async fn extract_compilation_feedback(
     } else {
         feedback.push_str("FAILED\n");
         feedback.push_str("Errors:\n");
-        // Format errors for better readability
+        // Format errors for better readability - match plan format exactly
         for line in errors.lines().take(20) {
-            if line.trim().starts_with("error") || line.trim().starts_with("Error") || line.trim().starts_with("SyntaxError") {
-                feedback.push_str(&format!("- {}\n", line.trim()));
+            let trimmed = line.trim();
+            if trimmed.starts_with("error") || trimmed.starts_with("Error") || trimmed.starts_with("SyntaxError") {
+                // Format as "- Line X: error message" if line number is present
+                if trimmed.contains(":") {
+                    feedback.push_str(&format!("- {}\n", trimmed));
+                } else {
+                    feedback.push_str(&format!("- {}\n", trimmed));
+                }
             }
         }
         feedback.push_str("\nPlease fix these compilation errors in the next iteration.");

@@ -1,7 +1,10 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAnimatedValue } from "../hooks/useAnimatedValue";
+import { getProjectMilestones, type ProjectMilestone } from "../lib/api/projects";
+import { getProjectTaskStats } from "../lib/api/projects";
+import { listProjects } from "../lib/api/projects";
 import styles from "./MultiRingProgress.module.scss";
 
 interface Task {
@@ -13,16 +16,135 @@ interface Task {
 interface MultiRingProgressProps {
   tasks?: Task[];
   projectedTimeline?: string;
+  projectId?: string;
 }
 
 export function MultiRingProgress({
-  tasks = [
-    { name: "Progress 1", progress: 85, color: "#e0e7ff" },
-    { name: "Progress 2", progress: 75, color: "#818cf8" },
-    { name: "Progress 3", progress: 60, color: "#6366f1" },
-  ],
-  projectedTimeline = "15 business days",
+  tasks: providedTasks,
+  projectedTimeline: providedTimeline,
+  projectId,
 }: MultiRingProgressProps) {
+  const [milestones, setMilestones] = useState<ProjectMilestone[]>([]);
+  const [taskStats, setTaskStats] = useState<{ [milestoneId: string]: number }>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(projectId || null);
+
+  useEffect(() => {
+    async function fetchData() {
+      setIsLoading(true);
+      setError(null);
+      try {
+        let targetProjectId = projectId;
+        
+        // If no projectId provided, get the first project
+        if (!targetProjectId) {
+          const projects = await listProjects();
+          if (projects.projects.length > 0) {
+            targetProjectId = projects.projects[0].project_id;
+            setCurrentProjectId(targetProjectId);
+          } else {
+            setMilestones([]);
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        if (!targetProjectId) {
+          setMilestones([]);
+          setIsLoading(false);
+          return;
+        }
+
+        // Fetch milestones and task stats
+        const [milestonesData, statsData] = await Promise.all([
+          getProjectMilestones(targetProjectId),
+          getProjectTaskStats(targetProjectId).catch(() => null),
+        ]);
+
+        setMilestones(milestonesData);
+
+        // Calculate progress for each milestone based on task completion
+        // For now, use milestone completion status (100% if completed, 0% if not)
+        // TODO: Calculate actual progress based on tasks assigned to milestone when API supports it
+        const milestoneStats: { [milestoneId: string]: number } = {};
+        milestonesData.forEach((milestone) => {
+          milestoneStats[milestone.id] = milestone.completed ? 100 : 0;
+        });
+        setTaskStats(milestoneStats);
+      } catch (err) {
+        console.error("Failed to fetch milestones:", err);
+        setError(err instanceof Error ? err : new Error("Failed to load milestone data"));
+        setMilestones([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, [projectId]);
+
+  // Generate tasks from milestones or use provided tasks
+  const tasks = useMemo(() => {
+    if (providedTasks) {
+      return providedTasks;
+    }
+
+    if (milestones.length === 0) {
+      // Default fallback
+      return [
+        { name: "Progress 1", progress: 85, color: "#e0e7ff" },
+        { name: "Progress 2", progress: 75, color: "#818cf8" },
+        { name: "Progress 3", progress: 60, color: "#6366f1" },
+      ];
+    }
+
+    // Map milestones to tasks (take first 3)
+    const colors = ["#e0e7ff", "#818cf8", "#6366f1"];
+    return milestones.slice(0, 3).map((milestone, index) => ({
+      name: milestone.title,
+      progress: taskStats[milestone.id] ?? (milestone.completed ? 100 : 0),
+      color: colors[index % colors.length],
+    }));
+  }, [providedTasks, milestones, taskStats]);
+
+  // Calculate projected timeline from milestone due dates
+  const projectedTimeline = useMemo(() => {
+    if (providedTimeline) {
+      return providedTimeline;
+    }
+
+    if (milestones.length === 0) {
+      return "15 business days";
+    }
+
+    // Find the latest due date
+    const dueDates = milestones
+      .map((m) => m.due_date)
+      .filter((d): d is string => d !== null)
+      .map((d) => new Date(d))
+      .filter((d) => !isNaN(d.getTime()));
+
+    if (dueDates.length === 0) {
+      return "TBD";
+    }
+
+    const latestDate = new Date(Math.max(...dueDates.map((d) => d.getTime())));
+    const today = new Date();
+    const daysDiff = Math.ceil((latestDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysDiff < 0) {
+      return "Overdue";
+    }
+    if (daysDiff === 0) {
+      return "Due today";
+    }
+    return `${daysDiff} business days`;
+  }, [providedTimeline, milestones]);
+
   // Animate individual task progress values - must call hooks at top level
   const animatedProgress1 = useAnimatedValue(tasks[0]?.progress ?? 85);
   const animatedProgress2 = useAnimatedValue(tasks[1]?.progress ?? 75);
@@ -229,17 +351,25 @@ export function MultiRingProgress({
           {/* Header */}
           <div className={styles.header}>
             <h3 className={styles.title}>Progress</h3>
-            <div className={styles.totalProgressRow}>
-              <span className={styles.totalProgressValue}>
-                {totalProgress}%
-              </span>
-              <span className={styles.totalProgressLabel}>
-                · Total progress
-              </span>
-            </div>
-            <p className={styles.timeline}>
-              Projected timeline: {projectedTimeline}
-            </p>
+            {isLoading ? (
+              <p className={styles.timeline}>Loading milestone data...</p>
+            ) : error ? (
+              <p className={styles.timeline}>Error: {error.message}</p>
+            ) : (
+              <>
+                <div className={styles.totalProgressRow}>
+                  <span className={styles.totalProgressValue}>
+                    {totalProgress}%
+                  </span>
+                  <span className={styles.totalProgressLabel}>
+                    · Total progress
+                  </span>
+                </div>
+                <p className={styles.timeline}>
+                  Projected timeline: {projectedTimeline}
+                </p>
+              </>
+            )}
           </div>
 
           {/* Chart */}

@@ -1,6 +1,8 @@
 // Kanban Board Design Tokens
 // All Kanban-specific measurements and values
 
+@use './_colors' as *;
+
 // Column dimensions
 $kanban-column-width: 639.41px;
 $kanban-column-height: 735.043px;

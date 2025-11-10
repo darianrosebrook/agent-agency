@@ -240,7 +240,7 @@ export default function AgentHealthPage() {
                         ? '#ef4444'
                         : '#6b7280',
                   }}
-                  title={systemHealth.database?.status || 'Unknown'}
+                  title={systemHealth.database?.status ?? 'Unknown'}
                 />
               </div>
               <div className={styles.serviceInfo}>

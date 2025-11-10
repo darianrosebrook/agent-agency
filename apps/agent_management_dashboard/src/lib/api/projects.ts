@@ -239,6 +239,47 @@ export async function updateProjectMilestone(
 }
 
 /**
+ * Project task from API
+ */
+export interface ProjectTask {
+  task_id: string;
+  title: string;
+  description?: string | null;
+  status: string;
+  risk_tier?: string | null;
+  priority?: number | null;
+  created_at: string;
+  updated_at: string;
+  completed_at?: string | null;
+}
+
+/**
+ * Project tasks response
+ */
+export interface ProjectTasksResponse {
+  tasks: ProjectTask[];
+}
+
+/**
+ * Get project tasks
+ */
+export async function getProjectTasks(projectId: string): Promise<ProjectTasksResponse> {
+  return apiGet<ProjectTasksResponse>(`${API_BASE}/projects/${projectId}/tasks`);
+}
+
+/**
+ * Update project overview/description
+ */
+export async function updateProjectOverview(
+  projectId: string,
+  overview: string
+): Promise<ProjectApiResponse> {
+  return apiPatch<ProjectApiResponse>(`${API_BASE}/projects/${projectId}`, {
+    overview,
+  });
+}
+
+/**
  * Get project task statistics
  */
 export async function getProjectTaskStats(projectId: string): Promise<ProjectTaskStats> {

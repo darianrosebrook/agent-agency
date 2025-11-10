@@ -11,6 +11,25 @@ import { parseApiError, AppError } from '../errors/types';
 import { retryWithBackoff, RetryOptions } from './retry';
 
 /**
+ * Safely show toast notification for API errors
+ * Uses lazy import to avoid circular dependencies
+ */
+function showApiErrorToast(error: AppError): void {
+  try {
+    // Lazy import to avoid circular dependency with toast utilities
+    import('./toast').then(({ toastError }) => {
+      toastError(error);
+    }).catch(() => {
+      // If toast import fails, fall back to console.error
+      console.error(`[${error.code}]`, error.getUserMessage());
+    });
+  } catch {
+    // If dynamic import is not available, use console.error
+    console.error(`[${error.code}]`, error.getUserMessage());
+  }
+}
+
+/**
  * Options for API fetch calls
  */
 export interface ApiFetchOptions extends RequestInit {
@@ -24,6 +43,12 @@ export interface ApiFetchOptions extends RequestInit {
    * Custom error handler
    */
   onError?: (error: AppError) => void;
+  
+  /**
+   * Whether to show toast notifications for errors
+   * @default true
+   */
+  showToast?: boolean;
   
   /**
    * Retry configuration
@@ -60,6 +85,7 @@ export async function apiFetch<T = unknown>(
   const {
     throwOnError = true,
     onError,
+    showToast = true,
     retry: retryConfig,
     headers = {},
     ...fetchOptions
@@ -92,6 +118,11 @@ export async function apiFetch<T = unknown>(
 
       const appError = parseApiError(errorData);
       
+      // Show toast notification for API errors (unless explicitly disabled)
+      if (throwOnError && showToast) {
+        showApiErrorToast(appError);
+      }
+      
       if (onError) {
         onError(appError);
       }
@@ -122,6 +153,11 @@ export async function apiFetch<T = unknown>(
         ? error 
         : parseApiError(error);
       
+      // Show toast notification for retry failures
+      if (throwOnError && showToast) {
+        showApiErrorToast(appError);
+      }
+      
       if (onError) {
         onError(appError);
       }
@@ -142,6 +178,11 @@ export async function apiFetch<T = unknown>(
     const appError = error instanceof AppError 
       ? error 
       : parseApiError(error);
+    
+    // Show toast notification for network/other errors
+    if (throwOnError && showToast) {
+      showApiErrorToast(appError);
+    }
     
     if (onError) {
       onError(appError);

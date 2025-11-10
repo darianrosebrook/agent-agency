@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GanttChart } from "./GanttChart";
 import { ZoomIn, ZoomOut, Calendar } from "lucide-react";
 import { Button } from "../primitives/button";
@@ -11,6 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../primitives/select";
+import { useProjectContext } from "./ProjectContext";
+import { getProjectTasks } from "../../lib/api/projects";
 import styles from "./TimelineTab.module.scss";
 
 export type ZoomLevel = "day" | "week" | "month" | "quarter";
@@ -27,172 +29,82 @@ export interface TimelineTask {
   description?: string;
 }
 
-// TODO: Replace mock timeline data with task and worker assignment data from v3 database with the following requirements:
-// 1. Timeline data fetching: Load tasks with worker assignments and dates
-//    - Data source: GET /api/projects/:id/tasks/timeline endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
-//    - Database tables: PostgreSQL `tasks` and `worker_assignments` tables
-//    - Include task metadata: id, title, worker, workerId, startDate, endDate, status, tags, description
-// 2. Worker information: Include worker name and ID for each task
-//    - Join worker_assignments table to get assigned worker details
-//    - Handle unassigned tasks gracefully
-// 3. Data transformation: Format API response for GanttChart component
-//    - Map API response to TimelineTask array with required fields
-//    - Handle date parsing and status mapping
-// Mock data for timeline tasks
-const mockTasks: TimelineTask[] = [
-  {
-    id: "1",
-    title: "Design system foundation",
-    worker: "Sarah Chen",
-    workerId: "sarah",
-    startDate: new Date(2024, 10, 1),
-    endDate: new Date(2024, 10, 5),
-    status: "completed",
-    tags: ["Design", "High Priority"],
-    description: "Created core design tokens and components",
-  },
-  {
-    id: "2",
-    title: "Component library setup",
-    worker: "Sarah Chen",
-    workerId: "sarah",
-    startDate: new Date(2024, 10, 6),
-    endDate: new Date(2024, 10, 12),
-    status: "completed",
-    tags: ["Design", "UI"],
-    description: "Set up Storybook and base components",
-  },
-  {
-    id: "3",
-    title: "Dashboard wireframes",
-    worker: "Sarah Chen",
-    workerId: "sarah",
-    startDate: new Date(2024, 10, 13),
-    endDate: new Date(2024, 10, 20),
-    status: "in-progress",
-    tags: ["Design", "Wireframes"],
-    description: "Creating dashboard layout mockups",
-  },
-  {
-    id: "4",
-    title: "API endpoint development",
-    worker: "Alex Kumar",
-    workerId: "alex",
-    startDate: new Date(2024, 10, 2),
-    endDate: new Date(2024, 10, 8),
-    status: "completed",
-    tags: ["Backend", "API"],
-    description: "Built REST API endpoints for user management",
-  },
-  {
-    id: "5",
-    title: "Database schema design",
-    worker: "Alex Kumar",
-    workerId: "alex",
-    startDate: new Date(2024, 10, 9),
-    endDate: new Date(2024, 10, 11),
-    status: "completed",
-    tags: ["Backend", "Database"],
-    description: "Designed and implemented database schema",
-  },
-  {
-    id: "6",
-    title: "Authentication system",
-    worker: "Alex Kumar",
-    workerId: "alex",
-    startDate: new Date(2024, 10, 12),
-    endDate: new Date(2024, 10, 18),
-    status: "in-progress",
-    tags: ["Backend", "Security"],
-    description: "Implementing JWT-based authentication",
-  },
-  {
-    id: "7",
-    title: "Frontend routing",
-    worker: "Jordan Lee",
-    workerId: "jordan",
-    startDate: new Date(2024, 10, 1),
-    endDate: new Date(2024, 10, 3),
-    status: "completed",
-    tags: ["Frontend", "Dev"],
-    description: "Set up React Router and navigation",
-  },
-  {
-    id: "8",
-    title: "Dashboard implementation",
-    worker: "Jordan Lee",
-    workerId: "jordan",
-    startDate: new Date(2024, 10, 4),
-    endDate: new Date(2024, 10, 10),
-    status: "completed",
-    tags: ["Frontend", "UI"],
-    description: "Built main dashboard components",
-  },
-  {
-    id: "9",
-    title: "User profile pages",
-    worker: "Jordan Lee",
-    workerId: "jordan",
-    startDate: new Date(2024, 10, 11),
-    endDate: new Date(2024, 10, 15),
-    status: "in-progress",
-    tags: ["Frontend", "UI"],
-    description: "Creating user profile and settings pages",
-  },
-  {
-    id: "10",
-    title: "Responsive design",
-    worker: "Jordan Lee",
-    workerId: "jordan",
-    startDate: new Date(2024, 10, 16),
-    endDate: new Date(2024, 10, 22),
-    status: "pending",
-    tags: ["Frontend", "Mobile"],
-    description: "Making all pages mobile responsive",
-  },
-  {
-    id: "11",
-    title: "Unit testing",
-    worker: "Maria Garcia",
-    workerId: "maria",
-    startDate: new Date(2024, 10, 3),
-    endDate: new Date(2024, 10, 7),
-    status: "completed",
-    tags: ["QA", "Testing"],
-    description: "Writing unit tests for core features",
-  },
-  {
-    id: "12",
-    title: "Integration testing",
-    worker: "Maria Garcia",
-    workerId: "maria",
-    startDate: new Date(2024, 10, 8),
-    endDate: new Date(2024, 10, 14),
-    status: "in-progress",
-    tags: ["QA", "Testing"],
-    description: "Setting up E2E test suite",
-  },
-  {
-    id: "13",
-    title: "Performance optimization",
-    worker: "Maria Garcia",
-    workerId: "maria",
-    startDate: new Date(2024, 10, 15),
-    endDate: new Date(2024, 10, 21),
-    status: "pending",
-    tags: ["QA", "Performance"],
-    description: "Optimizing bundle size and load times",
-  },
-];
 export function TimelineTab() {
+  const { currentProjectId } = useProjectContext();
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>("week");
   const [selectedWorker, setSelectedWorker] = useState<string>("all");
+  const [tasks, setTasks] = useState<TimelineTask[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
-  const workers = Array.from(new Set(mockTasks.map((t) => t.worker)));
+  useEffect(() => {
+    async function fetchTasks() {
+      if (!currentProjectId) {
+        setTasks([]);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await getProjectTasks(currentProjectId);
+        
+        // Transform API tasks to TimelineTask format
+        const timelineTasks: TimelineTask[] = response.tasks.map((task) => {
+          const startDate = new Date(task.created_at);
+          const endDate = task.completed_at 
+            ? new Date(task.completed_at)
+            : new Date(task.updated_at);
+          
+          // Map status to TimelineTask status
+          let status: "completed" | "in-progress" | "pending" = "pending";
+          if (task.status === "completed") {
+            status = "completed";
+          } else if (task.status === "in_progress" || task.status === "running") {
+            status = "in-progress";
+          }
+
+          // Extract tags from risk_tier or metadata if available
+          const tags: string[] = [];
+          if (task.risk_tier) {
+            tags.push(task.risk_tier);
+          }
+          if (task.priority !== null && task.priority !== undefined) {
+            tags.push(`Priority ${task.priority}`);
+          }
+
+          return {
+            id: task.task_id,
+            title: task.title,
+            worker: "Unassigned", // TODO: Fetch worker details when worker assignment API is available
+            workerId: "unassigned",
+            startDate,
+            endDate,
+            status,
+            tags,
+            description: task.description ?? undefined,
+          };
+        });
+
+        setTasks(timelineTasks);
+      } catch (err) {
+        console.error("Failed to fetch project tasks:", err);
+        setError(err instanceof Error ? err : new Error("Failed to load tasks"));
+        setTasks([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchTasks();
+  }, [currentProjectId]);
+
+  const workers = Array.from(new Set(tasks.map((t) => t.worker)));
   const filteredTasks =
     selectedWorker === "all"
-      ? mockTasks
-      : mockTasks.filter((t) => t.worker === selectedWorker);
+      ? tasks
+      : tasks.filter((t) => t.worker === selectedWorker);
 
   const handleZoomIn = () => {
     const levels: ZoomLevel[] = ["quarter", "month", "week", "day"];
@@ -262,7 +174,15 @@ export function TimelineTab() {
 
       {/* Gantt Chart */}
       <div className={styles.ganttContainer}>
-        <GanttChart tasks={filteredTasks} zoomLevel={zoomLevel} />
+        {isLoading ? (
+          <div className={styles.loadingMessage}>Loading timeline...</div>
+        ) : error ? (
+          <div className={styles.errorMessage}>Error loading timeline: {error.message}</div>
+        ) : filteredTasks.length === 0 ? (
+          <div className={styles.emptyMessage}>No tasks found for this project.</div>
+        ) : (
+          <GanttChart tasks={filteredTasks} zoomLevel={zoomLevel} />
+        )}
       </div>
     </div>
   );

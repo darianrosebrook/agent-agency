@@ -5,126 +5,67 @@ import { gsap } from "gsap";
 import {
   CheckCircle2,
   MoreVertical,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { useGSAPNumberAnimation } from "../hooks/useGSAPAnimation";
+import { getTasksStats, type TasksStats } from "../lib/api/tasks";
 import styles from "./RadialTaskProgress.module.scss";
-
-interface Project {
-  id: number;
-  title: string;
-  description: string;
-  progress: number;
-  status: string;
-  date: string;
-  estimatedDate: string;
-}
 
 interface RadialTaskProgressProps {
   totalSegments?: number;
 }
 
-// TODO: Replace hardcoded project data with data from v3 database with the following requirements:
-// 1. Recent projects fetching: Load recent projects sorted by last accessed
-//    - Data source: GET /api/projects?limit=6&sort=last_accessed endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
-//    - Database table: PostgreSQL `projects` table
-//    - Include project metadata: id, title, description, progress, status, dates
-// 2. Progress calculation: Calculate project progress from task completion
-//    - Aggregate completed tasks vs total tasks per project
-//    - Calculate progress percentage for display
-// 3. Data transformation: Format API response for component
-//    - Map API response to Project array with required fields
-//    - Handle date formatting and status mapping
-// Sample data for 6 recent projects
-const recentProjects: Project[] = [
-  {
-    id: 1,
-    title: "E-Commerce Platform",
-    description:
-      "Building a modern shopping experience with AI recommendations",
-    progress: 78,
-    status: "On Track",
-    date: "March 11, 2025",
-    estimatedDate: "March 28, 2025",
-  },
-  {
-    id: 2,
-    title: "Mobile App Redesign",
-    description: "Complete UI/UX overhaul for iOS and Android applications",
-    progress: 45,
-    status: "In Progress",
-    date: "March 10, 2025",
-    estimatedDate: "April 5, 2025",
-  },
-  {
-    id: 3,
-    title: "Data Analytics Dashboard",
-    description: "Real-time analytics with custom visualizations and reporting",
-    progress: 92,
-    status: "Nearly Done",
-    date: "March 8, 2025",
-    estimatedDate: "March 15, 2025",
-  },
-  {
-    id: 4,
-    title: "API Integration Suite",
-    description: "Connecting third-party services for seamless data flow",
-    progress: 62,
-    status: "Normal",
-    date: "March 7, 2025",
-    estimatedDate: "March 22, 2025",
-  },
-  {
-    id: 5,
-    title: "Security Audit System",
-    description: "Automated vulnerability scanning and compliance checking",
-    progress: 34,
-    status: "Early Stage",
-    date: "March 5, 2025",
-    estimatedDate: "April 12, 2025",
-  },
-  {
-    id: 6,
-    title: "Cloud Migration",
-    description: "Transitioning legacy systems to modern cloud infrastructure",
-    progress: 88,
-    status: "On Track",
-    date: "March 3, 2025",
-    estimatedDate: "March 18, 2025",
-  },
-];
-
 export function RadialTaskProgress({
   totalSegments = 24,
 }: RadialTaskProgressProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const currentProject = recentProjects[currentIndex];
+  const [taskStats, setTaskStats] = useState<TasksStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    async function fetchTaskStats() {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const stats = await getTasksStats();
+        setTaskStats(stats);
+      } catch (err) {
+        console.error("Failed to fetch task stats:", err);
+        setError(err instanceof Error ? err : new Error("Failed to load task statistics"));
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchTaskStats();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchTaskStats, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Calculate overall task completion percentage
+  const overallProgress = taskStats && taskStats.total > 0
+    ? Math.round((taskStats.completed / taskStats.total) * 100)
+    : 0;
+
+  // Determine status based on completion rate
+  const getStatus = (progress: number): string => {
+    if (progress >= 90) return "Nearly Done";
+    if (progress >= 70) return "On Track";
+    if (progress >= 50) return "In Progress";
+    if (progress >= 30) return "Normal";
+    return "Early Stage";
+  };
+
+  const status = getStatus(overallProgress);
   const svgRef = useRef<SVGSVGElement>(null);
   const segmentsRef = useRef<SVGPathElement[]>([]);
 
   // Use GSAP for smooth number animation
   const animatedProgress = useGSAPNumberAnimation(
-    currentProject.progress,
+    overallProgress,
     0.8,
     "power2.out"
   );
-
-  const handlePrevious = () => {
-    setCurrentIndex((prev) =>
-      prev === 0 ? recentProjects.length - 1 : prev - 1
-    );
-  };
-
-  const handleNext = () => {
-    setCurrentIndex((prev) =>
-      prev === recentProjects.length - 1 ? 0 : prev + 1
-    );
-  };
-
-  const handleDotClick = (index: number) => {
-    setCurrentIndex(index);
-  };
 
   const completedSegments = Math.round(
     (animatedProgress / 100) * totalSegments
@@ -302,25 +243,22 @@ export function RadialTaskProgress({
               <div className={styles.detailsHeader}>
                 <div className={styles.detailsTitleContainer}>
                   <h3 className={styles.detailsTitle}>
-                    {currentProject.title}
+                    Overall Task Progress
                   </h3>
                   <p className={styles.detailsDescription}>
-                    {currentProject.description}
+                    {isLoading 
+                      ? "Loading task statistics..." 
+                      : error 
+                      ? `Error: ${error.message}`
+                      : taskStats
+                      ? `Total: ${taskStats.total} tasks`
+                      : "No data available"}
                   </p>
                 </div>
                 <div className={styles.detailsActions}>
-                  {/* Carousel arrows */}
-                  <button
-                    onClick={handlePrevious}
-                    className={styles.actionButton}
-                  >
-                    <ChevronLeft className={styles.actionButtonIcon} />
-                  </button>
-                  <button onClick={handleNext} className={styles.actionButton}>
-                    <ChevronRight className={styles.actionButtonIcon} />
-                  </button>
                   <button
                     className={`${styles.actionButton} ${styles.actionButtonShrink}`}
+                    aria-label="More options"
                   >
                     <MoreVertical className={styles.actionButtonIcon} />
                   </button>
@@ -331,55 +269,49 @@ export function RadialTaskProgress({
               <div className={styles.detailsDivider} />
 
               {/* Info grid */}
-              <div className={styles.infoGrid}>
-                <div className={styles.infoItem}>
-                  <span className={styles.infoLabel}>Status:</span>
-                  <div className={styles.infoValueGroup}>
+              {taskStats && !isLoading && !error ? (
+                <div className={styles.infoGrid}>
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>Status:</span>
+                    <div className={styles.infoValueGroup}>
+                      <span className={styles.infoValue}>
+                        {status}
+                      </span>
+                      <CheckCircle2 className={styles.infoIcon} />
+                    </div>
+                  </div>
+
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>Progress:</span>
                     <span className={styles.infoValue}>
-                      {currentProject.status}
+                      {animatedProgress}%
                     </span>
-                    <CheckCircle2 className={styles.infoIcon} />
+                  </div>
+
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>Completed:</span>
+                    <span className={styles.infoValue}>
+                      {taskStats.completed}
+                    </span>
+                  </div>
+
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>In Progress:</span>
+                    <span className={styles.infoValue}>
+                      {taskStats.in_progress}
+                    </span>
                   </div>
                 </div>
-
-                <div className={styles.infoItem}>
-                  <span className={styles.infoLabel}>Progress:</span>
-                  <span className={styles.infoValue}>
-                    {currentProject.progress}%
-                  </span>
+              ) : (
+                <div className={styles.infoGrid}>
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>
+                      {isLoading ? "Loading..." : "No data"}
+                    </span>
+                  </div>
                 </div>
-
-                <div className={styles.infoItem}>
-                  <span className={styles.infoLabel}>Date:</span>
-                  <span className={styles.infoValue}>
-                    {currentProject.date}
-                  </span>
-                </div>
-
-                <div className={styles.infoItem}>
-                  <span className={styles.infoLabel}>ETR:</span>
-                  <span className={styles.infoValue}>
-                    {currentProject.estimatedDate}
-                  </span>
-                </div>
-              </div>
+              )}
             </div>
-          </div>
-
-          {/* Carousel dots at the bottom */}
-          <div className={styles.carouselDots}>
-            {recentProjects.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => handleDotClick(index)}
-                className={`${styles.carouselDot} ${
-                  index === currentIndex
-                    ? styles.carouselDotActive
-                    : styles.carouselDotInactive
-                }`}
-                aria-label={`Go to project ${index + 1}`}
-              />
-            ))}
           </div>
         </div>
       </div>

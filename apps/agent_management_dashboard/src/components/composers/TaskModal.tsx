@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { listProjects, type ProjectListItem } from "../../lib/api/projects";
 import {
   X,
   ChevronDown,
@@ -49,6 +50,8 @@ export function NewTaskModal({
   const [assignees, setAssignees] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [project, setProject] = useState("");
+  const [projects, setProjects] = useState<ProjectListItem[]>([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [subtasks, setSubtasks] = useState<
@@ -60,6 +63,25 @@ export function NewTaskModal({
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [showPriorityMenu, setShowPriorityMenu] = useState(false);
   const [showProjectMenu, setShowProjectMenu] = useState(false);
+
+  useEffect(() => {
+    async function fetchProjects() {
+      if (showProjectMenu && projects.length === 0) {
+        setIsLoadingProjects(true);
+        try {
+          const response = await listProjects();
+          setProjects(response.projects);
+        } catch (error) {
+          console.error("Failed to fetch projects:", error);
+          setProjects([]);
+        } finally {
+          setIsLoadingProjects(false);
+        }
+      }
+    }
+
+    fetchProjects();
+  }, [showProjectMenu, projects.length]);
 
   const handleCreate = () => {
     if (title.trim()) {
@@ -291,32 +313,29 @@ export function NewTaskModal({
                 </button>
                 {showProjectMenu && (
                   <div className={cn(styles.menuDropdown, styles.projectMenu)}>
-                    {/* TODO: Replace hardcoded project list with projects from v3 database with the following requirements:
-                    // 1. Project list fetching: Load available projects from database
-                    //    - Data source: GET /api/projects endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
-                    //    - Database table: PostgreSQL `projects` table
-                    //    - Include project names, IDs, and status for display
-                    // 2. Project selection: Allow selecting project for task assignment
-                    //    - Store selected project ID when task is created
-                    //    - Update task.project_id when project is selected
-                    //    - Support filtering projects by current user's access
-                    // 3. Project display: Show project name and status indicator
-                    //    - Display project name in dropdown
-                    //    - Show status indicator (green dot for active projects)
-                    //    - Handle empty project list gracefully */}
-                    {["Spotify", "Netflix", "Amazon", "Google"].map((proj) => (
-                      <button
-                        key={proj}
-                        onClick={() => {
-                          setProject(proj);
-                          setShowProjectMenu(false);
-                        }}
-                        className={styles.projectMenuItem}
-                      >
-                        <span className={styles.projectIndicator}></span>
-                        {proj}
-                      </button>
-                    ))}
+                    {isLoadingProjects ? (
+                      <div className={styles.projectMenuItem}>
+                        <span>Loading projects...</span>
+                      </div>
+                    ) : projects.length === 0 ? (
+                      <div className={styles.projectMenuItem}>
+                        <span>No projects available</span>
+                      </div>
+                    ) : (
+                      projects.map((proj) => (
+                        <button
+                          key={proj.project_id}
+                          onClick={() => {
+                            setProject(proj.name);
+                            setShowProjectMenu(false);
+                          }}
+                          className={styles.projectMenuItem}
+                        >
+                          <span className={styles.projectIndicator}></span>
+                          {proj.name}
+                        </button>
+                      ))
+                    )}
                   </div>
                 )}
               </div>

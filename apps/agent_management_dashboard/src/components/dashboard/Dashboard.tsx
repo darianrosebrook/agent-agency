@@ -49,6 +49,11 @@ const ServerEfficiencyChart = lazy(() =>
     default: mod.ServerEfficiencyChart,
   }))
 );
+const AgentActivityChart = lazy(() =>
+  import("../AgentActivityChart").then((mod) => ({
+    default: mod.AgentActivityChart,
+  }))
+);
 
 const ChartSkeleton = () => (
   <div className={styles.chartSkeleton}>
@@ -191,6 +196,17 @@ export function Dashboard() {
           <Suspense fallback={<ChartSkeleton />}>
             <ServerEfficiencyChart
               title="Server Efficiency Analysis"
+            />
+          </Suspense>
+        </div>
+
+        {/* Agent Activity Chart - spans 3 rows and 12 columns */}
+        <div className={cn(styles.colSpan12, styles.rowSpan3)}>
+          <Suspense fallback={<ChartSkeleton />}>
+            <AgentActivityChart
+              title="Agent Activity"
+              subtitle="Activity over the last 7 days"
+              days={7}
             />
           </Suspense>
         </div>

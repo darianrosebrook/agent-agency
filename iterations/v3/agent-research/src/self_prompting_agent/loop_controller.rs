@@ -11,6 +11,9 @@ use tracing::{info, warn};
 use crate::self_prompting_agent::evaluation::EvaluationOrchestrator;
 use crate::self_prompting_agent::models::ModelRegistry;
 use crate::self_prompting_agent::prompting_types::{Task, TaskResult, SelfPromptingAgentError};
+use crate::self_prompting_agent::learning_bridge::{LearningBridge, LearningSignal};
+use crate::self_prompting_agent::rl_signals::RLTrainer;
+use chrono::Utc;
 
 /// Self-prompting loop controller
 pub struct SelfPromptingLoop {
@@ -56,6 +59,8 @@ impl SelfPromptingLoop {
         task: Task,
         model_registry: Arc<ModelRegistry>,
         evaluator: Arc<EvaluationOrchestrator>,
+        learning_bridge: Option<Arc<LearningBridge>>,
+        rl_trainer: Option<Arc<RLTrainer>>,
     ) -> Result<SelfPromptingResult, Box<dyn std::error::Error + Send + Sync>> {
         let mut events = Vec::new();
         let mut current_task = task.clone();
@@ -99,6 +104,33 @@ impl SelfPromptingLoop {
             if score > best_score {
                 best_score = score;
                 best_result = Some(result.clone());
+            }
+
+            // Send learning signals on task completion
+            if let Some(ref learning_bridge) = learning_bridge {
+                let success = evaluation.score >= 0.9;
+                let signal = LearningSignal {
+                    signal_type: if success { "task_success" } else { "task_failure" }.to_string(),
+                    value: if success { 1.0 } else { 0.0 },
+                    context: format!("{:?}_code_fixing_iteration_{}", current_task.task_type, iteration),
+                    timestamp: Utc::now(),
+                };
+                
+                if let Err(e) = learning_bridge.process_signal(signal).await {
+                    warn!("Failed to send learning signal: {}", e);
+                }
+
+                // Train RL trainer if enabled
+                if let Some(ref trainer) = rl_trainer {
+                    let state = format!("{:?}_code_fixing", current_task.task_type);
+                    let action = format!("iteration_{}_strategy", iteration);
+                    let reward = if success { 1.0 } else { 0.0 };
+                    let next_state = format!("{:?}_code_fixing_result_{}", current_task.task_type, if success { "success" } else { "failure" });
+                    
+                    if let Err(e) = trainer.train_on_experience(&state, &action, reward, &next_state).await {
+                        warn!("Failed to train RL on experience: {}", e);
+                    }
+                }
             }
 
             // Check if we should continue iterating

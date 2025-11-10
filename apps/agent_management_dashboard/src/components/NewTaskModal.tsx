@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { listProjects, type ProjectListItem } from "../../lib/api/projects";
 import {
   X,
   ChevronDown,
@@ -49,6 +50,8 @@ export function NewTaskModal({
   const [assignees, setAssignees] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [project, setProject] = useState("");
+  const [projects, setProjects] = useState<ProjectListItem[]>([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [subtasks, setSubtasks] = useState<
@@ -60,6 +63,25 @@ export function NewTaskModal({
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [showPriorityMenu, setShowPriorityMenu] = useState(false);
   const [showProjectMenu, setShowProjectMenu] = useState(false);
+
+  useEffect(() => {
+    async function fetchProjects() {
+      if (showProjectMenu && projects.length === 0) {
+        setIsLoadingProjects(true);
+        try {
+          const response = await listProjects();
+          setProjects(response.projects);
+        } catch (error) {
+          console.error("Failed to fetch projects:", error);
+          setProjects([]);
+        } finally {
+          setIsLoadingProjects(false);
+        }
+      }
+    }
+
+    fetchProjects();
+  }, [showProjectMenu, projects.length]);
 
   const handleCreate = () => {
     if (title.trim()) {
@@ -274,20 +296,29 @@ export function NewTaskModal({
                 </button>
                 {showProjectMenu && (
                   <div className={styles.dropdownMenu} style={{ minWidth: '10rem' }}>
-                    {/* TODO: Replace hardcoded project list with projects from v3 database (see TaskModal.tsx for detailed requirements) */}
-                    {["Spotify", "Netflix", "Amazon", "Google"].map((proj) => (
-                      <button
-                        key={proj}
-                        onClick={() => {
-                          setProject(proj);
-                          setShowProjectMenu(false);
-                        }}
-                        className={cn(styles.dropdownMenuItem, styles.dropdownMenuItemPriority)}
-                      >
-                        <span className={styles.projectIndicator}></span>
-                        {proj}
-                      </button>
-                    ))}
+                    {isLoadingProjects ? (
+                      <div className={cn(styles.dropdownMenuItem, styles.dropdownMenuItemPriority)}>
+                        <span>Loading projects...</span>
+                      </div>
+                    ) : projects.length === 0 ? (
+                      <div className={cn(styles.dropdownMenuItem, styles.dropdownMenuItemPriority)}>
+                        <span>No projects available</span>
+                      </div>
+                    ) : (
+                      projects.map((proj) => (
+                        <button
+                          key={proj.project_id}
+                          onClick={() => {
+                            setProject(proj.name);
+                            setShowProjectMenu(false);
+                          }}
+                          className={cn(styles.dropdownMenuItem, styles.dropdownMenuItemPriority)}
+                        >
+                          <span className={styles.projectIndicator}></span>
+                          {proj.name}
+                        </button>
+                      ))
+                    )}
                   </div>
                 )}
               </div>

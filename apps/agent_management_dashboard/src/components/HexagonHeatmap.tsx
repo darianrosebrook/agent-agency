@@ -1,10 +1,12 @@
-import { useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "./primitives/tooltip";
+import { listTasks, type Task } from "../lib/api/tasks";
+import { getAgents, type Agent } from "../lib/api/agents";
 import styles from "./HexagonHeatmap.module.scss";
 
 type Axial = { q: number; r: number };
@@ -88,64 +90,81 @@ export function HexagonHeatmap({
   radius = 12,
   hexSize = 16,
 }: HexagonHeatmapProps) {
-  // TODO: Replace hardcoded agent names and generated completion percentages with real task and agent data from v3 database with the following requirements:
-  // 1. Agent data fetching: Load configured AI agents from database
-  //    - Data source: GET /api/agents endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
-  //    - Database table: PostgreSQL `agents` table
-  //    - Include agent names, IDs, and status information
-  // 2. Task completion data: Fetch task completion statistics by agent
-  //    - Data source: GET /api/tasks/stats/by-agent endpoint aggregating task completion from PostgreSQL `tasks` and `worker_assignments` tables
-  //    - Calculate completion percentages per agent based on assigned tasks
-  //    - Include task names and IDs for tooltip display
-  // 3. Hexagon mapping: Map tasks to hexagon grid positions
-  //    - Use task IDs or sequential mapping to assign hexagon coordinates
-  //    - Preserve visual heatmap pattern while using real completion data
-  // 4. Real-time updates: Refresh data when tasks are updated
-  //    - Subscribe to task update events or poll for changes
-  //    - Update hexagon colors based on latest completion percentages
-  // Generate hexagon spiral data with completion percentages
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const [tasksData, agentsData] = await Promise.all([
+          listTasks(),
+          getAgents(),
+        ]);
+        setTasks(tasksData.tasks);
+        setAgents(agentsData);
+      } catch (err) {
+        console.error("Failed to fetch tasks and agents:", err);
+        setError(err instanceof Error ? err : new Error("Failed to load data"));
+        setTasks([]);
+        setAgents([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Generate hexagon spiral data with real task completion percentages
   const hexagons = useMemo(() => {
     const center: Axial = { q: 0, r: 0 };
     const cells = hexSpiral(center, radius);
-    const agents = ["Agent Alpha", "Agent Beta", "Agent Gamma", "Agent Delta"];
+    
+    // Create agent lookup map
+    const agentMap = new Map<string, Agent>();
+    agents.forEach((agent) => {
+      agentMap.set(agent.id, agent);
+    });
 
+    // Calculate completion percentage for each task
+    const getTaskCompletion = (task: Task): number => {
+      if (task.status === "completed") return 100;
+      if (task.status === "failed" || task.status === "cancelled") return 0;
+      if (task.status === "running") return 50; // In progress
+      return 0; // Pending
+    };
+
+    // Map tasks to hexagons
     const data: HexagonData[] = cells.map((hex, idx) => {
       const { x, y } = axialToPixel(hex, hexSize);
-
-      // Calculate distance from center (0,0) using axial coordinates
-      const distance =
-        (Math.abs(hex.q) + Math.abs(hex.r) + Math.abs(hex.q + hex.r)) / 2;
-
-      // Create a bias where center hexagons have higher completion
-      // Distance ranges from 0 (center) to radius (outer edge)
-      const distanceBias = 1 - distance / radius;
-
-      // Generate completion percentage with noise patterns
-      const noise = (Math.sin(hex.q * 2.5) * Math.cos(hex.r * 2.5) + 1) / 2;
-      const noise2 = (Math.sin(hex.q * 0.8 + hex.r * 1.2) + 1) / 2;
-      const baseNoise = noise * 0.6 + noise2 * 0.4;
-
-      // Apply distance bias: center gets 60-100%, edges get 0-60%
-      const biasedCompletion = (distanceBias * 0.5 + baseNoise * 0.5) * 100;
-      const completion = Math.max(
-        0,
-        Math.min(100, Math.round(biasedCompletion))
-      );
+      
+      // Get task for this hexagon (or use empty if we run out of tasks)
+      const task = tasks[idx] ?? null;
+      const completion = task ? getTaskCompletion(task) : 0;
+      const agentId = task?.worker_id || null;
+      const agent = agentId ? agentMap.get(agentId) : null;
 
       return {
-        id: `hex-${hex.q}-${hex.r}`,
+        id: task?.id ?? `hex-${hex.q}-${hex.r}`,
         q: hex.q,
         r: hex.r,
         x,
         y,
         completion,
-        taskName: `Task ${idx + 1}`,
-        agent: agents[Math.floor(Math.random() * agents.length)],
+        taskName: task?.title ?? `Task ${idx + 1}`,
+        agent: agent?.name ?? "Unassigned",
       };
     });
 
     return data;
-  }, [radius, hexSize]);
+  }, [radius, hexSize, tasks, agents]);
 
   // Get color based on completion percentage
   const getHexColor = (completion: number): string => {
@@ -193,7 +212,13 @@ export function HexagonHeatmap({
           <div className={styles.header}>
             <h3 className={styles.title}>Task Completion Heatmap</h3>
             <p className={styles.subtitle}>
-              {totalTasks} tasks tracked across AI agents
+              {isLoading
+                ? "Loading tasks and agents..."
+                : error
+                ? `Error: ${error.message}`
+                : tasks.length > 0
+                ? `${tasks.length} tasks tracked across ${agents.length} AI agents`
+                : "No tasks available"}
             </p>
           </div>
 

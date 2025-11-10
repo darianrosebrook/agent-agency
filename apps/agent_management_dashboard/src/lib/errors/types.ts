@@ -144,8 +144,31 @@ function mapErrorCode(backendCode: string): ErrorCode {
 }
 
 /**
+ * Safely show toast notification
+ * Uses lazy import to avoid circular dependencies
+ */
+function showErrorToast(message: string, code: ErrorCode): void {
+  try {
+    // Lazy import to avoid circular dependency with toast utilities
+    import('../utils/toast').then(({ toastError }) => {
+      // Create a simple error object for toastError
+      const errorObj = new Error(message);
+      (errorObj as { code?: ErrorCode }).code = code;
+      toastError(errorObj);
+    }).catch(() => {
+      // If toast import fails, fall back to console.error
+      console.error(`[${code}]`, message);
+    });
+  } catch {
+    // If dynamic import is not available, use console.error
+    console.error(`[${code}]`, message);
+  }
+}
+
+/**
  * Safely create an AppError instance
  * Handles cases where AppError might not be available (module loading issues)
+ * Shows toast notification as fallback for better user experience
  */
 function createAppError(
   code: ErrorCode,
@@ -156,12 +179,15 @@ function createAppError(
     return new AppError(code, message, details);
   } catch (err) {
     // Fallback if AppError constructor fails (should not happen, but safety check)
-    const fallbackError = new Error(
-      message ?? ErrorMessages[code]
-    ) as unknown as AppError;
+    const errorMessage = message ?? ErrorMessages[code];
+    
+    // Show toast notification for user visibility
+    showErrorToast(errorMessage, code);
+    
+    const fallbackError = new Error(errorMessage) as unknown as AppError;
     fallbackError.code = code;
     fallbackError.details = details;
-    fallbackError.getUserMessage = () => message ?? ErrorMessages[code];
+    fallbackError.getUserMessage = () => errorMessage;
     fallbackError.isRetryable = () =>
       [
         ErrorCode.NETWORK_ERROR,

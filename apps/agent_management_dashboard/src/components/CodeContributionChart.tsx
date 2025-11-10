@@ -32,14 +32,9 @@ export function CodeContributionChart({
   days = 30,
 }: CodeContributionChartProps) {
   const [data, setData] = useState<DataPoint[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     async function fetchData() {
-      setIsLoading(true);
-      setError(null);
-
       try {
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - days);
@@ -104,10 +99,7 @@ export function CodeContributionChart({
         setData(chartData.length > 0 ? chartData : generateFallbackData());
       } catch (err) {
         console.error("Failed to fetch contribution data:", err);
-        setError(err instanceof Error ? err : new Error("Failed to load contribution data"));
         setData(generateFallbackData());
-      } finally {
-        setIsLoading(false);
       }
     }
 

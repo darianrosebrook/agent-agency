@@ -1,6 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useAnimatedValue } from "../hooks/useAnimatedValue";
+import { getTasksStats, type TasksStats } from "../lib/api/tasks";
 import styles from "./TaskCompletionGauge.module.scss";
 
 interface TaskCompletionGaugeProps {
@@ -12,17 +14,30 @@ export function TaskCompletionGauge({
   title = "Task Balance",
   subtitle = "Completion vs Creation Rate",
 }: TaskCompletionGaugeProps) {
-  // TODO: Replace mock data with aggregated task statistics from v3 database with the following requirements:
-  // 1. Task statistics fetching: Load aggregated task counts by status
-  //    - Data source: GET /api/tasks/stats endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
-  //    - Database table: PostgreSQL `tasks` table with aggregation queries
-  //    - Include counts for created, in-progress, and completed tasks
-  // 2. Completion rate calculation: Calculate completion vs creation rate improvement
-  //    - Compare current month completion rate to previous month
-  //    - Calculate percentage improvement for display
-  // 3. Data transformation: Format API response for gauge component
-  //    - Map API response to task counts (created, inProgress, completed)
-  //    - Calculate percentages for each section of the gauge
+  const [taskStats, setTaskStats] = useState<TasksStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    async function fetchTaskStats() {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const stats = await getTasksStats();
+        setTaskStats(stats);
+      } catch (err) {
+        console.error("Failed to fetch task stats:", err);
+        setError(err instanceof Error ? err : new Error("Failed to load task statistics"));
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchTaskStats();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchTaskStats, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Color constants matching gauge colors
   const COLORS = {
@@ -31,13 +46,17 @@ export function TaskCompletionGauge({
     completed: "#e0e7ff", // indigo-100 - light indigo for completed tasks
   };
 
-  // Mock data - showing we're completing 18% more tasks than creating
-  const completionRate = 18; // Percentage improvement over last month
+  // Calculate completion rate improvement (simplified - using completion_rate from API)
+  // For now, we'll use the completion_rate directly as a positive indicator
+  // TODO: Implement month-over-month comparison when historical data endpoint is available
+  const completionRate = taskStats?.completion_rate 
+    ? Math.round(taskStats.completion_rate * 100) 
+    : 0;
 
-  // Task distribution
-  const created = 35;
-  const inProgress = 42;
-  const completed = 68;
+  // Task distribution from API stats
+  const created = taskStats?.pending ?? 0;
+  const inProgress = taskStats?.in_progress ?? 0;
+  const completed = taskStats?.completed ?? 0;
 
   // Animate task counts
   const animatedCreated = useAnimatedValue(created);
@@ -122,6 +141,39 @@ export function TaskCompletionGauge({
 
     return dashes;
   };
+
+  // Show loading or error state
+  if (isLoading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.innerContainer}>
+          <div className={styles.content}>
+            <div className={styles.header}>
+              <h3 className={styles.title}>{title}</h3>
+              <p className={styles.subtitle}>Loading task statistics...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !taskStats) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.innerContainer}>
+          <div className={styles.content}>
+            <div className={styles.header}>
+              <h3 className={styles.title}>{title}</h3>
+              <p className={styles.subtitle}>
+                {error ? `Error: ${error.message}` : "No data available"}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>

@@ -6,6 +6,7 @@ import { ThemeProvider } from "next-themes";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Sidebar as NavigationSidebar } from "@/components/dashboard/NavigationSidebar";
 import { Toaster } from "@/components/primitives/sonner";
+import { ProjectProvider } from "@/components/ProjectContext";
 import { polyfillClassNameSplit } from "@/lib/utils/className-fix";
 import styles from "./providers.module.scss";
 
@@ -24,7 +25,11 @@ export function Providers({ children }: { children: ReactNode }) {
 
   // Prevent hydration mismatch by not rendering until mounted
   if (!mounted) {
-    return <div className={styles.providersContainer}>{children}</div>;
+    return (
+      <ProjectProvider>
+        <div className={styles.providersContainer}>{children}</div>
+      </ProjectProvider>
+    );
   }
 
   return (
@@ -34,13 +39,15 @@ export function Providers({ children }: { children: ReactNode }) {
       enableSystem
       disableTransitionOnChange
     >
-      <ErrorBoundary>
-        <div className={styles.providersContainer}>
-          <NavigationSidebar />
-          <main className={styles.main}>{children}</main>
-        </div>
-        <Toaster />
-      </ErrorBoundary>
+      <ProjectProvider>
+        <ErrorBoundary>
+          <div className={styles.providersContainer}>
+            <NavigationSidebar />
+            <main className={styles.main}>{children}</main>
+          </div>
+          <Toaster />
+        </ErrorBoundary>
+      </ProjectProvider>
     </ThemeProvider>
   );
 }

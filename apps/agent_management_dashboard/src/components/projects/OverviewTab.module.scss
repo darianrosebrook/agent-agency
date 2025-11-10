@@ -47,4 +47,19 @@
   background-color: $color-dark-bg-secondary;
   padding: $spacing-5;
   overflow-y: auto;
+  position: relative;
+}
+
+.savingIndicator {
+  position: absolute;
+  top: $spacing-4;
+  right: $spacing-4;
+  padding: $spacing-2 $spacing-3;
+  background-color: $color-dark-bg-primary;
+  border: 1px solid $color-neutral-800;
+  border-radius: $border-radius-md;
+  font-family: $font-family-sans;
+  font-size: $font-size-sm;
+  color: $color-gray-400;
+  z-index: 5;
 }

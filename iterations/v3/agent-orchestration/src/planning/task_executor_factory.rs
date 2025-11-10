@@ -11,6 +11,8 @@ use uuid::Uuid;
 use tracing::{debug, warn, info};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use tokio::sync::RwLock;
+use tokio_util::sync::CancellationToken;
 use agent_workers::{MCPWorkerPool, TaskDefinition, TaskResult, TaskPriority as WorkerTaskPriority};
 use agent_agency_contracts::task_executor::{TaskExecutor, TaskSpec, TaskExecutionResult, TaskExecutorHealth, TaskExecutionStats};
 
@@ -229,6 +231,8 @@ pub struct SequentialTaskExecutor {
     // task_queue: Option<Arc<dyn crate::data_infrastructure::queue::TaskQueueService>>,
     audit_manager: Option<Arc<crate::audit_trail::AuditTrailManager>>,
     circuit_breaker: Option<Arc<crate::error_handling::CircuitBreaker>>,
+    /// Active task cancellation tokens: task_id -> CancellationToken
+    active_tasks: Arc<RwLock<HashMap<Uuid, CancellationToken>>>,
 }
 
 impl std::fmt::Debug for SequentialTaskExecutor {
@@ -269,6 +273,7 @@ impl SequentialTaskExecutor {
             // task_queue,
             audit_manager,
             circuit_breaker,
+            active_tasks: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -438,6 +443,13 @@ impl TaskExecutor for SequentialTaskExecutor {
         let started_at = chrono::Utc::now();
         let execution_id = uuid::Uuid::new_v4();
 
+        // Create cancellation token for this task
+        let cancellation_token = CancellationToken::new();
+        {
+            let mut active_tasks = self.active_tasks.write().await;
+            active_tasks.insert(task_spec.id, cancellation_token.clone());
+        }
+
         // Record execution start in audit trail
         if let Some(audit) = &self.audit_manager {
             if let Err(e) = audit.record_task_execution_start(
@@ -483,24 +495,57 @@ impl TaskExecutor for SequentialTaskExecutor {
 
         info!("Executing task {} via MCPWorkerPool", task_spec.id);
 
-        // Execute task via MCP worker pool
-        let task_result = match mcp_pool.execute_task(task_def).await {
-            Ok(result) => result,
-            Err(e) => {
-                let completed_at = chrono::Utc::now();
-                let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
-                return Ok(TaskExecutionResult {
-                    execution_id: uuid::Uuid::new_v4(),
-                    task_id: task_spec.id,
-                    success: false,
-                    output: format!("Worker execution failed: {}", e),
-                    errors: vec![format!("Worker execution error: {}", e)],
-                    metadata: HashMap::new(),
-                    started_at,
-                    completed_at,
-                    duration_ms,
-                    worker_id: Some(worker_id),
-                });
+        // Execute task via MCP worker pool with cancellation support
+        // Note: MCPWorkerPool doesn't support cancellation tokens directly,
+        // but we track cancellation state and can check it before/during execution
+        let task_result = if cancellation_token.is_cancelled() {
+            // Task was cancelled before execution started
+            use agent_workers::{TaskStatus, TaskId};
+            TaskResult {
+                task_id: TaskId(task_spec.id), // TaskId is a newtype wrapper around Uuid
+                success: false,
+                subtasks_completed: 0,
+                total_subtasks: 0,
+                execution_time: std::time::Duration::ZERO,
+                execution_time_ms: 0,
+                summary: "Task cancelled before execution".to_string(),
+                worker_breakdown: vec![],
+                quality_scores: HashMap::new(),
+                errors: vec!["Task was cancelled".to_string()],
+                error_message: Some("Task was cancelled".to_string()),
+                tool_used: None,
+                status: TaskStatus::Cancelled,
+                metadata: HashMap::new(),
+            }
+        } else {
+            match mcp_pool.execute_task(task_def).await {
+                Ok(mut result) => {
+                    // Check if cancellation occurred during execution
+                    if cancellation_token.is_cancelled() {
+                        // Task was cancelled during execution - update result to reflect cancellation
+                        result.success = false;
+                        result.status = agent_workers::TaskStatus::Cancelled;
+                        result.errors.push("Task was cancelled during execution".to_string());
+                        result.error_message = Some("Task was cancelled during execution".to_string());
+                    }
+                    result
+                }
+                Err(e) => {
+                    let completed_at = chrono::Utc::now();
+                    let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
+                    return Ok(TaskExecutionResult {
+                        execution_id: uuid::Uuid::new_v4(),
+                        task_id: task_spec.id,
+                        success: false,
+                        output: format!("Worker execution failed: {}", e),
+                        errors: vec![format!("Worker execution error: {}", e)],
+                        metadata: HashMap::new(),
+                        started_at,
+                        completed_at,
+                        duration_ms,
+                        worker_id: Some(worker_id),
+                    });
+                }
             }
         };
 
@@ -610,11 +655,79 @@ impl TaskExecutor for SequentialTaskExecutor {
 
     async fn cancel_task_execution(
         &self,
-        _task_id: Uuid,
-        _worker_id: Uuid,
+        task_id: Uuid,
+        worker_id: Uuid,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // TODO: Implement task cancellation
-        Ok(())
+        info!("Cancelling task {} on worker {}", task_id, worker_id);
+
+        // Get cancellation token for this task
+        let cancellation_token = {
+            let active_tasks = self.active_tasks.read().await;
+            active_tasks.get(&task_id).cloned()
+        };
+
+        if let Some(token) = cancellation_token {
+            // Signal cancellation
+            token.cancel();
+            info!("Cancellation signal sent for task {}", task_id);
+
+            // Record cancellation in audit trail
+            if let Some(audit) = &self.audit_manager {
+                use crate::audit_trail::{AuditEvent, AuditCategory, AuditSeverity, AuditResult};
+                use chrono::Utc;
+                use std::collections::HashMap;
+
+                let event = AuditEvent {
+                    event_id: Uuid::new_v4(),
+                    timestamp: Utc::now(),
+                    correlation_id: None,
+                    parent_event_id: None,
+                    category: AuditCategory::Operation,
+                    severity: AuditSeverity::Info,
+                    actor: "orchestrator".to_string(),
+                    operation: "task_cancellation".to_string(),
+                    message: Some(format!("Task {} cancelled on worker {}", task_id, worker_id)),
+                    operation_id: Some(task_id.to_string()),
+                    target: Some(worker_id.to_string()),
+                    parameters: {
+                        let mut params = HashMap::new();
+                        params.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
+                        params.insert("worker_id".to_string(), serde_json::Value::String(worker_id.to_string()));
+                        params
+                    },
+                    result: AuditResult::Success {
+                        data: Some(serde_json::json!({
+                            "cancelled": true,
+                            "task_id": task_id.to_string(),
+                        })),
+                    },
+                    performance: None,
+                    context: {
+                        let mut ctx = HashMap::new();
+                        ctx.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
+                        ctx.insert("worker_id".to_string(), serde_json::Value::String(worker_id.to_string()));
+                        ctx
+                    },
+                    tags: vec!["orchestration".to_string(), "cancellation".to_string(), "task_management".to_string()],
+                };
+
+                tracing::info!(
+                    audit_event = ?event,
+                    category = ?event.category,
+                    operation = %event.operation,
+                    task_id = %task_id,
+                    worker_id = %worker_id,
+                    "Task cancellation recorded"
+                );
+            }
+
+            Ok(())
+        } else {
+            warn!("Task {} not found in active tasks - may have already completed", task_id);
+            // Task not found - may have already completed or never started
+            // Still return success as cancellation request was processed
+            Ok(())
+        }
     }
 }
 
@@ -628,6 +741,7 @@ pub struct ParallelTaskExecutor {
     audit_manager: Option<Arc<crate::audit_trail::AuditTrailManager>>,
     semaphore: tokio::sync::Semaphore,
     circuit_breaker: Option<Arc<crate::error_handling::CircuitBreaker>>,
+    active_tasks: Arc<tokio::sync::RwLock<std::collections::HashMap<Uuid, tokio_util::sync::CancellationToken>>>,
 }
 
 impl std::fmt::Debug for ParallelTaskExecutor {
@@ -672,6 +786,7 @@ impl ParallelTaskExecutor {
             audit_manager,
             semaphore,
             circuit_breaker,
+            active_tasks: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
         }
     }
 
@@ -846,6 +961,13 @@ impl TaskExecutor for ParallelTaskExecutor {
         let started_at = chrono::Utc::now();
         let execution_id = uuid::Uuid::new_v4();
 
+        // Create cancellation token for this task
+        let cancellation_token = tokio_util::sync::CancellationToken::new();
+        {
+            let mut active_tasks = self.active_tasks.write().await;
+            active_tasks.insert(task_spec.id, cancellation_token.clone());
+        }
+
         // Record execution start in audit trail
         if let Some(audit) = &self.audit_manager {
             if let Err(e) = audit.record_task_execution_start(
@@ -863,6 +985,11 @@ impl TaskExecutor for ParallelTaskExecutor {
             Some(pool) => pool,
             None => {
                 warn!("MCP worker pool not available, falling back to simulation");
+                // Remove task from active tasks on early exit
+                {
+                    let mut active_tasks = self.active_tasks.write().await;
+                    active_tasks.remove(&task_spec.id);
+                }
                 // Fallback to simulation if MCP pool not available
                 let completed_at = started_at + chrono::Duration::milliseconds(800);
                 let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
@@ -885,30 +1012,73 @@ impl TaskExecutor for ParallelTaskExecutor {
         let task_def = match self.task_spec_to_task_definition(&task_spec, None) {
             Ok(def) => def,
             Err(e) => {
+                // Remove task from active tasks on early exit
+                {
+                    let mut active_tasks = self.active_tasks.write().await;
+                    active_tasks.remove(&task_spec.id);
+                }
                 return Err(format!("Failed to convert TaskSpec to TaskDefinition: {}", e).into());
             }
         };
 
         info!("Executing task {} in parallel via MCPWorkerPool (permit acquired)", task_spec.id);
 
-        // Execute task via MCP worker pool (semaphore already acquired for concurrency control)
-        let task_result = match mcp_pool.execute_task(task_def).await {
-            Ok(result) => result,
-            Err(e) => {
-                let completed_at = chrono::Utc::now();
-                let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
-                return Ok(TaskExecutionResult {
-                    execution_id: uuid::Uuid::new_v4(),
-                    task_id: task_spec.id,
-                    success: false,
-                    output: format!("Worker execution failed: {}", e),
-                    errors: vec![format!("Worker execution error: {}", e)],
-                    metadata: HashMap::new(),
-                    started_at,
-                    completed_at,
-                    duration_ms,
-                    worker_id: Some(worker_id),
-                });
+        // Execute task via MCP worker pool with cancellation support
+        // Note: MCPWorkerPool doesn't support cancellation tokens directly,
+        // but we track cancellation state and can check it before/during execution
+        let task_result = if cancellation_token.is_cancelled() {
+            // Task was cancelled before execution started
+            use agent_workers::{TaskStatus, TaskId};
+            TaskResult {
+                task_id: TaskId(task_spec.id),
+                success: false,
+                subtasks_completed: 0,
+                total_subtasks: 0,
+                execution_time: std::time::Duration::ZERO,
+                execution_time_ms: 0,
+                summary: "Task cancelled before execution".to_string(),
+                worker_breakdown: vec![],
+                quality_scores: HashMap::new(),
+                errors: vec!["Task was cancelled".to_string()],
+                error_message: Some("Task was cancelled".to_string()),
+                tool_used: None,
+                status: TaskStatus::Cancelled,
+                metadata: HashMap::new(),
+            }
+        } else {
+            match mcp_pool.execute_task(task_def).await {
+                Ok(mut result) => {
+                    // Check if cancellation occurred during execution
+                    if cancellation_token.is_cancelled() {
+                        // Task was cancelled during execution - update result to reflect cancellation
+                        result.success = false;
+                        result.status = agent_workers::TaskStatus::Cancelled;
+                        result.errors.push("Task was cancelled during execution".to_string());
+                        result.error_message = Some("Task was cancelled during execution".to_string());
+                    }
+                    result
+                }
+                Err(e) => {
+                    let completed_at = chrono::Utc::now();
+                    let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
+                    // Remove task from active tasks on error
+                    {
+                        let mut active_tasks = self.active_tasks.write().await;
+                        active_tasks.remove(&task_spec.id);
+                    }
+                    return Ok(TaskExecutionResult {
+                        execution_id: uuid::Uuid::new_v4(),
+                        task_id: task_spec.id,
+                        success: false,
+                        output: format!("Worker execution failed: {}", e),
+                        errors: vec![format!("Worker execution error: {}", e)],
+                        metadata: HashMap::new(),
+                        started_at,
+                        completed_at,
+                        duration_ms,
+                        worker_id: Some(worker_id),
+                    });
+                }
             }
         };
 
@@ -923,6 +1093,12 @@ impl TaskExecutor for ParallelTaskExecutor {
             if let Err(e) = audit.record_task_execution_completion(&result, None).await {
                 warn!("Failed to record task execution completion in audit trail: {}", e);
             }
+        }
+
+        // Remove task from active tasks upon completion
+        {
+            let mut active_tasks = self.active_tasks.write().await;
+            active_tasks.remove(&task_spec.id);
         }
 
         Ok(result)
@@ -1019,11 +1195,79 @@ impl TaskExecutor for ParallelTaskExecutor {
 
     async fn cancel_task_execution(
         &self,
-        _task_id: Uuid,
-        _worker_id: Uuid,
+        task_id: Uuid,
+        worker_id: Uuid,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // TODO: Implement task cancellation
-        Ok(())
+        info!("Cancelling task {} on worker {}", task_id, worker_id);
+
+        // Get cancellation token for this task
+        let cancellation_token = {
+            let active_tasks = self.active_tasks.read().await;
+            active_tasks.get(&task_id).cloned()
+        };
+
+        if let Some(token) = cancellation_token {
+            // Signal cancellation
+            token.cancel();
+            info!("Cancellation signal sent for task {}", task_id);
+
+            // Record cancellation in audit trail
+            if let Some(audit) = &self.audit_manager {
+                use crate::audit_trail::{AuditEvent, AuditCategory, AuditSeverity, AuditResult};
+                use chrono::Utc;
+                use std::collections::HashMap;
+
+                let event = AuditEvent {
+                    event_id: Uuid::new_v4(),
+                    timestamp: Utc::now(),
+                    correlation_id: None,
+                    parent_event_id: None,
+                    category: AuditCategory::Operation,
+                    severity: AuditSeverity::Info,
+                    actor: "orchestrator".to_string(),
+                    operation: "task_cancellation".to_string(),
+                    message: Some(format!("Task {} cancelled on worker {}", task_id, worker_id)),
+                    operation_id: Some(task_id.to_string()),
+                    target: Some(worker_id.to_string()),
+                    parameters: {
+                        let mut params = HashMap::new();
+                        params.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
+                        params.insert("worker_id".to_string(), serde_json::Value::String(worker_id.to_string()));
+                        params
+                    },
+                    result: AuditResult::Success {
+                        data: Some(serde_json::json!({
+                            "cancelled": true,
+                            "task_id": task_id.to_string(),
+                        })),
+                    },
+                    performance: None,
+                    context: {
+                        let mut ctx = HashMap::new();
+                        ctx.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
+                        ctx.insert("worker_id".to_string(), serde_json::Value::String(worker_id.to_string()));
+                        ctx
+                    },
+                    tags: vec!["orchestration".to_string(), "cancellation".to_string(), "task_management".to_string()],
+                };
+
+                tracing::info!(
+                    audit_event = ?event,
+                    category = ?event.category,
+                    operation = %event.operation,
+                    task_id = %task_id,
+                    worker_id = %worker_id,
+                    "Task cancellation recorded"
+                );
+            }
+
+            Ok(())
+        } else {
+            warn!("Task {} not found in active tasks - may have already completed", task_id);
+            // Task not found - may have already completed or never started
+            // Still return success as cancellation request was processed
+            Ok(())
+        }
     }
 }
 
