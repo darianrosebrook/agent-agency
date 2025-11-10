@@ -16,6 +16,7 @@ import { ProjectView } from "./ProjectView";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useProjectStore } from "../../lib/stores";
+import { ProjectListSkeleton } from "../compounds";
 import {
   Table,
   TableBody,
@@ -31,6 +32,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import { cn } from "../ui/utils";
+import styles from "./Projects.module.scss";
 
 type SortField = "name" | "createdAt" | "lastAccessed";
 type SortOrder = "asc" | "desc";
@@ -42,6 +45,7 @@ export function Projects() {
     createProject,
     selectProject,
     clearCurrentProject,
+    isLoading,
   } = useProjectStore();
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -153,34 +157,34 @@ export function Projects() {
   // Empty State View
   if (!currentProject && projects.length === 0) {
     return (
-      <div className="p-8">
+      <div className={styles.projectsContainer}>
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 text-gray-300 mb-4">
+        <div className={styles.header}>
+          <div className={styles.headerTop}>
             <FolderPlus className="w-4 h-4" />
             <span className="text-sm">Projects</span>
           </div>
-          <h1 className="text-3xl text-white">Projects</h1>
+          <h1 className={styles.headerTitle}>Projects</h1>
         </div>
 
         {/* Empty State */}
-        <div className="flex items-center justify-center min-h-[500px]">
-          <div className="text-center max-w-3xl w-full">
+        <div className={styles.emptyStateContainer}>
+          <div className={styles.emptyStateContent}>
             {/* Icon as Button */}
-            <div className="mb-6 flex justify-center">
+            <div className={styles.emptyStateIcon}>
               <button
                 onClick={() => setIsNewProjectModalOpen(true)}
-                className="relative group cursor-pointer"
+                className={styles.emptyStateIconButton}
               >
-                <div className="w-32 h-32 bg-[#1a1a1a] border-2 border-gray-800 rounded-3xl flex items-center justify-center group-hover:border-blue-500/50 group-hover:bg-[#1f1f1f] transition-all">
+                <div className={styles.emptyStateIconBox}>
                   <FolderPlus className="w-16 h-16 text-gray-700 group-hover:text-blue-500 transition-colors" />
                 </div>
               </button>
             </div>
 
             {/* Text */}
-            <h2 className="text-2xl text-white mb-3">No projects yet</h2>
-            <p className="text-gray-400 mb-8">
+            <h2 className={styles.emptyStateTitle}>No projects yet</h2>
+            <p className={styles.emptyStateDescription}>
               Create your first project to get started. Projects help you
               organize your work and collaborate with your team.
             </p>
@@ -188,7 +192,7 @@ export function Projects() {
             {/* Create Project Button */}
             <Button
               onClick={() => setIsNewProjectModalOpen(true)}
-              className="bg-blue-600 text-white hover:bg-blue-700"
+              className={styles.newProjectButton}
             >
               <Plus className="w-4 h-4 mr-2" />
               Create Project
@@ -217,20 +221,20 @@ export function Projects() {
 
   // Projects List View (when there are projects but none selected)
   return (
-    <div className="p-8">
+    <div className={styles.projectsContainer}>
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <div className="flex items-center gap-2 text-gray-300 mb-4">
+      <div className={styles.header}>
+        <div className={styles.headerWithButton}>
+          <div className={styles.headerLeft}>
+            <div className={styles.headerTop}>
               <FolderPlus className="w-4 h-4" />
               <span className="text-sm">Projects</span>
             </div>
-            <h1 className="text-3xl text-white">Projects</h1>
+            <h1 className={styles.headerTitle}>Projects</h1>
           </div>
           <Button
             onClick={() => setIsNewProjectModalOpen(true)}
-            className="bg-blue-600 text-white hover:bg-blue-700"
+            className={styles.newProjectButton}
           >
             <Plus className="w-4 h-4 mr-2" />
             New Project
@@ -238,9 +242,9 @@ export function Projects() {
         </div>
 
         {/* Search and Filter Bar */}
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+        <div className={styles.searchFilterBar}>
+          <div className={styles.searchContainer}>
+            <Search className={styles.searchIcon} />
             <Input
               placeholder="Search projects..."
               value={searchQuery}
@@ -250,7 +254,7 @@ export function Projects() {
           </div>
           <Button
             variant="outline"
-            className="bg-[#1a1a1a] border-gray-800 text-gray-300 hover:bg-gray-800 hover:text-gray-100"
+            className={styles.filterButton}
           >
             <Filter className="w-4 h-4 mr-2" />
             Filter
@@ -259,9 +263,9 @@ export function Projects() {
       </div>
 
       {/* Recent Projects */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl text-white flex items-center gap-2">
+      <div className={styles.recentProjectsSection}>
+        <div className={styles.recentProjectsHeader}>
+          <h2 className={styles.recentProjectsTitle}>
             <Clock className="w-5 h-5 text-gray-400" />
             Recent Projects
           </h2>
@@ -276,30 +280,32 @@ export function Projects() {
           )}
         </div>
 
-        {recentProjects.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
+        {isLoading ? (
+          <ProjectListSkeleton count={6} />
+        ) : recentProjects.length === 0 ? (
+          <div className={styles.recentProjectsEmpty}>
             No projects found
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className={styles.recentProjectsGrid}>
             {recentProjects.map((project) => (
               <button
                 key={project.id}
                 onClick={() => handleProjectClick(project.id)}
-                className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-6 text-left hover:bg-[#1f1f1f] hover:border-gray-700 transition-all group"
+                className={styles.projectCard}
               >
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-[#0f0f0f] border border-gray-800 rounded-lg flex items-center justify-center group-hover:border-blue-500/50 transition-colors">
+                <div className={styles.projectCardContent}>
+                  <div className={styles.projectCardIcon}>
                     <FolderPlus className="w-6 h-6 text-gray-600 group-hover:text-blue-500 transition-colors" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-white mb-1 truncate">{project.name}</h3>
+                  <div className={styles.projectCardDetails}>
+                    <h3 className={styles.projectCardName}>{project.name}</h3>
                     {project.summary && (
-                      <p className="text-sm text-gray-500 mb-1 truncate">
+                      <p className={styles.projectCardSummary}>
                         {project.summary}
                       </p>
                     )}
-                    <p className="text-xs text-gray-600">
+                    <p className={styles.projectCardDate}>
                       {formatDate(project.lastAccessed)}
                     </p>
                   </div>
@@ -311,37 +317,37 @@ export function Projects() {
       </div>
 
       {/* All Projects Table */}
-      <div className="mb-8">
-        <h2 className="text-xl text-white mb-4">All Projects</h2>
+      <div className={styles.allProjectsSection}>
+        <h2 className={styles.allProjectsTitle}>All Projects</h2>
 
-        <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg overflow-hidden">
+        <div className={styles.projectsTable}>
           <Table>
             <TableHeader>
-              <TableRow className="border-gray-800 hover:bg-transparent">
+              <TableRow className={cn(styles.tableHeaderRow, "border-gray-800")}>
                 <TableHead
-                  className="text-gray-400 cursor-pointer select-none hover:text-gray-200 transition-colors"
+                  className={styles.tableHeaderCell}
                   onClick={() => handleSort("name")}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className={styles.tableHeaderCellContent}>
                     Name
                     {getSortIcon("name")}
                   </div>
                 </TableHead>
-                <TableHead className="text-gray-400">Summary</TableHead>
+                <TableHead className={styles.tableHeaderCell}>Summary</TableHead>
                 <TableHead
-                  className="text-gray-400 cursor-pointer select-none hover:text-gray-200 transition-colors"
+                  className={styles.tableHeaderCell}
                   onClick={() => handleSort("createdAt")}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className={styles.tableHeaderCellContent}>
                     Created
                     {getSortIcon("createdAt")}
                   </div>
                 </TableHead>
                 <TableHead
-                  className="text-gray-400 cursor-pointer select-none hover:text-gray-200 transition-colors"
+                  className={styles.tableHeaderCell}
                   onClick={() => handleSort("lastAccessed")}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className={styles.tableHeaderCellContent}>
                     Last Accessed
                     {getSortIcon("lastAccessed")}
                   </div>
@@ -349,11 +355,19 @@ export function Projects() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedProjects.length === 0 ? (
-                <TableRow className="hover:bg-transparent border-gray-800">
+              {isLoading ? (
+                <TableRow className={cn(styles.tableRowLoading, "border-gray-800")}>
+                  <TableCell colSpan={4} className="py-8">
+                    <div className="flex items-center justify-center">
+                      <ProjectListSkeleton count={pageSize} />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : paginatedProjects.length === 0 ? (
+                <TableRow className={cn(styles.tableRowLoading, "border-gray-800")}>
                   <TableCell
                     colSpan={4}
-                    className="text-center py-12 text-gray-500"
+                    className={styles.tableEmptyCell}
                   >
                     No projects found
                   </TableCell>
@@ -362,24 +376,24 @@ export function Projects() {
                 paginatedProjects.map((project) => (
                   <TableRow
                     key={project.id}
-                    className="border-gray-800 hover:bg-[#1f1f1f] cursor-pointer transition-colors"
+                    className={cn(styles.tableRow, "border-gray-800")}
                     onClick={() => handleProjectClick(project.id)}
                   >
-                    <TableCell className="text-white">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-[#0f0f0f] border border-gray-800 rounded flex items-center justify-center">
+                    <TableCell className={styles.tableCell}>
+                      <div className={styles.tableCellIcon}>
+                        <div className={styles.tableCellIconBox}>
                           <FolderPlus className="w-4 h-4 text-gray-600" />
                         </div>
                         {project.name}
                       </div>
                     </TableCell>
-                    <TableCell className="text-gray-400 max-w-md truncate">
+                    <TableCell className={styles.tableCellGray}>
                       {project.summary ?? "—"}
                     </TableCell>
-                    <TableCell className="text-gray-400">
+                    <TableCell className={styles.tableCellGray}>
                       {formatDate(project.createdAt)}
                     </TableCell>
-                    <TableCell className="text-gray-400">
+                    <TableCell className={styles.tableCellGray}>
                       {formatDate(project.lastAccessed)}
                     </TableCell>
                   </TableRow>
@@ -390,8 +404,8 @@ export function Projects() {
 
           {/* Pagination Controls */}
           {sortedProjects.length > 0 && (
-            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-800">
-              <div className="flex items-center gap-2 text-sm text-gray-400">
+            <div className={styles.pagination}>
+              <div className={styles.paginationLeft}>
                 <span>Show</span>
                 <Select
                   value={pageSize.toString()}
@@ -400,10 +414,10 @@ export function Projects() {
                     setCurrentPage(1);
                   }}
                 >
-                  <SelectTrigger className="w-20 h-8 bg-[#0f0f0f] border-gray-800 text-gray-300">
+                  <SelectTrigger className={styles.paginationSelect}>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1a1a1a] border-gray-800">
+                  <SelectContent className={styles.paginationSelectContent}>
                     <SelectItem value="5">5</SelectItem>
                     <SelectItem value="10">10</SelectItem>
                     <SelectItem value="20">20</SelectItem>
@@ -416,17 +430,17 @@ export function Projects() {
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className={styles.paginationRight}>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="bg-[#0f0f0f] border-gray-800 text-gray-300 hover:bg-gray-800 hover:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={styles.paginationButton}
                 >
                   Previous
                 </Button>
-                <span className="text-sm text-gray-400">
+                <span className={styles.paginationInfo}>
                   Page {currentPage} of {totalPages}
                 </span>
                 <Button
@@ -434,7 +448,7 @@ export function Projects() {
                   size="sm"
                   onClick={() => setCurrentPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="bg-[#0f0f0f] border-gray-800 text-gray-300 hover:bg-gray-800 hover:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={styles.paginationButton}
                 >
                   Next
                 </Button>

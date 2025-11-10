@@ -223,8 +223,8 @@ export const useProjectStore = create<ProjectState>()(
 
         try {
           const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
-          const data = await apiGet<unknown>(`${apiUrl}/api/projects`, {
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+          const data = await apiGet<unknown>(`${apiUrl}/api/v1/projects`, {
             retry: { maxAttempts: 3, initialDelay: 1000 },
           });
 
@@ -275,9 +275,9 @@ export const useProjectStore = create<ProjectState>()(
 
         try {
           const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
           const data = await apiPost<unknown>(
-            `${apiUrl}/api/projects`,
+            `${apiUrl}/api/v1/projects`,
             validatedRequest
           );
 
@@ -334,9 +334,9 @@ export const useProjectStore = create<ProjectState>()(
 
         try {
           const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
           const data = await apiPatch<unknown>(
-            `${apiUrl}/api/projects/${projectId}`,
+            `${apiUrl}/api/v1/projects/${projectId}`,
             validatedRequest
           );
 
@@ -383,9 +383,9 @@ export const useProjectStore = create<ProjectState>()(
 
         try {
           const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
           const data = await apiPost<unknown>(
-            `${apiUrl}/api/projects/${projectId}/tasks`,
+            `${apiUrl}/api/v1/projects/${projectId}/tasks`,
             validatedTask
           );
 
@@ -454,9 +454,9 @@ export const useProjectStore = create<ProjectState>()(
 
         try {
           const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
           const data = await apiPatch<unknown>(
-            `${apiUrl}/api/projects/${projectId}/tasks/${taskId}`,
+            `${apiUrl}/api/v1/projects/${projectId}/tasks/${taskId}`,
             validatedUpdates
           );
 

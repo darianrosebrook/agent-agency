@@ -1,0 +1,69 @@
+@use '../../styles/tokens' as *;
+
+.carousel {
+  position: relative;
+  width: 100%;
+}
+
+.carouselContent {
+  overflow: hidden;
+}
+
+.carouselItem {
+  min-width: 0;
+  width: 100%;
+  flex-shrink: 0;
+  flex-basis: 100%;
+}
+
+.carouselPrevious {
+  position: absolute;
+  top: 50%;
+  left: $spacing-4;
+  z-index: 10;
+  transform: translateY(-50%);
+}
+
+.carouselNext {
+  position: absolute;
+  top: 50%;
+  right: $spacing-4;
+  z-index: 10;
+  transform: translateY(-50%);
+}
+
+.carouselContentInner {
+  display: flex;
+  margin-left: -$spacing-4;
+
+  &[data-orientation='vertical'] {
+    flex-direction: column;
+    margin-left: 0;
+    margin-top: -$spacing-4;
+  }
+}
+
+.carouselItemInner {
+  padding-left: $spacing-4;
+
+  &[data-orientation='vertical'] {
+    padding-left: 0;
+    padding-top: $spacing-4;
+  }
+}
+
+.carouselPreviousVertical {
+  top: -3rem; // -top-12
+  left: 50%;
+  transform: translateX(-50%) rotate(90deg);
+}
+
+.carouselNextVertical {
+  bottom: -3rem; // -bottom-12
+  left: 50%;
+  right: auto;
+  top: auto;
+  transform: translateX(-50%) rotate(90deg);
+}
+
+

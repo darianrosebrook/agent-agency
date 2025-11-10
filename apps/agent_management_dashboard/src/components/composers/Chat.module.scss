@@ -1,0 +1,316 @@
+@use '../../styles/tokens' as *;
+
+// Prompt Box
+.promptBox {
+  max-width: 42rem; // max-w-2xl
+  margin-inline: auto;
+  width: 100%;
+}
+
+.contextFiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-2;
+  margin-bottom: $spacing-3;
+}
+
+.contextFileBadge {
+  background-color: rgb(31, 41, 55); // bg-gray-800
+  color: oklch(0.95 0 0); // text-gray-100
+  padding-right: $spacing-1;
+  gap: $spacing-2;
+
+  &:hover {
+    background-color: rgb(55, 65, 81); // hover:bg-gray-700
+  }
+}
+
+.contextFileRemove {
+  &:hover {
+    background-color: rgb(75, 85, 99); // hover:bg-gray-600
+    border-radius: 9999px; // rounded-full
+    padding: 0.125rem; // p-0.5
+  }
+}
+
+.promptContainer {
+  background-color: #1a1a1a;
+  position: relative;
+  border-radius: 1rem; // rounded-[16px]
+  width: 100%;
+}
+
+.promptBorder {
+  position: absolute;
+  border-color: #1a1a1a;
+  border-width: 0.909px;
+  border-style: solid;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 1rem; // rounded-[16px]
+}
+
+.promptInner {
+  width: 100%;
+}
+
+.promptContent {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem; // gap-[12px]
+  align-items: flex-start;
+  padding: 0.5rem; // p-[8px]
+  position: relative;
+  width: 100%;
+}
+
+.promptTextArea {
+  box-sizing: border-box;
+  display: flex;
+  gap: 0.5rem; // gap-[8px]
+  align-items: flex-end;
+  padding-bottom: 0;
+  padding-top: 0.25rem; // pt-[4px]
+  padding-inline: 0;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.promptInput {
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  line-height: 1.5rem; // leading-[24px]
+  font-style: normal;
+  width: 100%;
+  color: #555555; // text-[#555555]
+  font-size: 1rem; // text-[16px]
+  letter-spacing: -0.3125px; // tracking-[-0.3125px]
+  background-color: transparent;
+  border: none;
+  outline: none;
+
+  &::placeholder {
+    color: #555555; // placeholder:text-[#555555]
+  }
+}
+
+.promptActionsContainer {
+  background-color: #0f0f0f;
+  position: relative;
+  border-radius: 0.75rem; // rounded-[12px]
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.promptActionsBorder {
+  position: absolute;
+  border-color: #1a1a1a;
+  border-width: 0.909px;
+  border-style: solid;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 0.75rem; // rounded-[12px]
+}
+
+.promptActionsRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+}
+
+.promptActionsContent {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.307rem; // p-[4.909px]
+  position: relative;
+  width: 100%;
+}
+
+.promptActionsLeft {
+  display: flex;
+  gap: 0.5rem; // gap-[7.997px]
+  align-items: center;
+}
+
+.promptButton {
+  background-color: #1a1a1a;
+  border-radius: 0.5rem; // rounded-[8px]
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0.5rem; // p-[8px]
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: #252525; // hover:bg-[#252525]
+  }
+}
+
+.promptButtonSquare {
+  width: 2rem; // size-[32px]
+  height: 2rem; // size-[32px]
+}
+
+.promptButtonRect {
+  height: 2rem; // h-[31.989px]
+  padding-inline: 0.75rem; // pl-[11.989px] pr-[11.989px]
+  padding-block: 0;
+}
+
+.promptButtonIcon {
+  position: relative;
+  flex-shrink: 0;
+  width: 1rem; // size-[15.994px]
+  height: 1rem; // size-[15.994px]
+}
+
+.promptButtonText {
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  line-height: 1.25rem; // leading-[20px]
+  font-style: normal;
+  color: #99a1af; // text-[#99a1af]
+  font-size: 0.875rem; // text-[14px]
+  white-space: nowrap;
+  letter-spacing: -0.1504px; // tracking-[-0.1504px]
+}
+
+.promptSpacer {
+  position: relative;
+  flex-shrink: 0;
+  width: 2rem; // size-[31.989px]
+  height: 2rem; // size-[31.989px]
+}
+
+.promptSendButton {
+  background-color: #1a1a1a;
+  border-radius: 0.5rem; // rounded-[8px]
+  flex-shrink: 0;
+  width: 2rem; // size-[32px]
+  height: 2rem; // size-[32px]
+  display: flex;
+  align-items: center;
+  padding: 0.5rem; // p-[8px]
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: #252525; // hover:bg-[#252525]
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.promptSendIcon {
+  position: relative;
+  flex-shrink: 0;
+  width: 1rem; // size-[16px]
+  height: 1rem; // size-[16px]
+}
+
+// Empty State
+.emptyStateContainer {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-8;
+}
+
+.emptyStateContent {
+  text-align: center;
+  max-width: 48rem; // max-w-3xl
+  width: 100%;
+}
+
+.emptyStateIcon {
+  margin-bottom: $spacing-6;
+  display: flex;
+  justify-content: center;
+}
+
+.emptyStateIconWrapper {
+  position: relative;
+}
+
+.emptyStateIconBox {
+  width: 8rem; // w-32
+  height: 8rem; // h-32
+  background-color: #1a1a1a;
+  border: 2px solid rgb(31, 41, 55); // border-2 border-gray-800
+  border-radius: 1.5rem; // rounded-3xl
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emptyStateDot1 {
+  position: absolute;
+  top: -0.5rem; // -top-2
+  right: -0.5rem; // -right-2
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+  background-color: rgba(59, 130, 246, 0.2); // bg-blue-500/20
+  border-radius: 9999px; // rounded-full
+}
+
+.emptyStateDot2 {
+  position: absolute;
+  bottom: -0.75rem; // -bottom-3
+  left: -0.75rem; // -left-3
+  width: 1.5rem; // w-6
+  height: 1.5rem; // h-6
+  background-color: rgba(168, 85, 247, 0.2); // bg-purple-500/20
+  border-radius: 9999px; // rounded-full
+}
+
+.emptyStateTitle {
+  font-size: $font-size-2xl; // text-2xl
+  color: white; // text-white
+  margin-bottom: $spacing-3;
+}
+
+.emptyStateDescription {
+  color: rgb(156, 163, 175); // text-gray-400
+  margin-bottom: $spacing-8;
+}
+
+// Active Chat
+.chatContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.messagesArea {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.messagesContent {
+  padding: $spacing-8;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-6;
+  max-width: 64rem; // max-w-4xl
+  margin-inline: auto;
+}
+
+.inputArea {
+  background-color: #0f0f0f;
+  padding: $spacing-6;
+}
+
+.inputAreaContent {
+  max-width: 64rem; // max-w-4xl
+  margin-inline: auto;
+  width: 100%;
+}
+

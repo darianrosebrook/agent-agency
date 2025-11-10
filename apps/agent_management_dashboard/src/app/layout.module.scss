@@ -1,0 +1,7 @@
+@use '../styles/tokens' as *;
+
+.body {
+  background-color: oklch(0.145 0 0); // bg-zinc-950
+  color: oklch(0.75 0 0); // text-gray-100
+}
+

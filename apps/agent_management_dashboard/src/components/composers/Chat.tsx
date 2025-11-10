@@ -9,6 +9,8 @@ import svgPaths from "../../imports/svg-quupl4zjo1";
 import { useChatStore } from "../../lib/stores";
 import type { Message, Task } from "../../lib/schemas/chat";
 import { simulateAIResponse } from "../ChatAIHelper";
+import { cn } from "../ui/utils";
+import styles from "./Chat.module.scss";
 
 // Types imported from schemas
 
@@ -87,20 +89,20 @@ export function Chat() {
 
   // Prompt box component to avoid duplication
   const PromptBox = () => (
-    <div className="max-w-2xl mx-auto w-full">
+    <div className={styles.promptBox}>
       {/* Context Files Chips */}
       {contextFiles.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-3">
+        <div className={styles.contextFiles}>
           {contextFiles.map((file, index) => (
             <Badge
               key={index}
               variant="secondary"
-              className="bg-gray-800 text-gray-100 hover:bg-gray-700 pr-1 gap-2"
+              className={styles.contextFileBadge}
             >
               <span className="text-sm">{file}</span>
               <button
                 onClick={() => removeFile(index)}
-                className="hover:bg-gray-600 rounded-full p-0.5"
+                className={styles.contextFileRemove}
               >
                 <X className="h-3 w-3" />
               </button>
@@ -109,41 +111,41 @@ export function Chat() {
         </div>
       )}
 
-      <div className="bg-[#1a1a1a] relative rounded-[16px] w-full">
+      <div className={styles.promptContainer}>
         <div
           aria-hidden="true"
-          className="absolute border-[#1a1a1a] border-[0.909px] border-solid inset-0 pointer-events-none rounded-[16px]"
+          className={styles.promptBorder}
         />
-        <div className="w-full">
-          <div className="box-border content-stretch flex flex-col gap-[12px] items-start p-[8px] relative w-full">
+        <div className={styles.promptInner}>
+          <div className={styles.promptContent}>
             {/* Text Area */}
-            <div className="box-border content-stretch flex gap-[8px] items-end pb-0 pt-[4px] px-0 relative shrink-0 w-full">
+            <div className={styles.promptTextArea}>
               <input
                 type="text"
                 value={promptValue}
                 onChange={(e) => setPromptValue(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="What should we build?"
-                className="font-['Inter:Regular',sans-serif] font-normal leading-[24px] not-italic w-full text-[#555555] text-[16px] tracking-[-0.3125px] bg-transparent border-none outline-none placeholder:text-[#555555]"
+                className={styles.promptInput}
               />
             </div>
 
             {/* Container */}
-            <div className="bg-[#0f0f0f] relative rounded-[12px] shrink-0 w-full">
+            <div className={styles.promptActionsContainer}>
               <div
                 aria-hidden="true"
-                className="absolute border-[#1a1a1a] border-[0.909px] border-solid inset-0 pointer-events-none rounded-[12px]"
+                className={styles.promptActionsBorder}
               />
-              <div className="flex flex-row items-center w-full">
-                <div className="box-border content-stretch flex items-center justify-between p-[4.909px] relative w-full">
+              <div className={styles.promptActionsRow}>
+                <div className={styles.promptActionsContent}>
                   {/* Left side buttons */}
-                  <div className="content-stretch flex gap-[7.997px] items-center">
+                  <div className={styles.promptActionsLeft}>
                     {/* Plus Button */}
                     <button
                       onClick={() => setIsModalOpen(true)}
-                      className="bg-[#1a1a1a] rounded-[8px] shrink-0 size-[32px] content-stretch flex items-center p-[8px] hover:bg-[#252525] transition-colors"
+                      className={cn(styles.promptButton, styles.promptButtonSquare)}
                     >
-                      <div className="relative shrink-0 size-[15.994px]">
+                      <div className={styles.promptButtonIcon}>
                         <svg
                           className="block size-full"
                           fill="none"
@@ -169,8 +171,8 @@ export function Chat() {
                     </button>
 
                     {/* DeepSearch Button */}
-                    <button className="bg-[#1a1a1a] h-[31.989px] rounded-[8px] shrink-0 content-stretch flex gap-[7.997px] items-center pl-[11.989px] pr-[11.989px] py-0 hover:bg-[#252525] transition-colors">
-                      <div className="relative shrink-0 size-[15.994px]">
+                    <button className={cn(styles.promptButton, styles.promptButtonRect)}>
+                      <div className={styles.promptButtonIcon}>
                         <svg
                           className="block size-full"
                           fill="none"
@@ -211,14 +213,14 @@ export function Chat() {
                           </defs>
                         </svg>
                       </div>
-                      <span className="font-['Inter:Regular',sans-serif] font-normal leading-[20px] not-italic text-[#99a1af] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">
+                      <span className={styles.promptButtonText}>
                         DeepSearch
                       </span>
                     </button>
 
                     {/* Think Button */}
-                    <button className="bg-[#1a1a1a] h-[31.989px] rounded-[8px] shrink-0 content-stretch flex gap-[7.997px] items-center px-[11.989px] py-0 hover:bg-[#252525] transition-colors">
-                      <div className="relative shrink-0 size-[15.994px]">
+                    <button className={cn(styles.promptButton, styles.promptButtonRect)}>
+                      <div className={styles.promptButtonIcon}>
                         <svg
                           className="block size-full"
                           fill="none"
@@ -259,22 +261,22 @@ export function Chat() {
                           </defs>
                         </svg>
                       </div>
-                      <span className="font-['Inter:Regular',sans-serif] font-normal leading-[20px] not-italic text-[#99a1af] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">
+                      <span className={styles.promptButtonText}>
                         Think
                       </span>
                     </button>
                   </div>
 
                   {/* Spacer */}
-                  <div className="relative shrink-0 size-[31.989px]" />
+                  <div className={styles.promptSpacer} />
 
                   {/* Send Button */}
                   <button
                     onClick={handleSend}
                     disabled={!promptValue.trim()}
-                    className="bg-[#1a1a1a] rounded-[8px] shrink-0 size-[32px] content-stretch flex items-center p-[8px] hover:bg-[#252525] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={styles.promptSendButton}
                   >
-                    <div className="relative shrink-0 size-[16px]">
+                    <div className={styles.promptSendIcon}>
                       <svg
                         className="block size-full"
                         fill="none"
@@ -310,23 +312,23 @@ export function Chat() {
   if (showEmptyState) {
     // Empty state: centered prompt box
     return (
-      <div className="h-full flex items-center justify-center p-8">
-        <div className="text-center max-w-3xl w-full">
+      <div className={styles.emptyStateContainer}>
+        <div className={styles.emptyStateContent}>
           {/* Icon */}
-          <div className="mb-6 flex justify-center">
-            <div className="relative">
-              <div className="w-32 h-32 bg-[#1a1a1a] border-2 border-gray-800 rounded-3xl flex items-center justify-center">
+          <div className={styles.emptyStateIcon}>
+            <div className={styles.emptyStateIconWrapper}>
+              <div className={styles.emptyStateIconBox}>
                 <MessageSquare className="w-16 h-16 text-gray-700" />
               </div>
               {/* Decorative dots */}
-              <div className="absolute -top-2 -right-2 w-4 h-4 bg-blue-500/20 rounded-full"></div>
-              <div className="absolute -bottom-3 -left-3 w-6 h-6 bg-purple-500/20 rounded-full"></div>
+              <div className={styles.emptyStateDot1}></div>
+              <div className={styles.emptyStateDot2}></div>
             </div>
           </div>
 
           {/* Text */}
-          <h2 className="text-2xl text-white mb-3">Start a new conversation</h2>
-          <p className="text-gray-400 mb-8">
+          <h2 className={styles.emptyStateTitle}>Start a new conversation</h2>
+          <p className={styles.emptyStateDescription}>
             Ask questions, get insights, or brainstorm ideas. Your chat history
             will be organized automatically.
           </p>
@@ -346,10 +348,10 @@ export function Chat() {
 
   // Active chat: messages at top, input at bottom
   return (
-    <div className="flex flex-col h-full">
+    <div className={styles.chatContainer}>
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-8 space-y-6 max-w-4xl mx-auto">
+      <div className={styles.messagesArea}>
+        <div className={styles.messagesContent}>
           {messages.map((message) =>
             message.isLoading ? (
               <ChatMessageSkeleton key={message.id} tasks={message.tasks} />
@@ -361,8 +363,8 @@ export function Chat() {
       </div>
 
       {/* Input Area - Fixed at bottom */}
-      <div className=" bg-[#0f0f0f] p-6">
-        <div className="max-w-4xl mx-auto w-full">
+      <div className={styles.inputArea}>
+        <div className={styles.inputAreaContent}>
           <PromptBox />
         </div>
       </div>

@@ -1,0 +1,11 @@
+@use '../../styles/tokens' as *;
+
+.chatPage {
+  display: flex;
+  height: 100%; // h-full
+}
+
+.chatContent {
+  flex: 1;
+}
+

@@ -16,6 +16,8 @@ import { TasksTab } from "../composers/TasksTab";
 import { TimelineTab } from "../composers/TimelineTab";
 import { ManageTab } from "../composers/SettingsTab";
 import svgPaths from "../../imports/svg-ustevohwso";
+import { cn } from "../ui/utils";
+import styles from "./ProjectView.module.scss";
 
 interface ProjectViewProps {
   projectName: string;
@@ -39,20 +41,20 @@ export function ProjectView({
   ];
 
   return (
-    <div className="bg-[#0d0d0d] content-stretch flex flex-col items-start relative size-full">
+    <div className={styles.projectView}>
       {/* Header Container */}
-      <div className="relative shrink-0 w-full border-b border-neutral-800">
-        <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border content-stretch flex flex-col gap-[15.994px] items-start pb-[0.909px] pl-[23.999px] pr-[23.998px] pt-[15.994px] relative w-full">
+      <div className={styles.headerContainer}>
+        <div className={styles.headerContent}>
           {/* Breadcrumb and Title */}
-          <div className="content-stretch flex flex-col gap-[3.999px] items-start relative shrink-0 w-full">
+          <div className={styles.breadcrumbTitleContainer}>
             {/* Breadcrumb */}
-            <div className="h-[19.993px] relative shrink-0 w-full">
+            <div className={styles.breadcrumbContainer}>
               <Breadcrumb>
                 <BreadcrumbList>
                   <BreadcrumbItem>
                     <BreadcrumbLink
                       onClick={onBackToProjects}
-                      className="font-['Inter:Regular',sans-serif] font-normal leading-[20px] not-italic text-[#888888] text-[14px] tracking-[-0.1504px] cursor-pointer hover:text-gray-300"
+                      className={styles.breadcrumbLink}
                     >
                       Projects
                     </BreadcrumbLink>
@@ -61,7 +63,7 @@ export function ProjectView({
                     <ChevronRight className="w-3 h-3 text-[#888888]" />
                   </BreadcrumbSeparator>
                   <BreadcrumbItem>
-                    <BreadcrumbPage className="font-['Inter:Regular',sans-serif] font-normal leading-[20px] not-italic text-[#888888] text-[14px] tracking-[-0.1504px]">
+                    <BreadcrumbPage className={styles.breadcrumbPage}>
                       {projectName}
                     </BreadcrumbPage>
                   </BreadcrumbItem>
@@ -70,35 +72,36 @@ export function ProjectView({
             </div>
 
             {/* Heading */}
-            <div className="h-[31.996px] relative shrink-0 w-full">
-              <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[32px] left-0 not-italic text-[24px] text-nowrap text-white top-[-0.18px] tracking-[0.0703px] whitespace-pre">
+            <div className={styles.headingContainer}>
+              <p className={styles.heading}>
                 {projectName}
               </p>
             </div>
           </div>
 
           {/* Tabs and Controls */}
-          <div className="content-stretch flex h-[35.994px] items-center justify-between relative shrink-0 w-full">
+          <div className={styles.tabsControlsContainer}>
             {/* Tabs */}
-            <div className="h-[35.994px] relative shrink-0">
-              <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[35.994px] relative flex gap-[24px] items-start">
+            <div className={styles.tabsContainer}>
+              <div className={styles.tabsList}>
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className="relative h-[35.994px] group"
+                    className={styles.tabButton}
                   >
                     <p
-                      className={`font-['Inter:Regular',sans-serif] font-normal leading-[24px] not-italic text-[16px] text-nowrap tracking-[-0.3125px] whitespace-pre transition-colors ${
+                      className={cn(
+                        styles.tabLabel,
                         activeTab === tab.id
-                          ? "text-white"
-                          : "text-[#888888] hover:text-gray-300"
-                      }`}
+                          ? styles.tabLabelActive
+                          : styles.tabLabelInactive
+                      )}
                     >
                       {tab.label}
                     </p>
                     {activeTab === tab.id && (
-                      <div className="absolute bg-white h-[1.996px] left-0 top-[34px] right-0" />
+                      <div className={styles.tabIndicator} />
                     )}
                   </button>
                 ))}
@@ -106,23 +109,23 @@ export function ProjectView({
             </div>
 
             {/* Controls */}
-            <div className="h-[35.994px] relative shrink-0">
-              <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[35.994px] relative flex gap-[12px] items-center">
+            <div className={styles.controlsContainer}>
+              <div className={styles.controlsList}>
                 {/* Search Input */}
-                <div className="relative h-[35.994px] w-[255.994px] shrink-0">
-                  <div className="bg-[#1a1a1a] h-[35.994px] rounded-[8px] w-[255.994px]">
-                    <div className="box-border content-stretch flex h-[35.994px] items-center overflow-clip pl-[36px] pr-[48px] py-[4px] relative rounded-[inherit] w-[255.994px]">
-                      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[#888888] text-[14px] text-nowrap tracking-[-0.1504px] whitespace-pre">
+                <div className={styles.searchContainer}>
+                  <div className={styles.searchBox}>
+                    <div className={styles.searchInput}>
+                      <p className={styles.searchPlaceholder}>
                         Search
                       </p>
                     </div>
                     <div
                       aria-hidden="true"
-                      className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[8px]"
+                      className={styles.searchBorder}
                     />
                   </div>
                   {/* Search Icon */}
-                  <div className="absolute left-[12px] size-[15.994px] top-[10px]">
+                  <div className={styles.searchIcon}>
                     <svg
                       className="block size-full"
                       fill="none"
@@ -146,24 +149,24 @@ export function ProjectView({
                     </svg>
                   </div>
                   {/* Keyboard Shortcut */}
-                  <div className="absolute h-[16.001px] left-[226.53px] top-[10px] w-[17.465px]">
-                    <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[16px] left-0 not-italic text-[#888888] text-[12px] text-nowrap top-[0.46px] whitespace-pre">
+                  <div className={styles.keyboardShortcut}>
+                    <p className={styles.keyboardShortcutText}>
                       ⌘F
                     </p>
                   </div>
                 </div>
 
                 {/* Status Button */}
-                <button className="bg-[#1a1a1a] h-[35.994px] rounded-[8px] px-4 relative shrink-0 hover:bg-[#252525] transition-colors">
+                <button className={styles.controlButton}>
                   <div
                     aria-hidden="true"
-                    className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[8px]"
+                    className={styles.controlButtonBorder}
                   />
-                  <div className="flex items-center gap-2 h-full whitespace-nowrap">
-                    <p className="font-['Inter:Medium',sans-serif] font-medium leading-[20px] not-italic text-[14px] text-white tracking-[-0.1504px]">
+                  <div className={styles.controlButtonContent}>
+                    <p className={styles.controlButtonText}>
                       Status: All
                     </p>
-                    <div className="size-[15.994px] shrink-0">
+                    <div className={styles.controlButtonIcon}>
                       <svg
                         className="block size-full"
                         fill="none"
@@ -183,13 +186,13 @@ export function ProjectView({
                 </button>
 
                 {/* Sort Button */}
-                <button className="bg-[#1a1a1a] h-[35.994px] rounded-[8px] px-4 relative shrink-0 hover:bg-[#252525] transition-colors">
+                <button className={styles.controlButton}>
                   <div
                     aria-hidden="true"
-                    className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[8px]"
+                    className={styles.controlButtonBorder}
                   />
-                  <div className="flex items-center gap-2 h-full whitespace-nowrap">
-                    <div className="size-[15.994px] shrink-0">
+                  <div className={styles.controlButtonContent}>
+                    <div className={styles.controlButtonIcon}>
                       <svg
                         className="block size-full"
                         fill="none"
@@ -226,19 +229,19 @@ export function ProjectView({
                         />
                       </svg>
                     </div>
-                    <p className="font-['Inter:Medium',sans-serif] font-medium leading-[20px] not-italic text-[14px] text-white tracking-[-0.1504px]">
+                    <p className={styles.controlButtonText}>
                       Sort
                     </p>
                   </div>
                 </button>
 
                 {/* Grid View Button */}
-                <button className="bg-[#1a1a1a] box-border content-stretch flex h-[35.994px] items-center justify-center p-[0.909px] rounded-[8px] w-[41.804px] shrink-0 relative hover:bg-[#252525] transition-colors">
+                <button className={styles.gridViewButton}>
                   <div
                     aria-hidden="true"
-                    className="absolute border-[0.909px] border-neutral-800 border-solid inset-0 pointer-events-none rounded-[8px]"
+                    className={styles.controlButtonBorder}
                   />
-                  <div className="shrink-0 size-[15.994px]">
+                  <div className={styles.gridViewIcon}>
                     <svg
                       className="block size-full"
                       fill="none"
@@ -290,7 +293,7 @@ export function ProjectView({
       </div>
 
       {/* Tab Content Area */}
-      <div className="flex-1 w-full overflow-hidden min-h-0">
+      <div className={styles.tabContentArea}>
         {activeTab === "overview" && <OverviewTab />}
         {activeTab === "workspace" && <WorkspaceTab />}
         {activeTab === "tasks" && <TasksTab />}

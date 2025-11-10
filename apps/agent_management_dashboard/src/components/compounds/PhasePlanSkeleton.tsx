@@ -1,40 +1,39 @@
 import { Skeleton } from "../ui/skeleton";
+import { cn } from "../ui/utils";
+import styles from "./PhasePlanSkeleton.module.scss";
 
 export function PhasePlanSkeleton() {
   return (
-    <div className="w-full animate-pulse">
+    <div className={styles.phasePlanSkeleton}>
       {/* Header skeleton */}
-      <div className="mb-6">
-        <Skeleton className="h-8 w-48 mb-2 bg-gray-800" />
-        <Skeleton className="h-4 w-full max-w-xl mb-4 bg-gray-800" />
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-10 w-32 bg-gray-800" />
-          <Skeleton className="h-10 w-40 bg-gray-800" />
+      <div className={styles.header}>
+        <Skeleton className={cn(styles.headerTitle, "bg-gray-800")} />
+        <Skeleton className={cn(styles.headerDescription, "bg-gray-800")} />
+        <div className={styles.headerActions}>
+          <Skeleton className={cn(styles.headerAction, styles.headerActionFirst, "bg-gray-800")} />
+          <Skeleton className={cn(styles.headerAction, styles.headerActionSecond, "bg-gray-800")} />
         </div>
       </div>
 
       {/* Phase cards skeleton */}
       {[1, 2].map((phase) => (
-        <div
-          key={phase}
-          className="mb-6 bg-[#1a1a1a] rounded-xl border border-gray-800 overflow-hidden"
-        >
+        <div key={phase} className={styles.phaseCard}>
           {/* Phase header */}
-          <div className="px-6 py-5 border-b border-gray-800">
-            <div className="flex items-center gap-3 mb-2">
-              <Skeleton className="h-6 w-40 bg-gray-800" />
-              <Skeleton className="h-6 w-20 rounded-full bg-gray-800" />
+          <div className={styles.phaseHeader}>
+            <div className={styles.phaseHeaderTop}>
+              <Skeleton className={cn(styles.phaseTitle, styles.phaseTitleFirst, "bg-gray-800")} />
+              <Skeleton className={cn(styles.phaseTitle, styles.phaseTitleSecond, "bg-gray-800")} />
             </div>
-            <Skeleton className="h-4 w-full max-w-2xl bg-gray-800" />
+            <Skeleton className={cn(styles.phaseDescription, "bg-gray-800")} />
           </div>
 
           {/* Task items skeleton */}
-          <div className="divide-y divide-gray-800">
+          <div className={styles.taskList}>
             {[1, 2, 3].map((task) => (
-              <div key={task} className="px-6 py-4">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-5 w-5 rounded-full bg-gray-800" />
-                  <Skeleton className="h-5 w-64 bg-gray-800" />
+              <div key={task} className={styles.taskItem}>
+                <div className={styles.taskItemContent}>
+                  <Skeleton className={cn(styles.taskCheckbox, "bg-gray-800")} />
+                  <Skeleton className={cn(styles.taskText, "bg-gray-800")} />
                 </div>
               </div>
             ))}

@@ -1,0 +1,51 @@
+// Typography Design Tokens
+// Mapped from CSS variables and globals.css
+
+// Font families
+$font-family-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+$font-family-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+// Font sizes
+// Base font size from CSS variable --font-size: 16px
+$font-size-base: 1rem; // 16px (matches --font-size)
+
+// Typography scale from globals.css
+$font-size-xs: 0.875rem; // 14px (small)
+$font-size-sm: 0.875rem; // 14px
+$font-size-md: 1rem; // 16px
+$font-size-lg: 1.125rem; // 18px
+$font-size-xl: 1.25rem; // 20px
+$font-size-2xl: 1.5rem; // 24px
+$font-size-3xl: 1.875rem; // 30px
+$font-size-4xl: 2.25rem; // 36px
+$font-size-5xl: 3rem; // 48px
+$font-size-6xl: 3.75rem; // 60px
+$font-size-7xl: 4.5rem; // 72px
+$font-size-8xl: 6rem; // 96px
+
+// Font weights (from CSS variables)
+$font-weight-normal: 400; // --font-weight-normal
+$font-weight-medium: 500; // --font-weight-medium
+$font-weight-semibold: 600; // --font-weight-semibold
+$font-weight-bold: 700;
+
+// Line heights (from globals.css typography)
+$line-height-xs: 1.25; // 20px / 16px
+$line-height-sm: 1.25; // 20px / 16px
+$line-height-base: 1.5; // 24px / 16px
+$line-height-lg: 1.5; // 24px / 16px
+$line-height-xl: 1.5; // 32px / 20px
+$line-height-2xl: 1.5; // 32px / 24px
+$line-height-3xl: 1; // 48px / 48px
+$line-height-4xl: 1.11; // 40px / 36px
+$line-height-5xl: 1.33; // 32px / 24px
+$line-height-6xl: 1; // 20px / 20px
+$line-height-7xl: 1.21; // 116px / 96px
+$line-height-8xl: 1; // 60px / 60px
+
+// Letter spacing
+$letter-spacing-tight: -0.025em;
+$letter-spacing-normal: 0;
+$letter-spacing-wide: 0.025em;
+$letter-spacing-wider: 0.05em;
+

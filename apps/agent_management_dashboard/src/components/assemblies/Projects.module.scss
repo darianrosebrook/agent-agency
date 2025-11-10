@@ -1,0 +1,385 @@
+@use '../../styles/tokens' as *;
+
+.projectsContainer {
+  padding: $spacing-8;
+}
+
+.header {
+  margin-bottom: $spacing-8;
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  color: rgb(209, 213, 219); // text-gray-300
+  margin-bottom: $spacing-4;
+}
+
+.headerTitle {
+  font-size: $font-size-3xl; // text-3xl
+  color: white; // text-white
+}
+
+.headerWithButton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-4;
+}
+
+.headerLeft {
+  // Container for header left content
+}
+
+.newProjectButton {
+  background-color: rgb(37, 99, 235); // bg-blue-600
+  color: white; // text-white
+
+  &:hover {
+    background-color: rgb(29, 78, 216); // hover:bg-blue-700
+  }
+}
+
+// Empty State
+.emptyStateContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 500px; // min-h-[500px]
+}
+
+.emptyStateContent {
+  text-align: center;
+  max-width: 48rem; // max-w-3xl
+  width: 100%;
+}
+
+.emptyStateIcon {
+  margin-bottom: $spacing-6;
+  display: flex;
+  justify-content: center;
+}
+
+.emptyStateIconButton {
+  position: relative;
+  cursor: pointer;
+}
+
+.emptyStateIconBox {
+  width: 8rem; // w-32
+  height: 8rem; // h-32
+  background-color: #1a1a1a;
+  border: 2px solid rgb(31, 41, 55); // border-2 border-gray-800
+  border-radius: 1.5rem; // rounded-3xl
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color $transition-normal, background-color $transition-normal;
+
+  .emptyStateIconButton:hover & {
+    border-color: rgba(59, 130, 246, 0.5); // group-hover:border-blue-500/50
+    background-color: #1f1f1f; // group-hover:bg-[#1f1f1f]
+  }
+}
+
+.emptyStateTitle {
+  font-size: $font-size-2xl; // text-2xl
+  color: white; // text-white
+  margin-bottom: $spacing-3;
+}
+
+.emptyStateDescription {
+  color: rgb(156, 163, 175); // text-gray-400
+  margin-bottom: $spacing-8;
+}
+
+// Search and Filter
+.searchFilterBar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3;
+}
+
+.searchContainer {
+  position: relative;
+  flex: 1;
+  max-width: 28rem; // max-w-md
+}
+
+.searchIcon {
+  position: absolute;
+  left: $spacing-3;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+  color: rgb(107, 114, 128); // text-gray-500
+}
+
+.filterButton {
+  background-color: #1a1a1a; // bg-[#1a1a1a]
+  border-color: rgb(31, 41, 55); // border-gray-800
+  color: rgb(209, 213, 219); // text-gray-300
+
+  &:hover {
+    background-color: rgb(31, 41, 55); // hover:bg-gray-800
+    color: oklch(0.95 0 0); // hover:text-gray-100
+  }
+}
+
+// Recent Projects Section
+.recentProjectsSection {
+  margin-bottom: $spacing-8;
+}
+
+.recentProjectsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-4;
+}
+
+.recentProjectsTitle {
+  font-size: $font-size-xl; // text-xl
+  color: white; // text-white
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+}
+
+.recentProjectsEmpty {
+  text-align: center;
+  padding-block: 3rem; // py-12
+  color: rgb(107, 114, 128); // text-gray-500
+}
+
+.recentProjectsGrid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr)); // grid-cols-1
+  gap: $spacing-4;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)); // md:grid-cols-2
+  }
+
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr)); // lg:grid-cols-3
+  }
+}
+
+.projectCard {
+  background-color: #1a1a1a;
+  border: 1px solid rgb(31, 41, 55); // border border-gray-800
+  border-radius: calc(var(--radius) + 4px); // rounded-lg
+  padding: $spacing-6;
+  text-align: left;
+  transition: background-color $transition-normal, border-color $transition-normal;
+
+  &:hover {
+    background-color: #1f1f1f; // hover:bg-[#1f1f1f]
+    border-color: rgb(55, 65, 81); // hover:border-gray-700
+  }
+}
+
+.projectCardContent {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-4;
+}
+
+.projectCardIcon {
+  width: 3rem; // w-12
+  height: 3rem; // h-12
+  background-color: #0f0f0f;
+  border: 1px solid rgb(31, 41, 55); // border border-gray-800
+  border-radius: calc(var(--radius) + 4px); // rounded-lg
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color $transition-normal;
+
+  .projectCard:hover & {
+    border-color: rgba(59, 130, 246, 0.5); // group-hover:border-blue-500/50
+  }
+}
+
+.projectCardDetails {
+  flex: 1;
+  min-width: 0;
+}
+
+.projectCardName {
+  color: white; // text-white
+  margin-bottom: $spacing-1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectCardSummary {
+  font-size: $font-size-sm;
+  color: rgb(107, 114, 128); // text-gray-500
+  margin-bottom: $spacing-1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectCardDate {
+  font-size: $font-size-xs;
+  color: rgb(75, 85, 99); // text-gray-600
+}
+
+// All Projects Table Section
+.allProjectsSection {
+  margin-bottom: $spacing-8;
+}
+
+.allProjectsTitle {
+  font-size: $font-size-xl; // text-xl
+  color: white; // text-white
+  margin-bottom: $spacing-4;
+}
+
+.projectsTable {
+  background-color: #1a1a1a;
+  border: 1px solid rgb(31, 41, 55); // border border-gray-800
+  border-radius: calc(var(--radius) + 4px); // rounded-lg
+  overflow: hidden;
+}
+
+.tableHeaderRow {
+  border-color: rgb(31, 41, 55); // border-gray-800
+
+  &:hover {
+    background-color: transparent; // hover:bg-transparent
+  }
+}
+
+.tableHeaderCell {
+  color: rgb(156, 163, 175); // text-gray-400
+  cursor: pointer;
+  user-select: none;
+  transition: color $transition-normal;
+
+  &:hover {
+    color: rgb(229, 231, 235); // hover:text-gray-200
+  }
+}
+
+.tableHeaderCellContent {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+}
+
+.tableRow {
+  border-color: rgb(31, 41, 55); // border-gray-800
+  cursor: pointer;
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: #1f1f1f; // hover:bg-[#1f1f1f]
+  }
+}
+
+.tableRowLoading {
+  &:hover {
+    background-color: transparent; // hover:bg-transparent
+  }
+}
+
+.tableCell {
+  color: white; // text-white
+}
+
+.tableCellGray {
+  color: rgb(156, 163, 175); // text-gray-400
+  max-width: 28rem; // max-w-md
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tableCellIcon {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3;
+}
+
+.tableCellIconBox {
+  width: 2rem; // w-8
+  height: 2rem; // h-8
+  background-color: #0f0f0f;
+  border: 1px solid rgb(31, 41, 55); // border border-gray-800
+  border-radius: calc(var(--radius) - 4px); // rounded
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tableEmptyCell {
+  text-align: center;
+  padding-block: 3rem; // py-12
+  color: rgb(107, 114, 128); // text-gray-500
+}
+
+// Pagination
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: $spacing-6;
+  padding-block: $spacing-4;
+  border-top: 1px solid rgb(31, 41, 55); // border-t border-gray-800
+}
+
+.paginationLeft {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  font-size: $font-size-sm;
+  color: rgb(156, 163, 175); // text-gray-400
+}
+
+.paginationSelect {
+  width: 5rem; // w-20
+  height: 2rem; // h-8
+  background-color: #0f0f0f; // bg-[#0f0f0f]
+  border-color: rgb(31, 41, 55); // border-gray-800
+  color: rgb(209, 213, 219); // text-gray-300
+}
+
+.paginationSelectContent {
+  background-color: #1a1a1a; // bg-[#1a1a1a]
+  border-color: rgb(31, 41, 55); // border-gray-800
+}
+
+.paginationRight {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+}
+
+.paginationButton {
+  background-color: #0f0f0f; // bg-[#0f0f0f]
+  border-color: rgb(31, 41, 55); // border-gray-800
+  color: rgb(209, 213, 219); // text-gray-300
+
+  &:hover {
+    background-color: rgb(31, 41, 55); // hover:bg-gray-800
+    color: oklch(0.95 0 0); // hover:text-gray-100
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.paginationInfo {
+  font-size: $font-size-sm;
+  color: rgb(156, 163, 175); // text-gray-400
+}
+

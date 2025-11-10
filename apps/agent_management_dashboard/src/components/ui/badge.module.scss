@@ -1,0 +1,95 @@
+@use '../../styles/tokens' as *;
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid transparent;
+  padding: $spacing-0_5 $spacing-2;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  width: fit-content;
+  white-space: nowrap;
+  flex-shrink: 0;
+  gap: $spacing-1;
+  transition: color $transition-normal, box-shadow $transition-normal;
+  overflow: hidden;
+
+  svg {
+    width: 0.75rem; // size-3
+    height: 0.75rem;
+    pointer-events: none;
+  }
+
+  &:focus-visible {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px hsl(var(--ring) / 0.5);
+  }
+
+  &[aria-invalid='true'] {
+    box-shadow: 0 0 0 3px hsl(var(--destructive) / 0.2);
+    border-color: var(--destructive);
+
+    .dark & {
+      box-shadow: 0 0 0 3px hsl(var(--destructive) / 0.4);
+    }
+  }
+}
+
+// Variants
+.variant-default {
+  border-color: transparent;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+
+  &:has(a):hover,
+  a:hover & {
+    background-color: hsl(var(--primary) / 0.9);
+  }
+}
+
+.variant-secondary {
+  border-color: transparent;
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+
+  &:has(a):hover,
+  a:hover & {
+    background-color: hsl(var(--secondary) / 0.9);
+  }
+}
+
+.variant-destructive {
+  border-color: transparent;
+  background-color: var(--destructive);
+  color: white;
+
+  &:has(a):hover,
+  a:hover & {
+    background-color: hsl(var(--destructive) / 0.9);
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 3px hsl(var(--destructive) / 0.2);
+  }
+
+  .dark & {
+    background-color: hsl(var(--destructive) / 0.6);
+
+    &:focus-visible {
+      box-shadow: 0 0 0 3px hsl(var(--destructive) / 0.4);
+    }
+  }
+}
+
+.variant-outline {
+  color: var(--foreground);
+
+  &:has(a):hover,
+  a:hover & {
+    background-color: var(--accent);
+    color: var(--accent-foreground);
+  }
+}
+

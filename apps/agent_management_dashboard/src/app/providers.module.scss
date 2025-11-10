@@ -1,0 +1,17 @@
+@use '../styles/tokens' as *;
+
+.providersContainer {
+  display: flex;
+  height: 100vh; // h-screen
+  background-color: oklch(0.145 0 0); // bg-zinc-950
+  color: oklch(0.75 0 0); // text-gray-100
+}
+
+.main {
+  flex: 1;
+  overflow-y: auto;
+  min-width: 0; // min-w-0
+  min-height: 0; // Ensure content can shrink
+  position: relative; // Establish positioning context
+}
+

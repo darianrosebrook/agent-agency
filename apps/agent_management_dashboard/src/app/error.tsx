@@ -9,6 +9,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { AlertCircle, Home, RefreshCw } from "lucide-react";
+import styles from "./error.module.scss";
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -34,45 +35,45 @@ export default function Error({ error, reset }: ErrorProps) {
   }, [error]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0d0d0d] p-8">
-      <div className="text-center max-w-2xl">
-        <div className="mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-red-500/20 rounded-full mb-6">
-            <AlertCircle className="w-10 h-10 text-red-500" />
+    <div className={styles.errorPage}>
+      <div className={styles.errorContent}>
+        <div className={styles.errorHeader}>
+          <div className={styles.errorIconContainer}>
+            <AlertCircle className={styles.errorIcon} />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-4">Something went wrong!</h1>
-          <p className="text-gray-400 text-lg mb-2">
+          <h1 className={styles.errorTitle}>Something went wrong!</h1>
+          <p className={styles.errorMessage}>
             An unexpected error occurred. We&apos;ve been notified and are working on a fix.
           </p>
           {error.digest && (
-            <p className="text-gray-500 text-sm mt-2">
+            <p className={styles.errorDigest}>
               Error ID: {error.digest}
             </p>
           )}
         </div>
 
-        <div className="flex items-center justify-center gap-4 mb-8">
+        <div className={styles.errorActions}>
           <button
             onClick={reset}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            className={styles.errorButton}
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className={styles.errorButtonIcon} />
             Try Again
           </button>
           <Link
             href="/"
-            className="flex items-center gap-2 px-6 py-3 bg-[#1a1a1a] border border-gray-800 text-gray-300 rounded-lg hover:bg-gray-800 transition-colors"
+            className={styles.errorLink}
           >
-            <Home className="w-4 h-4" />
+            <Home className={styles.errorLinkIcon} />
             Go to Dashboard
           </Link>
         </div>
 
         {/* Error Details (only in development) */}
         {process.env.NODE_ENV === "development" && (
-          <div className="mt-8 text-left bg-[#1a1a1a] border border-red-500/50 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-red-500 mb-4">Error Details</h3>
-            <pre className="text-xs text-gray-300 overflow-auto">
+          <div className={styles.errorDetails}>
+            <h3 className={styles.errorDetailsTitle}>Error Details</h3>
+            <pre className={styles.errorDetailsPre}>
               {error.message}
               {error.stack && `\n\n${error.stack}`}
             </pre>

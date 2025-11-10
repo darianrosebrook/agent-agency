@@ -1,0 +1,19 @@
+@use '../../styles/tokens' as *;
+
+.priorityIndicator {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+}
+
+.priorityIndicatorButton {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  transition: opacity $transition-normal;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+

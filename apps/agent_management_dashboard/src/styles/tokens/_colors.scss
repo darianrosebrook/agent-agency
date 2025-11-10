@@ -1,0 +1,85 @@
+// Color Design Tokens
+// Mapped from CSS variables in globals.css
+// CSS variables are preserved for runtime theme switching
+
+// Primary colors
+$color-primary: #030213;
+$color-primary-foreground: oklch(1 0 0);
+
+// Secondary colors
+$color-secondary: oklch(0.95 0.0058 264.53);
+$color-secondary-foreground: #030213;
+
+// Background colors
+$color-background: #ffffff;
+$color-foreground: oklch(0.145 0 0);
+
+// Card colors
+$color-card: #ffffff;
+$color-card-foreground: oklch(0.145 0 0);
+
+// Popover colors
+$color-popover: oklch(1 0 0);
+$color-popover-foreground: oklch(0.145 0 0);
+
+// Muted colors
+$color-muted: #ececf0;
+$color-muted-foreground: #717182;
+
+// Accent colors
+$color-accent: #e9ebef;
+$color-accent-foreground: #030213;
+
+// Destructive colors
+$color-destructive: #d4183d;
+$color-destructive-foreground: #ffffff;
+
+// Semantic info colors (for status indicators, badges, etc.)
+$color-info: #93c5fd; // blue-300
+$color-info-light: #60a5fa; // blue-400
+
+// Border and input colors
+$color-border: rgba(0, 0, 0, 0.1);
+$color-input: transparent;
+$color-input-background: #f3f3f5;
+$color-switch-background: #cbced4;
+
+// Ring color
+$color-ring: oklch(0.708 0 0);
+
+// Chart colors
+$color-chart-1: oklch(0.646 0.222 41.116);
+$color-chart-2: oklch(0.6 0.118 184.704);
+$color-chart-3: oklch(0.398 0.07 227.392);
+$color-chart-4: oklch(0.828 0.189 84.429);
+$color-chart-5: oklch(0.769 0.188 70.08);
+
+// Sidebar colors
+$color-sidebar: oklch(0.985 0 0);
+$color-sidebar-foreground: oklch(0.145 0 0);
+$color-sidebar-primary: #030213;
+$color-sidebar-primary-foreground: oklch(0.985 0 0);
+$color-sidebar-accent: oklch(0.97 0 0);
+$color-sidebar-accent-foreground: oklch(0.205 0 0);
+$color-sidebar-border: oklch(0.922 0 0);
+$color-sidebar-ring: oklch(0.708 0 0);
+
+// Dark mode colors (for reference, CSS variables handle runtime switching)
+$color-dark-background: oklch(0.145 0 0);
+$color-dark-foreground: oklch(0.95 0 0);
+$color-dark-card: oklch(0.145 0 0);
+$color-dark-card-foreground: oklch(0.95 0 0);
+$color-dark-primary: oklch(0.985 0 0);
+$color-dark-primary-foreground: oklch(0.205 0 0);
+$color-dark-secondary: oklch(0.269 0 0);
+$color-dark-secondary-foreground: oklch(0.95 0 0);
+$color-dark-muted: oklch(0.269 0 0);
+$color-dark-muted-foreground: oklch(0.75 0 0);
+$color-dark-accent: oklch(0.269 0 0);
+$color-dark-accent-foreground: oklch(0.95 0 0);
+$color-dark-destructive: oklch(0.396 0.141 25.723);
+$color-dark-destructive-foreground: oklch(0.637 0.237 25.331);
+$color-dark-border: oklch(0.269 0 0);
+$color-dark-input: oklch(0.269 0 0);
+$color-dark-ring: oklch(0.439 0 0);
+

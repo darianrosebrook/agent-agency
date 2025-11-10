@@ -1,5 +1,7 @@
 "use client";
 
+import styles from "./page.module.scss";
+
 /**
  * Rules & Governance Page - Stub Implementation
  * 
@@ -9,28 +11,29 @@
 
 export default function RulesGovernancePage() {
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Rules & Governance</h1>
-        <p className="text-gray-400">
+    <div className={styles.rulesGovernancePage}>
+      <div className={styles.container}>
+      <div className={styles.header}>
+        <h1 className={styles.headerTitle}>Rules & Governance</h1>
+        <p className={styles.headerDescription}>
           Manage coding standards, quality gates, and compliance policies
         </p>
       </div>
 
-      <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-8 space-y-6">
+      <div className={styles.contentCard}>
         {/* Status Badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500/20 border border-yellow-500/50 rounded-lg">
-          <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-          <span className="text-yellow-500 text-sm font-medium">Stub Page - Implementation Required</span>
+        <div className={styles.statusBadge}>
+          <div className={styles.statusDot}></div>
+          <span className={styles.statusText}>Stub Page - Implementation Required</span>
         </div>
 
         {/* UX Requirements */}
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-white">UX Requirements</h2>
-          <div className="bg-[#0f0f0f] border border-gray-800 rounded-lg p-6 space-y-4">
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>UX Requirements</h2>
+          <div className={styles.sectionCard}>
             <div>
-              <h3 className="text-lg font-medium text-white mb-2">Rule Management Interface</h3>
-              <ul className="list-disc list-inside space-y-1 text-gray-300 text-sm">
+              <h3 className={styles.subsectionTitle}>Rule Management Interface</h3>
+              <ul className={styles.list}>
                 <li>List view of all rules with search and filter capabilities</li>
                 <li>Rule categories/tags (Code Quality, Security, Performance, Documentation, etc.)</li>
                 <li>Rule status indicators (Active, Inactive, Deprecated)</li>
@@ -39,8 +42,8 @@ export default function RulesGovernancePage() {
               </ul>
             </div>
             <div>
-              <h3 className="text-lg font-medium text-white mb-2">Rule Details View</h3>
-              <ul className="list-disc list-inside space-y-1 text-gray-300 text-sm">
+              <h3 className={styles.subsectionTitle}>Rule Details View</h3>
+              <ul className={styles.list}>
                 <li>Rule name, description, and rationale</li>
                 <li>Rule definition (code patterns, regex, AST patterns)</li>
                 <li>Violation examples and fixes</li>
@@ -49,8 +52,8 @@ export default function RulesGovernancePage() {
               </ul>
             </div>
             <div>
-              <h3 className="text-lg font-medium text-white mb-2">Governance Dashboard</h3>
-              <ul className="list-disc list-inside space-y-1 text-gray-300 text-sm">
+              <h3 className={styles.subsectionTitle}>Governance Dashboard</h3>
+              <ul className={styles.list}>
                 <li>Overall compliance score</li>
                 <li>Rule violation trends over time</li>
                 <li>Most violated rules</li>
@@ -59,8 +62,8 @@ export default function RulesGovernancePage() {
               </ul>
             </div>
             <div>
-              <h3 className="text-lg font-medium text-white mb-2">Rule Creation/Editing</h3>
-              <ul className="list-disc list-inside space-y-1 text-gray-300 text-sm">
+              <h3 className={styles.subsectionTitle}>Rule Creation/Editing</h3>
+              <ul className={styles.list}>
                 <li>Form-based rule creation with validation</li>
                 <li>Rule testing interface (test against sample code)</li>
                 <li>Preview of rule matches before activation</li>
@@ -72,12 +75,12 @@ export default function RulesGovernancePage() {
         </section>
 
         {/* Functionality Requirements */}
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-white">Functionality Requirements</h2>
-          <div className="bg-[#0f0f0f] border border-gray-800 rounded-lg p-6 space-y-4">
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>Functionality Requirements</h2>
+          <div className={styles.sectionCard}>
             <div>
-              <h3 className="text-lg font-medium text-white mb-2">Rule Storage & Management</h3>
-              <ul className="list-disc list-inside space-y-1 text-gray-300 text-sm">
+              <h3 className={styles.subsectionTitle}>Rule Storage & Management</h3>
+              <ul className={styles.list}>
                 <li>Store rules in PostgreSQL `rules` or `governance_rules` table</li>
                 <li>Rule definition storage (JSON, YAML, or structured format)</li>
                 <li>Rule versioning and history tracking</li>
@@ -86,8 +89,8 @@ export default function RulesGovernancePage() {
               </ul>
             </div>
             <div>
-              <h3 className="text-lg font-medium text-white mb-2">Rule Enforcement</h3>
-              <ul className="list-disc list-inside space-y-1 text-gray-300 text-sm">
+              <h3 className={styles.subsectionTitle}>Rule Enforcement</h3>
+              <ul className={styles.list}>
                 <li>Integration with code analysis tools (ESLint, Clippy, etc.)</li>
                 <li>Real-time rule checking during code commits</li>
                 <li>Pre-commit hook integration for rule validation</li>
@@ -96,8 +99,8 @@ export default function RulesGovernancePage() {
               </ul>
             </div>
             <div>
-              <h3 className="text-lg font-medium text-white mb-2">API Endpoints Required</h3>
-              <ul className="list-disc list-inside space-y-1 text-gray-300 text-sm">
+              <h3 className={styles.subsectionTitle}>API Endpoints Required</h3>
+              <ul className={styles.list}>
                 <li>GET /api/rules - List all rules with filters</li>
                 <li>GET /api/rules/:id - Get rule details</li>
                 <li>POST /api/rules - Create new rule</li>
@@ -110,8 +113,8 @@ export default function RulesGovernancePage() {
               </ul>
             </div>
             <div>
-              <h3 className="text-lg font-medium text-white mb-2">Compliance Tracking</h3>
-              <ul className="list-disc list-inside space-y-1 text-gray-300 text-sm">
+              <h3 className={styles.subsectionTitle}>Compliance Tracking</h3>
+              <ul className={styles.list}>
                 <li>Track rule violations in PostgreSQL `rule_violations` table</li>
                 <li>Calculate compliance scores per project and agent</li>
                 <li>Generate compliance reports</li>
@@ -122,83 +125,84 @@ export default function RulesGovernancePage() {
         </section>
 
         {/* TODOs Required for Completion */}
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-white">TODOs Required for Completion</h2>
-          <div className="bg-[#0f0f0f] border border-gray-800 rounded-lg p-6">
-            <div className="space-y-3">
-              <div className="flex items-start gap-3">
-                <input type="checkbox" className="mt-1" disabled />
-                <div>
-                  <p className="text-white font-medium">Create rules database schema</p>
-                  <p className="text-gray-400 text-sm">Design and implement PostgreSQL tables for rules, rule_violations, and rule_history in `iterations/v3/data-infrastructure`</p>
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>TODOs Required for Completion</h2>
+          <div className={styles.sectionCard}>
+            <div className={styles.todosList}>
+              <div className={styles.todoItem}>
+                <input type="checkbox" className={styles.todoCheckbox} disabled />
+                <div className={styles.todoContent}>
+                  <p className={styles.todoTitle}>Create rules database schema</p>
+                  <p className={styles.todoDescription}>Design and implement PostgreSQL tables for rules, rule_violations, and rule_history in `iterations/v3/data-infrastructure`</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <input type="checkbox" className="mt-1" disabled />
-                <div>
-                  <p className="text-white font-medium">Implement rule CRUD API endpoints</p>
-                  <p className="text-gray-400 text-sm">Create GET, POST, PATCH, DELETE endpoints for rules in `iterations/v3/data-infrastructure/src/api/handlers`</p>
+              <div className={styles.todoItem}>
+                <input type="checkbox" className={styles.todoCheckbox} disabled />
+                <div className={styles.todoContent}>
+                  <p className={styles.todoTitle}>Implement rule CRUD API endpoints</p>
+                  <p className={styles.todoDescription}>Create GET, POST, PATCH, DELETE endpoints for rules in `iterations/v3/data-infrastructure/src/api/handlers`</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <input type="checkbox" className="mt-1" disabled />
-                <div>
-                  <p className="text-white font-medium">Build rule list component</p>
-                  <p className="text-gray-400 text-sm">Create rule list view with search, filter, and sort functionality</p>
+              <div className={styles.todoItem}>
+                <input type="checkbox" className={styles.todoCheckbox} disabled />
+                <div className={styles.todoContent}>
+                  <p className={styles.todoTitle}>Build rule list component</p>
+                  <p className={styles.todoDescription}>Create rule list view with search, filter, and sort functionality</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <input type="checkbox" className="mt-1" disabled />
-                <div>
-                  <p className="text-white font-medium">Implement rule editor</p>
-                  <p className="text-gray-400 text-sm">Create rule creation/editing form with syntax highlighting and validation</p>
+              <div className={styles.todoItem}>
+                <input type="checkbox" className={styles.todoCheckbox} disabled />
+                <div className={styles.todoContent}>
+                  <p className={styles.todoTitle}>Implement rule editor</p>
+                  <p className={styles.todoDescription}>Create rule creation/editing form with syntax highlighting and validation</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <input type="checkbox" className="mt-1" disabled />
-                <div>
-                  <p className="text-white font-medium">Add rule testing interface</p>
-                  <p className="text-gray-400 text-sm">Implement rule testing against sample code before activation</p>
+              <div className={styles.todoItem}>
+                <input type="checkbox" className={styles.todoCheckbox} disabled />
+                <div className={styles.todoContent}>
+                  <p className={styles.todoTitle}>Add rule testing interface</p>
+                  <p className={styles.todoDescription}>Implement rule testing against sample code before activation</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <input type="checkbox" className="mt-1" disabled />
-                <div>
-                  <p className="text-white font-medium">Build compliance dashboard</p>
-                  <p className="text-gray-400 text-sm">Create dashboard showing compliance scores, violation trends, and rule statistics</p>
+              <div className={styles.todoItem}>
+                <input type="checkbox" className={styles.todoCheckbox} disabled />
+                <div className={styles.todoContent}>
+                  <p className={styles.todoTitle}>Build compliance dashboard</p>
+                  <p className={styles.todoDescription}>Create dashboard showing compliance scores, violation trends, and rule statistics</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <input type="checkbox" className="mt-1" disabled />
-                <div>
-                  <p className="text-white font-medium">Implement rule violation tracking</p>
-                  <p className="text-gray-400 text-sm">Track and display rule violations with status (open, fixed, ignored)</p>
+              <div className={styles.todoItem}>
+                <input type="checkbox" className={styles.todoCheckbox} disabled />
+                <div className={styles.todoContent}>
+                  <p className={styles.todoTitle}>Implement rule violation tracking</p>
+                  <p className={styles.todoDescription}>Track and display rule violations with status (open, fixed, ignored)</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <input type="checkbox" className="mt-1" disabled />
-                <div>
-                  <p className="text-white font-medium">Add rule enforcement integration</p>
-                  <p className="text-gray-400 text-sm">Integrate with code analysis tools and pre-commit hooks for automated rule checking</p>
+              <div className={styles.todoItem}>
+                <input type="checkbox" className={styles.todoCheckbox} disabled />
+                <div className={styles.todoContent}>
+                  <p className={styles.todoTitle}>Add rule enforcement integration</p>
+                  <p className={styles.todoDescription}>Integrate with code analysis tools and pre-commit hooks for automated rule checking</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <input type="checkbox" className="mt-1" disabled />
-                <div>
-                  <p className="text-white font-medium">Implement compliance reporting</p>
-                  <p className="text-gray-400 text-sm">Generate compliance reports with export functionality (PDF, CSV)</p>
+              <div className={styles.todoItem}>
+                <input type="checkbox" className={styles.todoCheckbox} disabled />
+                <div className={styles.todoContent}>
+                  <p className={styles.todoTitle}>Implement compliance reporting</p>
+                  <p className={styles.todoDescription}>Generate compliance reports with export functionality (PDF, CSV)</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <input type="checkbox" className="mt-1" disabled />
-                <div>
-                  <p className="text-white font-medium">Update navigation sidebar link</p>
-                  <p className="text-gray-400 text-sm">Change Rules & Governance button to Link component pointing to /rules-governance route</p>
+              <div className={styles.todoItem}>
+                <input type="checkbox" className={styles.todoCheckbox} disabled />
+                <div className={styles.todoContent}>
+                  <p className={styles.todoTitle}>Update navigation sidebar link</p>
+                  <p className={styles.todoDescription}>Change Rules & Governance button to Link component pointing to /rules-governance route</p>
                 </div>
               </div>
             </div>
           </div>
         </section>
+      </div>
       </div>
     </div>
   );

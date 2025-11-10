@@ -1,0 +1,117 @@
+@use '../../../styles/tokens' as *;
+
+.taskItem {
+  border-bottom: 1px solid oklch(0.269 0 0); // border-b border-zinc-800
+
+  &:last-child {
+    border-bottom: 0; // last:border-0
+  }
+}
+
+.taskTrigger {
+  padding-inline: $spacing-6; // px-6
+  padding-block: $spacing-4; // py-4
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: #1f1f1f; // hover:bg-[#1f1f1f]
+    text-decoration: none; // hover:no-underline
+  }
+}
+
+.taskTriggerContent {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3; // gap-3
+  flex: 1;
+  text-align: left;
+}
+
+.taskProgress {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2; // gap-2
+}
+
+.taskProgressIcon {
+  width: $spacing-5; // w-5
+  height: $spacing-5; // h-5
+  color: oklch(0.5 0 0); // text-zinc-500
+}
+
+.taskProgressText {
+  font-size: $font-size-sm; // text-sm
+  color: oklch(0.5 0 0); // text-zinc-400
+}
+
+.taskTitleInput {
+  width: 100%; // w-full
+  background-color: transparent; // bg-transparent
+  border: none;
+  outline: none;
+  color: oklch(0.75 0 0); // text-zinc-100
+  transition: box-shadow $transition-normal;
+
+  &:focus {
+    box-shadow: 0 0 0 2px #3b82f6; // focus:ring-2 focus:ring-blue-500
+  }
+  border-radius: $spacing-xs; // rounded
+  padding-inline: $spacing-2; // px-2
+  padding-block: $spacing-1; // py-1
+  margin-left: -$spacing-2; // -ml-2
+}
+
+.taskContent {
+  padding-inline: $spacing-6; // px-6
+  padding-bottom: $spacing-6; // pb-6
+  background-color: #0f0f0f; // bg-[#0f0f0f]
+}
+
+.taskDescriptionContainer {
+  margin-bottom: $spacing-4; // mb-4
+  margin-left: $spacing-8; // ml-8
+}
+
+.taskDescription {
+  width: 100%; // w-full
+  background-color: transparent; // bg-transparent
+  border: none;
+  outline: none;
+  color: oklch(0.5 0 0); // text-zinc-400
+  font-size: $font-size-sm; // text-sm
+  resize: none;
+  transition: box-shadow $transition-normal;
+
+  &:focus {
+    box-shadow: 0 0 0 2px #3b82f6; // focus:ring-2 focus:ring-blue-500
+  }
+  border-radius: $spacing-xs; // rounded
+  padding-inline: $spacing-2; // px-2
+  padding-block: $spacing-1; // py-1
+  margin-top: $spacing-2; // mt-2
+  min-height: 60px; // min-h-[60px]
+}
+
+.contextChipsContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-2; // gap-2
+  margin-bottom: $spacing-4; // mb-4
+  margin-left: $spacing-8; // ml-8
+}
+
+.subtasksContainer {
+  margin-bottom: $spacing-4; // mb-4
+  margin-left: $spacing-8; // ml-8
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2; // space-y-2
+}
+
+.taskActions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2; // gap-2
+  margin-left: $spacing-8; // ml-8
+}
+

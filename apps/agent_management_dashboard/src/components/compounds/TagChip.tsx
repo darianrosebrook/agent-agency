@@ -1,6 +1,8 @@
 'use client';
 
 import { X } from 'lucide-react';
+import styles from './TagChip.module.scss';
+import { cn } from '../ui/utils';
 
 interface TagChipProps {
   tag: string;
@@ -11,13 +13,11 @@ interface TagChipProps {
 export function TagChip({ tag, onRemove, className = '' }: TagChipProps) {
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-1 bg-zinc-700 rounded text-xs ${
-        onRemove ? 'cursor-pointer hover:bg-zinc-600' : ''
-      } transition-colors ${className}`}
+      className={cn(styles.tagChip, onRemove && styles.removable, className)}
       onClick={() => onRemove?.(tag)}
     >
       {tag}
-      {onRemove && <X className="w-3 h-3 text-gray-400 hover:text-white" />}
+      {onRemove && <X className={styles.tagChipIcon} />}
     </span>
   );
 }

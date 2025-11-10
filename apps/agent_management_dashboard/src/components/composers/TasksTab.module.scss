@@ -1,0 +1,14 @@
+@use '../../styles/tokens' as *;
+
+.tasksTab {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background-color: #0d0d0d; // bg-[#0d0d0d]
+}
+
+.tasksTabContent {
+  height: 100%;
+  overflow: auto;
+}
+

@@ -1,4 +1,4 @@
-import { Projects } from "@/components/assemblies/Projects";
+import { Projects } from "@/components/projects/Projects";
 
 export default function ProjectsPage() {
   return <Projects />;

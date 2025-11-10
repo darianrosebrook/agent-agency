@@ -1,0 +1,49 @@
+@use '../../../styles/tokens' as *;
+
+.contextMenuButton {
+  background-color: oklch(0.145 0 0); // bg-zinc-950
+  color: oklch(0.5 0 0); // text-zinc-300
+  border-color: oklch(0.269 0 0); // border-zinc-700
+  transition: background-color $transition-normal, color $transition-normal;
+
+  &:hover {
+    background-color: oklch(0.269 0 0); // hover:bg-zinc-800
+    color: oklch(0.95 0 0); // hover:text-zinc-100
+  }
+}
+
+.contextMenuButtonIcon {
+  width: $spacing-4; // w-4
+  height: $spacing-4; // h-4
+  margin-left: $spacing-2; // ml-2
+}
+
+.dropdownMenuContent {
+  width: 14rem; // w-56
+  background-color: #1a1a1a; // bg-[#1a1a1a]
+  border-color: oklch(0.269 0 0); // border-zinc-700
+}
+
+.dropdownMenuItem {
+  cursor: pointer;
+  color: oklch(0.5 0 0); // text-zinc-300
+  transition: background-color $transition-normal, color $transition-normal;
+
+  &:hover,
+  &:focus {
+    background-color: oklch(0.269 0 0); // hover:bg-zinc-800 focus:bg-zinc-800
+    color: oklch(0.95 0 0); // hover:text-zinc-100 focus:text-zinc-100
+  }
+}
+
+.dropdownMenuItemIcon {
+  width: $spacing-4; // w-4
+  height: $spacing-4; // h-4
+  margin-right: $spacing-2; // mr-2
+}
+
+.dropdownMenuSubContent {
+  background-color: #1a1a1a; // bg-[#1a1a1a]
+  border-color: oklch(0.269 0 0); // border-zinc-700
+}
+

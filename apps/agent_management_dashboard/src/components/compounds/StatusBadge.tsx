@@ -1,6 +1,8 @@
 "use client";
 
 import { StatusIcon, type StatusIconType } from "./StatusIcon";
+import styles from "./StatusBadge.module.scss";
+import { cn } from "../ui/utils";
 
 export interface StatusConfig {
   label: string;
@@ -24,7 +26,7 @@ export function StatusBadge({
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${config.color} font-medium hover:opacity-80 transition-opacity ${className}`}
+      className={cn(styles.statusBadge, config.color, className)}
       type={onClick ? "button" : undefined}
     >
       <StatusIcon type={config.icon} />

@@ -1,0 +1,49 @@
+@use '../../../styles/tokens' as *;
+
+.loadingContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh; // min-h-screen
+}
+
+.loadingText {
+  color: oklch(0.5 0 0); // text-gray-400
+}
+
+.errorContainer {
+  padding: $spacing-8; // p-8
+}
+
+.errorCard {
+  background-color: rgba(239, 68, 68, 0.2); // bg-red-500/20
+  border: 1px solid rgba(239, 68, 68, 0.5); // border border-red-500/50
+  border-radius: $spacing-lg; // rounded-lg
+  padding: $spacing-6; // p-6
+}
+
+.errorTitle {
+  font-size: $font-size-xl; // text-xl
+  font-weight: $font-weight-semibold; // font-semibold
+  color: #ef4444; // text-red-500
+  margin-bottom: $spacing-2; // mb-2
+}
+
+.errorMessage {
+  color: oklch(0.5 0 0); // text-gray-300
+  margin-bottom: $spacing-4; // mb-4
+}
+
+.errorButton {
+  padding-inline: $spacing-4; // px-4
+  padding-block: $spacing-2; // py-2
+  background-color: #2563eb; // bg-blue-600
+  color: white; // text-white
+  border-radius: $spacing-lg; // rounded-lg
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: #1d4ed8; // hover:bg-blue-700
+  }
+}
+

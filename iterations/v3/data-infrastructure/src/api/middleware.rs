@@ -3,6 +3,10 @@
 //! Contains middleware functions for API key authentication, rate limiting,
 //! and other request processing logic.
 
+pub mod auth;
+
+pub use auth::{VerifiedUser, AdminUser, ViewerUser, roles, has_role, has_any_role, has_all_roles};
+
 use axum::http::{HeaderMap, StatusCode};
 use axum::middleware::Next;
 use axum::response::Response;

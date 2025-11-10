@@ -1,0 +1,38 @@
+@use '../../../styles/tokens' as *;
+
+.contextChip {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-2; // gap-2
+  padding-inline: $spacing-3; // px-3
+  padding-block: 0.375rem; // py-1.5
+  background-color: rgba(59, 130, 246, 0.1); // bg-blue-500/10
+  color: #60a5fa; // text-blue-400
+  border-radius: 9999px; // rounded-full
+  font-size: $font-size-sm; // text-sm
+  border: 1px solid rgba(59, 130, 246, 0.2); // border border-blue-500/20
+}
+
+.contextChipIcon {
+  width: $spacing-3; // w-3
+  height: $spacing-3; // h-3
+}
+
+.contextChipRemove {
+  opacity: 0;
+  transition: opacity $transition-normal, color $transition-normal;
+
+  .contextChip:hover & {
+    opacity: 1; // group-hover:opacity-100
+  }
+
+  &:hover {
+    color: #93c5fd; // hover:text-blue-300
+  }
+}
+
+.contextChipRemoveIcon {
+  width: $spacing-3; // w-3
+  height: $spacing-3; // h-3
+}
+

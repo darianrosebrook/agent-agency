@@ -1,4 +1,6 @@
 import { ReactNode } from "react";
+import { cn } from "../ui/utils";
+import styles from "./BentoPanel.module.scss";
 
 interface BentoPanelProps {
   children?: ReactNode;
@@ -10,9 +12,7 @@ export function BentoPanel({
   className = "",
 }: BentoPanelProps) {
   return (
-    <div
-      className={`bg-[#111111] relative rounded-[12px] size-full border border-[#cacaca] ${className}`}
-    >
+    <div className={cn(styles.bentoPanel, className)}>
       {children}
     </div>
   );

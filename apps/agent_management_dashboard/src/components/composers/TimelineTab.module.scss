@@ -1,0 +1,88 @@
+@use '../../styles/tokens' as *;
+
+.timelineTab {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #0d0d0d; // bg-[#0d0d0d]
+}
+
+.controls {
+  border-bottom: 1px solid #262626; // border-b border-[#262626]
+  padding-inline: $spacing-6;
+  padding-block: $spacing-4;
+}
+
+.controlsContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.controlsLeft {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3;
+}
+
+.controlsTitle {
+  color: white; // text-white
+  font-size: $font-size-xl; // text-xl
+}
+
+.controlsRight {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3;
+}
+
+.workerSelect {
+  width: 12rem; // w-48
+  background-color: #1a1a1a; // bg-[#1a1a1a]
+  border-color: #262626; // border-[#262626]
+  color: white; // text-white
+}
+
+.workerSelectContent {
+  background-color: #1a1a1a; // bg-[#1a1a1a]
+  border-color: #262626; // border-[#262626]
+  color: white; // text-white
+}
+
+.zoomControls {
+  display: flex;
+  align-items: center;
+  gap: $spacing-1;
+  background-color: #1a1a1a; // bg-[#1a1a1a]
+  border-radius: calc(var(--radius) + 4px); // rounded-lg
+  border: 1px solid #262626; // border border-[#262626]
+  padding: $spacing-1;
+}
+
+.zoomButton {
+  height: 1.75rem; // h-7
+  padding-inline: $spacing-2;
+  color: #888888; // text-[#888888]
+
+  &:hover {
+    color: white; // hover:text-white
+    background-color: #262626; // hover:bg-[#262626]
+  }
+
+  &:disabled {
+    opacity: 0.3;
+  }
+}
+
+.zoomLevel {
+  padding-inline: $spacing-3;
+  font-size: $font-size-sm;
+  color: white; // text-white
+  text-transform: capitalize;
+}
+
+.ganttContainer {
+  flex: 1;
+  overflow: auto;
+}
+

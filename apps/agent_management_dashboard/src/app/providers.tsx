@@ -3,8 +3,9 @@
 import type { ReactNode } from "react";
 import { ThemeProvider } from "next-themes";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { Sidebar as NavigationSidebar } from "@/components/assemblies/NavigationSidebar";
+import { Sidebar as NavigationSidebar } from "@/components/dashboard/NavigationSidebar";
 import { Toaster } from "@/components/ui/sonner";
+import styles from "./providers.module.scss";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
@@ -15,9 +16,9 @@ export function Providers({ children }: { children: ReactNode }) {
       disableTransitionOnChange
     >
       <ErrorBoundary>
-        <div className="flex h-screen bg-zinc-950 text-gray-100">
+        <div className={styles.providersContainer}>
           <NavigationSidebar />
-          <main className="flex-1 overflow-y-auto">{children}</main>
+          <main className={styles.main}>{children}</main>
         </div>
         <Toaster />
       </ErrorBoundary>

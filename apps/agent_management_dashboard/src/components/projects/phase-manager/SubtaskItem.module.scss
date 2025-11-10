@@ -1,0 +1,59 @@
+@use '../../../styles/tokens' as *;
+
+.subtaskItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3; // gap-3
+  padding-block: $spacing-1; // py-1
+}
+
+.subtaskToggle {
+  flex-shrink: 0;
+}
+
+.subtaskIcon {
+  width: $spacing-4; // w-4
+  height: $spacing-4; // h-4
+}
+
+.subtaskIconCompleted {
+  color: #10b981; // text-green-500
+}
+
+.subtaskIconIncomplete {
+  color: oklch(0.5 0 0); // text-zinc-500
+}
+
+.subtaskText {
+  flex: 1;
+  font-size: $font-size-sm; // text-sm
+}
+
+.subtaskTextCompleted {
+  color: oklch(0.5 0 0); // text-zinc-500
+  text-decoration: line-through; // line-through
+}
+
+.subtaskTextIncomplete {
+  color: oklch(0.5 0 0); // text-zinc-300
+}
+
+.subtaskDelete {
+  opacity: 0;
+  transition: opacity $transition-normal, color $transition-normal;
+  color: oklch(0.5 0 0); // text-zinc-500
+
+  .subtaskItem:hover & {
+    opacity: 1; // group-hover:opacity-100
+  }
+
+  &:hover {
+    color: #ef4444; // hover:text-red-500
+  }
+}
+
+.subtaskDeleteIcon {
+  width: $spacing-4; // w-4
+  height: $spacing-4; // h-4
+}
+

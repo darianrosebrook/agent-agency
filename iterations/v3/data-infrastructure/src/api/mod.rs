@@ -20,11 +20,14 @@ pub mod handlers;
 pub mod types;
 pub mod transform;
 pub mod health;
+pub mod pagination;
 
 // Re-export public types and functions for backward compatibility
 pub use api_types::*;
 pub use api_errors::{ApiError, Result};
 pub use middleware::*;
+pub use middleware::auth::{VerifiedUser, AdminUser, ViewerUser, roles, has_role, has_any_role, has_all_roles};
+pub use pagination::{PaginationParams, CursorPaginationParams, PaginatedResponse, CursorPaginatedResponse, extract_pagination, extract_cursor_pagination};
 
 // Conditionally re-export server types if orchestration feature is enabled
 #[cfg(feature = "orchestration")]

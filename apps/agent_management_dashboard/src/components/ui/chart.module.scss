@@ -1,0 +1,58 @@
+@use '../../styles/tokens' as *;
+
+.chartContainer {
+  display: flex;
+  aspect-ratio: 16 / 9; // aspect-video
+  justify-content: center;
+  font-size: $font-size-xs;
+
+  // Recharts styling overrides
+  :global(.recharts-cartesian-axis-tick text) {
+    fill: var(--muted-foreground);
+  }
+
+  :global(.recharts-cartesian-grid line[stroke='#ccc']) {
+    stroke: hsl(var(--border) / 0.5);
+  }
+
+  :global(.recharts-curve.recharts-tooltip-cursor) {
+    stroke: var(--border);
+  }
+
+  :global(.recharts-polar-grid [stroke='#ccc']) {
+    stroke: var(--border);
+  }
+
+  :global(.recharts-radial-bar-background-sector) {
+    fill: var(--muted);
+  }
+
+  :global(.recharts-rectangle.recharts-tooltip-cursor) {
+    fill: var(--muted);
+  }
+
+  :global(.recharts-reference-line [stroke='#ccc']) {
+    stroke: var(--border);
+  }
+
+  :global(.recharts-dot[stroke='#fff']) {
+    stroke: transparent;
+  }
+
+  :global(.recharts-layer) {
+    outline: none;
+  }
+
+  :global(.recharts-sector) {
+    outline: none;
+
+    &[stroke='#fff'] {
+      stroke: transparent;
+    }
+  }
+
+  :global(.recharts-surface) {
+    outline: none;
+  }
+}
+

@@ -4,6 +4,8 @@ import { useState } from "react";
 import svgPaths from "../../imports/svg-jzcqnicw4t";
 import { ChatSidebar } from "./ChatSidebar";
 import WorkspacePanel from "../../imports/WorkspacePanel";
+import { cn } from "../ui/utils";
+import styles from "./WorkspaceTab.module.scss";
 
 export function WorkspaceTab() {
   const [activeTab, setActiveTab] = useState<"context" | "chats">("context");
@@ -11,18 +13,18 @@ export function WorkspaceTab() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   return (
-    <div className="h-full w-full overflow-hidden bg-[#0d0d0d]">
-      <div className="h-full overflow-auto">
-        <div className="box-border flex flex-col gap-[24px] h-full items-start pb-0 pt-[32px] px-[32px]">
+    <div className={styles.workspaceTab}>
+      <div className={styles.workspaceTabContent}>
+        <div className={styles.workspaceContainer}>
           {/* Main Content */}
-          <div className="content-stretch flex gap-[16px] items-start w-full flex-1 min-h-0 relative">
+          <div className={styles.mainContent}>
             {/* Expand Button - shown when sidebar is collapsed */}
             {isSidebarCollapsed && (
               <button
                 onClick={() => setIsSidebarCollapsed(false)}
-                className="absolute left-0 top-0 z-10 bg-[#1a1a1a] border border-neutral-800 flex items-center justify-center rounded-full size-[40px] hover:bg-[#252525] transition-colors shadow-lg"
+                className={styles.expandButton}
               >
-                <div className="size-[16px]">
+                <div className={styles.expandButtonIcon}>
                   <svg
                     className="block size-full"
                     fill="none"
@@ -43,26 +45,27 @@ export function WorkspaceTab() {
 
             {/* Workspace Sidebar */}
             <div
-              className={`bg-[#1a1a1a] flex flex-col h-full rounded-[16px] shrink-0 overflow-hidden transition-all duration-300 ${
+              className={cn(
+                styles.workspaceSidebar,
                 isSidebarCollapsed
-                  ? "w-0 opacity-0 -ml-[16px]"
-                  : "w-[319px] opacity-100"
-              }`}
+                  ? styles.workspaceSidebarCollapsed
+                  : styles.workspaceSidebarExpanded
+              )}
             >
               <div
                 aria-hidden="true"
-                className="absolute border-[#1e2939] border-[0px_0.909px_0px_0px] border-solid inset-0 pointer-events-none rounded-[16px]"
+                className={styles.workspaceSidebarBorder}
               />
 
               {/* Header */}
-              <div className="relative shrink-0 w-full">
+              <div className={styles.sidebarHeader}>
                 <div
                   aria-hidden="true"
-                  className="absolute border-[#1e2939] border-[0px_0px_0.909px] border-solid inset-0 pointer-events-none"
+                  className={styles.sidebarHeaderBorder}
                 />
-                <div className="flex flex-col h-[60px] items-start pb-[0.909px] pt-[16px] px-[16px]">
-                  <div className="h-[27px] relative w-full flex items-center">
-                    <div className="absolute left-0 size-[16px] top-[6px]">
+                <div className={styles.sidebarHeaderContent}>
+                  <div className={styles.sidebarHeaderTop}>
+                    <div className={styles.sidebarHeaderIcon}>
                       <svg
                         className="block size-full"
                         fill="none"
@@ -89,14 +92,14 @@ export function WorkspaceTab() {
                         </defs>
                       </svg>
                     </div>
-                    <p className="font-['Inter:Medium',sans-serif] font-medium leading-[27px] ml-[28px] text-[18px] text-white tracking-[-0.4395px]">
+                    <p className={styles.sidebarHeaderTitle}>
                       Workspace
                     </p>
                     <button
                       onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                      className="absolute bg-[#1a1a1a] border border-neutral-800 flex items-center justify-center right-0 rounded-full size-[32px] top-[-2px] hover:bg-[#252525] transition-colors"
+                      className={styles.sidebarCollapseButton}
                     >
-                      <div className="size-[16px]">
+                      <div className={styles.sidebarCollapseButtonIcon}>
                         <svg
                           className="block size-full"
                           fill="none"
@@ -118,42 +121,48 @@ export function WorkspaceTab() {
               </div>
 
               {/* Tab List */}
-              <div className="bg-[#0d0d0d] h-[40px] relative shrink-0 w-full">
+              <div className={styles.tabList}>
                 <div
                   aria-hidden="true"
-                  className="absolute border-[0px_0px_0.909px] border-neutral-800 border-solid inset-0 pointer-events-none"
+                  className={styles.tabListBorder}
                 />
-                <div className="h-[40px] relative w-full flex items-center px-[3px]">
+                <div className={styles.tabListContent}>
                   <button
                     onClick={() => setActiveTab("context")}
-                    className={`flex gap-[6px] h-[32px] items-center justify-center px-[9px] py-[5px] rounded-[14px] w-[50%] transition-colors ${
+                    className={cn(
+                      styles.tabButton,
                       activeTab === "context"
-                        ? "bg-[#1a1a1a]"
-                        : "hover:bg-[#1a1a1a]/50"
-                    }`}
+                        ? styles.tabButtonActive
+                        : styles.tabButtonInactive
+                    )}
                   >
                     <p
-                      className={`font-['Inter:Medium',sans-serif] font-medium leading-[20px] text-[14px] tracking-[-0.1504px] ${
+                      className={cn(
+                        styles.tabButtonText,
                         activeTab === "context"
-                          ? "text-white"
-                          : "text-[#888888]"
-                      }`}
+                          ? styles.tabButtonTextActive
+                          : styles.tabButtonTextInactive
+                      )}
                     >
                       Context
                     </p>
                   </button>
                   <button
                     onClick={() => setActiveTab("chats")}
-                    className={`flex gap-[6px] h-[32px] items-center justify-center px-[9px] py-[5px] rounded-[14px] w-[50%] transition-colors ${
+                    className={cn(
+                      styles.tabButton,
                       activeTab === "chats"
-                        ? "bg-[#1a1a1a]"
-                        : "hover:bg-[#1a1a1a]/50"
-                    }`}
+                        ? styles.tabButtonActive
+                        : styles.tabButtonInactive
+                    )}
                   >
                     <p
-                      className={`font-['Inter:Medium',sans-serif] font-medium leading-[20px] text-[14px] tracking-[-0.1504px] ${
-                        activeTab === "chats" ? "text-white" : "text-[#888888]"
-                      }`}
+                      className={cn(
+                        styles.tabButtonText,
+                        activeTab === "chats"
+                          ? styles.tabButtonTextActive
+                          : styles.tabButtonTextInactive
+                      )}
                     >
                       Chats
                     </p>
@@ -162,7 +171,7 @@ export function WorkspaceTab() {
               </div>
 
               {/* Tab Content */}
-              <div className="flex-1 overflow-auto">
+              <div className={styles.tabContent}>
                 {activeTab === "context" ? (
                   <ContextFileTree onSelect={setSelectedItem} />
                 ) : (
@@ -175,7 +184,7 @@ export function WorkspaceTab() {
 
             {/* Workspace Panel - appears when item is selected */}
             {selectedItem && (
-              <div className="flex-[2] min-h-0 h-full">
+              <div className={styles.workspacePanel}>
                 <WorkspacePanel
                   title={selectedItem}
                   onClose={() => setSelectedItem(null)}
@@ -185,9 +194,12 @@ export function WorkspaceTab() {
 
             {/* Bento Grid - reflows based on sidebar and panel visibility */}
             <div
-              className={`min-h-0 transition-all duration-300 ${
-                selectedItem ? "flex-1" : "flex-[2]"
-              }`}
+              className={cn(
+                styles.bentoGridContainer,
+                selectedItem
+                  ? styles.bentoGridContainerWithPanel
+                  : styles.bentoGridContainerWithoutPanel
+              )}
             >
               <BentoGrid hasPanel={!!selectedItem} />
             </div>
@@ -229,14 +241,14 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
   };
 
   return (
-    <div className="w-full p-[8px]">
+    <div className={styles.fileTree}>
       {/* src folder */}
-      <div className="mb-0">
+      <div className={styles.folderContainer}>
         <button
           onClick={() => toggleFolder("src")}
-          className="flex gap-[8px] h-[32px] items-center pl-[8px] pr-0 py-0 rounded-[4px] w-full hover:bg-[#252525] transition-colors"
+          className={styles.folderButton}
         >
-          <div className="size-[16px] shrink-0">
+          <div className={styles.folderIcon}>
             <svg
               className="block size-full"
               fill="none"
@@ -256,7 +268,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
               />
             </svg>
           </div>
-          <div className="size-[16px] shrink-0">
+          <div className={styles.folderIcon}>
             <svg
               className="block size-full"
               fill="none"
@@ -279,17 +291,17 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
               </defs>
             </svg>
           </div>
-          <p className="font-['Inter:Regular',sans-serif] font-normal leading-[20px] text-[#d1d5dc] text-[14px] tracking-[-0.1504px]">
+          <p className={styles.folderName}>
             src
           </p>
         </button>
         {expandedFolders.has("src") && (
-          <div className="flex flex-col gap-0">
+          <div className={styles.folderChildren}>
             <button
               onClick={() => onSelect("src/components")}
-              className="flex gap-[8px] h-[32px] items-center pl-[20px] pr-0 py-0 rounded-[4px] w-full hover:bg-[#252525] transition-colors"
+              className={styles.fileButton}
             >
-              <div className="size-[16px] shrink-0">
+              <div className={styles.fileIcon}>
                 <svg
                   className="block size-full"
                   fill="none"
@@ -305,7 +317,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
                   />
                 </svg>
               </div>
-              <div className="size-[16px] shrink-0">
+              <div className={styles.fileIcon}>
                 <svg
                   className="block size-full"
                   fill="none"
@@ -328,15 +340,15 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
                   </defs>
                 </svg>
               </div>
-              <p className="font-['Inter:Regular',sans-serif] font-normal leading-[20px] text-[#d1d5dc] text-[14px] tracking-[-0.1504px]">
+              <p className={styles.fileName}>
                 components
               </p>
             </button>
             <button
               onClick={() => onSelect("src/utils")}
-              className="flex gap-[8px] h-[32px] items-center pl-[20px] pr-0 py-0 rounded-[4px] w-full hover:bg-[#252525] transition-colors"
+              className={styles.fileButton}
             >
-              <div className="size-[16px] shrink-0">
+              <div className={styles.fileIcon}>
                 <svg
                   className="block size-full"
                   fill="none"
@@ -352,7 +364,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
                   />
                 </svg>
               </div>
-              <div className="size-[16px] shrink-0">
+              <div className={styles.fileIcon}>
                 <svg
                   className="block size-full"
                   fill="none"
@@ -375,7 +387,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
                   </defs>
                 </svg>
               </div>
-              <p className="font-['Inter:Regular',sans-serif] font-normal leading-[20px] text-[#d1d5dc] text-[14px] tracking-[-0.1504px]">
+              <p className={styles.fileName}>
                 utils
               </p>
             </button>
@@ -384,12 +396,12 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
       </div>
 
       {/* public folder */}
-      <div className="mb-0">
+      <div className={styles.folderContainer}>
         <button
           onClick={() => toggleFolder("public")}
-          className="flex gap-[8px] h-[32px] items-center pl-[8px] pr-0 py-0 rounded-[4px] w-full hover:bg-[#252525] transition-colors"
+          className={styles.folderButton}
         >
-          <div className="size-[16px] shrink-0">
+          <div className={styles.folderIcon}>
             <svg
               className="block size-full"
               fill="none"
@@ -409,7 +421,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
               />
             </svg>
           </div>
-          <div className="size-[16px] shrink-0">
+          <div className={styles.folderIcon}>
             <svg
               className="block size-full"
               fill="none"
@@ -432,17 +444,17 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
               </defs>
             </svg>
           </div>
-          <p className="font-['Inter:Regular',sans-serif] font-normal leading-[20px] text-[#d1d5dc] text-[14px] tracking-[-0.1504px]">
+          <p className={styles.folderName}>
             public
           </p>
         </button>
         {expandedFolders.has("public") && (
-          <div className="flex flex-col gap-0">
+          <div className={styles.folderChildren}>
             <button
               onClick={() => onSelect("public/index.html")}
-              className="flex gap-[8px] h-[32px] items-center pl-[36px] pr-0 py-0 rounded-[4px] w-full hover:bg-[#252525] transition-colors"
+              className={cn(styles.fileButton, styles.fileButtonNested)}
             >
-              <div className="size-[16px] shrink-0">
+              <div className={styles.fileIcon}>
                 <svg
                   className="block size-full"
                   fill="none"
@@ -493,15 +505,15 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
                   </defs>
                 </svg>
               </div>
-              <p className="font-['Inter:Regular',sans-serif] font-normal leading-[20px] text-[#d1d5dc] text-[14px] tracking-[-0.1504px]">
+              <p className={styles.fileName}>
                 index.html
               </p>
             </button>
             <button
               onClick={() => onSelect("public/styles.css")}
-              className="flex gap-[8px] h-[32px] items-center pl-[36px] pr-0 py-0 rounded-[4px] w-full hover:bg-[#252525] transition-colors"
+              className={cn(styles.fileButton, styles.fileButtonNested)}
             >
-              <div className="size-[16px] shrink-0">
+              <div className={styles.fileIcon}>
                 <svg
                   className="block size-full"
                   fill="none"
@@ -552,7 +564,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
                   </defs>
                 </svg>
               </div>
-              <p className="font-['Inter:Regular',sans-serif] font-normal leading-[20px] text-[#d1d5dc] text-[14px] tracking-[-0.1504px]">
+              <p className={styles.fileName}>
                 styles.css
               </p>
             </button>
@@ -563,9 +575,9 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
       {/* package.json */}
       <button
         onClick={() => onSelect("package.json")}
-        className="flex gap-[8px] h-[32px] items-center pl-[24px] pr-0 py-0 rounded-[4px] w-full hover:bg-[#252525] transition-colors"
+        className={styles.fileButton}
       >
-        <div className="size-[16px] shrink-0">
+        <div className={styles.fileIcon}>
           <svg
             className="block size-full"
             fill="none"
@@ -609,7 +621,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
             </defs>
           </svg>
         </div>
-        <p className="font-['Inter:Regular',sans-serif] font-normal leading-[20px] text-[#d1d5dc] text-[14px] tracking-[-0.1504px]">
+        <p className={styles.fileName}>
           package.json
         </p>
       </button>
@@ -617,9 +629,9 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
       {/* README.md */}
       <button
         onClick={() => onSelect("README.md")}
-        className="flex gap-[8px] h-[32px] items-center pl-[24px] pr-0 py-0 rounded-[4px] w-full hover:bg-[#252525] transition-colors"
+        className={styles.fileButton}
       >
-        <div className="size-[16px] shrink-0">
+        <div className={styles.fileIcon}>
           <svg
             className="block size-full"
             fill="none"
@@ -670,7 +682,7 @@ function ContextFileTree({ onSelect }: ContextFileTreeProps) {
             </defs>
           </svg>
         </div>
-        <p className="font-['Inter:Regular',sans-serif] font-normal leading-[20px] text-[#d1d5dc] text-[14px] tracking-[-0.1504px]">
+        <p className={styles.fileName}>
           README.md
         </p>
       </button>
@@ -685,80 +697,97 @@ interface BentoGridProps {
 function BentoGrid({ hasPanel }: BentoGridProps) {
   return (
     <div
-      className={`grid ${
-        hasPanel ? "grid-cols-1" : "grid-cols-12"
-      } gap-4 h-full auto-rows-[minmax(200px,auto)]`}
+      className={cn(
+        styles.bentoGrid,
+        hasPanel ? styles.bentoGridWithPanel : styles.bentoGridWithoutPanel
+      )}
     >
       {/* Panel 1 - spans 4 columns, 2 rows */}
       <div
-        className={`${
-          hasPanel ? "col-span-1" : "col-span-4"
-        } row-span-2 bg-[#1a1a1a] border border-[#1e2939] rounded-[16px] p-4 flex items-center justify-center`}
+        className={cn(
+          styles.bentoPanel,
+          hasPanel ? styles.bentoPanelWithPanel : styles.colSpan4,
+          styles.rowSpan2
+        )}
       >
-        <p className="text-[#4a5565] text-[16px]">Panel 1</p>
+        <p className={styles.bentoPanelText}>Panel 1</p>
       </div>
 
       {/* Panel 2 - spans 8 columns, 2 rows */}
       <div
-        className={`${
-          hasPanel ? "col-span-1" : "col-span-8"
-        } row-span-2 bg-[#1a1a1a] border border-[#1e2939] rounded-[16px] p-4 flex items-center justify-center`}
+        className={cn(
+          styles.bentoPanel,
+          hasPanel ? styles.bentoPanelWithPanel : styles.colSpan8,
+          styles.rowSpan2
+        )}
       >
-        <p className="text-[#4a5565] text-[16px]">Panel 2</p>
+        <p className={styles.bentoPanelText}>Panel 2</p>
       </div>
 
       {/* Panel 3 - spans 7 columns, 3 rows */}
       <div
-        className={`${
-          hasPanel ? "col-span-1" : "col-span-7"
-        } row-span-3 bg-[#1a1a1a] border border-[#1e2939] rounded-[16px] p-4 flex items-center justify-center`}
+        className={cn(
+          styles.bentoPanel,
+          hasPanel ? styles.bentoPanelWithPanel : styles.colSpan7,
+          styles.rowSpan3
+        )}
       >
-        <p className="text-[#4a5565] text-[16px]">Panel 3</p>
+        <p className={styles.bentoPanelText}>Panel 3</p>
       </div>
 
       {/* Panel 4 - spans 5 columns, 3 rows */}
       <div
-        className={`${
-          hasPanel ? "col-span-1" : "col-span-5"
-        } row-span-3 bg-[#1a1a1a] border border-[#1e2939] rounded-[16px] p-4 flex items-center justify-center`}
+        className={cn(
+          styles.bentoPanel,
+          hasPanel ? styles.bentoPanelWithPanel : styles.colSpan5,
+          styles.rowSpan3
+        )}
       >
-        <p className="text-[#4a5565] text-[16px]">Panel 4</p>
+        <p className={styles.bentoPanelText}>Panel 4</p>
       </div>
 
       {/* Panel 5 - spans 12 columns, 3 rows */}
       <div
-        className={`${
-          hasPanel ? "col-span-1" : "col-span-12"
-        } row-span-3 bg-[#1a1a1a] border border-[#1e2939] rounded-[16px] p-4 flex items-center justify-center`}
+        className={cn(
+          styles.bentoPanel,
+          hasPanel ? styles.bentoPanelWithPanel : styles.colSpan12,
+          styles.rowSpan3
+        )}
       >
-        <p className="text-[#4a5565] text-[16px]">Panel 5</p>
+        <p className={styles.bentoPanelText}>Panel 5</p>
       </div>
 
       {/* Panel 6 - spans 4 columns, 2 rows */}
       <div
-        className={`${
-          hasPanel ? "col-span-1" : "col-span-4"
-        } row-span-2 bg-[#1a1a1a] border border-[#1e2939] rounded-[16px] p-4 flex items-center justify-center`}
+        className={cn(
+          styles.bentoPanel,
+          hasPanel ? styles.bentoPanelWithPanel : styles.colSpan4,
+          styles.rowSpan2
+        )}
       >
-        <p className="text-[#4a5565] text-[16px]">Panel 6</p>
+        <p className={styles.bentoPanelText}>Panel 6</p>
       </div>
 
       {/* Panel 7 - spans 4 columns, 2 rows */}
       <div
-        className={`${
-          hasPanel ? "col-span-1" : "col-span-4"
-        } row-span-2 bg-[#1a1a1a] border border-[#1e2939] rounded-[16px] p-4 flex items-center justify-center`}
+        className={cn(
+          styles.bentoPanel,
+          hasPanel ? styles.bentoPanelWithPanel : styles.colSpan4,
+          styles.rowSpan2
+        )}
       >
-        <p className="text-[#4a5565] text-[16px]">Panel 7</p>
+        <p className={styles.bentoPanelText}>Panel 7</p>
       </div>
 
       {/* Panel 8 - spans 4 columns, 2 rows */}
       <div
-        className={`${
-          hasPanel ? "col-span-1" : "col-span-4"
-        } row-span-2 bg-[#1a1a1a] border border-[#1e2939] rounded-[16px] p-4 flex items-center justify-center`}
+        className={cn(
+          styles.bentoPanel,
+          hasPanel ? styles.bentoPanelWithPanel : styles.colSpan4,
+          styles.rowSpan2
+        )}
       >
-        <p className="text-[#4a5565] text-[16px]">Panel 8</p>
+        <p className={styles.bentoPanelText}>Panel 8</p>
       </div>
     </div>
   );

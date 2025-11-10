@@ -1,0 +1,50 @@
+@use '../../styles/tokens' as *;
+
+.breadcrumbList {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-1_5;
+  font-size: $font-size-sm;
+  color: var(--muted-foreground);
+  word-break: break-word;
+
+  @media (min-width: $breakpoint-sm) {
+    gap: 0.625rem; // sm:gap-2.5
+  }
+}
+
+.breadcrumbItem {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-1_5;
+}
+
+.breadcrumbLink {
+  transition: color $transition-normal;
+
+  &:hover {
+    color: var(--foreground);
+  }
+}
+
+.breadcrumbPage {
+  color: var(--foreground);
+  font-weight: $font-weight-normal;
+}
+
+.breadcrumbSeparator {
+  svg {
+    width: 0.875rem; // size-3.5
+    height: 0.875rem;
+  }
+}
+
+.breadcrumbEllipsis {
+  display: flex;
+  width: 2.25rem; // size-9
+  height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+}
+

@@ -1,0 +1,63 @@
+@use '../../styles/tokens' as *;
+
+.switch {
+  display: inline-flex;
+  height: 1.15rem;
+  width: 2rem; // w-8
+  flex-shrink: 0;
+  align-items: center;
+  border-radius: 9999px; // rounded-full
+  border: 1px solid transparent;
+  transition: all $transition-normal;
+  outline: none;
+
+  &[data-state='checked'] {
+    background-color: var(--primary);
+  }
+
+  &[data-state='unchecked'] {
+    background-color: var(--switch-background);
+  }
+
+  &:focus-visible {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px hsl(var(--ring) / 0.5);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .dark &[data-state='unchecked'] {
+    background-color: hsl(var(--input) / 0.8);
+  }
+}
+
+.switchThumb {
+  pointer-events: none;
+  display: block;
+  width: 1rem; // size-4
+  height: 1rem;
+  border-radius: 9999px; // rounded-full
+  background-color: var(--card);
+  box-shadow: 0;
+  transition: transform $transition-normal;
+
+  &[data-state='checked'] {
+    transform: translateX(calc(100% - 2px));
+  }
+
+  &[data-state='unchecked'] {
+    transform: translateX(0);
+  }
+
+  .dark &[data-state='unchecked'] {
+    background-color: var(--card-foreground);
+  }
+
+  .dark &[data-state='checked'] {
+    background-color: var(--primary-foreground);
+  }
+}
+

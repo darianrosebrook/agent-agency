@@ -1,5 +1,8 @@
 "use client";
 
+import styles from './PriorityIndicator.module.scss';
+import { cn } from '../ui/utils';
+
 export interface PriorityConfig {
   label: string;
   color: string;
@@ -30,7 +33,7 @@ export function PriorityIndicator({
     return (
       <button
         onClick={onClick}
-        className={`flex items-center gap-2 hover:opacity-80 transition-opacity ${className}`}
+        className={cn(styles.priorityIndicatorButton, className)}
         type="button"
       >
         {content}
@@ -39,6 +42,6 @@ export function PriorityIndicator({
   }
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>{content}</div>
+    <div className={cn(styles.priorityIndicator, className)}>{content}</div>
   );
 }

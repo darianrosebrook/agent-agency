@@ -1,0 +1,79 @@
+// Base Typography Styles
+// Typography styles matching globals.css but using SCSS tokens
+
+@use '../tokens' as *;
+
+// Base typography (only applied when no Tailwind text class is present)
+// This matches the :where(:not(:has([class*=' text-']), :not(:has([class^='text-'])))) selector
+:where(:not(:has([class*=' text-']), :not(:has([class^='text-'])))) {
+  h1 {
+    font-size: 96px;
+    font-weight: var(--font-weight-semibold);
+    line-height: 116px;
+  }
+
+  h2 {
+    font-size: 60px;
+    font-weight: var(--font-weight-semibold);
+    line-height: 60px;
+  }
+
+  h3 {
+    font-size: 48px;
+    font-weight: var(--font-weight-semibold);
+    line-height: 48px;
+  }
+
+  h4 {
+    font-size: 36px;
+    font-weight: var(--font-weight-semibold);
+    line-height: 40px;
+  }
+
+  h5 {
+    font-size: 24px;
+    font-weight: var(--font-weight-semibold);
+    line-height: 32px;
+  }
+
+  h6 {
+    font-size: 20px;
+    font-weight: var(--font-weight-semibold);
+    line-height: 28px;
+  }
+
+  p {
+    font-size: 16px;
+    font-weight: var(--font-weight-normal);
+    line-height: 24px;
+  }
+
+  label {
+    font-size: 16px;
+    font-weight: var(--font-weight-semibold);
+    line-height: 24px;
+  }
+
+  button {
+    font-size: 16px;
+    font-weight: var(--font-weight-semibold);
+    line-height: 24px;
+  }
+
+  input {
+    font-size: 16px;
+    font-weight: var(--font-weight-normal);
+    line-height: 24px;
+  }
+
+  small {
+    font-size: 14px;
+    font-weight: var(--font-weight-normal);
+    line-height: 20px;
+  }
+}
+
+html {
+  font-size: var(--font-size);
+}
+

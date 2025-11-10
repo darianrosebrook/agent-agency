@@ -1,0 +1,11 @@
+@use '../../styles/tokens' as *;
+
+.bentoPanel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: #111111;
+  border-radius: 0.75rem; // rounded-[12px]
+  border: 1px solid #cacaca;
+}
+

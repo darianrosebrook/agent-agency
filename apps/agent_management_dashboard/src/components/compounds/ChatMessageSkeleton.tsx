@@ -2,6 +2,7 @@ import { Bot } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { TaskTimeline } from "../TaskTimeline";
 import type { Task } from "../composers/Chat";
+import styles from "./ChatMessageSkeleton.module.scss";
 
 interface ChatMessageSkeletonProps {
   tasks?: Task[];
@@ -9,29 +10,29 @@ interface ChatMessageSkeletonProps {
 
 export function ChatMessageSkeleton({ tasks = [] }: ChatMessageSkeletonProps) {
   return (
-    <div className="space-y-4">
+    <div className={styles.chatMessageSkeleton}>
       {/* Task Timeline - appears above message */}
       {tasks.length > 0 && (
-        <div className="ml-12">
+        <div className={styles.taskTimelineContainer}>
           <TaskTimeline tasks={tasks} />
         </div>
       )}
 
       {/* Loading Message */}
-      <div className="flex gap-4">
+      <div className={styles.messageWrapper}>
         {/* Avatar */}
-        <div className="shrink-0 w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center">
+        <div className={styles.avatar}>
           <Bot className="w-4 h-4 text-gray-300" />
         </div>
 
         {/* Content */}
-        <div className="flex-1 w-full">
+        <div className={styles.content}>
           {/* Loading Card */}
-          <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-4 w-full">
+          <div className={styles.loadingCard}>
             {/* Skeleton Content */}
-            <div className="space-y-3">
+            <div className={styles.loadingCardContent}>
               {/* Content Lines Skeleton */}
-              <div className="space-y-2">
+              <div className={styles.contentLines}>
                 <Skeleton className="h-3 w-full bg-gray-800" />
                 <Skeleton className="h-3 w-[90%] bg-gray-800" />
                 <Skeleton className="h-3 w-[95%] bg-gray-800" />
@@ -42,22 +43,22 @@ export function ChatMessageSkeleton({ tasks = [] }: ChatMessageSkeletonProps) {
               </div>
 
               {/* Pulsing Indicator */}
-              <div className="flex items-center gap-2 pt-2">
-                <div className="flex gap-1">
+              <div className={styles.pulsingIndicator}>
+                <div className={styles.pulsingDots}>
                   <div
-                    className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"
+                    className={styles.pulsingDot}
                     style={{ animationDelay: "0ms" }}
                   ></div>
                   <div
-                    className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"
+                    className={styles.pulsingDot}
                     style={{ animationDelay: "150ms" }}
                   ></div>
                   <div
-                    className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"
+                    className={styles.pulsingDot}
                     style={{ animationDelay: "300ms" }}
                   ></div>
                 </div>
-                <span className="text-xs text-gray-500">
+                <span className={styles.pulsingText}>
                   Generating response...
                 </span>
               </div>
@@ -65,7 +66,7 @@ export function ChatMessageSkeleton({ tasks = [] }: ChatMessageSkeletonProps) {
           </div>
 
           {/* Timestamp Skeleton */}
-          <Skeleton className="h-3 w-16 mt-2 bg-gray-800" />
+          <Skeleton className={styles.timestampSkeleton} />
         </div>
       </div>
     </div>

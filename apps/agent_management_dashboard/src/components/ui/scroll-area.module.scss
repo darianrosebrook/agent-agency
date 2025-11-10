@@ -1,0 +1,46 @@
+@use '../../styles/tokens' as *;
+
+.scrollArea {
+  position: relative;
+}
+
+.scrollAreaViewport {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  transition: color $transition-normal, box-shadow $transition-normal;
+  outline: none;
+
+  &:focus-visible {
+    box-shadow: 0 0 0 3px hsl(var(--ring) / 0.5);
+    outline: 1px solid var(--ring);
+  }
+}
+
+.scrollBar {
+  display: flex;
+  touch-action: none;
+  padding: 1px;
+  transition: background-color $transition-normal;
+  user-select: none;
+
+  &[data-orientation='vertical'] {
+    height: 100%;
+    width: 0.625rem; // w-2.5
+    border-left: 1px solid transparent;
+  }
+
+  &[data-orientation='horizontal'] {
+    height: 0.625rem; // h-2.5
+    flex-direction: column;
+    border-top: 1px solid transparent;
+  }
+}
+
+.scrollBarThumb {
+  position: relative;
+  flex: 1;
+  border-radius: 9999px; // rounded-full
+  background-color: var(--border);
+}
+

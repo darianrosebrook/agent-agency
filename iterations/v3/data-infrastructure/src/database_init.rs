@@ -153,6 +153,18 @@ pub async fn initialize_database(config: DatabaseConfig) -> Result<DatabaseClien
     // Run migrations
     run_migrations(db_client.pool()).await?;
     
+    // Optionally verify schema after migrations
+    if std::env::var("VERIFY_SCHEMA_AFTER_MIGRATION")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse::<bool>()
+        .unwrap_or(false)
+    {
+        info!("Verifying schema after migrations...");
+        if !verify_schema(db_client.pool()).await? {
+            warn!("Schema verification failed after migrations - database may be in inconsistent state");
+        }
+    }
+    
     Ok(db_client)
 }
 
@@ -291,38 +303,73 @@ pub async fn run_migrations(pool: &PgPool) -> Result<()> {
 }
 
 /// Verify database schema is correct
+/// 
+/// Performs comprehensive schema validation using the validation script.
+/// This checks that all tables from migrations 014 and 015 match the model definitions.
 pub async fn verify_schema(pool: &PgPool) -> Result<bool> {
     info!("Verifying database schema...");
     
-    // Check critical tables exist
-    let critical_tables = [
-        "agent_experiences",
-        "memory_embeddings",
-        "agent_contexts",
-        "chat_sessions",
-        "chat_messages",
-        "tenants",
-    ];
-    
-    for table in &critical_tables {
-        let exists: bool = sqlx::query_scalar(
-            "SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_name = $1
-            )"
-        )
-        .bind(table)
-        .fetch_one(pool)
-        .await?;
-        
-        if !exists {
-            warn!("Critical table '{}' does not exist", table);
-            return Ok(false);
+    // Use comprehensive validation script
+    #[cfg(feature = "schema-validation")]
+    {
+        use crate::scripts::validate_schema;
+        match validate_schema::validate_all_schemas(pool).await {
+            Ok(true) => {
+                info!("Database schema verification passed");
+                Ok(true)
+            }
+            Ok(false) => {
+                warn!("Database schema verification failed - see logs above for details");
+                Ok(false)
+            }
+            Err(e) => {
+                error!("Schema validation error: {}", e);
+                Err(e)
+            }
         }
     }
     
-    info!("Database schema verification passed");
-    Ok(true)
+    #[cfg(not(feature = "schema-validation"))]
+    {
+        // Fallback to basic table existence check if validation feature not enabled
+        let critical_tables = [
+            "agent_experiences",
+            "memory_embeddings",
+            "agent_contexts",
+            "chat_sessions",
+            "chat_messages",
+            "tenants",
+            "tasks",
+            "workers",
+            "judges",
+        ];
+        
+        for table in &critical_tables {
+            let exists: bool = sqlx::query_scalar(
+                "SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = $1
+                )"
+            )
+            .bind(table)
+            .fetch_one(pool)
+            .await?;
+            
+            if !exists {
+                warn!("Critical table '{}' does not exist", table);
+                return Ok(false);
+            }
+        }
+        
+        info!("Database schema verification passed (basic check)");
+        Ok(true)
+    }
+}
+
+/// Verify schema with detailed validation (always uses full validation)
+pub async fn verify_schema_detailed(pool: &PgPool) -> Result<bool> {
+    use crate::scripts::validate_schema;
+    validate_schema::validate_all_schemas(pool).await
 }
 
 /// Set tenant context for Row Level Security

@@ -1,0 +1,16 @@
+@use '../../styles/tokens' as *;
+
+.metadataRow {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  align-items: center;
+}
+
+.metadataLabel {
+  color: rgb(156, 163, 175); // text-gray-400
+}
+
+.metadataValue {
+  // Value container - inherits from children
+}
+

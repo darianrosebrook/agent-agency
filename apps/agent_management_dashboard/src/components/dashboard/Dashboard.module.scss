@@ -1,0 +1,69 @@
+@use '../../styles/tokens' as *;
+
+.dashboard {
+  padding: $spacing-8;
+}
+
+.header {
+  margin-bottom: $spacing-8;
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  color: rgb(161, 161, 170); // text-zinc-300
+  margin-bottom: $spacing-4;
+}
+
+.headerTitle {
+  font-size: $font-size-3xl; // text-3xl
+  color: white; // text-white
+}
+
+.bentoGrid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr)); // grid-cols-12
+  gap: $spacing-4;
+  grid-auto-rows: 140px; // auto-rows-[140px]
+}
+
+.bentoItem {
+  // Base styles for bento grid items
+  // Specific column/row spans applied via className
+}
+
+// Grid column spans
+.colSpan5 {
+  grid-column: span 5 / span 5; // col-span-5
+}
+
+.colSpan7 {
+  grid-column: span 7 / span 7; // col-span-7
+}
+
+.colSpan8 {
+  grid-column: span 8 / span 8; // col-span-8
+}
+
+.colSpan4 {
+  grid-column: span 4 / span 4; // col-span-4
+}
+
+.colSpan12 {
+  grid-column: span 12 / span 12; // col-span-12
+}
+
+// Grid row spans
+.rowSpan2 {
+  grid-row: span 2 / span 2; // row-span-2
+}
+
+.rowSpan6 {
+  grid-row: span 6 / span 6; // row-span-6
+}
+
+.rowSpan3 {
+  grid-row: span 3 / span 3; // row-span-3
+}
+

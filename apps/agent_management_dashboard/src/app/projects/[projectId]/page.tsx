@@ -9,8 +9,9 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ProjectView } from "@/components/ProjectView";
-import { useProjectContext } from "@/components/ProjectContext";
+import { ProjectView } from "@/components/projects/ProjectView";
+import { useProjectContext } from "@/components/projects/ProjectContext";
+import styles from "./page.module.scss";
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -67,21 +68,21 @@ export default function ProjectDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-400">Loading project...</div>
+      <div className={styles.loadingContainer}>
+        <div className={styles.loadingText}>Loading project...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-8">
-        <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-6">
-          <h2 className="text-xl font-semibold text-red-500 mb-2">Project Not Found</h2>
-          <p className="text-gray-300 mb-4">{error}</p>
+      <div className={styles.errorContainer}>
+        <div className={styles.errorCard}>
+          <h2 className={styles.errorTitle}>Project Not Found</h2>
+          <p className={styles.errorMessage}>{error}</p>
           <button
             onClick={handleBackToProjects}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className={styles.errorButton}
           >
             Back to Projects
           </button>

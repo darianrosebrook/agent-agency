@@ -1,6 +1,8 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { cn } from '../ui/utils';
+import styles from './MetadataRow.module.scss';
 
 interface MetadataRowProps {
   label: string;
@@ -10,9 +12,9 @@ interface MetadataRowProps {
 
 export function MetadataRow({ label, children, className = '' }: MetadataRowProps) {
   return (
-    <div className={`grid grid-cols-[120px_1fr] items-center ${className}`}>
-      <div className="text-gray-400">{label}</div>
-      <div>{children}</div>
+    <div className={cn(styles.metadataRow, className)}>
+      <div className={styles.metadataLabel}>{label}</div>
+      <div className={styles.metadataValue}>{children}</div>
     </div>
   );
 }

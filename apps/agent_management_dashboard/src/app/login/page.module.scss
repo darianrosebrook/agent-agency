@@ -1,0 +1,229 @@
+@use '../../styles/tokens' as *;
+
+.loginPage {
+  min-height: 100vh; // min-h-screen
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #0d0d0d; // bg-[#0d0d0d]
+  padding: $spacing-8; // p-8
+}
+
+.loginContainer {
+  width: 100%; // w-full
+  max-width: 28rem; // max-w-md
+}
+
+.loginCard {
+  background-color: #1a1a1a; // bg-[#1a1a1a]
+  border: 1px solid oklch(0.269 0 0); // border border-gray-800
+  border-radius: $spacing-lg; // rounded-lg
+  padding: $spacing-8; // p-8
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-6; // space-y-6
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-2; // gap-2
+  padding-inline: $spacing-4; // px-4
+  padding-block: $spacing-2; // py-2
+  background-color: rgba(234, 179, 8, 0.2); // bg-yellow-500/20
+  border: 1px solid rgba(234, 179, 8, 0.5); // border border-yellow-500/50
+  border-radius: $spacing-lg; // rounded-lg
+}
+
+.statusBadgeDot {
+  width: $spacing-2; // w-2
+  height: $spacing-2; // h-2
+  background-color: #eab308; // bg-yellow-500
+  border-radius: 9999px; // rounded-full
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; // animate-pulse
+}
+
+.statusBadgeText {
+  color: #eab308; // text-yellow-500
+  font-size: $font-size-sm; // text-sm
+  font-weight: $font-weight-medium; // font-medium
+}
+
+.loginHeader {
+  text-align: center;
+}
+
+.loginTitle {
+  font-size: $font-size-3xl; // text-3xl
+  font-weight: $font-weight-bold; // font-bold
+  color: white; // text-white
+  margin-bottom: $spacing-2; // mb-2
+}
+
+.loginSubtitle {
+  color: oklch(0.5 0 0); // text-gray-400
+}
+
+.loginForm {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-4; // space-y-4
+}
+
+.formField {
+  // No specific styles, inherits from parent
+}
+
+.formLabel {
+  display: block;
+  font-size: $font-size-sm; // text-sm
+  font-weight: $font-weight-medium; // font-medium
+  color: oklch(0.5 0 0); // text-gray-300
+  margin-bottom: $spacing-2; // mb-2
+}
+
+.inputWrapper {
+  position: relative;
+}
+
+.inputIcon {
+  position: absolute;
+  left: $spacing-3; // left-3
+  top: 50%; // top-1/2
+  transform: translateY(-50%); // -translate-y-1/2
+  width: $spacing-4; // w-4
+  height: $spacing-4; // h-4
+  color: oklch(0.5 0 0); // text-gray-500
+}
+
+.formInput {
+  width: 100%; // w-full
+  background-color: #0f0f0f; // bg-[#0f0f0f]
+  border: 1px solid oklch(0.269 0 0); // border border-gray-800
+  border-radius: $spacing-lg; // rounded-lg
+  padding-left: 2.5rem; // pl-10
+  padding-right: $spacing-4; // pr-4
+  padding-block: $spacing-2; // py-2
+  color: white; // text-white
+  transition: border-color $transition-normal;
+
+  &::placeholder {
+    color: oklch(0.5 0 0); // placeholder:text-gray-500
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #2563eb; // focus:border-blue-500
+  }
+}
+
+.formOptions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rememberMe {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2; // gap-2
+}
+
+.rememberMeCheckbox {
+  width: $spacing-4; // w-4
+  height: $spacing-4; // h-4
+  background-color: #0f0f0f; // bg-[#0f0f0f]
+  border-color: oklch(0.269 0 0); // border-gray-800
+  border-radius: $spacing-xs; // rounded
+  color: #2563eb; // text-blue-600
+  transition: box-shadow $transition-normal;
+
+  &:focus {
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.5); // focus:ring-blue-500
+  }
+}
+
+.rememberMeLabel {
+  font-size: $font-size-sm; // text-sm
+  color: oklch(0.5 0 0); // text-gray-300
+}
+
+.forgotPasswordLink {
+  font-size: $font-size-sm; // text-sm
+  color: #2563eb; // text-blue-500
+  transition: color $transition-normal;
+
+  &:hover {
+    color: #3b82f6; // hover:text-blue-400
+  }
+}
+
+.errorMessage {
+  background-color: rgba(239, 68, 68, 0.2); // bg-red-500/20
+  border: 1px solid rgba(239, 68, 68, 0.5); // border border-red-500/50
+  border-radius: $spacing-lg; // rounded-lg
+  padding: $spacing-3; // p-3
+}
+
+.errorMessageText {
+  color: #ef4444; // text-red-500
+  font-size: $font-size-sm; // text-sm
+}
+
+.submitButton {
+  width: 100%; // w-full
+  background-color: #2563eb; // bg-blue-600
+  color: white; // text-white
+  padding-block: $spacing-2; // py-2
+  border-radius: $spacing-lg; // rounded-lg
+  transition: background-color $transition-normal;
+  font-weight: $font-weight-medium; // font-medium
+
+  &:hover:not(:disabled) {
+    background-color: #1d4ed8; // hover:bg-blue-700
+  }
+
+  &:disabled {
+    opacity: 0.5; // disabled:opacity-50
+    cursor: not-allowed; // disabled:cursor-not-allowed
+  }
+}
+
+.requirementsSection {
+  margin-top: $spacing-8; // mt-8
+  padding-top: $spacing-6; // pt-6
+  border-top: 1px solid oklch(0.269 0 0); // border-t border-gray-800
+}
+
+.requirementsTitle {
+  font-size: $font-size-lg; // text-lg
+  font-weight: $font-weight-semibold; // font-semibold
+  color: white; // text-white
+  margin-bottom: $spacing-4; // mb-4
+}
+
+.requirementsContent {
+  background-color: #0f0f0f; // bg-[#0f0f0f]
+  border: 1px solid oklch(0.269 0 0); // border border-gray-800
+  border-radius: $spacing-lg; // rounded-lg
+  padding: $spacing-4; // p-4
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2; // space-y-2
+  font-size: $font-size-sm; // text-sm
+  color: oklch(0.5 0 0); // text-gray-300
+}
+
+.requirementsList {
+  list-style-type: disc;
+  list-style-position: inside;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem; // space-y-1
+}
+
+.divider {
+  padding-top: $spacing-4; // pt-4
+  border-top: 1px solid oklch(0.269 0 0); // border-t border-gray-800
+}
+

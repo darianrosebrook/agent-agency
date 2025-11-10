@@ -27,5 +27,8 @@ export { BentoPanel } from "./BentoPanel";
 export { ChatMessage } from "./ChatMessage";
 export { ChatMessageError } from "./ChatMessageError";
 export { ChatMessageSkeleton } from "./ChatMessageSkeleton";
+export { ChatListSkeleton } from "./ChatListSkeleton";
+export { ProjectListSkeleton } from "./ProjectListSkeleton";
+export { ProgressIndicator } from "./ProgressIndicator";
 export { PhasePlanSkeleton } from "./PhasePlanSkeleton";
 export { ImageWithFallback } from "./ImageWithFallback";

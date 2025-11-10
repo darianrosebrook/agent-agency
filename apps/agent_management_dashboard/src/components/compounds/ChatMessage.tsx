@@ -13,6 +13,8 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Button } from "../ui/button";
+import { cn } from "../ui/utils";
+import styles from "./ChatMessage.module.scss";
 
 interface ChatMessageProps {
   message: Message;
@@ -25,7 +27,7 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
   // If this is a phase plan message
   if (message.isPhasePlan) {
     return (
-      <div className="ml-12">
+      <div className={styles.phasePlanContainer}>
         {message.isGeneratingPlan ? <PhasePlanSkeleton /> : <PhaseManager />}
       </div>
     );
@@ -34,33 +36,42 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
   // If message has an error, render error component
   if (message.error) {
     return (
-      <div className="space-y-4">
+      <div className={styles.chatMessageContainer}>
         {/* Task Timeline - only for assistant messages with tasks */}
         {!isUser && message.tasks && message.tasks.length > 0 && (
-          <div className="ml-12">
+          <div className={styles.taskTimelineContainer}>
             <TaskTimeline tasks={message.tasks} />
           </div>
         )}
 
         {/* Message with error */}
         <div
-          className={`flex gap-4 ${isUser ? "flex-row-reverse" : "flex-row"}`}
+          className={cn(
+            styles.messageWrapper,
+            isUser ? styles.userMessage : styles.assistantMessage
+          )}
         >
           {/* Avatar */}
           <div
-            className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-              isUser ? "bg-blue-600" : "bg-gray-800"
-            }`}
+            className={cn(
+              styles.avatar,
+              isUser ? styles.userAvatar : styles.assistantAvatar
+            )}
           >
             {isUser ? (
-              <User className="w-4 h-4 text-white" />
+              <User className={cn(styles.avatarIcon, styles.userIcon)} />
             ) : (
-              <Bot className="w-4 h-4 text-gray-300" />
+              <Bot className={cn(styles.avatarIcon, styles.assistantIcon)} />
             )}
           </div>
 
           {/* Error Content */}
-          <div className={`flex-1 ${isUser ? "flex flex-col items-end" : ""}`}>
+          <div
+            className={cn(
+              styles.messageContent,
+              isUser && styles.userContent
+            )}
+          >
             <ChatMessageError
               error={message.error}
               onRetry={
@@ -89,7 +100,7 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
       if (match.index > lastIndex) {
         const textBefore = content.slice(lastIndex, match.index);
         parts.push(
-          <p key={`text-${lastIndex}`} className="whitespace-pre-wrap mb-4">
+          <p key={`text-${lastIndex}`} className={cn(styles.messageText, styles.codeBlock)}>
             {textBefore}
           </p>
         );
@@ -99,18 +110,18 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
       const language = match[1] || "text";
       const code = match[2];
       parts.push(
-        <div key={`code-${match.index}`} className="mb-4">
-          <div className="bg-[#0f0f0f] rounded-lg border border-gray-800 overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-2 border-b border-gray-800">
-              <span className="text-xs text-gray-400 uppercase">
+        <div key={`code-${match.index}`} className={styles.codeBlock}>
+          <div className={styles.codeBlockContainer}>
+            <div className={styles.codeBlockHeader}>
+              <span className={styles.codeBlockLanguage}>
                 {language}
               </span>
-              <button className="text-xs text-gray-400 hover:text-gray-200 transition-colors">
+              <button className={styles.codeBlockCopyButton}>
                 Copy code
               </button>
             </div>
-            <pre className="p-4 overflow-x-auto">
-              <code className="text-sm text-gray-200 font-mono">{code}</code>
+            <pre className={styles.codeBlockContent}>
+              <code className={styles.codeBlockCode}>{code}</code>
             </pre>
           </div>
         </div>
@@ -123,7 +134,7 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
     if (lastIndex < content.length) {
       const remainingText = content.slice(lastIndex);
       parts.push(
-        <p key={`text-${lastIndex}`} className="whitespace-pre-wrap">
+        <p key={`text-${lastIndex}`} className={styles.messageText}>
           {remainingText}
         </p>
       );
@@ -132,47 +143,58 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
     return parts.length > 0 ? (
       parts
     ) : (
-      <p className="whitespace-pre-wrap">{content}</p>
+      <p className={styles.messageText}>{content}</p>
     );
   };
 
   return (
-    <div className="space-y-4">
+    <div className={styles.chatMessageContainer}>
       {/* Task Timeline - only for assistant messages with tasks */}
       {!isUser && message.tasks && message.tasks.length > 0 && (
-        <div className="ml-12">
+        <div className={styles.taskTimelineContainer}>
           <TaskTimeline tasks={message.tasks} />
         </div>
       )}
 
       {/* Message */}
-      <div className={`flex gap-4 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
+      <div
+        className={cn(
+          styles.messageWrapper,
+          isUser ? styles.userMessage : styles.assistantMessage
+        )}
+      >
         {/* Avatar */}
         <div
-          className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-            isUser ? "bg-blue-600" : "bg-gray-800"
-          }`}
+          className={cn(
+            styles.avatar,
+            isUser ? styles.userAvatar : styles.assistantAvatar
+          )}
         >
           {isUser ? (
-            <User className="w-4 h-4 text-white" />
+            <User className={cn(styles.avatarIcon, styles.userIcon)} />
           ) : (
-            <Bot className="w-4 h-4 text-gray-300" />
+            <Bot className={cn(styles.avatarIcon, styles.assistantIcon)} />
           )}
         </div>
 
         {/* Message Content */}
-        <div className={`flex-1 ${isUser ? "flex flex-col items-end" : ""}`}>
+        <div
+          className={cn(
+            styles.messageContent,
+            isUser && styles.userContent
+          )}
+        >
           {/* Context Files */}
           {message.contextFiles && message.contextFiles.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-2">
+            <div className={styles.contextFiles}>
               {message.contextFiles.map((file, index) => (
                 <Badge
                   key={index}
                   variant="secondary"
-                  className="bg-gray-800 text-gray-100 gap-1.5"
+                  className={styles.contextFileBadge}
                 >
                   <File className="w-3 h-3" />
-                  <span className="text-xs">{file}</span>
+                  <span className={styles.contextFileName}>{file}</span>
                 </Badge>
               ))}
             </div>
@@ -180,16 +202,15 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
 
           {/* Message Bubble */}
           <div
-            className={`rounded-lg p-4 ${
-              isUser
-                ? "bg-slate-600 text-white max-w-2xl"
-                : "bg-slate-900 border border-gray-800 text-gray-200 w-full"
-            }`}
+            className={cn(
+              styles.messageBubble,
+              isUser ? styles.userBubble : styles.assistantBubble
+            )}
           >
             {isUser ? (
-              <p className="whitespace-pre-wrap">{message.content}</p>
+              <p className={styles.messageText}>{message.content}</p>
             ) : (
-              <div className="prose prose-invert max-w-none">
+              <div className={styles.prose}>
                 {renderContent(message.content)}
               </div>
             )}
@@ -197,9 +218,10 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
 
           {/* Timestamp */}
           <div
-            className={`text-xs text-gray-500 mt-1 ${
-              isUser ? "text-right" : "text-left"
-            }`}
+            className={cn(
+              styles.timestamp,
+              isUser ? styles.userTimestamp : styles.assistantTimestamp
+            )}
           >
             {message.timestamp.toLocaleTimeString([], {
               hour: "2-digit",
@@ -209,11 +231,11 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
 
           {/* Action buttons - only for agent messages */}
           {!isUser && (
-            <div className="flex items-center gap-1 mt-2">
+            <div className={styles.actionButtons}>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0 text-gray-400 hover:text-gray-200 hover:bg-gray-800"
+                className={styles.actionButton}
                 onClick={() => {
                   navigator.clipboard.writeText(message.content);
                 }}
@@ -223,7 +245,7 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0 text-gray-400 hover:text-gray-200 hover:bg-gray-800"
+                className={styles.actionButton}
                 onClick={() => {
                   // Retry functionality placeholder
                   console.log("Retry message");
@@ -236,22 +258,22 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 w-8 p-0 text-gray-400 hover:text-gray-200 hover:bg-gray-800"
+                    className={styles.actionButton}
                   >
                     <MoreVertical className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="start"
-                  className="bg-[#1a1a1a] border-gray-800"
+                  className={styles.dropdownMenuContent}
                 >
-                  <DropdownMenuItem className="text-gray-300 focus:bg-gray-800 focus:text-gray-100 cursor-pointer">
+                  <DropdownMenuItem className={styles.dropdownMenuItem}>
                     Duplicate chat
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-gray-300 focus:bg-gray-800 focus:text-gray-100 cursor-pointer">
+                  <DropdownMenuItem className={styles.dropdownMenuItem}>
                     Flag for review
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-gray-300 focus:bg-gray-800 focus:text-gray-100 cursor-pointer">
+                  <DropdownMenuItem className={styles.dropdownMenuItem}>
                     Restore to this point in time
                   </DropdownMenuItem>
                 </DropdownMenuContent>

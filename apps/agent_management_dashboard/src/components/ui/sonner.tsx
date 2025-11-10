@@ -4,13 +4,15 @@ import * as React from "react";
 import { useTheme } from "next-themes";
 import { Toaster as Sonner, ToasterProps } from "sonner";
 
+import styles from "./sonner.module.scss";
+
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
 
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
-      className="toaster group"
+      className={styles.toaster}
       style={
         {
           "--normal-bg": "var(--popover)",

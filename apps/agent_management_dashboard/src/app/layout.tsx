@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Providers } from "./providers";
-import "@/styles/globals.css";
+import "@/styles/globals.scss";
+import styles from "./layout.module.scss";
 
 export const metadata: Metadata = {
   title: "Agent Management Dashboard",
@@ -15,7 +16,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="bg-zinc-950 text-gray-100">
+      <body className={styles.body}>
         <Providers>{children}</Providers>
       </body>
     </html>

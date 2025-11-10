@@ -311,6 +311,29 @@ impl DatabaseClient {
         Ok(created_task.id)
     }
 
+    /// Create a task from CreateTask struct
+    pub async fn create_task_from_create(&self, create_task: crate::database_operations::CreateTask) -> Result<crate::models::Task> {
+        let task = self.inner.create_task(create_task).await?;
+        Ok(crate::models::Task {
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            risk_tier: task.risk_tier,
+            scope: task.scope,
+            acceptance_criteria: task.acceptance_criteria,
+            context: task.context,
+            caws_spec: task.caws_spec,
+            status: task.status,
+            assigned_worker_id: task.assigned_worker_id,
+            priority: task.priority,
+            deadline: task.deadline,
+            metadata: task.metadata,
+            created_at: task.created_at,
+            updated_at: task.updated_at,
+            completed_at: task.completed_at,
+        })
+    }
+
     /// Get a task by ID
     pub async fn get_task(&self, task_id: &Uuid) -> Result<Option<crate::models::Task>> {
         let task = self.inner.get_task(*task_id).await?;
@@ -332,6 +355,57 @@ impl DatabaseClient {
             updated_at: t.updated_at,
             completed_at: t.completed_at,
         }))
+    }
+
+    /// Update a task
+    pub async fn update_task(&self, id: Uuid, update: crate::database_operations::UpdateTask) -> Result<crate::models::Task> {
+        let task = self.inner.update_task(id, update).await?;
+        Ok(crate::models::Task {
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            risk_tier: task.risk_tier,
+            scope: task.scope,
+            acceptance_criteria: task.acceptance_criteria,
+            context: task.context,
+            caws_spec: task.caws_spec,
+            status: task.status,
+            assigned_worker_id: task.assigned_worker_id,
+            priority: task.priority,
+            deadline: task.deadline,
+            metadata: task.metadata,
+            created_at: task.created_at,
+            updated_at: task.updated_at,
+            completed_at: task.completed_at,
+        })
+    }
+
+    /// Delete a task
+    pub async fn delete_task(&self, id: Uuid) -> Result<()> {
+        self.inner.delete_task(id).await
+    }
+
+    /// Get all tasks
+    pub async fn get_tasks(&self) -> Result<Vec<crate::models::Task>> {
+        let tasks = self.inner.get_tasks().await?;
+        Ok(tasks.into_iter().map(|t| crate::models::Task {
+            id: t.id,
+            title: t.title,
+            description: t.description,
+            risk_tier: t.risk_tier,
+            scope: t.scope,
+            acceptance_criteria: t.acceptance_criteria,
+            context: t.context,
+            caws_spec: t.caws_spec,
+            status: t.status,
+            assigned_worker_id: t.assigned_worker_id,
+            priority: t.priority,
+            deadline: t.deadline,
+            metadata: t.metadata,
+            created_at: t.created_at,
+            updated_at: t.updated_at,
+            completed_at: t.completed_at,
+        }).collect())
     }
 
     /// Revoke a waiver
@@ -721,6 +795,156 @@ impl DatabaseClient {
 
     pub async fn mark_password_reset_token_used(&self, id: Uuid) -> Result<()> {
         self.inner.mark_password_reset_token_used(id).await
+    }
+
+    // Execution plan operations
+    pub async fn create_execution_plan(&self, plan: crate::database_operations::CreateExecutionPlan) -> Result<crate::models::ExecutionPlan> {
+        self.inner.create_execution_plan(plan).await
+    }
+
+    pub async fn get_execution_plan(&self, id: Uuid) -> Result<Option<crate::models::ExecutionPlan>> {
+        self.inner.get_execution_plan(id).await
+    }
+
+    pub async fn get_execution_plans(&self) -> Result<Vec<crate::models::ExecutionPlan>> {
+        self.inner.get_execution_plans().await
+    }
+
+    pub async fn update_execution_plan(&self, id: Uuid, update: crate::database_operations::UpdateExecutionPlan) -> Result<crate::models::ExecutionPlan> {
+        self.inner.update_execution_plan(id, update).await
+    }
+
+    pub async fn delete_execution_plan(&self, id: Uuid) -> Result<()> {
+        self.inner.delete_execution_plan(id).await
+    }
+
+    // Milestone operations
+    pub async fn create_milestone(&self, milestone: crate::database_operations::CreateMilestone) -> Result<crate::models::Milestone> {
+        self.inner.create_milestone(milestone).await
+    }
+
+    pub async fn get_milestone(&self, plan_id: Uuid, milestone_id: String) -> Result<Option<crate::models::Milestone>> {
+        self.inner.get_milestone(plan_id, milestone_id).await
+    }
+
+    pub async fn get_milestones(&self, plan_id: Uuid) -> Result<Vec<crate::models::Milestone>> {
+        self.inner.get_milestones(plan_id).await
+    }
+
+    pub async fn update_milestone(&self, plan_id: Uuid, milestone_id: String, update: crate::database_operations::UpdateMilestone) -> Result<crate::models::Milestone> {
+        self.inner.update_milestone(plan_id, milestone_id, update).await
+    }
+
+    pub async fn delete_milestone(&self, plan_id: Uuid, milestone_id: String) -> Result<()> {
+        self.inner.delete_milestone(plan_id, milestone_id).await
+    }
+
+    // Worker operations
+    pub async fn create_worker(&self, worker: crate::database_operations::CreateWorker) -> Result<crate::models::Worker> {
+        self.inner.create_worker(worker).await
+    }
+
+    pub async fn get_worker(&self, id: Uuid) -> Result<Option<crate::models::Worker>> {
+        self.inner.get_worker(id).await
+    }
+
+    pub async fn get_workers(&self) -> Result<Vec<crate::models::Worker>> {
+        self.inner.get_workers().await
+    }
+
+    pub async fn update_worker(&self, id: Uuid, update: crate::database_operations::UpdateWorker) -> Result<crate::models::Worker> {
+        self.inner.update_worker(id, update).await
+    }
+
+    pub async fn delete_worker(&self, id: Uuid) -> Result<()> {
+        self.inner.delete_worker(id).await
+    }
+
+    /// Get task executions by worker_id
+    pub async fn get_task_executions_by_worker(&self, worker_id: Uuid) -> Result<Vec<crate::models::TaskExecution>> {
+        let rows = self.query(
+            "SELECT id, task_id, worker_id, execution_started_at, execution_completed_at, execution_time_ms, status, worker_output, self_assessment, metadata, error_message, tokens_used, created_at, updated_at, execution_metadata, result_data FROM task_executions WHERE worker_id = $1 ORDER BY execution_started_at DESC",
+            &[&worker_id]
+        ).await?;
+
+        let mut executions = Vec::new();
+        for row in rows {
+            let execution = crate::models::TaskExecution {
+                id: row.try_get("id")?,
+                task_id: row.try_get("task_id")?,
+                worker_id: row.try_get("worker_id")?,
+                execution_started_at: row.try_get("execution_started_at")?,
+                execution_completed_at: row.try_get("execution_completed_at")?,
+                execution_time_ms: row.try_get("execution_time_ms")?,
+                status: row.try_get("status")?,
+                worker_output: row.try_get("worker_output")?,
+                self_assessment: row.try_get("self_assessment")?,
+                metadata: row.try_get("metadata")?,
+                error_message: row.try_get("error_message")?,
+                tokens_used: row.try_get("tokens_used")?,
+                created_at: row.try_get("created_at")?,
+                updated_at: row.try_get("updated_at")?,
+                execution_metadata: row.try_get("execution_metadata")?,
+                result_data: row.try_get("result_data")?,
+            };
+            executions.push(execution);
+        }
+
+        Ok(executions)
+    }
+
+    // Judge operations
+    pub async fn create_judge(&self, judge: crate::database_operations::CreateJudge) -> Result<crate::models::Judge> {
+        self.inner.create_judge(judge).await
+    }
+
+    pub async fn get_judge(&self, id: Uuid) -> Result<Option<crate::models::Judge>> {
+        self.inner.get_judge(id).await
+    }
+
+    pub async fn get_judges(&self) -> Result<Vec<crate::models::Judge>> {
+        self.inner.get_judges().await
+    }
+
+    pub async fn update_judge(&self, id: Uuid, update: crate::database_operations::UpdateJudge) -> Result<crate::models::Judge> {
+        self.inner.update_judge(id, update).await
+    }
+
+    pub async fn delete_judge(&self, id: Uuid) -> Result<()> {
+        self.inner.delete_judge(id).await
+    }
+
+    /// Get judge evaluations by judge_id
+    pub async fn get_judge_evaluations_by_judge(&self, judge_id: Uuid) -> Result<Vec<crate::models::JudgeEvaluation>> {
+        let rows = self.query(
+            "SELECT id, verdict_id, judge_id, judge_verdict, evaluation_time_ms, tokens_used, confidence, evaluation_score, confidence_score, reasoning, evidence_used, evaluation_metadata, verdict_decision, risk_assessment, created_at, updated_at FROM judge_evaluations WHERE judge_id = $1 ORDER BY created_at DESC",
+            &[&judge_id]
+        ).await?;
+
+        let mut evaluations = Vec::new();
+        for row in rows {
+            let evaluation = crate::models::JudgeEvaluation {
+                id: row.try_get("id")?,
+                verdict_id: row.try_get("verdict_id")?,
+                judge_id: row.try_get("judge_id")?,
+                judge_verdict: row.try_get("judge_verdict")?,
+                evaluation_time_ms: row.try_get("evaluation_time_ms")?,
+                tokens_used: row.try_get("tokens_used")?,
+                confidence: row.try_get("confidence")?,
+                created_at: row.try_get("created_at")?,
+                evaluation_score: row.try_get("evaluation_score")?,
+                confidence_score: row.try_get("confidence_score")?,
+                reasoning: row.try_get("reasoning")?,
+                evidence_used: row.try_get("evidence_used")?,
+                evaluation_metadata: row.try_get("evaluation_metadata")?,
+                verdict_decision: row.try_get("verdict_decision")?,
+                risk_assessment: row.try_get("risk_assessment")?,
+                updated_at: row.try_get("updated_at")?,
+            };
+            evaluations.push(evaluation);
+        }
+
+        Ok(evaluations)
     }
 }
 

@@ -1,13 +1,14 @@
 "use client";
 
-import { Chat } from "@/components/composers/Chat";
-import { ChatSidebar } from "@/components/composers/ChatSidebar";
+import { Chat } from "@/components/chat/Chat";
+import { ChatSidebar } from "@/components/chat/ChatSidebar";
+import styles from "./page.module.scss";
 
 export default function ChatPage() {
   return (
-    <div className="flex h-full">
+    <div className={styles.chatPage}>
       <ChatSidebar />
-      <div className="flex-1">
+      <div className={styles.chatContent}>
         <Chat />
       </div>
     </div>

@@ -14,6 +14,8 @@ import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "../ui/button";
 import { parseApiError, isRetryableError } from "../../lib/errors";
 import type { AppError } from "../../lib/errors";
+import { cn } from "../ui/utils";
+import styles from "./ChatMessageError.module.scss";
 
 interface ChatMessageErrorProps {
   error: unknown;
@@ -87,26 +89,24 @@ export function ChatMessageError({
   }, [error]);
 
   return (
-    <div
-      className={`flex gap-3 border border-red-600/20 bg-red-600/10 rounded-lg p-4 ${className}`}
-    >
-      <div className="flex-shrink-0 mt-0.5">
+    <div className={cn(styles.chatMessageError, className)}>
+      <div className={styles.chatMessageErrorIcon}>
         <AlertCircle className="w-5 h-5 text-red-500" />
       </div>
 
-      <div className="flex-1 min-w-0">
-        <div className="text-sm text-red-400 font-medium mb-1">
+      <div className={styles.chatMessageErrorContent}>
+        <div className={styles.chatMessageErrorTitle}>
           {appError.getUserMessage() || errorMessage}
         </div>
         {process.env.NODE_ENV === "development" && appError.details && (
-          <div className="text-xs text-red-500/70 mt-2 font-mono break-all">
+          <div className={styles.chatMessageErrorDetails}>
             {JSON.stringify(appError.details, null, 2)}
           </div>
         )}
       </div>
 
       {retryable && onRetry && (
-        <div className="flex items-start">
+        <div className={styles.chatMessageErrorRetry}>
           <Button
             variant="ghost"
             size="sm"

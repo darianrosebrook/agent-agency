@@ -206,8 +206,8 @@ export const useChatStore = create<ChatState>()(
 
         try {
           const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
-          const data = await apiGet<unknown>(`${apiUrl}/api/chat/sessions`, {
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+          const data = await apiGet<unknown>(`${apiUrl}/api/v1/chat/sessions`, {
             retry: { maxAttempts: 3, initialDelay: 1000 },
           });
 
@@ -245,9 +245,9 @@ export const useChatStore = create<ChatState>()(
 
         try {
           const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
           const data = await apiPost<unknown>(
-            `${apiUrl}/api/chat/sessions`,
+            `${apiUrl}/api/v1/chat/sessions`,
             validatedRequest
           );
 
@@ -287,9 +287,9 @@ export const useChatStore = create<ChatState>()(
 
         try {
           const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
           const data = await apiGet<unknown>(
-            `${apiUrl}/api/chat/sessions/${sessionId}/messages`,
+            `${apiUrl}/api/v1/chat/sessions/${sessionId}/messages`,
             { retry: { maxAttempts: 3, initialDelay: 1000 } }
           );
 
@@ -340,9 +340,9 @@ export const useChatStore = create<ChatState>()(
 
         try {
           const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
           const data = await apiPost<unknown>(
-            `${apiUrl}/api/chat/sessions/${sessionId}/messages`,
+            `${apiUrl}/api/v1/chat/sessions/${sessionId}/messages`,
             {
               role: message.role,
               content: message.content,

@@ -1,8 +1,9 @@
-import { PhaseManager } from "@/components/composers/PhaseManager";
+import { PhaseManager } from "@/components/projects/PhaseManager";
+import styles from "./page.module.scss";
 
 export default function PhasePlannerPage() {
   return (
-    <div className="p-8">
+    <div className={styles.phasePlannerPage}>
       <PhaseManager />
     </div>
   );

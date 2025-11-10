@@ -7,12 +7,18 @@
 
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::{Query, State};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock, oneshot};
 use uuid::Uuid;
 use futures_util::{SinkExt, StreamExt};
+use tracing::{warn, info};
+
+#[cfg(feature = "orchestration")]
+use crate::api::{ApiState, middleware::auth::validate_token_and_get_user_id};
 
 mod redis_manager;
 pub use redis_manager::RedisSessionManager;
@@ -184,19 +190,58 @@ impl Default for WebSocketManager {
     }
 }
 
-/// WebSocket connection handler
+/// WebSocket connection handler with authentication
+///
+/// Validates the token from query parameters before accepting the connection.
+/// Rejects connection with 401 Unauthorized if token is invalid or missing.
+///
+/// Query parameters:
+/// - `token`: Bearer token for authentication (required)
+#[cfg(feature = "orchestration")]
+pub async fn websocket_handler(
+    ws: WebSocketUpgrade,
+    State(state): State<ApiState>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Response {
+    let connection_id = Uuid::new_v4().to_string();
+
+    // Extract token from query parameters
+    let token = match params.get("token") {
+        Some(t) => t.clone(),
+        None => {
+            warn!("WebSocket connection rejected: missing token");
+            return StatusCode::UNAUTHORIZED.into_response();
+        }
+    };
+
+    // Validate token and get user_id before accepting connection
+    let user_id = match validate_token_and_get_user_id(&token, &state.api.db_client).await {
+        Ok(uid) => uid.to_string(),
+        Err(status) => {
+            warn!("WebSocket connection rejected: token validation failed (status: {})", status);
+            return status.into_response();
+        }
+    };
+
+    info!("WebSocket connection authenticated: user_id={}, connection_id={}", user_id, connection_id);
+
+    // Accept connection with validated user_id
+    let manager = state.websocket_manager.clone();
+    ws.on_upgrade(move |socket| handle_socket(socket, manager, connection_id, user_id))
+}
+
+/// WebSocket connection handler without authentication (fallback for non-orchestration builds)
+#[cfg(not(feature = "orchestration"))]
 pub async fn websocket_handler(
     ws: WebSocketUpgrade,
     State(manager): State<Arc<WebSocketManager>>,
     Query(params): Query<HashMap<String, String>>,
-) -> axum::response::Response {
-    let token = params.get("token").cloned();
+) -> Response {
     let connection_id = Uuid::new_v4().to_string();
-
-    // TODO: Validate token and extract user_id
-    // For now, use connection_id as user_id placeholder
+    let token = params.get("token").cloned();
     let user_id = token.unwrap_or_else(|| connection_id.clone());
-
+    
+    warn!("WebSocket connection accepted without authentication (orchestration feature disabled)");
     ws.on_upgrade(move |socket| handle_socket(socket, manager, connection_id, user_id))
 }
 
@@ -206,7 +251,9 @@ async fn handle_socket(
     connection_id: String,
     user_id: String,
 ) {
+    // Register connection with validated user_id
     manager.register_connection(connection_id.clone(), user_id.clone()).await;
+    info!("WebSocket connection registered: connection_id={}, user_id={}", connection_id, user_id);
 
     let (mut sender, mut receiver) = socket.split();
 

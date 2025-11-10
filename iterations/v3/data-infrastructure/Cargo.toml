@@ -92,6 +92,7 @@ system-common-interfaces = { path = "../system-common-interfaces" }
 default = ["orchestration"]  # Enable modular handlers by default
 mcp = ["agent-mcp"]
 orchestration = []  # Feature flag for conditional compilation
+schema-validation = []  # Enable comprehensive schema validation
 
 [dev-dependencies]
 tokio-test = "0.4"

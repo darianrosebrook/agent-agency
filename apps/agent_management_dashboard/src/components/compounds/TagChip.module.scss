@@ -1,0 +1,31 @@
+@use '../../styles/tokens' as *;
+
+.tagChip {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-1;
+  padding: $spacing-1 $spacing-2;
+  background-color: oklch(0.269 0 0); // bg-zinc-700 equivalent
+  border-radius: calc(var(--radius) - 2px);
+  font-size: $font-size-xs;
+  transition: background-color $transition-normal;
+
+  &.removable {
+    cursor: pointer;
+
+    &:hover {
+      background-color: oklch(0.3 0 0); // hover:bg-zinc-600 equivalent
+    }
+  }
+}
+
+.tagChipIcon {
+  width: 0.75rem; // w-3
+  height: 0.75rem; // h-3
+  color: oklch(0.5 0 0); // text-gray-400 equivalent
+
+  &:hover {
+    color: white;
+  }
+}
+
