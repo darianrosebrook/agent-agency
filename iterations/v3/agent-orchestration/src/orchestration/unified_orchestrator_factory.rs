@@ -30,7 +30,7 @@ use crate::planning::{
     plan_executor::{WorkerPool, WorkerInfo, WorkerStatus, WorkerHealth, PlanExecutor, ExecutionConfig},
     factory::PlanningSystemFactory,
 };
-use crate::orchestration::task_state_persistence::InMemoryTaskStatePersistence;
+use crate::orchestration::task_state_persistence::{InMemoryTaskStatePersistence, TaskStatePersistence, DatabaseTaskStatePersistence};
 use crate::planning::{DatabaseOperations, plan_types::ExecutionPlan};
 use crate::workers::execution_bridge::WorkerExecutionBridge;
 use agent_workers::{TaskExecutor, MCPWorkerPool, WorkerPoolConfig, WorkerSpecialty};
@@ -173,6 +173,10 @@ impl UnifiedOrchestratorFactory {
         let db_client = Arc::new(data_infrastructure::DatabaseClient::new(db_config)
             .await
             .map_err(|e| anyhow::anyhow!("Failed to create database client: {}", e))?);
+        
+        // Clone db_client for TaskExecutor (it will be moved)
+        let db_client_for_executor = db_client.clone();
+        
         // Create ToolRegistry with real FileOperationsService for MCP tools
         // Use helper function from agent-workers that has access to both agent_mcp and data-infrastructure
         let repo_path = std::env::current_dir()
@@ -216,7 +220,7 @@ impl UnifiedOrchestratorFactory {
         worker_pool.register_worker(WorkerSpecialty::General, default_capabilities).await
             .map_err(|e| anyhow::anyhow!("Failed to register default worker: {}", e))?;
         
-        let task_executor = Arc::new(TaskExecutor::new(db_client));
+        let task_executor = Arc::new(TaskExecutor::new(db_client_for_executor));
         
         #[cfg(feature = "memory")]
         let worker_bridge = Arc::new(WorkerExecutionBridge::new(worker_pool, task_executor));
@@ -331,7 +335,9 @@ impl UnifiedOrchestratorFactory {
         ));
 
         // Create state persistence for pause/resume/cancel support
-        let state_persistence = Arc::new(InMemoryTaskStatePersistence::new());
+        // Use database persistence when db_client is available, otherwise use in-memory
+        // Database persistence provides crash recovery and task resumption capabilities
+        let state_persistence: Arc<dyn TaskStatePersistence> = Arc::new(DatabaseTaskStatePersistence::new(db_client.clone()));
 
         // Create UnifiedOrchestrator
         #[cfg(all(feature = "research", feature = "memory"))]

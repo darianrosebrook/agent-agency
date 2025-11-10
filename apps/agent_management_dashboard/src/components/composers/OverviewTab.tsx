@@ -21,9 +21,9 @@ export function OverviewTab() {
         title={showMetadata ? "Hide metadata panel" : "Show metadata panel"}
       >
         {showMetadata ? (
-          <PanelRightClose className="w-5 h-5" />
+          <PanelRightClose className={styles.toggleIcon} />
         ) : (
-          <PanelRightOpen className="w-5 h-5" />
+          <PanelRightOpen className={styles.toggleIcon} />
         )}
       </button>
 
@@ -66,7 +66,7 @@ function EditorOnly({ description }: { description?: string }) {
 
 function EditorToolbar() {
   return (
-    <div className="h-[35.994px] relative shrink-0 w-full">
+    <div className={styles.toolbarContainer}>
       {/* Bold Button */}
       <button className={`${styles.toolbarButton} ${styles.toolbarButtonBold}`}>
         <div className={styles.toolbarDropdownIcon}>

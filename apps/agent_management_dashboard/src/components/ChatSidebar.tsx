@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Plus, MessageSquare } from "lucide-react";
 import { useChatStore } from "../lib/stores";
+import { cn } from "./primitives/utils";
+import styles from "./ChatSidebar.module.scss";
 
 interface ChatGroup {
   id: string;
@@ -53,61 +55,62 @@ export function ChatSidebar({ onSelect }: ChatSidebarProps = {}) {
   };
 
   return (
-    <aside className="w-80 bg-[#1a1a1a] border-r border-gray-800 flex flex-col m-4 rounded-md max-h-full">
+    <aside className={styles.chatSidebar}>
       {/* Header */}
-      <div className="p-4 border-b border-gray-800">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-white">Chats</h2>
+      <div className={styles.header}>
+        <div className={styles.headerTop}>
+          <h2 className={styles.headerTitle}>Chats</h2>
           <button
             onClick={handleNewChat}
-            className="w-8 h-8 flex items-center justify-center text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+            className={styles.newChatButton}
           >
-            <Plus className="w-4 h-4" />
+            <Plus className={styles.newChatIcon} />
           </button>
         </div>
       </div>
 
       {/* Chat Groups */}
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className={styles.chatGroups}>
         {chats.length === 0 ? (
-          <div className="px-3 py-8 text-center text-gray-500 text-sm">
+          <div className={styles.emptyState}>
             No chats yet. Start a conversation!
           </div>
         ) : (
-          <div className="space-y-1">
+          <div className={styles.groupsList}>
             {groups.map((group) => (
               <div key={group.id}>
                 {/* Group Header */}
                 <button
                   onClick={() => toggleGroup(group.id)}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-gray-300 hover:bg-gray-800/50 rounded-lg group"
+                  className={styles.groupHeader}
                 >
                   {group.isExpanded ? (
-                    <ChevronDown className="w-4 h-4 shrink-0" />
+                    <ChevronDown className={styles.groupChevron} />
                   ) : (
-                    <ChevronRight className="w-4 h-4 shrink-0" />
+                    <ChevronRight className={styles.groupChevron} />
                   )}
-                  <span className="text-sm flex-1 text-left truncate">
+                  <span className={styles.groupName}>
                     {group.name}
                   </span>
-                  <span className="text-xs text-gray-600">{chats.length}</span>
+                  <span className={styles.groupCount}>{chats.length}</span>
                 </button>
 
                 {/* Chats in Group */}
                 {group.isExpanded && (
-                  <div className="ml-6 space-y-1 mt-1">
+                  <div className={styles.chatsList}>
                     {chats.map((chat) => (
                       <button
                         key={chat.id}
                         onClick={() => handleChatClick(chat.id)}
-                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                        className={cn(
+                          styles.chatItem,
                           currentChatId === chat.id
-                            ? "bg-gray-800 text-white"
-                            : "text-gray-300 hover:bg-gray-800/50"
-                        }`}
+                            ? styles.chatItemActive
+                            : styles.chatItemInactive
+                        )}
                       >
-                        <MessageSquare className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate text-left flex-1">
+                        <MessageSquare className={styles.chatIcon} />
+                        <span className={styles.chatTitle}>
                           {chat.title}
                         </span>
                       </button>

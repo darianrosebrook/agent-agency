@@ -1,0 +1,105 @@
+@use "../../../../styles/design-tokens.scss" as *;
+
+.aiAgentsTab {
+  min-height: 600px;
+  padding: 31.996px;
+}
+
+.container {
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border-radius: 0.625rem; // rounded-[10px]
+  padding: 24.908px;
+  border-width: 0.909px;
+  border-color: $color-neutral-800; // border-neutral-800
+}
+
+.heading {
+  font-family: 'Inter', sans-serif;
+  font-size: 20px;
+  line-height: 28px;
+  color: $color-white; // text-white
+  letter-spacing: -0.4492px;
+  margin-bottom: 15.994px;
+}
+
+.description {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: $color-gray-500; // text-[#888888]
+  letter-spacing: -0.1504px;
+  margin-bottom: 31.996px;
+}
+
+.agentsList {
+  display: flex;
+  flex-direction: column;
+  gap: 15.994px; // space-y-[15.994px]
+}
+
+.agentItem {
+  background-color: $color-dark-bg-secondary; // bg-[#0d0d0d]
+  border-radius: 0.5rem; // rounded-[8px]
+  padding: 16px;
+  border-width: 0.909px;
+  border-color: $color-neutral-800; // border-neutral-800
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.agentInfo {
+  // Container for agent name and description
+}
+
+.agentName {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500; // font-medium
+  font-size: 14px;
+  color: $color-white; // text-white
+  letter-spacing: -0.1504px;
+  margin-bottom: 4px;
+}
+
+.agentDescription {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: $color-gray-500; // text-[#888888]
+  letter-spacing: -0.1504px;
+}
+
+.toggleSwitch {
+  height: 18.395px;
+  width: 31.996px;
+  border-radius: 9999999px; // rounded-[1.5252e+07px] -> very large radius for toggle
+  transition: background-color $transition-normal;
+}
+
+.toggleSwitchActive {
+  background-color: #030213; // bg-[#030213]
+}
+
+.toggleSwitchInactive {
+  background-color: #cbced4; // bg-[#cbced4]
+}
+
+.toggleThumb {
+  background-color: $color-white; // bg-white
+  position: relative;
+  border-radius: 9999999px; // rounded-[1.5252e+07px]
+  flex-shrink: 0;
+  width: 15.994px;
+  height: 15.994px;
+  transition: transform $transition-normal;
+  margin-top: 0.909px;
+  margin-left: 0.909px;
+}
+
+.toggleThumbActive {
+  transform: translateX(14.903px);
+}
+
+.toggleThumbInactive {
+  transform: translateX(0.909px);
+}
+

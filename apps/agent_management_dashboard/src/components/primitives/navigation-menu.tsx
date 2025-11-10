@@ -93,7 +93,7 @@ function NavigationMenuViewport({
   ...props
 }: React.ComponentProps<typeof NavigationMenuPrimitive.Viewport>) {
   return (
-    <div className="absolute top-full left-0 isolate z-50 flex justify-center">
+    <div className={styles.navigationMenuViewportWrapper}>
       <NavigationMenuPrimitive.Viewport
         data-slot="navigation-menu-viewport"
         className={cn(styles.navigationMenuViewport, className)}
@@ -126,7 +126,7 @@ function NavigationMenuIndicator({
       className={cn(styles.navigationMenuIndicator, className)}
       {...props}
     >
-      <div className="bg-border relative top-[60%] h-2 w-2 rotate-45 rounded-tl-sm shadow-md" />
+      <div className={styles.navigationMenuIndicatorDot} />
     </NavigationMenuPrimitive.Indicator>
   );
 }

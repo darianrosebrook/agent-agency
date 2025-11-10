@@ -221,3 +221,15 @@
   color: $color-gray-600; // text-gray-600
 }
 
+.toggleIcon {
+  width: 1.25rem; // w-5
+  height: 1.25rem; // h-5
+}
+
+.toolbarContainer {
+  height: 35.994px;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+

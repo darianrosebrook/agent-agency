@@ -130,10 +130,10 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 <Badge
                   key={index}
                   variant="secondary"
-                  className="bg-gray-800 text-gray-100 gap-1.5"
+                  className={styles.fileBadge}
                 >
-                  <File className="w-3 h-3" />
-                  <span className="text-xs">{file}</span>
+                  <File className={styles.fileIcon} />
+                  <span className={styles.fileText}>{file}</span>
                 </Badge>
               ))}
             </div>

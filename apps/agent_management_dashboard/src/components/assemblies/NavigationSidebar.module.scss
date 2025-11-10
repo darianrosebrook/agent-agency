@@ -279,3 +279,13 @@
   font-size: $font-size-sm; // text-sm
 }
 
+// Icon classes
+.icon {
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+}
+
+.iconGray {
+  color: $color-gray-400; // text-gray-400
+}
+

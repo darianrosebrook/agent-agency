@@ -14,9 +14,9 @@ pub use assertions::AssertionFramework;
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::info;
+use tracing::{info, warn};
 
-use crate::services::{OrchestratorService, OllamaService, PostgresService};
+use crate::services::{OrchestratorService, OllamaService, PostgresService, ServiceManager};
 #[cfg(feature = "full")]
 use crate::test_helpers::create_test_autonomous_executor;
 #[cfg(feature = "full")]
@@ -27,12 +27,27 @@ pub struct LocalServiceManager {
     orchestrator: Arc<Mutex<OrchestratorService>>,
     ollama: Arc<Mutex<OllamaService>>,
     postgres: Arc<Mutex<PostgresService>>,
+    service_manager: ServiceManager,
 }
 
 impl LocalServiceManager {
     /// Create a new service manager
     pub async fn new() -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         info!("Initializing local service manager");
+
+        // Create comprehensive service manager to check and start dependencies
+        let service_manager = ServiceManager::new();
+        
+        // Check status of all services
+        let statuses = service_manager.check_all_services().await;
+        info!("Service status check:");
+        for status in &statuses {
+            if status.healthy {
+                info!("  ✅ {}: Running", status.name);
+            } else {
+                warn!("  ⚠️  {}: Not running", status.name);
+            }
+        }
 
         let orchestrator = Arc::new(Mutex::new(OrchestratorService::new().await?));
         let ollama = Arc::new(Mutex::new(OllamaService::new().await?));
@@ -42,12 +57,20 @@ impl LocalServiceManager {
             orchestrator,
             ollama,
             postgres,
+            service_manager,
         })
     }
 
-    /// Start all services
+    /// Start all services (with automatic dependency management)
     pub async fn start_all(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        info!("Starting all local services");
+        info!("Starting all local services with automatic dependency management");
+
+        // Ensure required dependencies are running
+        let required = vec!["postgres", "ollama"];
+        if let Err(e) = self.service_manager.ensure_all_services(&required).await {
+            warn!("Some services could not be started automatically: {}", e);
+            warn!("Tests may fail if services are not available");
+        }
 
         // Start services in dependency order
         {
@@ -148,5 +171,10 @@ impl LocalServiceManager {
 
     pub fn postgres(&self) -> Arc<Mutex<PostgresService>> {
         Arc::clone(&self.postgres)
+    }
+
+    /// Get service manager for checking/starting dependencies
+    pub fn service_manager(&self) -> &ServiceManager {
+        &self.service_manager
     }
 }

@@ -1,0 +1,839 @@
+{
+  "timestamp": "2025-11-10T06:24:43.662Z",
+  "summary": {
+    "oldRules": 386,
+    "newRules": 1788,
+    "missingInNew": 382,
+    "missingInOld": 1784,
+    "different": 4,
+    "same": 0
+  },
+  "differences": {
+    "missingInNew": [
+      {
+        "className": "pointer-events-none",
+        "properties": "pointer-events:none"
+      },
+      {
+        "className": "sr-only",
+        "properties": "clip:rect(0,0,0,0);white-space:nowrap;border-width:0;width:1px;height:1px;margin:-1px;padding:0;position:absolute;overflow:hidden"
+      },
+      {
+        "className": "absolute",
+        "properties": "position:absolute"
+      },
+      {
+        "className": "fixed",
+        "properties": "position:fixed"
+      },
+      {
+        "className": "relative",
+        "properties": "position:relative"
+      },
+      {
+        "className": "sticky",
+        "properties": "position:sticky"
+      },
+      {
+        "className": "inset-0",
+        "properties": "inset:calc(var(--spacing) * 0)"
+      },
+      {
+        "className": "-top-2",
+        "properties": "top:calc(var(--spacing) * -2)"
+      },
+      {
+        "className": "top-0",
+        "properties": "top:calc(var(--spacing) * 0)"
+      },
+      {
+        "className": "top-2",
+        "properties": "top:calc(var(--spacing) * 2)"
+      },
+      {
+        "className": "top-4",
+        "properties": "top:calc(var(--spacing) * 4)"
+      },
+      {
+        "className": "top-8",
+        "properties": "top:calc(var(--spacing) * 8)"
+      },
+      {
+        "className": "top-full",
+        "properties": "top:100%"
+      },
+      {
+        "className": "-right-2",
+        "properties": "right:calc(var(--spacing) * -2)"
+      },
+      {
+        "className": "right-0",
+        "properties": "right:calc(var(--spacing) * 0)"
+      },
+      {
+        "className": "right-2",
+        "properties": "right:calc(var(--spacing) * 2)"
+      },
+      {
+        "className": "right-3",
+        "properties": "right:calc(var(--spacing) * 3)"
+      },
+      {
+        "className": "right-4",
+        "properties": "right:calc(var(--spacing) * 4)"
+      },
+      {
+        "className": "right-8",
+        "properties": "right:calc(var(--spacing) * 8)"
+      },
+      {
+        "className": "-bottom-2",
+        "properties": "bottom:calc(var(--spacing) * -2)"
+      },
+      {
+        "className": "-bottom-3",
+        "properties": "bottom:calc(var(--spacing) * -3)"
+      },
+      {
+        "className": "bottom-8",
+        "properties": "bottom:calc(var(--spacing) * 8)"
+      },
+      {
+        "className": "-left-3",
+        "properties": "left:calc(var(--spacing) * -3)"
+      },
+      {
+        "className": "left-0",
+        "properties": "left:calc(var(--spacing) * 0)"
+      },
+      {
+        "className": "left-2",
+        "properties": "left:calc(var(--spacing) * 2)"
+      },
+      {
+        "className": "left-3",
+        "properties": "left:calc(var(--spacing) * 3)"
+      },
+      {
+        "className": "z-10",
+        "properties": "z-index:10"
+      },
+      {
+        "className": "z-20",
+        "properties": "z-index:20"
+      },
+      {
+        "className": "z-50",
+        "properties": "z-index:50"
+      },
+      {
+        "className": "col-span-1",
+        "properties": "grid-column:span 1 / span 1"
+      },
+      {
+        "className": "col-span-4",
+        "properties": "grid-column:span 4 / span 4"
+      },
+      {
+        "className": "col-span-5",
+        "properties": "grid-column:span 5 / span 5"
+      },
+      {
+        "className": "col-span-7",
+        "properties": "grid-column:span 7 / span 7"
+      },
+      {
+        "className": "col-span-8",
+        "properties": "grid-column:span 8 / span 8"
+      },
+      {
+        "className": "col-span-12",
+        "properties": "grid-column:span 12 / span 12"
+      },
+      {
+        "className": "row-span-2",
+        "properties": "grid-row:span 2 / span 2"
+      },
+      {
+        "className": "row-span-3",
+        "properties": "grid-row:span 3 / span 3"
+      },
+      {
+        "className": "row-span-6",
+        "properties": "grid-row:span 6 / span 6"
+      },
+      {
+        "className": "container",
+        "properties": "max-width:96rem"
+      },
+      {
+        "className": "m-4",
+        "properties": "margin:calc(var(--spacing) * 4)"
+      },
+      {
+        "className": "-mx-1",
+        "properties": "margin-inline:calc(var(--spacing) * -1)"
+      },
+      {
+        "className": "-mx-2",
+        "properties": "margin-inline:calc(var(--spacing) * -2)"
+      },
+      {
+        "className": "mx-auto",
+        "properties": "margin-inline:auto"
+      },
+      {
+        "className": "my-1",
+        "properties": "margin-block:calc(var(--spacing) * 1)"
+      },
+      {
+        "className": "-mt-2",
+        "properties": "margin-top:calc(var(--spacing) * -2)"
+      },
+      {
+        "className": "mt-0",
+        "properties": "margin-top:calc(var(--spacing) * 0)"
+      },
+      {
+        "className": "mt-1",
+        "properties": "margin-top:calc(var(--spacing) * 1)"
+      },
+      {
+        "className": "5",
+        "properties": "gap:calc(var(--spacing) * 2.5)"
+      },
+      {
+        "className": "mt-2",
+        "properties": "margin-top:calc(var(--spacing) * 2)"
+      },
+      {
+        "className": "mt-3",
+        "properties": "margin-top:calc(var(--spacing) * 3)"
+      },
+      {
+        "className": "mt-4",
+        "properties": "margin-top:calc(var(--spacing) * 4)"
+      },
+      {
+        "className": "mt-6",
+        "properties": "margin-top:calc(var(--spacing) * 6)"
+      },
+      {
+        "className": "mt-12",
+        "properties": "margin-top:calc(var(--spacing) * 12)"
+      },
+      {
+        "className": "mr-2",
+        "properties": "margin-right:calc(var(--spacing) * 2)"
+      },
+      {
+        "className": "mb-0",
+        "properties": "margin-bottom:calc(var(--spacing) * 0)"
+      },
+      {
+        "className": "mb-1",
+        "properties": "margin-bottom:calc(var(--spacing) * 1)"
+      },
+      {
+        "className": "mb-2",
+        "properties": "margin-bottom:calc(var(--spacing) * 2)"
+      },
+      {
+        "className": "mb-3",
+        "properties": "margin-bottom:calc(var(--spacing) * 3)"
+      },
+      {
+        "className": "mb-4",
+        "properties": "margin-bottom:calc(var(--spacing) * 4)"
+      },
+      {
+        "className": "mb-6",
+        "properties": "margin-bottom:calc(var(--spacing) * 6)"
+      },
+      {
+        "className": "mb-8",
+        "properties": "margin-bottom:calc(var(--spacing) * 8)"
+      },
+      {
+        "className": "-ml-2",
+        "properties": "margin-left:calc(var(--spacing) * -2)"
+      },
+      {
+        "className": "ml-2",
+        "properties": "margin-left:calc(var(--spacing) * 2)"
+      },
+      {
+        "className": "ml-6",
+        "properties": "margin-left:calc(var(--spacing) * 6)"
+      },
+      {
+        "className": "ml-8",
+        "properties": "margin-left:calc(var(--spacing) * 8)"
+      },
+      {
+        "className": "ml-12",
+        "properties": "margin-left:calc(var(--spacing) * 12)"
+      },
+      {
+        "className": "ml-auto",
+        "properties": "margin-left:auto"
+      },
+      {
+        "className": "box-border",
+        "properties": "box-sizing:border-box"
+      },
+      {
+        "className": "block",
+        "properties": "display:block"
+      },
+      {
+        "className": "flex",
+        "properties": "display:flex"
+      },
+      {
+        "className": "grid",
+        "properties": "display:grid"
+      },
+      {
+        "className": "hidden",
+        "properties": "display:none"
+      },
+      {
+        "className": "inline",
+        "properties": "display:inline"
+      },
+      {
+        "className": "inline-block",
+        "properties": "display:inline-block"
+      },
+      {
+        "className": "inline-flex",
+        "properties": "display:inline-flex"
+      },
+      {
+        "className": "table",
+        "properties": "display:table"
+      },
+      {
+        "className": "table-caption",
+        "properties": "display:table-caption"
+      },
+      {
+        "className": "table-cell",
+        "properties": "display:table-cell"
+      },
+      {
+        "className": "table-row",
+        "properties": "display:table-row"
+      },
+      {
+        "className": "aspect-square",
+        "properties": "aspect-ratio:1"
+      },
+      {
+        "className": "size-2",
+        "properties": "width:calc(var(--spacing) * 2);height:calc(var(--spacing) * 2)"
+      },
+      {
+        "className": "size-4",
+        "properties": "width:calc(var(--spacing) * 4);height:calc(var(--spacing) * 4)"
+      },
+      {
+        "className": "size-9",
+        "properties": "width:calc(var(--spacing) * 9);height:calc(var(--spacing) * 9)"
+      },
+      {
+        "className": "size-10",
+        "properties": "width:calc(var(--spacing) * 10);height:calc(var(--spacing) * 10)"
+      },
+      {
+        "className": "size-full",
+        "properties": "width:100%;height:100%"
+      },
+      {
+        "className": "h-0",
+        "properties": "height:calc(var(--spacing) * 0)"
+      },
+      {
+        "className": "h-2",
+        "properties": "height:calc(var(--spacing) * 2)"
+      },
+      {
+        "className": "h-3",
+        "properties": "height:calc(var(--spacing) * 3)"
+      },
+      {
+        "className": "h-4",
+        "properties": "height:calc(var(--spacing) * 4)"
+      },
+      {
+        "className": "h-5",
+        "properties": "height:calc(var(--spacing) * 5)"
+      },
+      {
+        "className": "h-6",
+        "properties": "height:calc(var(--spacing) * 6)"
+      },
+      {
+        "className": "h-7",
+        "properties": "height:calc(var(--spacing) * 7)"
+      },
+      {
+        "className": "h-8",
+        "properties": "height:calc(var(--spacing) * 8)"
+      },
+      {
+        "className": "h-9",
+        "properties": "height:calc(var(--spacing) * 9)"
+      },
+      {
+        "className": "h-10",
+        "properties": "height:calc(var(--spacing) * 10)"
+      },
+      {
+        "className": "h-12",
+        "properties": "height:calc(var(--spacing) * 12)"
+      },
+      {
+        "className": "h-16",
+        "properties": "height:calc(var(--spacing) * 16)"
+      },
+      {
+        "className": "h-20",
+        "properties": "height:calc(var(--spacing) * 20)"
+      },
+      {
+        "className": "h-24",
+        "properties": "height:calc(var(--spacing) * 24)"
+      },
+      {
+        "className": "h-32",
+        "properties": "height:calc(var(--spacing) * 32)"
+      }
+    ],
+    "missingInOld": [
+      {
+        "className": "SecuritySettingsTab_animate-spin-slow__mNSuH",
+        "properties": "animation:SecuritySettingsTab_spin-slow__dlB0I 3s linear infinite"
+      },
+      {
+        "className": "SecuritySettingsTab_animate-spin__Ale7A",
+        "properties": "animation:SecuritySettingsTab_spin__5L_ji 1s linear infinite"
+      },
+      {
+        "className": "SecuritySettingsTab_animate-pulse__XyYDy",
+        "properties": "animation:SecuritySettingsTab_pulse__jaCmW 2s cubic-bezier(.4,0,.6,1) infinite"
+      },
+      {
+        "className": "SecuritySettingsTab_animate-fade-in__oABY2",
+        "properties": "animation:SecuritySettingsTab_fade-in__ug5Td .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "SecuritySettingsTab_animate-fade-out__AnPMK",
+        "properties": "animation:SecuritySettingsTab_fade-out__mIjMo .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "SecuritySettingsTab_animate-slide-in__1qeCw",
+        "properties": "animation:SecuritySettingsTab_slide-in__lZX7P .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "SecuritySettingsTab_animate-slide-out__SYtoD",
+        "properties": "animation:SecuritySettingsTab_slide-out__iDSyR .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "SecuritySettingsTab_securityTab__EJ6p_",
+        "properties": "display:flex;flex-direction:column;gap:1.5rem"
+      },
+      {
+        "className": "SecuritySettingsTab_loading__wMevy",
+        "properties": "padding:2rem;text-align:center;color:#a1a1aa"
+      },
+      {
+        "className": "SecuritySettingsTab_form__E72ZU",
+        "properties": "display:flex;flex-direction:column;gap:1rem"
+      },
+      {
+        "className": "SecuritySettingsTab_formGroup__ZVYBv",
+        "properties": "display:flex;flex-direction:column;gap:.5rem"
+      },
+      {
+        "className": "SecuritySettingsTab_twoFAEnabled__4AptM",
+        "properties": "display:flex;flex-direction:column;gap:1rem"
+      },
+      {
+        "className": "SecuritySettingsTab_qrCode__HakOP",
+        "properties": "display:flex;justify-content:center;padding:1rem;background-color:#fff;border-radius:.75rem"
+      },
+      {
+        "className": "SecuritySettingsTab_backupCodes__D_us8",
+        "properties": "margin-top:1rem;padding:1rem;background-color:#0f0f0f;border-radius:.75rem"
+      },
+      {
+        "className": "ApiKeysTab_animate-spin-slow__NfAd0",
+        "properties": "animation:ApiKeysTab_spin-slow__LzgyP 3s linear infinite"
+      },
+      {
+        "className": "ApiKeysTab_animate-spin__CGXZt",
+        "properties": "animation:ApiKeysTab_spin__dX7_d 1s linear infinite"
+      },
+      {
+        "className": "ApiKeysTab_animate-pulse__2Aybd",
+        "properties": "animation:ApiKeysTab_pulse__scg0H 2s cubic-bezier(.4,0,.6,1) infinite"
+      },
+      {
+        "className": "ApiKeysTab_animate-fade-in__kCEpo",
+        "properties": "animation:ApiKeysTab_fade-in__7_tyc .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "ApiKeysTab_animate-fade-out__8qcMA",
+        "properties": "animation:ApiKeysTab_fade-out__z82Qj .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "ApiKeysTab_animate-slide-in__jo_Kw",
+        "properties": "animation:ApiKeysTab_slide-in__03iCl .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "ApiKeysTab_animate-slide-out__3PS12",
+        "properties": "animation:ApiKeysTab_slide-out__p92s3 .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "ApiKeysTab_apiKeysTab__b_lV7",
+        "properties": "display:flex;flex-direction:column;gap:1.5rem"
+      },
+      {
+        "className": "ApiKeysTab_loading__GDZ8U",
+        "properties": "padding:2rem;text-align:center;color:#a1a1aa"
+      },
+      {
+        "className": "ApiKeysTab_newKeyAlert__b5Fjj",
+        "properties": "padding:1rem;background-color:#0f0f0f;border:1px solid #a1a1aa;border-radius:calc(var(--radius) - 2px);margin-bottom:1rem"
+      },
+      {
+        "className": "ApiKeysTab_createForm__jp5g8",
+        "properties": "margin-top:1rem;padding:1rem;background-color:#0f0f0f;border-radius:calc(var(--radius) - 2px);display:flex;flex-direction:column;gap:1rem"
+      },
+      {
+        "className": "ApiKeysTab_formGroup__QDieL",
+        "properties": "display:flex;flex-direction:column;gap:.5rem"
+      },
+      {
+        "className": "ApiKeysTab_keysList__NYrLz",
+        "properties": "margin-top:1.5rem;display:flex;flex-direction:column;gap:1rem"
+      },
+      {
+        "className": "ApiKeysTab_keyItem__bUXRm",
+        "properties": "display:flex;justify-content:space-between;align-items:center;padding:1rem;background-color:#0f0f0f;border-radius:calc(var(--radius) - 2px)"
+      },
+      {
+        "className": "ApiKeysTab_keyActions__gDAoV",
+        "properties": "display:flex;gap:.5rem"
+      },
+      {
+        "className": "IntegrationsTab_animate-spin-slow__b5oYV",
+        "properties": "animation:IntegrationsTab_spin-slow__HC5i5 3s linear infinite"
+      },
+      {
+        "className": "IntegrationsTab_animate-spin__vPPZQ",
+        "properties": "animation:IntegrationsTab_spin__NpBLk 1s linear infinite"
+      },
+      {
+        "className": "IntegrationsTab_animate-pulse__V5jbG",
+        "properties": "animation:IntegrationsTab_pulse__F_awe 2s cubic-bezier(.4,0,.6,1) infinite"
+      },
+      {
+        "className": "IntegrationsTab_animate-fade-in__pLrgO",
+        "properties": "animation:IntegrationsTab_fade-in__btRJs .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "IntegrationsTab_animate-fade-out__euyKO",
+        "properties": "animation:IntegrationsTab_fade-out__4AKnB .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "IntegrationsTab_animate-slide-in__Solob",
+        "properties": "animation:IntegrationsTab_slide-in__eRi3u .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "IntegrationsTab_animate-slide-out__kePQu",
+        "properties": "animation:IntegrationsTab_slide-out__HVLOe .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "IntegrationsTab_integrationsTab__Of3kP",
+        "properties": "display:flex;flex-direction:column;gap:1.5rem"
+      },
+      {
+        "className": "IntegrationsTab_loading__sjbWb",
+        "properties": "padding:2rem;text-align:center;color:#a1a1aa"
+      },
+      {
+        "className": "IntegrationsTab_integrationsList__1HyHC",
+        "properties": "display:flex;flex-direction:column;gap:1rem"
+      },
+      {
+        "className": "IntegrationsTab_integrationItem__mklnr",
+        "properties": "display:flex;justify-content:space-between;align-items:center;padding:1rem;background-color:#0f0f0f;border-radius:.75rem"
+      },
+      {
+        "className": "IntegrationsTab_integrationActions__ybpNp",
+        "properties": "display:flex;gap:.5rem"
+      },
+      {
+        "className": "page_animate-spin-slow__pn5_y",
+        "properties": "animation:page_spin-slow__hOZDI 3s linear infinite"
+      },
+      {
+        "className": "page_animate-spin__puYBy",
+        "properties": "animation:page_spin__facpq 1s linear infinite"
+      },
+      {
+        "className": "page_animate-pulse__l7dy1",
+        "properties": "animation:page_pulse__Y50G9 2s cubic-bezier(.4,0,.6,1) infinite"
+      },
+      {
+        "className": "page_animate-fade-in__oy2ma",
+        "properties": "animation:page_fade-in__VxZ6N .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "page_animate-fade-out__PKdMf",
+        "properties": "animation:page_fade-out__EsldE .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "page_animate-slide-in__B9za0",
+        "properties": "animation:page_slide-in__GLj1Z .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "page_animate-slide-out__COvkl",
+        "properties": "animation:page_slide-out__P0TpV .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "page_settingsPage__NPQXd",
+        "properties": "width:100%;min-height:100%;padding:2rem;max-width:80rem;margin-left:auto;margin-right:auto"
+      },
+      {
+        "className": "page_settingsHeader__vDHXe",
+        "properties": "margin-bottom:2rem"
+      },
+      {
+        "className": "page_settingsTitle__0Zf7h",
+        "properties": "font-size:1.875rem;font-weight:400;line-height:1.2;color:#fff;margin-bottom:.5rem"
+      },
+      {
+        "className": "page_settingsDescription__455Ny",
+        "properties": "color:oklch(.5 0 0)"
+      },
+      {
+        "className": "page_settingsContent__vzMxx",
+        "properties": "background-color:#1a1a1a;border:1px solid oklch(.269 0 0);border-radius:.875rem;padding:2rem;display:flex;flex-direction:column;gap:1.5rem"
+      },
+      {
+        "className": "page_tabs__rFGlC",
+        "properties": "width:100%"
+      },
+      {
+        "className": "page_tabsList__lyWag",
+        "properties": "margin-bottom:1.5rem"
+      },
+      {
+        "className": "page_tabContent__QIyfv",
+        "properties": "margin-top:1rem"
+      },
+      {
+        "className": "page_statusBadge__OaHlh",
+        "properties": "display:inline-flex;align-items:center;gap:.5rem;padding-inline:1rem;padding-block:.5rem;background-color:rgba(234,179,8,.2);border:1px solid rgba(234,179,8,.5);border-radius:.875rem"
+      },
+      {
+        "className": "page_statusBadgeDot__Xb0as",
+        "properties": "width:.5rem;height:.5rem;background-color:#eab308;border-radius:9999px;animation:page_pulse__Y50G9 2s cubic-bezier(.4,0,.6,1) infinite"
+      },
+      {
+        "className": "page_statusBadgeText__E6_T7",
+        "properties": "color:#eab308;font-size:.875rem;font-weight:500"
+      },
+      {
+        "className": "page_section__qcXcR",
+        "properties": "display:flex;flex-direction:column;gap:1rem"
+      },
+      {
+        "className": "page_sectionTitle__unVAP",
+        "properties": "font-size:1.25rem;font-weight:600;color:#fff"
+      },
+      {
+        "className": "page_sectionContent__rtpFT",
+        "properties": "background-color:#0f0f0f;border:1px solid oklch(.269 0 0);border-radius:.875rem;padding:1.5rem;display:flex;flex-direction:column;gap:1rem"
+      },
+      {
+        "className": "page_subsectionTitle__pYsTW",
+        "properties": "font-size:1.125rem;font-weight:500;color:#fff;margin-bottom:.5rem"
+      },
+      {
+        "className": "page_subsectionList__x7vFn",
+        "properties": "list-style-type:disc;list-style-position:inside;display:flex;flex-direction:column;gap:.25rem;color:oklch(.5 0 0);font-size:.875rem"
+      },
+      {
+        "className": "page_todoItem__7T9F_",
+        "properties": "display:flex;align-items:flex-start;gap:.75rem"
+      },
+      {
+        "className": "page_todoCheckbox__dnswl",
+        "properties": "margin-top:.25rem"
+      },
+      {
+        "className": "page_todoTitle__ZxnMX",
+        "properties": "color:#fff;font-weight:500"
+      },
+      {
+        "className": "page_todoDescription__GElm7",
+        "properties": "color:oklch(.5 0 0);font-size:.875rem"
+      },
+      {
+        "className": "page_animate-spin-slow__YHjsR",
+        "properties": "animation:page_spin-slow__WZlda 3s linear infinite"
+      },
+      {
+        "className": "page_animate-spin__vxx4y",
+        "properties": "animation:page_spin__3bffv 1s linear infinite"
+      },
+      {
+        "className": "page_animate-pulse___mO7S",
+        "properties": "animation:page_pulse__8tZFk 2s cubic-bezier(.4,0,.6,1) infinite"
+      },
+      {
+        "className": "page_animate-fade-in__aSlpW",
+        "properties": "animation:page_fade-in__59MGF .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "page_animate-fade-out___pgBC",
+        "properties": "animation:page_fade-out__RotLZ .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "page_animate-slide-in__4ZQuC",
+        "properties": "animation:page_slide-in__5yonr .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "page_animate-slide-out__ZMHzF",
+        "properties": "animation:page_slide-out__6Ks1S .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "page_chatPage__0x_5Q",
+        "properties": "display:flex;height:100%"
+      },
+      {
+        "className": "page_chatContent__7IJL_",
+        "properties": "flex:1;display:flex;flex-direction:column"
+      },
+      {
+        "className": "page_loadingContainer__tyYS1",
+        "properties": "display:flex;align-items:center;justify-content:center;height:100%"
+      },
+      {
+        "className": "page_loadingText__K4wKN",
+        "properties": "font-size:.875rem;color:#a1a1aa"
+      },
+      {
+        "className": "page_sidebarLoadingContainer__RvGcB",
+        "properties": "width:16rem;background-color:#18181b;border-right:1px solid #27272a;padding:1rem"
+      },
+      {
+        "className": "page_sidebarLoadingText__Avh0t",
+        "properties": "font-size:.875rem;color:#a1a1aa"
+      },
+      {
+        "className": "not-found_animate-spin-slow__5ePI_",
+        "properties": "animation:not-found_spin-slow__9qtAG 3s linear infinite"
+      },
+      {
+        "className": "not-found_animate-spin__M_4aT",
+        "properties": "animation:not-found_spin__b3w99 1s linear infinite"
+      },
+      {
+        "className": "not-found_animate-pulse__O88sl",
+        "properties": "animation:not-found_pulse__yLex3 2s cubic-bezier(.4,0,.6,1) infinite"
+      },
+      {
+        "className": "not-found_animate-fade-in__8ptw_",
+        "properties": "animation:not-found_fade-in__j_r_y .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "not-found_animate-fade-out__nLlwT",
+        "properties": "animation:not-found_fade-out__ph_0O .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "not-found_animate-slide-in__tfhxY",
+        "properties": "animation:not-found_slide-in__935sG .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "not-found_animate-slide-out__is_Jm",
+        "properties": "animation:not-found_slide-out__YNvSR .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "not-found_notFoundPage__bxaXv",
+        "properties": "min-height:100vh;display:flex;align-items:center;justify-content:center;background-color:#0d0d0d;padding:2rem"
+      },
+      {
+        "className": "not-found_notFoundContent__FXJ2o",
+        "properties": "text-align:center;max-width:42rem"
+      },
+      {
+        "className": "not-found_notFoundHeader__VkksS",
+        "properties": "margin-bottom:2rem"
+      },
+      {
+        "className": "not-found_notFoundCode__YmnMH",
+        "properties": "font-size:8rem;font-weight:700;color:#fff;margin-bottom:1rem"
+      },
+      {
+        "className": "not-found_notFoundTitle__TWvEE",
+        "properties": "font-size:1.875rem;font-weight:600;color:#fff;margin-bottom:1rem"
+      },
+      {
+        "className": "not-found_notFoundDescription__UKHWY",
+        "properties": "color:#9ca3af;font-size:1.125rem;margin-bottom:2rem"
+      },
+      {
+        "className": "not-found_notFoundActions__Z6mQC",
+        "properties": "display:flex;align-items:center;justify-content:center;gap:1rem"
+      },
+      {
+        "className": "not-found_dashboardButton__DVVvf",
+        "properties": "display:flex;align-items:center;gap:.5rem;padding-inline:1.5rem;padding-block:.75rem;background-color:#2563eb;color:#fff;border-radius:1.5rem;transition:background-color .25s cubic-bezier(0,0,.2,1);font-weight:500"
+      },
+      {
+        "className": "not-found_dashboardButtonIcon__GOMfc",
+        "properties": "width:1rem;height:1rem"
+      },
+      {
+        "className": "not-found_backButton__DBcUx",
+        "properties": "display:flex;align-items:center;gap:.5rem;padding-inline:1.5rem;padding-block:.75rem;background-color:#1a1a1a;border:1px solid #1f2937;color:#d1d5db;border-radius:1.5rem;transition:background-color .25s cubic-bezier(0,0,.2,1)"
+      },
+      {
+        "className": "not-found_backButtonIcon__AQVJA",
+        "properties": "width:1rem;height:1rem"
+      },
+      {
+        "className": "not-found_pagesSection__6bFY0",
+        "properties": "margin-top:3rem;text-align:left;background-color:#1a1a1a;border:1px solid #1f2937;border-radius:1.5rem;padding:1.5rem"
+      }
+    ],
+    "different": [
+      {
+        "className": "animate-pulse",
+        "old": "animation:var(--animate-pulse)",
+        "new": "animation:pulse 2s cubic-bezier(.4,0,.6,1) infinite"
+      },
+      {
+        "className": "animate-spin",
+        "old": "animation:var(--animate-spin)",
+        "new": "animation:spin 1s linear infinite"
+      },
+      {
+        "className": "dark",
+        "old": "--background: oklch(.145 0 0);--foreground: oklch(.95 0 0);--card: oklch(.145 0 0);--card-foreground: oklch(.95 0 0);--popover: oklch(.145 0 0);--popover-foreground: oklch(.95 0 0);--primary: oklch(.985 0 0);--primary-foreground: oklch(.205 0 0);--secondary: oklch(.269 0 0);--secondary-foreground: oklch(.95 0 0);--muted: oklch(.269 0 0);--muted-foreground: oklch(.75 0 0);--accent: oklch(.269 0 0);--accent-foreground: oklch(.95 0 0);--destructive: oklch(.396 .141 25.723);--destructive-foreground: oklch(.637 .237 25.331);--border: oklch(.269 0 0);--input: oklch(.269 0 0);--ring: oklch(.439 0 0);--font-weight-semibold: 600;--font-weight-medium: 500;--font-weight-normal: 400;--chart-1: oklch(.488 .243 264.376);--chart-2: oklch(.696 .17 162.48);--chart-3: oklch(.769 .188 70.08);--chart-4: oklch(.627 .265 303.9);--chart-5: oklch(.645 .246 16.439);--sidebar: oklch(.205 0 0);--sidebar-foreground: oklch(.95 0 0);--sidebar-primary: oklch(.488 .243 264.376);--sidebar-primary-foreground: oklch(.95 0 0);--sidebar-accent: oklch(.269 0 0);--sidebar-accent-foreground: oklch(.95 0 0);--sidebar-border: oklch(.269 0 0);--sidebar-ring: oklch(.439 0 0)",
+        "new": "--background:oklch(0.145 0 0);--foreground:oklch(0.95 0 0);--card:oklch(0.145 0 0);--card-foreground:oklch(0.95 0 0);--popover:oklch(0.145 0 0);--popover-foreground:oklch(0.95 0 0);--primary:oklch(0.985 0 0);--primary-foreground:oklch(0.205 0 0);--secondary:oklch(0.269 0 0);--secondary-foreground:oklch(0.95 0 0);--muted:oklch(0.269 0 0);--muted-foreground:oklch(0.75 0 0);--accent:oklch(0.269 0 0);--accent-foreground:oklch(0.95 0 0);--destructive:oklch(0.396 0.141 25.723);--destructive-foreground:oklch(0.637 0.237 25.331);--border:oklch(0.269 0 0);--input:oklch(0.269 0 0);--ring:oklch(0.439 0 0);--font-weight-semibold:600;--font-weight-medium:500;--font-weight-normal:400;--chart-1:oklch(0.488 0.243 264.376);--chart-2:oklch(0.696 0.17 162.48);--chart-3:oklch(0.769 0.188 70.08);--chart-4:oklch(0.627 0.265 303.9);--chart-5:oklch(0.645 0.246 16.439);--sidebar:oklch(0.205 0 0);--sidebar-foreground:oklch(0.95 0 0);--sidebar-primary:oklch(0.488 0.243 264.376);--sidebar-primary-foreground:oklch(0.95 0 0);--sidebar-accent:oklch(0.269 0 0);--sidebar-accent-foreground:oklch(0.95 0 0);--sidebar-border:oklch(0.269 0 0);--sidebar-ring:oklch(0.439 0 0)"
+      },
+      {
+        "className": "animate-spin-slow",
+        "old": "animation:3s linear infinite spin-slow",
+        "new": "animation:spin-slow 3s linear infinite"
+      }
+    ]
+  }
+}

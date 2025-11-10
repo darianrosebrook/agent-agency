@@ -11,11 +11,15 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use anyhow::Result;
+use anyhow::{Result, Context};
+use tracing::{debug, warn, error};
 
 use agent_agency_contracts::WorkingSpec;
 use agent_agency_contracts::planning_io::ExecutionPlan;
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
+
+use data_infrastructure::simple_client::DatabaseClient;
+use sqlx::Row;
 
 /// Complete execution state for a task
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -188,88 +192,239 @@ impl TaskStatePersistence for InMemoryTaskStatePersistence {
 }
 
 /// Database-backed task state persistence (for production use)
-/// This would integrate with a real database for persistent storage
-#[cfg(feature = "database")]
+/// Provides persistent storage for task execution state enabling resumption and recovery
 pub struct DatabaseTaskStatePersistence {
-    // TODO: Implement comprehensive database connection pool for task state persistence
-    //       Currently a placeholder; should implement comprehensive database connection pool integration for persistent task state storage in production environments.
-    //
-    // COMPLETION CHECKLIST:
-    // [ ] Primary functionality implemented
-    // [ ] API/data structures defined & stable
-    // [ ] Error handling + validation aligned with error taxonomy
-    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-    // [ ] Integration tests for external systems/contracts
-    // [ ] Documentation: public API + system behavior
-    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-    // [ ] Security posture reviewed (inputs, authz, sandboxing)
-    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-    // [ ] Configurability and feature flags defined if relevant
-    // [ ] Failure-mode cards documented (degradation paths)
-    //
-    // ACCEPTANCE CRITERIA:
-    // - Database connection pool is implemented
-    // - Task state persistence uses real database
-    // - Connection pooling is efficient and scalable
-    // - Database operations are transactional and reliable
-    //
-    // DEPENDENCIES:
-    // - Database connection pool library (Required)
-    // - Database schema for task state (Required)
-    // - Connection management utilities (Required)
-    //
-    // ESTIMATED EFFORT: 10-14 hours (medium confidence)
-    // PRIORITY: Medium
-    // BLOCKING: No
-    //
-    // GOVERNANCE:
-    // - CAWS Tier: 2 (database persistence functionality)
-    // - Change Budget: ~250 LOC
-    // - Reviewer Requirements: Database connection pooling and persistence expertise
+    /// Database client for persistence operations
+    db_client: Arc<DatabaseClient>,
 }
 
-#[cfg(feature = "database")]
-#[async_trait::async_trait]
-impl TaskStatePersistence for DatabaseTaskStatePersistence {
-    async fn save_state(&self, _state: &TaskExecutionState) -> Result<()> {
-        // TODO: Implement database persistence
-        // - Serialize state to JSON
-        // - Store in database with task_id as key
-        // - Update last_updated timestamp
-        todo!("Database persistence not yet implemented")
+impl DatabaseTaskStatePersistence {
+    /// Create a new database-backed task state persistence instance
+    pub fn new(db_client: Arc<DatabaseClient>) -> Self {
+        Self { db_client }
     }
 
-    async fn load_state(&self, _task_id: Uuid) -> Result<Option<TaskExecutionState>> {
-        // TODO: Implement database loading
-        // - Query database for task_id
-        // - Deserialize JSON to TaskExecutionState
-        // - Return state if found
-        todo!("Database loading not yet implemented")
+    /// Convert ExecutionStateStatus to database string representation
+    fn status_to_string(status: &ExecutionStateStatus) -> String {
+        match status {
+            ExecutionStateStatus::Pending => "pending".to_string(),
+            ExecutionStateStatus::Running => "running".to_string(),
+            ExecutionStateStatus::Paused => "paused".to_string(),
+            ExecutionStateStatus::Completed => "completed".to_string(),
+            ExecutionStateStatus::Failed => "failed".to_string(),
+            ExecutionStateStatus::Cancelled => "cancelled".to_string(),
+            ExecutionStateStatus::Crashed => "crashed".to_string(),
+        }
+    }
+
+    /// Convert database string to ExecutionStateStatus
+    fn string_to_status(s: &str) -> Result<ExecutionStateStatus> {
+        match s {
+            "pending" => Ok(ExecutionStateStatus::Pending),
+            "running" => Ok(ExecutionStateStatus::Running),
+            "paused" => Ok(ExecutionStateStatus::Paused),
+            "completed" => Ok(ExecutionStateStatus::Completed),
+            "failed" => Ok(ExecutionStateStatus::Failed),
+            "cancelled" => Ok(ExecutionStateStatus::Cancelled),
+            "crashed" => Ok(ExecutionStateStatus::Crashed),
+            _ => Err(anyhow::anyhow!("Invalid status: {}", s)),
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl TaskStatePersistence for DatabaseTaskStatePersistence {
+    async fn save_state(&self, state: &TaskExecutionState) -> Result<()> {
+        debug!("Saving task execution state for task {}", state.task_id);
+
+        // Serialize state to JSON
+        let state_json = serde_json::to_value(state)
+            .context("Failed to serialize TaskExecutionState to JSON")?;
+
+        let status_str = Self::status_to_string(&state.status);
+
+        // Upsert state (insert or update)
+        self.db_client.execute(
+            r#"
+            INSERT INTO task_execution_states (task_id, state_data, status, checkpoint_at, last_updated)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (task_id) DO UPDATE SET
+                state_data = EXCLUDED.state_data,
+                status = EXCLUDED.status,
+                checkpoint_at = EXCLUDED.checkpoint_at,
+                last_updated = EXCLUDED.last_updated
+            "#,
+            &[
+                &state.task_id,
+                &state_json,
+                &status_str,
+                &state.checkpoint_at,
+                &Utc::now(),
+            ],
+        )
+        .await
+        .context("Failed to save task execution state to database")?;
+
+        debug!("Successfully saved task execution state for task {}", state.task_id);
+        Ok(())
+    }
+
+    async fn load_state(&self, task_id: Uuid) -> Result<Option<TaskExecutionState>> {
+        debug!("Loading task execution state for task {}", task_id);
+
+        let row = self.db_client.query_one(
+            r#"
+            SELECT state_data, status, checkpoint_at, last_updated
+            FROM task_execution_states
+            WHERE task_id = $1
+            "#,
+            &[&task_id],
+        )
+        .await
+        .context("Failed to query task execution state from database")?;
+
+        match row {
+            Some(row) => {
+                let state_json: serde_json::Value = row.try_get("state_data")
+                    .context("Failed to get state_data from database row")?;
+
+                // Deserialize JSON to TaskExecutionState
+                let state: TaskExecutionState = serde_json::from_value(state_json)
+                    .context("Failed to deserialize TaskExecutionState from JSON")?;
+
+                debug!("Successfully loaded task execution state for task {}", task_id);
+                Ok(Some(state))
+            }
+            None => {
+                debug!("No task execution state found for task {}", task_id);
+                Ok(None)
+            }
+        }
     }
 
     async fn list_resumable_tasks(&self) -> Result<Vec<Uuid>> {
-        // TODO: Query database for tasks with resumable status
-        todo!("Database query not yet implemented")
+        debug!("Listing resumable tasks");
+
+        let rows = self.db_client.query(
+            r#"
+            SELECT task_id
+            FROM task_execution_states
+            WHERE status IN ('paused', 'crashed', 'running')
+            ORDER BY last_updated DESC
+            "#,
+            &[],
+        )
+        .await
+        .context("Failed to query resumable tasks from database")?;
+
+        let mut task_ids = Vec::new();
+        for row in rows {
+            let task_id: Uuid = row.try_get("task_id")
+                .context("Failed to get task_id from database row")?;
+            task_ids.push(task_id);
+        }
+
+        debug!("Found {} resumable tasks", task_ids.len());
+        Ok(task_ids)
     }
 
-    async fn delete_state(&self, _task_id: Uuid) -> Result<()> {
-        // TODO: Delete from database
-        todo!("Database deletion not yet implemented")
+    async fn delete_state(&self, task_id: Uuid) -> Result<()> {
+        debug!("Deleting task execution state for task {}", task_id);
+
+        // Delete checkpoints first (foreign key constraint)
+        self.db_client.execute(
+            "DELETE FROM task_state_checkpoints WHERE task_id = $1",
+            &[&task_id],
+        )
+        .await
+        .context("Failed to delete task state checkpoints")?;
+
+        // Delete state
+        self.db_client.execute(
+            "DELETE FROM task_execution_states WHERE task_id = $1",
+            &[&task_id],
+        )
+        .await
+        .context("Failed to delete task execution state from database")?;
+
+        debug!("Successfully deleted task execution state for task {}", task_id);
+        Ok(())
     }
 
-    async fn has_resumable_state(&self, _task_id: Uuid) -> Result<bool> {
-        // TODO: Check database for resumable state
-        todo!("Database check not yet implemented")
+    async fn has_resumable_state(&self, task_id: Uuid) -> Result<bool> {
+        debug!("Checking if task {} has resumable state", task_id);
+
+        let row = self.db_client.query_one(
+            r#"
+            SELECT status
+            FROM task_execution_states
+            WHERE task_id = $1 AND status IN ('paused', 'crashed', 'running')
+            "#,
+            &[&task_id],
+        )
+        .await
+        .context("Failed to check resumable state in database")?;
+
+        let has_resumable = row.is_some();
+        debug!("Task {} has resumable state: {}", task_id, has_resumable);
+        Ok(has_resumable)
     }
 
-    async fn create_checkpoint(&self, _task_id: Uuid, _state: &TaskExecutionState) -> Result<()> {
-        // TODO: Create checkpoint in database
-        todo!("Database checkpoint not yet implemented")
+    async fn create_checkpoint(&self, task_id: Uuid, state: &TaskExecutionState) -> Result<()> {
+        debug!("Creating checkpoint for task {}", task_id);
+
+        // Save state first (this will update checkpoint_at)
+        let mut state_with_checkpoint = state.clone();
+        state_with_checkpoint.checkpoint_at = Some(Utc::now());
+        self.save_state(&state_with_checkpoint).await?;
+
+        // Serialize state for checkpoint storage
+        let state_json = serde_json::to_value(state)
+            .context("Failed to serialize TaskExecutionState to JSON for checkpoint")?;
+
+        // Create checkpoint record
+        self.db_client.execute(
+            r#"
+            INSERT INTO task_state_checkpoints (task_id, checkpoint_timestamp, state_data)
+            VALUES ($1, $2, $3)
+            "#,
+            &[
+                &task_id,
+                &Utc::now(),
+                &state_json,
+            ],
+        )
+        .await
+        .context("Failed to create checkpoint in database")?;
+
+        debug!("Successfully created checkpoint for task {}", task_id);
+        Ok(())
     }
 
-    async fn list_checkpoints(&self, _task_id: Uuid) -> Result<Vec<DateTime<Utc>>> {
-        // TODO: List checkpoints from database
-        todo!("Database checkpoint listing not yet implemented")
+    async fn list_checkpoints(&self, task_id: Uuid) -> Result<Vec<DateTime<Utc>>> {
+        debug!("Listing checkpoints for task {}", task_id);
+
+        let rows = self.db_client.query(
+            r#"
+            SELECT checkpoint_timestamp
+            FROM task_state_checkpoints
+            WHERE task_id = $1
+            ORDER BY checkpoint_timestamp DESC
+            "#,
+            &[&task_id],
+        )
+        .await
+        .context("Failed to query checkpoints from database")?;
+
+        let mut checkpoints = Vec::new();
+        for row in rows {
+            let timestamp: DateTime<Utc> = row.try_get("checkpoint_timestamp")
+                .context("Failed to get checkpoint_timestamp from database row")?;
+            checkpoints.push(timestamp);
+        }
+
+        debug!("Found {} checkpoints for task {}", checkpoints.len(), task_id);
+        Ok(checkpoints)
     }
 }
 

@@ -69,6 +69,10 @@
   padding-bottom: $spacing-4;
 }
 
+.accordionHeader {
+  display: flex;
+}
+
 @keyframes accordion-down {
   from {
     height: 0;

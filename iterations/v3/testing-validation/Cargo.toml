@@ -41,6 +41,7 @@ system-federated-ml = { path = "../system-federated-ml", optional = true }
 agent-research = { path = "../agent-research", optional = true }
 anyhow = "1.0"
 futures = "0.3"
+clap = { version = "4", features = ["derive"] }
 
 # Schema generation for JSON schemas
 schemars = { version = "0.8", features = ["derive"] }
@@ -49,3 +50,7 @@ schemars = { version = "0.8", features = ["derive"] }
 default = []
 full = ["agent-research", "system-federated-ml", "agent-orchestration", "data-interfaces-adapters"]
 e2e = []
+
+[[bin]]
+name = "ensure_services"
+path = "src/bin/ensure_services.rs"

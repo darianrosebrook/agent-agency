@@ -1,0 +1,488 @@
+@use "../../styles/design-tokens.scss" as *;
+
+.projectsContainer {
+  padding: $spacing-8;
+}
+
+.header {
+  margin-bottom: $spacing-8;
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  color: $color-gray-300; // text-gray-300
+  margin-bottom: $spacing-4;
+}
+
+.headerTitle {
+  font-size: $font-size-3xl; // text-3xl
+  color: $color-white; // text-white
+}
+
+.headerWithButton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-4;
+}
+
+.headerLeft {
+  // Container for header left content
+}
+
+.newProjectButton {
+  background-color: $color-blue-600; // bg-blue-600
+  color: $color-white; // text-white
+
+  &:hover {
+    background-color: $color-blue-700; // hover:bg-blue-700
+  }
+}
+
+// Loading State
+.loadingContainer {
+  padding: $spacing-8;
+}
+
+.loadingContent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 500px; // min-h-[500px]
+}
+
+.loadingSpinner {
+  text-align: center;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+  border-radius: 9999px; // rounded-full
+  height: 3rem; // h-12
+  width: 3rem; // w-12
+  border-bottom-width: 2px; // border-b-2
+  border-color: $color-blue-500; // border-blue-500
+  margin: 0 auto $spacing-4;
+}
+
+.loadingText {
+  color: $color-gray-400; // text-gray-400
+}
+
+// Empty State
+.emptyStateContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 500px; // min-h-[500px]
+}
+
+.emptyStateContent {
+  text-align: center;
+  max-width: 48rem; // max-w-3xl
+  width: 100%;
+}
+
+.emptyStateIcon {
+  margin-bottom: $spacing-6;
+  display: flex;
+  justify-content: center;
+}
+
+.emptyStateIconButton {
+  position: relative;
+  cursor: pointer;
+}
+
+.emptyStateIconBox {
+  width: 8rem; // w-32
+  height: 8rem; // h-32
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border: 2px solid $color-gray-800; // border-2 border-gray-800
+  border-radius: 1.5rem; // rounded-3xl
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color $transition-normal, background-color $transition-normal;
+
+  .emptyStateIconButton:hover & {
+    border-color: rgba($color-blue-500, 0.5); // group-hover:border-blue-500/50
+    background-color: $color-dark-bg-hover-alt; // group-hover:bg-[#1f1f1f]
+  }
+}
+
+.emptyStateIconLarge {
+  width: 4rem; // w-16
+  height: 4rem; // h-16
+  color: $color-gray-700; // text-gray-700
+  transition: color $transition-normal;
+
+  .emptyStateIconButton:hover & {
+    color: $color-blue-500; // group-hover:text-blue-500
+  }
+}
+
+.emptyStateTitle {
+  font-size: $font-size-2xl; // text-2xl
+  color: $color-white; // text-white
+  margin-bottom: $spacing-3;
+}
+
+.emptyStateDescription {
+  color: $color-gray-400; // text-gray-400
+  margin-bottom: $spacing-8;
+}
+
+// Search and Filter
+.searchFilterBar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3;
+}
+
+.searchContainer {
+  position: relative;
+  flex: 1;
+  max-width: 28rem; // max-w-md
+}
+
+.searchIcon {
+  position: absolute;
+  left: $spacing-3;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+  color: $color-gray-500; // text-gray-500
+}
+
+.searchInput {
+  padding-left: 2.5rem; // pl-10
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border-color: $color-gray-800; // border-gray-800
+  color: $color-gray-100; // text-gray-100
+
+  &::placeholder {
+    color: $color-gray-600; // placeholder:text-gray-600
+  }
+}
+
+.filterButton {
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border-color: $color-gray-800; // border-gray-800
+  color: $color-gray-300; // text-gray-300
+
+  &:hover {
+    background-color: $color-gray-800; // hover:bg-gray-800
+    color: $color-gray-100; // hover:text-gray-100
+  }
+}
+
+// Recent Projects Section
+.recentProjectsSection {
+  margin-bottom: $spacing-8;
+}
+
+.recentProjectsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-4;
+}
+
+.recentProjectsTitle {
+  font-size: $font-size-xl; // text-xl
+  color: $color-white; // text-white
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+}
+
+.recentProjectsIcon {
+  width: 1.25rem; // w-5
+  height: 1.25rem; // h-5
+  color: $color-gray-400; // text-gray-400
+}
+
+.recentProjectsSeeMore {
+  color: $color-blue-500; // text-blue-500
+
+  &:hover {
+    color: $color-blue-400; // hover:text-blue-400
+    background-color: transparent; // hover:bg-transparent
+  }
+}
+
+.recentProjectsEmpty {
+  text-align: center;
+  padding-block: $spacing-12; // py-12
+  color: $color-gray-500; // text-gray-500
+}
+
+.recentProjectsGrid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr)); // grid-cols-1
+  gap: $spacing-4;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)); // md:grid-cols-2
+  }
+
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr)); // lg:grid-cols-3
+  }
+}
+
+.projectCard {
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border: 1px solid $color-gray-800; // border border-gray-800
+  border-radius: 0.5rem; // rounded-lg
+  padding: $spacing-6;
+  text-align: left;
+  transition: background-color $transition-normal, border-color $transition-normal;
+
+  &:hover {
+    background-color: $color-dark-bg-hover-alt; // hover:bg-[#1f1f1f]
+    border-color: $color-gray-700; // hover:border-gray-700
+  }
+}
+
+.projectCardContent {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-4;
+}
+
+.projectCardIcon {
+  width: 3rem; // w-12
+  height: 3rem; // h-12
+  background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
+  border: 1px solid $color-gray-800; // border border-gray-800
+  border-radius: 0.5rem; // rounded-lg
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color $transition-normal;
+
+  .projectCard:hover & {
+    border-color: rgba($color-blue-500, 0.5); // group-hover:border-blue-500/50
+  }
+}
+
+.projectCardIconInner {
+  width: 1.5rem; // w-6
+  height: 1.5rem; // h-6
+  color: $color-gray-600; // text-gray-600
+  transition: color $transition-normal;
+
+  .projectCard:hover & {
+    color: $color-blue-500; // group-hover:text-blue-500
+  }
+}
+
+.projectCardDetails {
+  flex: 1;
+  min-width: 0;
+}
+
+.projectCardName {
+  color: $color-white; // text-white
+  margin-bottom: $spacing-1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectCardSummary {
+  font-size: $font-size-sm;
+  color: $color-gray-500; // text-gray-500
+  margin-bottom: $spacing-1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectCardDate {
+  font-size: $font-size-xs;
+  color: $color-gray-600; // text-gray-600
+}
+
+// All Projects Table Section
+.allProjectsSection {
+  margin-bottom: $spacing-8;
+}
+
+.allProjectsTitle {
+  font-size: $font-size-xl; // text-xl
+  color: $color-white; // text-white
+  margin-bottom: $spacing-4;
+}
+
+.projectsTable {
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border: 1px solid $color-gray-800; // border border-gray-800
+  border-radius: 0.5rem; // rounded-lg
+  overflow: hidden;
+}
+
+.tableHeaderRow {
+  border-color: $color-gray-800; // border-gray-800
+
+  &:hover {
+    background-color: transparent; // hover:bg-transparent
+  }
+}
+
+.tableHeaderCell {
+  color: $color-gray-400; // text-gray-400
+  cursor: pointer;
+  user-select: none;
+  transition: color $transition-normal;
+
+  &:hover {
+    color: $color-gray-200; // hover:text-gray-200
+  }
+}
+
+.tableHeaderCellContent {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+}
+
+.tableHeaderIcon {
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+}
+
+.tableRow {
+  border-color: $color-gray-800; // border-gray-800
+  cursor: pointer;
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: $color-dark-bg-hover-alt; // hover:bg-[#1f1f1f]
+  }
+}
+
+.tableCell {
+  color: $color-white; // text-white
+}
+
+.tableCellIcon {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3;
+}
+
+.tableCellIconBox {
+  width: 2rem; // w-8
+  height: 2rem; // h-8
+  background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
+  border: 1px solid $color-gray-800; // border border-gray-800
+  border-radius: calc(var(--radius) - 4px); // rounded
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tableCellIconInner {
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+  color: $color-gray-600; // text-gray-600
+}
+
+.tableCellGray {
+  color: $color-gray-400; // text-gray-400
+  max-width: 28rem; // max-w-md
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tableEmptyCell {
+  text-align: center;
+  padding-block: $spacing-12; // py-12
+  color: $color-gray-500; // text-gray-500
+}
+
+// Pagination
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: $spacing-6;
+  padding-block: $spacing-4;
+  border-top: 1px solid $color-gray-800; // border-t border-gray-800
+}
+
+.paginationLeft {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  font-size: $font-size-sm;
+  color: $color-gray-400; // text-gray-400
+}
+
+.paginationSelect {
+  width: 5rem; // w-20
+  height: 2rem; // h-8
+  background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
+  border-color: $color-gray-800; // border-gray-800
+  color: $color-gray-300; // text-gray-300
+}
+
+.paginationSelectContent {
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border-color: $color-gray-800; // border-gray-800
+}
+
+.paginationRight {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+}
+
+.paginationButton {
+  background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
+  border-color: $color-gray-800; // border-gray-800
+  color: $color-gray-300; // text-gray-300
+
+  &:hover {
+    background-color: $color-gray-800; // hover:bg-gray-800
+    color: $color-gray-100; // hover:text-gray-100
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.paginationInfo {
+  font-size: $font-size-sm;
+  color: $color-gray-400; // text-gray-400
+}
+
+.icon {
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+}
+
+.iconWithMargin {
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+  margin-right: $spacing-2; // mr-2
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+

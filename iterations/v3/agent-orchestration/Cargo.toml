@@ -115,6 +115,7 @@ mcp = []  # Feature flag for MCP functionality
 [dev-dependencies]
 insta = { version = "1.38", features = ["yaml"] }
 proptest = "1.5"
+testing-validation = { path = "../testing-validation" }
 
 [[bin]]
 name = "agent-orchestration-server"

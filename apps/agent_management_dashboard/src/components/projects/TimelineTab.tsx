@@ -216,7 +216,7 @@ export function TimelineTab() {
       <div className={styles.controls}>
         <div className={styles.controlsContent}>
           <div className={styles.controlsLeft}>
-            <Calendar className="w-5 h-5 text-[#888888]" />
+            <Calendar className={styles.controlsIcon} />
             <h2 className={styles.controlsTitle}>Project Timeline</h2>
           </div>
 
@@ -243,7 +243,7 @@ export function TimelineTab() {
                 disabled={zoomLevel === "quarter"}
                 className={styles.zoomButton}
               >
-                <ZoomOut className="w-4 h-4" />
+                <ZoomOut className={styles.zoomIcon} />
               </Button>
               <span className={styles.zoomLevel}>{zoomLevel}</span>
               <Button
@@ -253,7 +253,7 @@ export function TimelineTab() {
                 disabled={zoomLevel === "day"}
                 className={styles.zoomButton}
               >
-                <ZoomIn className="w-4 h-4" />
+                <ZoomIn className={styles.zoomIcon} />
               </Button>
             </div>
           </div>

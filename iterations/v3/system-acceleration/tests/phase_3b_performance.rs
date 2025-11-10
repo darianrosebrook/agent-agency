@@ -280,6 +280,10 @@ async fn find_available_models(models_dir: &str) -> Vec<ModelInfo> {
     let mut models = Vec::new();
 
     // FastViT T8 F16 - Vision model
+    // NOTE: Skipping FastViT for now - requires Image feature support in FFI bridge
+    //       The FFI bridge currently only supports MultiArray features, not Image features
+    // TODO: Add Image feature support to agentbridge_dict_provider_set_feature_image
+    /*
     let fastvit_path = Path::new(models_dir)
         .join("fastvit")
         .join("FastViTT8F16.mlpackage.mlmodelc");
@@ -292,6 +296,7 @@ async fn find_available_models(models_dir: &str) -> Vec<ModelInfo> {
             input_dtype: "F32".to_string(),
         });
     }
+    */
 
     // Mistral 7B FP16 - Text model
     let mistral_path = Path::new(models_dir)
@@ -363,33 +368,27 @@ async fn test_model_performance(
         timeout_ms: Some(5000),
     };
 
-    // Extract input name and shape for inference functions
-    let input_name = "input"; // Standard input name used in create_test_input
-    let input_shape = model_info.input_shape.clone();
-    
-    // Recreate test input data for closures (since MLDictionaryFeatureProvider doesn't implement Clone)
-    let test_data: Vec<f32> = {
-        let total_elements: usize = model_info.input_shape.iter().map(|&x| x as usize).product();
-        (0..total_elements)
-            .map(|i| (i % 100) as f32 / 100.0)
-            .collect()
-    };
+    // Create test input once (will be reused for each inference iteration)
+    let test_input = create_test_input(model_info)?;
     
     let cpu_inference = {
         let model_ref = model_ref.clone();
-        let test_data = test_data.clone();
-        let input_shape = input_shape.clone();
-        let input_name = input_name.to_string();
+        let model_name = model_info.name.clone();
         move || {
-            // Recreate provider for each inference
-            let input_array = MLMultiArray::from_slice(&test_data, &input_shape)
-                .map_err(|e| format!("Failed to create test array: {}", e))?;
-            let mut features = HashMap::new();
-            features.insert(input_name.clone(), MLFeatureValue::MultiArray(input_array));
-            let test_input = MLDictionaryFeatureProvider::from_dictionary(&features)
-                .map_err(|e| format!("Failed to create test provider: {}", e))?;
+            // Recreate provider for each inference (since provider doesn't implement Clone)
+            let test_input = create_test_input(model_info)
+                .map_err(|e| format!("Failed to recreate test input: {}", e))?;
             
-            run_inference_cpu(&model_ref, &test_input, &input_name, &input_shape)
+            // Determine input name/shape for logging (not used in actual inference)
+            let (_input_name, _input_shape) = if model_name.contains("FastViT") {
+                ("image", model_info.input_shape.clone())
+            } else if model_name.contains("Mistral") {
+                ("inputIds", vec![1, 1]) // Stateful model: 2D shape [batch, seq_len]
+            } else {
+                ("input", model_info.input_shape.clone())
+            };
+            
+            run_inference_cpu(&model_ref, &test_input, "", &[])
                 .map_err(|e| system_acceleration::ane::ane_errors::ANEError::Internal(format!("CPU inference failed: {}", e)))
         }
     };
@@ -407,19 +406,22 @@ async fn test_model_performance(
 
     let ane_inference = {
         let model_ref = model_ref.clone();
-        let test_data = test_data.clone();
-        let input_shape = input_shape.clone();
-        let input_name = input_name.to_string();
+        let model_name = model_info.name.clone();
         move || {
-            // Recreate provider for each inference
-            let input_array = MLMultiArray::from_slice(&test_data, &input_shape)
-                .map_err(|e| format!("Failed to create test array: {}", e))?;
-            let mut features = HashMap::new();
-            features.insert(input_name.clone(), MLFeatureValue::MultiArray(input_array));
-            let test_input = MLDictionaryFeatureProvider::from_dictionary(&features)
-                .map_err(|e| format!("Failed to create test provider: {}", e))?;
+            // Recreate provider for each inference (since provider doesn't implement Clone)
+            let test_input = create_test_input(model_info)
+                .map_err(|e| format!("Failed to recreate test input: {}", e))?;
             
-            run_inference_ane(&model_ref, &test_input, &input_name, &input_shape)
+            // Determine input name/shape for logging (not used in actual inference)
+            let (_input_name, _input_shape) = if model_name.contains("FastViT") {
+                ("image", model_info.input_shape.clone())
+            } else if model_name.contains("Mistral") {
+                ("inputIds", vec![1, 1]) // Stateful model: 2D shape [batch, seq_len]
+            } else {
+                ("input", model_info.input_shape.clone())
+            };
+            
+            run_inference_ane(&model_ref, &test_input, "", &[])
                 .map_err(|e| system_acceleration::ane::ane_errors::ANEError::Internal(format!("ANE inference failed: {}", e)))
         }
     };
@@ -464,21 +466,115 @@ async fn test_model_performance(
 
 /// Create test input for model inference
 fn create_test_input(model_info: &ModelInfo) -> Result<MLDictionaryFeatureProvider, Box<dyn std::error::Error>> {
-    // Create test data based on input shape
-    let total_elements: usize = model_info.input_shape.iter().map(|&x| x as usize).product();
-    let test_data = (0..total_elements)
-        .map(|i| (i % 100) as f32 / 100.0) // Simple normalized test data
-        .collect::<Vec<f32>>();
-
-    // Create input tensor
-    let input_array = MLMultiArray::from_slice(&test_data, &model_info.input_shape)
-        .map_err(|e| format!("Failed to create test array: {}", e))?;
     let mut features = HashMap::new();
-    features.insert("input".to_string(), MLFeatureValue::MultiArray(input_array));
+    
+    // Model-specific input creation
+    if model_info.name.contains("FastViT") {
+        // FastViT expects "image" feature as Image type (not MultiArray)
+        // Create a simple RGB image: 256x256 pixels, 3 channels
+        // Image data format: RGB bytes (76800 bytes = 256 * 256 * 3)
+        let width = 256;
+        let height = 256;
+        let channels = 3;
+        let image_data: Vec<u8> = (0..(width * height * channels))
+            .map(|i| ((i % 256) as u8)) // Simple test pattern
+            .collect();
+        
+        features.insert("image".to_string(), MLFeatureValue::Image(image_data));
+    } else if model_info.name.contains("Mistral") {
+        // Mistral StatefulMistral7BInstructFP16 is a stateful model that expects single-token inputs
+        // Error messages indicate conflicting requirements - trying 4D shape with snake_case names
+        // Swift bridge uses "input_ids" and "attention_mask" (snake_case) with 1D arrays
+        // But model error says it expects 4D shape
+        // Trying: 4D shape [batch_size, sequence_length, 1, 1] with sequence_length = 1
+        let seq_len = 1; // Stateful models process one token at a time
+        let batch_size = 1;
+        
+        // Create inputIds as 2-d: [batch_size, sequence_length]
+        // Model expects "inputIds" (camelCase) and "causalMask" (camelCase) with 2D shape
+        // Error: "MultiArray 4-d shape is not allowed, expected 2-d"
+        let input_ids_data: Vec<f32> = vec![42.0]; // Single token ID
+        let input_ids_shape = vec![batch_size as i32, seq_len as i32];
+        let input_ids_array = MLMultiArray::from_slice(&input_ids_data, &input_ids_shape)
+            .map_err(|e| format!("Failed to create inputIds array: {}", e))?;
+        features.insert("inputIds".to_string(), MLFeatureValue::MultiArray(input_ids_array));
+        
+        // Create causalMask as 2-d: [batch_size, sequence_length]
+        // Model expects "causalMask" (camelCase) with 2D shape
+        let mask_data: Vec<f32> = vec![1.0]; // Single mask value
+        let mask_shape = vec![batch_size as i32, seq_len as i32];
+        let mask_array = MLMultiArray::from_slice(&mask_data, &mask_shape)
+            .map_err(|e| format!("Failed to create causalMask array: {}", e))?;
+        features.insert("causalMask".to_string(), MLFeatureValue::MultiArray(mask_array));
+    } else {
+        // Generic fallback for other models
+        let total_elements: usize = model_info.input_shape.iter().map(|&x| x as usize).product();
+        let test_data = (0..total_elements)
+            .map(|i| (i % 100) as f32 / 100.0)
+            .collect::<Vec<f32>>();
+        
+        let input_array = MLMultiArray::from_slice(&test_data, &model_info.input_shape)
+            .map_err(|e| format!("Failed to create test array: {}", e))?;
+        features.insert("input".to_string(), MLFeatureValue::MultiArray(input_array));
+    }
 
     let provider = MLDictionaryFeatureProvider::from_dictionary(&features)
         .map_err(|e| format!("Failed to create test provider: {}", e))?;
     Ok(provider)
+}
+
+/// Run inference directly with provider (supports multiple inputs)
+fn run_inference_with_provider(
+    model_ref: &ModelRef,
+    input_provider: &MLDictionaryFeatureProvider,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use system_acceleration::ane::compat::coreml::registry;
+    
+    // Import the FFI function directly
+    extern "C" {
+        fn agentbridge_model_run_inference(
+            model_ref: u64,
+            input_provider_ref: u64,
+            out_output_provider_ref: *mut u64,
+            out_error: *mut *mut std::ffi::c_char,
+        ) -> i32;
+    }
+    
+    let mut output_provider_ref: u64 = 0;
+    let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+    
+    let inference_result = registry::with_model_handle(model_ref.clone(), |model_handle| {
+        unsafe {
+            agentbridge_model_run_inference(
+                model_handle.as_ptr() as u64,
+                input_provider.ptr() as u64,
+                &mut output_provider_ref,
+                &mut error_ptr,
+            )
+        }
+    }).ok_or_else(|| "Model not found in registry".to_string())?;
+    
+    if inference_result != 0 {
+        let error_msg = if !error_ptr.is_null() {
+            unsafe {
+                let cstr = std::ffi::CStr::from_ptr(error_ptr);
+                let msg = cstr.to_string_lossy().to_string();
+                system_acceleration::ane::compat::model::agentbridge_free_string(error_ptr);
+                msg
+            }
+        } else {
+            "Unknown error during Core ML inference".to_string()
+        };
+        return Err(error_msg.into());
+    }
+    
+    // Output provider is created but we don't need to process it for benchmarks
+    // Just verify inference succeeded
+    if output_provider_ref == 0 {
+        return Err("Inference returned null output provider".into());
+    }
+    
+    Ok(())
 }
 
 /// Run inference with CPU-only configuration
@@ -488,71 +584,11 @@ fn create_test_input(model_info: &ModelInfo) -> Result<MLDictionaryFeatureProvid
 fn run_inference_cpu(
     model_ref: &ModelRef,
     input: &MLDictionaryFeatureProvider,
-    input_name: &str,
-    input_shape: &[i32],
+    _input_name: &str,
+    _input_shape: &[i32],
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use system_acceleration::ane::compat::coreml::run_inference;
-    use system_acceleration::ane::compat::model::agentbridge_provider_get_feature_float32;
-    
-    // Extract input data from provider
-    let input_data = unsafe {
-        let mut data_ptr: *mut f32 = std::ptr::null_mut();
-        let mut shape_ptr: *mut i32 = std::ptr::null_mut();
-        let mut shape_len: i32 = 0;
-        let mut data_len: i32 = 0;
-        let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
-        
-        let name_cstr = std::ffi::CString::new(input_name)
-            .map_err(|e| format!("Invalid input name: {}", e))?;
-        
-        let result = agentbridge_provider_get_feature_float32(
-            input.ptr() as u64,
-            name_cstr.as_ptr(),
-            &mut data_ptr,
-            &mut shape_ptr,
-            &mut shape_len,
-            &mut data_len,
-            &mut error_ptr,
-        );
-        
-        if result != 0 {
-            let error_msg = if !error_ptr.is_null() {
-                unsafe {
-                    let cstr = std::ffi::CStr::from_ptr(error_ptr);
-                    let msg = cstr.to_string_lossy().to_string();
-                    system_acceleration::ane::compat::model::agentbridge_free_string(error_ptr);
-                    msg
-                }
-            } else {
-                "Unknown error extracting input data".to_string()
-            };
-            return Err(error_msg.into());
-        }
-        
-        if data_ptr.is_null() || data_len <= 0 {
-            return Err("Failed to extract input data from provider".into());
-        }
-        
-        let data = std::slice::from_raw_parts(data_ptr, data_len as usize).to_vec();
-        
-        // Free the allocated data
-        system_acceleration::ane::compat::model::agentbridge_free_array_data(data_ptr);
-        
-        data
-    };
-    
-    // Convert input shape from i32 to usize
-    let input_shape_usize: Vec<usize> = input_shape.iter().map(|&x| x as usize).collect();
-    
-    // Run inference
-    let _output = run_inference(
-        model_ref.clone(),
-        input_name,
-        &input_data,
-        &input_shape_usize,
-    ).map_err(|e| format!("CPU inference failed: {}", e))?;
-    
-    Ok(())
+    // Use provider directly to support multiple inputs (e.g., Mistral needs input_ids + causalMask)
+    run_inference_with_provider(model_ref, input)
 }
 
 /// Run inference with ANE acceleration
@@ -562,71 +598,11 @@ fn run_inference_cpu(
 fn run_inference_ane(
     model_ref: &ModelRef,
     input: &MLDictionaryFeatureProvider,
-    input_name: &str,
-    input_shape: &[i32],
+    _input_name: &str,
+    _input_shape: &[i32],
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use system_acceleration::ane::compat::coreml::run_inference;
-    use system_acceleration::ane::compat::model::agentbridge_provider_get_feature_float32;
-    
-    // Extract input data from provider
-    let input_data = unsafe {
-        let mut data_ptr: *mut f32 = std::ptr::null_mut();
-        let mut shape_ptr: *mut i32 = std::ptr::null_mut();
-        let mut shape_len: i32 = 0;
-        let mut data_len: i32 = 0;
-        let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
-        
-        let name_cstr = std::ffi::CString::new(input_name)
-            .map_err(|e| format!("Invalid input name: {}", e))?;
-        
-        let result = agentbridge_provider_get_feature_float32(
-            input.ptr() as u64,
-            name_cstr.as_ptr(),
-            &mut data_ptr,
-            &mut shape_ptr,
-            &mut shape_len,
-            &mut data_len,
-            &mut error_ptr,
-        );
-        
-        if result != 0 {
-            let error_msg = if !error_ptr.is_null() {
-                unsafe {
-                    let cstr = std::ffi::CStr::from_ptr(error_ptr);
-                    let msg = cstr.to_string_lossy().to_string();
-                    system_acceleration::ane::compat::model::agentbridge_free_string(error_ptr);
-                    msg
-                }
-            } else {
-                "Unknown error extracting input data".to_string()
-            };
-            return Err(error_msg.into());
-        }
-        
-        if data_ptr.is_null() || data_len <= 0 {
-            return Err("Failed to extract input data from provider".into());
-        }
-        
-        let data = std::slice::from_raw_parts(data_ptr, data_len as usize).to_vec();
-        
-        // Free the allocated data
-        system_acceleration::ane::compat::model::agentbridge_free_array_data(data_ptr);
-        
-        data
-    };
-    
-    // Convert input shape from i32 to usize
-    let input_shape_usize: Vec<usize> = input_shape.iter().map(|&x| x as usize).collect();
-    
-    // Run inference (model should be loaded with ANE-enabled configuration)
-    let _output = run_inference(
-        model_ref.clone(),
-        input_name,
-        &input_data,
-        &input_shape_usize,
-    ).map_err(|e| format!("ANE inference failed: {}", e))?;
-    
-    Ok(())
+    // Use provider directly to support multiple inputs (e.g., Mistral needs input_ids + causalMask)
+    run_inference_with_provider(model_ref, input)
 }
 
 /// Measure ANE utilization

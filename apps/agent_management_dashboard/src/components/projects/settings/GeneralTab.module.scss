@@ -1,0 +1,675 @@
+@use "../../../../styles/design-tokens.scss" as *;
+
+.generalTab {
+  height: 1352.6px;
+  position: relative;
+  flex-shrink: 0;
+  width: 1216.01px;
+}
+
+.generalTabInner {
+  background-clip: padding-box;
+  border: 0;
+  border-color: transparent;
+  border-style: solid;
+  box-sizing: border-box;
+  height: 1352.6px;
+  position: relative;
+  width: 1216.01px;
+}
+
+// Project Details Section
+.projectDetailsSection {
+  position: absolute;
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  height: 381.754px;
+  left: 0;
+  border-radius: 0.625rem; // rounded-[10px]
+  top: 0;
+  width: 1216.01px;
+}
+
+.projectDetailsBorder {
+  position: absolute;
+  border-width: 0.909px;
+  border-color: $color-neutral-800; // border-neutral-800
+  border-style: solid;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 0.625rem; // rounded-[10px]
+}
+
+.projectDetailsHeading {
+  position: absolute;
+  height: 27.997px;
+  left: 24.91px;
+  top: 24.91px;
+  width: 1166.19px;
+}
+
+.projectDetailsHeadingText {
+  position: absolute;
+  font-family: 'Inter', sans-serif;
+  line-height: 28px;
+  left: 0;
+  font-style: normal;
+  font-size: 20px;
+  white-space: nowrap;
+  color: $color-white; // text-white
+  top: -0.18px;
+  letter-spacing: -0.4492px;
+  white-space: pre;
+}
+
+.projectDetailsContent {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 15.994px;
+  height: 227.955px;
+  align-items: flex-start;
+  left: 24.91px;
+  top: 68.9px;
+  width: 1166.19px;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 5.994px;
+  height: 55.987px;
+  align-items: flex-start;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.formFieldDescription {
+  display: flex;
+  gap: 8px;
+  height: 13.999px;
+  align-items: center;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.formFieldLabel {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500; // font-medium
+  line-height: 14px;
+  font-style: normal;
+  position: relative;
+  flex-shrink: 0;
+  color: $color-gray-300; // text-[#d1d5dc] -> gray-300
+  font-size: 14px;
+  white-space: nowrap;
+  letter-spacing: -0.1504px;
+  white-space: pre;
+}
+
+.formInput {
+  background-color: $color-dark-bg-secondary; // bg-[#0d0d0d]
+  height: 35.994px;
+  position: relative;
+  border-radius: 0.5rem; // rounded-[8px]
+  flex-shrink: 0;
+  width: 100%;
+  border-width: 0.909px;
+  border-color: $color-neutral-800; // border-neutral-800
+  padding-inline: 12px;
+  padding-block: 4px;
+  font-family: 'Inter', sans-serif;
+  line-height: 20px;
+  font-size: 14px;
+  color: $color-white; // text-white
+  letter-spacing: -0.1504px;
+
+  &:focus {
+    outline: none;
+    border-color: #2d7ff9; // focus:border-[#2d7ff9]
+  }
+}
+
+.formTextarea {
+  background-color: $color-dark-bg-secondary; // bg-[#0d0d0d]
+  height: 63.999px;
+  position: relative;
+  border-radius: 0.5rem; // rounded-[8px]
+  flex-shrink: 0;
+  width: 100%;
+  border-width: 0.909px;
+  border-color: $color-neutral-800; // border-neutral-800
+  padding-inline: 12.909px;
+  padding-block: 8.909px;
+  font-family: 'Inter', sans-serif;
+  line-height: 20px;
+  font-size: 14px;
+  color: $color-white; // text-white
+  letter-spacing: -0.1504px;
+  resize: none;
+
+  &:focus {
+    outline: none;
+    border-color: #2d7ff9; // focus:border-[#2d7ff9]
+  }
+}
+
+.formFieldRow {
+  height: 55.987px;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.formFieldHalf {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 5.994px;
+  height: 55.987px;
+  align-items: flex-start;
+  top: 0;
+  width: 575.099px;
+}
+
+.formFieldHalfRight {
+  left: 591.09px;
+}
+
+.readOnlyField {
+  background-color: $color-dark-bg-secondary; // bg-[#0d0d0d]
+  opacity: 0.5;
+  height: 35.994px;
+  position: relative;
+  border-radius: 0.5rem; // rounded-[8px]
+  flex-shrink: 0;
+  width: 100%;
+  border-width: 0.909px;
+  border-color: $color-neutral-800; // border-neutral-800
+  padding-inline: 12px;
+  padding-block: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.readOnlyFieldText {
+  font-family: 'Inter', sans-serif;
+  line-height: 20px;
+  color: $color-gray-500; // text-[#888888]
+  font-size: 14px;
+  letter-spacing: -0.1504px;
+}
+
+.saveButton {
+  position: absolute;
+  background-color: #2d7ff9; // bg-[#2d7ff9]
+  box-sizing: border-box;
+  display: flex;
+  gap: 8px;
+  height: 35.994px;
+  align-items: center;
+  justify-content: center;
+  left: 1065.52px;
+  padding-inline: 16px;
+  padding-block: 8px;
+  border-radius: 0.5rem; // rounded-[8px]
+  top: 320.85px;
+  width: 125.582px;
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: #2570d9; // hover:bg-[#2570d9]
+  }
+}
+
+.saveButtonText {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500; // font-medium
+  line-height: 20px;
+  font-style: normal;
+  position: relative;
+  flex-shrink: 0;
+  font-size: 14px;
+  white-space: nowrap;
+  color: $color-white; // text-white
+  letter-spacing: -0.1504px;
+  white-space: pre;
+}
+
+// Team Settings Section
+.teamSettingsSection {
+  position: absolute;
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 15.994px;
+  height: 301.74px;
+  align-items: flex-start;
+  left: 0;
+  padding-bottom: 0.909px;
+  padding-top: 24.908px;
+  padding-inline: 24.908px;
+  border-radius: 0.625rem; // rounded-[10px]
+  top: 405.75px;
+  width: 1216.01px;
+}
+
+.teamSettingsBorder {
+  position: absolute;
+  border-width: 0.909px;
+  border-color: $color-neutral-800; // border-neutral-800
+  border-style: solid;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 0.625rem; // rounded-[10px]
+}
+
+.teamSettingsHeading {
+  height: 27.997px;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.teamSettingsHeadingText {
+  position: absolute;
+  font-family: 'Inter', sans-serif;
+  line-height: 28px;
+  left: 0;
+  font-style: normal;
+  font-size: 20px;
+  white-space: nowrap;
+  color: $color-white; // text-white
+  top: -0.18px;
+  letter-spacing: -0.4492px;
+  white-space: pre;
+}
+
+.teamSettingsContent {
+  display: flex;
+  flex-direction: column;
+  gap: 15.994px;
+  height: 207.933px;
+  align-items: flex-start;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.defaultAssigneeField {
+  display: flex;
+  flex-direction: column;
+  gap: 5.994px;
+  height: 55.987px;
+  align-items: flex-start;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.defaultAssigneeButton {
+  background-color: $color-dark-bg-secondary; // bg-[#0d0d0d]
+  height: 35.994px;
+  position: relative;
+  border-radius: 0.5rem; // rounded-[8px]
+  flex-shrink: 0;
+  width: 100%;
+  border-width: 0.909px;
+  border-color: $color-neutral-800; // border-neutral-800
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: 12.905px;
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: $color-dark-bg-primary; // hover:bg-[#1a1a1a]
+  }
+}
+
+.defaultAssigneeButtonText {
+  font-family: 'Inter', sans-serif;
+  line-height: 20px;
+  font-size: 14px;
+  color: $color-white; // text-white
+  letter-spacing: -0.1504px;
+}
+
+.defaultAssigneeIcon {
+  position: relative;
+  flex-shrink: 0;
+  width: 15.994px;
+  height: 15.994px;
+}
+
+.toggleRow {
+  display: flex;
+  height: 59.979px;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.toggleRowContent {
+  height: 35.987px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.toggleRowTitle {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500; // font-medium
+  line-height: 14px;
+  color: $color-gray-300; // text-[#d1d5dc] -> gray-300
+  font-size: 14px;
+  letter-spacing: -0.1504px;
+}
+
+.toggleRowDescription {
+  font-family: 'Inter', sans-serif;
+  line-height: 20px;
+  color: $color-gray-500; // text-[#888888]
+  font-size: 14px;
+  letter-spacing: -0.1504px;
+  margin-top: 1.996px;
+}
+
+.toggleSwitch {
+  height: 18.395px;
+  position: relative;
+  border-radius: 9999999px; // rounded-[1.5252e+07px] -> very large radius for toggle
+  flex-shrink: 0;
+  width: 31.996px;
+  transition: background-color $transition-normal;
+}
+
+.toggleSwitchActive {
+  background-color: #030213; // bg-[#030213]
+}
+
+.toggleSwitchInactive {
+  background-color: #cbced4; // bg-[#cbced4]
+}
+
+.toggleThumb {
+  background-color: $color-white; // bg-white
+  position: relative;
+  border-radius: 9999999px; // rounded-[1.5252e+07px]
+  flex-shrink: 0;
+  width: 15.994px;
+  height: 15.994px;
+  transition: transform $transition-normal;
+  margin-top: 0.909px;
+  margin-left: 0.909px;
+}
+
+.toggleThumbActive {
+  transform: translateX(14.903px);
+}
+
+.toggleThumbInactive {
+  transform: translateX(0.909px);
+}
+
+// Notifications Section
+.notificationsSection {
+  position: absolute;
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 15.994px;
+  height: 323.714px;
+  align-items: flex-start;
+  left: 0;
+  padding-bottom: 0.909px;
+  padding-top: 24.908px;
+  padding-inline: 24.908px;
+  border-radius: 0.625rem; // rounded-[10px]
+  top: 731.49px;
+  width: 1216.01px;
+}
+
+.notificationsBorder {
+  position: absolute;
+  border-width: 0.909px;
+  border-color: $color-neutral-800; // border-neutral-800
+  border-style: solid;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 0.625rem; // rounded-[10px]
+}
+
+.notificationsHeading {
+  height: 27.997px;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.notificationsHeadingText {
+  position: absolute;
+  font-family: 'Inter', sans-serif;
+  line-height: 28px;
+  left: 0;
+  font-style: normal;
+  font-size: 20px;
+  white-space: nowrap;
+  color: $color-white; // text-white
+  top: -0.18px;
+  letter-spacing: -0.4492px;
+  white-space: pre;
+}
+
+.notificationsContent {
+  height: 229.908px;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.notificationItem {
+  position: absolute;
+  display: flex;
+  height: 59.979px;
+  align-items: center;
+  justify-content: space-between;
+  width: 1166.19px;
+}
+
+.notificationItemFirst {
+  left: 0;
+  top: 0;
+}
+
+.notificationItemSecond {
+  left: 0;
+  top: 84.96px;
+}
+
+.notificationItemThird {
+  left: 0;
+  top: 169.93px;
+}
+
+.notificationDivider {
+  position: absolute;
+  background-color: $color-neutral-800; // bg-neutral-800
+  height: 0.994px;
+  width: 1166.19px;
+}
+
+.notificationDividerFirst {
+  left: 0;
+  top: 71.97px;
+}
+
+.notificationDividerSecond {
+  left: 0;
+  top: 156.94px;
+}
+
+// Danger Zone Section
+.dangerZoneSection {
+  position: absolute;
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 15.994px;
+  height: 273.395px;
+  align-items: flex-start;
+  left: 0;
+  padding-bottom: 0.909px;
+  padding-top: 24.908px;
+  padding-inline: 24.908px;
+  border-radius: 0.625rem; // rounded-[10px]
+  top: 1079.2px;
+  width: 1216.01px;
+}
+
+.dangerZoneBorder {
+  position: absolute;
+  border-color: #5c1515; // border-[#5c1515]
+  border-width: 0.909px;
+  border-style: solid;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 0.625rem; // rounded-[10px]
+}
+
+.dangerZoneHeading {
+  height: 27.997px;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.dangerZoneIcon {
+  position: absolute;
+  left: 0;
+  width: 20px;
+  height: 20px;
+  top: 4px;
+}
+
+.dangerZoneHeadingText {
+  position: absolute;
+  font-family: 'Inter', sans-serif;
+  line-height: 28px;
+  left: 28px;
+  font-style: normal;
+  color: #ff6b6b; // text-[#ff6b6b]
+  font-size: 20px;
+  white-space: nowrap;
+  top: -0.18px;
+  letter-spacing: -0.4492px;
+  white-space: pre;
+}
+
+.dangerZoneContent {
+  display: flex;
+  flex-direction: column;
+  gap: 15.994px;
+  height: 179.588px;
+  align-items: flex-start;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.dangerZoneItem {
+  height: 81.797px;
+  position: relative;
+  border-radius: 0.625rem; // rounded-[10px]
+  flex-shrink: 0;
+  width: 100%;
+  border-width: 0.909px;
+  border-color: $color-neutral-800; // border-neutral-800
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: 16.903px;
+}
+
+.dangerZoneItemDelete {
+  border-color: #5c1515; // border-[#5c1515]
+}
+
+.dangerZoneItemContent {
+  height: 47.99px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.dangerZoneItemTitle {
+  font-family: 'Inter', sans-serif;
+  line-height: 24px;
+  font-size: 16px;
+  color: $color-white; // text-white
+  letter-spacing: -0.3125px;
+}
+
+.dangerZoneItemDescription {
+  font-family: 'Inter', sans-serif;
+  line-height: 20px;
+  color: $color-gray-500; // text-[#888888]
+  font-size: 14px;
+  letter-spacing: -0.1504px;
+  margin-top: 3.999px;
+}
+
+.dangerZoneButtonArchive {
+  background-color: $color-zinc-900; // bg-zinc-900
+  height: 35.994px;
+  border-radius: 0.5rem; // rounded-[8px]
+  width: 83.537px;
+  border-width: 0.909px;
+  border-color: #5c1515; // border-[#5c1515]
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: $color-gray-100; // hover:bg-gray-100
+  }
+}
+
+.dangerZoneButtonDelete {
+  background-color: $color-white; // bg-white
+  height: 35.994px;
+  border-radius: 0.5rem; // rounded-[8px]
+  width: 100.547px;
+  border-width: 0.909px;
+  border-color: #5c1515; // border-[#5c1515]
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: $color-gray-100; // hover:bg-gray-100
+  }
+}
+
+.dangerZoneButtonText {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500; // font-medium
+  line-height: 20px;
+  color: #ff6b6b; // text-[#ff6b6b]
+  font-size: 14px;
+  letter-spacing: -0.1504px;
+}
+
+.dangerZoneButtonIcon {
+  position: relative;
+  width: 15.994px;
+  height: 15.994px;
+}
+

@@ -59,6 +59,7 @@ use axum::{
     response::IntoResponse,
 };
 use std::collections::HashMap;
+use std::process::Command;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use uuid::Uuid;
@@ -645,6 +646,72 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
 }
 
 // ============================================================================
+// Helper Functions
+// ============================================================================
+
+/// Detect the current git branch from the workspace root
+fn detect_git_branch(workspace_root: &str) -> Option<String> {
+    let output = Command::new("git")
+        .args(&["rev-parse", "--abbrev-ref", "HEAD"])
+        .current_dir(workspace_root)
+        .output()
+        .ok()?;
+    
+    if output.status.success() {
+        String::from_utf8(output.stdout)
+            .ok()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+    } else {
+        None
+    }
+}
+
+/// Estimate completion time from working spec
+/// Returns estimated completion time in seconds, or None if unable to estimate
+fn estimate_completion_from_spec(workspace_root: &str) -> Option<i64> {
+    // Look for .caws/working-spec.yaml in workspace root
+    let spec_path = std::path::Path::new(workspace_root)
+        .join(".caws")
+        .join("working-spec.yaml");
+    
+    if !spec_path.exists() {
+        return None;
+    }
+    
+    // Try to read the working spec
+    let spec_content = std::fs::read_to_string(&spec_path).ok()?;
+    
+    // Simple heuristic: parse max_files and max_loc from YAML using string matching
+    // This is a basic implementation - in production, use proper YAML parsing
+    let max_files = extract_yaml_value(&spec_content, "max_files")
+        .and_then(|v| v.parse::<i64>().ok())
+        .unwrap_or(10);
+    let max_loc = extract_yaml_value(&spec_content, "max_loc")
+        .and_then(|v| v.parse::<i64>().ok())
+        .unwrap_or(500);
+    
+    // Estimate: 5 minutes per file + 1 second per 10 lines
+    let file_time = max_files * 300; // 5 minutes per file
+    let loc_time = max_loc / 10; // 1 second per 10 lines
+    Some(file_time + loc_time)
+}
+
+/// Extract a value from YAML content using simple string matching
+/// This is a basic implementation - proper YAML parsing would be better
+fn extract_yaml_value(content: &str, key: &str) -> Option<String> {
+    let search_key = format!("{}:", key);
+    for line in content.lines() {
+        if line.trim().starts_with(&search_key) {
+            if let Some(value) = line.split(':').nth(1) {
+                return Some(value.trim().to_string());
+            }
+        }
+    }
+    None
+}
+
+// ============================================================================
 // Handler Functions
 // ============================================================================
 
@@ -719,12 +786,14 @@ async fn submit_task_handler(
             use agent_agency_contracts::TaskContext as ContractsTaskContext;
             use chrono::Utc;
             
+            let workspace_root = std::env::current_dir()
+                .ok()
+                .and_then(|p| p.to_str().map(|s| s.to_string()))
+                .unwrap_or_else(|| ".".to_string());
+            
             let request_context = RequestTaskContext {
-                workspace_root: std::env::current_dir()
-                    .ok()
-                    .and_then(|p| p.to_str().map(|s| s.to_string()))
-                    .unwrap_or_else(|| ".".to_string()),
-                git_branch: "main".to_string(), // TODO: Detect actual git branch
+                workspace_root: workspace_root.clone(),
+                git_branch: detect_git_branch(&workspace_root).unwrap_or_else(|| "main".to_string()),
                 recent_changes: vec![],
                 dependencies: std::collections::HashMap::new(),
                 environment: Environment::Development,
@@ -740,12 +809,15 @@ async fn submit_task_handler(
                 max_retries: 3,
                 metadata: {
                     let mut meta = std::collections::HashMap::new();
-                    meta.insert("workspace_root".to_string(), serde_json::Value::String(request_context.workspace_root));
+                    meta.insert("workspace_root".to_string(), serde_json::Value::String(request_context.workspace_root.clone()));
                     meta.insert("git_branch".to_string(), serde_json::Value::String(request_context.git_branch));
                     meta.insert("environment".to_string(), serde_json::Value::String(format!("{:?}", request_context.environment)));
                     meta
                 },
             };
+
+            // Clone workspace_root for use after task_context is moved
+            let workspace_root = request_context.workspace_root.clone();
 
             // Execute task via UnifiedOrchestratorAdapter
             match unified_orchestrator.orchestrate_task(working_spec, task_context).await {
@@ -760,7 +832,8 @@ async fn submit_task_handler(
                         } else {
                             format!("Task execution failed: {}", result.errors.join(", "))
                         },
-                        estimated_completion: None, // TODO: Calculate from working spec
+                        estimated_completion: estimate_completion_from_spec(&workspace_root)
+                            .map(|seconds| Utc::now() + ChronoDuration::seconds(seconds)),
                     };
                     Ok(Json(serde_json::json!(response)))
                 }
@@ -4835,9 +4908,15 @@ async fn request_password_reset_handler(
         match db.create_password_reset_token(token).await {
             Ok(_) => {
                 info!("Password reset token created for user: {}", user.id);
-                // TODO: Send email with reset token
-                // For now, just log it (NOT SECURE - remove in production)
-                warn!("Password reset token (DEV ONLY): {}", reset_token);
+                // PLACEHOLDER: Email sending not implemented
+                // In production, integrate with email service (SMTP, SendGrid, SES, etc.)
+                // Required: Email service configuration, template rendering, error handling
+                // For now, log token in development only (NOT SECURE - remove in production)
+                if std::env::var("ENVIRONMENT").unwrap_or_else(|_| "development".to_string()) == "development" {
+                    warn!("Password reset token (DEV ONLY - email sending not implemented): {}", reset_token);
+                } else {
+                    warn!("Password reset token created but email sending not implemented - token logged for debugging");
+                }
             }
             Err(e) => {
                 error!("Failed to create password reset token: {}", e);
@@ -5769,9 +5848,11 @@ async fn setup_2fa_handler(
         urlencoding::encode(issuer)
     );
 
-    // Hash the secret before storing (we'll decrypt it for verification)
-    // For now, store base32 encoded (in production, encrypt this)
-    let secret_encrypted = secret_base32.clone(); // PLACEHOLDER: Should be encrypted with proper key management
+    // PLACEHOLDER: 2FA secret encryption not implemented
+    // In production, encrypt secret using proper key management (AWS KMS, HashiCorp Vault, etc.)
+    // Required: Encryption key management, secure key storage, encryption/decryption functions
+    // For now, store base32 encoded (NOT SECURE - secrets should be encrypted at rest)
+    let secret_encrypted = secret_base32.clone();
 
     let method = req.method.clone();
     let create = data_infrastructure::database_operations::CreateTwoFactorAuth {
