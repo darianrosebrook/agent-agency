@@ -24,7 +24,7 @@ async function apiRequest<T>(
     headers,
   };
 
-  if (data && (method === 'POST' || method === 'PUT')) {
+  if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
     config.body = JSON.stringify(data);
   }
 
@@ -49,6 +49,10 @@ export const serverApi = {
 
   async put<T>(url: string, data?: unknown): Promise<T> {
     return apiRequest<T>('PUT', url, data);
+  },
+
+  async patch<T>(url: string, data?: unknown): Promise<T> {
+    return apiRequest<T>('PATCH', url, data);
   },
 
   async delete<T>(url: string): Promise<T> {
