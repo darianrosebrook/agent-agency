@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { useState } from "react";
 import { useAnimatedValue } from "../hooks/useAnimatedValue";
+import styles from "./CodeContributionChart.module.scss";
 
 interface DataPoint {
   day: string;
@@ -105,12 +106,12 @@ export function CodeContributionChart({
         payload.find((p) => p.dataKey === "contribution")?.value ?? 0;
 
       return (
-        <div className="bg-[#111111] border border-[#39393b] rounded-[8px] px-6 py-4">
-          <div className="text-white text-[13px] mb-1">Total Performance</div>
-          <div className="text-white text-[13px]">
+        <div className={styles.tooltip}>
+          <div className={styles.tooltipLabel}>Total Performance</div>
+          <div className={styles.tooltipValue}>
             {(totalValue / 1000).toFixed(1)}K lines of code
           </div>
-          <div className="text-[#9e9ea0] text-[11px] mt-1">
+          <div className={styles.tooltipSubtext}>
             {(acceptedValue / 1000).toFixed(1)}K accepted
           </div>
         </div>
@@ -135,7 +136,7 @@ export function CodeContributionChart({
           cy={cy}
           r={0}
           fill={stroke}
-          className="transition-all duration-200 hover:r-4"
+          className={styles.customDot}
         />
       );
     }
@@ -143,17 +144,17 @@ export function CodeContributionChart({
   };
 
   return (
-    <div className="bg-[#111111] relative rounded-[12px] size-full border border-[#cacaca]">
-      <div className="size-full">
-        <div className="box-border flex flex-col p-8 relative size-full">
+    <div className={styles.container}>
+      <div className={styles.innerContainer}>
+        <div className={styles.content}>
           {/* Header */}
-          <div className="mb-6">
-            <h3 className="text-white text-[17px] mb-1">{title}</h3>
-            <p className="text-[#9e9ea0] text-[11px]">{subtitle}</p>
+          <div className={styles.header}>
+            <h3 className={styles.title}>{title}</h3>
+            <p className={styles.subtitle}>{subtitle}</p>
           </div>
 
           {/* Chart */}
-          <div className="flex-1 relative min-h-0">
+          <div className={styles.chart}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={data}
@@ -222,24 +223,24 @@ export function CodeContributionChart({
           </div>
 
           {/* Stats overlay */}
-          <div className="absolute top-8 right-8 bg-[#111111] border border-[#39393b] rounded-[8px] px-6 py-4">
-            <div className="text-white text-[13px] mb-1">Total Performance</div>
-            <div className="text-white text-[13px]">
+          <div className={styles.statsOverlay}>
+            <div className={styles.statsLabel}>Total Performance</div>
+            <div className={styles.statsValue}>
               {formattedTotal} lines of code
             </div>
           </div>
 
           {/* Legend */}
-          <div className="absolute bottom-8 right-8 bg-[#111111] border border-[#39393b] rounded-[8px] px-6 py-4">
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-[4px] bg-[#6366f1] rounded-full" />
-                <span className="text-[#9e9ea0] text-[11px]">
+          <div className={styles.legendOverlay}>
+            <div className={styles.legendContent}>
+              <div className={styles.legendItem}>
+                <div className={styles.legendLine} />
+                <span className={styles.legendLabel}>
                   Accepted lines of code
                 </span>
               </div>
-              <div className="flex items-center gap-3">
-                <svg width="32" height="4" className="flex-shrink-0">
+              <div className={styles.legendItem}>
+                <svg width="32" height="4" className={styles.legendDashedLine}>
                   <line
                     x1="0"
                     y1="2"
@@ -250,7 +251,7 @@ export function CodeContributionChart({
                     strokeDasharray="6 4"
                   />
                 </svg>
-                <span className="text-[#888] text-[11px]">
+                <span className={styles.legendDashedLabel}>
                   Total overall (accepted + not accepted)
                 </span>
               </div>

@@ -1,213 +1,351 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import styles from "./page.module.scss";
+import {
+  getRules,
+  getViolations,
+  getComplianceStats,
+  type CawsRule,
+  type CawsViolation,
+  type ComplianceStats,
+} from "../../lib/api/rules";
+import { ErrorDisplay } from "../../components/ErrorDisplay";
+import { BentoPanel } from "../../components/compounds/BentoPanel";
 
 /**
- * Rules & Governance Page - Stub Implementation
+ * Rules & Governance Page
  * 
- * This page provides management and oversight of coding rules, governance policies,
- * quality gates, and compliance standards that agents must follow.
+ * Management and oversight of coding rules, governance policies,
+ * quality gates, and compliance standards.
+ * 
+ * @author @darianrosebrook
  */
-
 export default function RulesGovernancePage() {
+  const [rules, setRules] = useState<CawsRule[]>([]);
+  const [violations, setViolations] = useState<CawsViolation[]>([]);
+  const [compliance, setCompliance] = useState<ComplianceStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [filter, setFilter] = useState<{
+    ruleType?: string;
+    isActive?: boolean;
+    violationStatus?: string;
+  }>({});
+  const [selectedRule, setSelectedRule] = useState<CawsRule | null>(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const [rulesData, violationsData, complianceData] = await Promise.all([
+          getRules({ rule_type: filter.ruleType, is_active: filter.isActive }),
+          getViolations({ status: filter.violationStatus }),
+          getComplianceStats(),
+        ]);
+
+        setRules(rulesData);
+        setViolations(violationsData);
+        setCompliance(complianceData);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error("Failed to load rules and governance data"));
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [filter.ruleType, filter.isActive, filter.violationStatus]);
+
+  if (isLoading) {
+    return (
+      <div className={styles.rulesGovernancePage}>
+        <div className={styles.container}>
+          <div className={styles.header}>
+            <h1 className={styles.headerTitle}>Rules & Governance</h1>
+            <p className={styles.headerDescription}>Loading rules and compliance data...</p>
+          </div>
+          <div className={styles.loadingState}>
+            <div className={styles.spinner}></div>
+            <p>Loading data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.rulesGovernancePage}>
+        <div className={styles.container}>
+          <div className={styles.header}>
+            <h1 className={styles.headerTitle}>Rules & Governance</h1>
+          </div>
+          <ErrorDisplay
+            error={error}
+            onRetry={async () => {
+              setIsLoading(true);
+              setError(null);
+              try {
+                const [rulesData, violationsData, complianceData] = await Promise.all([
+                  getRules({ rule_type: filter.ruleType, is_active: filter.isActive }),
+                  getViolations({ status: filter.violationStatus }),
+                  getComplianceStats(),
+                ]);
+                setRules(rulesData);
+                setViolations(violationsData);
+                setCompliance(complianceData);
+              } catch (err) {
+                setError(err instanceof Error ? err : new Error("Failed to load rules and governance data"));
+              } finally {
+                setIsLoading(false);
+              }
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  const activeRules = rules.filter((r) => r.is_active);
+  const openViolations = violations.filter((v) => v.status === 'open');
+  const resolvedViolations = violations.filter((v) => v.status === 'resolved');
+
   return (
     <div className={styles.rulesGovernancePage}>
       <div className={styles.container}>
-      <div className={styles.header}>
-        <h1 className={styles.headerTitle}>Rules & Governance</h1>
-        <p className={styles.headerDescription}>
-          Manage coding standards, quality gates, and compliance policies
-        </p>
-      </div>
-
-      <div className={styles.contentCard}>
-        {/* Status Badge */}
-        <div className={styles.statusBadge}>
-          <div className={styles.statusDot}></div>
-          <span className={styles.statusText}>Stub Page - Implementation Required</span>
+        <div className={styles.header}>
+          <h1 className={styles.headerTitle}>Rules & Governance</h1>
+          <p className={styles.headerDescription}>
+            Manage coding standards, quality gates, and compliance policies
+          </p>
         </div>
 
-        {/* UX Requirements */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>UX Requirements</h2>
-          <div className={styles.sectionCard}>
-            <div>
-              <h3 className={styles.subsectionTitle}>Rule Management Interface</h3>
-              <ul className={styles.list}>
-                <li>List view of all rules with search and filter capabilities</li>
-                <li>Rule categories/tags (Code Quality, Security, Performance, Documentation, etc.)</li>
-                <li>Rule status indicators (Active, Inactive, Deprecated)</li>
-                <li>Priority/severity levels (Critical, High, Medium, Low)</li>
-                <li>Rule editor with syntax highlighting for rule definitions</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className={styles.subsectionTitle}>Rule Details View</h3>
-              <ul className={styles.list}>
-                <li>Rule name, description, and rationale</li>
-                <li>Rule definition (code patterns, regex, AST patterns)</li>
-                <li>Violation examples and fixes</li>
-                <li>Compliance statistics (violations found, fixed, pending)</li>
-                <li>Rule history and version tracking</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className={styles.subsectionTitle}>Governance Dashboard</h3>
-              <ul className={styles.list}>
-                <li>Overall compliance score</li>
-                <li>Rule violation trends over time</li>
-                <li>Most violated rules</li>
-                <li>Agent compliance by rule category</li>
-                <li>Project compliance scores</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className={styles.subsectionTitle}>Rule Creation/Editing</h3>
-              <ul className={styles.list}>
-                <li>Form-based rule creation with validation</li>
-                <li>Rule testing interface (test against sample code)</li>
-                <li>Preview of rule matches before activation</li>
-                <li>Rule activation/deactivation toggle</li>
-                <li>Bulk rule operations (enable/disable multiple rules)</li>
-              </ul>
-            </div>
-          </div>
-        </section>
+        {/* Compliance Overview */}
+        {compliance && (
+          <div className={styles.metricsGrid}>
+            <BentoPanel className={styles.metricCard}>
+              <div className={styles.metricLabel}>Compliance Score</div>
+              <div className={styles.metricValue} style={{ color: compliance.compliance_score >= 90 ? '#22c55e' : compliance.compliance_score >= 70 ? '#eab308' : '#ef4444' }}>
+                {compliance.compliance_score.toFixed(1)}%
+              </div>
+            </BentoPanel>
 
-        {/* Functionality Requirements */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Functionality Requirements</h2>
-          <div className={styles.sectionCard}>
-            <div>
-              <h3 className={styles.subsectionTitle}>Rule Storage & Management</h3>
-              <ul className={styles.list}>
-                <li>Store rules in PostgreSQL `rules` or `governance_rules` table</li>
-                <li>Rule definition storage (JSON, YAML, or structured format)</li>
-                <li>Rule versioning and history tracking</li>
-                <li>Rule categories and tagging system</li>
-                <li>Rule activation/deactivation with effective dates</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className={styles.subsectionTitle}>Rule Enforcement</h3>
-              <ul className={styles.list}>
-                <li>Integration with code analysis tools (ESLint, Clippy, etc.)</li>
-                <li>Real-time rule checking during code commits</li>
-                <li>Pre-commit hook integration for rule validation</li>
-                <li>CI/CD pipeline integration for automated rule checking</li>
-                <li>Rule violation reporting and tracking</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className={styles.subsectionTitle}>API Endpoints Required</h3>
-              <ul className={styles.list}>
-                <li>GET /api/rules - List all rules with filters</li>
-                <li>GET /api/rules/:id - Get rule details</li>
-                <li>POST /api/rules - Create new rule</li>
-                <li>PATCH /api/rules/:id - Update rule</li>
-                <li>DELETE /api/rules/:id - Delete rule</li>
-                <li>POST /api/rules/:id/test - Test rule against sample code</li>
-                <li>GET /api/rules/compliance - Get compliance statistics</li>
-                <li>GET /api/rules/violations - Get rule violations</li>
-                <li>POST /api/rules/bulk-update - Bulk enable/disable rules</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className={styles.subsectionTitle}>Compliance Tracking</h3>
-              <ul className={styles.list}>
-                <li>Track rule violations in PostgreSQL `rule_violations` table</li>
-                <li>Calculate compliance scores per project and agent</li>
-                <li>Generate compliance reports</li>
-                <li>Track violation resolution status</li>
-              </ul>
-            </div>
-          </div>
-        </section>
+            <BentoPanel className={styles.metricCard}>
+              <div className={styles.metricLabel}>Active Rules</div>
+              <div className={styles.metricValue}>{compliance.active_rules}</div>
+            </BentoPanel>
 
-        {/* TODOs Required for Completion */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>TODOs Required for Completion</h2>
-          <div className={styles.sectionCard}>
-            <div className={styles.todosList}>
-              <div className={styles.todoItem}>
-                <input type="checkbox" className={styles.todoCheckbox} disabled />
-                <div className={styles.todoContent}>
-                  <p className={styles.todoTitle}>Create rules database schema</p>
-                  <p className={styles.todoDescription}>Design and implement PostgreSQL tables for rules, rule_violations, and rule_history in `iterations/v3/data-infrastructure`</p>
-                </div>
+            <BentoPanel className={styles.metricCard}>
+              <div className={styles.metricLabel}>Open Violations</div>
+              <div className={styles.metricValue} style={{ color: openViolations.length > 0 ? '#ef4444' : '#22c55e' }}>
+                {openViolations.length}
               </div>
-              <div className={styles.todoItem}>
-                <input type="checkbox" className={styles.todoCheckbox} disabled />
-                <div className={styles.todoContent}>
-                  <p className={styles.todoTitle}>Implement rule CRUD API endpoints</p>
-                  <p className={styles.todoDescription}>Create GET, POST, PATCH, DELETE endpoints for rules in `iterations/v3/data-infrastructure/src/api/handlers`</p>
-                </div>
-              </div>
-              <div className={styles.todoItem}>
-                <input type="checkbox" className={styles.todoCheckbox} disabled />
-                <div className={styles.todoContent}>
-                  <p className={styles.todoTitle}>Build rule list component</p>
-                  <p className={styles.todoDescription}>Create rule list view with search, filter, and sort functionality</p>
-                </div>
-              </div>
-              <div className={styles.todoItem}>
-                <input type="checkbox" className={styles.todoCheckbox} disabled />
-                <div className={styles.todoContent}>
-                  <p className={styles.todoTitle}>Implement rule editor</p>
-                  <p className={styles.todoDescription}>Create rule creation/editing form with syntax highlighting and validation</p>
-                </div>
-              </div>
-              <div className={styles.todoItem}>
-                <input type="checkbox" className={styles.todoCheckbox} disabled />
-                <div className={styles.todoContent}>
-                  <p className={styles.todoTitle}>Add rule testing interface</p>
-                  <p className={styles.todoDescription}>Implement rule testing against sample code before activation</p>
-                </div>
-              </div>
-              <div className={styles.todoItem}>
-                <input type="checkbox" className={styles.todoCheckbox} disabled />
-                <div className={styles.todoContent}>
-                  <p className={styles.todoTitle}>Build compliance dashboard</p>
-                  <p className={styles.todoDescription}>Create dashboard showing compliance scores, violation trends, and rule statistics</p>
-                </div>
-              </div>
-              <div className={styles.todoItem}>
-                <input type="checkbox" className={styles.todoCheckbox} disabled />
-                <div className={styles.todoContent}>
-                  <p className={styles.todoTitle}>Implement rule violation tracking</p>
-                  <p className={styles.todoDescription}>Track and display rule violations with status (open, fixed, ignored)</p>
-                </div>
-              </div>
-              <div className={styles.todoItem}>
-                <input type="checkbox" className={styles.todoCheckbox} disabled />
-                <div className={styles.todoContent}>
-                  <p className={styles.todoTitle}>Add rule enforcement integration</p>
-                  <p className={styles.todoDescription}>Integrate with code analysis tools and pre-commit hooks for automated rule checking</p>
-                </div>
-              </div>
-              <div className={styles.todoItem}>
-                <input type="checkbox" className={styles.todoCheckbox} disabled />
-                <div className={styles.todoContent}>
-                  <p className={styles.todoTitle}>Implement compliance reporting</p>
-                  <p className={styles.todoDescription}>Generate compliance reports with export functionality (PDF, CSV)</p>
-                </div>
-              </div>
-              <div className={styles.todoItem}>
-                <input type="checkbox" className={styles.todoCheckbox} disabled />
-                <div className={styles.todoContent}>
-                  <p className={styles.todoTitle}>Update navigation sidebar link</p>
-                  <p className={styles.todoDescription}>Change Rules & Governance button to Link component pointing to /rules-governance route</p>
-                </div>
-              </div>
-            </div>
+            </BentoPanel>
+
+            <BentoPanel className={styles.metricCard}>
+              <div className={styles.metricLabel}>Resolved Violations</div>
+              <div className={styles.metricValue}>{resolvedViolations.length}</div>
+            </BentoPanel>
           </div>
-        </section>
-      </div>
+        )}
+
+        {/* Filters */}
+        <div className={styles.controls}>
+          <div className={styles.controlGroup}>
+            <label htmlFor="ruleType" className={styles.controlLabel}>
+              Rule Type:
+            </label>
+            <select
+              id="ruleType"
+              value={filter.ruleType || ""}
+              onChange={(e) => setFilter({ ...filter, ruleType: e.target.value || undefined })}
+              className={styles.select}
+            >
+              <option value="">All Types</option>
+              <option value="code_quality">Code Quality</option>
+              <option value="security">Security</option>
+              <option value="performance">Performance</option>
+              <option value="documentation">Documentation</option>
+            </select>
+          </div>
+
+          <div className={styles.controlGroup}>
+            <label htmlFor="isActive" className={styles.controlLabel}>
+              Status:
+            </label>
+            <select
+              id="isActive"
+              value={filter.isActive === undefined ? "" : String(filter.isActive)}
+              onChange={(e) => setFilter({ ...filter, isActive: e.target.value === "" ? undefined : e.target.value === "true" })}
+              className={styles.select}
+            >
+              <option value="">All Rules</option>
+              <option value="true">Active Only</option>
+              <option value="false">Inactive Only</option>
+            </select>
+          </div>
+
+          <div className={styles.controlGroup}>
+            <label htmlFor="violationStatus" className={styles.controlLabel}>
+              Violation Status:
+            </label>
+            <select
+              id="violationStatus"
+              value={filter.violationStatus || ""}
+              onChange={(e) => setFilter({ ...filter, violationStatus: e.target.value || undefined })}
+              className={styles.select}
+            >
+              <option value="">All Statuses</option>
+              <option value="open">Open</option>
+              <option value="resolved">Resolved</option>
+              <option value="ignored">Ignored</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Rules List */}
+        <BentoPanel className={styles.section}>
+          <h2 className={styles.sectionTitle}>Rules ({rules.length})</h2>
+          {rules.length === 0 ? (
+            <div className={styles.emptyState}>
+              <p className={styles.emptyText}>No rules found</p>
+              <p className={styles.emptyDescription}>
+                Rules will appear here once they are created.
+              </p>
+            </div>
+          ) : (
+            <div className={styles.rulesList}>
+              {rules.map((rule) => (
+                <div
+                  key={rule.id}
+                  className={`${styles.ruleItem} ${selectedRule?.id === rule.id ? styles.ruleItemSelected : ''}`}
+                  onClick={() => setSelectedRule(rule)}
+                >
+                  <div className={styles.ruleHeader}>
+                    <div className={styles.ruleTitleRow}>
+                      <span className={styles.ruleName}>{rule.name}</span>
+                      <div className={styles.ruleBadges}>
+                        {rule.is_active ? (
+                          <span className={styles.badgeActive}>Active</span>
+                        ) : (
+                          <span className={styles.badgeInactive}>Inactive</span>
+                        )}
+                        <span className={styles.badgeSeverity} data-severity={rule.severity.toLowerCase()}>
+                          {rule.severity}
+                        </span>
+                      </div>
+                    </div>
+                    <span className={styles.ruleId}>{rule.id}</span>
+                  </div>
+                  <p className={styles.ruleDescription}>{rule.description}</p>
+                  <div className={styles.ruleMeta}>
+                    <span className={styles.ruleType}>{rule.rule_type}</span>
+                    {rule.constitutional_reference && (
+                      <span className={styles.ruleReference}>
+                        Ref: {rule.constitutional_reference}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </BentoPanel>
+
+        {/* Violations List */}
+        <BentoPanel className={styles.section}>
+          <h2 className={styles.sectionTitle}>Violations ({violations.length})</h2>
+          {violations.length === 0 ? (
+            <div className={styles.emptyState}>
+              <p className={styles.emptyText}>No violations found</p>
+              <p className={styles.emptyDescription}>
+                All rules are being followed correctly.
+              </p>
+            </div>
+          ) : (
+            <div className={styles.violationsList}>
+              {violations.map((violation) => (
+                <div key={violation.id} className={styles.violationItem}>
+                  <div className={styles.violationHeader}>
+                    <div className={styles.violationTitleRow}>
+                      <span className={styles.violationCode}>{violation.violation_code}</span>
+                      <div className={styles.violationBadges}>
+                        <span className={styles.badgeStatus} data-status={violation.status.toLowerCase()}>
+                          {violation.status}
+                        </span>
+                        <span className={styles.badgeSeverity} data-severity={violation.severity.toLowerCase()}>
+                          {violation.severity}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className={styles.violationDescription}>{violation.description}</p>
+                  <div className={styles.violationMeta}>
+                    <span className={styles.violationRule}>Rule: {violation.rule_id}</span>
+                    {violation.file_path && (
+                      <span className={styles.violationLocation}>
+                        {violation.file_path}
+                        {violation.line_number && `:${violation.line_number}`}
+                      </span>
+                    )}
+                    <span className={styles.violationDate}>
+                      {new Date(violation.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </BentoPanel>
+
+        {/* Violations by Severity */}
+        {compliance && Object.keys(compliance.violations_by_severity).length > 0 && (
+          <BentoPanel className={styles.section}>
+            <h2 className={styles.sectionTitle}>Violations by Severity</h2>
+            <div className={styles.severityList}>
+              {Object.entries(compliance.violations_by_severity).map(([severity, count]) => (
+                <div key={severity} className={styles.severityItem}>
+                  <span className={styles.severityName}>{severity}</span>
+                  <span className={styles.severityCount}>{count}</span>
+                </div>
+              ))}
+            </div>
+          </BentoPanel>
+        )}
+
+        {/* Most Violated Rules */}
+        {compliance && compliance.violations_by_rule.length > 0 && (
+          <BentoPanel className={styles.section}>
+            <h2 className={styles.sectionTitle}>Most Violated Rules</h2>
+            <div className={styles.topViolationsList}>
+              {compliance.violations_by_rule
+                .sort((a, b) => b.violation_count - a.violation_count)
+                .slice(0, 10)
+                .map((item) => (
+                  <div key={item.rule_id} className={styles.topViolationItem}>
+                    <div className={styles.topViolationHeader}>
+                      <span className={styles.topViolationRuleName}>{item.rule_name}</span>
+                      <span className={styles.topViolationCount}>{item.violation_count}</span>
+                    </div>
+                    <span className={styles.topViolationRuleId}>{item.rule_id}</span>
+                  </div>
+                ))}
+            </div>
+          </BentoPanel>
+        )}
+
+        {/* Note about advanced features */}
+        <BentoPanel className={styles.section}>
+          <h2 className={styles.sectionTitle}>Note</h2>
+          <p className={styles.infoText}>
+            Rule creation, editing, and testing interfaces will be added in a future update.
+            Currently, you can view existing rules and violations.
+          </p>
+        </BentoPanel>
       </div>
     </div>
   );
 }
-
-
-
-

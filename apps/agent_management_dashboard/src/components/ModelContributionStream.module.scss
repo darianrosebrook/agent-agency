@@ -1,0 +1,111 @@
+@use "design-tokens" as *;
+
+.container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: #111111; // bg-[#111111]
+  border-radius: 0.75rem; // rounded-[12px]
+  border: 1px solid #cacaca; // border border-[#cacaca]
+}
+
+.innerContainer {
+  width: 100%;
+  height: 100%;
+}
+
+.content {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: $spacing-6; // p-6
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.header {
+  margin-bottom: $spacing-4; // mb-4
+}
+
+.title {
+  color: $color-white; // text-white
+  font-size: 0.9375rem; // text-[15px]
+  margin-bottom: $spacing-1; // mb-1
+}
+
+.subtitle {
+  color: #9e9ea0; // text-[#9e9ea0]
+  font-size: 0.625rem; // text-[10px]
+}
+
+.chart {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-3; // gap-3
+  margin-top: $spacing-3; // mt-3
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem; // gap-1.5
+}
+
+.legendDot {
+  width: 0.5rem; // w-2
+  height: 0.5rem; // h-2
+  border-radius: 9999px; // rounded-full
+}
+
+.legendLabel {
+  color: #9e9ea0; // text-[#9e9ea0]
+  font-size: 0.5625rem; // text-[9px]
+}
+
+// Tooltip styles
+.tooltip {
+  background-color: #111111; // bg-[#111111]
+  border: 1px solid #39393b; // border border-[#39393b]
+  border-radius: 0.5rem; // rounded-[8px]
+  padding: $spacing-3 $spacing-4; // px-4 py-3
+}
+
+.tooltipLabel {
+  color: $color-white; // text-white
+  font-size: 0.75rem; // text-[12px]
+  margin-bottom: $spacing-2; // mb-2
+}
+
+.tooltipItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2; // gap-2
+  margin-bottom: $spacing-1; // mb-1
+}
+
+.tooltipDot {
+  width: 0.5rem; // w-2
+  height: 0.5rem; // h-2
+  border-radius: 9999px; // rounded-full
+}
+
+.tooltipText {
+  color: #9e9ea0; // text-[#9e9ea0]
+  font-size: 0.6875rem; // text-[11px]
+}
+
+.tooltipTotal {
+  color: $color-white; // text-white
+  font-size: 0.6875rem; // text-[11px]
+  margin-top: $spacing-2; // mt-2
+  padding-top: $spacing-2; // pt-2
+  border-top: 1px solid #39393b; // border-t border-[#39393b]
+}
+

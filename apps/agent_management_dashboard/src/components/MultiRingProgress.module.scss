@@ -1,0 +1,116 @@
+@use "design-tokens" as *;
+
+.container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: $color-neutral-950; // bg-neutral-950
+  border-radius: 0.75rem; // rounded-[12px]
+  border: 1px solid #cacaca; // border border-[#cacaca]
+}
+
+.innerContainer {
+  width: 100%;
+  height: 100%;
+}
+
+.content {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-4; // gap-4
+  padding: $spacing-6; // p-6
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.header {
+  // Header container
+}
+
+.title {
+  color: $color-neutral-50; // text-neutral-50
+  font-size: 1.25rem; // text-[20px]
+  letter-spacing: -0.2px; // tracking-[-0.2px]
+  margin-bottom: $spacing-3; // mb-3
+}
+
+.totalProgressRow {
+  display: flex;
+  align-items: baseline;
+  gap: $spacing-2; // gap-2
+  margin-bottom: $spacing-1; // mb-1
+}
+
+.totalProgressValue {
+  color: $color-neutral-50; // text-neutral-50
+  font-size: 2rem; // text-[32px]
+  letter-spacing: -1.6px; // tracking-[-1.6px]
+}
+
+.totalProgressLabel {
+  color: $color-zinc-500; // text-zinc-500
+  font-size: 0.875rem; // text-[14px]
+}
+
+.timeline {
+  color: $color-zinc-500; // text-zinc-500
+  font-size: 0.75rem; // text-[12px]
+}
+
+.chart {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.svg {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.segment {
+  transition: fill 500ms ease-out;
+}
+
+.percentageLabel {
+  fill: $color-zinc-600; // fill-zinc-600
+}
+
+.progressLabel {
+  fill: $color-neutral-50; // fill-neutral-50
+  transition: none; // transition-none
+}
+
+.divider {
+  width: 100%;
+  height: 1px; // h-px
+  background-color: #cacaca; // bg-[#cacaca]
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-6; // gap-6
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2; // gap-2
+}
+
+.legendSwatch {
+  width: $spacing-6; // w-6
+  height: $spacing-3; // h-3
+  border-radius: 0.125rem; // rounded-sm
+}
+
+.legendLabel {
+  color: $color-zinc-500; // text-zinc-500
+  font-size: 0.875rem; // text-[14px]
+}
+

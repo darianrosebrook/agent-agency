@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { BentoPanel } from "./compounds";
 import { ArrowUpRight } from "lucide-react";
 import { useAnimatedValue } from "../hooks/useAnimatedValue";
+import styles from "./ServerEfficiencyChart.module.scss";
 
 interface ServerEfficiencyChartProps {
   title?: string;
@@ -16,7 +17,7 @@ export function ServerEfficiencyChart({
 }: ServerEfficiencyChartProps) {
   // Animate efficiency percentage
   const animatedEfficiency = useAnimatedValue(efficiency);
-  
+
   // TODO: Replace hardcoded bar data with observability metrics from v3 API with the following requirements:
   // 1. Efficiency metrics fetching: Load server efficiency time-series data
   //    - Data source: GET /api/observability/efficiency endpoint from `iterations/v3/system-observability` crate
@@ -61,34 +62,43 @@ export function ServerEfficiencyChart({
       animatedBar7,
       animatedBar8,
     ],
-    [animatedBar1, animatedBar2, animatedBar3, animatedBar4, animatedBar5, animatedBar6, animatedBar7, animatedBar8]
+    [
+      animatedBar1,
+      animatedBar2,
+      animatedBar3,
+      animatedBar4,
+      animatedBar5,
+      animatedBar6,
+      animatedBar7,
+      animatedBar8,
+    ]
   );
 
   return (
     <BentoPanel>
-      <div className="h-full flex flex-col p-6">
+      <div className={styles.content}>
         {/* Header */}
-        <div className="flex items-start justify-between mb-8">
-          <h3 className="text-zinc-400 text-sm">{title}</h3>
-          <button className="text-zinc-500 hover:text-zinc-300 transition-colors">
-            <ArrowUpRight className="w-4 h-4" />
+        <div className={styles.header}>
+          <h3 className={styles.title}>{title}</h3>
+          <button className={styles.moreButton}>
+            <ArrowUpRight className={styles.moreButtonIcon} />
           </button>
         </div>
 
         {/* Efficiency Metric */}
-        <div className="mb-6">
-          <div className="text-white text-4xl transition-none">+{animatedEfficiency}%</div>
+        <div className={styles.efficiencyMetric}>
+          <div className={styles.efficiencyValue}>+{animatedEfficiency}%</div>
         </div>
 
         {/* Bar Chart */}
-        <div className="flex-1 flex items-end gap-[6px] justify-between">
+        <div className={styles.barChart}>
           {animatedBars.map((animatedHeight, index) => (
             <div
               key={index}
-              className="flex-1 bg-zinc-700 rounded-t-sm relative transition-all duration-500 ease-out"
+              className={styles.bar}
               style={{ height: `${animatedHeight}%` }}
             >
-              <div className="absolute top-0 left-0 right-0 h-[3px] bg-zinc-300 rounded-t-sm" />
+              <div className={styles.barTop} />
             </div>
           ))}
         </div>

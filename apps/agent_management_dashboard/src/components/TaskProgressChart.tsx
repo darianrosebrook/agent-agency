@@ -1,6 +1,7 @@
 "use client";
 
 import { useAnimatedValue } from "../hooks/useAnimatedValue";
+import styles from "./TaskProgressChart.module.scss";
 
 interface TaskProgressChartProps {
   completedTasks?: number;
@@ -32,90 +33,90 @@ export function TaskProgressChart({
   );
 
   return (
-    <div className="bg-neutral-950 relative rounded-[12px] size-full">
-      <div className="size-full">
-        <div className="box-border content-stretch flex flex-col gap-[16px] items-start overflow-clip p-[12px] relative size-full">
+    <div className={styles.container}>
+      <div className={styles.innerContainer}>
+        <div className={styles.content}>
           {/* Header */}
-          <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-            <div className="content-stretch flex items-start justify-between relative shrink-0 w-full">
+          <div className={styles.header}>
+            <div className={styles.headerTop}>
               {/* Category badges */}
-              <div className="content-stretch flex gap-[8px] items-start relative shrink-0">
+              <div className={styles.categories}>
                 {categories.map((category) => (
                   <div
                     key={category}
-                    className="relative rounded-[2px] shrink-0"
+                    className={styles.categoryBadge}
                   >
-                    <div className="box-border content-stretch flex items-center overflow-clip px-[4px] py-[2px] relative rounded-[inherit]">
-                      <div className="flex flex-col justify-center leading-[0] not-italic relative shrink-0 text-[#cacaca] text-[8px] text-nowrap text-right tracking-[0.12px]">
-                        <p className="leading-none whitespace-pre">
+                    <div className={styles.categoryBadgeInner}>
+                      <div className={styles.categoryText}>
+                        <p className={styles.categoryTextParagraph}>
                           {category}
                         </p>
                       </div>
                     </div>
                     <div
                       aria-hidden="true"
-                      className="absolute border border-[#cacaca] border-solid inset-0 pointer-events-none rounded-[2px]"
+                      className={styles.categoryBorder}
                     />
                   </div>
                 ))}
               </div>
             </div>
             {/* Title */}
-            <div className="flex flex-col justify-center leading-[0] not-italic relative shrink-0 text-[24px] text-center text-neutral-50 text-nowrap tracking-[-0.24px]">
-              <p className="leading-[normal] whitespace-pre">
+            <div className={styles.title}>
+              <p className={styles.titleParagraph}>
                 All active projects completion rate
               </p>
             </div>
           </div>
 
           {/* Divider */}
-          <div className="bg-[#cacaca] h-px shrink-0 w-full" />
+          <div className={styles.divider} />
 
           {/* Stats */}
-          <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0">
-            <div className="flex flex-col justify-center leading-[0] not-italic relative shrink-0 text-[#cacaca] text-[10px] text-center text-nowrap tracking-[-0.1px]">
-              <p className="leading-[12px] whitespace-pre">
+          <div className={styles.stats}>
+            <div className={styles.statsText}>
+              <p className={styles.statsTextParagraph}>
                 You have {animatedCompletedTasks} tasks out of{" "}
                 {animatedTotalTasks} completed
               </p>
             </div>
-            <div className="content-stretch flex gap-[8px] items-center relative shrink-0">
+            <div className={styles.statsRow}>
               {/* Percentage */}
-              <div className="flex flex-col justify-end leading-[0] not-italic relative shrink-0 text-[48px] text-center text-neutral-50 text-nowrap tracking-[-2.4px]">
-                <p className="leading-[48px] whitespace-pre">
+              <div className={styles.percentage}>
+                <p className={styles.percentageParagraph}>
                   {animatedPercentage}%
                 </p>
               </div>
               {/* Task count badge */}
-              <div className="relative rounded-[2px] shrink-0">
-                <div className="box-border content-stretch flex items-center overflow-clip px-[4px] py-[2px] relative rounded-[inherit]">
-                  <div className="flex flex-col justify-center leading-[0] not-italic relative shrink-0 text-[#cacaca] text-[8px] text-nowrap text-right tracking-[0.12px]">
-                    <p className="leading-none whitespace-pre">
+              <div className={styles.taskBadge}>
+                <div className={styles.taskBadgeInner}>
+                  <div className={styles.taskBadgeText}>
+                    <p className={styles.taskBadgeTextParagraph}>
                       {animatedCompletedTasks} tasks
                     </p>
                   </div>
                 </div>
                 <div
                   aria-hidden="true"
-                  className="absolute border border-[#cacaca] border-solid inset-0 pointer-events-none rounded-[2px]"
+                  className={styles.taskBadgeBorder}
                 />
               </div>
               {/* Time reference */}
-              <div className="flex flex-col justify-center leading-[0] not-italic relative shrink-0 text-[#cacaca] text-[10px] text-center text-nowrap tracking-[-0.1px]">
-                <p className="leading-[12px] whitespace-pre">since last week</p>
+              <div className={styles.timeReference}>
+                <p className={styles.timeReferenceParagraph}>since last week</p>
               </div>
             </div>
           </div>
 
           {/* Bar chart */}
-          <div className="basis-0 content-stretch flex gap-[2px] grow items-center max-h-[64px] min-h-px min-w-px overflow-clip relative rounded-[4px] shrink-0 w-full">
+          <div className={styles.barChart}>
             {Array.from({ length: animatedTotalTasks }).map((_, index) => (
               <div
                 key={index}
-                className={`basis-0 grow h-[108px] min-h-px min-w-px shrink-0 transition-colors duration-500 ease-out ${
+                className={`${styles.bar} ${
                   index < animatedCompletedTasks
-                    ? "bg-neutral-50"
-                    : "bg-[#454545]"
+                    ? styles.barCompleted
+                    : styles.barIncomplete
                 }`}
               />
             ))}
@@ -124,7 +125,7 @@ export function TaskProgressChart({
       </div>
       <div
         aria-hidden="true"
-        className="absolute border border-[#cacaca] border-solid inset-0 pointer-events-none rounded-[12px]"
+        className={styles.borderOverlay}
       />
     </div>
   );

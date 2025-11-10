@@ -1,0 +1,135 @@
+@use "design-tokens" as *;
+
+.container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: #111111; // bg-[#111111]
+  border-radius: 0.75rem; // rounded-[12px]
+  border: 1px solid #cacaca; // border border-[#cacaca]
+}
+
+.innerContainer {
+  width: 100%;
+  height: 100%;
+}
+
+.content {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: $spacing-8; // p-8
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.header {
+  margin-bottom: $spacing-6; // mb-6
+}
+
+.title {
+  color: $color-white; // text-white
+  font-size: 1.0625rem; // text-[17px]
+  margin-bottom: $spacing-1; // mb-1
+}
+
+.subtitle {
+  color: #9e9ea0; // text-[#9e9ea0]
+  font-size: 0.6875rem; // text-[11px]
+}
+
+.hexagonGrid {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.svg {
+  width: 100%;
+  height: 100%;
+}
+
+.hexagonPath {
+  transition: all 200ms;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.8; // hover:opacity-80
+  }
+}
+
+.statsAndLegend {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: $spacing-6; // mt-6
+}
+
+.stats {
+  display: flex;
+  gap: $spacing-8; // gap-8
+}
+
+.statItem {
+  // Individual stat item container
+}
+
+.statLabel {
+  color: #9e9ea0; // text-[#9e9ea0]
+  font-size: 0.6875rem; // text-[11px]
+  margin-bottom: $spacing-1; // mb-1
+}
+
+.statValue {
+  color: $color-white; // text-white
+  font-size: 0.9375rem; // text-[15px]
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: $spacing-4; // gap-4
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2; // gap-2
+}
+
+.legendSwatch {
+  width: $spacing-4; // w-4
+  height: $spacing-4; // h-4
+  border-radius: 0.25rem; // rounded-[4px]
+}
+
+.legendLabel {
+  color: #9e9ea0; // text-[#9e9ea0]
+  font-size: 0.6875rem; // text-[11px]
+}
+
+// Tooltip styles (for UI tooltip component)
+.tooltipContent {
+  background-color: #111111; // bg-[#111111]
+  border: 1px solid #39393b; // border border-[#39393b]
+  color: $color-white; // text-white
+}
+
+.tooltipInner {
+  font-size: 0.8125rem; // text-[13px]
+}
+
+.tooltipTitle {
+  margin-bottom: $spacing-1; // mb-1
+}
+
+.tooltipSubtext {
+  color: #9e9ea0; // text-[#9e9ea0]
+  font-size: 0.6875rem; // text-[11px]
+}
+

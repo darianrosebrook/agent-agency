@@ -1,0 +1,302 @@
+@use "design-tokens" as *;
+
+.container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: $color-neutral-950; // bg-neutral-950
+  border-radius: 0.75rem; // rounded-[12px]
+}
+
+.innerContainer {
+  width: 100%;
+  height: 100%;
+}
+
+.content {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-4; // gap-[16px]
+  align-items: flex-start;
+  overflow: clip;
+  padding: $spacing-3; // p-[12px]
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2; // gap-[8px]
+  align-items: flex-start;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.headerTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.categories {
+  display: flex;
+  gap: $spacing-2; // gap-[8px]
+  align-items: flex-start;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.categoryBadge {
+  position: relative;
+  border-radius: 0.125rem; // rounded-[2px]
+  flex-shrink: 0;
+}
+
+.categoryBadgeInner {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  overflow: clip;
+  padding: $spacing-0_5 $spacing-1; // px-[4px] py-[2px]
+  position: relative;
+  border-radius: inherit;
+}
+
+.categoryText {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 0;
+  font-style: normal;
+  position: relative;
+  flex-shrink: 0;
+  color: #cacaca; // text-[#cacaca]
+  font-size: 0.5rem; // text-[8px]
+  white-space: nowrap;
+  text-align: right;
+  letter-spacing: 0.12px; // tracking-[0.12px]
+}
+
+.categoryTextParagraph {
+  line-height: 1; // leading-none
+  white-space: pre; // whitespace-pre
+}
+
+.categoryBorder {
+  position: absolute;
+  border: 1px solid #cacaca;
+  border-style: solid;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+  border-radius: 0.125rem; // rounded-[2px]
+}
+
+.title {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 0;
+  font-style: normal;
+  position: relative;
+  flex-shrink: 0;
+  font-size: $font-size-2xl; // text-[24px]
+  text-align: center;
+  color: $color-neutral-50; // text-neutral-50
+  white-space: nowrap;
+  letter-spacing: -0.24px; // tracking-[-0.24px]
+}
+
+.titleParagraph {
+  line-height: normal; // leading-[normal]
+  white-space: pre; // whitespace-pre
+}
+
+.divider {
+  background-color: #cacaca; // bg-[#cacaca]
+  height: 1px; // h-px
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.stats {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2; // gap-[8px]
+  align-items: flex-start;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.statsText {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 0;
+  font-style: normal;
+  position: relative;
+  flex-shrink: 0;
+  color: #cacaca; // text-[#cacaca]
+  font-size: 0.625rem; // text-[10px]
+  text-align: center;
+  white-space: nowrap;
+  letter-spacing: -0.1px; // tracking-[-0.1px]
+}
+
+.statsTextParagraph {
+  line-height: 0.75rem; // leading-[12px]
+  white-space: pre; // whitespace-pre
+}
+
+.statsRow {
+  display: flex;
+  gap: $spacing-2; // gap-[8px]
+  align-items: center;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.percentage {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  line-height: 0;
+  font-style: normal;
+  position: relative;
+  flex-shrink: 0;
+  font-size: $font-size-5xl; // text-[48px]
+  text-align: center;
+  color: $color-neutral-50; // text-neutral-50
+  white-space: nowrap;
+  letter-spacing: -2.4px; // tracking-[-2.4px]
+}
+
+.percentageParagraph {
+  line-height: 3rem; // leading-[48px]
+  white-space: pre; // whitespace-pre
+}
+
+.taskBadge {
+  position: relative;
+  border-radius: 0.125rem; // rounded-[2px]
+  flex-shrink: 0;
+}
+
+.taskBadgeInner {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  overflow: clip;
+  padding: $spacing-0_5 $spacing-1; // px-[4px] py-[2px]
+  position: relative;
+  border-radius: inherit;
+}
+
+.taskBadgeText {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 0;
+  font-style: normal;
+  position: relative;
+  flex-shrink: 0;
+  color: #cacaca; // text-[#cacaca]
+  font-size: 0.5rem; // text-[8px]
+  white-space: nowrap;
+  text-align: right;
+  letter-spacing: 0.12px; // tracking-[0.12px]
+}
+
+.taskBadgeTextParagraph {
+  line-height: 1; // leading-none
+  white-space: pre; // whitespace-pre
+}
+
+.taskBadgeBorder {
+  position: absolute;
+  border: 1px solid #cacaca;
+  border-style: solid;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+  border-radius: 0.125rem; // rounded-[2px]
+}
+
+.timeReference {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 0;
+  font-style: normal;
+  position: relative;
+  flex-shrink: 0;
+  color: #cacaca; // text-[#cacaca]
+  font-size: 0.625rem; // text-[10px]
+  text-align: center;
+  white-space: nowrap;
+  letter-spacing: -0.1px; // tracking-[-0.1px]
+}
+
+.timeReferenceParagraph {
+  line-height: 0.75rem; // leading-[12px]
+  white-space: pre; // whitespace-pre
+}
+
+.barChart {
+  flex-basis: 0;
+  display: flex;
+  gap: $spacing-0_5; // gap-[2px]
+  flex-grow: 1;
+  align-items: center;
+  max-height: $spacing-16; // max-h-[64px]
+  min-height: 1px;
+  min-width: 1px;
+  overflow: clip;
+  position: relative;
+  border-radius: $spacing-1; // rounded-[4px]
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.bar {
+  flex-basis: 0;
+  flex-grow: 1;
+  min-height: 1px;
+  min-width: 1px;
+  flex-shrink: 0;
+  transition: background-color 500ms ease-out;
+}
+
+.barCompleted {
+  background-color: $color-neutral-50; // bg-neutral-50
+  height: 6.75rem; // h-[108px]
+}
+
+.barIncomplete {
+  background-color: #454545; // bg-[#454545]
+  height: 6.75rem; // h-[108px]
+}
+
+.borderOverlay {
+  position: absolute;
+  border: 1px solid #cacaca;
+  border-style: solid;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+  border-radius: 0.75rem; // rounded-[12px]
+}
+

@@ -1,4 +1,4 @@
-@use '../../styles/tokens' as *;
+@use "../../styles/design-tokens.scss" as *;
 
 .accordionItem {
   border-bottom: 1px solid var(--border);

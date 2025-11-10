@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { useAnimatedValue } from "../hooks/useAnimatedValue";
+import styles from "./MultiRingProgress.module.scss";
 
 interface Task {
   name: string;
@@ -47,12 +48,15 @@ export function MultiRingProgress({
   const centerY = 200;
   const totalSegments = 40;
 
-  // Define ring parameters (outer to inner)
-  const rings = [
-    { radius: 160, innerRadius: 140, strokeWidth: 20 },
-    { radius: 135, innerRadius: 115, strokeWidth: 20 },
-    { radius: 110, innerRadius: 90, strokeWidth: 20 },
-  ];
+  // Define ring parameters (outer to inner) - memoized to prevent recreation on each render
+  const rings = useMemo(
+    () => [
+      { radius: 160, innerRadius: 140, strokeWidth: 20 },
+      { radius: 135, innerRadius: 115, strokeWidth: 20 },
+      { radius: 110, innerRadius: 90, strokeWidth: 20 },
+    ],
+    []
+  );
 
   // Format numbers to fixed decimal places to prevent hydration mismatches
   const formatNumber = (value: number, decimals: number = 2): string => {
@@ -60,62 +64,60 @@ export function MultiRingProgress({
   };
 
   // Generate segments for a ring
-  const generateRingSegments = (
-    progress: number,
-    radius: number,
-    innerRadius: number,
-    color: string
-  ) => {
-    const segments = [];
-    const segmentAngle = 360 / totalSegments;
-    const gapAngle = 2;
-    const completedSegments = Math.round((progress / 100) * totalSegments);
+  const generateRingSegments = useCallback(
+    (progress: number, radius: number, innerRadius: number, color: string) => {
+      const segments = [];
+      const segmentAngle = 360 / totalSegments;
+      const gapAngle = 2;
+      const completedSegments = Math.round((progress / 100) * totalSegments);
 
-    for (let i = 0; i < totalSegments; i++) {
-      const startAngle = i * segmentAngle - 90;
-      const endAngle = startAngle + segmentAngle - gapAngle;
+      for (let i = 0; i < totalSegments; i++) {
+        const startAngle = i * segmentAngle - 90;
+        const endAngle = startAngle + segmentAngle - gapAngle;
 
-      // Calculate coordinates and format to fixed decimal places for consistent rendering
-      const x1 = formatNumber(
-        centerX + radius * Math.cos((startAngle * Math.PI) / 180)
-      );
-      const y1 = formatNumber(
-        centerY + radius * Math.sin((startAngle * Math.PI) / 180)
-      );
-      const x2 = formatNumber(
-        centerX + radius * Math.cos((endAngle * Math.PI) / 180)
-      );
-      const y2 = formatNumber(
-        centerY + radius * Math.sin((endAngle * Math.PI) / 180)
-      );
-      const x3 = formatNumber(
-        centerX + innerRadius * Math.cos((endAngle * Math.PI) / 180)
-      );
-      const y3 = formatNumber(
-        centerY + innerRadius * Math.sin((endAngle * Math.PI) / 180)
-      );
-      const x4 = formatNumber(
-        centerX + innerRadius * Math.cos((startAngle * Math.PI) / 180)
-      );
-      const y4 = formatNumber(
-        centerY + innerRadius * Math.sin((startAngle * Math.PI) / 180)
-      );
+        // Calculate coordinates and format to fixed decimal places for consistent rendering
+        const x1 = formatNumber(
+          centerX + radius * Math.cos((startAngle * Math.PI) / 180)
+        );
+        const y1 = formatNumber(
+          centerY + radius * Math.sin((startAngle * Math.PI) / 180)
+        );
+        const x2 = formatNumber(
+          centerX + radius * Math.cos((endAngle * Math.PI) / 180)
+        );
+        const y2 = formatNumber(
+          centerY + radius * Math.sin((endAngle * Math.PI) / 180)
+        );
+        const x3 = formatNumber(
+          centerX + innerRadius * Math.cos((endAngle * Math.PI) / 180)
+        );
+        const y3 = formatNumber(
+          centerY + innerRadius * Math.sin((endAngle * Math.PI) / 180)
+        );
+        const x4 = formatNumber(
+          centerX + innerRadius * Math.cos((startAngle * Math.PI) / 180)
+        );
+        const y4 = formatNumber(
+          centerY + innerRadius * Math.sin((startAngle * Math.PI) / 180)
+        );
 
-      // Build path data string with formatted numbers (single line)
-      const pathData = `M ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} L ${x3} ${y3} A ${innerRadius} ${innerRadius} 0 0 0 ${x4} ${y4} Z`;
+        // Build path data string with formatted numbers (single line)
+        const pathData = `M ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} L ${x3} ${y3} A ${innerRadius} ${innerRadius} 0 0 0 ${x4} ${y4} Z`;
 
-      segments.push(
-        <path
-          key={`${radius}-${i}`}
-          d={pathData}
-          fill={i < completedSegments ? color : "#27272a"}
-          className="transition-colors duration-500 ease-out"
-        />
-      );
-    }
+        segments.push(
+          <path
+            key={`${radius}-${i}`}
+            d={pathData}
+            fill={i < completedSegments ? color : "#27272a"}
+            className={styles.segment}
+          />
+        );
+      }
 
-    return segments;
-  };
+      return segments;
+    },
+    [centerX, centerY, totalSegments]
+  );
 
   // Generate radial grid lines
   const generateGridLines = () => {
@@ -182,7 +184,7 @@ export function MultiRingProgress({
           y={y}
           textAnchor="middle"
           dominantBaseline="middle"
-          className="fill-zinc-600"
+          className={styles.percentageLabel}
           style={{
             fontSize: "12px",
             fontWeight: "400",
@@ -209,7 +211,7 @@ export function MultiRingProgress({
         y={y}
         textAnchor="start"
         dominantBaseline="middle"
-        className="fill-neutral-50 transition-none"
+        className={styles.progressLabel}
         style={{
           fontSize: "14px",
           fontWeight: "500",
@@ -221,35 +223,33 @@ export function MultiRingProgress({
   };
 
   return (
-    <div className="bg-neutral-950 relative rounded-[12px] size-full border border-[#cacaca]">
-      <div className="size-full">
-        <div className="box-border flex flex-col gap-4 p-6 relative size-full">
+    <div className={styles.container}>
+      <div className={styles.innerContainer}>
+        <div className={styles.content}>
           {/* Header */}
-          <div>
-            <h3 className="text-neutral-50 text-[20px] tracking-[-0.2px] mb-3">
-              Progress
-            </h3>
-            <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-neutral-50 text-[32px] tracking-[-1.6px]">
+          <div className={styles.header}>
+            <h3 className={styles.title}>Progress</h3>
+            <div className={styles.totalProgressRow}>
+              <span className={styles.totalProgressValue}>
                 {totalProgress}%
               </span>
-              <span className="text-zinc-500 text-[14px]">
+              <span className={styles.totalProgressLabel}>
                 · Total progress
               </span>
             </div>
-            <p className="text-zinc-500 text-[12px]">
+            <p className={styles.timeline}>
               Projected timeline: {projectedTimeline}
             </p>
           </div>
 
           {/* Chart */}
-          <div className="flex-1 flex items-center justify-center">
+          <div className={styles.chart}>
             <svg
               width="400"
               height="400"
               viewBox="0 0 400 400"
               xmlns="http://www.w3.org/2000/svg"
-              className="max-w-full max-h-full"
+              className={styles.svg}
             >
               {/* Grid lines */}
               {generateGridLines()}
@@ -314,7 +314,7 @@ export function MultiRingProgress({
                       )}
                     </g>
                   )),
-                [animatedTasks, rings]
+                [animatedTasks, rings, generateRingSegments]
               )}
 
               {/* Percentage labels around chart */}
@@ -326,17 +326,17 @@ export function MultiRingProgress({
           </div>
 
           {/* Divider */}
-          <div className="w-full h-px bg-[#cacaca]" />
+          <div className={styles.divider} />
 
           {/* Legend */}
-          <div className="flex items-center justify-center gap-6">
+          <div className={styles.legend}>
             {tasks.map((task) => (
-              <div key={task.name} className="flex items-center gap-2">
+              <div key={task.name} className={styles.legendItem}>
                 <div
-                  className="w-6 h-3 rounded-sm"
+                  className={styles.legendSwatch}
                   style={{ backgroundColor: task.color }}
                 />
-                <span className="text-zinc-500 text-[14px]">{task.name}</span>
+                <span className={styles.legendLabel}>{task.name}</span>
               </div>
             ))}
           </div>

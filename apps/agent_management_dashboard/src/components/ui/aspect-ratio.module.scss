@@ -1,4 +1,4 @@
-@use '../../styles/tokens' as *;
+@use "../../styles/design-tokens.scss" as *;
 
 // AspectRatio component uses Radix UI primitives
 // No additional styling needed - inherits from parent components

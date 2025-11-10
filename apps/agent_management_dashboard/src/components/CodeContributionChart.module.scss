@@ -1,0 +1,145 @@
+@use "design-tokens" as *;
+
+.container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: #111111; // bg-[#111111]
+  border-radius: 0.75rem; // rounded-[12px]
+  border: 1px solid #cacaca; // border border-[#cacaca]
+}
+
+.innerContainer {
+  width: 100%;
+  height: 100%;
+}
+
+.content {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: $spacing-8; // p-8
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.header {
+  margin-bottom: $spacing-6; // mb-6
+}
+
+.title {
+  color: $color-white; // text-white
+  font-size: 1.0625rem; // text-[17px]
+  margin-bottom: $spacing-1; // mb-1
+}
+
+.subtitle {
+  color: #9e9ea0; // text-[#9e9ea0]
+  font-size: 0.6875rem; // text-[11px]
+}
+
+.chart {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+.statsOverlay {
+  position: absolute;
+  top: $spacing-8; // top-8
+  right: $spacing-8; // right-8
+  background-color: #111111; // bg-[#111111]
+  border: 1px solid #39393b; // border border-[#39393b]
+  border-radius: 0.5rem; // rounded-[8px]
+  padding: $spacing-4 $spacing-6; // px-6 py-4
+}
+
+.statsLabel {
+  color: $color-white; // text-white
+  font-size: 0.8125rem; // text-[13px]
+  margin-bottom: $spacing-1; // mb-1
+}
+
+.statsValue {
+  color: $color-white; // text-white
+  font-size: 0.8125rem; // text-[13px]
+}
+
+.legendOverlay {
+  position: absolute;
+  bottom: $spacing-8; // bottom-8
+  right: $spacing-8; // right-8
+  background-color: #111111; // bg-[#111111]
+  border: 1px solid #39393b; // border border-[#39393b]
+  border-radius: 0.5rem; // rounded-[8px]
+  padding: $spacing-4 $spacing-6; // px-6 py-4
+}
+
+.legendContent {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-3; // gap-3
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3; // gap-3
+}
+
+.legendLine {
+  width: $spacing-8; // w-8
+  height: 0.25rem; // h-[4px]
+  background-color: #6366f1; // bg-[#6366f1]
+  border-radius: 9999px; // rounded-full
+}
+
+.legendLabel {
+  color: #9e9ea0; // text-[#9e9ea0]
+  font-size: 0.6875rem; // text-[11px]
+}
+
+.legendDashedLine {
+  flex-shrink: 0;
+}
+
+.legendDashedLabel {
+  color: #888; // text-[#888]
+  font-size: 0.6875rem; // text-[11px]
+}
+
+// Tooltip styles
+.tooltip {
+  background-color: #111111; // bg-[#111111]
+  border: 1px solid #39393b; // border border-[#39393b]
+  border-radius: 0.5rem; // rounded-[8px]
+  padding: $spacing-4 $spacing-6; // px-6 py-4
+}
+
+.tooltipLabel {
+  color: $color-white; // text-white
+  font-size: 0.8125rem; // text-[13px]
+  margin-bottom: $spacing-1; // mb-1
+}
+
+.tooltipValue {
+  color: $color-white; // text-white
+  font-size: 0.8125rem; // text-[13px]
+}
+
+.tooltipSubtext {
+  color: #9e9ea0; // text-[#9e9ea0]
+  font-size: 0.6875rem; // text-[11px]
+  margin-top: $spacing-1; // mt-1
+}
+
+// Custom dot hover effect
+.customDot {
+  transition: all 200ms;
+
+  &:hover {
+    r: 4; // hover:r-4
+  }
+}
+

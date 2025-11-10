@@ -1,4 +1,4 @@
-@use '../styles/tokens' as *;
+@use "../styles/design-tokens.scss" as *;
 
 .body {
   background-color: oklch(0.145 0 0); // bg-zinc-950

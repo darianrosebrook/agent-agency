@@ -1,6 +1,7 @@
 "use client";
 
 import { useAnimatedValue } from "../hooks/useAnimatedValue";
+import styles from "./TaskCompletionGauge.module.scss";
 
 interface TaskCompletionGaugeProps {
   title?: string;
@@ -22,12 +23,12 @@ export function TaskCompletionGauge({
   // 3. Data transformation: Format API response for gauge component
   //    - Map API response to task counts (created, inProgress, completed)
   //    - Calculate percentages for each section of the gauge
-  
+
   // Color constants matching gauge colors
   const COLORS = {
-    created: "#27272a",      // zinc-800 - dark gray for created tasks
-    inProgress: "#6366f1",   // indigo-500 - indigo for in-progress tasks
-    completed: "#e0e7ff",    // indigo-100 - light indigo for completed tasks
+    created: "#27272a", // zinc-800 - dark gray for created tasks
+    inProgress: "#6366f1", // indigo-500 - indigo for in-progress tasks
+    completed: "#e0e7ff", // indigo-100 - light indigo for completed tasks
   };
 
   // Mock data - showing we're completing 18% more tasks than creating
@@ -45,9 +46,12 @@ export function TaskCompletionGauge({
   const animatedCompletionRate = useAnimatedValue(completionRate);
 
   // Calculate animated totals and percentages
-  const animatedTotal = animatedCreated + animatedInProgress + animatedCompleted;
-  const createdPercent = animatedTotal > 0 ? (animatedCreated / animatedTotal) * 100 : 0;
-  const inProgressPercent = animatedTotal > 0 ? (animatedInProgress / animatedTotal) * 100 : 0;
+  const animatedTotal =
+    animatedCreated + animatedInProgress + animatedCompleted;
+  const createdPercent =
+    animatedTotal > 0 ? (animatedCreated / animatedTotal) * 100 : 0;
+  const inProgressPercent =
+    animatedTotal > 0 ? (animatedInProgress / animatedTotal) * 100 : 0;
 
   // Total number of dashes in the semi-circle
   const totalDashes = 60;
@@ -109,7 +113,7 @@ export function TaskCompletionGauge({
           stroke={color}
           strokeWidth={dashWidth}
           strokeLinecap="round"
-          className="transition-colors duration-500 ease-out"
+          className={styles.dash}
         />
       );
 
@@ -120,64 +124,86 @@ export function TaskCompletionGauge({
   };
 
   return (
-    <div className="bg-[#111111] relative rounded-[12px] size-full border border-[#cacaca]">
-      <div className="size-full">
-        <div className="box-border flex flex-col p-6 relative size-full">
+    <div className={styles.container}>
+      <div className={styles.innerContainer}>
+        <div className={styles.content}>
           {/* Header */}
-          <div className="mb-3">
-            <h3 className="text-white text-[15px] mb-1">{title}</h3>
-            <p className="text-[#9e9ea0] text-[10px]">{subtitle}</p>
+          <div className={styles.header}>
+            <h3 className={styles.title}>{title}</h3>
+            <p className={styles.subtitle}>{subtitle}</p>
           </div>
 
           {/* Gauge */}
-          <div className="flex-1 flex flex-col items-center justify-center -mt-2">
-            <div className="relative scale-200">
-              <svg width="240" height="140" viewBox="0 0 240 140">
+          <div className={styles.gaugeContainer}>
+            <div className={styles.gaugeWrapper}>
+              <svg className={styles.gaugeSvg} viewBox="0 0 240 140">
                 {renderDashes()}
               </svg>
 
               {/* Center percentage */}
-              <div className="absolute inset-0 flex items-center justify-center pt-8">
-                <div className="text-center">
-                  <div className="text-white text-[32px] leading-none transition-none">
+              <div className={styles.centerPercentage}>
+                <div className={styles.centerContent}>
+                  <div className={styles.percentageValue}>
                     +{animatedCompletionRate}%
                   </div>
-                  <div className="text-[#9e9ea0] text-[10px] mt-1.5">
-                    vs last month
-                  </div>
+                  <div className={styles.percentageLabel}>vs last month</div>
                 </div>
               </div>
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-4 mt-4">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.created }} />
-                <span className="text-[#9e9ea0] text-[9px]">Created</span>
+            <div className={styles.legend}>
+              <div className={styles.legendItem}>
+                <div
+                  className={styles.legendDot}
+                  style={{ backgroundColor: COLORS.created }}
+                />
+                <span className={styles.legendLabel}>Created</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.inProgress }} />
-                <span className="text-[#9e9ea0] text-[9px]">In Progress</span>
+              <div className={styles.legendItem}>
+                <div
+                  className={styles.legendDot}
+                  style={{ backgroundColor: COLORS.inProgress }}
+                />
+                <span className={styles.legendLabel}>In Progress</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.completed }} />
-                <span className="text-[#9e9ea0] text-[9px]">Completed</span>
+              <div className={styles.legendItem}>
+                <div
+                  className={styles.legendDot}
+                  style={{ backgroundColor: COLORS.completed }}
+                />
+                <span className={styles.legendLabel}>Completed</span>
               </div>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-4 mt-3 w-full max-w-[220px]">
-              <div className="text-center">
-                <div className="text-[11px] transition-none" style={{ color: COLORS.created }}>{animatedCreated}</div>
-                <div className="text-[#9e9ea0] text-[8px]">created</div>
+            <div className={styles.stats}>
+              <div className={styles.statItem}>
+                <div
+                  className={styles.statValue}
+                  style={{ color: COLORS.created }}
+                >
+                  {animatedCreated}
+                </div>
+                <div className={styles.statLabel}>created</div>
               </div>
-              <div className="text-center">
-                <div className="text-[11px] transition-none" style={{ color: COLORS.inProgress }}>{animatedInProgress}</div>
-                <div className="text-[#9e9ea0] text-[8px]">in progress</div>
+              <div className={styles.statItem}>
+                <div
+                  className={styles.statValue}
+                  style={{ color: COLORS.inProgress }}
+                >
+                  {animatedInProgress}
+                </div>
+                <div className={styles.statLabel}>in progress</div>
               </div>
-              <div className="text-center">
-                <div className="text-[11px] transition-none" style={{ color: COLORS.completed }}>{animatedCompleted}</div>
-                <div className="text-[#9e9ea0] text-[8px]">completed</div>
+              <div className={styles.statItem}>
+                <div
+                  className={styles.statValue}
+                  style={{ color: COLORS.completed }}
+                >
+                  {animatedCompleted}
+                </div>
+                <div className={styles.statLabel}>completed</div>
               </div>
             </div>
           </div>

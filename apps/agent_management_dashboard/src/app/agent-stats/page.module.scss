@@ -1,4 +1,4 @@
-@use '../../styles/tokens' as *;
+@use "../../styles/design-tokens.scss" as *;
 
 .agentStatsPage {
   width: 100%; // w-full
@@ -129,4 +129,280 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-3; // space-y-3
+}
+
+// Loading and error states
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: $spacing-4;
+  color: oklch(0.5 0 0); // text-gray-400
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid oklch(0.269 0 0); // border-gray-800
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Controls
+.controls {
+  display: flex;
+  gap: $spacing-4;
+  margin-bottom: $spacing-6;
+  flex-wrap: wrap;
+}
+
+.controlGroup {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+}
+
+.controlLabel {
+  color: oklch(0.75 0 0); // text-gray-300
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+.select {
+  background-color: #1a1a1a; // bg-[#1a1a1a]
+  border: 1px solid oklch(0.269 0 0); // border-gray-800
+  border-radius: 0.5rem; // rounded-md
+  padding: $spacing-2 $spacing-3;
+  color: white;
+  font-size: $font-size-sm;
+  min-width: 150px;
+
+  &:focus {
+    outline: none;
+    border-color: oklch(0.5 0 0); // border-gray-400
+  }
+}
+
+// Metrics grid
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: $spacing-4;
+  margin-bottom: $spacing-6;
+}
+
+.metricCard {
+  background-color: #1a1a1a; // bg-[#1a1a1a]
+  border: 1px solid oklch(0.269 0 0); // border-gray-800
+  border-radius: 0.875rem; // rounded-lg
+  padding: $spacing-6;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2;
+}
+
+.metricLabel {
+  color: oklch(0.5 0 0); // text-gray-400
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+.metricValue {
+  color: white;
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-semibold;
+}
+
+.metricValuePositive {
+  color: #22c55e; // text-green-500
+  font-weight: $font-weight-semibold;
+}
+
+.metricValueNeutral {
+  color: oklch(0.75 0 0); // text-gray-300
+  font-weight: $font-weight-semibold;
+}
+
+.metricValueNegative {
+  color: #ef4444; // text-red-500
+  font-weight: $font-weight-semibold;
+}
+
+// Type list
+.typeList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-3;
+}
+
+.typeItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-3;
+  background-color: #0f0f0f; // bg-[#0f0f0f]
+  border-radius: 0.5rem; // rounded-md
+}
+
+.typeName {
+  color: white;
+  font-weight: $font-weight-medium;
+}
+
+.typeCount {
+  color: oklch(0.75 0 0); // text-gray-300
+  font-weight: $font-weight-semibold;
+}
+
+// Model list
+.modelList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-4;
+}
+
+.modelItem {
+  padding: $spacing-4;
+  background-color: #0f0f0f; // bg-[#0f0f0f]
+  border-radius: 0.5rem; // rounded-md
+  border: 1px solid oklch(0.269 0 0); // border-gray-800
+}
+
+.modelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-3;
+}
+
+.modelName {
+  color: white;
+  font-weight: $font-weight-semibold;
+  font-size: $font-size-lg;
+}
+
+.modelTasks {
+  color: oklch(0.5 0 0); // text-gray-400
+  font-size: $font-size-sm;
+}
+
+.modelMetrics {
+  display: flex;
+  gap: $spacing-4;
+  flex-wrap: wrap;
+}
+
+.modelMetric {
+  display: flex;
+  gap: $spacing-2;
+  align-items: center;
+}
+
+// Contributions list
+.contributionsList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-4;
+}
+
+.contributionItem {
+  padding: $spacing-4;
+  background-color: #0f0f0f; // bg-[#0f0f0f]
+  border-radius: 0.5rem; // rounded-md
+  border: 1px solid oklch(0.269 0 0); // border-gray-800
+}
+
+.contributionHeader {
+  margin-bottom: $spacing-3;
+}
+
+.agentName {
+  color: white;
+  font-weight: $font-weight-semibold;
+  font-size: $font-size-lg;
+}
+
+.contributionMetrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: $spacing-3;
+}
+
+.contributionMetric {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-1;
+}
+
+// Efficiency list
+.efficiencyList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-4;
+}
+
+.efficiencyItem {
+  padding: $spacing-4;
+  background-color: #0f0f0f; // bg-[#0f0f0f]
+  border-radius: 0.5rem; // rounded-md
+  border: 1px solid oklch(0.269 0 0); // border-gray-800
+}
+
+.efficiencyHeader {
+  margin-bottom: $spacing-3;
+}
+
+.efficiencyMetrics {
+  display: flex;
+  gap: $spacing-4;
+  flex-wrap: wrap;
+}
+
+.efficiencyMetric {
+  display: flex;
+  gap: $spacing-2;
+  align-items: center;
+}
+
+// Info text
+.infoText {
+  color: oklch(0.75 0 0); // text-gray-300
+  margin-bottom: $spacing-2;
+}
+
+.infoNote {
+  color: oklch(0.5 0 0); // text-gray-400
+  font-size: $font-size-sm;
+  font-style: italic;
+}
+
+// Empty state
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-12;
+  text-align: center;
+}
+
+.emptyText {
+  color: white;
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+  margin-bottom: $spacing-2;
+}
+
+.emptyDescription {
+  color: oklch(0.5 0 0); // text-gray-400
+  font-size: $font-size-sm;
 }

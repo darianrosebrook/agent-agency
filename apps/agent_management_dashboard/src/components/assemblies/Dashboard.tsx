@@ -6,6 +6,7 @@ import { HexagonHeatmap } from "../HexagonHeatmap";
 import { ModelContributionStream } from "../ModelContributionStream";
 import { TaskCompletionGauge } from "../TaskCompletionGauge";
 import { ServerEfficiencyChart } from "../ServerEfficiencyChart";
+import { BentoPanel } from "../compounds/BentoPanel";
 import { LayoutGrid } from "lucide-react";
 import { cn } from "../ui/utils";
 import styles from "./Dashboard.module.scss";
@@ -16,8 +17,8 @@ export function Dashboard() {
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerTop}>
-          <LayoutGrid className="w-4 h-4" />
-          <span className="text-sm">Dashboard</span>
+          <LayoutGrid className={styles.headerIcon} />
+          <span className={styles.headerLabel}>Dashboard</span>
         </div>
         {/* TODO: Replace hardcoded user name with data from v3 API with the following requirements:
         // 1. User data fetching: Load current user information from API
@@ -53,12 +54,16 @@ export function Dashboard() {
 
         {/* Radial Task Progress - spans 2 rows and 7 columns */}
         <div className={cn(styles.colSpan7, styles.rowSpan2)}>
-          <RadialTaskProgress />
+          <BentoPanel>
+            <RadialTaskProgress />
+          </BentoPanel>
         </div>
 
         {/* Hexagon Heatmap - spans 6 rows and 8 columns */}
         <div className={cn(styles.colSpan8, styles.rowSpan6)}>
-          <HexagonHeatmap radius={8} hexSize={28} />
+          <BentoPanel>
+            <HexagonHeatmap radius={8} hexSize={28} />
+          </BentoPanel>
         </div>
 
         {/* Multi-Ring Progress - spans 6 rows and 4 columns */}
@@ -74,14 +79,16 @@ export function Dashboard() {
           // 3. Data transformation: Format API response for MultiRingProgress component
           //    - Map milestones to tasks array with name, progress, and color
           //    - Calculate projectedTimeline string from milestone dates */}
-          <MultiRingProgress
-            tasks={[
-              { name: "Progress 1", progress: 85, color: "#e0e7ff" },
-              { name: "Progress 2", progress: 75, color: "#818cf8" },
-              { name: "Progress 3", progress: 60, color: "#6366f1" },
-            ]}
-            projectedTimeline="15 business days"
-          />
+          <BentoPanel>
+            <MultiRingProgress
+              tasks={[
+                { name: "Progress 1", progress: 85, color: "#e0e7ff" },
+                { name: "Progress 2", progress: 75, color: "#818cf8" },
+                { name: "Progress 3", progress: 60, color: "#6366f1" },
+              ]}
+              projectedTimeline="15 business days"
+            />
+          </BentoPanel>
         </div>
 
         {/* Code Contribution Chart - spans 3 rows and 12 columns */}
@@ -97,11 +104,13 @@ export function Dashboard() {
           // 3. Data transformation: Format API response for CodeContributionChart component
           //    - Map API response to DataPoint array with day, baseline (total), and contribution (accepted)
           //    - Calculate total contribution for display */}
-          <CodeContributionChart
-            title="Overall Contribution"
-            subtitle="2 Agents over the last 30 days"
-            days={30}
-          />
+          <BentoPanel>
+            <CodeContributionChart
+              title="Overall Contribution"
+              subtitle="2 Agents over the last 30 days"
+              days={30}
+            />
+          </BentoPanel>
         </div>
 
         {/* Small panels row */}
@@ -117,17 +126,21 @@ export function Dashboard() {
           // 3. Data transformation: Format API response for ModelContributionStream component
           //    - Map API response to StreamDataPoint array with month and model-specific values
           //    - Handle missing model data gracefully */}
-          <ModelContributionStream
-            title="Model Contributions"
-            subtitle="Lines of code by AI model"
-          />
+          <BentoPanel>
+            <ModelContributionStream
+              title="Model Contributions"
+              subtitle="Lines of code by AI model"
+            />
+          </BentoPanel>
         </div>
 
         <div className={cn(styles.colSpan4, styles.rowSpan2)}>
-          <TaskCompletionGauge
-            title="Task Balance"
-            subtitle="Completion vs Creation Rate"
-          />
+          <BentoPanel>
+            <TaskCompletionGauge
+              title="Task Balance"
+              subtitle="Completion vs Creation Rate"
+            />
+          </BentoPanel>
         </div>
 
         {/* TODO: Replace hardcoded efficiency metric with observability data from v3 API with the following requirements:
@@ -141,10 +154,14 @@ export function Dashboard() {
         // 3. Data transformation: Format API response for ServerEfficiencyChart component
         //    - Map API response to bars array with height values
         //    - Calculate overall efficiency percentage for display */}
-        <ServerEfficiencyChart
-          title="Server Efficiency Analysis"
-          efficiency={55}
-        />
+        <div className={cn(styles.colSpan4, styles.rowSpan2)}>
+          <BentoPanel>
+            <ServerEfficiencyChart
+              title="Server Efficiency Analysis"
+              efficiency={55}
+            />
+          </BentoPanel>
+        </div>
       </div>
     </div>
   );

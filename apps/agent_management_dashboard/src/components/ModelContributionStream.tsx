@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useState } from "react";
+import styles from "./ModelContributionStream.module.scss";
 
 interface StreamDataPoint {
   month: string;
@@ -79,33 +80,39 @@ export function ModelContributionStream({
   ];
 
   // Custom tooltip
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({
+    active,
+    payload,
+    label,
+  }: {
+    active?: boolean;
+    payload?: Array<{ dataKey?: string; value?: number; color?: string }>;
+    label?: string;
+  }) => {
     if (active && payload?.length) {
       const total = payload.reduce(
-        (sum: number, item: any) => sum + item.value,
+        (sum: number, item) => sum + (item.value ?? 0),
         0
       );
 
       return (
-        <div className="bg-[#111111] border border-[#39393b] rounded-[8px] px-4 py-3">
-          <div className="text-white text-[12px] mb-2">{label}</div>
-          {payload.reverse().map((item: any) => {
+        <div className={styles.tooltip}>
+          <div className={styles.tooltipLabel}>{label}</div>
+          {payload.reverse().map((item) => {
             const model = models.find((m) => m.name === item.dataKey);
             return (
-              <div key={item.dataKey} className="flex items-center gap-2 mb-1">
+              <div key={item.dataKey} className={styles.tooltipItem}>
                 <div
-                  className="w-2 h-2 rounded-full"
+                  className={styles.tooltipDot}
                   style={{ backgroundColor: item.color }}
                 />
-                <span className="text-[#9e9ea0] text-[11px]">
+                <span className={styles.tooltipText}>
                   {model?.label}: {item.value}
                 </span>
               </div>
             );
           })}
-          <div className="text-white text-[11px] mt-2 pt-2 border-t border-[#39393b]">
-            Total: {total}
-          </div>
+          <div className={styles.tooltipTotal}>Total: {total}</div>
         </div>
       );
     }
@@ -113,17 +120,17 @@ export function ModelContributionStream({
   };
 
   return (
-    <div className="bg-[#111111] relative rounded-[12px] size-full border border-[#cacaca]">
-      <div className="size-full">
-        <div className="box-border flex flex-col p-6 relative size-full">
+    <div className={styles.container}>
+      <div className={styles.innerContainer}>
+        <div className={styles.content}>
           {/* Header */}
-          <div className="mb-4">
-            <h3 className="text-white text-[15px] mb-1">{title}</h3>
-            <p className="text-[#9e9ea0] text-[10px]">{subtitle}</p>
+          <div className={styles.header}>
+            <h3 className={styles.title}>{title}</h3>
+            <p className={styles.subtitle}>{subtitle}</p>
           </div>
 
           {/* Chart */}
-          <div className="flex-1 relative min-h-0">
+          <div className={styles.chart}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
                 data={data}
@@ -200,14 +207,14 @@ export function ModelContributionStream({
           </div>
 
           {/* Legend */}
-          <div className="flex flex-wrap gap-3 mt-3">
+          <div className={styles.legend}>
             {models.reverse().map((model) => (
-              <div key={model.name} className="flex items-center gap-1.5">
+              <div key={model.name} className={styles.legendItem}>
                 <div
-                  className="w-2 h-2 rounded-full"
+                  className={styles.legendDot}
                   style={{ backgroundColor: model.color }}
                 />
-                <span className="text-[#9e9ea0] text-[9px]">{model.label}</span>
+                <span className={styles.legendLabel}>{model.label}</span>
               </div>
             ))}
           </div>

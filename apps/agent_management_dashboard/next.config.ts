@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -23,6 +24,9 @@ const nextConfig: NextConfig = {
             exclude: ["error", "warn"],
           }
         : false,
+  },
+  sassOptions: {
+    includePaths: [path.join(__dirname, 'src/styles')],
   },
   webpack: (config, { isServer }) => {
     if (!isServer) {

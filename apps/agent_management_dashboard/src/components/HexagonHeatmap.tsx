@@ -5,6 +5,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "./ui/tooltip";
+import styles from "./HexagonHeatmap.module.scss";
 
 type Axial = { q: number; r: number };
 
@@ -199,25 +200,25 @@ export function HexagonHeatmap({
   const drawSize = hexSize * drawScale;
 
   return (
-    <div className="bg-[#111111] relative rounded-[12px] size-full border border-[#cacaca]">
-      <div className="size-full">
-        <div className="box-border flex flex-col p-8 relative size-full">
+    <div className={styles.container}>
+      <div className={styles.innerContainer}>
+        <div className={styles.content}>
           {/* Header */}
-          <div className="mb-6">
-            <h3 className="text-white text-[17px] mb-1">
+          <div className={styles.header}>
+            <h3 className={styles.title}>
               Task Completion Heatmap
             </h3>
-            <p className="text-[#9e9ea0] text-[11px]">
+            <p className={styles.subtitle}>
               {totalTasks} tasks tracked across AI agents
             </p>
           </div>
 
           {/* Hexagon Grid */}
-          <div className="flex-1 relative min-h-0 flex items-center justify-center overflow-hidden">
+          <div className={styles.hexagonGrid}>
             <TooltipProvider>
               <svg
                 viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-                className="w-full h-full"
+                className={styles.svg}
                 style={{ maxHeight: "100%", maxWidth: "100%" }}
               >
                 <g
@@ -232,7 +233,7 @@ export function HexagonHeatmap({
                           stroke="#000000"
                           strokeWidth="1"
                           strokeOpacity={0.4}
-                          className="transition-all duration-200 hover:opacity-80 cursor-pointer"
+                          className={styles.hexagonPath}
                           style={{
                             filter:
                               hex.completion > 0
@@ -243,13 +244,13 @@ export function HexagonHeatmap({
                       </TooltipTrigger>
                       <TooltipContent
                         side="top"
-                        className="bg-[#111111] border border-[#39393b] text-white"
+                        className={styles.tooltipContent}
                       >
-                        <div className="text-[13px]">
-                          <div className="mb-1">
+                        <div className={styles.tooltipInner}>
+                          <div className={styles.tooltipTitle}>
                             {hex.taskName}
                           </div>
-                          <div className="text-[#9e9ea0] text-[11px]">
+                          <div className={styles.tooltipSubtext}>
                             {hex.agent} • {hex.completion}%
                             complete
                           </div>
@@ -263,49 +264,49 @@ export function HexagonHeatmap({
           </div>
 
           {/* Stats and Legend */}
-          <div className="flex justify-between items-end mt-6">
-            <div className="flex gap-8">
-              <div>
-                <div className="text-[#9e9ea0] text-[11px] mb-1">
+          <div className={styles.statsAndLegend}>
+            <div className={styles.stats}>
+              <div className={styles.statItem}>
+                <div className={styles.statLabel}>
                   Completed
                 </div>
-                <div className="text-white text-[15px]">
+                <div className={styles.statValue}>
                   {completedTasks} / {totalTasks}
                 </div>
               </div>
-              <div>
-                <div className="text-[#9e9ea0] text-[11px] mb-1">
+              <div className={styles.statItem}>
+                <div className={styles.statLabel}>
                   Avg Completion
                 </div>
-                <div className="text-white text-[15px]">
+                <div className={styles.statValue}>
                   {averageCompletion}%
                 </div>
               </div>
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-[4px] bg-[#27272a]" />
-                <span className="text-[#9e9ea0] text-[11px]">
+            <div className={styles.legend}>
+              <div className={styles.legendItem}>
+                <div className={styles.legendSwatch} style={{ backgroundColor: "#27272a" }} />
+                <span className={styles.legendLabel}>
                   0%
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-[4px] bg-[#312e81]" />
-                <span className="text-[#9e9ea0] text-[11px]">
+              <div className={styles.legendItem}>
+                <div className={styles.legendSwatch} style={{ backgroundColor: "#312e81" }} />
+                <span className={styles.legendLabel}>
                   1-40%
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-[4px] bg-[#6366f1]" />
-                <span className="text-[#9e9ea0] text-[11px]">
+              <div className={styles.legendItem}>
+                <div className={styles.legendSwatch} style={{ backgroundColor: "#6366f1" }} />
+                <span className={styles.legendLabel}>
                   41-80%
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-[4px] bg-[#e0e7ff]" />
-                <span className="text-[#9e9ea0] text-[11px]">
+              <div className={styles.legendItem}>
+                <div className={styles.legendSwatch} style={{ backgroundColor: "#e0e7ff" }} />
+                <span className={styles.legendLabel}>
                   81-100%
                 </span>
               </div>

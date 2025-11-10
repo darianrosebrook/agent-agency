@@ -1,4 +1,4 @@
-@use '../../styles/tokens' as *;
+@use "../../styles/design-tokens.scss" as *;
 
 .statusIcon {
   width: $spacing-4; // w-4

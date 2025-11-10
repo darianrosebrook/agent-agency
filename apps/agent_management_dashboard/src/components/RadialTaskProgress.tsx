@@ -9,6 +9,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useGSAPNumberAnimation } from "../hooks/useGSAPAnimation";
+import styles from "./RadialTaskProgress.module.scss";
 
 interface Project {
   id: number;
@@ -245,29 +246,34 @@ export function RadialTaskProgress({
   }, []);
 
   return (
-    <div className="bg-neutral-950 relative rounded-[12px] size-full border border-[#cacaca]">
-      <div className="size-full">
-        <div className="box-border flex flex-col p-6 relative size-full">
+    <div className={styles.container}>
+      <div className={styles.innerContainer}>
+        <div className={styles.content}>
           {/* Main content area */}
-          <div className="flex items-center gap-6 flex-1 min-h-0">
+          <div className={styles.mainContent}>
             {/* Left side - Radial chart */}
-            <div className="flex-shrink-0">
+            <div className={styles.chartContainer}>
               <svg
                 ref={svgRef}
                 width="240"
                 height="240"
                 viewBox="0 0 240 240"
                 xmlns="http://www.w3.org/2000/svg"
-                className="transform -rotate-0"
+                className={styles.svg}
               >
                 {segments}
                 {/* Center circle with percentage */}
-                <circle cx="120" cy="120" r="65" fill="#0a0a0a" />
+                <circle
+                  cx="120"
+                  cy="120"
+                  r="65"
+                  className={styles.centerCircle}
+                />
                 <text
                   x="120"
                   y="130"
                   textAnchor="middle"
-                  className="fill-neutral-50 transition-none"
+                  className={styles.centerText}
                   style={{
                     fontSize: "56px",
                     fontWeight: "300",
@@ -288,80 +294,71 @@ export function RadialTaskProgress({
             </div>
 
             {/* Divider */}
-            <div className="h-full w-px bg-[#cacaca] flex-shrink-0" />
+            <div className={styles.divider} />
 
             {/* Right side - Task details */}
-            <div className="flex-1 flex flex-col gap-4 min-w-0">
+            <div className={styles.detailsContainer}>
               {/* Header */}
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-neutral-50 text-[20px] tracking-[-0.2px] mb-2">
+              <div className={styles.detailsHeader}>
+                <div className={styles.detailsTitleContainer}>
+                  <h3 className={styles.detailsTitle}>
                     {currentProject.title}
                   </h3>
-                  <p className="text-[#cacaca] text-[12px] tracking-[-0.12px] leading-[16px]">
+                  <p className={styles.detailsDescription}>
                     {currentProject.description}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className={styles.detailsActions}>
                   {/* Carousel arrows */}
                   <button
                     onClick={handlePrevious}
-                    className="text-[#cacaca] hover:text-neutral-50 transition-colors p-1 hover:bg-neutral-900 rounded"
+                    className={styles.actionButton}
                   >
-                    <ChevronLeft className="w-5 h-5" />
+                    <ChevronLeft className={styles.actionButtonIcon} />
+                  </button>
+                  <button onClick={handleNext} className={styles.actionButton}>
+                    <ChevronRight className={styles.actionButtonIcon} />
                   </button>
                   <button
-                    onClick={handleNext}
-                    className="text-[#cacaca] hover:text-neutral-50 transition-colors p-1 hover:bg-neutral-900 rounded"
+                    className={`${styles.actionButton} ${styles.actionButtonShrink}`}
                   >
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-                  <button className="text-[#cacaca] hover:text-neutral-50 transition-colors flex-shrink-0">
-                    <MoreVertical className="w-5 h-5" />
+                    <MoreVertical className={styles.actionButtonIcon} />
                   </button>
                 </div>
               </div>
 
               {/* Divider */}
-              <div className="w-full h-px bg-[#cacaca]" />
+              <div className={styles.detailsDivider} />
 
               {/* Info grid */}
-              <div className="grid grid-cols-2 gap-y-3 gap-x-6">
-                <div className="flex items-center justify-between">
-                  <span className="text-[#cacaca] text-[14px] tracking-[-0.14px]">
-                    Status:
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-neutral-50 text-[14px] tracking-[-0.14px]">
+              <div className={styles.infoGrid}>
+                <div className={styles.infoItem}>
+                  <span className={styles.infoLabel}>Status:</span>
+                  <div className={styles.infoValueGroup}>
+                    <span className={styles.infoValue}>
                       {currentProject.status}
                     </span>
-                    <CheckCircle2 className="w-4 h-4 text-neutral-50" />
+                    <CheckCircle2 className={styles.infoIcon} />
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-[#cacaca] text-[14px] tracking-[-0.14px]">
-                    Progress:
-                  </span>
-                  <span className="text-neutral-50 text-[14px] tracking-[-0.14px]">
+                <div className={styles.infoItem}>
+                  <span className={styles.infoLabel}>Progress:</span>
+                  <span className={styles.infoValue}>
                     {currentProject.progress}%
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-[#cacaca] text-[14px] tracking-[-0.14px]">
-                    Date:
-                  </span>
-                  <span className="text-neutral-50 text-[14px] tracking-[-0.14px]">
+                <div className={styles.infoItem}>
+                  <span className={styles.infoLabel}>Date:</span>
+                  <span className={styles.infoValue}>
                     {currentProject.date}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-[#cacaca] text-[14px] tracking-[-0.14px]">
-                    ETR:
-                  </span>
-                  <span className="text-neutral-50 text-[14px] tracking-[-0.14px]">
+                <div className={styles.infoItem}>
+                  <span className={styles.infoLabel}>ETR:</span>
+                  <span className={styles.infoValue}>
                     {currentProject.estimatedDate}
                   </span>
                 </div>
@@ -370,15 +367,15 @@ export function RadialTaskProgress({
           </div>
 
           {/* Carousel dots at the bottom */}
-          <div className="flex justify-center gap-2 mt-4 pt-4 border-t border-[#cacaca]">
+          <div className={styles.carouselDots}>
             {recentProjects.map((_, index) => (
               <button
                 key={index}
                 onClick={() => handleDotClick(index)}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                className={`${styles.carouselDot} ${
                   index === currentIndex
-                    ? "bg-neutral-50 w-6"
-                    : "bg-[#454545] hover:bg-[#cacaca]"
+                    ? styles.carouselDotActive
+                    : styles.carouselDotInactive
                 }`}
                 aria-label={`Go to project ${index + 1}`}
               />

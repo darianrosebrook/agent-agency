@@ -1,4 +1,4 @@
-@use '../../styles/tokens' as *;
+@use "../../styles/design-tokens.scss" as *;
 
 .rulesGovernancePage {
   width: 100%; // w-full
@@ -129,4 +129,403 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-3; // space-y-3
+}
+
+// Loading and error states
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: $spacing-4;
+  color: oklch(0.5 0 0); // text-gray-400
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid oklch(0.269 0 0); // border-gray-800
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Controls
+.controls {
+  display: flex;
+  gap: $spacing-4;
+  margin-bottom: $spacing-6;
+  flex-wrap: wrap;
+}
+
+.controlGroup {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+}
+
+.controlLabel {
+  color: oklch(0.75 0 0); // text-gray-300
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+.select {
+  background-color: #1a1a1a; // bg-[#1a1a1a]
+  border: 1px solid oklch(0.269 0 0); // border-gray-800
+  border-radius: 0.5rem; // rounded-md
+  padding: $spacing-2 $spacing-3;
+  color: white;
+  font-size: $font-size-sm;
+  min-width: 150px;
+
+  &:focus {
+    outline: none;
+    border-color: oklch(0.5 0 0); // border-gray-400
+  }
+}
+
+// Metrics grid
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: $spacing-4;
+  margin-bottom: $spacing-6;
+}
+
+.metricCard {
+  background-color: #1a1a1a; // bg-[#1a1a1a]
+  border: 1px solid oklch(0.269 0 0); // border-gray-800
+  border-radius: 0.875rem; // rounded-lg
+  padding: $spacing-6;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2;
+}
+
+.metricLabel {
+  color: oklch(0.5 0 0); // text-gray-400
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+.metricValue {
+  color: white;
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-semibold;
+}
+
+// Rules list
+.rulesList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-3;
+}
+
+.ruleItem {
+  padding: $spacing-4;
+  background-color: #0f0f0f; // bg-[#0f0f0f]
+  border: 1px solid oklch(0.269 0 0); // border-gray-800
+  border-radius: 0.5rem; // rounded-md
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: oklch(0.5 0 0); // border-gray-400
+    background-color: #1a1a1a; // bg-[#1a1a1a]
+  }
+}
+
+.ruleItemSelected {
+  border-color: #3b82f6; // border-blue-500
+  background-color: #1a1a1a; // bg-[#1a1a1a]
+}
+
+.ruleHeader {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2;
+  margin-bottom: $spacing-2;
+}
+
+.ruleTitleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: $spacing-2;
+}
+
+.ruleName {
+  color: white;
+  font-weight: $font-weight-semibold;
+  font-size: $font-size-lg;
+}
+
+.ruleId {
+  color: oklch(0.5 0 0); // text-gray-400
+  font-size: $font-size-xs;
+  font-family: monospace;
+}
+
+.ruleDescription {
+  color: oklch(0.75 0 0); // text-gray-300
+  font-size: $font-size-sm;
+  margin-bottom: $spacing-2;
+}
+
+.ruleMeta {
+  display: flex;
+  gap: $spacing-3;
+  flex-wrap: wrap;
+}
+
+.ruleType {
+  color: oklch(0.5 0 0); // text-gray-400
+  font-size: $font-size-xs;
+  padding: $spacing-1 $spacing-2;
+  background-color: #0f0f0f; // bg-[#0f0f0f]
+  border-radius: 0.25rem; // rounded
+}
+
+.ruleReference {
+  color: oklch(0.5 0 0); // text-gray-400
+  font-size: $font-size-xs;
+}
+
+// Badges
+.ruleBadges {
+  display: flex;
+  gap: $spacing-2;
+}
+
+.badgeActive {
+  padding: $spacing-1 $spacing-2;
+  background-color: rgba(34, 197, 94, 0.2); // bg-green-500/20
+  color: #22c55e; // text-green-500
+  border-radius: 0.25rem; // rounded
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.badgeInactive {
+  padding: $spacing-1 $spacing-2;
+  background-color: rgba(107, 114, 128, 0.2); // bg-gray-500/20
+  color: oklch(0.5 0 0); // text-gray-400
+  border-radius: 0.25rem; // rounded
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.badgeSeverity {
+  padding: $spacing-1 $spacing-2;
+  border-radius: 0.25rem; // rounded
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+
+  &[data-severity="critical"] {
+    background-color: rgba(239, 68, 68, 0.2); // bg-red-500/20
+    color: #ef4444; // text-red-500
+  }
+
+  &[data-severity="high"] {
+    background-color: rgba(249, 115, 22, 0.2); // bg-orange-500/20
+    color: #f97316; // text-orange-500
+  }
+
+  &[data-severity="medium"] {
+    background-color: rgba(234, 179, 8, 0.2); // bg-yellow-500/20
+    color: #eab308; // text-yellow-500
+  }
+
+  &[data-severity="low"] {
+    background-color: rgba(59, 130, 246, 0.2); // bg-blue-500/20
+    color: #3b82f6; // text-blue-500
+  }
+
+  &[data-severity="info"] {
+    background-color: rgba(107, 114, 128, 0.2); // bg-gray-500/20
+    color: oklch(0.75 0 0); // text-gray-300
+  }
+}
+
+.badgeStatus {
+  padding: $spacing-1 $spacing-2;
+  border-radius: 0.25rem; // rounded
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+
+  &[data-status="open"] {
+    background-color: rgba(239, 68, 68, 0.2); // bg-red-500/20
+    color: #ef4444; // text-red-500
+  }
+
+  &[data-status="resolved"] {
+    background-color: rgba(34, 197, 94, 0.2); // bg-green-500/20
+    color: #22c55e; // text-green-500
+  }
+
+  &[data-status="ignored"] {
+    background-color: rgba(107, 114, 128, 0.2); // bg-gray-500/20
+    color: oklch(0.5 0 0); // text-gray-400
+  }
+}
+
+// Violations list
+.violationsList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-3;
+}
+
+.violationItem {
+  padding: $spacing-4;
+  background-color: #0f0f0f; // bg-[#0f0f0f]
+  border: 1px solid oklch(0.269 0 0); // border-gray-800
+  border-radius: 0.5rem; // rounded-md
+}
+
+.violationHeader {
+  margin-bottom: $spacing-2;
+}
+
+.violationTitleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: $spacing-2;
+}
+
+.violationCode {
+  color: white;
+  font-weight: $font-weight-semibold;
+  font-size: $font-size-base;
+  font-family: monospace;
+}
+
+.violationBadges {
+  display: flex;
+  gap: $spacing-2;
+}
+
+.violationDescription {
+  color: oklch(0.75 0 0); // text-gray-300
+  font-size: $font-size-sm;
+  margin-bottom: $spacing-2;
+}
+
+.violationMeta {
+  display: flex;
+  gap: $spacing-3;
+  flex-wrap: wrap;
+  font-size: $font-size-xs;
+  color: oklch(0.5 0 0); // text-gray-400
+}
+
+.violationRule {
+  font-family: monospace;
+}
+
+.violationLocation {
+  font-family: monospace;
+}
+
+.violationDate {
+  margin-left: auto;
+}
+
+// Severity list
+.severityList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-3;
+}
+
+.severityItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-3;
+  background-color: #0f0f0f; // bg-[#0f0f0f]
+  border-radius: 0.5rem; // rounded-md
+}
+
+.severityName {
+  color: white;
+  font-weight: $font-weight-medium;
+  text-transform: capitalize;
+}
+
+.severityCount {
+  color: oklch(0.75 0 0); // text-gray-300
+  font-weight: $font-weight-semibold;
+}
+
+// Top violations list
+.topViolationsList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-3;
+}
+
+.topViolationItem {
+  padding: $spacing-3;
+  background-color: #0f0f0f; // bg-[#0f0f0f]
+  border-radius: 0.5rem; // rounded-md
+}
+
+.topViolationHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-1;
+}
+
+.topViolationRuleName {
+  color: white;
+  font-weight: $font-weight-medium;
+}
+
+.topViolationCount {
+  color: #ef4444; // text-red-500
+  font-weight: $font-weight-semibold;
+}
+
+.topViolationRuleId {
+  color: oklch(0.5 0 0); // text-gray-400
+  font-size: $font-size-xs;
+  font-family: monospace;
+}
+
+// Info text
+.infoText {
+  color: oklch(0.75 0 0); // text-gray-300
+}
+
+// Empty state
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-12;
+  text-align: center;
+}
+
+.emptyText {
+  color: white;
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+  margin-bottom: $spacing-2;
+}
+
+.emptyDescription {
+  color: oklch(0.5 0 0); // text-gray-400
+  font-size: $font-size-sm;
 }
