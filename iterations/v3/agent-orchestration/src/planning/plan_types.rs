@@ -913,7 +913,7 @@ mod tests {
                     git_branch: "main".to_string(),
                     recent_changes: vec![],
                     dependencies: std::collections::HashMap::new(),
-                    environment: Environment::Development,
+                    environment: agent_agency_contracts::task_request::Environment::Development,
                 },
                 non_functional_requirements: None,
                 validation_results: None,
@@ -1082,7 +1082,7 @@ mod tests {
                 total_cpu_cores: 4,
                 peak_memory_mb: 2048,
                 total_disk_mb: 10240,
-                network_requirements: NetworkRequirements {
+                network_requirements: agent_agency_contracts::planning::NetworkRequirements {
                     peak_bandwidth_mbps: 100.0,
                     external_services: vec![],
                     security_requirements: vec![],

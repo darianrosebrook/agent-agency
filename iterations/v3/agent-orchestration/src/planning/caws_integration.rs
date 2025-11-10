@@ -653,7 +653,7 @@ mod tests {
             given: "User is logged out".to_string(),
             when: "User submits valid credentials".to_string(),
             then: "User is logged in".to_string(),
-            priority: Some(MoSCoWPriority::Must),
+            priority: Some(agent_agency_contracts::MoSCoWPriority::Must),
         };
         assert!(bridge.validate_acceptance_criterion(&valid_criterion, 0).is_ok());
 

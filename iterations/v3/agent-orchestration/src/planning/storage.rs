@@ -728,40 +728,40 @@ mod tests {
                 id: Uuid::new_v4(),
                 session_id: Uuid::new_v4(),
                 working_spec_id: "test-spec".to_string(),
-                contract_plan: WorkingSpec {
+                contract_plan: agent_agency_contracts::WorkingSpec {
                     version: "1.0".to_string(),
                     id: "test-spec".to_string(),
                     title: "Test Spec".to_string(),
                     description: "Test description".to_string(),
                     goals: vec![],
                     risk_tier: 2,
-                    constraints: WorkingSpecConstraints {
+                    constraints: agent_agency_contracts::WorkingSpecConstraints {
                         max_duration_minutes: None,
                         max_iterations: None,
                         budget_limits: None,
                         scope_restrictions: None,
                     },
                     acceptance_criteria: vec![],
-                    test_plan: TestPlan {
+                    test_plan: agent_agency_contracts::TestPlan {
                         unit_tests: vec![],
                         integration_tests: vec![],
                         e2e_scenarios: vec![],
                         coverage_targets: None,
                     },
-                    rollback_plan: RollbackPlan {
-                        strategy: RollbackStrategy::GitRevert,
+                    rollback_plan: agent_agency_contracts::RollbackPlan {
+                        strategy: agent_agency_contracts::RollbackStrategy::GitRevert,
                         automated_steps: vec![],
                         manual_steps: vec![],
-                        data_impact: DataImpact::None,
+                        data_impact: agent_agency_contracts::DataImpact::None,
                         downtime_required: None,
                         rollback_window_minutes: None,
                     },
-                    context: WorkingSpecContext {
+                    context: agent_agency_contracts::WorkingSpecContext {
                         workspace_root: "/tmp".to_string(),
                         git_branch: "main".to_string(),
                         recent_changes: vec![],
                         dependencies: HashMap::new(),
-                        environment: task_request::Environment::Development,
+                        environment: agent_agency_contracts::task_request::Environment::Development,
                     },
                     non_functional_requirements: None,
                     validation_results: None,
@@ -769,13 +769,13 @@ mod tests {
                     scope: vec![],
                     metadata: None,
                     milestones: vec![],
-                    change_budget: planning_io::ChangeBudget {
+                    change_budget: agent_agency_contracts::planning_io::ChangeBudget {
                         max_files: 10,
                         max_loc: 100,
                         max_migrations: 0,
                         allow_breaking_changes: false,
                         allow_new_dependencies: false,
-                        enforcement_mode: planning_io::BudgetEnforcement::Strict,
+                        enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
                     },
                     file_changes: vec![],
                     coverage_targets: None,
@@ -787,7 +787,7 @@ mod tests {
                 overview: "Test overview".to_string(),
                 state: agent_agency_contracts::planning_io::PlanState::Draft,
                 milestones: vec![],
-                dependency_graph: planning_io::DependencyGraph {
+                dependency_graph: agent_agency_contracts::planning_io::DependencyGraph {
                     nodes: HashMap::new(),
                     edges: vec![],
                     critical_path: vec![],
@@ -795,32 +795,32 @@ mod tests {
                     has_cycles: false,
                     cycles: vec![],
                 },
-                change_budget: planning_io::ChangeBudget {
+                change_budget: agent_agency_contracts::planning_io::ChangeBudget {
                     max_files: 10,
                     max_loc: 100,
                     max_migrations: 0,
                     allow_breaking_changes: false,
                     allow_new_dependencies: false,
-                    enforcement_mode: planning_io::BudgetEnforcement::Strict,
+                    enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
                 },
-                quality_gates: planning_io::QualityGates {
+                quality_gates: agent_agency_contracts::planning_io::QualityGates {
                     coverage_requirements: HashMap::new(),
-                    mutation_requirements: planning_io::MutationRequirements {
+                    mutation_requirements: agent_agency_contracts::planning_io::MutationRequirements {
                         required: false,
                         min_score: 0.0,
                         operators: vec![],
                     },
-                    security_requirements: planning_io::SecurityRequirements {
+                    security_requirements: agent_agency_contracts::planning_io::SecurityRequirements {
                         scan_required: false,
                         max_issues_by_severity: HashMap::new(),
                         required_controls: vec![],
                     },
-                    performance_requirements: planning_io::PerformanceRequirements {
+                    performance_requirements: agent_agency_contracts::planning_io::PerformanceRequirements {
                         max_regressions: 0,
                         required_benchmarks: vec![],
                         slas: vec![],
                     },
-                    documentation_requirements: planning_io::DocumentationRequirements {
+                    documentation_requirements: agent_agency_contracts::planning_io::DocumentationRequirements {
                         api_docs_required: false,
                         code_docs_required: false,
                         architecture_docs_required: false,
@@ -836,12 +836,12 @@ mod tests {
                 },
                 evidence_requirements: vec![],
                 active_waivers: vec![],
-                metadata: planning_io::PlanMetadata {
+                metadata: agent_agency_contracts::planning_io::PlanMetadata {
                     created_at: Utc::now(),
                     updated_at: Utc::now(),
                     approved_at: None,
                     completed_at: None,
-                    created_by: planning_io::PlanCreator::AI {
+                    created_by: agent_agency_contracts::planning_io::PlanCreator::AI {
                         model: "test-model".to_string(),
                         version: "1.0".to_string(),
                     },
@@ -851,7 +851,7 @@ mod tests {
                     generation_time_ms: Some(100),
                     model_used: Some("test-model".to_string()),
                     fallback_used: false,
-                    strategy: types::planning::PlanningStrategy::AIAssisted,
+                    strategy: agent_agency_contracts::types::planning::PlanningStrategy::AIAssisted,
                     confidence: 0.5,
                     estimated_duration_ms: 0,
                     estimated_cost_cents: 0,

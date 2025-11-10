@@ -897,7 +897,7 @@ mod tests {
     #[test]
     fn test_planning_task_result_creation() {
         // Test that PlanningTaskResult can be created
-        let _task_id = Uuid::new_v4();
+        let task_id = Uuid::new_v4();
         let execution_plan = crate::planning::plan_types::ExecutionPlan {
             contract_plan: agent_agency_contracts::planning_io::ExecutionPlan {
                 id: Uuid::new_v4(),
@@ -1107,11 +1107,11 @@ mod tests {
     #[test]
     fn test_planning_status_creation() {
         // Test that PlanningStatus can be created
-        let _task_id = Uuid::new_v4();
-        let _plan_id = Uuid::new_v4();
+        let task_id = Uuid::new_v4();
+        let plan_id = Uuid::new_v4();
         let status = PlanningStatus {
-            task_id: _task_id,
-            plan_id: _plan_id,
+            task_id,
+            plan_id,
             state: agent_agency_contracts::planning_io::PlanState::Draft,
             progress: 0.0,
             quality_verified: false,

@@ -352,27 +352,27 @@ mod tests {
     #[test]
     fn test_simple_execution_order() {
         let mut nodes = HashMap::new();
-        nodes.insert("M1".to_string(), DependencyNode {
+        nodes.insert("M1".to_string(), agent_agency_contracts::planning_io::DependencyNode {
             milestone_id: "M1".to_string(),
-            node_type: DependencyNodeType::Milestone,
+            node_type: agent_agency_contracts::planning_io::DependencyNodeType::Milestone,
             estimated_cost: 1.0,
             estimated_time_ms: 1000,
             resource_requirements: HashMap::new(),
             metadata: HashMap::new(),
         });
-        nodes.insert("M2".to_string(), DependencyNode {
+        nodes.insert("M2".to_string(), agent_agency_contracts::planning_io::DependencyNode {
             milestone_id: "M2".to_string(),
-            node_type: DependencyNodeType::Milestone,
+            node_type: agent_agency_contracts::planning_io::DependencyNodeType::Milestone,
             estimated_cost: 1.0,
             estimated_time_ms: 1000,
             resource_requirements: HashMap::new(),
             metadata: HashMap::new(),
         });
 
-        let edges = vec![DependencyEdge {
+        let edges = vec![agent_agency_contracts::planning_io::DependencyEdge {
             from: "M1".to_string(),
             to: "M2".to_string(),
-            edge_type: DependencyEdgeType::Hard,
+            edge_type: agent_agency_contracts::planning_io::DependencyEdgeType::Hard,
             weight: 1.0,
             metadata: HashMap::new(),
         }];
@@ -397,25 +397,25 @@ mod tests {
     #[test]
     fn test_parallel_execution() {
         let mut nodes = HashMap::new();
-        nodes.insert("M1".to_string(), DependencyNode {
+        nodes.insert("M1".to_string(), agent_agency_contracts::planning_io::DependencyNode {
             milestone_id: "M1".to_string(),
-            node_type: DependencyNodeType::Milestone,
+            node_type: agent_agency_contracts::planning_io::DependencyNodeType::Milestone,
             estimated_cost: 1.0,
             estimated_time_ms: 1000,
             resource_requirements: HashMap::new(),
             metadata: HashMap::new(),
         });
-        nodes.insert("M2".to_string(), DependencyNode {
+        nodes.insert("M2".to_string(), agent_agency_contracts::planning_io::DependencyNode {
             milestone_id: "M2".to_string(),
-            node_type: DependencyNodeType::Milestone,
+            node_type: agent_agency_contracts::planning_io::DependencyNodeType::Milestone,
             estimated_cost: 1.0,
             estimated_time_ms: 1000,
             resource_requirements: HashMap::new(),
             metadata: HashMap::new(),
         });
-        nodes.insert("M3".to_string(), DependencyNode {
+        nodes.insert("M3".to_string(), agent_agency_contracts::planning_io::DependencyNode {
             milestone_id: "M3".to_string(),
-            node_type: DependencyNodeType::Milestone,
+            node_type: agent_agency_contracts::planning_io::DependencyNodeType::Milestone,
             estimated_cost: 1.0,
             estimated_time_ms: 1000,
             resource_requirements: HashMap::new(),
@@ -424,17 +424,17 @@ mod tests {
 
         // M1 and M2 can run in parallel, M3 depends on both
         let edges = vec![
-            DependencyEdge {
+            agent_agency_contracts::planning_io::DependencyEdge {
                 from: "M1".to_string(),
                 to: "M3".to_string(),
-                edge_type: DependencyEdgeType::Hard,
+                edge_type: agent_agency_contracts::planning_io::DependencyEdgeType::Hard,
                 weight: 1.0,
                 metadata: HashMap::new(),
             },
-            DependencyEdge {
+            agent_agency_contracts::planning_io::DependencyEdge {
                 from: "M2".to_string(),
                 to: "M3".to_string(),
-                edge_type: DependencyEdgeType::Hard,
+                edge_type: agent_agency_contracts::planning_io::DependencyEdgeType::Hard,
                 weight: 1.0,
                 metadata: HashMap::new(),
             },
@@ -461,9 +461,9 @@ mod tests {
     fn test_execution_stats() {
         let mut nodes = HashMap::new();
         for i in 1..=5 {
-            nodes.insert(format!("M{}", i), DependencyNode {
+            nodes.insert(format!("M{}", i), agent_agency_contracts::planning_io::DependencyNode {
                 milestone_id: format!("M{}", i),
-                node_type: DependencyNodeType::Milestone,
+                node_type: agent_agency_contracts::planning_io::DependencyNodeType::Milestone,
                 estimated_cost: 1.0,
                 estimated_time_ms: 1000,
                 resource_requirements: HashMap::new(),
@@ -496,19 +496,19 @@ mod tests {
     #[test]
     fn test_cycle_detection() {
         let mut nodes = HashMap::new();
-        nodes.insert("M1".to_string(), DependencyNode {
+        nodes.insert("M1".to_string(), agent_agency_contracts::planning_io::DependencyNode {
             milestone_id: "M1".to_string(),
-            node_type: DependencyNodeType::Milestone,
+            node_type: agent_agency_contracts::planning_io::DependencyNodeType::Milestone,
             estimated_cost: 1.0,
             estimated_time_ms: 1000,
             resource_requirements: HashMap::new(),
             metadata: HashMap::new(),
         });
 
-        let edges = vec![DependencyEdge {
+        let edges = vec![agent_agency_contracts::planning_io::DependencyEdge {
             from: "M1".to_string(),
             to: "M1".to_string(), // Self-cycle
-            edge_type: DependencyEdgeType::Hard,
+            edge_type: agent_agency_contracts::planning_io::DependencyEdgeType::Hard,
             weight: 1.0,
             metadata: HashMap::new(),
         }];

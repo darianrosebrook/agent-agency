@@ -608,7 +608,7 @@ mod tests {
             waiver_id: "test-waiver".to_string(),
             reason: "emergency_hotfix".to_string(),
             waived_gates: vec!["quality_gates".to_string()],
-            expires_at: Utc::now() + Duration::hours(24),
+            expires_at: Utc::now() + chrono::Duration::hours(24),
             approved_by: "emergency-system".to_string(),
         };
 
