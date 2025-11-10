@@ -36,18 +36,19 @@ The model's actual input schema is not being queried. We're guessing the format 
 ## FastViT T8 F16 Model
 
 ### Current Status
-- Skipped in benchmarks (commented out)
-- Requires Image feature support in FFI bridge
+- ✅ **IMPLEMENTED** - Image feature support added to FFI bridge
+- Tests enabled in benchmarks
 
-### Issue
-- Model expects `image` feature as `MLFeatureValue::Image` type
-- FFI bridge only supports `MLFeatureValue::MultiArray` via `agentbridge_dict_provider_set_feature_multiarray`
-- No `agentbridge_dict_provider_set_feature_image` function exists
+### Implementation
+- ✅ Added `agentbridge_dict_provider_set_feature_image` to Swift bridge
+- ✅ Added corresponding FFI declaration in Rust (`model.rs`, `coreml_direct.rs`)
+- ✅ Updated `coreml_direct.rs` to handle `MLFeatureValue::Image` features
+- ✅ Swift bridge converts raw RGB bytes to `CVPixelBuffer` and creates `MLFeatureValue`
+- ✅ Image dimension inference from data length (assumes RGB, 3 bytes per pixel)
 
-### Solution Required
-1. Add `agentbridge_dict_provider_set_feature_image` to Swift bridge
-2. Add corresponding FFI declaration in Rust
-3. Update `coreml_direct.rs` to handle Image features
+### Testing
+- FastViT tests are now enabled in `ane_performance_benchmarks.rs`
+- Model info updated to use `"image"` dtype to trigger Image feature type
 
 ## Ingestors Status
 

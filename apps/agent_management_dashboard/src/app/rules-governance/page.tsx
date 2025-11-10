@@ -109,7 +109,6 @@ export default function RulesGovernancePage() {
     );
   }
 
-  const activeRules = rules.filter((r) => r.is_active);
   const openViolations = violations.filter((v) => v.status === 'open');
   const resolvedViolations = violations.filter((v) => v.status === 'resolved');
 
@@ -160,7 +159,7 @@ export default function RulesGovernancePage() {
             </label>
             <select
               id="ruleType"
-              value={filter.ruleType || ""}
+              value={filter.ruleType ?? ""}
               onChange={(e) => setFilter({ ...filter, ruleType: e.target.value || undefined })}
               className={styles.select}
             >
@@ -194,7 +193,7 @@ export default function RulesGovernancePage() {
             </label>
             <select
               id="violationStatus"
-              value={filter.violationStatus || ""}
+              value={filter.violationStatus ?? ""}
               onChange={(e) => setFilter({ ...filter, violationStatus: e.target.value || undefined })}
               className={styles.select}
             >

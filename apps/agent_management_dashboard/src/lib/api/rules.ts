@@ -285,7 +285,7 @@ export async function getComplianceStats(): Promise<ComplianceStats> {
 
   const violationsBySeverity: Record<string, number> = {};
   violations.forEach((v) => {
-    violationsBySeverity[v.severity] = (violationsBySeverity[v.severity] || 0) + 1;
+    violationsBySeverity[v.severity] = (violationsBySeverity[v.severity] ?? 0) + 1;
   });
 
   const violationsByRule: Record<string, { rule_name: string; count: number }> = {};
@@ -293,7 +293,7 @@ export async function getComplianceStats(): Promise<ComplianceStats> {
     if (!violationsByRule[v.rule_id]) {
       const rule = rules.find((r) => r.id === v.rule_id);
       violationsByRule[v.rule_id] = {
-        rule_name: rule?.name || v.rule_id,
+        rule_name: rule?.name ?? v.rule_id,
         count: 0,
       };
     }

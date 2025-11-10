@@ -8,7 +8,7 @@
  */
 
 import { toast as sonnerToast, type ExternalToast, type Action } from 'sonner';
-import { parseApiError, ErrorCode, type AppError } from '../errors';
+import { parseApiError } from '../errors';
 import type React from 'react';
 
 /**
@@ -25,7 +25,7 @@ interface ToastOptions {
  */
 export function toastSuccess(message: string, options?: ToastOptions) {
   const toastOptions: ExternalToast = {
-    duration: options?.duration || 4000,
+    duration: options?.duration ?? 4000,
     ...(options?.action && { action: options.action }),
     ...(options?.cancel && { cancel: options.cancel }),
   };
@@ -38,7 +38,7 @@ export function toastSuccess(message: string, options?: ToastOptions) {
 export function toastError(error: unknown, options?: ToastOptions) {
   const appError = parseApiError(error);
   const toastOptions: ExternalToast = {
-    duration: options?.duration || 6000,
+    duration: options?.duration ?? 6000,
     ...(options?.action && { action: options.action }),
     ...(options?.cancel && { cancel: options.cancel }),
   };
@@ -50,7 +50,7 @@ export function toastError(error: unknown, options?: ToastOptions) {
  */
 export function toastWarning(message: string, options?: ToastOptions) {
   const toastOptions: ExternalToast = {
-    duration: options?.duration || 5000,
+    duration: options?.duration ?? 5000,
     ...(options?.action && { action: options.action }),
     ...(options?.cancel && { cancel: options.cancel }),
   };
@@ -62,7 +62,7 @@ export function toastWarning(message: string, options?: ToastOptions) {
  */
 export function toastInfo(message: string, options?: ToastOptions) {
   const toastOptions: ExternalToast = {
-    duration: options?.duration || 4000,
+    duration: options?.duration ?? 4000,
     ...(options?.action && { action: options.action }),
     ...(options?.cancel && { cancel: options.cancel }),
   };
@@ -92,7 +92,7 @@ export function toastPromise<T>(
   return sonnerToast.promise(promise, {
     loading: messages.loading,
     success: messages.success,
-    error: messages.error || ((error: unknown) => {
+    error: messages.error ?? ((error: unknown) => {
       const appError = parseApiError(error);
       return appError.getUserMessage();
     }),

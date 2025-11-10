@@ -9,6 +9,7 @@ use std::collections::HashMap;
 
 // Import functions needed for method implementations
 use super::model::{coreml_runtime_available, coreml_unavailable_error};
+// Note: KvStateHandle is defined in this file (types.rs), not in kv_cache.rs
 
 // Import FFI functions needed for implementations
 use super::model::{
@@ -18,6 +19,18 @@ use super::model::{
     agentbridge_dict_provider_set_feature_multiarray,
     agentbridge_dict_provider_destroy,
 };
+
+// FFI declaration for setting state features
+#[cfg(target_os = "macos")]
+extern "C" {
+    fn agentbridge_dict_provider_set_feature_state(
+        provider_ref: u64,
+        feature_name: *const std::ffi::c_char,
+        kv_state_ref: u64,
+        model_ref: u64,
+        out_error: *mut *mut std::ffi::c_char,
+    ) -> i32;
+}
 
 /// Opaque handle to a Core ML model managed by the BridgesFFI framework
 #[derive(Debug, Clone, PartialEq, Eq, Hash, JsonSchema)]
@@ -46,12 +59,19 @@ pub struct MLModelConfiguration {
 
 /// Compute units for Core ML inference
 #[derive(Debug, Clone, Copy, PartialEq, JsonSchema, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub enum MLComputeUnits {
     /// Use CPU only
+    #[serde(rename = "cpuOnly")]
     CpuOnly,
     /// Use CPU and GPU
+    #[serde(rename = "cpuAndGPU")]
     CpuAndGpu,
+    /// Use CPU and Neural Engine (ANE) - explicit ANE acceleration
+    #[serde(rename = "cpuAndNeuralEngine")]
+    CpuAndNeuralEngine,
     /// Use all available compute units (including ANE if available)
+    #[serde(rename = "all")]
     All,
 }
 
@@ -162,6 +182,8 @@ pub enum MLFeatureValue {
     Dictionary(HashMap<String, MLFeatureValue>),
     /// Image data (raw bytes for CoreML image processing)
     Image(Vec<u8>),
+    /// State feature for stateful models (KV cache)
+    State(KvStateHandle),
 }
 
 /// Provider of feature values for Core ML model input
@@ -204,7 +226,13 @@ impl MLDictionaryFeatureProvider {
     }
 
     /// Create a dictionary feature provider from a map of feature values
-    pub fn from_dictionary(dict: &std::collections::HashMap<String, MLFeatureValue>) -> std::result::Result<Self, String> {
+    /// 
+    /// For state features, a model reference is required. Pass `Some(model_ref)` if the dictionary
+    /// contains State features, otherwise `None` is sufficient.
+    pub fn from_dictionary(
+        dict: &std::collections::HashMap<String, MLFeatureValue>,
+        model_ref: Option<u64>,
+    ) -> std::result::Result<Self, String> {
         if !coreml_runtime_available() {
             let err = coreml_unavailable_error();
             return Err(format!("{}", err));
@@ -307,6 +335,44 @@ impl MLDictionaryFeatureProvider {
                             }
                         } else {
                             format!("Unknown error setting feature '{}'", name)
+                        };
+
+                        // Clean up the provider we created
+                        unsafe { agentbridge_dict_provider_destroy(provider_ref) };
+                        return Err(error_msg);
+                    }
+                }
+                MLFeatureValue::State(kv_state) => {
+                    // State features require a model reference
+                    let model_ref_val = model_ref.ok_or_else(|| {
+                        format!("Model reference required for state feature '{}'", name)
+                    })?;
+
+                    let name_cstr = std::ffi::CString::new(name.clone())
+                        .map_err(|e| format!("Invalid feature name '{}': {}", name, e))?;
+
+                    let mut feature_error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+
+                    let set_result = unsafe {
+                        agentbridge_dict_provider_set_feature_state(
+                            provider_ref,
+                            name_cstr.as_ptr(),
+                            kv_state.handle(),
+                            model_ref_val,
+                            &mut feature_error_ptr,
+                        )
+                    };
+
+                    if set_result != 0 {
+                        let error_msg = if !feature_error_ptr.is_null() {
+                            unsafe {
+                                let cstr = std::ffi::CStr::from_ptr(feature_error_ptr);
+                                let msg = cstr.to_string_lossy().to_string();
+                                agentbridge_free_string(feature_error_ptr);
+                                msg
+                            }
+                        } else {
+                            format!("Unknown error setting state feature '{}'", name)
                         };
 
                         // Clean up the provider we created

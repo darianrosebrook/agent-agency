@@ -41,6 +41,16 @@ extern "C" {
         out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
+    pub fn agentbridge_dict_provider_set_feature_image(
+        provider_ref: u64,
+        name: *const std::ffi::c_char,
+        image_data: *const u8,
+        image_data_length: i32,
+        width: i32,
+        height: i32,
+        out_error: *mut *mut std::ffi::c_char,
+    ) -> i32;
+
     pub fn agentbridge_dict_provider_set_feature_float32(
         provider_ref: u64,
         feature_name: *const std::ffi::c_char,

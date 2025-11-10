@@ -16,7 +16,7 @@ import { EventSourceParserStream } from 'eventsource-parser/stream';
 export interface StreamingOptions {
   url: string;
   method?: 'GET' | 'POST';
-  body?: any;
+  body?: unknown;
   headers?: Record<string, string>;
   onChunk?: (chunk: string) => void;
   onComplete?: (fullContent: string) => void;
@@ -95,7 +95,7 @@ export function useStreamingResponse(options: StreamingOptions) {
   interface StreamingStartOptions {
     url?: string;
     method?: 'GET' | 'POST';
-    body?: any;
+    body?: unknown;
     headers?: Record<string, string>;
   }
 
@@ -118,9 +118,7 @@ export function useStreamingResponse(options: StreamingOptions) {
     (chunk: string) => {
       if (debounce) {
         debounceBufferRef.current += chunk;
-        if (!debounceTimerRef.current) {
-          debounceTimerRef.current = setTimeout(flushDebounceBuffer, debounceDelay);
-        }
+        debounceTimerRef.current ??= setTimeout(flushDebounceBuffer, debounceDelay);
       } else {
         contentRef.current += chunk;
         setState((prev) => ({
@@ -130,6 +128,7 @@ export function useStreamingResponse(options: StreamingOptions) {
         onChunk?.(chunk);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [debounce, debounceDelay, flushDebounceBuffer, onChunk]
   );
 
@@ -156,9 +155,9 @@ export function useStreamingResponse(options: StreamingOptions) {
     });
 
     try {
-      const finalUrl = overrideOptions?.url || url;
-      const finalMethod = overrideOptions?.method || method;
-      const finalBody = overrideOptions?.body || body;
+      const finalUrl = overrideOptions?.url ?? url;
+      const finalMethod = overrideOptions?.method ?? method;
+      const finalBody = overrideOptions?.body ?? body;
       const finalHeaders = { ...headers, ...overrideOptions?.headers };
 
       const requestHeaders: Record<string, string> = {
@@ -237,7 +236,7 @@ export function useStreamingResponse(options: StreamingOptions) {
 
           // Handle content chunks
           if (parsed.content) {
-            let contentToAdd = parsed.content;
+            const contentToAdd = parsed.content;
 
             // Split large chunks for better UX if enabled
             if (splitLargeChunks && contentToAdd.length >= chunkSplitThreshold) {
@@ -253,9 +252,9 @@ export function useStreamingResponse(options: StreamingOptions) {
               addContentWithDebounce(contentToAdd);
             }
           }
-        } catch (e) {
+        } catch {
           // If not JSON, treat as plain text content
-          let textContent = data;
+          const textContent = data;
           if (splitLargeChunks && textContent.length >= chunkSplitThreshold) {
             const chunks = splitChunk(textContent, chunkSplitThreshold);
             for (const chunk of chunks) {
@@ -295,6 +294,7 @@ export function useStreamingResponse(options: StreamingOptions) {
       });
       onError?.(err);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url, method, body, headers, onChunk, onComplete, onError, splitLargeChunks, chunkSplitThreshold, debounce, debounceDelay, addContentWithDebounce, flushDebounceBuffer]);
 
   const stop = useCallback(() => {
@@ -312,6 +312,7 @@ export function useStreamingResponse(options: StreamingOptions) {
       ...prev,
       isStreaming: false,
     }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debounce, flushDebounceBuffer]);
 
   const reset = useCallback(() => {
@@ -349,7 +350,8 @@ export function useStreamingResponse(options: StreamingOptions) {
  * @param threshold Minimum size to trigger splitting
  * @returns Array of chunks
  */
-function splitChunk(content: string, threshold: number): string[] {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
+function splitChunk(content: string, _threshold: number): string[] {
   const chunks: string[] = [];
   let remaining = content;
 

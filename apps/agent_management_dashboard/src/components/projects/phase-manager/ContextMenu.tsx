@@ -11,7 +11,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "../../primitives/dropdown-menu";
-import { cn } from "../../primitives/utils";
 import styles from "./ContextMenu.module.scss";
 
 interface ContextMenuProps {

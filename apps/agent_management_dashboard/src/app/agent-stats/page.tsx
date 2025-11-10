@@ -134,7 +134,6 @@ export default function AgentStatsPage() {
     );
   }
 
-  const selectedAgent = selectedAgentId ? agents.find((a) => a.id === selectedAgentId) : null;
   const filteredContributions = selectedAgentId
     ? contributions.filter((c) => c.agent_id === selectedAgentId)
     : contributions;
@@ -179,7 +178,7 @@ export default function AgentStatsPage() {
             </label>
             <select
               id="agentFilter"
-              value={selectedAgentId || ""}
+              value={selectedAgentId ?? ""}
               onChange={(e) => setSelectedAgentId(e.target.value || null)}
               className={styles.select}
             >
@@ -319,7 +318,7 @@ export default function AgentStatsPage() {
                   <div key={metric.agent_id} className={styles.efficiencyItem}>
                     <div className={styles.efficiencyHeader}>
                       <span className={styles.agentName}>
-                        {agent?.name || metric.agent_id}
+                        {agent?.name ?? metric.agent_id}
                       </span>
                     </div>
                     <div className={styles.efficiencyMetrics}>

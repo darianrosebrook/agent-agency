@@ -7,6 +7,13 @@
   flex-direction: column;
   height: 100vh; // h-screen
   overflow: hidden;
+  width: 320px; // w-80 = 320px
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); // Smooth width transition
+  will-change: width; // Optimize for GPU acceleration
+}
+
+.sidebarCollapsed {
+  width: 64px; // w-16 = 64px
 }
 
 .header {
@@ -62,6 +69,13 @@
   display: inline;
   color: $color-white; // text-white
   font-family: $font-family-sans; // Inter font family
+  opacity: 1;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  .sidebarCollapsed & {
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
 .collapseButton {
@@ -106,9 +120,16 @@
   padding-right: 2rem; // pr-8
   padding-block: $spacing-2; // py-2
   color: $color-gray-200; // text-gray-200
+  opacity: 1;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
   &::placeholder {
     color: $color-gray-500; // placeholder:text-gray-500
+  }
+  
+  .sidebarCollapsed & {
+    opacity: 0;
+    pointer-events: none;
   }
 }
 
@@ -207,6 +228,13 @@
 
 .navLinkText {
   font-size: $font-size-sm; // text-sm
+  opacity: 1;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  .sidebarCollapsed & {
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
 .divider {
@@ -261,6 +289,13 @@
   font-size: $font-size-sm; // text-sm
   flex: 1;
   text-align: left;
+  opacity: 1;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  .sidebarCollapsed & {
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
 .folderChevron {
@@ -289,5 +324,12 @@
 
 .newProjectText {
   font-size: $font-size-sm; // text-sm
+  opacity: 1;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  .sidebarCollapsed & {
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 

@@ -85,7 +85,7 @@ export class AppError extends Error {
     message?: string,
     public details?: Record<string, unknown>
   ) {
-    super(message || ErrorMessages[code]);
+    super(message ?? ErrorMessages[code]);
     this.name = 'AppError';
   }
 
@@ -93,7 +93,7 @@ export class AppError extends Error {
    * Get user-friendly error message
    */
   getUserMessage(): string {
-    return this.message || ErrorMessages[this.code];
+    return this.message ?? ErrorMessages[this.code];
   }
 
   /**

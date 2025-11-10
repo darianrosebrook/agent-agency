@@ -8,8 +8,6 @@
  */
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/primitives/button";
-import { Input } from "@/components/primitives/input";
 import { Label } from "@/components/primitives/label";
 import {
   Card,
@@ -25,10 +23,11 @@ import {
 } from "@/lib/api/settings";
 import styles from "./GeneralSettingsTab.module.scss";
 
+type SettingValue = string | number | boolean | null | undefined;
+
 export function GeneralSettingsTab() {
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [settings, setSettings] = useState<Record<string, any>>({});
+  const [settings, setSettings] = useState<Record<string, SettingValue>>({});
 
   useEffect(() => {
     loadSettings();
@@ -38,12 +37,12 @@ export function GeneralSettingsTab() {
     try {
       setLoading(true);
       const userSettings = await getUserSettings();
-      const settingsMap: Record<string, any> = {};
+      const settingsMap: Record<string, SettingValue> = {};
       userSettings.forEach((setting) => {
         settingsMap[setting.setting_key] = setting.setting_value;
       });
       setSettings(settingsMap);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to load settings:", error);
     } finally {
       setLoading(false);
@@ -52,11 +51,10 @@ export function GeneralSettingsTab() {
 
   const saveSetting = async (
     key: string,
-    value: any,
+    value: SettingValue,
     type: string = "string"
   ) => {
     try {
-      setSaving(true);
       const currentValue = settings[key];
 
       if (currentValue === undefined) {
@@ -67,11 +65,9 @@ export function GeneralSettingsTab() {
 
       setSettings((prev) => ({ ...prev, [key]: value }));
       alert("Settings saved successfully");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to save settings:", error);
       alert("Failed to save settings");
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -93,7 +89,7 @@ export function GeneralSettingsTab() {
             <Label htmlFor="language">Language</Label>
             <select
               id="language"
-              value={settings.language || "en"}
+              value={String(settings.language ?? "en")}
               onChange={(e) =>
                 saveSetting("language", e.target.value, "string")
               }
@@ -110,7 +106,7 @@ export function GeneralSettingsTab() {
             <Label htmlFor="timezone">Timezone</Label>
             <select
               id="timezone"
-              value={settings.timezone || "UTC"}
+              value={String(settings.timezone ?? "UTC")}
               onChange={(e) =>
                 saveSetting("timezone", e.target.value, "string")
               }
@@ -128,7 +124,7 @@ export function GeneralSettingsTab() {
             <Label htmlFor="theme">Theme</Label>
             <select
               id="theme"
-              value={settings.theme || "dark"}
+              value={String(settings.theme ?? "dark")}
               onChange={(e) => saveSetting("theme", e.target.value, "string")}
               className={styles.select}
             >
@@ -142,7 +138,7 @@ export function GeneralSettingsTab() {
             <Label htmlFor="dateFormat">Date Format</Label>
             <select
               id="dateFormat"
-              value={settings.date_format || "YYYY-MM-DD"}
+              value={String(settings.date_format ?? "YYYY-MM-DD")}
               onChange={(e) =>
                 saveSetting("date_format", e.target.value, "string")
               }

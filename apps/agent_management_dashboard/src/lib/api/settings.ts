@@ -9,10 +9,12 @@ const API_BASE = '/api/v1';
 // Types
 // ============================================================================
 
+export type SettingValue = string | number | boolean | null | undefined;
+
 export interface UserSetting {
   user_id: string;
   setting_key: string;
-  setting_value: any;
+  setting_value: SettingValue;
   setting_type: string;
   created_at: string;
   updated_at: string;
@@ -20,7 +22,7 @@ export interface UserSetting {
 
 export interface AppSetting {
   setting_key: string;
-  setting_value: any;
+  setting_value: SettingValue;
   setting_type: string;
   description?: string;
   is_public: boolean;
@@ -34,8 +36,8 @@ export interface Integration {
   integration_type: string;
   provider: string;
   name: string;
-  config: Record<string, any>;
-  credentials: Record<string, any>;
+  config: Record<string, unknown>;
+  credentials: Record<string, unknown>;
   is_active: boolean;
   is_enabled: boolean;
   created_at: string;
@@ -88,7 +90,7 @@ export async function getUserSetting(key: string): Promise<UserSetting> {
 
 export async function createUserSetting(
   key: string,
-  value: any,
+  value: SettingValue,
   type: string
 ): Promise<UserSetting> {
   return apiPost<UserSetting>(`${API_BASE}/settings/user`, {
@@ -100,7 +102,7 @@ export async function createUserSetting(
 
 export async function updateUserSetting(
   key: string,
-  value?: any,
+  value?: SettingValue,
   type?: string
 ): Promise<UserSetting> {
   return apiPatch<UserSetting>(`${API_BASE}/settings/user/${encodeURIComponent(key)}`, {
@@ -131,7 +133,7 @@ export async function getAppSetting(key: string): Promise<AppSetting> {
 
 export async function createAppSetting(
   key: string,
-  value: any,
+  value: SettingValue,
   type: string,
   description?: string,
   isPublic: boolean = false
@@ -147,7 +149,7 @@ export async function createAppSetting(
 
 export async function updateAppSetting(
   key: string,
-  value?: any,
+  value?: SettingValue,
   type?: string,
   description?: string,
   isPublic?: boolean
@@ -184,8 +186,8 @@ export async function createIntegration(
   name: string,
   integrationType: string,
   provider: string,
-  config: Record<string, any>,
-  credentials: Record<string, any>,
+  config: Record<string, unknown>,
+  credentials: Record<string, unknown>,
   isActive: boolean = true
 ): Promise<Integration> {
   return apiPost<Integration>(`${API_BASE}/settings/integrations`, {
@@ -203,8 +205,8 @@ export async function updateIntegration(
   id: string,
   updates: {
     name?: string;
-    configuration?: Record<string, any>;
-    credentials?: Record<string, any>;
+    configuration?: Record<string, unknown>;
+    credentials?: Record<string, unknown>;
     is_active?: boolean;
     is_enabled?: boolean;
   }
@@ -276,8 +278,8 @@ export async function deleteApiKey(id: string): Promise<void> {
 export async function get2FA(): Promise<TwoFactorAuth | null> {
   try {
     return await apiGet<TwoFactorAuth>(`${API_BASE}/settings/2fa`);
-  } catch (error: any) {
-    if (error.status === 404) {
+  } catch (error: unknown) {
+    if (error instanceof Error && 'status' in error && (error as { status: number }).status === 404) {
       return null;
     }
     throw error;

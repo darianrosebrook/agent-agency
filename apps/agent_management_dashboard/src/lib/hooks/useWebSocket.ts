@@ -21,7 +21,7 @@ export interface WebSocketOptions {
   reconnectDelayMax?: number;
   randomizationFactor?: number; // Randomization factor for reconnection delay (0-1)
   transport?: Transport; // Transport preference: 'websocket', 'polling', or 'auto' (default)
-  onMessage?: (data: any) => void;
+  onMessage?: (data: unknown) => void;
   onError?: (error: Event) => void;
   onOpen?: () => void;
   onClose?: () => void;
@@ -116,7 +116,7 @@ export function useWebSocket(options: WebSocketOptions) {
         try {
           const data = JSON.parse(event.data);
           onMessage?.(data);
-        } catch (e) {
+        } catch {
           // If not JSON, pass raw data
           onMessage?.(event.data);
         }
@@ -139,7 +139,8 @@ export function useWebSocket(options: WebSocketOptions) {
         }
       };
 
-      ws.onclose = (event) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
+      ws.onclose = (_event) => {
         setState((prev) => ({
           ...prev,
           connected: false,
@@ -208,10 +209,13 @@ export function useWebSocket(options: WebSocketOptions) {
     token,
     reconnectDelay,
     reconnectDelayMax,
+    randomizationFactor,
+    preferredTransport,
     onMessage,
     onError,
     onOpen,
     onClose,
+    onTransportChange,
   ]);
 
   const disconnect = useCallback(() => {
@@ -226,7 +230,7 @@ export function useWebSocket(options: WebSocketOptions) {
     }
   }, []);
 
-  const send = useCallback((data: any) => {
+  const send = useCallback((data: unknown) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       const message = typeof data === "string" ? data : JSON.stringify(data);
       wsRef.current.send(message);

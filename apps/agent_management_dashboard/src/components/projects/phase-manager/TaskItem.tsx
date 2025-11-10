@@ -12,7 +12,6 @@ import { SubtaskItem } from "./SubtaskItem";
 import { ContextMenu } from "./ContextMenu";
 import { calculateTaskProgress } from "./utils";
 import type { Task } from "./types";
-import { cn } from "../../primitives/utils";
 import styles from "./TaskItem.module.scss";
 
 interface TaskItemProps {
@@ -32,7 +31,7 @@ interface TaskItemProps {
 
 export function TaskItem({
   task,
-  phaseId: _phaseId, // eslint-disable-line @typescript-eslint/no-unused-vars
+  phaseId: _phaseId, // eslint-disable-line no-unused-vars
   onUpdateTitle,
   onUpdateDescription,
   onAddSubtask,

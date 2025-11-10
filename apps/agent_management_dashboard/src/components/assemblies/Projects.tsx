@@ -32,7 +32,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../primitives/select";
-import { cn } from "../primitives/utils";
 import styles from "./Projects.module.scss";
 
 type SortField = "name" | "createdAt" | "lastAccessed";

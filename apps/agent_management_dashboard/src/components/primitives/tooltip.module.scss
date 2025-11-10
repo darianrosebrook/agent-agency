@@ -10,12 +10,18 @@
   background-color: var(--primary);
   color: var(--primary-foreground);
   text-wrap: balance;
-  animation: fade-in $duration-normal $ease-out, zoom-in-95 $duration-normal $ease-out;
+
+  // Use animations like other Radix UI components (Popover, Dialog, etc.)
+  // Radix UI automatically waits for animations to complete before unmounting
+  &[data-state='open'] {
+    animation: fade-in $duration-normal $ease-out, zoom-in-95 $duration-normal $ease-out;
+  }
 
   &[data-state='closed'] {
     animation: fade-out $duration-normal $ease-out, zoom-out-95 $duration-normal $ease-out;
   }
 
+  // Side-specific slide animations
   &[data-side='bottom'] {
     animation: slide-in-from-top-2 $duration-normal $ease-out;
   }

@@ -13,7 +13,6 @@ import React from "react";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "../primitives/button";
 import { parseApiError, isRetryableError } from "../../lib/errors";
-import type { AppError } from "../../lib/errors";
 import { cn } from "../primitives/utils";
 import styles from "./ChatMessageError.module.scss";
 

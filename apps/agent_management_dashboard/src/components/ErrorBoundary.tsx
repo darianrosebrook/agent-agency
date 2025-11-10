@@ -13,7 +13,6 @@ import React, { Component, type ReactNode } from "react";
 import { AlertCircle, RefreshCw, Home } from "lucide-react";
 import { Button } from "./primitives/button";
 import { ErrorDisplay } from "./ErrorDisplay";
-import { cn } from "./primitives/utils";
 import styles from "./ErrorBoundary.module.scss";
 
 interface Props {

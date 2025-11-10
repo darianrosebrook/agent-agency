@@ -35,7 +35,7 @@ pub use crate::ane::compat::registry::*;
 pub use crate::ane::compat::coreml_module as coreml;
 
 // Explicitly re-export key functions and types from coreml_module
-pub use crate::ane::compat::coreml_module::{run_inference, load_model, compile_model, is_ane_available, detect_coreml_capabilities, query_model_inputs, query_model_outputs, ModelIOSpec};
+pub use crate::ane::compat::coreml_module::{run_inference, load_model, load_model_with_config, compile_model, is_ane_available, detect_coreml_capabilities, query_model_inputs, query_model_outputs, ModelIOSpec, ComputeUnits};
 
 // All implementations moved to appropriate modules
 // This file now serves as a clean re-export facade

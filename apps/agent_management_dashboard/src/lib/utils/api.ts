@@ -7,7 +7,7 @@
  * @author @darianrosebrook
  */
 
-import { parseApiError, AppError, isRetryableError } from '../errors/types';
+import { parseApiError, AppError } from '../errors/types';
 import { retryWithBackoff, RetryOptions } from './retry';
 
 /**
@@ -105,7 +105,7 @@ export async function apiFetch<T = unknown>(
 
     // Parse successful response
     const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
+    if (contentType?.includes('application/json')) {
       return await response.json() as T;
     }
     

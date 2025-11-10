@@ -12,3 +12,209 @@
   overflow: auto;
 }
 
+// Utility classes for Container-16-2951
+.tasksTabAddButton {
+  transition: background-color $transition-normal;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #1a1a1a; // hover:bg-[#1a1a1a]
+  }
+}
+
+// Import utility classes from OverviewTab.module.scss pattern
+.relative {
+  position: relative;
+}
+
+.shrink0 {
+  flex-shrink: 0;
+}
+
+.sizeIcon {
+  width: 15.994px;
+  height: 15.994px;
+}
+
+.block {
+  display: block;
+}
+
+.sizeFull {
+  width: 100%;
+  height: 100%;
+}
+
+.rounded8 {
+  border-radius: 8px;
+}
+
+.rounded10 {
+  border-radius: 10px;
+}
+
+.bgClipPadding {
+  background-clip: padding-box;
+}
+
+.border0 {
+  border-width: 0;
+}
+
+.borderTransparent {
+  border-color: transparent;
+}
+
+.borderSolid {
+  border-style: solid;
+}
+
+.boxBorder {
+  box-sizing: border-box;
+}
+
+.contentStretch {
+  align-content: stretch;
+}
+
+.flex {
+  display: flex;
+}
+
+.gapSmall {
+  gap: 7.997px;
+}
+
+.itemsCenter {
+  align-items: center;
+}
+
+.justifyCenter {
+  justify-content: center;
+}
+
+.justifyBetween {
+  justify-content: space-between;
+}
+
+.itemsStart {
+  align-items: flex-start;
+}
+
+.pl0 {
+  padding-left: 0;
+}
+
+.prTiny {
+  padding-right: 0.007px;
+}
+
+.pr0 {
+  padding-right: 0;
+}
+
+.py0 {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.absolute {
+  position: absolute;
+}
+
+.fontNormal {
+  font-weight: 400;
+}
+
+.leading24 {
+  line-height: 24px;
+}
+
+.leading20 {
+  line-height: 20px;
+}
+
+.left0 {
+  left: 0;
+}
+
+.notItalic {
+  font-style: normal;
+}
+
+.text16 {
+  font-size: 16px;
+}
+
+.text14 {
+  font-size: 14px;
+}
+
+.textNowrap {
+  white-space: nowrap;
+}
+
+.textWhite {
+  color: $color-white;
+}
+
+.trackingNeg3125 {
+  letter-spacing: -0.3125px;
+}
+
+.trackingNeg1504 {
+  letter-spacing: -0.1504px;
+}
+
+.whitespacePre {
+  white-space: pre;
+}
+
+.bgNeutral800 {
+  background-color: $color-neutral-800;
+}
+
+.inset0 {
+  inset: 0;
+}
+
+.pointerEventsNone {
+  pointer-events: none;
+}
+
+.wFull {
+  width: 100%;
+}
+
+.overflowClip {
+  overflow: clip;
+}
+
+.roundedInherit {
+  border-radius: inherit;
+}
+
+.flexCol {
+  flex-direction: column;
+}
+
+.pTiny {
+  padding: 1.818px;
+}
+
+.hFull {
+  height: 100%;
+}
+
+.minH0 {
+  min-height: 0;
+}
+
+.overflowAuto {
+  overflow: auto;
+}
+
+.flex1 {
+  flex: 1;
+}
+

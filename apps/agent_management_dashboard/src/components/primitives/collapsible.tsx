@@ -3,8 +3,6 @@
 import * as React from "react";
 import * as CollapsiblePrimitive from "@radix-ui/react-collapsible";
 
-import styles from "./collapsible.module.scss";
-
 function Collapsible({
   ...props
 }: React.ComponentProps<typeof CollapsiblePrimitive.Root>) {

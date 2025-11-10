@@ -250,7 +250,8 @@ pub mod test_data {
         let mut features = HashMap::new();
         features.insert("input".to_string(), super::super::types::MLFeatureValue::MultiArray(array));
 
-        Ok(MLDictionaryFeatureProvider::from_dictionary(&features)?)
+        // Test provider doesn't use state features - pass None
+        Ok(MLDictionaryFeatureProvider::from_dictionary(&features, None)?)
     }
 }
 

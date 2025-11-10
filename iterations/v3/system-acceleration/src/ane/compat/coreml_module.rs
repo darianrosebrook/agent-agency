@@ -155,6 +155,11 @@ pub fn compile_model(source_path: &Path) -> Result<std::path::PathBuf> {
 /// Load a compiled Core ML model and return an opaque reference
 /// The raw handle is stored in a thread-local registry for safety
 pub fn load_model(path: &str) -> Result<ModelRef> {
+    load_model_with_config(path, None)
+}
+
+/// Load a compiled Core ML model with specific compute unit configuration
+pub fn load_model_with_config(path: &str, compute_units: Option<ComputeUnits>) -> Result<ModelRef> {
     if !coreml_runtime_available() {
         return Err(coreml_unavailable_error());
     }
@@ -168,42 +173,26 @@ pub fn load_model(path: &str) -> Result<ModelRef> {
         let mut model_ref: u64 = 0;
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
-        // TODO: Pass model configuration to agentbridge_model_create
-        //       Currently passes null config; should create and pass proper model configuration structure.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Define model configuration structure
-        // [ ] Create configuration from model parameters
-        // [ ] Pass configuration to agentbridge_model_create
-        // [ ] Handle configuration errors
-        // [ ] Support various configuration options
-        // [ ] Add unit tests for configuration
-        // [ ] Add integration tests with real models
-        // [ ] Verify configuration handling
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Model configuration is created correctly
-        // - Configuration is passed to model creation
-        // - Configuration errors are handled gracefully
-        // - Various configuration options are supported
-        //
-        // DEPENDENCIES:
-        // - Model configuration structure (Required)
-        // - Configuration creation utilities (Required)
-        // - agentbridge API (Required)
-        //
-        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (model configuration feature)
-        // - Change Budget: ~60 LOC
-        // - Reviewer Requirements: Core ML and model configuration expertise
+        // Create model configuration with specified compute units
+        let config = MLModelConfiguration {
+            compute_units: compute_units.map(|cu| match cu {
+                ComputeUnits::CpuOnly => MLComputeUnits::CpuOnly,
+                ComputeUnits::CpuAndGpu => MLComputeUnits::CpuAndGpu,
+                ComputeUnits::CpuAndNeuralEngine => MLComputeUnits::CpuAndNeuralEngine,
+                ComputeUnits::All => MLComputeUnits::All,
+            }).unwrap_or(MLComputeUnits::CpuAndNeuralEngine),
+            allow_low_precision_accumulation_on_gpu: true,
+        };
+
+        let config_json = serde_json::to_string(&config)
+            .map_err(|e| ANEError::Internal(format!("Failed to serialize config: {}", e)))?;
+        let config_json_cstr = std::ffi::CString::new(config_json)
+            .map_err(|e| ANEError::InvalidInput(format!("Invalid config JSON: {}", e)))?;
+
         let result = unsafe {
             agentbridge_model_create(
                 model_path_cstr.as_ptr(),
-                std::ptr::null(), // Temporary: null config until configuration structure is implemented
+                config_json_cstr.as_ptr(),
                 &mut model_ref,
                 &mut error_ptr,
             )
@@ -248,6 +237,7 @@ pub struct InferenceOptions {
 pub enum ComputeUnits {
     CpuOnly,
     CpuAndGpu,
+    CpuAndNeuralEngine,
     All,
 }
 
@@ -419,7 +409,9 @@ pub fn run_inference(
         input_features.insert(input_name.to_string(), MLFeatureValue::MultiArray(input_array));
 
         // Create input provider
-        let input_provider = MLDictionaryFeatureProvider::from_dictionary(&input_features)
+        // Get model handle for state features if needed
+        let model_handle = registry::with_model_handle(model_ref.clone(), |handle| handle.as_ptr() as u64);
+        let input_provider = MLDictionaryFeatureProvider::from_dictionary(&input_features, model_handle)
             .map_err(|e| ANEError::Internal(format!("Failed to create input provider: {}", e)))?;
 
         // Run inference using scoped handle access
@@ -635,6 +627,34 @@ pub fn query_model_inputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
             .as_array()
             .ok_or_else(|| ANEError::Internal("inputDescriptions not found or not an array".to_string()))?;
 
+        // Check if this is a stateful model (Mistral, etc.)
+        // State features like keyCache may not appear in inputDescriptions but are still required
+        // Check multiple possible metadata locations
+        let metadata = info_json["modelDescription"]["metadata"].as_object();
+        let model_name = metadata
+            .and_then(|m| m.get("name"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_lowercase();
+        let model_desc = metadata
+            .and_then(|m| m.get("description"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_lowercase();
+        
+        // Also check the model path/identifier if available
+        let model_identifier = info_json["modelDescription"]["metadata"]["identifier"]
+            .as_str()
+            .unwrap_or("")
+            .to_lowercase();
+        
+        let is_stateful_model = model_name.contains("mistral") 
+            || model_name.contains("stateful")
+            || model_desc.contains("mistral")
+            || model_desc.contains("stateful")
+            || model_identifier.contains("mistral")
+            || model_identifier.contains("stateful");
+
         let mut input_specs = Vec::new();
 
         for input_desc in input_descriptions {
@@ -648,8 +668,16 @@ pub fn query_model_inputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
                 .unwrap_or("unknown")
                 .to_string();
 
+            // Check if this is a state feature (MLState)
+            let is_state_feature = feature_type.to_lowercase().contains("state") 
+                || name.to_lowercase().contains("keycache")
+                || name.to_lowercase().contains("valuecache");
+
             // Determine data type and shape
-            let (dtype, shape, batch_capable) = if let Some(shape_array) = input_desc["shape"].as_array() {
+            let (dtype, shape, batch_capable) = if is_state_feature {
+                // State feature - use "state" as dtype
+                ("state".to_string(), vec![], false)
+            } else if let Some(shape_array) = input_desc["shape"].as_array() {
                 // MultiArray type
                 let shape: Vec<i32> = shape_array
                     .iter()
@@ -697,6 +725,35 @@ pub fn query_model_inputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
                 dtype,
                 shape,
                 batch_capable,
+            });
+        }
+
+        // For stateful models (like Mistral), add keyCache state feature if not already present
+        // Note: Core ML state features don't appear in inputDescriptions but are still required
+        // Heuristic: If we have inputIds and causalMask but no keyCache, this is likely a Mistral model
+        // that requires keyCache as a state feature
+        let has_input_ids = input_specs.iter().any(|spec| spec.name.to_lowercase() == "inputids");
+        let has_causal_mask = input_specs.iter().any(|spec| spec.name.to_lowercase() == "causalmask");
+        let has_keycache = input_specs.iter().any(|spec| spec.name.to_lowercase().contains("keycache"));
+        
+        // Mistral models typically have inputIds and causalMask but keyCache is required as state
+        // Always add keyCache if we detect this pattern (safe heuristic for Mistral models)
+        if has_input_ids && has_causal_mask && !has_keycache {
+            input_specs.push(ModelIOSpec {
+                name: "keyCache".to_string(),
+                dtype: "state".to_string(),
+                shape: vec![],
+                batch_capable: false,
+            });
+        }
+        
+        // Also check metadata-based detection for other stateful models
+        if is_stateful_model && !has_keycache {
+            input_specs.push(ModelIOSpec {
+                name: "keyCache".to_string(),
+                dtype: "state".to_string(),
+                shape: vec![],
+                batch_capable: false,
             });
         }
 

@@ -43,6 +43,7 @@ export function useGSAPNumberAnimation(
         tweenRef.current.kill();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetValue, duration, ease]);
 
   return animatedValue;

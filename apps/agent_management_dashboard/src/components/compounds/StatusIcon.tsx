@@ -11,7 +11,7 @@ interface StatusIconProps {
 }
 
 export function StatusIcon({ type, className }: StatusIconProps) {
-  const iconClassName = className || styles.statusIcon;
+  const iconClassName = className ?? styles.statusIcon;
   if (type === 'dashed-circle') {
     return (
       <svg className={iconClassName} viewBox="0 0 16 16" fill="none">

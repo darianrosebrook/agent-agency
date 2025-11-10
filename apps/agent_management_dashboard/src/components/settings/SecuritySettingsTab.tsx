@@ -26,9 +26,10 @@ import {
   changePassword,
 } from "@/lib/api/settings";
 import styles from "./SecuritySettingsTab.module.scss";
+import type { TwoFactorAuth } from "@/lib/api/settings";
 
 export function SecuritySettingsTab() {
-  const [twoFA, setTwoFA] = useState<any>(null);
+  const [twoFA, setTwoFA] = useState<TwoFactorAuth | null>(null);
   const [loading, setLoading] = useState(true);
   const [setupMode, setSetupMode] = useState(false);
   const [qrUrl, setQrUrl] = useState("");

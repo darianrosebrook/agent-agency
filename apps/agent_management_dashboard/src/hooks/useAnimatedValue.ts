@@ -30,6 +30,7 @@ export function useAnimatedValue(
     setAnimatedValue(targetValue);
     animatedValueRef.current = targetValue;
     startValueRef.current = targetValue;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Animate when targetValue changes
@@ -52,9 +53,7 @@ export function useAnimatedValue(
     }
 
     const animate = (timestamp: number) => {
-      if (startTimeRef.current === null) {
-        startTimeRef.current = timestamp;
-      }
+      startTimeRef.current ??= timestamp;
 
       const elapsed = timestamp - startTimeRef.current;
       const progress = Math.min(elapsed / duration, 1);

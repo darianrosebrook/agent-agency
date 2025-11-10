@@ -41,9 +41,31 @@ function TooltipContent({
   children,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Content>) {
+  const contentRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const content = contentRef.current;
+    if (!content) return;
+
+    // Listen for animation end to ensure fade-out completes
+    const handleAnimationEnd = (e: AnimationEvent) => {
+      // Only handle fade-out/zoom-out animations
+      if (e.animationName.includes('fade-out') || e.animationName.includes('zoom-out')) {
+        // Animation completed - Radix UI will handle unmounting
+      }
+    };
+
+    content.addEventListener('animationend', handleAnimationEnd);
+
+    return () => {
+      content.removeEventListener('animationend', handleAnimationEnd);
+    };
+  }, []);
+
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Content
+        ref={contentRef}
         data-slot="tooltip-content"
         sideOffset={sideOffset}
         className={cn(styles.tooltipContent, className)}

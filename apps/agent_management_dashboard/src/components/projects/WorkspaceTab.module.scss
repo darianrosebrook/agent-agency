@@ -414,3 +414,25 @@
   letter-spacing: -0.1504px; // tracking-[-0.1504px]
 }
 
+// WorkspacePanel component styles
+.workspacePanelCloseButton {
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: #252525; // hover:bg-[#252525]
+  }
+}
+
+// Additional utility classes for WorkspacePanel
+.textCenter {
+  text-align: center;
+}
+
+.text12 {
+  font-size: 0.75rem; // text-[12px]
+}
+
+.leading16 {
+  line-height: 1rem; // leading-[16px]
+}
+

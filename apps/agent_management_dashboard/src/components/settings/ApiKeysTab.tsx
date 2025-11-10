@@ -113,7 +113,7 @@ export function ApiKeysTab() {
         <CardContent>
           {newKey && (
             <div className={styles.newKeyAlert}>
-              <p>New API Key (save this - it won't be shown again):</p>
+              <p>New API Key (save this - it won&apos;t be shown again):</p>
               <code>{newKey}</code>
               <Button onClick={() => setNewKey(null)}>Close</Button>
             </div>

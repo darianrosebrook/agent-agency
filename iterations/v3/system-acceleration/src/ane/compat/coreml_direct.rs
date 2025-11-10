@@ -12,6 +12,7 @@ use std::collections::HashMap;
 
 // Import runtime check and FFI functions from model module
 use super::model::{coreml_runtime_available, coreml_unavailable_error};
+use super::types::KvStateHandle;
 
 // FFI declarations for agentbridge functions
 #[cfg(target_os = "macos")]
@@ -51,6 +52,24 @@ extern "C" {
         provider_ref: u64,
         name: *const std::ffi::c_char,
         array_ref: u64,
+        out_error: *mut *mut std::ffi::c_char,
+    ) -> i32;
+
+    fn agentbridge_dict_provider_set_feature_image(
+        provider_ref: u64,
+        name: *const std::ffi::c_char,
+        image_data: *const u8,
+        image_data_length: i32,
+        width: i32,
+        height: i32,
+        out_error: *mut *mut std::ffi::c_char,
+    ) -> i32;
+
+    fn agentbridge_dict_provider_set_feature_state(
+        provider_ref: u64,
+        feature_name: *const std::ffi::c_char,
+        kv_state_ref: u64,
+        model_ref: u64,
         out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
@@ -276,8 +295,142 @@ impl CoreMLModel {
                             return Err(ANEError::Internal(error_msg));
                         }
                     }
+                    MLFeatureValue::State(kv_state) => {
+                        let name_cstr = CString::new(name.as_str())
+                            .map_err(|e| ANEError::InvalidInput(format!("Invalid feature name: {}", e)))?;
+
+                        let model_ref = self.get_model_ref()?;
+
+                        // Set state feature in provider
+                        let mut feature_error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+                        let feature_result = unsafe {
+                            agentbridge_dict_provider_set_feature_state(
+                                input_provider_ref,
+                                name_cstr.as_ptr(),
+                                kv_state.handle(),
+                                model_ref,
+                                &mut feature_error_ptr,
+                            )
+                        };
+
+                        if feature_result != 0 {
+                            unsafe { agentbridge_dict_provider_destroy(input_provider_ref) };
+                            let error_msg = if !feature_error_ptr.is_null() {
+                                unsafe {
+                                    let cstr = std::ffi::CStr::from_ptr(feature_error_ptr);
+                                    let msg = cstr.to_string_lossy().to_string();
+                                    agentbridge_free_string(feature_error_ptr);
+                                    msg
+                                }
+                            } else {
+                                format!("Unknown error setting state feature '{}'", name)
+                            };
+                            return Err(ANEError::Internal(error_msg));
+                        }
+                    }
+                    MLFeatureValue::Image(image_data) => {
+                        let name_cstr = CString::new(name.as_str())
+                            .map_err(|e| ANEError::InvalidInput(format!("Invalid feature name: {}", e)))?;
+
+                        // Extract image dimensions from the data
+                        // For RGB images: data length = width * height * 3
+                        // We infer dimensions assuming RGB format (3 bytes per pixel)
+                        // TODO: Query model metadata for expected image dimensions
+                        //       Currently infers dimensions from data length; should query model metadata to get expected image dimensions and validate input matches model requirements.
+                        //
+                        // COMPLETION CHECKLIST:
+                        // [ ] Query model metadata for image input constraints
+                        // [ ] Extract expected width, height, and pixel format from metadata
+                        // [ ] Validate input image dimensions match model requirements
+                        // [ ] Provide clear error messages for dimension mismatches
+                        // [ ] API/data structures defined & stable
+                        // [ ] Error handling + validation aligned with error taxonomy
+                        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                        // [ ] Integration tests for external systems/contracts
+                        // [ ] Documentation: public API + system behavior
+                        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                        // [ ] Configurability and feature flags defined if relevant
+                        // [ ] Failure-mode cards documented (degradation paths)
+                        //
+                        // ACCEPTANCE CRITERIA:
+                        // - Model metadata is queried for image constraints
+                        // - Expected dimensions are extracted correctly
+                        // - Input validation catches dimension mismatches
+                        // - Error messages are clear and actionable
+                        // - Performance impact is minimal (<1ms overhead)
+                        //
+                        // DEPENDENCIES:
+                        // - Model metadata query utilities (Required)
+                        // - Image constraint parsing (Required)
+                        // - Dimension validation logic (Required)
+                        //
+                        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+                        // PRIORITY: Low
+                        // BLOCKING: No
+                        //
+                        // GOVERNANCE:
+                        // - CAWS Tier: 3 (validation enhancement)
+                        // - Change Budget: ~100 LOC
+                        // - Reviewer Requirements: CoreML metadata and image processing expertise
+                        let channels = 3; // RGB
+                        let total_pixels = image_data.len() / channels;
+                        
+                        if image_data.len() % channels != 0 {
+                            unsafe { agentbridge_dict_provider_destroy(input_provider_ref) };
+                            return Err(ANEError::InvalidInput(format!(
+                                "Image data length for feature '{}' is not a multiple of {} (RGB channels), got {} bytes",
+                                name, channels, image_data.len()
+                            )));
+                        }
+
+                        // Infer dimensions - assume square images for now
+                        // In the future, we should query model metadata for expected dimensions
+                        let dimension = (total_pixels as f64).sqrt() as i32;
+                        let width = dimension;
+                        let height = dimension;
+
+                        // Validate inferred dimensions match data length
+                        let expected_length = ((width as usize) * (height as usize) * channels) as usize;
+                        if image_data.len() != expected_length {
+                            unsafe { agentbridge_dict_provider_destroy(input_provider_ref) };
+                            return Err(ANEError::InvalidInput(format!(
+                                "Image data length mismatch for feature '{}': inferred {}x{}x{} = {} bytes, got {} bytes. Consider querying model metadata for expected dimensions.",
+                                name, width, height, channels, expected_length, image_data.len()
+                            )));
+                        }
+
+                        let mut feature_error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+                        let feature_result = unsafe {
+                            agentbridge_dict_provider_set_feature_image(
+                                input_provider_ref,
+                                name_cstr.as_ptr(),
+                                image_data.as_ptr(),
+                                image_data.len() as i32,
+                                width,
+                                height,
+                                &mut feature_error_ptr,
+                            )
+                        };
+
+                        if feature_result != 0 {
+                            unsafe { agentbridge_dict_provider_destroy(input_provider_ref) };
+                            let error_msg = if !feature_error_ptr.is_null() {
+                                unsafe {
+                                    let cstr = std::ffi::CStr::from_ptr(feature_error_ptr);
+                                    let msg = cstr.to_string_lossy().to_string();
+                                    agentbridge_free_string(feature_error_ptr);
+                                    msg
+                                }
+                            } else {
+                                format!("Unknown error setting image feature '{}'", name)
+                            };
+                            return Err(ANEError::Internal(error_msg));
+                        }
+                    }
                     _ => {
-                        // For now, only MultiArray is supported
+                        // Other feature types not yet supported
                         unsafe { agentbridge_dict_provider_destroy(input_provider_ref) };
                         return Err(ANEError::NotImplemented(format!("Feature type not yet supported for feature '{}'", name)));
                     }
@@ -496,6 +649,8 @@ pub enum MLFeatureValue {
     String(String),
     Int64(i64),
     Double(f64),
+    Image(Vec<u8>), // Image data (raw bytes for CoreML image processing)
+    State(KvStateHandle), // State feature for stateful models (KV cache)
 }
 
 // Simple MLMultiArray implementation

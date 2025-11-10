@@ -7,7 +7,7 @@
  * @author @darianrosebrook
  */
 
-import { AppError, isRetryableError } from '../errors/types';
+import { isRetryableError } from '../errors/types';
 
 /**
  * Retry configuration options

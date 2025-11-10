@@ -31,7 +31,7 @@ interface TaskItemProps {
 
 export function TaskItem({
   task,
-  phaseId: _phaseId, // eslint-disable-line @typescript-eslint/no-unused-vars
+  phaseId: _phaseId, // eslint-disable-line no-unused-vars
   onUpdateTitle,
   onUpdateDescription,
   onAddSubtask,

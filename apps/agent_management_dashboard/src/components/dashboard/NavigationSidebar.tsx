@@ -1,12 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-
-const gsapLoader = async () => {
-  const gsapModule = await import("gsap");
-  // GSAP exports as default, but also has named exports
-  return gsapModule.default || gsapModule;
-};
+import { useState, useCallback } from "react";
 import {
   Search,
   MessageSquare,
@@ -35,8 +29,6 @@ import styles from "./NavigationSidebar.module.scss";
 export function Sidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const sidebarRef = useRef<HTMLElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
 
   const isActive = useCallback(
     (path: string) => {
@@ -49,98 +41,12 @@ export function Sidebar() {
     setIsCollapsed((prev) => !prev);
   }, []);
 
-  // Optimize sidebar animation with GSAP - lazy loaded
-  useEffect(() => {
-    if (!sidebarRef.current) return;
-
-    const sidebar = sidebarRef.current;
-    const targetWidth = isCollapsed ? 64 : 320;
-
-    sidebar.style.willChange = "width";
-
-    let tween: any = null;
-
-    gsapLoader().then((gsap: any) => {
-      tween = gsap.to(sidebar, {
-        width: targetWidth,
-        duration: 0.3,
-        ease: "power2.out",
-        force3D: true,
-        onComplete: () => {
-          sidebar.style.willChange = "auto";
-        },
-      });
-    });
-
-    return () => {
-      if (tween) {
-        tween.kill();
-      }
-      sidebar.style.willChange = "auto";
-    };
-  }, [isCollapsed]);
-
-  // Animate content opacity for smoother transitions - lazy loaded GSAP
-  useEffect(() => {
-    if (!contentRef.current) return;
-
-    const content = contentRef.current;
-    const textElements = Array.from(
-      content.querySelectorAll("span, h4, input")
-    ) as HTMLElement[];
-
-    if (textElements.length === 0) return;
-
-    let tween: any = null;
-
-    gsapLoader().then((gsap: any) => {
-      if (isCollapsed) {
-        tween = gsap.to(textElements, {
-          opacity: 0,
-          duration: 0.15,
-          stagger: 0.01,
-          ease: "power2.in",
-          force3D: true,
-        });
-      } else {
-        tween = gsap.fromTo(
-          textElements,
-          { opacity: 0 },
-          {
-            opacity: 1,
-            duration: 0.2,
-            stagger: 0.01,
-            delay: 0.1,
-            ease: "power2.out",
-            force3D: true,
-          }
-        );
-      }
-    });
-
-    return () => {
-      if (tween) {
-        tween.kill();
-      }
-    };
-  }, [isCollapsed]);
-
   return (
     <aside
-      ref={sidebarRef}
-      className={styles.sidebar}
-      style={{
-        width: isCollapsed ? "64px" : "320px", // w-16 = 64px, w-80 = 320px
-        // Use contain for layout isolation to prevent layout thrashing
-        contain: "layout style paint",
-        // Optimize rendering
-        backfaceVisibility: "hidden",
-        transform: "translateZ(0)", // Force GPU layer
-      }}
+      className={cn(styles.sidebar, isCollapsed && styles.sidebarCollapsed)}
     >
       {/* Header */}
       <div
-        ref={contentRef}
         className={cn(
           styles.header,
           isCollapsed ? styles.headerCollapsed : styles.headerExpanded

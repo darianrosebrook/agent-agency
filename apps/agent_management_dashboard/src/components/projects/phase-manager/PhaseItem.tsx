@@ -2,8 +2,7 @@
 
 import { Accordion } from "../../primitives/accordion";
 import { TaskItem } from "./TaskItem";
-import type { Phase, Task } from "./types";
-import { cn } from "../../primitives/utils";
+import type { Phase } from "./types";
 import styles from "./PhaseItem.module.scss";
 
 interface PhaseItemProps {

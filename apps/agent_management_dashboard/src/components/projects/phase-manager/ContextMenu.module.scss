@@ -1,4 +1,4 @@
-@use "../../../styles/design-tokens.scss" as *;
+@use "design-tokens" as *;
 
 .contextMenuButton {
   background-color: $color-zinc-950; // bg-zinc-950

@@ -264,7 +264,7 @@ function SidebarTrigger({
 }
 
 function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, state } = useSidebar();
 
   return (
     <button
@@ -275,9 +275,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
       onClick={toggleSidebar}
       title="Toggle Sidebar"
       className={cn(styles.sidebarRail, className)}
-      data-side={side}
       data-state={state}
-      data-collapsible={collapsible}
       {...props}
     />
   );
