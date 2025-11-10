@@ -5,12 +5,13 @@
 //!
 //! Author: @darianrosebrook
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use sqlx::{PgPool, Row};
 use std::collections::HashMap;
 use tracing::{error, info, warn};
 
 /// Expected table schemas based on models.rs
+#[allow(dead_code)]
 struct TableSchema {
     name: &'static str,
     fields: Vec<FieldSchema>,
@@ -24,6 +25,7 @@ struct FieldSchema {
     nullable: bool,
 }
 
+#[allow(dead_code)]
 struct ForeignKeySchema {
     field: &'static str,
     references_table: &'static str,

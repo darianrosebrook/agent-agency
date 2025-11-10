@@ -517,8 +517,6 @@ impl WhisperInferenceExecutor {
 
     /// Decode token sequence to text
     fn decode_tokens_to_text(&self, tokens: &[i32]) -> Result<String> {
-        use tokenizers::Tokenizer;
-
         // Whisper special tokens
         const START_OF_TRANSCRIPT: i32 = 50258;
         const END_OF_TRANSCRIPT: i32 = 50257;

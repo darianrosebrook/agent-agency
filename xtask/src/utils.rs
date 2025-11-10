@@ -22,6 +22,7 @@ pub async fn run_command(program: &str, args: &[&str]) -> Result<()> {
 }
 
 /// Run a command and capture its output
+#[allow(dead_code)]
 pub async fn capture_command_output(program: &str, args: &[&str]) -> Result<String> {
     debug!("Capturing output from: {} {}", program, args.join(" "));
 
@@ -40,6 +41,7 @@ pub async fn capture_command_output(program: &str, args: &[&str]) -> Result<Stri
 }
 
 /// Check if a command exists on the system
+#[allow(dead_code)]
 pub async fn command_exists(program: &str) -> bool {
     Command::new(program)
         .arg("--version")
@@ -52,6 +54,7 @@ pub async fn command_exists(program: &str) -> bool {
 }
 
 /// Get the project root directory
+#[allow(dead_code)]
 pub fn project_root() -> Result<std::path::PathBuf> {
     let mut current = std::env::current_dir()?;
     loop {
@@ -66,6 +69,7 @@ pub fn project_root() -> Result<std::path::PathBuf> {
 }
 
 /// Find all Rust crates in the workspace
+#[allow(dead_code)]
 pub fn find_rust_crates() -> Result<Vec<std::path::PathBuf>> {
     let root = project_root()?;
     let mut crates = Vec::new();

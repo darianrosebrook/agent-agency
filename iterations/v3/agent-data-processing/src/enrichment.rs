@@ -355,7 +355,7 @@ impl AsrEnricher {
         // TODO: Implement Whisper model caching
         //       Currently loads model on each call; should cache loaded models for efficiency.
         let config = WhisperConfig::default();
-        let mut telemetry = TelemetryCollector::new();
+        let telemetry = TelemetryCollector::new();
         let circuit_breaker = CircuitBreaker::new(CircuitBreakerConfig::default());
         let whisper_model = load_whisper_model(model_path, config, telemetry, circuit_breaker)
             .map_err(|e| anyhow::anyhow!("Failed to load Whisper model: {}", e))?;

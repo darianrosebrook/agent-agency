@@ -218,6 +218,7 @@ impl DatabaseTaskStatePersistence {
     }
 
     /// Convert database string to ExecutionStateStatus
+    #[allow(dead_code)]
     fn string_to_status(s: &str) -> Result<ExecutionStateStatus> {
         match s {
             "pending" => Ok(ExecutionStateStatus::Pending),

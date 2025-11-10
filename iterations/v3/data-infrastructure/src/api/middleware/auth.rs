@@ -9,7 +9,6 @@
 //! @author @darianrosebrook
 
 use axum::{
-    extract::FromRequestParts,
     http::{header::AUTHORIZATION, HeaderMap, StatusCode},
 };
 use chrono::Utc;

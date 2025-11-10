@@ -83,6 +83,7 @@ where
 
 /// Normalize content type from explicit type or detected type
 /// Returns the explicit type if provided, otherwise falls back to detected type, or Unknown
+#[allow(dead_code)]
 fn normalize_content_type(explicit: Option<ContentType>, detected: Option<ContentType>) -> ContentType {
     explicit.or(detected).unwrap_or(ContentType::Unknown)
 }

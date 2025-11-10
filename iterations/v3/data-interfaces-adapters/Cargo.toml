@@ -68,6 +68,7 @@ default = ["orchestration"]
 orchestration = ["research", "memory"]  # Enable both research and memory for UnifiedOrchestrator
 memory = ["agent-orchestration/memory"]  # Enable memory feature for UnifiedOrchestrator
 research = ["agent-orchestration/research"]  # Enable research feature for UnifiedOrchestrator
+testing = []  # Enable testing endpoints (uses subprocess, no direct dependency)
 
 [[bin]]
 name = "agent-agency-api-server"

@@ -112,6 +112,7 @@ council = []  # Feature flag for council functionality
 tool-chain = []  # Feature flag for tool-chain functionality
 mcp = []  # Feature flag for MCP functionality
 runtime-optimization = ["dep:system-federated-ml"]  # Feature flag for runtime optimization (ArbiterPipelineOptimizer)
+model-management = ["dep:agent-model-management"]  # Feature flag for model management functionality
 
 [dev-dependencies]
 insta = { version = "1.38", features = ["yaml"] }

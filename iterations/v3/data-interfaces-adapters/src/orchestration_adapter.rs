@@ -339,48 +339,62 @@ impl UnifiedOrchestratorAdapter {
 
             // Create worker bridge
             let worker_pool = Arc::new(MCPWorkerPool::new(WorkerPoolConfig::default()).await);
-            // TaskExecutor requires a database client - use provided one or create stub
+            // TaskExecutor requires a database client - use provided one or create asynchronously
             let db_client_for_executor = if let Some(db) = db_client_clone {
                 db
             } else {
-                // TODO: Implement async database client creation
-                //       Currently requires pre-provided client; should implement async database client creation handling DatabaseClient::new async requirement.
-                //
-                // COMPLETION CHECKLIST:
-                // [ ] Primary functionality implemented
-                // [ ] API/data structures defined & stable
-                // [ ] Error handling + validation aligned with error taxonomy
-                // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-                // [ ] Integration tests for external systems/contracts
-                // [ ] Documentation: public API + system behavior
-                // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-                // [ ] Security posture reviewed (inputs, authz, sandboxing)
-                // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-                // [ ] Configurability and feature flags defined if relevant
-                // [ ] Failure-mode cards documented (degradation paths)
-                //
-                // ACCEPTANCE CRITERIA:
-                // - Database client is created asynchronously
-                // - Async creation is handled correctly
-                // - Error handling works for creation failures
-                // - Client is properly initialized
-                //
-                // DEPENDENCIES:
-                // - DatabaseClient::new async API (Required)
-                // - Async initialization utilities (Required)
-                // - Error handling infrastructure (Required)
-                //
-                // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-                // PRIORITY: Medium
-                // BLOCKING: No
-                //
-                // GOVERNANCE:
-                // - CAWS Tier: 2 (database integration feature)
-                // - Change Budget: ~80 LOC
-                // - Reviewer Requirements: Async Rust and database expertise
-                return Err(ServiceError::Internal( // Temporary: error until async client creation
-                    "Database client required for TaskExecutor. Please provide a database client when creating UnifiedOrchestratorAdapter.".to_string()
-                ));
+                // Implemented: Async database client creation
+                // Creates database client from environment variables or defaults
+                use data_infrastructure::database_config::DatabaseConfig;
+                use data_infrastructure::simple_client::DatabaseClient;
+                use tracing::{info, warn};
+                
+                // Load database configuration from environment or use defaults
+                let database_url = std::env::var("DATABASE_URL")
+                    .unwrap_or_else(|_| {
+                        warn!("DATABASE_URL not set, using default database connection");
+                        "postgresql://postgres@localhost:5432/agent_agency_v3".to_string()
+                    });
+                
+                info!("Creating database client asynchronously with URL: {}", 
+                    database_url.split('@').nth(1).unwrap_or("***"));
+                
+                // Create database configuration
+                let db_config = DatabaseConfig {
+                    database_url: database_url.clone(),
+                    max_connections: std::env::var("DATABASE_MAX_CONNECTIONS")
+                        .ok()
+                        .and_then(|v| v.parse().ok())
+                        .or(Some(100)),
+                    pool_max: std::env::var("DATABASE_POOL_MAX")
+                        .ok()
+                        .and_then(|v| v.parse().ok())
+                        .or(Some(100)),
+                    connection_timeout: std::env::var("DATABASE_CONNECTION_TIMEOUT")
+                        .ok()
+                        .and_then(|v| v.parse().ok())
+                        .or(Some(30)),
+                    query_timeout: std::env::var("DATABASE_QUERY_TIMEOUT")
+                        .ok()
+                        .and_then(|v| v.parse().ok())
+                        .or(Some(60)),
+                    ..Default::default()
+                };
+                
+                // Create database client asynchronously
+                match DatabaseClient::new(db_config).await {
+                    Ok(client) => {
+                        info!("Database client created successfully");
+                        Arc::new(client)
+                    }
+                    Err(e) => {
+                        warn!("Failed to create database client: {}. TaskExecutor will not have database access.", e);
+                        return Err(ServiceError::Internal(format!(
+                            "Failed to create database client: {}. Please ensure DATABASE_URL is set correctly or provide a database client when creating UnifiedOrchestratorAdapter.",
+                            e
+                        )));
+                    }
+                }
             };
             let task_executor = Arc::new(TaskExecutor::new(db_client_for_executor));
             let worker_bridge = Arc::new(WorkerExecutionBridge::new(worker_pool, task_executor));

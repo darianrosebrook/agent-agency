@@ -4,10 +4,11 @@
 //! rollback capabilities for failed or incorrect processing operations.
 
 use schemars::JsonSchema;
-use system_resilience::workspace_state::{WorkspaceStateManager, WorkspaceViewManager, StateId};
+use system_resilience::workspace_state::{WorkspaceStateManager, WorkspaceViewManager, RollbackManager, StateId};
 use crate::{DataProcessingResult, DataProcessingError};
 use std::sync::Arc;
 use std::path::PathBuf;
+use tracing::{info, warn, error};
 
 /// Configuration for workspace integration
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
@@ -54,6 +55,7 @@ impl From<&WorkspaceConfig> for system_resilience::workspace_state::WorkspaceCon
 pub struct WorkspaceIntegrationHooks {
     workspace_manager: Arc<WorkspaceStateManager>,
     view_manager: Option<Arc<WorkspaceViewManager>>,
+    rollback_manager: Option<Arc<RollbackManager>>,
     config: WorkspaceConfig,
     _pre_processing_state: Option<StateId>,
 }
@@ -82,9 +84,25 @@ impl WorkspaceIntegrationHooks {
             None
         };
 
+        // Create rollback manager if rollback is enabled
+        let rollback_manager = if config.enable_rollback {
+            let backup_dir = config.workspace_root.join(".workspace-backups");
+            // Ensure backup directory exists
+            if let Err(e) = std::fs::create_dir_all(&backup_dir) {
+                warn!("Failed to create backup directory {:?}: {}", backup_dir, e);
+            }
+            Some(Arc::new(RollbackManager::new(
+                Arc::clone(&workspace_manager),
+                &backup_dir
+            )))
+        } else {
+            None
+        };
+
         Ok(Self {
             workspace_manager,
             view_manager,
+            rollback_manager,
             config: config.clone(),
             _pre_processing_state: None,
         })
@@ -131,65 +149,110 @@ impl WorkspaceIntegrationHooks {
     }
 
     /// Rollback workspace changes after failed processing
+    /// Uses RollbackManager to restore workspace state from pre_state_id snapshot
     pub async fn rollback_processing_changes(&self, pre_state_id: StateId) -> DataProcessingResult<()> {
         if !self.config.enable_rollback {
             return Ok(());
         }
 
-        // TODO: Implement real workspace rollback functionality
-        // - [ ] Integrate with workspace manager API for rollback
-        // - [ ] Restore workspace state from pre_state_id snapshot
-        // - [ ] Handle rollback errors and partial state restoration
-        // - [ ] Add validation to ensure rollback state is valid
-        // - [ ] Add unit tests with mock workspace states
-        // - [ ] Add integration tests with real workspace rollback
-        // TODO: Implement workspace rollback using workspace manager API
-        //       Currently simulates rollback; should implement actual rollback using workspace manager API for automatic state restoration.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Rollback uses workspace manager API correctly
-        // - State restoration is automatic
-        // - Rollback is reliable
-        // - Error handling works for rollback failures
-        //
-        // DEPENDENCIES:
-        // - Workspace manager API (Required)
-        // - State restoration infrastructure (Required)
-        // - Rollback utilities (Required)
-        //
-        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (workspace management feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Workspace management expertise
-        tracing::warn!("Rollback requested for state: {}. Manual restoration may be required.", pre_state_id); // Temporary: manual restoration until API integration
+        // Implemented: Real workspace rollback functionality using RollbackManager
+        // Restores workspace state from pre_state_id snapshot with automatic state restoration
         
-        // Create a rollback view for debugging
-        if let Some(ref view_manager) = self.view_manager {
-            let view_name = format!("rollback_{}", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
-            let view_result = view_manager.create_view(pre_state_id, Some(view_name.clone())).await
-                .map_err(|e| DataProcessingError::Other(format!("Failed to create rollback view: {:?}", e)))?;
-            
-            tracing::info!("Created rollback view: {} at {:?}", view_name, view_result.data);
+        info!("Starting rollback to state: {:?}", pre_state_id);
+        
+        // Validate that the target state exists
+        match self.workspace_manager.get_state(pre_state_id).await {
+            Ok(_) => {
+                info!("Target state {:?} exists, proceeding with rollback", pre_state_id);
+            }
+            Err(e) => {
+                error!("Target state {:?} not found: {:?}", pre_state_id, e);
+                return Err(DataProcessingError::Other(format!(
+                    "Cannot rollback: target state {:?} not found: {:?}",
+                    pre_state_id, e
+                )));
+            }
         }
         
-        Ok(())
+        // Perform rollback using RollbackManager
+        if let Some(ref rollback_manager) = self.rollback_manager {
+            // Create backup of current state before rollback (for safety)
+            let create_backup = true;
+            
+            match rollback_manager.rollback_to_state(pre_state_id, create_backup).await {
+                Ok(rollback_result) => {
+                    info!(
+                        "Rollback completed successfully: {} files restored, {} removed, {} modified (duration: {}ms)",
+                        rollback_result.files_restored,
+                        rollback_result.files_removed,
+                        rollback_result.files_modified,
+                        rollback_result.duration_ms
+                    );
+                    
+                    // Log any warnings from rollback operation
+                    if !rollback_result.warnings.is_empty() {
+                        for warning in &rollback_result.warnings {
+                            warn!("Rollback warning: {}", warning);
+                        }
+                    }
+                    
+                    // Verify rollback was successful
+                    if !rollback_result.success {
+                        error!("Rollback operation reported failure despite returning Ok");
+                        return Err(DataProcessingError::Other(
+                            "Rollback operation failed".to_string()
+                        ));
+                    }
+                    
+                    // Create a rollback view for debugging/verification
+                    if let Some(ref view_manager) = self.view_manager {
+                        let view_name = format!("rollback_{}", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
+                        match view_manager.create_view(pre_state_id, Some(view_name.clone())).await {
+                            Ok(view_result) => {
+                                info!("Created rollback view: {} at {:?}", view_name, view_result.data);
+                            }
+                            Err(e) => {
+                                warn!("Failed to create rollback view: {:?}", e);
+                                // Don't fail the rollback if view creation fails
+                            }
+                        }
+                    }
+                    
+                    Ok(())
+                }
+                Err(e) => {
+                    error!("Rollback failed: {:?}", e);
+                    
+                    // Attempt partial recovery: create a view of the target state for manual recovery
+                    if let Some(ref view_manager) = self.view_manager {
+                        let view_name = format!("rollback_failed_{}", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
+                        if let Ok(view_result) = view_manager.create_view(pre_state_id, Some(view_name.clone())).await {
+                            warn!("Rollback failed, but created recovery view: {} at {:?}", view_name, view_result.data);
+                        }
+                    }
+                    
+                    Err(DataProcessingError::Other(format!(
+                        "Rollback to state {:?} failed: {:?}",
+                        pre_state_id, e
+                    )))
+                }
+            }
+        } else {
+            // Rollback manager not available - fallback to view creation only
+            warn!("Rollback manager not available, creating rollback view only");
+            
+            if let Some(ref view_manager) = self.view_manager {
+                let view_name = format!("rollback_{}", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
+                let view_result = view_manager.create_view(pre_state_id, Some(view_name.clone())).await
+                    .map_err(|e| DataProcessingError::Other(format!("Failed to create rollback view: {:?}", e)))?;
+                
+                info!("Created rollback view: {} at {:?}", view_name, view_result.data);
+            }
+            
+            Err(DataProcessingError::Other(
+                "Rollback manager not initialized - rollback not performed".to_string()
+            ))
+        }
     }
 
     /// Create a processing view for debugging or analysis
@@ -227,49 +290,21 @@ impl WorkspaceIntegrationHooks {
             (0, 0.0)
         };
 
-        // TODO: Implement accurate state counting
-        // - [ ] Query workspace manager for actual state count
-        // - [ ] Distinguish between active and archived states
-        // - [ ] Calculate total states from actual state registry
-        // - [ ] Handle missing state data gracefully
-        // - [ ] Add unit tests with mock state counts
-        // - [ ] Add integration tests with real workspace state tracking
-        // TODO: Calculate actual total states from workspace state tracking
-        //       Currently estimates based on views; should calculate actual total states from workspace state tracking system.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Total states are calculated accurately
-        // - State tracking is comprehensive
-        // - Calculation includes all state types
-        // - Error handling works for tracking failures
-        //
-        // DEPENDENCIES:
-        // - Workspace state tracking system (Required)
-        // - State counting utilities (Required)
-        // - State query infrastructure (Required)
-        //
-        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (monitoring enhancement)
-        // - Change Budget: ~80 LOC
-        // - Reviewer Requirements: Workspace state tracking expertise
-        let total_states = total_views + 1; // Temporary: estimation until state tracking integration
+        // Implemented: Accurate state counting from workspace state manager
+        let total_states = match self.workspace_manager.list_states().await {
+            Ok(state_ids) => {
+                // Get actual count of states from workspace manager
+                let state_count = state_ids.len();
+                tracing::debug!("Retrieved {} states from workspace manager", state_count);
+                state_count
+            }
+            Err(e) => {
+                // Fallback to estimation if state listing fails
+                tracing::warn!("Failed to list states from workspace manager: {:?}, using estimation", e);
+                // Use views + 1 as fallback estimation (current state not yet captured)
+                total_views + 1
+            }
+        };
 
         Ok(WorkspaceStats {
             total_states,

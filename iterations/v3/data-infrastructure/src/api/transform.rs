@@ -5,7 +5,6 @@
 
 use uuid::Uuid;
 use serde_json::Value;
-use chrono::Utc;
 
 use crate::api::api_types::WaiverResponse;
 use crate::models::Waiver;
@@ -54,6 +53,7 @@ pub fn waiver_to_response(waiver: Waiver, task_id: Option<Uuid>) -> WaiverRespon
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::Utc;
 
     #[test]
     fn test_waiver_to_response_conversion() {

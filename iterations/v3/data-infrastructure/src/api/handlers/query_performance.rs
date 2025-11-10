@@ -11,11 +11,10 @@ use axum::{
 };
 use serde_json;
 use std::collections::HashMap;
-use tracing::error;
 
 use crate::api::ApiState;
 use crate::monitoring::query_performance::{
-    QueryPerformanceMonitor, QueryPerformanceConfig, PerformanceSummary, QueryMetrics, SlowQueryAlert,
+    PerformanceSummary,
 };
 
 /// Get query performance summary

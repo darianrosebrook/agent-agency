@@ -1636,7 +1636,7 @@ impl DatabaseOperations for DatabaseClient {
         let now = Utc::now();
         
         // Get current user to merge with updates
-        let current = self.get_user(id).await?
+        let _current = self.get_user(id).await?
             .ok_or_else(|| anyhow::anyhow!("User not found: {}", id))?;
         
         sqlx::query_as::<_, User>(
@@ -1781,7 +1781,7 @@ impl DatabaseOperations for DatabaseClient {
         let now = Utc::now();
         
         // Get current session to merge with updates
-        let current = self.get_session(id).await?
+        let _current = self.get_session(id).await?
             .ok_or_else(|| anyhow::anyhow!("Session not found: {}", id))?;
         
         sqlx::query_as::<_, Session>(
@@ -2797,20 +2797,23 @@ impl DatabaseOperations for DatabaseClient {
         let mut query = String::from("SELECT * FROM caws_violations WHERE 1=1");
         let mut bind_count = 1;
         
-        if let Some(tid) = task_id {
+        if let Some(_tid) = task_id {
             query.push_str(&format!(" AND task_id = ${}", bind_count));
             bind_count += 1;
         }
         
-        if let Some(rid) = rule_id {
+        if let Some(_rid) = rule_id {
             query.push_str(&format!(" AND rule_id = ${}", bind_count));
             bind_count += 1;
         }
         
-        if let Some(st) = status {
+        if let Some(_st) = status {
             query.push_str(&format!(" AND status = ${}", bind_count));
             bind_count += 1;
         }
+        
+        // Acknowledge bind_count is no longer needed after query string construction
+        let _ = bind_count;
         
         query.push_str(" ORDER BY created_at DESC");
         
@@ -2833,7 +2836,7 @@ impl DatabaseOperations for DatabaseClient {
         let mut updates = Vec::new();
         let mut bind_count = 1;
         
-        if let Some(status) = &update.status {
+        if update.status.is_some() {
             updates.push(format!("status = ${}", bind_count));
             bind_count += 1;
         }
@@ -2843,7 +2846,7 @@ impl DatabaseOperations for DatabaseClient {
             bind_count += 1;
         }
         
-        if let Some(metadata) = &update.metadata {
+        if update.metadata.is_some() {
             updates.push(format!("metadata = ${}", bind_count));
             bind_count += 1;
         }
@@ -2984,11 +2987,11 @@ impl DatabaseOperations for DatabaseClient {
         let mut updates = Vec::new();
         let mut bind_count = 1;
         
-        if let Some(name) = &update.name {
+        if update.name.is_some() {
             updates.push(format!("name = ${}", bind_count));
             bind_count += 1;
         }
-        if let Some(version) = &update.version {
+        if update.version.is_some() {
             updates.push(format!("version = ${}", bind_count));
             bind_count += 1;
         }
@@ -2996,15 +2999,15 @@ impl DatabaseOperations for DatabaseClient {
             updates.push(format!("description = ${}", bind_count));
             bind_count += 1;
         }
-        if let Some(rules) = &update.rules {
+        if update.rules.is_some() {
             updates.push(format!("rules = ${}", bind_count));
             bind_count += 1;
         }
-        if let Some(config) = &update.config {
+        if update.config.is_some() {
             updates.push(format!("config = ${}", bind_count));
             bind_count += 1;
         }
-        if let Some(is_active) = update.is_active {
+        if update.is_active.is_some() {
             updates.push(format!("is_active = ${}", bind_count));
             bind_count += 1;
         }
@@ -3136,6 +3139,9 @@ impl DatabaseOperations for DatabaseClient {
             bind_count += 1;
         }
         
+        // Acknowledge bind_count is no longer needed after query string construction
+        let _ = bind_count;
+        
         query.push_str(" ORDER BY created_at DESC");
         
         let mut query_builder = sqlx::query_as::<_, RuleEnforcementStatus>(&query);
@@ -3169,12 +3175,12 @@ impl DatabaseOperations for DatabaseClient {
             .await?
         };
         
-        if let Some(existing) = existing {
+        if let Some(_existing) = existing {
             // Update existing
             let mut updates = Vec::new();
             let mut bind_count = 1;
             
-            if let Some(state) = &status.enforcement_state {
+            if status.enforcement_state.is_some() {
                 updates.push(format!("enforcement_state = ${}", bind_count));
                 bind_count += 1;
             }
@@ -3190,7 +3196,7 @@ impl DatabaseOperations for DatabaseClient {
                 updates.push(format!("override_reason = ${}", bind_count));
                 bind_count += 1;
             }
-            if let Some(metadata) = &status.metadata {
+            if status.metadata.is_some() {
                 updates.push(format!("metadata = ${}", bind_count));
                 bind_count += 1;
             }
@@ -3281,7 +3287,7 @@ impl DatabaseOperations for DatabaseClient {
             .execute(&self.pool)
             .await?;
             
-            if let Some(tid) = task_id {
+            if task_id.is_some() {
                 sqlx::query_as::<_, RuleEnforcementStatus>(
                     "SELECT * FROM rule_enforcement_status WHERE id = $1"
                 )

@@ -3,24 +3,14 @@
 //! This module contains all API handlers related to user authentication,
 //! including login, logout, token refresh, password reset, and current user retrieval.
 
-use axum::{
-    extract::{Path, State},
-    http::{HeaderMap, StatusCode},
-    Json,
-};
 use serde::{Deserialize, Serialize};
 use sha2::{Sha256, Digest};
-use chrono::{DateTime, Utc, Duration as ChronoDuration};
+use chrono::{DateTime, Utc};
 use uuid::Uuid;
-use tracing::{error, info, warn};
+use tracing::warn;
 
 // Note: Handler implementations are in api-server.rs
 // This module exports types and helper functions for reference
-
-#[cfg(feature = "orchestration")]
-use crate::api::ApiState;
-use crate::database_operations::{CreateUser, CreateSession, CreatePasswordResetToken, UpdateUser, UpdateSession};
-use crate::models::{User, Session};
 
 /// Login request
 #[derive(Debug, Deserialize)]
@@ -71,6 +61,7 @@ pub struct RefreshTokenRequest {
 }
 
 /// Helper function to hash a token (for session storage)
+#[allow(dead_code)]
 fn hash_token(token: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.update(token.as_bytes());
@@ -79,6 +70,7 @@ fn hash_token(token: &str) -> String {
 
 /// Helper function to generate a simple JWT-like token (for MVP)
 /// In production, use proper JWT library with signing
+#[allow(dead_code)]
 fn generate_token(user_id: &Uuid, roles: &[String]) -> String {
     // Simple token format: base64(user_id:roles:timestamp)
     // In production, use proper JWT signing
@@ -91,6 +83,7 @@ fn generate_token(user_id: &Uuid, roles: &[String]) -> String {
 
 /// Helper function to verify password hash (using Argon2)
 /// This is a placeholder - integrate with system-quality-security AuthService
+#[allow(dead_code)]
 fn verify_password(password: &str, hash: &str) -> bool {
     // PLACEHOLDER: Integrate with system-quality-security AuthService
     // For now, use simple comparison (NOT SECURE - replace immediately)
@@ -101,6 +94,7 @@ fn verify_password(password: &str, hash: &str) -> bool {
 
 /// Helper function to hash password (using Argon2)
 /// This is a placeholder - integrate with system-quality-security AuthService
+#[allow(dead_code)]
 fn hash_password(password: &str) -> String {
     // PLACEHOLDER: Integrate with system-quality-security AuthService
     // For now, use simple hash (NOT SECURE - replace immediately)
