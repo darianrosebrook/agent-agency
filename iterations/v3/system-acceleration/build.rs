@@ -31,10 +31,48 @@ fn main() {
                 
                 if let Ok(output) = swift_build {
                     if output.status.success() {
-                        // Swift Package Manager builds static libraries in .build/release/
-                        // The library name matches the package name
-                        let build_dir = bridge_path.join(".build").join("release");
-                        println!("cargo:rustc-link-search=native={}", build_dir.display());
+                        // Swift Package Manager builds static libraries in architecture-specific directories
+                        // e.g., .build/arm64-apple-macosx/release/ or .build/x86_64-apple-macosx/release/
+                        let arch = std::env::var("TARGET")
+                            .unwrap_or_else(|_| "unknown".to_string())
+                            .split('-')
+                            .next()
+                            .unwrap_or("unknown")
+                            .to_string();
+                        
+                        // Map Rust target arch to Swift arch
+                        let swift_arch = match arch.as_str() {
+                            "aarch64" => "arm64",
+                            "x86_64" => "x86_64",
+                            _ => "arm64", // Default to arm64 for Apple Silicon
+                        };
+                        
+                        let build_dir = bridge_path.join(".build")
+                            .join(format!("{}-apple-macosx", swift_arch))
+                            .join("release");
+                        
+                        // Also check the generic release directory as fallback
+                        let fallback_dir = bridge_path.join(".build").join("release");
+                        
+                        if build_dir.exists() {
+                            println!("cargo:rustc-link-search=native={}", build_dir.display());
+                        } else if fallback_dir.exists() {
+                            println!("cargo:rustc-link-search=native={}", fallback_dir.display());
+                        } else {
+                            // Try to find any release directory
+                            let build_base = bridge_path.join(".build");
+                            if let Ok(entries) = std::fs::read_dir(&build_base) {
+                                for entry in entries.flatten() {
+                                    if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                                        let release_dir = entry.path().join("release");
+                                        if release_dir.exists() {
+                                            println!("cargo:rustc-link-search=native={}", release_dir.display());
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         
                         // Link the static library - Swift PM creates libCoreMLBridge.a
                         println!("cargo:rustc-link-lib=static=CoreMLBridge");
