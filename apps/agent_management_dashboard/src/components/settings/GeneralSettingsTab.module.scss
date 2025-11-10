@@ -1,0 +1,40 @@
+@use '../../../styles/tokens' as *;
+
+.generalTab {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-6;
+}
+
+.loading {
+  padding: $spacing-8;
+  text-align: center;
+  color: oklch(0.5 0 0);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-4;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2;
+}
+
+.select {
+  padding: $spacing-2 $spacing-3;
+  background-color: #0f0f0f;
+  border: 1px solid oklch(0.269 0 0);
+  border-radius: $spacing-md;
+  color: white;
+  font-size: $font-size-sm;
+  
+  &:focus {
+    outline: none;
+    border-color: oklch(0.6 0 0);
+  }
+}
+

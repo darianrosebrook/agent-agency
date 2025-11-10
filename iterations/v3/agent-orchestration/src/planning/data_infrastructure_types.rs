@@ -78,7 +78,7 @@ pub mod models {
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct ExecutionPlan {
         #[schemars(with = "String")]
-        pub id: Uuid,
+    pub id: Uuid,
         #[schemars(with = "String")]
         pub session_id: Uuid,
         pub working_spec_id: String,

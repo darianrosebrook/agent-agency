@@ -10,4 +10,3 @@ export * from "./provenance";
 export * from "./agents";
 export * from "./telemetry";
 export * from "./judges";
-export * from "./settings";

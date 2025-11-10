@@ -3,35 +3,47 @@
 .settingsPage {
   width: 100%;
   min-height: 100%;
-  padding: $spacing-8; // p-8
-  max-width: 80rem; // max-w-7xl
+  padding: $spacing-8;
+  max-width: 80rem;
   margin-left: auto;
   margin-right: auto;
 }
 
 .settingsHeader {
-  margin-bottom: $spacing-8; // mb-8
+  margin-bottom: $spacing-8;
 }
 
 .settingsTitle {
-  font-size: $font-size-3xl; // text-3xl
-  font-weight: $font-weight-bold; // font-bold
-  color: white; // text-white
-  margin-bottom: $spacing-2; // mb-2
+  font-size: $font-size-3xl;
+  font-weight: $font-weight-bold;
+  color: white;
+  margin-bottom: $spacing-2;
 }
 
 .settingsDescription {
-  color: oklch(0.5 0 0); // text-gray-400
+  color: oklch(0.5 0 0);
 }
 
 .settingsContent {
-  background-color: #1a1a1a; // bg-[#1a1a1a]
-  border: 1px solid oklch(0.269 0 0); // border border-gray-800
-  border-radius: $spacing-lg; // rounded-lg
-  padding: $spacing-8; // p-8
+  background-color: #1a1a1a;
+  border: 1px solid oklch(0.269 0 0);
+  border-radius: $spacing-lg;
+  padding: $spacing-8;
   display: flex;
   flex-direction: column;
-  gap: $spacing-6; // space-y-6
+  gap: $spacing-6;
+}
+
+.tabs {
+  width: 100%;
+}
+
+.tabsList {
+  margin-bottom: $spacing-6;
+}
+
+.tabContent {
+  margin-top: $spacing-4;
 }
 
 .statusBadge {

@@ -394,9 +394,9 @@ impl CoreMLModel {
                 }),
             );
 
-            Ok(MLFeatureProvider {
+        Ok(MLFeatureProvider {
                 features: output_features,
-            })
+        })
         }
 
         #[cfg(not(target_os = "macos"))]
