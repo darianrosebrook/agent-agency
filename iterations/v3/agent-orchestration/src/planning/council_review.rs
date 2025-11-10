@@ -596,29 +596,56 @@ impl CouncilPlanReview {
             }
         };
 
-        // Extract judge verdicts from council session (if accessible)
-        // TODO: Extract judge verdicts from council session metadata:
-        // 1. Session metadata access: Access council session metadata
-        //    - Retrieve session contributions/verdicts from council
-        //    - Handle private field access appropriately
-        //    - Support session metadata API if available
-        // 2. Verdict extraction: Extract judge verdicts properly
-        //    - Parse verdicts from session contributions
-        //    - Map council verdicts to JudgeVerdict format
-        //    - Handle missing or incomplete verdicts
-        // 3. Metadata integration: Integrate with session metadata system
-        //    - Use proper session metadata access patterns
-        //    - Support session metadata serialization
-        //    - Handle metadata versioning and changes
-        // ACCEPTANCE CRITERIA:
-        // - Judge verdicts are extracted from council session metadata
-        // - Verdicts are correctly mapped to JudgeVerdict format
-        // - Session metadata access works correctly
-        // DEPENDENCIES:
-        // - Council session metadata API (Required)
-        // - Verdict serialization system (Required)
-        // PRIORITY: Medium
-        let judge_verdicts: Vec<JudgeVerdict> = vec![];
+        // Extract judge verdicts from council session contributions
+        // Map JudgeContribution to JudgeVerdict format for council decision
+        let judge_verdicts: Vec<JudgeVerdict> = council_session.contributions
+            .iter()
+            .map(|contribution| {
+                // Map JudgeVerdict enum (Approve/Refine/Reject) to JudgeVerdictType enum
+                let verdict_type = match &contribution.verdict {
+                    crate::judge_backup::verdicts::JudgeVerdict::Approve { .. } => {
+                        JudgeVerdictType::Approve
+                    }
+                    crate::judge_backup::verdicts::JudgeVerdict::Refine { .. } => {
+                        JudgeVerdictType::ConditionalApproval
+                    }
+                    crate::judge_backup::verdicts::JudgeVerdict::Reject { .. } => {
+                        JudgeVerdictType::Reject
+                    }
+                };
+                
+                // Extract confidence from verdict or use contribution confidence
+                let confidence = contribution.verdict.confidence()
+                    .max(contribution.confidence);
+                
+                // Extract reasoning from verdict or use contribution reasoning
+                let rationale = match &contribution.verdict {
+                    crate::judge_backup::verdicts::JudgeVerdict::Approve { reasoning, .. } => {
+                        reasoning.clone()
+                    }
+                    crate::judge_backup::verdicts::JudgeVerdict::Refine { reasoning, .. } => {
+                        reasoning.clone()
+                    }
+                    crate::judge_backup::verdicts::JudgeVerdict::Reject { reasoning, .. } => {
+                        reasoning.clone()
+                    }
+                };
+                
+                // Use contribution reasoning if verdict reasoning is empty
+                let final_rationale = if rationale.is_empty() {
+                    contribution.reasoning.clone()
+                } else {
+                    rationale
+                };
+                
+                JudgeVerdict {
+                    judge_id: contribution.judge_id.clone(),
+                    verdict: verdict_type,
+                    confidence,
+                    rationale: final_rationale,
+                }
+            })
+            .collect();
 
         let council_decision = CouncilDecision {
             verdict,
@@ -892,85 +919,285 @@ impl CouncilPlanReview {
                             .and_then(|s| Uuid::parse_str(s).ok())
                             .unwrap_or(plan_id);
                         
-                        // TODO: Implement comprehensive CouncilReviewResult extraction
-                        //       Currently returns minimal result; should implement comprehensive extraction of all fields from metadata, audit trail, and related sources for complete review result.
-                        //
-                        // COMPLETION CHECKLIST:
-                        // [ ] Primary functionality implemented
-                        // [ ] API/data structures defined & stable
-                        // [ ] Error handling + validation aligned with error taxonomy
-                        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-                        // [ ] Integration tests for external systems/contracts
-                        // [ ] Documentation: public API + system behavior
-                        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-                        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-                        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-                        // [ ] Configurability and feature flags defined if relevant
-                        // [ ] Failure-mode cards documented (degradation paths)
-                        //
-                        // ACCEPTANCE CRITERIA:
-                        // - All CouncilReviewResult fields are extracted from available sources
-                        // - Metadata parsing handles all field types correctly
-                        // - Audit trail is parsed for additional context
-                        // - Result extraction is robust to missing or malformed data
-                        //
-                        // DEPENDENCIES:
-                        // - Metadata parsing utilities (Required)
-                        // - Audit trail parsing system (Required)
-                        // - Field extraction and validation logic (Required)
-                        //
-                        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
-                        // PRIORITY: Low
-                        // BLOCKING: No
-                        //
-                        // GOVERNANCE:
-                        // - CAWS Tier: 2 (data extraction enhancement)
-                        // - Change Budget: ~150 LOC
-                        // - Reviewer Requirements: Data extraction and parsing expertise
-                        Some(CouncilReviewResult {
-                            plan_id: plan_id_from_meta,
-                            approved,
-                            risk_tier: 2, // Default
-                            scope_validation: ScopeValidationResult {
+                        // Comprehensive CouncilReviewResult extraction from audit entry metadata
+                        // Extracts all fields from metadata, handling missing or malformed data gracefully
+                        
+                        // Extract risk tier
+                        let risk_tier = entry.metadata.get("risk_tier")
+                            .and_then(|v| v.as_u64())
+                            .map(|t| t as u8)
+                            .or_else(|| entry.metadata.get("risk_tier")
+                                .and_then(|v| v.as_str())
+                                .and_then(|s| s.parse::<u8>().ok()))
+                            .unwrap_or(2); // Default to tier 2
+                        
+                        // Extract scope validation results
+                        let scope_validation = if let Some(scope_val) = entry.metadata.get("scope_validation") {
+                            // Try to deserialize full scope validation
+                            serde_json::from_value::<ScopeValidationResult>(scope_val.clone())
+                                .unwrap_or_else(|_| {
+                                    // Fallback: extract individual fields
+                                    ScopeValidationResult {
+                                        is_valid: scope_val.get("is_valid")
+                                            .and_then(|v| v.as_bool())
+                                            .or_else(|| entry.metadata.get("scope_valid").and_then(|v| v.as_bool()))
+                                            .unwrap_or(true),
+                                        violations: scope_val.get("violations")
+                                            .and_then(|v| serde_json::from_value::<Vec<ScopeViolation>>(v.clone()).ok())
+                                            .unwrap_or_else(|| {
+                                                // Try to extract violations from array
+                                                entry.metadata.get("scope_violations")
+                                                    .and_then(|v| v.as_array())
+                                                    .map(|arr| arr.iter().filter_map(|v| {
+                                                        serde_json::from_value::<ScopeViolation>(v.clone()).ok()
+                                                    }).collect())
+                                                    .unwrap_or_default()
+                                            }),
+                                        recommendations: scope_val.get("recommendations")
+                                            .and_then(|v| v.as_array())
+                                            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+                                            .or_else(|| entry.metadata.get("scope_recommendations")
+                                                .and_then(|v| v.as_array())
+                                                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect()))
+                                            .unwrap_or_default(),
+                                        risk_level: scope_val.get("risk_level")
+                                            .and_then(|v| v.as_str())
+                                            .and_then(|s| match s {
+                                                "Low" | "low" => Some(ScopeRiskLevel::Low),
+                                                "Medium" | "medium" => Some(ScopeRiskLevel::Medium),
+                                                "High" | "high" => Some(ScopeRiskLevel::High),
+                                                "Critical" | "critical" => Some(ScopeRiskLevel::Critical),
+                                                _ => None,
+                                            })
+                                            .or_else(|| entry.metadata.get("scope_risk_level")
+                                                .and_then(|v| v.as_str())
+                                                .and_then(|s| match s {
+                                                    "Low" | "low" => Some(ScopeRiskLevel::Low),
+                                                    "Medium" | "medium" => Some(ScopeRiskLevel::Medium),
+                                                    "High" | "high" => Some(ScopeRiskLevel::High),
+                                                    "Critical" | "critical" => Some(ScopeRiskLevel::Critical),
+                                                    _ => None,
+                                                }))
+                                            .unwrap_or(ScopeRiskLevel::Low),
+                                    }
+                                })
+                        } else {
+                            // No scope_validation object, extract from top-level metadata
+                            ScopeValidationResult {
                                 is_valid: entry.metadata.get("scope_valid")
                                     .and_then(|v| v.as_bool())
                                     .unwrap_or(true),
-                                violations: vec![],
-                                recommendations: vec![],
-                                risk_level: ScopeRiskLevel::Low,
-                            },
-                            ethical_assessment: EthicalAssessmentResult {
-                                passed: true,
-                                concerns: vec![],
+                                violations: entry.metadata.get("scope_violations")
+                                    .and_then(|v| v.as_array())
+                                    .map(|arr| arr.iter().filter_map(|v| {
+                                        serde_json::from_value::<ScopeViolation>(v.clone()).ok()
+                                    }).collect())
+                                    .unwrap_or_default(),
+                                recommendations: entry.metadata.get("scope_recommendations")
+                                    .and_then(|v| v.as_array())
+                                    .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+                                    .unwrap_or_default(),
+                                risk_level: entry.metadata.get("scope_risk_level")
+                                    .and_then(|v| v.as_str())
+                                    .and_then(|s| match s {
+                                        "Low" | "low" => Some(ScopeRiskLevel::Low),
+                                        "Medium" | "medium" => Some(ScopeRiskLevel::Medium),
+                                        "High" | "high" => Some(ScopeRiskLevel::High),
+                                        "Critical" | "critical" => Some(ScopeRiskLevel::Critical),
+                                        _ => None,
+                                    })
+                                    .unwrap_or(ScopeRiskLevel::Low),
+                            }
+                        };
+                        
+                        // Extract ethical assessment results
+                        let ethical_assessment = if let Some(eth_assess) = entry.metadata.get("ethical_assessment") {
+                            serde_json::from_value::<EthicalAssessmentResult>(eth_assess.clone())
+                                .unwrap_or_else(|_| {
+                                    EthicalAssessmentResult {
+                                        passed: eth_assess.get("passed")
+                                            .and_then(|v| v.as_bool())
+                                            .or_else(|| entry.metadata.get("ethical_assessment_passed").and_then(|v| v.as_bool()))
+                                            .unwrap_or(true),
+                                        concerns: eth_assess.get("concerns")
+                                            .and_then(|v| serde_json::from_value::<Vec<EthicalConcern>>(v.clone()).ok())
+                                            .unwrap_or_else(|| {
+                                                entry.metadata.get("ethical_concerns")
+                                                    .and_then(|v| v.as_array())
+                                                    .map(|arr| arr.iter().filter_map(|v| {
+                                                        serde_json::from_value::<EthicalConcern>(v.clone()).ok()
+                                                    }).collect())
+                                                    .unwrap_or_default()
+                                            }),
+                                        constitutional_score: eth_assess.get("constitutional_score")
+                                            .and_then(|v| v.as_f64())
+                                            .or_else(|| entry.metadata.get("constitutional_score").and_then(|v| v.as_f64()))
+                                            .unwrap_or(1.0),
+                                        recommendations: eth_assess.get("recommendations")
+                                            .and_then(|v| v.as_array())
+                                            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+                                            .unwrap_or_default(),
+                                    }
+                                })
+                        } else {
+                            EthicalAssessmentResult {
+                                passed: entry.metadata.get("ethical_assessment_passed")
+                                    .and_then(|v| v.as_bool())
+                                    .unwrap_or(true),
+                                concerns: entry.metadata.get("ethical_concerns")
+                                    .and_then(|v| v.as_array())
+                                    .map(|arr| arr.iter().filter_map(|v| {
+                                        serde_json::from_value::<EthicalConcern>(v.clone()).ok()
+                                    }).collect())
+                                    .unwrap_or_default(),
                                 constitutional_score: entry.metadata.get("constitutional_score")
                                     .and_then(|v| v.as_f64())
                                     .unwrap_or(1.0),
                                 recommendations: vec![],
-                            },
-                            quality_requirements: QualityRequirements {
-                                min_test_coverage: 0.0,
-                                security_scan_required: false,
-                                performance_budget_required: false,
-                                manual_review_required: false,
-                                council_approval_required: false,
-                                evidence_requirements: vec![],
-                            },
-                            council_decision: CouncilDecision {
+                            }
+                        };
+                        
+                        // Extract quality requirements
+                        let quality_requirements = if let Some(qual_req) = entry.metadata.get("quality_requirements") {
+                            serde_json::from_value::<QualityRequirements>(qual_req.clone())
+                                .unwrap_or_else(|_| {
+                                    QualityRequirements {
+                                        min_test_coverage: qual_req.get("min_test_coverage")
+                                            .and_then(|v| v.as_f64())
+                                            .unwrap_or(0.0),
+                                        security_scan_required: qual_req.get("security_scan_required")
+                                            .and_then(|v| v.as_bool())
+                                            .unwrap_or(false),
+                                        performance_budget_required: qual_req.get("performance_budget_required")
+                                            .and_then(|v| v.as_bool())
+                                            .unwrap_or(false),
+                                        manual_review_required: qual_req.get("manual_review_required")
+                                            .and_then(|v| v.as_bool())
+                                            .unwrap_or(false),
+                                        council_approval_required: qual_req.get("council_approval_required")
+                                            .and_then(|v| v.as_bool())
+                                            .unwrap_or(false),
+                                        evidence_requirements: qual_req.get("evidence_requirements")
+                                            .and_then(|v| v.as_array())
+                                            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+                                            .unwrap_or_default(),
+                                    }
+                                })
+                        } else {
+                            QualityRequirements {
+                                min_test_coverage: entry.metadata.get("min_test_coverage")
+                                    .and_then(|v| v.as_f64())
+                                    .unwrap_or(0.0),
+                                security_scan_required: entry.metadata.get("security_scan_required")
+                                    .and_then(|v| v.as_bool())
+                                    .unwrap_or(false),
+                                performance_budget_required: entry.metadata.get("performance_budget_required")
+                                    .and_then(|v| v.as_bool())
+                                    .unwrap_or(false),
+                                manual_review_required: entry.metadata.get("manual_review_required")
+                                    .and_then(|v| v.as_bool())
+                                    .unwrap_or(false),
+                                council_approval_required: entry.metadata.get("council_approval_required")
+                                    .and_then(|v| v.as_bool())
+                                    .unwrap_or(false),
+                                evidence_requirements: entry.metadata.get("evidence_requirements")
+                                    .and_then(|v| v.as_array())
+                                    .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+                                    .unwrap_or_default(),
+                            }
+                        };
+                        
+                        // Extract council decision
+                        let council_decision = if let Some(council_dec) = entry.metadata.get("council_decision") {
+                            serde_json::from_value::<CouncilDecision>(council_dec.clone())
+                                .unwrap_or_else(|_| {
+                                    CouncilDecision {
+                                        verdict: council_dec.get("verdict")
+                                            .and_then(|v| v.as_str())
+                                            .and_then(|s| match s {
+                                                "Approved" | "approved" => Some(CouncilVerdict::Approved),
+                                                "ConditionalApproval" | "conditional_approval" => Some(CouncilVerdict::ConditionalApproval),
+                                                "Rejected" | "rejected" => Some(CouncilVerdict::Rejected),
+                                                "RequestMoreInfo" | "request_more_info" => Some(CouncilVerdict::RequestMoreInfo),
+                                                _ => None,
+                                            })
+                                            .unwrap_or_else(|| if approved {
+                                                CouncilVerdict::Approved
+                                            } else {
+                                                CouncilVerdict::Rejected
+                                            }),
+                                        confidence_score: council_dec.get("confidence_score")
+                                            .and_then(|v| v.as_f64())
+                                            .or_else(|| entry.metadata.get("confidence_score").and_then(|v| v.as_f64()))
+                                            .unwrap_or(0.5),
+                                        rationale: council_dec.get("rationale")
+                                            .and_then(|v| v.as_str())
+                                            .map(|s| s.to_string())
+                                            .or_else(|| entry.metadata.get("rationale")
+                                                .and_then(|v| v.as_str())
+                                                .map(|s| s.to_string()))
+                                            .unwrap_or_else(|| entry.description.clone()),
+                                        judge_verdicts: council_dec.get("judge_verdicts")
+                                            .and_then(|v| serde_json::from_value::<Vec<JudgeVerdict>>(v.clone()).ok())
+                                            .unwrap_or_default(),
+                                        decided_at: council_dec.get("decided_at")
+                                            .and_then(|v| v.as_str())
+                                            .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+                                            .map(|dt| dt.with_timezone(&chrono::Utc))
+                                            .or_else(|| entry.metadata.get("decided_at")
+                                                .and_then(|v| v.as_str())
+                                                .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+                                                .map(|dt| dt.with_timezone(&chrono::Utc)))
+                                            .unwrap_or(entry.timestamp),
+                                    }
+                                })
+                        } else {
+                            CouncilDecision {
                                 verdict: if approved {
                                     CouncilVerdict::Approved
                                 } else {
                                     CouncilVerdict::Rejected
                                 },
-                                confidence_score: entry.metadata.get("constitutional_score")
+                                confidence_score: entry.metadata.get("confidence_score")
                                     .and_then(|v| v.as_f64())
                                     .unwrap_or(0.5),
-                                rationale: entry.description.clone(),
-                                judge_verdicts: vec![],
-                                decided_at: entry.timestamp,
-                            },
-                            reviewed_at: entry.timestamp,
-                            review_duration_ms: 0,
-                            metadata: entry.metadata,
+                                rationale: entry.metadata.get("rationale")
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string())
+                                    .unwrap_or_else(|| entry.description.clone()),
+                                judge_verdicts: entry.metadata.get("judge_verdicts")
+                                    .and_then(|v| serde_json::from_value::<Vec<JudgeVerdict>>(v.clone()).ok())
+                                    .unwrap_or_default(),
+                                decided_at: entry.metadata.get("decided_at")
+                                    .and_then(|v| v.as_str())
+                                    .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+                                    .map(|dt| dt.with_timezone(&chrono::Utc))
+                                    .unwrap_or(entry.timestamp),
+                            }
+                        };
+                        
+                        // Extract review timestamp and duration
+                        let reviewed_at = entry.metadata.get("reviewed_at")
+                            .and_then(|v| v.as_str())
+                            .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+                            .map(|dt| dt.with_timezone(&chrono::Utc))
+                            .unwrap_or(entry.timestamp);
+                        
+                        let review_duration_ms = entry.metadata.get("review_duration_ms")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0);
+                        
+                        Some(CouncilReviewResult {
+                            plan_id: plan_id_from_meta,
+                            approved,
+                            risk_tier,
+                            scope_validation,
+                            ethical_assessment,
+                            quality_requirements,
+                            council_decision,
+                            reviewed_at,
+                            review_duration_ms,
+                            metadata: entry.metadata.clone(),
                         })
                     })
             })
