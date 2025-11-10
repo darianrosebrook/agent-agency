@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use tracing::info;
+use tracing::{info, warn};
 
 use crate::self_prompting_agent::evaluation::EvaluationOrchestrator;
 use crate::self_prompting_agent::loop_controller::{SelfPromptingLoop, SelfPromptingResult, SelfPromptingEvent};
@@ -12,6 +12,7 @@ use crate::self_prompting_agent::models::ModelRegistry;
 use crate::self_prompting_agent::sandbox::SandboxEnvironment;
 use crate::self_prompting_agent::prompting_types::{Task, SelfPromptingAgentError, AutonomousMode, SafetyMode};
 use crate::self_prompting_agent::learning_bridge::LearningBridge;
+use crate::self_prompting_agent::rl_signals::RLTrainer;
 
 /// Configuration for the self-prompting agent
 
@@ -24,6 +25,7 @@ pub struct SelfPromptingAgentConfig {
     pub execution_mode: AutonomousMode,
     pub safety_mode: SafetyMode,
     pub enable_learning: bool,
+    pub enable_rl: bool,
 }
 
 impl Default for SelfPromptingAgentConfig {
@@ -36,6 +38,7 @@ impl Default for SelfPromptingAgentConfig {
             execution_mode: AutonomousMode::Auto,
             safety_mode: SafetyMode::Sandbox,
             enable_learning: true,
+            enable_rl: false,
         }
     }
 }
@@ -49,6 +52,7 @@ pub struct SelfPromptingAgent {
     sandbox: Option<SandboxEnvironment>,
     event_sender: Option<mpsc::UnboundedSender<SelfPromptingEvent>>,
     learning_bridge: Option<Arc<LearningBridge>>,
+    rl_trainer: Option<Arc<RLTrainer>>,
 }
 
 impl SelfPromptingAgent {
@@ -82,6 +86,13 @@ impl SelfPromptingAgent {
             None
         };
 
+        // Initialize RL trainer if enabled
+        let rl_trainer = if config.enable_rl {
+            Some(Arc::new(RLTrainer::new(0.1, 0.9))) // learning_rate, discount_factor
+        } else {
+            None
+        };
+
         Ok(Self {
             config,
             model_registry,
@@ -90,6 +101,7 @@ impl SelfPromptingAgent {
             sandbox,
             event_sender: Some(event_tx),
             learning_bridge,
+            rl_trainer,
         })
     }
 
@@ -100,8 +112,31 @@ impl SelfPromptingAgent {
         // Validate task
         self.validate_task(&task).await?;
 
-        // Execute the self-prompting loop
-        let result = self.loop_controller.execute_task(task, self.model_registry.clone(), self.evaluator.clone()).await
+        // Get learning recommendations before execution if learning is enabled
+        let mut task_with_recommendations = task;
+        if let Some(ref learning_bridge) = self.learning_bridge {
+            match learning_bridge.get_recommendations(&format!("{:?}_code_fixing", task_with_recommendations.task_type)).await {
+                Ok(recommendations) => {
+                    if !recommendations.is_empty() {
+                        info!("Learning system recommendations: {:?}", recommendations);
+                        // Add recommendations to task refinement_context
+                        task_with_recommendations.refinement_context.extend(
+                            recommendations.iter().map(|r| format!("Learning insight: {}", r))
+                        );
+                    }
+                }
+                Err(e) => warn!("Failed to get learning recommendations: {}", e),
+            }
+        }
+
+        // Execute the self-prompting loop with learning bridge and RL trainer
+        let result = self.loop_controller.execute_task(
+            task_with_recommendations,
+            self.model_registry.clone(),
+            self.evaluator.clone(),
+            self.learning_bridge.clone(),
+            self.rl_trainer.clone(),
+        ).await
             .map_err(|e| SelfPromptingAgentError::Execution(e.to_string()))?;
 
         info!("Self-prompting execution completed with {} iterations", result.iterations);
@@ -140,9 +175,20 @@ impl SelfPromptingAgent {
                 "evaluation_framework": true,
                 "sandbox_environment": self.sandbox.is_some(),
                 "loop_controller": true,
-                "learning_enabled": self.learning_bridge.is_some()
+                "learning_enabled": self.learning_bridge.is_some(),
+                "rl_enabled": self.rl_trainer.is_some()
             }
         })
+    }
+
+    /// Get learning bridge reference
+    pub fn learning_bridge(&self) -> Option<&Arc<LearningBridge>> {
+        self.learning_bridge.as_ref()
+    }
+
+    /// Get RL trainer reference
+    pub fn rl_trainer(&self) -> Option<&Arc<RLTrainer>> {
+        self.rl_trainer.as_ref()
     }
 
     /// Shutdown the agent

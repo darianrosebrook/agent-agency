@@ -302,7 +302,7 @@ path = "src/lib.rs"
     let evaluator = Arc::new(EvaluationOrchestrator::new());
     // Note: Agent config max_iterations will be set to 1 in the wrapper function
     // to allow compilation feedback injection between iterations
-    // Create agent config
+    // Create agent config with learning enabled
     let agent_config = SelfPromptingAgentConfig {
         max_iterations: 1, // Set to 1 so we can inject compilation feedback between iterations
         enable_sandbox: true,
@@ -310,6 +310,8 @@ path = "src/lib.rs"
         enable_git_snapshots: false,
         execution_mode: AutonomousMode::Auto,
         safety_mode: SafetyMode::Sandbox,
+        enable_learning: true, // Enable learning bridge for compilation feedback signals
+        enable_rl: false, // RL training can be enabled for advanced learning
     };
 
     let agent = match SelfPromptingAgent::new(agent_config, model_registry, evaluator).await {
@@ -772,6 +774,24 @@ async fn run_playground_test_with_feedback(
                 }
                 Err(e) => {
                     warn!("Failed to send learning signal: {}", e);
+                }
+            }
+
+            // Train RL trainer if enabled
+            if let Some(rl_trainer) = agent.rl_trainer() {
+                let state = format!("{}_compilation_iteration_{}", file_type, iteration);
+                let action = format!("fix_compilation_strategy");
+                let reward = if compilation_success { 1.0 } else { 0.0 };
+                let next_state = format!("{}_compilation_result_{}", file_type, if compilation_success { "success" } else { "failure" });
+                
+                match rl_trainer.train_on_experience(&state, &action, reward, &next_state).await {
+                    Ok(_) => {
+                        info!("Trained RL on compilation experience: {} -> {} -> {} (reward: {:.2})", 
+                            state, action, next_state, reward);
+                    }
+                    Err(e) => {
+                        warn!("Failed to train RL on compilation experience: {}", e);
+                    }
                 }
             }
         }
