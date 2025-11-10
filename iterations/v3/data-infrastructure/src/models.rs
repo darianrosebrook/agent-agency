@@ -1025,3 +1025,105 @@ pub struct PasswordResetToken {
     #[schemars(with = "String")]
     pub created_at: DateTime<Utc>,
 }
+
+/// User settings model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
+pub struct UserSetting {
+    #[schemars(with = "String")]
+    pub id: Uuid,
+    #[schemars(with = "String")]
+    pub user_id: Uuid,
+    pub setting_key: String,
+    pub setting_value: serde_json::Value,
+    pub setting_type: String,
+    #[schemars(with = "String")]
+    pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+    pub updated_at: DateTime<Utc>,
+}
+
+/// App settings model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
+pub struct AppSetting {
+    #[schemars(with = "String")]
+    pub id: Uuid,
+    pub setting_key: String,
+    pub setting_value: serde_json::Value,
+    pub setting_type: String,
+    pub description: Option<String>,
+    pub is_public: bool,
+    pub created_by: String,
+    #[schemars(with = "String")]
+    pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+    pub updated_at: DateTime<Utc>,
+    pub updated_by: Option<String>,
+}
+
+/// Integration model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
+pub struct Integration {
+    #[schemars(with = "String")]
+    pub id: Uuid,
+    pub name: String,
+    pub integration_type: String,
+    pub provider: String,
+    pub configuration: serde_json::Value,
+    pub credentials: serde_json::Value,
+    pub is_active: bool,
+    pub is_enabled: bool,
+    pub last_sync_at: Option<DateTime<Utc>>,
+    pub sync_status: Option<String>,
+    pub sync_error: Option<String>,
+    pub created_by: String,
+    #[schemars(with = "String")]
+    pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+    pub updated_at: DateTime<Utc>,
+    pub updated_by: Option<String>,
+}
+
+/// API key model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
+pub struct ApiKey {
+    #[schemars(with = "String")]
+    pub id: Uuid,
+    #[schemars(with = "String")]
+    pub user_id: Uuid,
+    pub key_name: String,
+    pub key_hash: String,
+    pub key_prefix: String,
+    pub scopes: Vec<String>,
+    pub rate_limit_per_minute: Option<i32>,
+    pub rate_limit_per_hour: Option<i32>,
+    pub rate_limit_per_day: Option<i32>,
+    pub last_used_at: Option<DateTime<Utc>>,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub is_active: bool,
+    pub is_revoked: bool,
+    pub revoked_at: Option<DateTime<Utc>>,
+    pub revoked_reason: Option<String>,
+    #[schemars(with = "String")]
+    pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+    pub updated_at: DateTime<Utc>,
+    pub created_by: String,
+}
+
+/// Two-factor authentication model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
+pub struct TwoFactorAuth {
+    #[schemars(with = "String")]
+    pub id: Uuid,
+    #[schemars(with = "String")]
+    pub user_id: Uuid,
+    pub method: String,
+    pub secret_encrypted: String,
+    pub backup_codes: Vec<String>,
+    pub is_enabled: bool,
+    pub last_used_at: Option<DateTime<Utc>>,
+    #[schemars(with = "String")]
+    pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+    pub updated_at: DateTime<Utc>,
+}
