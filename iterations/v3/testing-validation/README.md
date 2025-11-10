@@ -2,6 +2,12 @@
 
 **Real E2E Tests with NO Mocks** - Validates autonomous agent workflows using actual local services.
 
+## 📚 Documentation
+
+- **[TEST_CATALOG.md](./TEST_CATALOG.md)** - Comprehensive catalog of all tests, test modules, and compilation status
+- **[TEST_STATUS_SUMMARY.md](./TEST_STATUS_SUMMARY.md)** - Current test compilation status and quick reference
+- **[Quality Evaluation Plan](../docs/QUALITY_EVALUATION_PLAN.md)** - Plan for evaluating AI agent output quality, reasoning, and decision-making
+
 ## ✅ Working Implementation
 
 This crate now contains a **fully functional E2E test** that demonstrates:

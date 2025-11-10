@@ -26,7 +26,15 @@ These are standalone test files that are compiled separately:
 - `tool_execution.rs` - MCP tool execution tests
 
 #### `agent-orchestration/tests/`
-- `integration_autonomous_executor.rs` - Autonomous executor integration tests
+- `integration_autonomous_executor.rs` - ✅ **COMPILES** - Autonomous executor integration tests (7 tests, 1 marked `#[ignore]`)
+  - Tests: `test_multi_session_context_continuity`, `test_council_review_and_debate_protocol`, `test_iterative_refinement_with_satisficing`, `test_memory_system_integration`, `test_progress_tracking_and_plateau_detection`, `test_autonomous_executor_creation`, `test_end_to_end_autonomous_execution` (ignored)
+- `integration_e2e_flow.rs` - ❌ **HAS ERRORS** (25 compilation errors) - End-to-end flow integration tests (6 tests)
+  - Tests: `test_complete_e2e_flow`, `test_caws_adjudication_cycle_stages`, `test_claim_extraction_always_on`, `test_performance_tracker_always_on`, `test_worktree_isolation`, `test_reflexive_learning_integration`
+- `integration_unified_orchestrator.rs` - ✅ **COMPILES** (20 warnings) - Unified orchestrator integration tests
+- `integration_workspace_state.rs` - ✅ **COMPILES** - Workspace state integration tests
+- `integration_task_state_persistence.rs` - ❌ **HAS ERRORS** (16 compilation errors) - Task state persistence tests (8 tests, marked `#[ignore]`)
+- `playground_tests.rs` - ✅ **COMPILES** - Playground manager tests (5 tests, requires `evaluation` feature)
+  - Tests: `test_playground_manager_creation`, `test_setup_and_cleanup_scenario`, `test_create_test_file`, `test_create_broken_file`, `test_scaffold_comprehensive_broken_files`
 
 #### `data-infrastructure/tests/`
 - `database_persistence_integration.rs` - Database persistence integration tests

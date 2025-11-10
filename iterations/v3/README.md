@@ -18,6 +18,8 @@ Unlike traditional software testing that focuses on binary success/failure, Agen
 
 **Scenario-Based Testing**: Agents are evaluated in controlled playground environments with known issues, measuring not just outcomes but the quality of problem-solving approaches.
 
+**Quality Evaluation**: Comprehensive quality assessment framework for evaluating AI agent output against mid-level engineer/writer standards. See [Quality Evaluation Plan](./docs/QUALITY_EVALUATION_PLAN.md) for testing chain-of-thought reasoning, council decisions, and output quality.
+
 ## Architecture
 
 ### System Components
