@@ -1,0 +1,47 @@
+@use '../../styles/tokens' as *;
+
+.projectListSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2; // space-y-2
+}
+
+.projectSkeletonItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3; // gap-3
+  padding: $spacing-4; // p-4
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border: 1px solid $color-gray-800; // border border-gray-800
+  border-radius: $spacing-lg; // rounded-lg
+}
+
+.projectSkeletonIcon {
+  width: $spacing-5; // w-5
+  height: $spacing-5; // h-5
+  flex-shrink: 0; // shrink-0
+  color: $color-gray-700; // text-gray-700
+}
+
+.projectSkeletonContent {
+  flex: 1; // flex-1
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2; // space-y-2
+}
+
+.projectSkeletonTitle {
+  height: $spacing-5; // h-5
+  width: 75%; // w-3/4
+}
+
+.projectSkeletonSubtitle {
+  height: $spacing-3; // h-3
+  width: 50%; // w-1/2
+}
+
+.projectSkeletonDate {
+  height: $spacing-4; // h-4
+  width: 5rem; // w-20
+}
+

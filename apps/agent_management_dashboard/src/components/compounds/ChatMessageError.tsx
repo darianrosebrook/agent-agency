@@ -91,7 +91,7 @@ export function ChatMessageError({
   return (
     <div className={cn(styles.chatMessageError, className)}>
       <div className={styles.chatMessageErrorIcon}>
-        <AlertCircle className="w-5 h-5 text-red-500" />
+        <AlertCircle className={styles.chatMessageErrorIconSvg} />
       </div>
 
       <div className={styles.chatMessageErrorContent}>
@@ -111,9 +111,9 @@ export function ChatMessageError({
             variant="ghost"
             size="sm"
             onClick={onRetry}
-            className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
+            className={styles.retryButton}
           >
-            <RefreshCw className="w-4 h-4 mr-1" />
+            <RefreshCw className={styles.retryButtonIcon} />
             Retry
           </Button>
         </div>

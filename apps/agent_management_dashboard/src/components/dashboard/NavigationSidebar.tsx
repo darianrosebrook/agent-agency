@@ -1,7 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { gsap } from "gsap";
+import { useState, useEffect, useRef, useCallback } from "react";
+
+const gsapLoader = async () => {
+  const gsap = await import("gsap");
+  return gsap.gsap;
+};
 import {
   Search,
   MessageSquare,
@@ -33,77 +37,91 @@ export function Sidebar() {
   const sidebarRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const isActive = (path: string) => {
-    return pathname === path;
-  };
+  const isActive = useCallback(
+    (path: string) => {
+      return pathname === path;
+    },
+    [pathname]
+  );
 
-  // Optimize sidebar animation with GSAP
+  const toggleCollapse = useCallback(() => {
+    setIsCollapsed((prev) => !prev);
+  }, []);
+
+  // Optimize sidebar animation with GSAP - lazy loaded
   useEffect(() => {
     if (!sidebarRef.current) return;
 
     const sidebar = sidebarRef.current;
-    const targetWidth = isCollapsed ? 64 : 320; // w-16 = 64px, w-80 = 320px
+    const targetWidth = isCollapsed ? 64 : 320;
 
-    // Set will-change before animation starts
     sidebar.style.willChange = "width";
 
-    // Use GSAP for optimized animation with force3D for GPU acceleration
-    const tween = gsap.to(sidebar, {
-      width: targetWidth,
-      duration: 0.3,
-      ease: "power2.out",
-      force3D: true, // Force GPU acceleration
-      onComplete: () => {
-        sidebar.style.willChange = "auto";
-      },
+    let tween: gsap.core.Tween | null = null;
+
+    gsapLoader().then((gsap) => {
+      tween = gsap.to(sidebar, {
+        width: targetWidth,
+        duration: 0.3,
+        ease: "power2.out",
+        force3D: true,
+        onComplete: () => {
+          sidebar.style.willChange = "auto";
+        },
+      });
     });
 
     return () => {
-      tween.kill();
+      if (tween) {
+        tween.kill();
+      }
       sidebar.style.willChange = "auto";
     };
   }, [isCollapsed]);
 
-  // Animate content opacity for smoother transitions
+  // Animate content opacity for smoother transitions - lazy loaded GSAP
   useEffect(() => {
     if (!contentRef.current) return;
 
     const content = contentRef.current;
-    // Only animate text elements that should fade
     const textElements = Array.from(
       content.querySelectorAll("span, h4, input")
     ) as HTMLElement[];
 
     if (textElements.length === 0) return;
 
-    if (isCollapsed) {
-      // Fade out text elements quickly
-      const tween = gsap.to(textElements, {
-        opacity: 0,
-        duration: 0.15,
-        stagger: 0.01,
-        ease: "power2.in",
-        force3D: true, // GPU acceleration
-      });
+    let tween: gsap.core.Tween | null = null;
 
-      return () => tween.kill();
-    } else {
-      // Fade in text elements with slight delay
-      const tween = gsap.fromTo(
-        textElements,
-        { opacity: 0 },
-        {
-          opacity: 1,
-          duration: 0.2,
+    gsapLoader().then((gsap) => {
+      if (isCollapsed) {
+        tween = gsap.to(textElements, {
+          opacity: 0,
+          duration: 0.15,
           stagger: 0.01,
-          delay: 0.1,
-          ease: "power2.out",
-          force3D: true, // GPU acceleration
-        }
-      );
+          ease: "power2.in",
+          force3D: true,
+        });
+      } else {
+        tween = gsap.fromTo(
+          textElements,
+          { opacity: 0 },
+          {
+            opacity: 1,
+            duration: 0.2,
+            stagger: 0.01,
+            delay: 0.1,
+            ease: "power2.out",
+            force3D: true,
+          }
+        );
+      }
+    });
 
-      return () => tween.kill();
-    }
+    return () => {
+      if (tween) {
+        tween.kill();
+      }
+    };
   }, [isCollapsed]);
 
   return (
@@ -146,10 +164,7 @@ export function Sidebar() {
               <Moon className="w-4 h-4 text-gray-400" />
             </div>
           )}
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className={styles.collapseButton}
-          >
+          <button onClick={toggleCollapse} className={styles.collapseButton}>
             <LayoutGrid className="w-4 h-4" />
           </button>
         </div>
@@ -186,26 +201,32 @@ export function Sidebar() {
               placeholder="Search"
               className={styles.searchInput}
             />
-            <kbd className={styles.searchKeyboard}>
-              /
-            </kbd>
+            <kbd className={styles.searchKeyboard}>/</kbd>
           </div>
         )}
 
         {/* Quick Links */}
         <TooltipProvider>
-          <div className={isCollapsed ? styles.quickLinksCollapsed : styles.quickLinks}>
+          <div
+            className={
+              isCollapsed ? styles.quickLinksCollapsed : styles.quickLinks
+            }
+          >
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
                   href="/chat"
                   className={cn(
                     styles.quickLink,
-                    isCollapsed ? styles.quickLinkCollapsed : styles.quickLinkExpanded
+                    isCollapsed
+                      ? styles.quickLinkCollapsed
+                      : styles.quickLinkExpanded
                   )}
                 >
                   <MessageSquare className="w-4 h-4" />
-                  {!isCollapsed && <span className={styles.navLinkText}>Chat</span>}
+                  {!isCollapsed && (
+                    <span className={styles.navLinkText}>Chat</span>
+                  )}
                 </Link>
               </TooltipTrigger>
               {isCollapsed && (
@@ -220,11 +241,15 @@ export function Sidebar() {
                   href="/projects"
                   className={cn(
                     styles.quickLink,
-                    isCollapsed ? styles.quickLinkCollapsed : styles.quickLinkExpanded
+                    isCollapsed
+                      ? styles.quickLinkCollapsed
+                      : styles.quickLinkExpanded
                   )}
                 >
                   <FileSignature className="w-4 h-4" />
-                  {!isCollapsed && <span className={styles.navLinkText}>Projects</span>}
+                  {!isCollapsed && (
+                    <span className={styles.navLinkText}>Projects</span>
+                  )}
                 </Link>
               </TooltipTrigger>
               {isCollapsed && (
@@ -252,12 +277,18 @@ export function Sidebar() {
                   href="/"
                   className={cn(
                     styles.navLink,
-                    isCollapsed ? styles.navLinkCollapsed : styles.navLinkExpanded,
-                    isActive("/") ? styles.navLinkActive : styles.navLinkInactive
+                    isCollapsed
+                      ? styles.navLinkCollapsed
+                      : styles.navLinkExpanded,
+                    isActive("/")
+                      ? styles.navLinkActive
+                      : styles.navLinkInactive
                   )}
                 >
                   <LayoutGrid className="w-4 h-4" />
-                  {!isCollapsed && <span className={styles.navLinkText}>Dashboard</span>}
+                  {!isCollapsed && (
+                    <span className={styles.navLinkText}>Dashboard</span>
+                  )}
                 </Link>
               </TooltipTrigger>
               {isCollapsed && (
@@ -272,12 +303,18 @@ export function Sidebar() {
                   href="/agent-stats"
                   className={cn(
                     styles.navLink,
-                    isCollapsed ? styles.navLinkCollapsed : styles.navLinkExpanded,
-                    isActive("/agent-stats") ? styles.navLinkActive : styles.navLinkInactive
+                    isCollapsed
+                      ? styles.navLinkCollapsed
+                      : styles.navLinkExpanded,
+                    isActive("/agent-stats")
+                      ? styles.navLinkActive
+                      : styles.navLinkInactive
                   )}
                 >
                   <TrendingUp className="w-4 h-4" />
-                  {!isCollapsed && <span className={styles.navLinkText}>Agent Stats</span>}
+                  {!isCollapsed && (
+                    <span className={styles.navLinkText}>Agent Stats</span>
+                  )}
                 </Link>
               </TooltipTrigger>
               {isCollapsed && (
@@ -292,13 +329,19 @@ export function Sidebar() {
                   href="/rules-governance"
                   className={cn(
                     styles.navLink,
-                    isCollapsed ? styles.navLinkCollapsed : styles.navLinkExpanded,
-                    isActive("/rules-governance") ? styles.navLinkActive : styles.navLinkInactive
+                    isCollapsed
+                      ? styles.navLinkCollapsed
+                      : styles.navLinkExpanded,
+                    isActive("/rules-governance")
+                      ? styles.navLinkActive
+                      : styles.navLinkInactive
                   )}
                 >
                   <FileCode className="w-4 h-4" />
                   {!isCollapsed && (
-                    <span className={styles.navLinkText}>Rules & Governance</span>
+                    <span className={styles.navLinkText}>
+                      Rules & Governance
+                    </span>
                   )}
                 </Link>
               </TooltipTrigger>
@@ -314,8 +357,12 @@ export function Sidebar() {
                   href="/agent-health"
                   className={cn(
                     styles.navLink,
-                    isCollapsed ? styles.navLinkCollapsed : styles.navLinkExpanded,
-                    isActive("/agent-health") ? styles.navLinkActive : styles.navLinkInactive
+                    isCollapsed
+                      ? styles.navLinkCollapsed
+                      : styles.navLinkExpanded,
+                    isActive("/agent-health")
+                      ? styles.navLinkActive
+                      : styles.navLinkInactive
                   )}
                 >
                   <HeartPulse className="w-4 h-4" />
@@ -336,8 +383,12 @@ export function Sidebar() {
                   href="/phase-planner"
                   className={cn(
                     styles.navLink,
-                    isCollapsed ? styles.navLinkCollapsed : styles.navLinkExpanded,
-                    isActive("/phase-planner") ? styles.navLinkActive : styles.navLinkInactive
+                    isCollapsed
+                      ? styles.navLinkCollapsed
+                      : styles.navLinkExpanded,
+                    isActive("/phase-planner")
+                      ? styles.navLinkActive
+                      : styles.navLinkInactive
                   )}
                 >
                   <Workflow className="w-4 h-4" />
@@ -358,12 +409,18 @@ export function Sidebar() {
                   href="/settings"
                   className={cn(
                     styles.navLink,
-                    isCollapsed ? styles.navLinkCollapsed : styles.navLinkExpanded,
-                    isActive("/settings") ? styles.navLinkActive : styles.navLinkInactive
+                    isCollapsed
+                      ? styles.navLinkCollapsed
+                      : styles.navLinkExpanded,
+                    isActive("/settings")
+                      ? styles.navLinkActive
+                      : styles.navLinkInactive
                   )}
                 >
                   <Settings className="w-4 h-4" />
-                  {!isCollapsed && <span className={styles.navLinkText}>Settings</span>}
+                  {!isCollapsed && (
+                    <span className={styles.navLinkText}>Settings</span>
+                  )}
                 </Link>
               </TooltipTrigger>
               {isCollapsed && (
@@ -395,18 +452,39 @@ export function Sidebar() {
               //    - Display project description or summary
               //    - Show project progress or task count
               //    - Allow quick actions (open, archive, delete) */}
-              <button className={cn(styles.folderButton, styles.folderButtonGroup)}>
-                <div className={cn(styles.folderStatusDot, styles.folderStatusDotBlue)}></div>
+              <button
+                className={cn(styles.folderButton, styles.folderButtonGroup)}
+              >
+                <div
+                  className={cn(
+                    styles.folderStatusDot,
+                    styles.folderStatusDotBlue
+                  )}
+                ></div>
                 <span className={styles.folderName}>Recent Project</span>
                 <ChevronDown className={styles.folderChevron} />
               </button>
-              <button className={cn(styles.folderButton, styles.folderButtonGroup)}>
-                <div className={cn(styles.folderStatusDot, styles.folderStatusDotGray)}></div>
+              <button
+                className={cn(styles.folderButton, styles.folderButtonGroup)}
+              >
+                <div
+                  className={cn(
+                    styles.folderStatusDot,
+                    styles.folderStatusDotGray
+                  )}
+                ></div>
                 <span className={styles.folderName}>Recent Project</span>
                 <ChevronDown className={styles.folderChevron} />
               </button>
-              <button className={cn(styles.folderButton, styles.folderButtonGroup)}>
-                <div className={cn(styles.folderStatusDot, styles.folderStatusDotYellow)}></div>
+              <button
+                className={cn(styles.folderButton, styles.folderButtonGroup)}
+              >
+                <div
+                  className={cn(
+                    styles.folderStatusDot,
+                    styles.folderStatusDotYellow
+                  )}
+                ></div>
                 <span className={styles.folderName}>Recent Project</span>
                 <ChevronDown className={styles.folderChevron} />
               </button>

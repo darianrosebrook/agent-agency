@@ -12,13 +12,22 @@
   display: flex;
   align-items: center;
   gap: $spacing-2;
-  color: rgb(161, 161, 170); // text-zinc-300
+  color: $color-zinc-300; // text-zinc-300
   margin-bottom: $spacing-4;
+}
+
+.headerIcon {
+  width: $spacing-4; // w-4
+  height: $spacing-4; // h-4
+}
+
+.headerLabel {
+  font-size: $font-size-sm; // text-sm
 }
 
 .headerTitle {
   font-size: $font-size-3xl; // text-3xl
-  color: white; // text-white
+  color: $color-white; // text-white
 }
 
 .bentoGrid {
@@ -65,5 +74,21 @@
 
 .rowSpan3 {
   grid-row: span 3 / span 3; // row-span-3
+}
+
+.chartSkeleton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 200px; // min-h-[200px]
+  background-color: $color-gray-900; // bg-[#111] -> gray-900
+  border-radius: 0.75rem; // rounded-[12px]
+  border: 1px solid $color-gray-300; // border border-[#cacaca] -> gray-300
+}
+
+.chartSkeletonText {
+  font-size: $font-size-sm; // text-sm
+  color: $color-gray-400; // text-gray-400
 }
 

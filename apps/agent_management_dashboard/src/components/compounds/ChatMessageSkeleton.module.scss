@@ -20,7 +20,7 @@
   width: 2rem; // w-8
   height: 2rem; // h-8
   border-radius: 9999px; // rounded-full
-  background-color: rgb(31, 41, 55); // bg-gray-800
+  background-color: $color-gray-800; // bg-gray-800
   display: flex;
   align-items: center;
   justify-content: center;
@@ -32,8 +32,8 @@
 }
 
 .loadingCard {
-  background-color: #1a1a1a;
-  border: 1px solid rgb(31, 41, 55); // border-gray-800
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border: 1px solid $color-gray-800; // border-gray-800
   border-radius: calc(var(--radius) + 4px); // rounded-lg
   padding: $spacing-4;
   width: 100%;
@@ -66,20 +66,55 @@
 .pulsingDot {
   width: 0.5rem; // w-2
   height: 0.5rem; // h-2
-  background-color: rgb(59, 130, 246); // bg-blue-500
+  background-color: $color-blue-500; // bg-blue-500
   border-radius: 9999px; // rounded-full
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 .pulsingText {
   font-size: $font-size-xs;
-  color: rgb(107, 114, 128); // text-gray-500
+  color: $color-gray-500; // text-gray-500
 }
 
 .timestampSkeleton {
   height: 0.75rem; // h-3
   width: 4rem; // w-16
   margin-top: $spacing-2;
-  background-color: rgb(31, 41, 55); // bg-gray-800
+  background-color: $color-gray-800; // bg-gray-800
+}
+
+.avatarIcon {
+  width: $spacing-4; // w-4
+  height: $spacing-4; // h-4
+  color: $color-gray-300; // text-gray-300
+}
+
+.contentLine {
+  height: 0.75rem; // h-3
+  width: 100%; // w-full
+}
+
+.contentLine90 {
+  width: 90%; // w-[90%]
+}
+
+.contentLine95 {
+  width: 95%; // w-[95%]
+}
+
+.contentLine85 {
+  width: 85%; // w-[85%]
+}
+
+.contentLine92 {
+  width: 92%; // w-[92%]
+}
+
+.contentLine88 {
+  width: 88%; // w-[88%]
+}
+
+.contentLine75 {
+  width: 75%; // w-[75%]
 }
 

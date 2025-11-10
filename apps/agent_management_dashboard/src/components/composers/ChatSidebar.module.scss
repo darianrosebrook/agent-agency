@@ -132,3 +132,20 @@
   white-space: nowrap;
 }
 
+.newChatButtonIcon {
+  width: $spacing-4; // w-4
+  height: $spacing-4; // h-4
+}
+
+.groupHeaderIcon {
+  width: $spacing-4; // w-4
+  height: $spacing-4; // h-4
+  flex-shrink: 0; // shrink-0
+}
+
+.chatItemIcon {
+  width: 0.875rem; // w-3.5
+  height: 0.875rem; // h-3.5
+  flex-shrink: 0; // shrink-0
+}
+

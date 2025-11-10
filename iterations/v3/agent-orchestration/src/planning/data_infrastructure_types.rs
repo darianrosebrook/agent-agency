@@ -78,10 +78,26 @@ pub mod models {
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct ExecutionPlan {
         #[schemars(with = "String")]
-    pub id: Uuid,
+        pub id: Uuid,
+        #[schemars(with = "String")]
+        pub session_id: Uuid,
+        pub working_spec_id: String,
         pub title: String,
-        pub overview: String,
-        // Add other fields as needed
+        pub overview: Option<String>,
+        pub state: String,
+        pub milestones: serde_json::Value,
+        pub dependency_graph: serde_json::Value,
+        pub change_budget: serde_json::Value,
+        pub quality_gates: serde_json::Value,
+        pub evidence_requirements: serde_json::Value,
+        pub active_waivers: serde_json::Value,
+        pub metadata: serde_json::Value,
+        #[schemars(with = "String")]
+        pub created_at: DateTime<Utc>,
+        #[schemars(with = "String")]
+        pub updated_at: DateTime<Utc>,
+        pub approved_at: Option<DateTime<Utc>>,
+        pub completed_at: Option<DateTime<Utc>>,
     }
 
     /// Planning session model

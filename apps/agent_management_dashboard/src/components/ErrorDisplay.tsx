@@ -1,9 +1,9 @@
 /**
  * Error Display Component
- * 
+ *
  * Displays user-friendly error messages with retry functionality.
  * Inspired by Open-WebUI's error display patterns.
- * 
+ *
  * @author @darianrosebrook
  */
 
@@ -12,7 +12,6 @@
 import { AlertCircle, RefreshCw, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { parseApiError, isRetryableError } from "../lib/errors";
-import type { AppError } from "../lib/errors";
 
 interface ErrorDisplayProps {
   error: unknown;
@@ -91,4 +90,3 @@ export function InlineError({ error }: { error: unknown }) {
     </div>
   );
 }
-

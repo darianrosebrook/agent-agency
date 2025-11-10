@@ -32,7 +32,7 @@ export function TaskProgressChart({
   );
 
   return (
-    <div className="bg-neutral-950 relative rounded-[12px] size-full">
+    <div className="bg-[#111] relative rounded-[12px] size-full border border-[#cacaca]">
       <div className="size-full">
         <div className="box-border content-stretch flex flex-col gap-[16px] items-start overflow-clip p-[12px] relative size-full">
           {/* Header */}
@@ -102,27 +102,23 @@ export function TaskProgressChart({
               </div>
               {/* Time reference */}
               <div className="flex flex-col justify-center leading-[0] not-italic relative shrink-0 text-[#cacaca] text-[10px] text-center text-nowrap tracking-[-0.1px]">
-                <p className="leading-[12px] whitespace-pre">
-                  since last week
-                </p>
+                <p className="leading-[12px] whitespace-pre">since last week</p>
               </div>
             </div>
           </div>
 
           {/* Bar chart */}
           <div className="basis-0 content-stretch flex gap-[2px] grow items-center max-h-[64px] min-h-px min-w-px overflow-clip relative rounded-[4px] shrink-0 w-full">
-            {Array.from({ length: animatedTotalTasks }).map(
-              (_, index) => (
-                <div
-                  key={index}
-                  className={`basis-0 grow h-[108px] min-h-px min-w-px shrink-0 transition-colors duration-500 ease-out ${
-                    index < animatedCompletedTasks
-                      ? "bg-neutral-50"
-                      : "bg-[#454545]"
-                  }`}
-                />
-              ),
-            )}
+            {Array.from({ length: animatedTotalTasks }).map((_, index) => (
+              <div
+                key={index}
+                className={`basis-0 grow h-[108px] min-h-px min-w-px shrink-0 transition-colors duration-500 ease-out ${
+                  index < animatedCompletedTasks
+                    ? "bg-neutral-50"
+                    : "bg-[#454545]"
+                }`}
+              />
+            ))}
           </div>
         </div>
       </div>

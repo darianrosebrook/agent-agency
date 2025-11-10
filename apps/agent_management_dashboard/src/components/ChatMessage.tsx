@@ -3,8 +3,8 @@ import { User, Bot, File, Copy, RotateCw, MoreVertical } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { TaskTimeline } from "./TaskTimeline";
 import { PhaseManager } from "./PhaseManager";
-import { PhasePlanSkeleton } from "./PhasePlanSkeleton";
-import type { Message } from "./Chat";
+import { PhasePlanSkeleton } from "./compounds/PhasePlanSkeleton";
+import type { Message } from "../lib/schemas/chat";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -117,7 +117,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
           {/* Context Files */}
           {message.contextFiles && message.contextFiles.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-2">
-              {message.contextFiles.map((file, index) => (
+              {message.contextFiles.map((file: string, index: number) => (
                 <Badge
                   key={index}
                   variant="secondary"

@@ -7,7 +7,7 @@
  * @author @darianrosebrook
  */
 
-import { toast as sonnerToast } from 'sonner';
+import { toast as sonnerToast, type ExternalToast } from 'sonner';
 import { parseApiError, ErrorCode, type AppError } from '../errors';
 
 /**
@@ -29,10 +29,16 @@ interface ToastOptions {
  * Show success toast
  */
 export function toastSuccess(message: string, options?: ToastOptions) {
-  return sonnerToast.success(message, {
+  const toastOptions: ExternalToast = {
     duration: options?.duration || 4000,
-    ...options,
-  });
+  };
+  if (options?.action) {
+    toastOptions.action = options.action;
+  }
+  if (options?.cancel) {
+    toastOptions.cancel = options.cancel;
+  }
+  return sonnerToast.success(message, toastOptions);
 }
 
 /**
@@ -40,30 +46,48 @@ export function toastSuccess(message: string, options?: ToastOptions) {
  */
 export function toastError(error: unknown, options?: ToastOptions) {
   const appError = parseApiError(error);
-  return sonnerToast.error(appError.getUserMessage(), {
+  const toastOptions: ExternalToast = {
     duration: options?.duration || 6000,
-    ...options,
-  });
+  };
+  if (options?.action) {
+    toastOptions.action = options.action;
+  }
+  if (options?.cancel) {
+    toastOptions.cancel = options.cancel;
+  }
+  return sonnerToast.error(appError.getUserMessage(), toastOptions);
 }
 
 /**
  * Show warning toast
  */
 export function toastWarning(message: string, options?: ToastOptions) {
-  return sonnerToast.warning(message, {
+  const toastOptions: ExternalToast = {
     duration: options?.duration || 5000,
-    ...options,
-  });
+  };
+  if (options?.action) {
+    toastOptions.action = options.action;
+  }
+  if (options?.cancel) {
+    toastOptions.cancel = options.cancel;
+  }
+  return sonnerToast.warning(message, toastOptions);
 }
 
 /**
  * Show info toast
  */
 export function toastInfo(message: string, options?: ToastOptions) {
-  return sonnerToast.info(message, {
+  const toastOptions: ExternalToast = {
     duration: options?.duration || 4000,
-    ...options,
-  });
+  };
+  if (options?.action) {
+    toastOptions.action = options.action;
+  }
+  if (options?.cancel) {
+    toastOptions.cancel = options.cancel;
+  }
+  return sonnerToast.info(message, toastOptions);
 }
 
 /**

@@ -79,7 +79,17 @@ export const ChatMessageResponseSchema = z.object({
   id: z.string(),
   role: z.string(),
   content: z.string(),
-  timestamp: z.string().transform((str) => new Date(str)),
+  timestamp: z.string().transform((str, ctx) => {
+    const date = new Date(str);
+    if (isNaN(date.getTime())) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid date string",
+      });
+      return z.NEVER;
+    }
+    return date;
+  }),
   metadata: z.record(z.unknown()).optional(),
 });
 

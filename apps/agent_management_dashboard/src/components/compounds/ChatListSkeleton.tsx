@@ -10,17 +10,18 @@
 
 import { Skeleton } from "../ui/skeleton";
 import { MessageSquare } from "lucide-react";
+import styles from "./ChatListSkeleton.module.scss";
 
 export function ChatListSkeleton({ count = 5 }: { count?: number }) {
   return (
-    <div className="space-y-1 p-2">
+    <div className={styles.chatListSkeleton}>
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg"
+          className={styles.chatSkeletonItem}
         >
-          <MessageSquare className="w-3.5 h-3.5 shrink-0 text-gray-700" />
-          <Skeleton className="h-4 flex-1 bg-gray-800" />
+          <MessageSquare className={styles.chatSkeletonIcon} />
+          <Skeleton className={styles.chatSkeletonText} />
         </div>
       ))}
     </div>

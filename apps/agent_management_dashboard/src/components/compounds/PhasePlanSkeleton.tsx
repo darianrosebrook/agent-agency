@@ -1,5 +1,4 @@
 import { Skeleton } from "../ui/skeleton";
-import { cn } from "../ui/utils";
 import styles from "./PhasePlanSkeleton.module.scss";
 
 export function PhasePlanSkeleton() {
@@ -7,11 +6,11 @@ export function PhasePlanSkeleton() {
     <div className={styles.phasePlanSkeleton}>
       {/* Header skeleton */}
       <div className={styles.header}>
-        <Skeleton className={cn(styles.headerTitle, "bg-gray-800")} />
-        <Skeleton className={cn(styles.headerDescription, "bg-gray-800")} />
+        <Skeleton className={styles.headerTitle} />
+        <Skeleton className={styles.headerDescription} />
         <div className={styles.headerActions}>
-          <Skeleton className={cn(styles.headerAction, styles.headerActionFirst, "bg-gray-800")} />
-          <Skeleton className={cn(styles.headerAction, styles.headerActionSecond, "bg-gray-800")} />
+          <Skeleton className={`${styles.headerAction} ${styles.headerActionFirst}`} />
+          <Skeleton className={`${styles.headerAction} ${styles.headerActionSecond}`} />
         </div>
       </div>
 
@@ -21,10 +20,10 @@ export function PhasePlanSkeleton() {
           {/* Phase header */}
           <div className={styles.phaseHeader}>
             <div className={styles.phaseHeaderTop}>
-              <Skeleton className={cn(styles.phaseTitle, styles.phaseTitleFirst, "bg-gray-800")} />
-              <Skeleton className={cn(styles.phaseTitle, styles.phaseTitleSecond, "bg-gray-800")} />
+              <Skeleton className={`${styles.phaseTitle} ${styles.phaseTitleFirst}`} />
+              <Skeleton className={`${styles.phaseTitle} ${styles.phaseTitleSecond}`} />
             </div>
-            <Skeleton className={cn(styles.phaseDescription, "bg-gray-800")} />
+            <Skeleton className={styles.phaseDescription} />
           </div>
 
           {/* Task items skeleton */}
@@ -32,8 +31,8 @@ export function PhasePlanSkeleton() {
             {[1, 2, 3].map((task) => (
               <div key={task} className={styles.taskItem}>
                 <div className={styles.taskItemContent}>
-                  <Skeleton className={cn(styles.taskCheckbox, "bg-gray-800")} />
-                  <Skeleton className={cn(styles.taskText, "bg-gray-800")} />
+                  <Skeleton className={styles.taskCheckbox} />
+                  <Skeleton className={styles.taskText} />
                 </div>
               </div>
             ))}

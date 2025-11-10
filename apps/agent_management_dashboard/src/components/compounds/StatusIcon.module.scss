@@ -1,0 +1,7 @@
+@use '../../styles/tokens' as *;
+
+.statusIcon {
+  width: $spacing-4; // w-4
+  height: $spacing-4; // h-4
+}
+

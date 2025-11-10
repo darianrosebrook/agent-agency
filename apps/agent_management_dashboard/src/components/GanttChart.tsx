@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { TimelineTask, ZoomLevel } from "./TimelineView";
+import type { TimelineTask, ZoomLevel } from "./composers/TimelineTab";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import {
   Tooltip,
@@ -88,10 +88,23 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
   }, [dateRange, zoomLevel]);
 
   // Group adjacent tasks when zoomed out
-  const groupedTasksByWorker = useMemo(() => {
+  const groupedTasksByWorker = useMemo((): Map<string, GroupedTask[]> => {
     if (zoomLevel === "day" || zoomLevel === "week") {
       // Show individual tasks at detailed zoom levels
-      return tasksByWorker;
+      // Convert TimelineTask[] to GroupedTask[] for consistency
+      const grouped = new Map<string, GroupedTask[]>();
+      tasksByWorker.forEach((tasks, workerId) => {
+        const groups: GroupedTask[] = tasks.map((task) => ({
+          id: task.id,
+          tasks: [task],
+          startDate: task.startDate,
+          endDate: task.endDate,
+          worker: task.worker,
+          workerId: task.workerId,
+        }));
+        grouped.set(workerId, groups);
+      });
+      return grouped;
     }
 
     // Group adjacent tasks at higher zoom levels
@@ -119,7 +132,7 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
             // Save current group and start new one
             if (currentGroup.length > 0) {
               groups.push({
-                id: currentGroup.map((t) => t.id).join("-"),
+                id: currentGroup.map((t: TimelineTask) => t.id).join("-"),
                 tasks: [...currentGroup],
                 startDate: currentGroup[0].startDate,
                 endDate: currentGroup[currentGroup.length - 1].endDate,
@@ -134,7 +147,7 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
         // Handle last group
         if (index === tasks.length - 1 && currentGroup.length > 0) {
           groups.push({
-            id: currentGroup.map((t) => t.id).join("-"),
+                id: currentGroup.map((t: TimelineTask) => t.id).join("-"),
             tasks: [...currentGroup],
             startDate: currentGroup[0].startDate,
             endDate: currentGroup[currentGroup.length - 1].endDate,
@@ -262,7 +275,7 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
                       <AvatarFallback>
                         {worker.worker
                           .split(" ")
-                          .map((n) => n[0])
+                          .map((n: string) => n[0])
                           .join("")}
                       </AvatarFallback>
                     </Avatar>
@@ -272,7 +285,7 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
                       </p>
                       <p className="text-[#888888] text-xs">
                         {
-                          workerTasks.filter((t) => t.status === "completed")
+                          workerTasks.filter((t: TimelineTask) => t.status === "completed")
                             .length
                         }
                         /{workerTasks.length} completed
@@ -326,7 +339,7 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
                                     {task.title}
                                   </p>
                                   <div className="flex gap-1">
-                                    {task.tags.slice(0, 2).map((tag, i) => (
+                                    {task.tags?.slice(0, 2).map((tag: string, i: number) => (
                                       <span
                                         key={i}
                                         className="text-[10px] text-[#888888] bg-[#262626] px-1.5 py-0.5 rounded"
@@ -354,16 +367,18 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
                                       {task.endDate.toLocaleDateString()}
                                     </span>
                                   </div>
-                                  <div className="flex gap-1.5 flex-wrap">
-                                    {task.tags.map((tag, i) => (
-                                      <span
-                                        key={i}
-                                        className="text-xs bg-[#262626] px-2 py-0.5 rounded"
-                                      >
-                                        {tag}
-                                      </span>
-                                    ))}
-                                  </div>
+                                  {task.tags && task.tags.length > 0 && (
+                                    <div className="flex gap-1.5 flex-wrap">
+                                      {task.tags.map((tag: string, i: number) => (
+                                        <span
+                                          key={i}
+                                          className="text-xs bg-[#262626] px-2 py-0.5 rounded"
+                                        >
+                                          {tag}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               </TooltipContent>
                             </Tooltip>
@@ -371,7 +386,7 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
                         })
                       : // Grouped view - show combined task groups
                         (groupedTasksByWorker.get(workerId) ?? []).map(
-                          (group) => {
+                          (group: GroupedTask) => {
                             const position = calculateTaskPosition(
                               group.startDate,
                               group.endDate
@@ -384,7 +399,7 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
                                   <div
                                     className={`absolute top-2 h-10 rounded-lg border-l-4 ${getStatusColor(
                                       group.tasks.every(
-                                        (t) => t.status === "completed"
+                                        (t: TimelineTask) => t.status === "completed"
                                       )
                                         ? "completed"
                                         : "in-progress"
@@ -399,9 +414,9 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
                                       </p>
                                       <span className="text-[10px] text-[#888888] ml-2">
                                         {
-                                          group.tasks.filter(
-                                            (t) => t.status === "completed"
-                                          ).length
+                                      group.tasks.filter(
+                                        (t: TimelineTask) => t.status === "completed"
+                                      ).length
                                         }
                                         /{group.tasks.length}
                                       </span>
@@ -414,7 +429,7 @@ export function GanttChart({ tasks, zoomLevel }: GanttChartProps) {
                                       Task Group ({group.tasks.length} tasks)
                                     </p>
                                     <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                                      {group.tasks.map((task) => (
+                                      {group.tasks.map((task: TimelineTask) => (
                                         <div
                                           key={task.id}
                                           className="text-xs border-l-2 border-[#404040] pl-2"

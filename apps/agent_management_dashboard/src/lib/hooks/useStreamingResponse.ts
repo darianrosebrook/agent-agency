@@ -12,7 +12,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { EventSourceParserStream } from 'eventsource-parser/stream';
-import type { ParsedEvent } from 'eventsource-parser';
+import type { ParsedEvent } from 'eventsource-parser/lib/parse';
 
 export interface StreamingOptions {
   url: string;

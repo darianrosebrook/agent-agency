@@ -19,6 +19,8 @@ import {
   type TaskStatus,
   type Priority,
 } from "../compounds";
+import { cn } from "../ui/utils";
+import styles from "./TaskModal.module.scss";
 
 interface NewTaskModalProps {
   open: boolean;
@@ -126,23 +128,23 @@ export function NewTaskModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
-      <div className="bg-zinc-800 rounded-lg w-full max-w-2xl text-white shadow-2xl">
+    <div className={styles.modalOverlay}>
+      <div className={styles.modalContent}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-zinc-700">
+        <div className={styles.modalHeader}>
           <button
             onClick={() => onOpenChange(false)}
-            className="text-gray-400 hover:text-white transition-colors"
+            className={styles.closeButton}
           >
-            <X className="w-5 h-5" />
+            <X className={styles.closeButtonIcon} />
           </button>
-          <div className="flex items-center gap-2 text-sm text-gray-400">
+          <div className={styles.modalHeaderTitle}>
             <span>New Task</span>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className={styles.modalBody}>
           {/* Title */}
           <div>
             <input
@@ -150,20 +152,20 @@ export function NewTaskModal({
               placeholder="Task title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-transparent border-none outline-none text-white text-2xl font-semibold placeholder:text-gray-600 mb-2"
+              className={styles.titleInput}
               autoFocus
             />
             <textarea
               placeholder="Add a description for this task..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full bg-transparent border-none outline-none text-sm text-gray-400 placeholder:text-gray-600 resize-none leading-relaxed"
+              className={styles.descriptionTextarea}
               rows={3}
             />
           </div>
 
           {/* Metadata Grid */}
-          <div className="space-y-3 text-sm">
+          <div className={styles.metadataGrid}>
             {/* Status */}
             <MetadataRow label="Status">
               <div className="relative">
@@ -173,7 +175,7 @@ export function NewTaskModal({
                   onClick={() => setShowStatusMenu(!showStatusMenu)}
                 />
                 {showStatusMenu && (
-                  <div className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-xl py-2 z-10 min-w-[180px]">
+                  <div className={styles.menuDropdown}>
                     {(Object.keys(taskStatusConfig) as TaskStatus[]).map(
                       (key) => (
                         <button
@@ -182,7 +184,7 @@ export function NewTaskModal({
                             setStatus(key);
                             setShowStatusMenu(false);
                           }}
-                          className={`w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-100 transition-colors ${taskStatusConfig[key].color}`}
+                          className={cn(styles.menuItem, taskStatusConfig[key].color)}
                         >
                           <StatusBadge
                             status={key}
@@ -211,8 +213,8 @@ export function NewTaskModal({
             //    - Show "Unassigned" when no users are selected
             //    - Handle user lookup and display gracefully */}
             <MetadataRow label="Assignees">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center text-xs font-medium">
+              <div className={styles.assigneesContainer}>
+                <div className={styles.assigneeAvatar}>
                   {assignees ? assignees[0].toUpperCase() : "U"}
                 </div>
                 <input
@@ -220,7 +222,7 @@ export function NewTaskModal({
                   placeholder="Add assignees"
                   value={assignees}
                   onChange={(e) => setAssignees(e.target.value)}
-                  className="bg-transparent border-none outline-none text-white placeholder:text-gray-600"
+                  className={styles.assigneeInput}
                 />
               </div>
             </MetadataRow>
@@ -232,7 +234,7 @@ export function NewTaskModal({
                 placeholder="Set due date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="bg-transparent border-none outline-none text-white placeholder:text-gray-600"
+                className={styles.metadataInput}
               />
             </MetadataRow>
 
@@ -245,7 +247,7 @@ export function NewTaskModal({
                   onClick={() => setShowPriorityMenu(!showPriorityMenu)}
                 />
                 {showPriorityMenu && (
-                  <div className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-xl py-2 z-10 min-w-[140px]">
+                  <div className={cn(styles.menuDropdown, styles.priorityMenu)}>
                     {(Object.keys(priorityConfig) as Priority[]).map((key) => (
                       <button
                         key={key}
@@ -253,7 +255,7 @@ export function NewTaskModal({
                           setPriority(key);
                           setShowPriorityMenu(false);
                         }}
-                        className="w-full flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                        className={styles.menuItem}
                       >
                         <PriorityIndicator
                           priority={key}
@@ -271,19 +273,19 @@ export function NewTaskModal({
               <div className="relative">
                 <button
                   onClick={() => setShowProjectMenu(!showProjectMenu)}
-                  className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                  className={styles.projectButton}
                 >
                   {project ? (
                     <>
-                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                      <span className={styles.projectIndicator}></span>
                       <span>{project}</span>
                     </>
                   ) : (
-                    <span className="text-gray-600">Add project</span>
+                    <span className={styles.projectPlaceholder}>Add project</span>
                   )}
                 </button>
                 {showProjectMenu && (
-                  <div className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-xl py-2 z-10 min-w-[160px]">
+                  <div className={cn(styles.menuDropdown, styles.projectMenu)}>
                     {/* TODO: Replace hardcoded project list with projects from v3 database with the following requirements:
                     // 1. Project list fetching: Load available projects from database
                     //    - Data source: GET /api/projects endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
@@ -304,9 +306,9 @@ export function NewTaskModal({
                           setProject(proj);
                           setShowProjectMenu(false);
                         }}
-                        className="w-full flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                        className={styles.projectMenuItem}
                       >
-                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                        <span className={styles.projectIndicator}></span>
                         {proj}
                       </button>
                     ))}
@@ -317,7 +319,7 @@ export function NewTaskModal({
 
             {/* Tags */}
             <MetadataRow label="Tags">
-              <div className="flex gap-2 flex-wrap">
+              <div className={styles.tagsContainer}>
                 {tags.map((tag) => (
                   <TagChip key={tag} tag={tag} onRemove={handleRemoveTag} />
                 ))}
@@ -333,7 +335,7 @@ export function NewTaskModal({
                         handleAddTag();
                       }
                     }}
-                    className="bg-transparent border-none outline-none text-white placeholder:text-gray-600 text-xs min-w-[80px]"
+                    className={styles.tagInput}
                   />
                 )}
               </div>
@@ -342,61 +344,62 @@ export function NewTaskModal({
 
           {/* Sub-tasks */}
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <button className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
-                <ChevronDown className="w-4 h-4" />
+            <div className={styles.subtasksHeader}>
+              <button className={styles.subtasksToggle}>
+                <ChevronDown className={styles.subtasksToggleIcon} />
                 <span>Sub-tasks</span>
               </button>
-              <div className="flex gap-1">
+              <div className={styles.subtasksActions}>
                 <button
                   onClick={() => setIsAddingSubtask(true)}
-                  className="p-1 hover:bg-zinc-700 rounded transition-colors"
+                  className={styles.subtasksActionButton}
                 >
-                  <Plus className="w-4 h-4 text-gray-400" />
+                  <Plus className={styles.subtasksActionIcon} />
                 </button>
-                <button className="p-1 hover:bg-zinc-700 rounded transition-colors">
-                  <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                <button className={styles.subtasksActionButton}>
+                  <MoreHorizontal className={styles.subtasksActionIcon} />
                 </button>
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className={styles.subtasksList}>
               {subtasks.map((task) => (
                 <div
                   key={task.id}
-                  className="flex items-center gap-3 p-2 hover:bg-zinc-700 rounded transition-colors group"
+                  className={styles.subtaskItem}
                 >
                   <button
                     onClick={() => toggleSubtask(task.id)}
-                    className="flex-shrink-0"
+                    className={styles.subtaskCheckbox}
                   >
                     {task.completed ? (
-                      <CheckCircle2 className="w-5 h-5 text-green-500" />
+                      <CheckCircle2 className={cn(styles.subtaskCheckboxIcon, styles.subtaskCheckboxIconCompleted)} />
                     ) : (
-                      <Circle className="w-5 h-5 text-gray-600" />
+                      <Circle className={cn(styles.subtaskCheckboxIcon, styles.subtaskCheckboxIconIncomplete)} />
                     )}
                   </button>
                   <span
-                    className={
-                      task.completed ? "text-gray-500 line-through" : ""
-                    }
+                    className={cn(
+                      styles.subtaskTitle,
+                      task.completed && styles.completed
+                    )}
                   >
                     {task.title}
                   </span>
-                  <div className="ml-auto flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className={styles.subtaskActions}>
                     <button
                       onClick={() => handleRemoveSubtask(task.id)}
-                      className="text-gray-400 hover:text-white"
+                      className={styles.subtaskRemoveButton}
                     >
-                      <X className="w-4 h-4" />
+                      <X className={styles.subtaskRemoveIcon} />
                     </button>
                   </div>
                 </div>
               ))}
 
               {isAddingSubtask && (
-                <div className="flex items-center gap-2 p-2">
-                  <Circle className="w-5 h-5 text-gray-600 flex-shrink-0" />
+                <div className={styles.subtaskInputContainer}>
+                  <Circle className={cn(styles.subtaskCheckboxIcon, styles.subtaskCheckboxIconIncomplete)} />
                   <input
                     type="text"
                     placeholder="Subtask title"
@@ -416,7 +419,7 @@ export function NewTaskModal({
                         setIsAddingSubtask(false);
                       }
                     }}
-                    className="flex-1 bg-transparent border-none outline-none text-white placeholder:text-gray-600"
+                    className={styles.subtaskInput}
                     autoFocus
                   />
                 </div>
@@ -426,17 +429,17 @@ export function NewTaskModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-zinc-700">
+        <div className={styles.modalFooter}>
           <button
             onClick={() => onOpenChange(false)}
-            className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+            className={styles.cancelButton}
           >
             Cancel
           </button>
           <button
             onClick={handleCreate}
             disabled={!title.trim()}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className={styles.createButton}
           >
             Create Task
           </button>

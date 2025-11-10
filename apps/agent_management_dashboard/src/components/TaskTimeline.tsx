@@ -12,7 +12,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import type { Task } from "./composers/Chat";
+import type { Task } from "../lib/schemas/chat";
 
 interface TaskTimelineProps {
   tasks: Task[];

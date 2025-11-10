@@ -109,7 +109,7 @@ export function TaskItem({
             variant="outline"
             size="sm"
             onClick={onAddSubtask}
-            className="text-zinc-300 border-zinc-700 hover:bg-zinc-800 hover:text-zinc-100 bg-zinc-950"
+            className={styles.addSubtaskButton}
           >
             Add subtask
           </Button>

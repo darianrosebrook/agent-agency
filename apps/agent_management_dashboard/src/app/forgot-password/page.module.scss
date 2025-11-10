@@ -2,10 +2,10 @@
 
 .forgotPasswordPage {
   display: flex;
-  min-height: 100vh; // min-h-screen
+  min-height: 100vh;
   align-items: center;
   justify-content: center;
-  background-color: oklch(0.145 0 0); // bg-zinc-950
+  background-color: rgb(9, 9, 11); // bg-zinc-950
   padding: $spacing-4; // p-4
 }
 
@@ -13,13 +13,94 @@
   width: 100%; // w-full
   max-width: 28rem; // max-w-md
   border-radius: $spacing-lg; // rounded-lg
-  border: 1px solid oklch(0.269 0 0); // border border-gray-800
+  border: 1px solid rgb(31, 41, 55); // border border-gray-800
   background-color: #1a1a1a; // bg-[#1a1a1a]
   padding: $spacing-8; // p-8
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); // shadow-lg
 }
 
-.forgotPasswordHeader {
+.successContainer {
+  text-align: center;
+}
+
+.successIconWrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem; // w-16
+  height: 4rem; // h-16
+  background-color: rgba(34, 197, 94, 0.2); // bg-green-500/20
+  border-radius: 9999px; // rounded-full
+  margin-bottom: $spacing-4; // mb-4
+}
+
+.successIcon {
+  width: 2rem; // w-8
+  height: 2rem; // h-8
+  color: #22c55e; // text-green-500
+}
+
+.successTitle {
+  font-size: $font-size-2xl; // text-2xl
+  font-weight: $font-weight-bold; // font-bold
+  color: white; // text-white
+  margin-bottom: $spacing-2; // mb-2
+}
+
+.successMessage {
+  color: rgb(156, 163, 175); // text-gray-400
+  margin-bottom: $spacing-6; // mb-6
+}
+
+.successEmail {
+  color: white; // text-white
+  font-weight: $font-weight-medium; // font-medium
+}
+
+.successActions {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-3; // space-y-3
+}
+
+.backToLoginButton {
+  display: block;
+  width: 100%; // w-full
+  background-color: #2563eb; // bg-blue-600
+  color: white; // text-white
+  padding-block: $spacing-2; // py-2
+  border-radius: $spacing-lg; // rounded-lg
+  transition: background-color $transition-normal;
+  font-weight: $font-weight-medium; // font-medium
+  text-align: center;
+
+  &:hover {
+    background-color: #1d4ed8; // hover:bg-blue-700
+  }
+}
+
+.resendButton {
+  display: block;
+  width: 100%; // w-full
+  background-color: #0d0d0d; // bg-[#0d0d0d]
+  border: 1px solid rgb(31, 41, 55); // border border-gray-800
+  color: rgb(209, 213, 219); // text-gray-300
+  padding-block: $spacing-2; // py-2
+  border-radius: $spacing-lg; // rounded-lg
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: rgb(31, 41, 55); // hover:bg-gray-800
+  }
+}
+
+.successFooter {
+  font-size: $font-size-sm; // text-sm
+  color: rgb(107, 114, 128); // text-gray-500
+  margin-top: $spacing-6; // mt-6
+}
+
+.formHeader {
   margin-bottom: $spacing-6; // mb-6
 }
 
@@ -27,12 +108,12 @@
   display: inline-flex;
   align-items: center;
   gap: $spacing-2; // gap-2
-  color: oklch(0.5 0 0); // text-gray-400
-  transition: color $transition-normal;
+  color: rgb(156, 163, 175); // text-gray-400
   margin-bottom: $spacing-4; // mb-4
+  transition: color $transition-normal;
 
   &:hover {
-    color: oklch(0.5 0 0); // hover:text-gray-300
+    color: rgb(209, 213, 219); // hover:text-gray-300
   }
 }
 
@@ -41,15 +122,15 @@
   height: $spacing-4; // h-4
 }
 
-.forgotPasswordTitle {
+.formTitle {
   font-size: $font-size-3xl; // text-3xl
   font-weight: $font-weight-bold; // font-bold
   color: white; // text-white
   margin-bottom: $spacing-2; // mb-2
 }
 
-.forgotPasswordDescription {
-  color: oklch(0.5 0 0); // text-gray-400
+.formSubtitle {
+  color: rgb(156, 163, 175); // text-gray-400
 }
 
 .stubBadge {
@@ -59,7 +140,7 @@
   background-color: rgba(234, 179, 8, 0.1); // bg-yellow-400/10
   padding-inline: $spacing-2; // px-2
   padding-block: $spacing-1; // py-1
-  font-size: $font-size-xs; // text-xs
+  font-size: 0.75rem; // text-xs
   font-weight: $font-weight-medium; // font-medium
   color: #eab308; // text-yellow-500
   border: 1px solid rgba(234, 179, 8, 0.2); // ring-1 ring-inset ring-yellow-400/20
@@ -73,14 +154,14 @@
 }
 
 .formField {
-  // No specific styles, inherits from parent
+  // No specific styles
 }
 
 .formLabel {
   display: block;
   font-size: $font-size-sm; // text-sm
   font-weight: $font-weight-medium; // font-medium
-  color: oklch(0.5 0 0); // text-gray-300
+  color: rgb(209, 213, 219); // text-gray-300
   margin-bottom: $spacing-2; // mb-2
 }
 
@@ -95,13 +176,13 @@
   transform: translateY(-50%); // -translate-y-1/2
   width: $spacing-4; // w-4
   height: $spacing-4; // h-4
-  color: oklch(0.5 0 0); // text-gray-500
+  color: rgb(107, 114, 128); // text-gray-500
 }
 
 .formInput {
   width: 100%; // w-full
   background-color: #0f0f0f; // bg-[#0f0f0f]
-  border: 1px solid oklch(0.269 0 0); // border border-gray-800
+  border: 1px solid rgb(31, 41, 55); // border border-gray-800
   border-radius: $spacing-lg; // rounded-lg
   padding-left: 2.5rem; // pl-10
   padding-right: $spacing-4; // pr-4
@@ -110,7 +191,7 @@
   transition: border-color $transition-normal;
 
   &::placeholder {
-    color: oklch(0.5 0 0); // placeholder:text-gray-500
+    color: rgb(107, 114, 128); // placeholder:text-gray-500
   }
 
   &:focus {
@@ -153,7 +234,7 @@
 .requirementsSection {
   margin-top: $spacing-8; // mt-8
   padding-top: $spacing-6; // pt-6
-  border-top: 1px solid oklch(0.269 0 0); // border-t border-gray-800
+  border-top: 1px solid rgb(31, 41, 55); // border-t border-gray-800
 }
 
 .requirementsTitle {
@@ -166,102 +247,13 @@
 .requirementsList {
   list-style-type: disc;
   list-style-position: inside;
-  color: oklch(0.5 0 0); // text-gray-400
+  color: rgb(156, 163, 175); // text-gray-400
   display: flex;
   flex-direction: column;
   gap: $spacing-2; // space-y-2
   font-size: $font-size-sm; // text-sm
 }
 
-// Success state
-.successCard {
-  width: 100%; // w-full
-  max-width: 28rem; // max-w-md
-  border-radius: $spacing-lg; // rounded-lg
-  border: 1px solid oklch(0.269 0 0); // border border-gray-800
-  background-color: #1a1a1a; // bg-[#1a1a1a]
-  padding: $spacing-8; // p-8
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); // shadow-lg
-}
-
-.successContent {
-  text-align: center;
-}
-
-.successIconContainer {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 4rem; // w-16
-  height: 4rem; // h-16
-  background-color: rgba(34, 197, 94, 0.2); // bg-green-500/20
-  border-radius: 9999px; // rounded-full
-  margin-bottom: $spacing-4; // mb-4
-}
-
-.successIcon {
-  width: 2rem; // w-8
-  height: 2rem; // h-8
-  color: #22c55e; // text-green-500
-}
-
-.successTitle {
-  font-size: $font-size-2xl; // text-2xl
-  font-weight: $font-weight-bold; // font-bold
-  color: white; // text-white
-  margin-bottom: $spacing-2; // mb-2
-}
-
-.successMessage {
-  color: oklch(0.5 0 0); // text-gray-400
-  margin-bottom: $spacing-6; // mb-6
-}
-
-.successEmail {
-  color: white; // text-white
-  font-weight: $font-weight-medium; // font-medium
-}
-
-.successActions {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-3; // space-y-3
-}
-
-.backToLoginButton {
-  display: block;
-  width: 100%; // w-full
-  background-color: #2563eb; // bg-blue-600
-  color: white; // text-white
-  padding-block: $spacing-2; // py-2
-  border-radius: $spacing-lg; // rounded-lg
-  transition: background-color $transition-normal;
-  font-weight: $font-weight-medium; // font-medium
-  text-align: center;
-
-  &:hover {
-    background-color: #1d4ed8; // hover:bg-blue-700
-  }
-}
-
-.resendButton {
-  display: block;
-  width: 100%; // w-full
-  background-color: #0d0d0d; // bg-[#0d0d0d]
-  border: 1px solid oklch(0.269 0 0); // border border-gray-800
-  color: oklch(0.5 0 0); // text-gray-300
-  padding-block: $spacing-2; // py-2
-  border-radius: $spacing-lg; // rounded-lg
-  transition: background-color $transition-normal;
-
-  &:hover {
-    background-color: oklch(0.269 0 0); // hover:bg-gray-800
-  }
-}
-
-.successFooter {
-  font-size: $font-size-sm; // text-sm
-  color: oklch(0.5 0 0); // text-gray-500
+.requirementsSectionDivider {
   margin-top: $spacing-6; // mt-6
 }
-

@@ -19,13 +19,13 @@ export function PhaseHeader({ onSaveToProject }: PhaseHeaderProps) {
       <div className={styles.phaseActions}>
         <Button
           onClick={onSaveToProject}
-          className="bg-blue-600 text-white hover:bg-blue-700"
+          className={styles.addToProjectButton}
         >
           Add to Project
         </Button>
         <Button
           variant="outline"
-          className="bg-[#1a1a1a] border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+          className={styles.startNewProjectButton}
         >
           Start New Project
         </Button>

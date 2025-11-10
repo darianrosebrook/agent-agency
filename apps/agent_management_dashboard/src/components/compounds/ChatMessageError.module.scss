@@ -3,8 +3,8 @@
 .chatMessageError {
   display: flex;
   gap: $spacing-3;
-  border: 1px solid rgba(220, 38, 38, 0.2); // border-red-600/20
-  background-color: rgba(220, 38, 38, 0.1); // bg-red-600/10
+  border: 1px solid rgba($color-red-600, 0.2); // border-red-600/20
+  background-color: rgba($color-red-600, 0.1); // bg-red-600/10
   border-radius: calc(var(--radius) + 4px); // rounded-lg
   padding: $spacing-4;
 }
@@ -21,14 +21,14 @@
 
 .chatMessageErrorTitle {
   font-size: $font-size-sm;
-  color: rgb(248, 113, 113); // text-red-400
+  color: $color-red-400; // text-red-400
   font-weight: $font-weight-medium;
   margin-bottom: $spacing-1;
 }
 
 .chatMessageErrorDetails {
   font-size: $font-size-xs;
-  color: rgba(239, 68, 68, 0.7); // text-red-500/70
+  color: rgba($color-red-500, 0.7); // text-red-500/70
   margin-top: $spacing-2;
   font-family: $font-family-mono;
   word-break: break-all;
@@ -37,5 +37,27 @@
 .chatMessageErrorRetry {
   display: flex;
   align-items: flex-start;
+}
+
+.chatMessageErrorIconSvg {
+  width: $spacing-5; // w-5
+  height: $spacing-5; // h-5
+  color: $color-red-500; // text-red-500
+}
+
+.retryButton {
+  color: $color-red-400; // text-red-400
+  transition: color $transition-normal, background-color $transition-normal;
+
+  &:hover {
+    color: $color-red-300; // hover:text-red-300
+    background-color: rgba($color-red-500, 0.2); // hover:bg-red-500/20
+  }
+}
+
+.retryButtonIcon {
+  width: $spacing-4; // w-4
+  height: $spacing-4; // h-4
+  margin-right: $spacing-1; // mr-1
 }
 

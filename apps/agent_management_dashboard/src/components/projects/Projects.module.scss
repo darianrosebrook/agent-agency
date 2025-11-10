@@ -12,13 +12,13 @@
   display: flex;
   align-items: center;
   gap: $spacing-2;
-  color: rgb(209, 213, 219); // text-gray-300
+  color: $color-gray-300; // text-gray-300
   margin-bottom: $spacing-4;
 }
 
 .headerTitle {
   font-size: $font-size-3xl; // text-3xl
-  color: white; // text-white
+  color: $color-white; // text-white
 }
 
 .headerWithButton {
@@ -33,11 +33,11 @@
 }
 
 .newProjectButton {
-  background-color: rgb(37, 99, 235); // bg-blue-600
-  color: white; // text-white
+  background-color: $color-blue-600; // bg-blue-600
+  color: $color-white; // text-white
 
   &:hover {
-    background-color: rgb(29, 78, 216); // hover:bg-blue-700
+    background-color: $color-blue-700; // hover:bg-blue-700
   }
 }
 
@@ -69,8 +69,8 @@
 .emptyStateIconBox {
   width: 8rem; // w-32
   height: 8rem; // h-32
-  background-color: #1a1a1a;
-  border: 2px solid rgb(31, 41, 55); // border-2 border-gray-800
+  background-color: $color-dark-bg-primary;
+  border: 2px solid $color-gray-800; // border-2 border-gray-800
   border-radius: 1.5rem; // rounded-3xl
   display: flex;
   align-items: center;
@@ -78,19 +78,19 @@
   transition: border-color $transition-normal, background-color $transition-normal;
 
   .emptyStateIconButton:hover & {
-    border-color: rgba(59, 130, 246, 0.5); // group-hover:border-blue-500/50
-    background-color: #1f1f1f; // group-hover:bg-[#1f1f1f]
+    border-color: rgba($color-blue-500, 0.5); // group-hover:border-blue-500/50
+    background-color: $color-dark-bg-hover-alt; // group-hover:bg-[#1f1f1f]
   }
 }
 
 .emptyStateTitle {
   font-size: $font-size-2xl; // text-2xl
-  color: white; // text-white
+  color: $color-white; // text-white
   margin-bottom: $spacing-3;
 }
 
 .emptyStateDescription {
-  color: rgb(156, 163, 175); // text-gray-400
+  color: $color-gray-400; // text-gray-400
   margin-bottom: $spacing-8;
 }
 
@@ -114,17 +114,17 @@
   transform: translateY(-50%);
   width: 1rem; // w-4
   height: 1rem; // h-4
-  color: rgb(107, 114, 128); // text-gray-500
+  color: $color-gray-500; // text-gray-500
 }
 
 .filterButton {
-  background-color: #1a1a1a; // bg-[#1a1a1a]
-  border-color: rgb(31, 41, 55); // border-gray-800
-  color: rgb(209, 213, 219); // text-gray-300
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border-color: $color-gray-800; // border-gray-800
+  color: $color-gray-300; // text-gray-300
 
   &:hover {
-    background-color: rgb(31, 41, 55); // hover:bg-gray-800
-    color: oklch(0.95 0 0); // hover:text-gray-100
+    background-color: $color-gray-800; // hover:bg-gray-800
+    color: $color-gray-100; // hover:text-gray-100
   }
 }
 
@@ -142,7 +142,7 @@
 
 .recentProjectsTitle {
   font-size: $font-size-xl; // text-xl
-  color: white; // text-white
+  color: $color-white; // text-white
   display: flex;
   align-items: center;
   gap: $spacing-2;
@@ -151,7 +151,7 @@
 .recentProjectsEmpty {
   text-align: center;
   padding-block: 3rem; // py-12
-  color: rgb(107, 114, 128); // text-gray-500
+  color: $color-gray-500; // text-gray-500
 }
 
 .recentProjectsGrid {
@@ -169,16 +169,16 @@
 }
 
 .projectCard {
-  background-color: #1a1a1a;
-  border: 1px solid rgb(31, 41, 55); // border border-gray-800
+  background-color: $color-dark-bg-primary;
+  border: 1px solid $color-gray-800; // border border-gray-800
   border-radius: calc(var(--radius) + 4px); // rounded-lg
   padding: $spacing-6;
   text-align: left;
   transition: background-color $transition-normal, border-color $transition-normal;
 
   &:hover {
-    background-color: #1f1f1f; // hover:bg-[#1f1f1f]
-    border-color: rgb(55, 65, 81); // hover:border-gray-700
+    background-color: $color-dark-bg-hover-alt; // hover:bg-[#1f1f1f]
+    border-color: $color-gray-700; // hover:border-gray-700
   }
 }
 
@@ -191,8 +191,8 @@
 .projectCardIcon {
   width: 3rem; // w-12
   height: 3rem; // h-12
-  background-color: #0f0f0f;
-  border: 1px solid rgb(31, 41, 55); // border border-gray-800
+  background-color: $color-dark-bg-secondary;
+  border: 1px solid $color-gray-800; // border border-gray-800
   border-radius: calc(var(--radius) + 4px); // rounded-lg
   display: flex;
   align-items: center;
@@ -200,7 +200,7 @@
   transition: border-color $transition-normal;
 
   .projectCard:hover & {
-    border-color: rgba(59, 130, 246, 0.5); // group-hover:border-blue-500/50
+    border-color: rgba($color-blue-500, 0.5); // group-hover:border-blue-500/50
   }
 }
 
@@ -210,7 +210,7 @@
 }
 
 .projectCardName {
-  color: white; // text-white
+  color: $color-white; // text-white
   margin-bottom: $spacing-1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -219,7 +219,7 @@
 
 .projectCardSummary {
   font-size: $font-size-sm;
-  color: rgb(107, 114, 128); // text-gray-500
+  color: $color-gray-500; // text-gray-500
   margin-bottom: $spacing-1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -228,7 +228,7 @@
 
 .projectCardDate {
   font-size: $font-size-xs;
-  color: rgb(75, 85, 99); // text-gray-600
+  color: $color-gray-600; // text-gray-600
 }
 
 // All Projects Table Section
@@ -238,19 +238,19 @@
 
 .allProjectsTitle {
   font-size: $font-size-xl; // text-xl
-  color: white; // text-white
+  color: $color-white; // text-white
   margin-bottom: $spacing-4;
 }
 
 .projectsTable {
-  background-color: #1a1a1a;
-  border: 1px solid rgb(31, 41, 55); // border border-gray-800
+  background-color: $color-dark-bg-primary;
+  border: 1px solid $color-gray-800; // border border-gray-800
   border-radius: calc(var(--radius) + 4px); // rounded-lg
   overflow: hidden;
 }
 
 .tableHeaderRow {
-  border-color: rgb(31, 41, 55); // border-gray-800
+  border-color: $color-gray-800; // border-gray-800
 
   &:hover {
     background-color: transparent; // hover:bg-transparent
@@ -258,13 +258,13 @@
 }
 
 .tableHeaderCell {
-  color: rgb(156, 163, 175); // text-gray-400
+  color: $color-gray-400; // text-gray-400
   cursor: pointer;
   user-select: none;
   transition: color $transition-normal;
 
   &:hover {
-    color: rgb(229, 231, 235); // hover:text-gray-200
+    color: $color-gray-200; // hover:text-gray-200
   }
 }
 
@@ -275,12 +275,12 @@
 }
 
 .tableRow {
-  border-color: rgb(31, 41, 55); // border-gray-800
+  border-color: $color-gray-800; // border-gray-800
   cursor: pointer;
   transition: background-color $transition-normal;
 
   &:hover {
-    background-color: #1f1f1f; // hover:bg-[#1f1f1f]
+    background-color: $color-dark-bg-hover-alt; // hover:bg-[#1f1f1f]
   }
 }
 
@@ -291,11 +291,11 @@
 }
 
 .tableCell {
-  color: white; // text-white
+  color: $color-white; // text-white
 }
 
 .tableCellGray {
-  color: rgb(156, 163, 175); // text-gray-400
+  color: $color-gray-400; // text-gray-400
   max-width: 28rem; // max-w-md
   overflow: hidden;
   text-overflow: ellipsis;
@@ -311,8 +311,8 @@
 .tableCellIconBox {
   width: 2rem; // w-8
   height: 2rem; // h-8
-  background-color: #0f0f0f;
-  border: 1px solid rgb(31, 41, 55); // border border-gray-800
+  background-color: $color-dark-bg-secondary;
+  border: 1px solid $color-gray-800; // border border-gray-800
   border-radius: calc(var(--radius) - 4px); // rounded
   display: flex;
   align-items: center;
@@ -322,7 +322,7 @@
 .tableEmptyCell {
   text-align: center;
   padding-block: 3rem; // py-12
-  color: rgb(107, 114, 128); // text-gray-500
+  color: $color-gray-500; // text-gray-500
 }
 
 // Pagination
@@ -332,7 +332,7 @@
   justify-content: space-between;
   padding-inline: $spacing-6;
   padding-block: $spacing-4;
-  border-top: 1px solid rgb(31, 41, 55); // border-t border-gray-800
+  border-top: 1px solid $color-gray-800; // border-t border-gray-800
 }
 
 .paginationLeft {
@@ -340,20 +340,20 @@
   align-items: center;
   gap: $spacing-2;
   font-size: $font-size-sm;
-  color: rgb(156, 163, 175); // text-gray-400
+  color: $color-gray-400; // text-gray-400
 }
 
 .paginationSelect {
   width: 5rem; // w-20
   height: 2rem; // h-8
-  background-color: #0f0f0f; // bg-[#0f0f0f]
-  border-color: rgb(31, 41, 55); // border-gray-800
-  color: rgb(209, 213, 219); // text-gray-300
+  background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
+  border-color: $color-gray-800; // border-gray-800
+  color: $color-gray-300; // text-gray-300
 }
 
 .paginationSelectContent {
-  background-color: #1a1a1a; // bg-[#1a1a1a]
-  border-color: rgb(31, 41, 55); // border-gray-800
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border-color: $color-gray-800; // border-gray-800
 }
 
 .paginationRight {
@@ -363,13 +363,13 @@
 }
 
 .paginationButton {
-  background-color: #0f0f0f; // bg-[#0f0f0f]
-  border-color: rgb(31, 41, 55); // border-gray-800
-  color: rgb(209, 213, 219); // text-gray-300
+  background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
+  border-color: $color-gray-800; // border-gray-800
+  color: $color-gray-300; // text-gray-300
 
   &:hover {
-    background-color: rgb(31, 41, 55); // hover:bg-gray-800
-    color: oklch(0.95 0 0); // hover:text-gray-100
+    background-color: $color-gray-800; // hover:bg-gray-800
+    color: $color-gray-100; // hover:text-gray-100
   }
 
   &:disabled {
@@ -380,6 +380,111 @@
 
 .paginationInfo {
   font-size: $font-size-sm;
-  color: rgb(156, 163, 175); // text-gray-400
+  color: $color-gray-400; // text-gray-400
+}
+
+// Icon sizes
+.iconSmall {
+  width: $spacing-4; // w-4
+  height: $spacing-4; // h-4
+}
+
+.iconMedium {
+  width: $spacing-5; // w-5
+  height: $spacing-5; // h-5
+}
+
+.iconLarge {
+  width: $spacing-6; // w-6
+  height: $spacing-6; // h-6
+}
+
+.iconXLarge {
+  width: 4rem; // w-16
+  height: 4rem; // h-16
+}
+
+// Text sizes
+.textSm {
+  font-size: $font-size-sm; // text-sm
+}
+
+// Button icons
+.buttonIcon {
+  width: $spacing-4; // w-4
+  height: $spacing-4; // h-4
+  margin-right: $spacing-2; // mr-2
+}
+
+// Empty state icon
+.emptyStateIconSvg {
+  width: 4rem; // w-16
+  height: 4rem; // h-16
+  color: $color-gray-700; // text-gray-700
+  transition: color $transition-normal;
+
+  .emptyStateIconButton:hover & {
+    color: $color-blue-500; // group-hover:text-blue-500
+  }
+}
+
+// Search input
+.searchInput {
+  padding-left: 2.5rem; // pl-10
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border-color: $color-gray-800; // border-gray-800
+  color: $color-gray-100; // text-gray-100
+
+  &::placeholder {
+    color: $color-gray-600; // placeholder:text-gray-600
+  }
+}
+
+// Recent projects icon
+.recentProjectsIcon {
+  width: $spacing-5; // w-5
+  height: $spacing-5; // h-5
+  color: $color-gray-400; // text-gray-400
+}
+
+// See more button
+.seeMoreButton {
+  color: $color-blue-500; // text-blue-500
+  transition: color $transition-normal;
+
+  &:hover {
+    color: $color-blue-400; // hover:text-blue-400
+    background-color: transparent; // hover:bg-transparent
+  }
+}
+
+// Project card icon
+.projectCardIconSvg {
+  width: $spacing-6; // w-6
+  height: $spacing-6; // h-6
+  color: $color-gray-600; // text-gray-600
+  transition: color $transition-normal;
+
+  .projectCard:hover & {
+    color: $color-blue-500; // group-hover:text-blue-500
+  }
+}
+
+// Table cell icon
+.tableCellIconSvg {
+  width: $spacing-4; // w-4
+  height: $spacing-4; // h-4
+  color: $color-gray-600; // text-gray-600
+}
+
+// Table loading cell
+.tableLoadingCell {
+  padding-block: $spacing-8; // py-8
+}
+
+.tableLoadingContent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 

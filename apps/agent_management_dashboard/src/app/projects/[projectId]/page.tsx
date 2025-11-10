@@ -2,16 +2,31 @@
 
 /**
  * Project Detail Page - Dynamic Route Implementation
- * 
+ *
  * This page displays detailed information about a specific project,
  * including overview, workspace, tasks, timeline, and management tabs.
  */
 
+import { Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ProjectView } from "@/components/projects/ProjectView";
+import dynamic from "next/dynamic";
 import { useProjectContext } from "@/components/projects/ProjectContext";
 import styles from "./page.module.scss";
+
+const ProjectView = dynamic(
+  () =>
+    import("@/components/projects/ProjectView").then((mod) => ({
+      default: mod.ProjectView,
+    })),
+  {
+    loading: () => (
+      <div className={styles.loadingContainer}>
+        <div className={styles.loadingText}>Loading project view...</div>
+      </div>
+    ),
+  }
+);
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -21,10 +36,11 @@ export default function ProjectDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Safely extract projectId from params, ensuring it's a string
-  const projectId = typeof params?.projectId === 'string' 
-    ? params.projectId 
-    : Array.isArray(params?.projectId) 
-      ? params.projectId[0] 
+  const projectId =
+    typeof params?.projectId === "string"
+      ? params.projectId
+      : Array.isArray(params?.projectId)
+      ? params.projectId[0]
       : null;
 
   useEffect(() => {
@@ -80,15 +96,16 @@ export default function ProjectDetailPage() {
         <div className={styles.errorCard}>
           <h2 className={styles.errorTitle}>Project Not Found</h2>
           <p className={styles.errorMessage}>{error}</p>
-          <button
-            onClick={handleBackToProjects}
-            className={styles.errorButton}
-          >
+          <button onClick={handleBackToProjects} className={styles.errorButton}>
             Back to Projects
           </button>
         </div>
       </div>
     );
+  }
+
+  if (!projectId) {
+    return null;
   }
 
   const project = getProjectById(projectId);
@@ -97,10 +114,17 @@ export default function ProjectDetailPage() {
   }
 
   return (
-    <ProjectView
-      projectName={project.name}
-      onBackToProjects={handleBackToProjects}
-    />
+    <Suspense
+      fallback={
+        <div className={styles.loadingContainer}>
+          <div className={styles.loadingText}>Loading project view...</div>
+        </div>
+      }
+    >
+      <ProjectView
+        projectName={project.name}
+        onBackToProjects={handleBackToProjects}
+      />
+    </Suspense>
   );
 }
-

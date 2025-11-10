@@ -1,4 +1,4 @@
-import type { Message, Task } from "./composers/Chat";
+import type { Message, Task } from "../../lib/schemas/chat";
 
 export async function simulateAIResponse(
   messageId: string,

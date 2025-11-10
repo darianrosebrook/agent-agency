@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, ReactNode } from "react";
-import type { Message } from "./composers/Chat";
+import type { Message } from "../lib/schemas/chat";
 
 interface ChatData {
   id: string;

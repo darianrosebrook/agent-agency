@@ -101,8 +101,7 @@ export function FileDropzoneModal({
                 multiple
                 onChange={handleFileSelect}
                 className="hidden"
-                webkitdirectory=""
-                directory=""
+                {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)}
               />
               <div className="bg-gray-800 hover:bg-gray-700 text-white px-6 py-2 rounded-lg text-sm">
                 Browse Files

@@ -12,11 +12,13 @@
  * Matches backend ErrorResponse format
  */
 export interface ApiErrorResponse {
-  error: string; // Human-readable error message
-  code: string; // Machine-readable error code
-  status: number; // HTTP status code
+  error?: string | { code?: string; message?: string; details?: Record<string, unknown> }; // Human-readable error message or error object
+  code?: string; // Machine-readable error code
+  status?: number; // HTTP status code
   details?: Record<string, unknown>; // Additional error details
   request_id?: string; // Request ID for correlation
+  detail?: string | { msg: string; type: string }[]; // FastAPI-style error
+  message?: string; // Standard Error message property
 }
 
 /**
@@ -146,15 +148,15 @@ export function parseApiError(error: unknown): AppError {
     const apiError = error as ApiErrorResponse;
     
     // New format: { error: string, code: string, status: number, details?, request_id? }
-    if ('error' in apiError && 'code' in apiError && 'status' in apiError) {
+    if ('error' in apiError && 'code' in apiError && 'status' in apiError && typeof apiError.error === 'string' && typeof apiError.code === 'string' && typeof apiError.status === 'number') {
       const code = mapErrorCode(apiError.code);
       return new AppError(code, apiError.error, apiError.details);
     }
 
     // Legacy format: { error: { code, message, details } }
-    if ('error' in apiError && typeof apiError.error === 'object' && apiError.error !== null) {
+    if ('error' in apiError && typeof apiError.error === 'object' && apiError.error !== null && !Array.isArray(apiError.error)) {
       const legacyError = apiError.error as { code?: string; message?: string; details?: Record<string, unknown> };
-      if (legacyError.code) {
+      if (legacyError.code && typeof legacyError.code === 'string') {
         const code = mapErrorCode(legacyError.code);
         return new AppError(code, legacyError.message, legacyError.details);
       }

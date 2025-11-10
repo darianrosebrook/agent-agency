@@ -222,7 +222,7 @@ impl RealWorkingSpecProvider {
         match self.db_ops.get_execution_plans().await {
             Ok(plans) => {
                 // Find plan with matching working_spec_id
-                if let Some(existing_plan) = plans.iter().find(|plan| plan.working_spec_id == expected_working_spec_id) {
+                if let Some(existing_plan) = plans.iter().find(|plan| plan.working_spec_id == expected_working_spec_id).cloned() {
                     debug!(
                         "Found existing execution plan for working_spec_id: {}",
                         expected_working_spec_id
@@ -239,6 +239,11 @@ impl RealWorkingSpecProvider {
                         if let Ok(quality_gates) = serde_json::from_value::<agent_agency_contracts::planning_io::QualityGates>(quality_gates_json.clone()) {
                             working_spec.quality_gates = Some(quality_gates);
                         }
+                    }
+                    
+                    // Also try to extract from quality_gates field directly
+                    if let Ok(quality_gates) = serde_json::from_value::<agent_agency_contracts::planning_io::QualityGates>(existing_plan.quality_gates.clone()) {
+                        working_spec.quality_gates = Some(quality_gates);
                     }
                     
                     // Use the existing working_spec_id to maintain consistency

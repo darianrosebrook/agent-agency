@@ -37,11 +37,11 @@
   justify-content: center;
 
   &.userAvatar {
-    background-color: #2563eb; // bg-blue-600
+    background-color: $color-blue-600; // bg-blue-600
   }
 
   &.assistantAvatar {
-    background-color: oklch(0.269 0 0); // bg-gray-800
+    background-color: $color-gray-800; // bg-gray-800
   }
 }
 
@@ -50,11 +50,11 @@
   height: 1rem; // h-4
 
   &.userIcon {
-    color: white;
+    color: $color-white;
   }
 
   &.assistantIcon {
-    color: oklch(0.75 0 0); // text-gray-300
+    color: $color-gray-300; // text-gray-300
   }
 }
 
@@ -80,15 +80,15 @@
   padding: $spacing-4;
 
   &.userBubble {
-    background-color: oklch(0.4 0.02 240); // bg-slate-600
-    color: white;
+    background-color: $color-slate-600; // bg-slate-600
+    color: $color-white;
     max-width: 42rem; // max-w-2xl
   }
 
   &.assistantBubble {
-    background-color: oklch(0.15 0.01 240); // bg-slate-900
-    border: 1px solid oklch(0.269 0 0); // border-gray-800
-    color: oklch(0.75 0 0); // text-gray-200
+    background-color: $color-slate-900; // bg-slate-900
+    border: 1px solid $color-gray-800; // border-gray-800
+    color: $color-gray-200; // text-gray-200
     width: 100%;
   }
 }
@@ -104,7 +104,7 @@
 
 .timestamp {
   font-size: $font-size-xs;
-  color: oklch(0.5 0 0); // text-gray-500
+  color: $color-gray-500; // text-gray-500
   margin-top: $spacing-1;
 
   &.userTimestamp {
@@ -127,11 +127,11 @@
   height: 2rem; // h-8
   width: 2rem; // w-8
   padding: 0;
-  color: oklch(0.5 0 0); // text-gray-400
+  color: $color-gray-400; // text-gray-400
 
   &:hover {
-    color: oklch(0.75 0 0); // hover:text-gray-200
-    background-color: oklch(0.269 0 0); // hover:bg-gray-800
+    color: $color-gray-200; // hover:text-gray-200
+    background-color: $color-gray-800; // hover:bg-gray-800
   }
 }
 
@@ -140,9 +140,9 @@
 }
 
 .codeBlockContainer {
-  background-color: #0f0f0f;
+  background-color: $color-dark-bg-secondary; // bg-[#0f0f0f]
   border-radius: calc(var(--radius) + 4px);
-  border: 1px solid oklch(0.269 0 0); // border-gray-800
+  border: 1px solid $color-gray-800; // border-gray-800
   overflow: hidden;
 }
 
@@ -151,22 +151,22 @@
   align-items: center;
   justify-content: space-between;
   padding: $spacing-2 $spacing-4;
-  border-bottom: 1px solid oklch(0.269 0 0); // border-gray-800
+  border-bottom: 1px solid $color-gray-800; // border-gray-800
 }
 
 .codeBlockLanguage {
   font-size: $font-size-xs;
-  color: oklch(0.5 0 0); // text-gray-400
+  color: $color-gray-400; // text-gray-400
   text-transform: uppercase;
 }
 
 .codeBlockCopyButton {
   font-size: $font-size-xs;
-  color: oklch(0.5 0 0); // text-gray-400
+  color: $color-gray-400; // text-gray-400
   transition: color $transition-normal;
 
   &:hover {
-    color: oklch(0.75 0 0); // hover:text-gray-200
+    color: $color-gray-200; // hover:text-gray-200
   }
 }
 
@@ -177,13 +177,13 @@
 
 .codeBlockCode {
   font-size: $font-size-sm;
-  color: oklch(0.75 0 0); // text-gray-200
+  color: $color-gray-200; // text-gray-200
   font-family: $font-family-mono;
 }
 
 .contextFileBadge {
-  background-color: oklch(0.269 0 0); // bg-gray-800
-  color: oklch(0.95 0 0); // text-gray-100
+  background-color: $color-gray-800; // bg-gray-800
+  color: $color-gray-100; // text-gray-100
   gap: $spacing-1_5;
 }
 
@@ -192,17 +192,28 @@
 }
 
 .dropdownMenuContent {
-  background-color: #1a1a1a;
-  border-color: oklch(0.269 0 0); // border-gray-800
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border-color: $color-gray-800; // border-gray-800
 }
 
 .dropdownMenuItem {
-  color: oklch(0.75 0 0); // text-gray-300
+  color: $color-gray-300; // text-gray-300
   cursor: pointer;
 
   &:focus {
-    background-color: oklch(0.269 0 0); // focus:bg-gray-800
-    color: oklch(0.95 0 0); // focus:text-gray-100
+    background-color: $color-gray-800; // focus:bg-gray-800
+    color: $color-gray-100; // focus:text-gray-100
   }
+}
+
+// Icon sizes
+.contextFileIcon {
+  width: 0.75rem; // w-3
+  height: 0.75rem; // h-3
+}
+
+.actionButtonIcon {
+  width: $spacing-4; // w-4
+  height: $spacing-4; // h-4
 }
 

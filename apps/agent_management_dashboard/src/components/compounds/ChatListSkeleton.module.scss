@@ -1,0 +1,30 @@
+@use '../../styles/tokens' as *;
+
+.chatListSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem; // space-y-1
+  padding: $spacing-2; // p-2
+}
+
+.chatSkeletonItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2; // gap-2
+  padding-inline: $spacing-3; // px-3
+  padding-block: $spacing-2; // py-2
+  border-radius: $spacing-lg; // rounded-lg
+}
+
+.chatSkeletonIcon {
+  width: 0.875rem; // w-3.5
+  height: 0.875rem; // h-3.5
+  flex-shrink: 0; // shrink-0
+  color: $color-gray-700; // text-gray-700
+}
+
+.chatSkeletonText {
+  height: $spacing-4; // h-4
+  flex: 1; // flex-1
+}
+

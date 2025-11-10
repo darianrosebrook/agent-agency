@@ -11,6 +11,7 @@
 import React from "react";
 import { cn } from "../ui/utils";
 import { Loader2 } from "lucide-react";
+import styles from "./ProgressIndicator.module.scss";
 
 interface ProgressIndicatorProps {
   progress?: number; // 0-100
@@ -28,35 +29,35 @@ export function ProgressIndicator({
   const displayProgress = Math.min(100, Math.max(0, progress ?? 0));
 
   return (
-    <div className={cn("flex flex-col items-center gap-3", className)}>
+    <div className={cn(styles.progressIndicator, className)}>
       {progress !== undefined ? (
         <>
           {/* Progress Bar */}
-          <div className="w-full max-w-xs bg-gray-800 rounded-full h-2 overflow-hidden">
+          <div className={styles.progressBarContainer}>
             <div
-              className="h-full bg-blue-600 transition-all duration-300 ease-out"
+              className={styles.progressBarFill}
               style={{ width: `${displayProgress}%` }}
             />
           </div>
           
           {/* Percentage and Message */}
-          <div className="text-center">
+          <div className={styles.progressInfo}>
             {showPercentage && (
-              <div className="text-sm text-gray-300 mb-1">
+              <div className={styles.progressPercentage}>
                 {Math.round(displayProgress)}%
               </div>
             )}
             {message && (
-              <div className="text-xs text-gray-500">{message}</div>
+              <div className={styles.progressMessage}>{message}</div>
             )}
           </div>
         </>
       ) : (
         <>
           {/* Indeterminate Progress */}
-          <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+          <Loader2 className={styles.loaderIcon} />
           {message && (
-            <div className="text-sm text-gray-400 text-center">{message}</div>
+            <div className={styles.loaderMessage}>{message}</div>
           )}
         </>
       )}

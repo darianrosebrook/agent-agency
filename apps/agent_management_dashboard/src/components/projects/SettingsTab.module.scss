@@ -4,7 +4,7 @@
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background-color: #0d0d0d; // bg-[#0d0d0d]
+  background-color: $color-dark-bg-secondary; // bg-[#0d0d0d]
 }
 
 .settingsTabContent {
@@ -44,7 +44,7 @@
   position: relative;
   flex-shrink: 0;
   font-size: 1.875rem; // text-[30px]
-  color: white; // text-white
+  color: $color-white; // text-white
   letter-spacing: 0.3955px; // tracking-[0.3955px]
 }
 
@@ -61,7 +61,7 @@
   line-height: 1.5rem; // leading-[24px]
   left: 0;
   font-style: normal;
-  color: #888888; // text-[#888888]
+  color: $color-gray-500; // text-[#888888] -> gray-500
   font-size: 1rem; // text-[16px]
   white-space: nowrap;
   top: -0.045625rem; // top-[-0.73px]
@@ -91,7 +91,7 @@
 }
 
 .tabList {
-  background-color: #1a1a1a; // bg-[#1a1a1a]
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
   height: 2.249625rem; // h-[35.994px]
   position: relative;
   border-radius: 0.875rem; // rounded-[14px]
@@ -102,7 +102,7 @@
 .tabListBorder {
   position: absolute;
   border-width: 0.909px;
-  border-color: rgb(38, 38, 38); // border-neutral-800
+  border-color: $color-neutral-800; // border-neutral-800
   border-style: solid;
   inset: 0;
   pointer-events: none;
@@ -156,12 +156,12 @@
 }
 
 .tabButtonActive {
-  background-color: #2d2d2d; // bg-[#2d2d2d]
+  background-color: $color-gray-800; // bg-[#2d2d2d] -> gray-800
 }
 
 .tabButtonInactive {
   &:hover {
-    background-color: #252525; // hover:bg-[#252525]
+    background-color: $color-dark-bg-hover; // hover:bg-[#252525]
   }
 }
 
@@ -189,10 +189,10 @@
 }
 
 .tabButtonTextActive {
-  color: white; // text-white
+  color: $color-white; // text-white
 }
 
 .tabButtonTextInactive {
-  color: #cccccc; // text-[#cccccc]
+  color: $color-gray-300; // text-[#cccccc] -> gray-300
 }
 

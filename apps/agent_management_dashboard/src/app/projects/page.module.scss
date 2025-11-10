@@ -1,0 +1,14 @@
+@use '../../styles/tokens' as *;
+
+.loadingContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.loadingText {
+  font-size: $font-size-sm;
+  color: rgb(156, 163, 175); // text-gray-400
+}
+

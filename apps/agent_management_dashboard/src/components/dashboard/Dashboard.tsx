@@ -1,14 +1,52 @@
-import { TaskProgressChart } from "../TaskProgressChart";
-import { RadialTaskProgress } from "../RadialTaskProgress";
-import { MultiRingProgress } from "../MultiRingProgress";
-import { CodeContributionChart } from "../CodeContributionChart";
-import { HexagonHeatmap } from "../HexagonHeatmap";
-import { ModelContributionStream } from "../ModelContributionStream";
-import { TaskCompletionGauge } from "../TaskCompletionGauge";
-import { ServerEfficiencyChart } from "../ServerEfficiencyChart";
+import { Suspense, lazy } from "react";
 import { LayoutGrid } from "lucide-react";
 import { cn } from "../ui/utils";
 import styles from "./Dashboard.module.scss";
+
+const TaskProgressChart = lazy(() =>
+  import("../TaskProgressChart").then((mod) => ({
+    default: mod.TaskProgressChart,
+  }))
+);
+const RadialTaskProgress = lazy(() =>
+  import("../RadialTaskProgress").then((mod) => ({
+    default: mod.RadialTaskProgress,
+  }))
+);
+const MultiRingProgress = lazy(() =>
+  import("../MultiRingProgress").then((mod) => ({
+    default: mod.MultiRingProgress,
+  }))
+);
+const CodeContributionChart = lazy(() =>
+  import("../CodeContributionChart").then((mod) => ({
+    default: mod.CodeContributionChart,
+  }))
+);
+const HexagonHeatmap = lazy(() =>
+  import("../HexagonHeatmap").then((mod) => ({ default: mod.HexagonHeatmap }))
+);
+const ModelContributionStream = lazy(() =>
+  import("../ModelContributionStream").then((mod) => ({
+    default: mod.ModelContributionStream,
+  }))
+);
+const TaskCompletionGauge = lazy(() =>
+  import("../TaskCompletionGauge").then((mod) => ({
+    default: mod.TaskCompletionGauge,
+  }))
+);
+const ServerEfficiencyChart = lazy(() =>
+  import("../ServerEfficiencyChart").then((mod) => ({
+    default: mod.ServerEfficiencyChart,
+  }))
+);
+
+const ChartSkeleton = () => (
+  <div className={styles.chartSkeleton}>
+    <div className={styles.chartSkeletonText}>Loading chart...</div>
+  </div>
+);
 
 export function Dashboard() {
   return (
@@ -16,8 +54,8 @@ export function Dashboard() {
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerTop}>
-          <LayoutGrid className="w-4 h-4" />
-          <span className="text-sm">Dashboard</span>
+          <LayoutGrid className={styles.headerIcon} />
+          <span className={styles.headerLabel}>Dashboard</span>
         </div>
         {/* TODO: Replace hardcoded user name with data from v3 API with the following requirements:
         // 1. User data fetching: Load current user information from API
@@ -48,17 +86,23 @@ export function Dashboard() {
         //    - Map API response to TaskProgressChart props (completedTasks, totalTasks, categories)
         //    - Handle edge cases (zero tasks, all completed, etc.) */}
         <div className={cn(styles.colSpan5, styles.rowSpan2)}>
-          <TaskProgressChart completedTasks={19} totalTasks={40} />
+          <Suspense fallback={<ChartSkeleton />}>
+            <TaskProgressChart completedTasks={19} totalTasks={40} />
+          </Suspense>
         </div>
 
         {/* Radial Task Progress - spans 2 rows and 7 columns */}
         <div className={cn(styles.colSpan7, styles.rowSpan2)}>
-          <RadialTaskProgress />
+          <Suspense fallback={<ChartSkeleton />}>
+            <RadialTaskProgress />
+          </Suspense>
         </div>
 
         {/* Hexagon Heatmap - spans 6 rows and 8 columns */}
         <div className={cn(styles.colSpan8, styles.rowSpan6)}>
-          <HexagonHeatmap rows={12} cols={16} hexSize={28} />
+          <Suspense fallback={<ChartSkeleton />}>
+            <HexagonHeatmap radius={8} hexSize={28} />
+          </Suspense>
         </div>
 
         {/* Multi-Ring Progress - spans 6 rows and 4 columns */}
@@ -72,16 +116,18 @@ export function Dashboard() {
           //    - Use milestone completion dates and task estimates
           //    - Handle missing or incomplete milestone data
           // 3. Data transformation: Format API response for MultiRingProgress component
-          //    - Map milestones to tasks array with name, progress, and color
+          //    - Map API response to tasks array with name, progress, and color
           //    - Calculate projectedTimeline string from milestone dates */}
-          <MultiRingProgress
-            tasks={[
-              { name: "Progress 1", progress: 85, color: "#e0e7ff" },
-              { name: "Progress 2", progress: 75, color: "#818cf8" },
-              { name: "Progress 3", progress: 60, color: "#6366f1" },
-            ]}
-            projectedTimeline="15 business days"
-          />
+          <Suspense fallback={<ChartSkeleton />}>
+            <MultiRingProgress
+              tasks={[
+                { name: "Progress 1", progress: 85, color: "#e0e7ff" },
+                { name: "Progress 2", progress: 75, color: "#818cf8" },
+                { name: "Progress 3", progress: 60, color: "#6366f1" },
+              ]}
+              projectedTimeline="15 business days"
+            />
+          </Suspense>
         </div>
 
         {/* Code Contribution Chart - spans 3 rows and 12 columns */}
@@ -97,11 +143,13 @@ export function Dashboard() {
           // 3. Data transformation: Format API response for CodeContributionChart component
           //    - Map API response to DataPoint array with day, baseline (total), and contribution (accepted)
           //    - Calculate total contribution for display */}
-          <CodeContributionChart
-            title="Overall Contribution"
-            subtitle="2 Agents over the last 30 days"
-            days={30}
-          />
+          <Suspense fallback={<ChartSkeleton />}>
+            <CodeContributionChart
+              title="Overall Contribution"
+              subtitle="2 Agents over the last 30 days"
+              days={30}
+            />
+          </Suspense>
         </div>
 
         {/* Small panels row */}
@@ -117,17 +165,21 @@ export function Dashboard() {
           // 3. Data transformation: Format API response for ModelContributionStream component
           //    - Map API response to StreamDataPoint array with month and model-specific values
           //    - Handle missing model data gracefully */}
-          <ModelContributionStream
-            title="Model Contributions"
-            subtitle="Lines of code by AI model"
-          />
+          <Suspense fallback={<ChartSkeleton />}>
+            <ModelContributionStream
+              title="Model Contributions"
+              subtitle="Lines of code by AI model"
+            />
+          </Suspense>
         </div>
 
         <div className={cn(styles.colSpan4, styles.rowSpan2)}>
-          <TaskCompletionGauge
-            title="Task Balance"
-            subtitle="Completion vs Creation Rate"
-          />
+          <Suspense fallback={<ChartSkeleton />}>
+            <TaskCompletionGauge
+              title="Task Balance"
+              subtitle="Completion vs Creation Rate"
+            />
+          </Suspense>
         </div>
 
         {/* TODO: Replace hardcoded efficiency metric with observability data from v3 API with the following requirements:
@@ -141,10 +193,14 @@ export function Dashboard() {
         // 3. Data transformation: Format API response for ServerEfficiencyChart component
         //    - Map API response to bars array with height values
         //    - Calculate overall efficiency percentage for display */}
-        <ServerEfficiencyChart
-          title="Server Efficiency Analysis"
-          efficiency={55}
-        />
+        <div className={cn(styles.colSpan4, styles.rowSpan2)}>
+          <Suspense fallback={<ChartSkeleton />}>
+            <ServerEfficiencyChart
+              title="Server Efficiency Analysis"
+              efficiency={55}
+            />
+          </Suspense>
+        </div>
       </div>
     </div>
   );

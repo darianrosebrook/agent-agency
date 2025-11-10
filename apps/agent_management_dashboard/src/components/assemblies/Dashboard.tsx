@@ -58,7 +58,7 @@ export function Dashboard() {
 
         {/* Hexagon Heatmap - spans 6 rows and 8 columns */}
         <div className={cn(styles.colSpan8, styles.rowSpan6)}>
-          <HexagonHeatmap rows={12} cols={16} hexSize={28} />
+          <HexagonHeatmap radius={8} hexSize={28} />
         </div>
 
         {/* Multi-Ring Progress - spans 6 rows and 4 columns */}

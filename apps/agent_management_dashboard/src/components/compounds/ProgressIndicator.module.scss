@@ -1,0 +1,58 @@
+@use '../../styles/tokens' as *;
+
+.progressIndicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-3; // gap-3
+}
+
+.progressBarContainer {
+  width: 100%; // w-full
+  max-width: 20rem; // max-w-xs
+  background-color: $color-gray-800; // bg-gray-800
+  border-radius: 9999px; // rounded-full
+  height: 0.5rem; // h-2
+  overflow: hidden;
+}
+
+.progressBarFill {
+  height: 100%; // h-full
+  background-color: $color-blue-600; // bg-blue-600
+  transition: width 300ms ease-out; // transition-all duration-300 ease-out
+}
+
+.progressInfo {
+  text-align: center;
+}
+
+.progressPercentage {
+  font-size: $font-size-sm; // text-sm
+  color: $color-gray-300; // text-gray-300
+  margin-bottom: $spacing-1; // mb-1
+}
+
+.progressMessage {
+  font-size: $font-size-xs; // text-xs
+  color: $color-gray-500; // text-gray-500
+}
+
+.loaderIcon {
+  width: $spacing-6; // w-6
+  height: $spacing-6; // h-6
+  animation: spin 1s linear infinite; // animate-spin
+  color: $color-blue-600; // text-blue-600
+}
+
+.loaderMessage {
+  font-size: $font-size-sm; // text-sm
+  color: $color-gray-400; // text-gray-400
+  text-align: center;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+

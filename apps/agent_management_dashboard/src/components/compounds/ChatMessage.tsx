@@ -5,7 +5,7 @@ import { TaskTimeline } from "../TaskTimeline";
 import { PhaseManager } from "../composers/PhaseManager";
 import { PhasePlanSkeleton } from "./PhasePlanSkeleton";
 import { ChatMessageError } from "./ChatMessageError";
-import type { Message } from "../composers/Chat";
+import type { Message } from "../../lib/schemas/chat";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -187,13 +187,13 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
           {/* Context Files */}
           {message.contextFiles && message.contextFiles.length > 0 && (
             <div className={styles.contextFiles}>
-              {message.contextFiles.map((file, index) => (
+              {message.contextFiles.map((file: string, index: number) => (
                 <Badge
                   key={index}
                   variant="secondary"
                   className={styles.contextFileBadge}
                 >
-                  <File className="w-3 h-3" />
+                  <File className={styles.contextFileIcon} />
                   <span className={styles.contextFileName}>{file}</span>
                 </Badge>
               ))}
@@ -240,7 +240,7 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
                   navigator.clipboard.writeText(message.content);
                 }}
               >
-                <Copy className="w-4 h-4" />
+                <Copy className={styles.actionButtonIcon} />
               </Button>
               <Button
                 variant="ghost"
@@ -251,7 +251,7 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
                   console.log("Retry message");
                 }}
               >
-                <RotateCw className="w-4 h-4" />
+                <RotateCw className={styles.actionButtonIcon} />
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -260,7 +260,7 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
                     size="sm"
                     className={styles.actionButton}
                   >
-                    <MoreVertical className="w-4 h-4" />
+                    <MoreVertical className={styles.actionButtonIcon} />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent

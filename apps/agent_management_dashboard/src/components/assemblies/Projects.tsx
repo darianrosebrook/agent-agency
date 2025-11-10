@@ -109,15 +109,22 @@ export function Projects() {
 
   // Sort and paginate projects for table
   const sortedProjects = [...filteredProjects].sort((a, b) => {
-    let aValue: string | Date = a[sortField];
-    let bValue: string | Date = b[sortField];
+    let aValue: string | number;
+    let bValue: string | number;
+    const aFieldValue = a[sortField];
+    const bFieldValue = b[sortField];
 
     if (sortField === "createdAt" || sortField === "lastAccessed") {
-      aValue = (aValue instanceof Date ? aValue : new Date(aValue)).getTime();
-      bValue = (bValue instanceof Date ? bValue : new Date(bValue)).getTime();
+      const aDate = aFieldValue instanceof Date ? aFieldValue : new Date(aFieldValue as string);
+      const bDate = bFieldValue instanceof Date ? bFieldValue : new Date(bFieldValue as string);
+      aValue = aDate.getTime();
+      bValue = bDate.getTime();
     } else if (sortField === "name") {
-      aValue = String(aValue).toLowerCase();
-      bValue = String(bValue).toLowerCase();
+      aValue = String(aFieldValue).toLowerCase();
+      bValue = String(bFieldValue).toLowerCase();
+    } else {
+      aValue = String(aFieldValue);
+      bValue = String(bFieldValue);
     }
 
     if (sortOrder === "asc") {

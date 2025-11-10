@@ -80,7 +80,7 @@ export function ChatSidebar({ onSelect }: ChatSidebarProps = {}) {
             onClick={handleNewChat}
             className={styles.newChatButton}
           >
-            <Plus className="w-4 h-4" />
+            <Plus className={styles.newChatButtonIcon} />
           </button>
         </div>
       </div>
@@ -103,9 +103,9 @@ export function ChatSidebar({ onSelect }: ChatSidebarProps = {}) {
                   className={styles.groupHeader}
                 >
                   {group.isExpanded ? (
-                    <ChevronDown className="w-4 h-4 shrink-0" />
+                    <ChevronDown className={styles.groupHeaderIcon} />
                   ) : (
-                    <ChevronRight className="w-4 h-4 shrink-0" />
+                    <ChevronRight className={styles.groupHeaderIcon} />
                   )}
                   <span className={styles.groupHeaderText}>
                     {group.name}

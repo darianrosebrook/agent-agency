@@ -76,14 +76,30 @@ export function MultiRingProgress({
       const endAngle = startAngle + segmentAngle - gapAngle;
 
       // Calculate coordinates and format to fixed decimal places for consistent rendering
-      const x1 = formatNumber(centerX + radius * Math.cos((startAngle * Math.PI) / 180));
-      const y1 = formatNumber(centerY + radius * Math.sin((startAngle * Math.PI) / 180));
-      const x2 = formatNumber(centerX + radius * Math.cos((endAngle * Math.PI) / 180));
-      const y2 = formatNumber(centerY + radius * Math.sin((endAngle * Math.PI) / 180));
-      const x3 = formatNumber(centerX + innerRadius * Math.cos((endAngle * Math.PI) / 180));
-      const y3 = formatNumber(centerY + innerRadius * Math.sin((endAngle * Math.PI) / 180));
-      const x4 = formatNumber(centerX + innerRadius * Math.cos((startAngle * Math.PI) / 180));
-      const y4 = formatNumber(centerY + innerRadius * Math.sin((startAngle * Math.PI) / 180));
+      const x1 = formatNumber(
+        centerX + radius * Math.cos((startAngle * Math.PI) / 180)
+      );
+      const y1 = formatNumber(
+        centerY + radius * Math.sin((startAngle * Math.PI) / 180)
+      );
+      const x2 = formatNumber(
+        centerX + radius * Math.cos((endAngle * Math.PI) / 180)
+      );
+      const y2 = formatNumber(
+        centerY + radius * Math.sin((endAngle * Math.PI) / 180)
+      );
+      const x3 = formatNumber(
+        centerX + innerRadius * Math.cos((endAngle * Math.PI) / 180)
+      );
+      const y3 = formatNumber(
+        centerY + innerRadius * Math.sin((endAngle * Math.PI) / 180)
+      );
+      const x4 = formatNumber(
+        centerX + innerRadius * Math.cos((startAngle * Math.PI) / 180)
+      );
+      const y4 = formatNumber(
+        centerY + innerRadius * Math.sin((startAngle * Math.PI) / 180)
+      );
 
       // Build path data string with formatted numbers (single line)
       const pathData = `M ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} L ${x3} ${y3} A ${innerRadius} ${innerRadius} 0 0 0 ${x4} ${y4} Z`;
@@ -108,10 +124,18 @@ export function MultiRingProgress({
 
     for (const angle of angles) {
       // Format coordinates to fixed decimal places for consistent rendering
-      const x1 = formatNumber(centerX + 70 * Math.cos(((angle - 90) * Math.PI) / 180));
-      const y1 = formatNumber(centerY + 70 * Math.sin(((angle - 90) * Math.PI) / 180));
-      const x2 = formatNumber(centerX + 175 * Math.cos(((angle - 90) * Math.PI) / 180));
-      const y2 = formatNumber(centerY + 175 * Math.sin(((angle - 90) * Math.PI) / 180));
+      const x1 = formatNumber(
+        centerX + 70 * Math.cos(((angle - 90) * Math.PI) / 180)
+      );
+      const y1 = formatNumber(
+        centerY + 70 * Math.sin(((angle - 90) * Math.PI) / 180)
+      );
+      const x2 = formatNumber(
+        centerX + 175 * Math.cos(((angle - 90) * Math.PI) / 180)
+      );
+      const y2 = formatNumber(
+        centerY + 175 * Math.sin(((angle - 90) * Math.PI) / 180)
+      );
 
       lines.push(
         <line
@@ -144,8 +168,12 @@ export function MultiRingProgress({
 
     return labels.map(({ angle, text }) => {
       // Format coordinates to fixed decimal places for consistent rendering
-      const x = formatNumber(centerX + 185 * Math.cos(((angle - 90) * Math.PI) / 180));
-      const y = formatNumber(centerY + 185 * Math.sin(((angle - 90) * Math.PI) / 180));
+      const x = formatNumber(
+        centerX + 185 * Math.cos(((angle - 90) * Math.PI) / 180)
+      );
+      const y = formatNumber(
+        centerY + 185 * Math.sin(((angle - 90) * Math.PI) / 180)
+      );
 
       return (
         <text
@@ -193,7 +221,7 @@ export function MultiRingProgress({
   };
 
   return (
-    <div className="bg-neutral-950 relative rounded-[12px] size-full border border-[#cacaca]">
+    <div className="bg-[#111] relative rounded-[12px] size-full border border-[#cacaca]">
       <div className="size-full">
         <div className="box-border flex flex-col gap-4 p-6 relative size-full">
           {/* Header */}

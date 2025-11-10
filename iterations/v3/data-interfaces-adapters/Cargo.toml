@@ -38,6 +38,7 @@ toml = "0.8"
 # Cryptography (for authentication)
 sha2 = "0.10"
 base64 = "0.21"
+rand = "0.8"
 
 # Security and authentication
 system-quality-security = { path = "../system-quality-security" }

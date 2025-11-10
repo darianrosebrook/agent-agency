@@ -558,6 +558,41 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
         .route("/api/v1/auth/password-reset/request", post(request_password_reset_handler))
         .route("/api/v1/auth/password-reset/confirm", post(confirm_password_reset_handler));
 
+    // Settings management endpoints
+    router = router
+        // User settings
+        .route("/api/v1/settings/user", get(get_user_settings_handler))
+        .route("/api/v1/settings/user", post(create_user_setting_handler))
+        .route("/api/v1/settings/user/:key", get(get_user_setting_handler))
+        .route("/api/v1/settings/user/:key", axum::routing::patch(update_user_setting_handler))
+        .route("/api/v1/settings/user/:key", axum::routing::delete(delete_user_setting_handler))
+        // App settings
+        .route("/api/v1/settings/app", get(get_app_settings_handler))
+        .route("/api/v1/settings/app", post(create_app_setting_handler))
+        .route("/api/v1/settings/app/:key", get(get_app_setting_handler))
+        .route("/api/v1/settings/app/:key", axum::routing::patch(update_app_setting_handler))
+        .route("/api/v1/settings/app/:key", axum::routing::delete(delete_app_setting_handler))
+        // Integrations
+        .route("/api/v1/settings/integrations", get(list_integrations_handler))
+        .route("/api/v1/settings/integrations", post(create_integration_handler))
+        .route("/api/v1/settings/integrations/:id", get(get_integration_handler))
+        .route("/api/v1/settings/integrations/:id", axum::routing::patch(update_integration_handler))
+        .route("/api/v1/settings/integrations/:id", axum::routing::delete(delete_integration_handler))
+        // API keys
+        .route("/api/v1/settings/api-keys", get(list_api_keys_handler))
+        .route("/api/v1/settings/api-keys", post(create_api_key_handler))
+        .route("/api/v1/settings/api-keys/:id", get(get_api_key_handler))
+        .route("/api/v1/settings/api-keys/:id", axum::routing::patch(update_api_key_handler))
+        .route("/api/v1/settings/api-keys/:id/revoke", post(revoke_api_key_handler))
+        .route("/api/v1/settings/api-keys/:id", axum::routing::delete(delete_api_key_handler))
+        // Password change
+        .route("/api/v1/settings/password", post(change_password_handler))
+        // Two-factor authentication
+        .route("/api/v1/settings/2fa", get(get_2fa_handler))
+        .route("/api/v1/settings/2fa", post(setup_2fa_handler))
+        .route("/api/v1/settings/2fa/verify", post(verify_2fa_handler))
+        .route("/api/v1/settings/2fa", axum::routing::delete(disable_2fa_handler));
+
     // Add CORS if enabled
     if enable_cors {
         router = router.layer(tower_http::cors::CorsLayer::permissive());
@@ -4139,6 +4174,96 @@ struct RefreshTokenRequest {
     refresh_token: String,
 }
 
+// Settings management request/response types
+
+#[derive(Debug, Deserialize)]
+struct CreateUserSettingRequest {
+    setting_key: String,
+    setting_value: serde_json::Value,
+    setting_type: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct UpdateUserSettingRequest {
+    setting_value: Option<serde_json::Value>,
+    setting_type: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CreateAppSettingRequest {
+    setting_key: String,
+    setting_value: serde_json::Value,
+    setting_type: String,
+    description: Option<String>,
+    is_public: bool,
+}
+
+#[derive(Debug, Deserialize)]
+struct UpdateAppSettingRequest {
+    setting_value: Option<serde_json::Value>,
+    setting_type: Option<String>,
+    description: Option<String>,
+    is_public: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CreateIntegrationRequest {
+    name: String,
+    integration_type: String,
+    provider: String,
+    configuration: serde_json::Value,
+    credentials: serde_json::Value,
+    is_active: bool,
+    is_enabled: bool,
+}
+
+#[derive(Debug, Deserialize)]
+struct UpdateIntegrationRequest {
+    name: Option<String>,
+    configuration: Option<serde_json::Value>,
+    credentials: Option<serde_json::Value>,
+    is_active: Option<bool>,
+    is_enabled: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CreateApiKeyRequest {
+    key_name: String,
+    scopes: Vec<String>,
+    rate_limit_per_minute: Option<i32>,
+    rate_limit_per_hour: Option<i32>,
+    rate_limit_per_day: Option<i32>,
+    expires_at: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct UpdateApiKeyRequest {
+    key_name: Option<String>,
+    scopes: Option<Vec<String>>,
+    rate_limit_per_minute: Option<i32>,
+    rate_limit_per_hour: Option<i32>,
+    rate_limit_per_day: Option<i32>,
+    expires_at: Option<String>,
+    is_active: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ChangePasswordRequest {
+    current_password: String,
+    new_password: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct Setup2FARequest {
+    method: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct Verify2FARequest {
+    method: String,
+    code: String,
+}
+
 /// Helper function to hash a token (for session storage)
 fn hash_token(token: &str) -> String {
     let mut hasher = Sha256::new();
@@ -4730,6 +4855,829 @@ async fn confirm_password_reset_handler(
         }
         Err(e) => {
             error!("Failed to update password: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+// ============================================================================
+// Settings Management Handlers
+// ============================================================================
+
+// Helper function to extract user_id from Authorization header
+async fn get_user_id_from_auth(
+    headers: &axum::http::HeaderMap,
+    db: &Arc<dyn data_infrastructure::database_operations::DatabaseOperations + Send + Sync>,
+) -> Result<Uuid, StatusCode> {
+    let token = headers
+        .get("Authorization")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|s| {
+            if s.starts_with("Bearer ") {
+                Some(s[7..].to_string())
+            } else {
+                None
+            }
+        })
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+
+    let token_hash = hash_token(&token);
+    let session = db.get_session_by_token_hash(&token_hash).await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+
+    if Utc::now() > session.expires_at {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+
+    Ok(session.user_id)
+}
+
+// User settings handlers
+async fn get_user_settings_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let user_id = get_user_id_from_auth(&headers, db).await?;
+    let setting_type = params.get("type").map(|s| s.as_str());
+
+    match db.get_user_settings(user_id, setting_type).await {
+        Ok(settings) => {
+            Ok(Json(serde_json::json!({
+                "settings": settings,
+                "total": settings.len()
+            })))
+        }
+        Err(e) => {
+            error!("Failed to get user settings: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn create_user_setting_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Json(req): Json<CreateUserSettingRequest>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let user_id = get_user_id_from_auth(&headers, db).await?;
+
+    let create = data_infrastructure::database_operations::CreateUserSetting {
+        user_id,
+        setting_key: req.setting_key,
+        setting_value: req.setting_value,
+        setting_type: req.setting_type,
+    };
+
+    match db.create_user_setting(create).await {
+        Ok(setting) => Ok(Json(serde_json::json!(setting))),
+        Err(e) => {
+            error!("Failed to create user setting: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_user_setting_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Path(key): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let user_id = get_user_id_from_auth(&headers, db).await?;
+
+    match db.get_user_setting(user_id, &key).await {
+        Ok(Some(setting)) => Ok(Json(serde_json::json!(setting))),
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            error!("Failed to get user setting: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn update_user_setting_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Path(key): Path<String>,
+    Json(req): Json<UpdateUserSettingRequest>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let user_id = get_user_id_from_auth(&headers, db).await?;
+
+    let update = data_infrastructure::database_operations::UpdateUserSetting {
+        setting_value: req.setting_value,
+        setting_type: req.setting_type,
+    };
+
+    match db.update_user_setting(user_id, &key, update).await {
+        Ok(setting) => Ok(Json(serde_json::json!(setting))),
+        Err(e) => {
+            error!("Failed to update user setting: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn delete_user_setting_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Path(key): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let user_id = get_user_id_from_auth(&headers, db).await?;
+
+    match db.delete_user_setting(user_id, &key).await {
+        Ok(_) => Ok(Json(serde_json::json!({
+            "status": "deleted",
+            "setting_key": key
+        }))),
+        Err(e) => {
+            error!("Failed to delete user setting: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+// App settings handlers
+async fn get_app_settings_handler(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let setting_type = params.get("type").map(|s| s.as_str());
+    let is_public = params.get("is_public").and_then(|s| s.parse::<bool>().ok());
+
+    match db.get_app_settings(setting_type, is_public).await {
+        Ok(settings) => {
+            Ok(Json(serde_json::json!({
+                "settings": settings,
+                "total": settings.len()
+            })))
+        }
+        Err(e) => {
+            error!("Failed to get app settings: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn create_app_setting_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Json(req): Json<CreateAppSettingRequest>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let created_by = get_user_id_from_auth(&headers, db).await?
+        .to_string();
+
+    let create = data_infrastructure::database_operations::CreateAppSetting {
+        setting_key: req.setting_key,
+        setting_value: req.setting_value,
+        setting_type: req.setting_type,
+        description: req.description,
+        is_public: req.is_public,
+        created_by,
+    };
+
+    match db.create_app_setting(create).await {
+        Ok(setting) => Ok(Json(serde_json::json!(setting))),
+        Err(e) => {
+            error!("Failed to create app setting: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_app_setting_handler(
+    State(state): State<AppState>,
+    Path(key): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+
+    match db.get_app_setting(&key).await {
+        Ok(Some(setting)) => Ok(Json(serde_json::json!(setting))),
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            error!("Failed to get app setting: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn update_app_setting_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Path(key): Path<String>,
+    Json(req): Json<UpdateAppSettingRequest>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let updated_by = Some(get_user_id_from_auth(&headers, db).await?
+        .to_string());
+
+    let update = data_infrastructure::database_operations::UpdateAppSetting {
+        setting_value: req.setting_value,
+        setting_type: req.setting_type,
+        description: req.description,
+        is_public: req.is_public,
+        updated_by,
+    };
+
+    match db.update_app_setting(&key, update).await {
+        Ok(setting) => Ok(Json(serde_json::json!(setting))),
+        Err(e) => {
+            error!("Failed to update app setting: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn delete_app_setting_handler(
+    State(state): State<AppState>,
+    Path(key): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+
+    match db.delete_app_setting(&key).await {
+        Ok(_) => Ok(Json(serde_json::json!({
+            "status": "deleted",
+            "setting_key": key
+        }))),
+        Err(e) => {
+            error!("Failed to delete app setting: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+// Integration handlers
+async fn list_integrations_handler(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let provider = params.get("provider").map(|s| s.as_str());
+    let is_active = params.get("is_active").and_then(|s| s.parse::<bool>().ok());
+
+    match db.get_integrations(provider, is_active).await {
+        Ok(integrations) => {
+            Ok(Json(serde_json::json!({
+                "integrations": integrations,
+                "total": integrations.len()
+            })))
+        }
+        Err(e) => {
+            error!("Failed to get integrations: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn create_integration_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Json(req): Json<CreateIntegrationRequest>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let created_by = get_user_id_from_auth(&headers, db).await?
+        .to_string();
+
+    let create = data_infrastructure::database_operations::CreateIntegration {
+        name: req.name,
+        integration_type: req.integration_type,
+        provider: req.provider,
+        configuration: req.configuration,
+        credentials: req.credentials,
+        is_active: req.is_active,
+        is_enabled: req.is_enabled,
+        created_by,
+    };
+
+    match db.create_integration(create).await {
+        Ok(integration) => Ok(Json(serde_json::json!(integration))),
+        Err(e) => {
+            error!("Failed to create integration: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_integration_handler(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let integration_id = Uuid::parse_str(&id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    match db.get_integration(integration_id).await {
+        Ok(Some(integration)) => Ok(Json(serde_json::json!(integration))),
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            error!("Failed to get integration: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn update_integration_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Path(id): Path<String>,
+    Json(req): Json<UpdateIntegrationRequest>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let integration_id = Uuid::parse_str(&id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    let updated_by = Some(get_user_id_from_auth(&headers, db).await?
+        .to_string());
+
+    let update = data_infrastructure::database_operations::UpdateIntegration {
+        name: req.name,
+        configuration: req.configuration,
+        credentials: req.credentials,
+        is_active: req.is_active,
+        is_enabled: req.is_enabled,
+        updated_by,
+    };
+
+    match db.update_integration(integration_id, update).await {
+        Ok(integration) => Ok(Json(serde_json::json!(integration))),
+        Err(e) => {
+            error!("Failed to update integration: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn delete_integration_handler(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let integration_id = Uuid::parse_str(&id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    match db.delete_integration(integration_id).await {
+        Ok(_) => Ok(Json(serde_json::json!({
+            "status": "deleted",
+            "integration_id": id
+        }))),
+        Err(e) => {
+            error!("Failed to delete integration: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+// API key handlers
+async fn list_api_keys_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let user_id = get_user_id_from_auth(&headers, db).await?;
+    let is_active = params.get("is_active").and_then(|s| s.parse::<bool>().ok());
+
+    match db.get_user_api_keys(user_id, is_active).await {
+        Ok(api_keys) => {
+            // Don't expose key_hash or secret data
+            let sanitized_keys: Vec<serde_json::Value> = api_keys.iter().map(|key| {
+                serde_json::json!({
+                    "id": key.id.to_string(),
+                    "key_name": key.key_name,
+                    "key_prefix": key.key_prefix,
+                    "scopes": key.scopes,
+                    "rate_limit_per_minute": key.rate_limit_per_minute,
+                    "rate_limit_per_hour": key.rate_limit_per_hour,
+                    "rate_limit_per_day": key.rate_limit_per_day,
+                    "last_used_at": key.last_used_at.map(|d| d.to_rfc3339()),
+                    "expires_at": key.expires_at.map(|d| d.to_rfc3339()),
+                    "is_active": key.is_active,
+                    "is_revoked": key.is_revoked,
+                    "created_at": key.created_at.to_rfc3339(),
+                })
+            }).collect();
+
+            Ok(Json(serde_json::json!({
+                "api_keys": sanitized_keys,
+                "total": sanitized_keys.len()
+            })))
+        }
+        Err(e) => {
+            error!("Failed to get API keys: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn create_api_key_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Json(req): Json<CreateApiKeyRequest>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let user_id = get_user_id_from_auth(&headers, db).await?;
+    let created_by = user_id.to_string();
+
+    // Generate API key using secure random
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+    let key_bytes: Vec<u8> = (0..32).map(|_| rng.gen()).collect();
+    let api_key = base64::encode(&key_bytes);
+    let key_prefix = api_key.chars().take(8).collect::<String>();
+    let key_hash = hash_token(&api_key);
+
+    let expires_at = req.expires_at
+        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
+        .map(|dt| dt.with_timezone(&Utc));
+
+    let create = data_infrastructure::database_operations::CreateApiKey {
+        user_id,
+        key_name: req.key_name,
+        key_hash,
+        key_prefix,
+        scopes: req.scopes,
+        rate_limit_per_minute: req.rate_limit_per_minute,
+        rate_limit_per_hour: req.rate_limit_per_hour,
+        rate_limit_per_day: req.rate_limit_per_day,
+        expires_at,
+        created_by,
+    };
+
+    match db.create_api_key(create).await {
+        Ok(_) => {
+            // Return the key only once (in production, this should be shown only once)
+            Ok(Json(serde_json::json!({
+                "status": "created",
+                "api_key": format!("aa_{}", api_key),
+                "key_prefix": key_prefix,
+                "warning": "Store this key securely. It will not be shown again."
+            })))
+        }
+        Err(e) => {
+            error!("Failed to create API key: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_api_key_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let user_id = get_user_id_from_auth(&headers, db).await?;
+    let key_id = Uuid::parse_str(&id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    match db.get_api_key(key_id).await {
+        Ok(Some(key)) => {
+            // Verify ownership
+            if key.user_id != user_id {
+                return Err(StatusCode::FORBIDDEN);
+            }
+
+            // Don't expose key_hash
+            Ok(Json(serde_json::json!({
+                "id": key.id.to_string(),
+                "key_name": key.key_name,
+                "key_prefix": key.key_prefix,
+                "scopes": key.scopes,
+                "rate_limit_per_minute": key.rate_limit_per_minute,
+                "rate_limit_per_hour": key.rate_limit_per_hour,
+                "rate_limit_per_day": key.rate_limit_per_day,
+                "last_used_at": key.last_used_at.map(|d| d.to_rfc3339()),
+                "expires_at": key.expires_at.map(|d| d.to_rfc3339()),
+                "is_active": key.is_active,
+                "is_revoked": key.is_revoked,
+                "created_at": key.created_at.to_rfc3339(),
+            })))
+        }
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            error!("Failed to get API key: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn update_api_key_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Path(id): Path<String>,
+    Json(req): Json<UpdateApiKeyRequest>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let user_id = get_user_id_from_auth(&headers, db).await?;
+    let key_id = Uuid::parse_str(&id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    // Verify ownership
+    let existing_key = db.get_api_key(key_id).await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+    
+    if existing_key.user_id != user_id {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    let expires_at = req.expires_at
+        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
+        .map(|dt| dt.with_timezone(&Utc));
+
+    let update = data_infrastructure::database_operations::UpdateApiKey {
+        key_name: req.key_name,
+        scopes: req.scopes,
+        rate_limit_per_minute: req.rate_limit_per_minute,
+        rate_limit_per_hour: req.rate_limit_per_hour,
+        rate_limit_per_day: req.rate_limit_per_day,
+        expires_at,
+        is_active: req.is_active,
+    };
+
+    match db.update_api_key(key_id, update).await {
+        Ok(key) => {
+            // Don't expose key_hash
+            Ok(Json(serde_json::json!({
+                "id": key.id.to_string(),
+                "key_name": key.key_name,
+                "key_prefix": key.key_prefix,
+                "scopes": key.scopes,
+                "rate_limit_per_minute": key.rate_limit_per_minute,
+                "rate_limit_per_hour": key.rate_limit_per_hour,
+                "rate_limit_per_day": key.rate_limit_per_day,
+                "expires_at": key.expires_at.map(|d| d.to_rfc3339()),
+                "is_active": key.is_active,
+            })))
+        }
+        Err(e) => {
+            error!("Failed to update API key: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn revoke_api_key_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Path(id): Path<String>,
+    Json(req): Json<HashMap<String, String>>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let user_id = get_user_id_from_auth(&headers, db).await?;
+    let key_id = Uuid::parse_str(&id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    // Verify ownership
+    let existing_key = db.get_api_key(key_id).await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+    
+    if existing_key.user_id != user_id {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    let reason = req.get("reason").cloned();
+
+    match db.revoke_api_key(key_id, reason).await {
+        Ok(_) => Ok(Json(serde_json::json!({
+            "status": "revoked",
+            "api_key_id": id
+        }))),
+        Err(e) => {
+            error!("Failed to revoke API key: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn delete_api_key_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let user_id = get_user_id_from_auth(&headers, db).await?;
+    let key_id = Uuid::parse_str(&id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    // Verify ownership
+    let existing_key = db.get_api_key(key_id).await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+    
+    if existing_key.user_id != user_id {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    match db.delete_api_key(key_id).await {
+        Ok(_) => Ok(Json(serde_json::json!({
+            "status": "deleted",
+            "api_key_id": id
+        }))),
+        Err(e) => {
+            error!("Failed to delete API key: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+// Password change handler
+async fn change_password_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Json(req): Json<ChangePasswordRequest>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let user_id = get_user_id_from_auth(&headers, db).await?;
+
+    // Get user
+    let user = db.get_user(user_id).await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    // Verify current password
+    if !state.auth_service.verify_password(&req.current_password, &user.password_hash) {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+
+    // Hash new password
+    let new_password_hash = state.auth_service.hash_password(&req.new_password)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Update user password
+    let update = data_infrastructure::database_operations::UpdateUser {
+        email: None,
+        username: None,
+        password_hash: Some(new_password_hash),
+        name: None,
+        roles: None,
+        is_active: None,
+        failed_attempts: Some(0),
+        locked_until: None,
+        last_login: None,
+    };
+
+    match db.update_user(user_id, update).await {
+        Ok(_) => {
+            info!("Password changed for user: {}", user_id);
+            Ok(Json(serde_json::json!({
+                "status": "success",
+                "message": "Password changed successfully"
+            })))
+        }
+        Err(e) => {
+            error!("Failed to change password: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+// Two-factor authentication handlers
+async fn get_2fa_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let user_id = get_user_id_from_auth(&headers, db).await?;
+
+    match db.get_two_factor_auth(user_id, None).await {
+        Ok(Some(two_fa)) => {
+            // Don't expose secret_encrypted or backup_codes
+            Ok(Json(serde_json::json!({
+                "method": two_fa.method,
+                "is_enabled": two_fa.is_enabled,
+                "last_used_at": two_fa.last_used_at.map(|d| d.to_rfc3339()),
+            })))
+        }
+        Ok(None) => Ok(Json(serde_json::json!({
+            "is_enabled": false,
+            "method": serde_json::Value::Null
+        }))),
+        Err(e) => {
+            error!("Failed to get 2FA: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn setup_2fa_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Json(req): Json<Setup2FARequest>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let user_id = get_user_id_from_auth(&headers, db).await?;
+
+    // PLACEHOLDER: Generate TOTP secret and backup codes
+    // In production, use a proper TOTP library like `totp-lite` or `oath`
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+    let secret_bytes: Vec<u8> = (0..20).map(|_| rng.gen()).collect();
+    let secret_encrypted = base64::encode(&secret_bytes); // PLACEHOLDER: Should be encrypted
+    
+    let backup_codes: Vec<String> = (0..10)
+        .map(|_| {
+            let code: u32 = rng.gen_range(100000..999999);
+            code.to_string()
+        })
+        .collect();
+
+    let create = data_infrastructure::database_operations::CreateTwoFactorAuth {
+        user_id,
+        method: req.method,
+        secret_encrypted,
+        backup_codes: backup_codes.clone(),
+        is_enabled: false, // Not enabled until verified
+    };
+
+    match db.create_two_factor_auth(create).await {
+        Ok(_) => {
+            Ok(Json(serde_json::json!({
+                "status": "setup",
+                "method": req.method,
+                "backup_codes": backup_codes,
+                "message": "Verify with code to enable 2FA"
+            })))
+        }
+        Err(e) => {
+            error!("Failed to setup 2FA: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn verify_2fa_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Json(req): Json<Verify2FARequest>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let user_id = get_user_id_from_auth(&headers, db).await?;
+
+    // Get 2FA config
+    let two_fa = db.get_two_factor_auth(user_id, Some(&req.method)).await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    // PLACEHOLDER: Verify TOTP code
+    // In production, use a proper TOTP library to verify the code against secret_encrypted
+    // For now, accept any code (NOT SECURE - must implement proper verification)
+    let code_valid = true; // PLACEHOLDER: Should verify against secret_encrypted
+
+    if !code_valid {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+
+    // Enable 2FA
+    let update = data_infrastructure::database_operations::UpdateTwoFactorAuth {
+        secret_encrypted: None,
+        backup_codes: None,
+        is_enabled: Some(true),
+    };
+
+    match db.update_two_factor_auth(user_id, &req.method, update).await {
+        Ok(_) => {
+            Ok(Json(serde_json::json!({
+                "status": "enabled",
+                "method": req.method,
+                "message": "2FA enabled successfully"
+            })))
+        }
+        Err(e) => {
+            error!("Failed to enable 2FA: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn disable_2fa_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let user_id = get_user_id_from_auth(&headers, db).await?;
+
+    // Get 2FA config to find method
+    let two_fa = db.get_two_factor_auth(user_id, None).await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    match db.delete_two_factor_auth(user_id, &two_fa.method).await {
+        Ok(_) => {
+            Ok(Json(serde_json::json!({
+                "status": "disabled",
+                "message": "2FA disabled successfully"
+            })))
+        }
+        Err(e) => {
+            error!("Failed to disable 2FA: {}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   FolderPlus,
   Plus,
@@ -32,7 +32,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { cn } from "../ui/utils";
 import styles from "./Projects.module.scss";
 
 type SortField = "name" | "createdAt" | "lastAccessed";
@@ -59,79 +58,107 @@ export function Projects() {
 
   const currentProject = getCurrentProject();
 
-  const handleCreateProject = (data: {
-    name: string;
-    summary?: string;
-    description?: string;
-    milestones?: string[];
-  }) => {
-    createProject(data);
-  };
+  const handleCreateProject = useCallback(
+    (data: {
+      name: string;
+      summary?: string;
+      description?: string;
+      milestones?: string[];
+    }) => {
+      createProject(data);
+    },
+    [createProject]
+  );
 
-  const handleProjectClick = (projectId: string) => {
-    selectProject(projectId);
-  };
+  const handleProjectClick = useCallback(
+    (projectId: string) => {
+      selectProject(projectId);
+    },
+    [selectProject]
+  );
 
-  const handleBackToProjects = () => {
+  const handleBackToProjects = useCallback(() => {
     clearCurrentProject();
-  };
+  }, [clearCurrentProject]);
 
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortOrder("desc");
-    }
-    setCurrentPage(1);
-  };
+  const handleSort = useCallback(
+    (field: SortField) => {
+      if (sortField === field) {
+        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      } else {
+        setSortField(field);
+        setSortOrder("desc");
+      }
+      setCurrentPage(1);
+    },
+    [sortField, sortOrder]
+  );
 
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) {
-      return <ChevronsUpDown className="w-4 h-4" />;
+      return <ChevronsUpDown className={styles.iconSmall} />;
     }
     return sortOrder === "asc" ? (
-      <ChevronUp className="w-4 h-4" />
+      <ChevronUp className={styles.iconSmall} />
     ) : (
-      <ChevronDown className="w-4 h-4" />
+      <ChevronDown className={styles.iconSmall} />
     );
   };
 
-  // Filter projects based on search
-  const filteredProjects = projects.filter((p) =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter projects based on search - memoized
+  const filteredProjects = useMemo(() => {
+    return projects.filter((p) =>
+      p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [projects, searchQuery]);
 
-  // Sort projects by last accessed for recent section
-  const recentProjects = [...filteredProjects]
-    .sort((a, b) => b.lastAccessed.getTime() - a.lastAccessed.getTime())
-    .slice(0, showAllRecent ? filteredProjects.length : 6);
+  // Sort projects by last accessed for recent section - memoized
+  const recentProjects = useMemo(() => {
+    return [...filteredProjects]
+      .sort((a, b) => b.lastAccessed.getTime() - a.lastAccessed.getTime())
+      .slice(0, showAllRecent ? filteredProjects.length : 6);
+  }, [filteredProjects, showAllRecent]);
 
-  // Sort and paginate projects for table
-  const sortedProjects = [...filteredProjects].sort((a, b) => {
-    let aValue: string | Date = a[sortField];
-    let bValue: string | Date = b[sortField];
+  // Sort and paginate projects for table - memoized
+  const { sortedProjects, totalPages, paginatedProjects } = useMemo(() => {
+    const sorted = [...filteredProjects].sort((a, b) => {
+      let aValue: string | number;
+      let bValue: string | number;
+      const aFieldValue = a[sortField];
+      const bFieldValue = b[sortField];
 
-    if (sortField === "createdAt" || sortField === "lastAccessed") {
-      aValue = (aValue instanceof Date ? aValue : new Date(aValue)).getTime();
-      bValue = (bValue instanceof Date ? bValue : new Date(bValue)).getTime();
-    } else if (sortField === "name") {
-      aValue = String(aValue).toLowerCase();
-      bValue = String(bValue).toLowerCase();
-    }
+      if (sortField === "createdAt" || sortField === "lastAccessed") {
+        const aDate = aFieldValue instanceof Date ? aFieldValue : new Date(aFieldValue as string);
+        const bDate = bFieldValue instanceof Date ? bFieldValue : new Date(bFieldValue as string);
+        aValue = aDate.getTime();
+        bValue = bDate.getTime();
+      } else if (sortField === "name") {
+        aValue = String(aFieldValue).toLowerCase();
+        bValue = String(bFieldValue).toLowerCase();
+      } else {
+        aValue = String(aFieldValue);
+        bValue = String(bFieldValue);
+      }
 
-    if (sortOrder === "asc") {
-      return aValue > bValue ? 1 : -1;
-    } else {
-      return aValue < bValue ? 1 : -1;
-    }
-  });
+      if (sortOrder === "asc") {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
 
-  const totalPages = Math.ceil(sortedProjects.length / pageSize);
-  const paginatedProjects = sortedProjects.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+    const total = Math.ceil(sorted.length / pageSize);
+    const paginated = sorted.slice(
+      (currentPage - 1) * pageSize,
+      currentPage * pageSize
+    );
+
+    return {
+      sortedProjects: sorted,
+      totalPages: total,
+      paginatedProjects: paginated,
+    };
+  }, [filteredProjects, sortField, sortOrder, pageSize, currentPage]);
 
   const formatDate = (date: Date) => {
     const now = new Date();
@@ -161,8 +188,8 @@ export function Projects() {
         {/* Header */}
         <div className={styles.header}>
           <div className={styles.headerTop}>
-            <FolderPlus className="w-4 h-4" />
-            <span className="text-sm">Projects</span>
+            <FolderPlus className={styles.iconSmall} />
+            <span className={styles.textSm}>Projects</span>
           </div>
           <h1 className={styles.headerTitle}>Projects</h1>
         </div>
@@ -177,7 +204,7 @@ export function Projects() {
                 className={styles.emptyStateIconButton}
               >
                 <div className={styles.emptyStateIconBox}>
-                  <FolderPlus className="w-16 h-16 text-gray-700 group-hover:text-blue-500 transition-colors" />
+                  <FolderPlus className={styles.emptyStateIconSvg} />
                 </div>
               </button>
             </div>
@@ -194,7 +221,7 @@ export function Projects() {
               onClick={() => setIsNewProjectModalOpen(true)}
               className={styles.newProjectButton}
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className={styles.buttonIcon} />
               Create Project
             </Button>
           </div>
@@ -227,8 +254,8 @@ export function Projects() {
         <div className={styles.headerWithButton}>
           <div className={styles.headerLeft}>
             <div className={styles.headerTop}>
-              <FolderPlus className="w-4 h-4" />
-              <span className="text-sm">Projects</span>
+              <FolderPlus className={styles.iconSmall} />
+              <span className={styles.textSm}>Projects</span>
             </div>
             <h1 className={styles.headerTitle}>Projects</h1>
           </div>
@@ -236,7 +263,7 @@ export function Projects() {
             onClick={() => setIsNewProjectModalOpen(true)}
             className={styles.newProjectButton}
           >
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className={styles.buttonIcon} />
             New Project
           </Button>
         </div>
@@ -249,14 +276,11 @@ export function Projects() {
               placeholder="Search projects..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-[#1a1a1a] border-gray-800 text-gray-100 placeholder:text-gray-600"
+              className={styles.searchInput}
             />
           </div>
-          <Button
-            variant="outline"
-            className={styles.filterButton}
-          >
-            <Filter className="w-4 h-4 mr-2" />
+          <Button variant="outline" className={styles.filterButton}>
+            <Filter className={styles.buttonIcon} />
             Filter
           </Button>
         </div>
@@ -266,14 +290,14 @@ export function Projects() {
       <div className={styles.recentProjectsSection}>
         <div className={styles.recentProjectsHeader}>
           <h2 className={styles.recentProjectsTitle}>
-            <Clock className="w-5 h-5 text-gray-400" />
+            <Clock className={styles.recentProjectsIcon} />
             Recent Projects
           </h2>
           {filteredProjects.length > 6 && (
             <Button
               variant="ghost"
               onClick={() => setShowAllRecent(!showAllRecent)}
-              className="text-blue-500 hover:text-blue-400 hover:bg-transparent"
+              className={styles.seeMoreButton}
             >
               {showAllRecent ? "Show Less" : "See More"}
             </Button>
@@ -283,9 +307,7 @@ export function Projects() {
         {isLoading ? (
           <ProjectListSkeleton count={6} />
         ) : recentProjects.length === 0 ? (
-          <div className={styles.recentProjectsEmpty}>
-            No projects found
-          </div>
+          <div className={styles.recentProjectsEmpty}>No projects found</div>
         ) : (
           <div className={styles.recentProjectsGrid}>
             {recentProjects.map((project) => (
@@ -296,7 +318,7 @@ export function Projects() {
               >
                 <div className={styles.projectCardContent}>
                   <div className={styles.projectCardIcon}>
-                    <FolderPlus className="w-6 h-6 text-gray-600 group-hover:text-blue-500 transition-colors" />
+                    <FolderPlus className={styles.projectCardIconSvg} />
                   </div>
                   <div className={styles.projectCardDetails}>
                     <h3 className={styles.projectCardName}>{project.name}</h3>
@@ -323,7 +345,7 @@ export function Projects() {
         <div className={styles.projectsTable}>
           <Table>
             <TableHeader>
-              <TableRow className={cn(styles.tableHeaderRow, "border-gray-800")}>
+              <TableRow className={styles.tableHeaderRow}>
                 <TableHead
                   className={styles.tableHeaderCell}
                   onClick={() => handleSort("name")}
@@ -333,7 +355,9 @@ export function Projects() {
                     {getSortIcon("name")}
                   </div>
                 </TableHead>
-                <TableHead className={styles.tableHeaderCell}>Summary</TableHead>
+                <TableHead className={styles.tableHeaderCell}>
+                  Summary
+                </TableHead>
                 <TableHead
                   className={styles.tableHeaderCell}
                   onClick={() => handleSort("createdAt")}
@@ -356,19 +380,16 @@ export function Projects() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow className={cn(styles.tableRowLoading, "border-gray-800")}>
-                  <TableCell colSpan={4} className="py-8">
-                    <div className="flex items-center justify-center">
+                <TableRow className={styles.tableRowLoading}>
+                  <TableCell colSpan={4} className={styles.tableLoadingCell}>
+                    <div className={styles.tableLoadingContent}>
                       <ProjectListSkeleton count={pageSize} />
                     </div>
                   </TableCell>
                 </TableRow>
               ) : paginatedProjects.length === 0 ? (
-                <TableRow className={cn(styles.tableRowLoading, "border-gray-800")}>
-                  <TableCell
-                    colSpan={4}
-                    className={styles.tableEmptyCell}
-                  >
+                <TableRow className={styles.tableRowLoading}>
+                  <TableCell colSpan={4} className={styles.tableEmptyCell}>
                     No projects found
                   </TableCell>
                 </TableRow>
@@ -376,13 +397,13 @@ export function Projects() {
                 paginatedProjects.map((project) => (
                   <TableRow
                     key={project.id}
-                    className={cn(styles.tableRow, "border-gray-800")}
+                    className={styles.tableRow}
                     onClick={() => handleProjectClick(project.id)}
                   >
                     <TableCell className={styles.tableCell}>
                       <div className={styles.tableCellIcon}>
                         <div className={styles.tableCellIconBox}>
-                          <FolderPlus className="w-4 h-4 text-gray-600" />
+                          <FolderPlus className={styles.tableCellIconSvg} />
                         </div>
                         {project.name}
                       </div>
