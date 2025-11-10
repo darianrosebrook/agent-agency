@@ -1,9 +1,15 @@
+"use client";
+
 import { Suspense, lazy, useEffect, useState } from "react";
 import { LayoutGrid } from "lucide-react";
 import { cn } from "../primitives/utils";
 import styles from "./Dashboard.module.scss";
 import { getCurrentUser } from "../../lib/api/users";
 import type { CurrentUser } from "../../lib/api/users";
+import { getTasksStats } from "../../lib/api/tasks";
+import type { TasksStats } from "../../lib/api/tasks";
+import { getContributions, getModelContributions } from "../../lib/api/agents";
+import { getEfficiencyMetrics } from "../../lib/api/observability";
 
 const TaskProgressChart = lazy(() =>
   import("../TaskProgressChart").then((mod) => ({
@@ -53,6 +59,8 @@ const ChartSkeleton = () => (
 export function Dashboard() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [taskStats, setTaskStats] = useState<TasksStats | null>(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
 
   useEffect(() => {
     async function fetchUser() {
@@ -67,7 +75,20 @@ export function Dashboard() {
       }
     }
 
+    async function fetchStats() {
+      try {
+        const stats = await getTasksStats();
+        setTaskStats(stats);
+      } catch (error) {
+        console.error("Failed to fetch task stats:", error);
+        // Continue with null stats - component will use defaults
+      } finally {
+        setIsLoadingStats(false);
+      }
+    }
+
     fetchUser();
+    fetchStats();
   }, []);
 
   const userName = user?.name || "User";
@@ -88,20 +109,12 @@ export function Dashboard() {
       {/* Bento Grid */}
       <div className={styles.bentoGrid}>
         {/* Task Progress Chart - spans 2 rows and 5 columns */}
-        {/* TODO: Replace hardcoded task counts with aggregated data from v3 database with the following requirements:
-        // 1. Task statistics fetching: Load aggregated task completion statistics
-        //    - Data source: GET /api/projects/:id/tasks/stats endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
-        //    - Database table: PostgreSQL `tasks` table with aggregation queries
-        //    - Include completedTasks count, totalTasks count, and category breakdowns
-        // 2. Real-time updates: Refresh statistics when tasks are created or updated
-        //    - Subscribe to task update events or poll periodically
-        //    - Handle loading and error states
-        // 3. Data transformation: Format API response for chart component
-        //    - Map API response to TaskProgressChart props (completedTasks, totalTasks, categories)
-        //    - Handle edge cases (zero tasks, all completed, etc.) */}
         <div className={cn(styles.colSpan5, styles.rowSpan2)}>
           <Suspense fallback={<ChartSkeleton />}>
-            <TaskProgressChart completedTasks={19} totalTasks={40} />
+            <TaskProgressChart
+              completedTasks={taskStats?.completed ?? 19}
+              totalTasks={taskStats?.total ?? 40}
+            />
           </Suspense>
         </div>
 
@@ -146,17 +159,6 @@ export function Dashboard() {
 
         {/* Code Contribution Chart - spans 3 rows and 12 columns */}
         <div className={cn(styles.colSpan12, styles.rowSpan3)}>
-          {/* TODO: Replace hardcoded contribution data with provenance/telemetry data from v3 database with the following requirements:
-          // 1. Contribution data fetching: Load code contribution statistics over time
-          //    - Data source: GET /api/telemetry/contributions?days={days} endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
-          //    - Database tables: PostgreSQL `provenance` and `telemetry` tables
-          //    - Aggregate accepted lines of code vs total lines by day
-          // 2. Time range filtering: Support configurable time ranges (last 7, 30, 90 days)
-          //    - Pass days parameter to API endpoint
-          //    - Handle date range calculations and timezone issues
-          // 3. Data transformation: Format API response for CodeContributionChart component
-          //    - Map API response to DataPoint array with day, baseline (total), and contribution (accepted)
-          //    - Calculate total contribution for display */}
           <Suspense fallback={<ChartSkeleton />}>
             <CodeContributionChart
               title="Overall Contribution"
@@ -168,17 +170,6 @@ export function Dashboard() {
 
         {/* Small panels row */}
         <div className={cn(styles.colSpan4, styles.rowSpan2)}>
-          {/* TODO: Replace hardcoded model contribution data with telemetry data from v3 database with the following requirements:
-          // 1. Model contribution data fetching: Load model usage statistics by month
-          //    - Data source: GET /api/telemetry/model-contributions endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
-          //    - Database table: PostgreSQL `telemetry` table
-          //    - Aggregate lines of code contributed by each AI model (gemma3n, qwen, instruct, mistral)
-          // 2. Time aggregation: Group contributions by month for stream chart
-          //    - Handle month boundaries and date range calculations
-          //    - Support configurable time ranges
-          // 3. Data transformation: Format API response for ModelContributionStream component
-          //    - Map API response to StreamDataPoint array with month and model-specific values
-          //    - Handle missing model data gracefully */}
           <Suspense fallback={<ChartSkeleton />}>
             <ModelContributionStream
               title="Model Contributions"
@@ -196,22 +187,10 @@ export function Dashboard() {
           </Suspense>
         </div>
 
-        {/* TODO: Replace hardcoded efficiency metric with observability data from v3 API with the following requirements:
-        // 1. Efficiency metrics fetching: Load server efficiency time-series data
-        //    - Data source: GET /api/observability/efficiency endpoint from `iterations/v3/system-observability` crate
-        //    - Return server efficiency metrics over time
-        //    - Include efficiency percentage and time-series bar data
-        // 2. Real-time updates: Refresh efficiency metrics periodically
-        //    - Poll API endpoint at configurable intervals
-        //    - Handle loading and error states
-        // 3. Data transformation: Format API response for ServerEfficiencyChart component
-        //    - Map API response to bars array with height values
-        //    - Calculate overall efficiency percentage for display */}
         <div className={cn(styles.colSpan4, styles.rowSpan2)}>
           <Suspense fallback={<ChartSkeleton />}>
             <ServerEfficiencyChart
               title="Server Efficiency Analysis"
-              efficiency={55}
             />
           </Suspense>
         </div>

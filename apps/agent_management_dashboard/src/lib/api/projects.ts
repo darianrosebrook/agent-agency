@@ -102,6 +102,26 @@ export interface ProjectSettings {
 const API_BASE = '/api/proxy/api/v1';
 
 /**
+ * Project list item from API (snake_case)
+ */
+export interface ProjectListItem {
+  project_id: string;
+  name: string;
+  overview?: string | null;
+  state?: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at?: string | null;
+}
+
+/**
+ * Projects list response
+ */
+export interface ProjectsListResponse {
+  projects: ProjectListItem[];
+}
+
+/**
  * Project details from API (snake_case)
  */
 export interface ProjectApiResponse {
@@ -125,6 +145,13 @@ export interface ProjectApiResponse {
     assignee?: string | null;
     created_at: string;
   }>;
+}
+
+/**
+ * List all projects
+ */
+export async function listProjects(): Promise<ProjectsListResponse> {
+  return apiGet<ProjectsListResponse>(`${API_BASE}/projects`);
 }
 
 /**
