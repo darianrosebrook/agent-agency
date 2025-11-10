@@ -23,6 +23,13 @@ pub mod sla_validator;
 // Multimodal retriever modules
 pub mod multimodal_retriever;
 
+// Content processing modules
+pub mod content_processor;
+pub mod context_builder;
+pub mod vector_search;
+pub mod web_scraper;
+pub mod multimodal_context_provider;
+
 // Planning agent modules (consolidated from planning-agent crate)
 pub mod planning_agent;
 
@@ -31,6 +38,10 @@ pub mod self_prompting_agent;
 
 // Research types module
 pub mod research_types;
+
+// Knowledge seeker module (directory-based)
+pub mod knowledge_seeker;
+pub use knowledge_seeker::KnowledgeSeeker;
 
 // Learning service module
 pub mod learning_service;
@@ -67,6 +78,12 @@ pub use processor::ClaimExtractionProcessor;
 pub use extraction_types::*;
 pub use orchestrator::LearningOrchestrator;
 pub use agent_agency_contracts::types::research::VerificationMethod;
+pub use research_types::ContentProcessingConfig;
+pub use content_processor::ContentProcessor;
+pub use context_builder::ContextBuilder;
+pub use vector_search::VectorSearchEngine;
+pub use web_scraper::WebScraper;
+pub use multimodal_context_provider::MultimodalContext;
 
 use anyhow::Result;
 use std::time::Instant;

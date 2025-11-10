@@ -10,11 +10,11 @@ use uuid::Uuid;
 use dashmap::DashMap;
 
 use crate::research_types::*;
-use crate::ContentProcessingConfig;
-use crate::{
-    ConfigurationUpdate, ContentProcessor, ContextBuilder, VectorSearchEngine, WebScraper,
-};
-use crate::multimodal_context_provider::MultimodalContext;
+use crate::ContentProcessor;
+use crate::ContextBuilder;
+use crate::VectorSearchEngine;
+use crate::WebScraper;
+use crate::MultimodalContext;
 use data_infrastructure::DatabaseClient;
 
 use super::orchestration::QueryOrchestrator;
@@ -23,7 +23,7 @@ use super::scraping::ScrapingCoordinator;
 use super::synthesis::ContextSynthesizer;
 use super::processing::ContentProcessorManager;
 use super::database::DatabaseManager;
-use super::metrics::MetricsCollector;
+use super::knowledge_metrics::MetricsCollector;
 use super::sessions::SessionManager;
 use super::events::{EventEmitter, ResearchEvent};
 

@@ -8,14 +8,13 @@ use uuid::Uuid;
 use tracing::{info, error, warn};
 
 use crate::research_types::*;
-use crate::{ConfigurationUpdate, ResearchResult};
 
 use super::core::KnowledgeSeeker;
 use super::search::SearchCoordinator;
 use super::scraping::ScrapingCoordinator;
 use super::synthesis::ContextSynthesizer;
 use super::processing::ContentProcessorManager;
-use super::metrics::MetricsCollector;
+use super::knowledge_metrics::MetricsCollector;
 use super::events::{EventEmitter, ResearchEvent};
 
 /// Query orchestrator for coordinating research execution

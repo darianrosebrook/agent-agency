@@ -395,3 +395,13 @@ pub struct FuzzyMatchingConfig {
     pub coverage_boost: f32,
     pub max_total_boost: f32,
 }
+
+/// Content processing configuration
+#[derive(Debug, Clone, Serialize, Deserialize) ]
+pub struct ContentProcessingConfig {
+    pub enable_cleaning: bool,
+    pub enable_markdown: bool,
+    pub enable_text_extraction: bool,
+    pub max_content_length: usize,
+    pub enable_summarization: bool,
+}

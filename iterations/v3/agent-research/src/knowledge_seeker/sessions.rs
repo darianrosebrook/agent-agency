@@ -6,7 +6,7 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
-use crate::{ResearchSession, ResearchQuery};
+use crate::research_types::{ResearchSession, ResearchQuery};
 
 /// Session manager for research sessions
 
@@ -34,7 +34,7 @@ impl SessionManager {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             queries: vec![],
-            status: crate::SessionStatus::Active,
+            is_active: true,
         };
 
         self.sessions.write().await.insert(session.id, session.clone());
@@ -62,7 +62,7 @@ impl SessionManager {
     pub async fn complete_session(&self, session_id: Uuid) -> Result<()> {
         let mut sessions = self.sessions.write().await;
         if let Some(session) = sessions.get_mut(&session_id) {
-            session.status = crate::SessionStatus::Completed;
+            session.is_active = false;
             session.updated_at = Utc::now();
             Ok(())
         } else {

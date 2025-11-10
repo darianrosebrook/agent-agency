@@ -19,13 +19,13 @@ impl DatabaseManager {
     }
 
     /// Store research results in database
-    pub async fn store_results(&self, _results: &[crate::ResearchResult]) -> Result<()> {
+    pub async fn store_results(&self, _results: &[crate::research_types::ResearchResult]) -> Result<()> {
         // Placeholder for database storage
         Ok(())
     }
 
     /// Retrieve cached research results
-    pub async fn get_cached_results(&self, _query: &str) -> Result<Option<Vec<crate::ResearchResult>>> {
+    pub async fn get_cached_results(&self, _query: &str) -> Result<Option<Vec<crate::research_types::ResearchResult>>> {
         // Placeholder for cache retrieval
         Ok(None)
     }

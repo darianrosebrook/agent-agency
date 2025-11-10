@@ -1,7 +1,8 @@
 //! Content processing and management
 
 use std::sync::Arc;
-use crate::{ConfigurationUpdate, ContentProcessingConfig, ContentProcessor};
+use crate::research_types::{ConfigurationUpdate, ContentProcessingConfig};
+use crate::content_processor::ContentProcessor;
 
 /// Content processor manager
 
@@ -28,8 +29,8 @@ impl ContentProcessorManager {
     }
 
     /// Process content
-    pub async fn process_content(&self, content: &str) -> Result<Option<crate::ProcessedContent>> {
-        Ok(self.processor.process_content(content).await?)
+    pub async fn process_content(&self, content: &str) -> Result<Option<crate::research_types::ContentProcessingResult>> {
+        Ok(Some(self.processor.process_content(content).await?))
     }
 
     /// Update configuration

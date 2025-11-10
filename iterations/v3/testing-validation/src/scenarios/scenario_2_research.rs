@@ -63,7 +63,7 @@ pub async fn run_test(
     // Initialize real KnowledgeSeeker for research
     let db_client = services.postgres();
     #[cfg(feature = "full")]
-    use agent_research::knowledge_seeker::KnowledgeSeeker;
+    use agent_research::KnowledgeSeeker;
     #[cfg(feature = "full")]
     use agent_research::research_types::{ResearchAgentConfig, VectorSearchConfig, WebScrapingConfig, ContextSynthesisConfig, PerformanceConfig, FuzzyMatchingConfig};
     let knowledge_seeker = KnowledgeSeeker::new(

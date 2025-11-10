@@ -6,7 +6,7 @@ use uuid::Uuid;
 use tracing::info;
 
 use crate::research_types::*;
-use crate::{ConfigurationUpdate, ContextBuilder};
+use crate::ContextBuilder;
 
 use super::events::EventEmitter;
 

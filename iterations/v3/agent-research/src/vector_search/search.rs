@@ -8,9 +8,9 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info};
 
-use super::core::VectorSearchEngine;
-use super::cache::CacheManager;
-use super::metrics::VectorSearchMetrics;
+use super::vector_core::VectorSearchEngine;
+use super::vector_search_cache::CacheManager;
+use super::vector_metrics::VectorSearchMetrics;
 use super::embedding::EmbeddingProcessor;
 use super::qdrant::QdrantClient;
 use super::text_processing::TextProcessor;

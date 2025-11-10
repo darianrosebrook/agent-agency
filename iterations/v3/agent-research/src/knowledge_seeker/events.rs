@@ -1,7 +1,7 @@
 //! Event emission and handling
 
 use tokio::sync::mpsc;
-use crate::ResearchEvent;
+use super::core::ResearchEvent;
 
 /// Event emitter for research events
 

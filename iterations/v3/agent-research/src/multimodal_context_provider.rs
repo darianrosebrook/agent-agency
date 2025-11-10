@@ -291,7 +291,7 @@ impl MultimodalContextProvider {
                 query_expansions: vec![], // Would be populated by retriever
             },
         })
-    // }
+    }
 
     /// Get context for council evidence enrichment
     ///
@@ -379,9 +379,9 @@ mod tests {
         let content2 = "This is sample content";
         let content3 = "Different content";
 
-        let hash1 = hash_content(content1);
-        let hash2 = hash_content(content2);
-        let hash3 = hash_content(content3);
+        let hash1 = MultimodalContextProvider::hash_content(content1);
+        let hash2 = MultimodalContextProvider::hash_content(content2);
+        let hash3 = MultimodalContextProvider::hash_content(content3);
 
         assert_eq!(hash1, hash2);
         assert_ne!(hash1, hash3);

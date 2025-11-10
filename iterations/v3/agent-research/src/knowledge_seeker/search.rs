@@ -7,7 +7,7 @@ use uuid::Uuid;
 use tracing::{info, warn};
 
 use crate::research_types::*;
-use crate::{ConfigurationUpdate, VectorSearchEngine};
+use crate::VectorSearchEngine;
 
 use super::index::InvertedIndex;
 use super::events::EventEmitter;
@@ -126,7 +126,7 @@ impl SearchCoordinator {
     }
 
     /// Calculate V2 confidence score for vector search results
-    fn calculate_v2_confidence_score(&self, entry: &crate::VectorSearchResult, query: &ResearchQuery) -> f32 {
+    fn calculate_v2_confidence_score(&self, entry: &crate::research_types::SearchResult, query: &ResearchQuery) -> f32 {
         let mut confidence = 0.7; // Base confidence for vector search
 
         // Higher confidence for exact matches in title
@@ -159,80 +159,5 @@ impl SearchCoordinator {
     }
 }
 
-/// Inverted index for keyword-based search
-
-#[derive(Debug, Serialize, Deserialize) ]
-pub struct InvertedIndex {
-    index: std::collections::HashMap<String, Vec<Posting>>,
-}
-
-impl InvertedIndex {
-    /// Create a new inverted index
-    pub fn new() -> Self {
-        Self {
-            index: std::collections::HashMap::new(),
-        }
-    }
-
-    /// Add a term to the index
-    pub fn add_term(&mut self, term: &str, document_id: usize, document: &crate::KnowledgeEntry) {
-        let postings = self.index.entry(term.to_string()).or_insert_with(Vec::new);
-
-        // Check if document already exists
-        if !postings.iter().any(|p| p.document_id == document_id) {
-            // TODO: Implement position tracking for term occurrences:
-            // 1. Position tracking: Track character/word positions of terms
-            //    - Record byte offsets or character positions for each term occurrence
-            //    - Support multiple positions per term in a document
-            //    - Enable phrase queries and proximity searches
-            // 2. Position storage: Efficient position storage
-            //    - Use compact data structures for position arrays
-            //    - Compress position data for large documents
-            //    - Support incremental position updates
-            // 3. Position queries: Enable position-based queries
-            //    - Support phrase matching using position data
-            //    - Enable proximity searches (terms within N positions)
-            //    - Support ordered and unordered phrase queries
-            // ACCEPTANCE CRITERIA:
-            // - Term positions are tracked and stored for each document
-            // - Position data enables phrase and proximity queries
-            // - Position storage is efficient and doesn't significantly impact performance
-            // DEPENDENCIES:
-            // - Posting struct extension (Required)
-            // - Position indexing algorithms (Required)
-            // PRIORITY: Medium
-            postings.push(Posting {
-                document_id,
-                positions: vec![],
-                term_frequency: 1, // Temporary: placeholder until position tracking is implemented
-            });
-        }
-    }
-
-    /// Get postings for a term
-    pub fn get_postings(&self, term: &str) -> Option<&Vec<Posting>> {
-        self.index.get(term)
-    }
-
-    /// Optimize the index (placeholder for future optimization)
-    pub fn optimize(&mut self) {
-        // Placeholder for index optimization
-        // Could include merging postings, compression, etc.
-    }
-}
-
-/// Posting in the inverted index
-#[derive(Debug, Clone, Serialize, Deserialize) ]
-pub struct Posting {
-    pub document_id: usize,
-    pub positions: Vec<usize>,
-    pub term_frequency: u32,
-}
-
-/// Search result from inverted index
-#[derive(Debug, Clone, Serialize, Deserialize) ]
-pub struct SearchResult {
-    pub document_id: usize,
-    pub score: f32,
-    pub term_matches: Vec<String>,
-}
+// InvertedIndex, Posting, and SearchResult are defined in index.rs, not here
+// Remove duplicate definitions - use the ones from super::index

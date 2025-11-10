@@ -4,7 +4,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use chrono::{DateTime, Utc};
 
-use crate::ResearchMetrics;
+use crate::research_types::ResearchMetrics;
 
 /// Metrics collector for research operations
 

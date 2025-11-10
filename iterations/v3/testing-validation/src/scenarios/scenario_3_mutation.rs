@@ -13,6 +13,8 @@ use tracing::{info, error};
 use crate::harness::{TestEnvironment, LocalServiceManager, AssertionFramework};
 use crate::fixtures::schema_validator_spec::*;
 use crate::{TestResult, TestMetrics, Scenario};
+#[cfg(feature = "full")]
+use agent_research::self_prompting_agent::models::{ModelRegistry, OllamaProvider};
 
 /// Run the mutation testing scenario
 pub async fn run_test(

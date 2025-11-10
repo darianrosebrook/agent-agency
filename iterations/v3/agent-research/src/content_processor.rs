@@ -3,7 +3,6 @@
 //! Processes and cleans scraped content for research purposes.
 
 use crate::research_types::*;
-use crate::ContentProcessingConfig;
 use anyhow::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;

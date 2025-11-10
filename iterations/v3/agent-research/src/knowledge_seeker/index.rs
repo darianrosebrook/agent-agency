@@ -20,7 +20,7 @@ impl InvertedIndex {
     }
 
     /// Add a term to the index
-    pub fn add_term(&mut self, term: &str, document_id: usize, _document: &crate::KnowledgeEntry) {
+    pub fn add_term(&mut self, term: &str, document_id: usize, _document: &crate::research_types::KnowledgeEntry) {
         let postings = self.index.entry(term.to_string()).or_insert_with(Vec::new);
 
         // Check if document already exists

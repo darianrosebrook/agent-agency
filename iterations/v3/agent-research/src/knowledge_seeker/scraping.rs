@@ -207,12 +207,16 @@ impl ScrapingCoordinator {
                 // Process the scraped content
                 match content_processor.process_content(&scraping_result.content).await {
                     Ok(processed) => {
-                        let processed = processed.unwrap_or_else(|| crate::ProcessedContent {
+                        let processed = processed.unwrap_or_else(|| crate::research_types::ContentProcessingResult {
+                            original_content: scraping_result.content.clone(),
                             processed_content: scraping_result.content.clone(),
+                            extracted_text: scraping_result.content.clone(),
                             summary: None,
-                            keywords: vec![],
-                            language: None,
-                            reading_time_minutes: 0,
+                            key_phrases: vec![],
+                            entities: vec![],
+                            links: vec![],
+                            processing_time_ms: 0,
+                            metadata: std::collections::HashMap::new(),
                         });
 
                         let result = ResearchResult {
