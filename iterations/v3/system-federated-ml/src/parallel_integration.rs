@@ -196,6 +196,7 @@ impl ParallelToolCoordinator {
     }
 
     /// Decompose chain into parallel tasks
+    #[allow(dead_code)]
     async fn decompose_chain_into_tasks(
         &self,
         chain: &ToolChain,
@@ -229,6 +230,7 @@ impl ParallelToolCoordinator {
     }
 
     /// Execute parallel tasks
+    #[allow(dead_code)]
     async fn execute_parallel_tasks(
         &self,
         tasks: Vec<ParallelTask>,
@@ -306,6 +308,7 @@ impl ParallelToolCoordinator {
     }
 
     /// Execute single task with worker (static version for async spawn)
+    #[allow(dead_code)]
     async fn execute_single_task_with_worker_static(
         _task_executor: &Arc<ChainExecutor>,
         task: ParallelTask,
@@ -409,6 +412,7 @@ impl ParallelToolCoordinator {
     }
 
     /// Execute single task with worker
+    #[allow(dead_code)]
     async fn execute_single_task_with_worker(
         &self,
         task: ParallelTask,
@@ -487,6 +491,7 @@ impl ParallelToolCoordinator {
     }
 
     /// Synthesize parallel results back into chain format
+    #[allow(dead_code)]
     async fn synthesize_parallel_results(
         &self,
         chain: &ToolChain,
@@ -519,6 +524,7 @@ impl ParallelToolCoordinator {
     }
 
     /// Estimate chain complexity
+    #[allow(dead_code)]
     fn estimate_chain_complexity(&self, chain: &ToolChain) -> f64 {
         let node_count = chain.dag.node_count() as f64;
         let edge_count = chain.dag.edge_count() as f64;
@@ -550,6 +556,7 @@ impl ParallelToolCoordinator {
     }
 
     /// Identify parallel execution sections
+    #[allow(dead_code)]
     fn identify_parallel_sections(&self, chain: &ToolChain) -> Vec<String> {
         let mut sections = Vec::new();
 
@@ -571,6 +578,7 @@ impl ParallelToolCoordinator {
     }
 
     /// Estimate resource requirements
+    #[allow(dead_code)]
     fn estimate_resource_requirements(&self, chain: &ToolChain) -> HashMap<String, u32> {
         let mut requirements = HashMap::new();
 
@@ -595,6 +603,7 @@ impl ParallelToolCoordinator {
     }
 
     /// Compute execution levels (topological levels)
+    #[allow(dead_code)]
     fn compute_execution_levels(&self, chain: &ToolChain) -> Result<HashMap<usize, Vec<petgraph::graph::NodeIndex>>, ParallelExecutionError> {
         use petgraph::visit::EdgeRef;
         use std::collections::HashSet;
@@ -643,6 +652,7 @@ impl ParallelToolCoordinator {
     }
 
     /// Get node dependencies
+    #[allow(dead_code)]
     fn get_node_dependencies(&self, chain: &ToolChain, node_idx: petgraph::graph::NodeIndex) -> Vec<String> {
         chain.dag.edges_directed(node_idx, petgraph::Direction::Incoming)
             .map(|edge| self.node_id_to_task_id(edge.source()))
@@ -650,12 +660,14 @@ impl ParallelToolCoordinator {
     }
 
     /// Estimate node duration
+    #[allow(dead_code)]
     fn estimate_node_duration(&self, node: &ToolNode) -> u64 {
         // Base on SLA and tool characteristics
         node.sla_ms as u64
     }
 
     /// Estimate node resources
+    #[allow(dead_code)]
     fn estimate_node_resources(&self, node: &ToolNode) -> HashMap<String, u32> {
         let mut resources = HashMap::new();
 
@@ -666,6 +678,7 @@ impl ParallelToolCoordinator {
     }
 
     /// Calculate task priority
+    #[allow(dead_code)]
     fn calculate_task_priority(&self, task: &ParallelTask) -> u8 {
         // Higher priority for critical path tasks
         if task.execution_level == 0 {
